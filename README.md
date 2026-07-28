@@ -104,11 +104,16 @@ npm run dev                    # http://localhost:3000
 
 Variables de entorno:
 
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY
-```
+| Variable | La usa | Dónde se necesita |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | La aplicación | Local y despliegue |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | La aplicación | Local y despliegue |
+| `SUPABASE_SERVICE_ROLE_KEY` | Solo `scripts/seed-usuarios.py` | Solo local |
+| `SUPABASE_PROJECT_REF` | Solo los scripts de migración | Solo local |
+| `SUPABASE_MGMT_TOKEN` | Solo los scripts de migración | Solo local |
+
+El *service role key* omite por completo las políticas de RLS: no debe cargarse en
+el entorno de despliegue, donde la aplicación nunca lo utiliza.
 
 ### Base de datos desde cero
 
@@ -132,7 +137,14 @@ python scripts/run-sql.py supabase/migrations/010_alertas_v2.sql
 ### Despliegue en Vercel
 
 1. Importar el repositorio en Vercel (detecta Next.js automáticamente).
-2. Cargar las tres variables de entorno en *Settings → Environment Variables*.
+2. Cargar en *Settings → Environment Variables* únicamente estas dos, en los tres
+   entornos (Production, Preview y Development):
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL       https://<ref>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY  eyJhbGciOi...
+   ```
+
 3. Desplegar. No requiere configuración adicional.
 
 ## Accesos de demostración
