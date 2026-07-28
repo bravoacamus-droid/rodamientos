@@ -1,0 +1,293 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   RODATECH · Design tokens
+   Marca: #0E4C73 (azul) · #F2E307 (amarillo) · #A8A8AD (gris) · negro · blanco
+   ========================================================================== */
+
+@theme {
+  --color-brand-50:  #eef6fb;
+  --color-brand-100: #d5e8f4;
+  --color-brand-200: #aed1e8;
+  --color-brand-300: #7cb2d6;
+  --color-brand-400: #468cbe;
+  --color-brand-500: #22689e;
+  --color-brand-600: #0E4C73;
+  --color-brand-700: #0c4064;
+  --color-brand-800: #0b3450;
+  --color-brand-900: #0a2b41;
+  --color-brand-950: #061c2c;
+
+  --color-accent-50:  #fefce8;
+  --color-accent-100: #fdf8c4;
+  --color-accent-200: #fcf08d;
+  --color-accent-300: #f9e34c;
+  --color-accent-400: #F2E307;
+  --color-accent-500: #dcc706;
+  --color-accent-600: #bd9f04;
+  --color-accent-700: #977407;
+  --color-accent-800: #7d5c0e;
+  --color-accent-900: #6a4b12;
+
+  --color-steel-50:  #f7f7f8;
+  --color-steel-100: #efeff1;
+  --color-steel-200: #e2e2e5;
+  --color-steel-300: #cbcbd0;
+  --color-steel-400: #A8A8AD;
+  --color-steel-500: #8b8b91;
+  --color-steel-600: #6f6f75;
+  --color-steel-700: #5a5a5f;
+  --color-steel-800: #4c4c50;
+  --color-steel-900: #424245;
+  --color-steel-950: #242426;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+@layer base {
+  :root {
+    --bg:          #f4f6f8;
+    --surface:     #ffffff;
+    --surface-2:   #fafbfc;
+    --border:      #e4e7eb;
+    --border-soft: #eef1f4;
+    --fg:          #14181d;
+    --fg-muted:    #5c6773;
+    --fg-subtle:   #8894a2;
+    --ring:        #0E4C73;
+
+    --ok:      #0f8a5f;
+    --ok-bg:   #e7f7f0;
+    --warn:    #b57d05;
+    --warn-bg: #fdf6e0;
+    --danger:  #c5313a;
+    --danger-bg:#fdecec;
+    --info:    #1f6fb2;
+    --info-bg: #e9f3fb;
+
+    /* --- Visualización de datos (paleta validada · modo claro sobre #fff) --- */
+    --viz-1: #22689e;   /* azul de marca  */
+    --viz-2: #E07A1F;   /* naranja        */
+    --viz-3: #1B9E77;   /* verde aqua     */
+    --viz-4: #7A5AF8;   /* violeta        */
+    --viz-5: #C0392B;   /* rojo           */
+
+    /* Rampa ordinal de un solo tono (aging de cartera, mapas de calor) */
+    --viz-ord-1: #7cb2d6;
+    --viz-ord-2: #468cbe;
+    --viz-ord-3: #22689e;
+    --viz-ord-4: #0E4C73;
+    --viz-ord-5: #0a2b41;
+
+    /* Estado — nunca se reutiliza como color de serie */
+    --viz-good:     #0ca30c;
+    --viz-warning:  #fab219;
+    --viz-serious:  #ec835a;
+    --viz-critical: #d03b3b;
+
+    /* Cromo del gráfico */
+    --viz-grid:     #eaedf1;
+    --viz-axis:     #cbd2da;
+    --viz-ink:      #5c6773;
+    --viz-ink-soft: #8894a2;
+  }
+
+  :root[data-theme="dark"] {
+    --bg:          #0b1016;
+    --surface:     #121922;
+    --surface-2:   #161f2a;
+    --border:      #22303f;
+    --border-soft: #1a2531;
+    --fg:          #e7edf3;
+    --fg-muted:    #93a3b5;
+    --fg-subtle:   #6b7d90;
+    --ring:        #468cbe;
+
+    --ok:      #34c98a;
+    --ok-bg:   #102b22;
+    --warn:    #e0b13a;
+    --warn-bg: #2d2413;
+    --danger:  #f2666e;
+    --danger-bg:#2e1518;
+    --info:    #63b0e8;
+    --info-bg: #10222f;
+
+    /* --- Visualización · pasos propios para la superficie oscura #121922 --- */
+    --viz-1: #3E8BC9;
+    --viz-2: #CF7A2E;
+    --viz-3: #22A177;
+    --viz-4: #8E7BEC;
+    --viz-5: #DB5B55;
+
+    --viz-ord-1: #17527e;
+    --viz-ord-2: #2170a6;
+    --viz-ord-3: #3d90c6;
+    --viz-ord-4: #67aedb;
+    --viz-ord-5: #9ecdec;
+
+    --viz-good:     #0ca30c;
+    --viz-warning:  #fab219;
+    --viz-serious:  #ec835a;
+    --viz-critical: #d03b3b;
+
+    --viz-grid:     #1e2a37;
+    --viz-axis:     #2d3d4e;
+    --viz-ink:      #93a3b5;
+    --viz-ink-soft: #6b7d90;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-accent-400);
+    color: #14181d;
+  }
+
+  /* Scrollbars discretas */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--fg-subtle) 35%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--fg-subtle) 60%, transparent);
+    background-clip: content-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .bg-surface   { background-color: var(--surface); }
+  .bg-surface-2 { background-color: var(--surface-2); }
+  .bg-app       { background-color: var(--bg); }
+  .text-fg      { color: var(--fg); }
+  .text-muted   { color: var(--fg-muted); }
+  .text-subtle  { color: var(--fg-subtle); }
+  .border-app   { border-color: var(--border); }
+  .border-soft  { border-color: var(--border-soft); }
+
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .elev-1 { box-shadow: 0 1px 2px rgb(15 23 32 / 0.05), 0 1px 3px rgb(15 23 32 / 0.04); }
+  .elev-2 { box-shadow: 0 2px 4px rgb(15 23 32 / 0.05), 0 6px 16px rgb(15 23 32 / 0.07); }
+  .elev-3 { box-shadow: 0 10px 30px rgb(15 23 32 / 0.12), 0 2px 8px rgb(15 23 32 / 0.06); }
+
+  :root[data-theme="dark"] .elev-1 { box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); }
+  :root[data-theme="dark"] .elev-2 { box-shadow: 0 4px 14px rgb(0 0 0 / 0.45); }
+  :root[data-theme="dark"] .elev-3 { box-shadow: 0 16px 40px rgb(0 0 0 / 0.55); }
+
+  .ring-brand { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-600) 18%, transparent); }
+
+  .stripe-brand {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      var(--color-accent-400) 0 10px,
+      var(--color-brand-600) 10px 20px
+    );
+  }
+
+  .scroll-x {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+
+/* ---------------------------------------------------------------- Animación */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--fg-subtle) 14%, transparent);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 65%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-fade-up { animation: fade-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-scale-in { animation: scale-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 45%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.animate-pulse-ring { animation: pulse-ring 2s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------ Print */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
