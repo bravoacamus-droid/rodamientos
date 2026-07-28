@@ -1,14 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { credencialesSupabase } from "@/lib/supabase/config";
 
 const RUTAS_PUBLICAS = ["/login", "/auth"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  const { url, anonKey } = credencialesSupabase();
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {

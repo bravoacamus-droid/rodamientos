@@ -32,14 +32,48 @@ export function LoginForm() {
   const [verClave, setVerClave] = React.useState(false);
   const [cargando, setCargando] = React.useState<string | null>(null);
 
+  /** Traduce fallos de red o de configuración a un mensaje accionable. */
+  function describirError(mensaje: string) {
+    if (/Invalid value|Failed to (execute|fetch)|NetworkError|Load failed/i.test(mensaje)) {
+      return (
+        "No se pudo contactar al servidor de autenticación. Suele deberse a que las " +
+        "variables NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY del entorno " +
+        "quedaron con un espacio o salto de línea al pegarlas. Vuelva a cargarlas y " +
+        "redespliegue."
+      );
+    }
+    if (/Invalid login credentials/i.test(mensaje)) {
+      return "Correo o contraseña incorrectos.";
+    }
+    if (/Email not confirmed/i.test(mensaje)) {
+      return "La cuenta existe pero su correo no ha sido confirmado.";
+    }
+    return mensaje;
+  }
+
   async function ingresar(correo: string, password: string, etiqueta: string) {
     setCargando(etiqueta);
-    const supabase = createClient();
+
+    let supabase;
+    try {
+      supabase = createClient();
+    } catch (e) {
+      setCargando(null);
+      toast.error("Configuración incompleta", {
+        description: e instanceof Error ? e.message : String(e),
+        duration: 10000,
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email: correo, password });
 
     if (error) {
       setCargando(null);
-      toast.error("No se pudo iniciar sesión", { description: error.message });
+      toast.error("No se pudo iniciar sesión", {
+        description: describirError(error.message),
+        duration: 10000,
+      });
       return;
     }
 
