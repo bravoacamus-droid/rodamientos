@@ -37,11 +37,18 @@ export default async function CotizacionPage({ params }: Props) {
 
   if (!c) notFound();
 
-  const { data: items } = await supabase
-    .from("cotizacion_items")
-    .select("*, productos(id, sku)")
-    .eq("cotizacion_id", id)
-    .order("orden");
+  const [{ data: items }, { data: cargos }] = await Promise.all([
+    supabase
+      .from("cotizacion_items")
+      .select("*, productos(id, sku)")
+      .eq("cotizacion_id", id)
+      .order("orden"),
+    supabase
+      .from("cotizacion_cargos")
+      .select("*")
+      .eq("cotizacion_id", id)
+      .order("orden"),
+  ]);
 
   const cliente = c.clientes as unknown as {
     id: string; codigo: string; razon_social: string; ruc: string | null;
@@ -51,8 +58,13 @@ export default async function CotizacionPage({ params }: Props) {
   };
   const vendedor = c.profiles as unknown as { nombre: string; email: string } | null;
   const lineas = items ?? [];
-  const costoTotal = lineas.reduce((s, i) => s + Number(i.costo_unitario) * Number(i.cantidad), 0);
-  const margenSoles = Number(c.subtotal) - costoTotal;
+  const cargosLista = cargos ?? [];
+  const totalCargos = cargosLista.reduce((s, g) => s + Number(g.monto), 0);
+  const costoCargos = cargosLista.reduce((s, g) => s + Number(g.costo), 0);
+  const baseGravada = Number(c.subtotal) + totalCargos;
+  const costoTotal =
+    lineas.reduce((s, i) => s + Number(i.costo_unitario) * Number(i.cantidad), 0) + costoCargos;
+  const margenSoles = baseGravada - costoTotal;
 
   return (
     <>
@@ -83,6 +95,8 @@ export default async function CotizacionPage({ params }: Props) {
                 condiciones: c.condiciones,
                 tiempo_entrega: c.tiempo_entrega,
                 observaciones: c.observaciones,
+                mostrar_igv: c.mostrar_igv ?? true,
+                mostrar_margen: c.mostrar_margen ?? false,
               }}
               cliente={cliente}
               vendedor={vendedor?.nombre ?? "Rodatech"}
@@ -94,7 +108,14 @@ export default async function CotizacionPage({ params }: Props) {
                 unidad: i.unidad,
                 precio_unitario: Number(i.precio_unitario),
                 descuento_pct: Number(i.descuento_pct),
+                costo_unitario: Number(i.costo_unitario),
                 subtotal: Number(i.subtotal),
+              }))}
+              cargos={(cargos ?? []).map((g) => ({
+                concepto: g.concepto,
+                detalle: g.detalle,
+                monto: Number(g.monto),
+                costo: Number(g.costo),
               }))}
               empresa={empresa as unknown as EmpresaPdf}
             />
@@ -241,11 +262,55 @@ export default async function CotizacionPage({ params }: Props) {
               })}
             </TBody>
           </Table>
+          {cargosLista.length > 0 && (
+            <div className="border-t px-5 py-3">
+              <div className="mb-2 flex items-center gap-2">
+                <Truck className="size-3.5 text-subtle" />
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-subtle">
+                  Cargos adicionales
+                </p>
+              </div>
+              <ul className="space-y-1.5">
+                {cargosLista.map((g) => (
+                  <li
+                    key={g.id}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-accent-50 px-3 py-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[12.5px] font-medium text-fg">{g.concepto}</span>
+                      {g.detalle && (
+                        <span className="block truncate text-[11px] text-muted">{g.detalle}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-[12.5px] font-semibold text-fg tabular">
+                        {money(g.monto)}
+                      </span>
+                      <span className="block text-[10px] text-subtle tabular">
+                        costo {money(g.costo)}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="flex justify-end border-t bg-[var(--surface-2)] px-5 py-3">
             <div className="w-full max-w-xs space-y-1">
               <div className="flex justify-between text-[12px] text-muted">
-                <span>Subtotal</span>
+                <span>Mercadería</span>
                 <span className="tabular">{money(c.subtotal)}</span>
+              </div>
+              {totalCargos > 0 && (
+                <div className="flex justify-between text-[12px] text-muted">
+                  <span>Cargos adicionales</span>
+                  <span className="tabular">{money(totalCargos)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[12px] text-muted">
+                <span>Subtotal gravado</span>
+                <span className="tabular">{money(baseGravada)}</span>
               </div>
               <div className="flex justify-between text-[12px] text-muted">
                 <span>IGV (18%)</span>
@@ -255,6 +320,12 @@ export default async function CotizacionPage({ params }: Props) {
                 <span>Total</span>
                 <span className="tabular">{money(c.total)}</span>
               </div>
+              <p className="pt-1 text-right text-[10.5px] text-subtle">
+                {c.mostrar_igv === false
+                  ? "El PDF muestra un total único sin desglosar el IGV"
+                  : "El PDF desglosa el IGV"}
+                {c.mostrar_margen && " · con costo y margen (copia interna)"}
+              </p>
             </div>
           </div>
         </Card>

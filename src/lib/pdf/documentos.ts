@@ -63,7 +63,16 @@ export type ItemPdf = {
   unidad: string;
   precio_unitario: number;
   descuento_pct?: number;
+  costo_unitario?: number;
   subtotal: number;
+};
+
+/** Concepto ajeno a la mercadería: flete, embalaje, seguro, instalación. */
+export type CargoPdf = {
+  concepto: string;
+  detalle?: string | null;
+  monto: number;
+  costo?: number;
 };
 
 const soles = (n: number, moneda = "PEN") =>
@@ -244,12 +253,32 @@ function bloqueDatos(
   return y + Math.max(h1, h2) + 5;
 }
 
-function tablaItems(doc: jsPDF, y: number, items: ItemPdf[], moneda: string) {
-  motor!.autoTable(doc, {
-    startY: y,
-    margin: { left: MARGEN, right: MARGEN },
-    head: [["#", "Código", "Descripción", "Cant.", "U.M.", "P. Unit.", "Dscto.", "Importe"]],
-    body: items.map((it, i) => [
+/**
+ * Detalle del documento.
+ *
+ * `cargos` son conceptos ajenos a la mercadería (flete, embalaje, seguro) y se
+ * imprimen al final de la tabla con fondo distinto para que el cliente los
+ * distinga de los ítems. `mostrarMargen` agrega costo y margen por línea: solo
+ * para la copia interna.
+ */
+function tablaItems(
+  doc: jsPDF,
+  y: number,
+  items: ItemPdf[],
+  moneda: string,
+  opciones?: { cargos?: CargoPdf[]; mostrarMargen?: boolean }
+) {
+  const cargos = opciones?.cargos ?? [];
+  const conMargen = !!opciones?.mostrarMargen;
+
+  const cabecera = ["#", "Código", "Descripción", "Cant.", "U.M.", "P. Unit.", "Dscto."];
+  if (conMargen) cabecera.push("Costo", "Margen");
+  cabecera.push("Importe");
+
+  const filaItem = (it: ItemPdf, i: number) => {
+    const neto = it.precio_unitario * (1 - (it.descuento_pct ?? 0) / 100);
+    const margen = neto > 0 ? ((neto - (it.costo_unitario ?? 0)) / neto) * 100 : 0;
+    const fila = [
       String(i + 1),
       it.codigo,
       it.marca ? `${it.descripcion}\n${it.marca}` : it.descripcion,
@@ -257,8 +286,53 @@ function tablaItems(doc: jsPDF, y: number, items: ItemPdf[], moneda: string) {
       it.unidad,
       soles(it.precio_unitario, moneda),
       it.descuento_pct ? `${Number(it.descuento_pct).toFixed(1)}%` : "—",
-      soles(it.subtotal, moneda),
-    ]),
+    ];
+    if (conMargen) {
+      fila.push(soles(it.costo_unitario ?? 0, moneda), `${margen.toFixed(1)}%`);
+    }
+    fila.push(soles(it.subtotal, moneda));
+    return fila;
+  };
+
+  const filaCargo = (c: CargoPdf, i: number) => {
+    const fila = [
+      String(items.length + i + 1),
+      "—",
+      c.detalle ? `${c.concepto}\n${c.detalle}` : c.concepto,
+      "1",
+      "SERV",
+      soles(c.monto, moneda),
+      "—",
+    ];
+    if (conMargen) {
+      const margen = c.monto > 0 ? ((c.monto - (c.costo ?? 0)) / c.monto) * 100 : 0;
+      fila.push(soles(c.costo ?? 0, moneda), `${margen.toFixed(1)}%`);
+    }
+    fila.push(soles(c.monto, moneda));
+    return fila;
+  };
+
+  const ultimaCol = cabecera.length - 1;
+  const columnStyles: Record<number, Record<string, unknown>> = {
+    0: { cellWidth: 7, halign: "center", textColor: GRIS_TXT },
+    1: { cellWidth: 24, fontStyle: "bold", fontSize: 6.8 },
+    2: { cellWidth: "auto" },
+    3: { cellWidth: 13, halign: "right" },
+    4: { cellWidth: 12, halign: "center", textColor: GRIS_TXT },
+    5: { cellWidth: 20, halign: "right" },
+    6: { cellWidth: 13, halign: "right", textColor: GRIS_TXT },
+  };
+  if (conMargen) {
+    columnStyles[7] = { cellWidth: 19, halign: "right", textColor: GRIS_TXT };
+    columnStyles[8] = { cellWidth: 16, halign: "right", textColor: GRIS_TXT };
+  }
+  columnStyles[ultimaCol] = { cellWidth: 22, halign: "right", fontStyle: "bold" };
+
+  motor!.autoTable(doc, {
+    startY: y,
+    margin: { left: MARGEN, right: MARGEN },
+    head: [cabecera],
+    body: [...items.map(filaItem), ...cargos.map(filaCargo)],
     theme: "grid",
     styles: {
       font: "helvetica",
@@ -277,18 +351,45 @@ function tablaItems(doc: jsPDF, y: number, items: ItemPdf[], moneda: string) {
       cellPadding: { top: 2.4, bottom: 2.4, left: 2, right: 2 },
     },
     alternateRowStyles: { fillColor: [250, 251, 252] },
-    columnStyles: {
-      0: { cellWidth: 7, halign: "center", textColor: GRIS_TXT },
-      1: { cellWidth: 26, fontStyle: "bold", fontSize: 6.8 },
-      2: { cellWidth: "auto" },
-      3: { cellWidth: 14, halign: "right" },
-      4: { cellWidth: 12, halign: "center", textColor: GRIS_TXT },
-      5: { cellWidth: 21, halign: "right" },
-      6: { cellWidth: 14, halign: "right", textColor: GRIS_TXT },
-      7: { cellWidth: 23, halign: "right", fontStyle: "bold" },
+    columnStyles,
+    didParseCell: (data) => {
+      // Los cargos adicionales van sobre fondo ámbar tenue
+      if (data.section === "body" && data.row.index >= items.length) {
+        data.cell.styles.fillColor = [255, 250, 231];
+        data.cell.styles.fontStyle = data.column.index === 2 ? "bold" : "normal";
+      }
     },
   });
   return (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+}
+
+/** Marca de agua diagonal para las copias que exponen costo y margen. */
+function marcaCopiaInterna(doc: jsPDF) {
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const paginas = doc.getNumberOfPages();
+
+  for (let p = 1; p <= paginas; p++) {
+    doc.setPage(p);
+    doc.saveGraphicsState();
+    // @ts-expect-error setGState existe en tiempo de ejecución
+    doc.setGState(new doc.GState({ opacity: 0.09 }));
+    doc.setTextColor(197, 49, 58);
+    doc.setFont("helvetica", "bold").setFontSize(46);
+    doc.text("COPIA INTERNA", W / 2, H / 2, { align: "center", angle: 32 });
+    doc.restoreGraphicsState();
+
+    doc.setFillColor(253, 236, 236);
+    doc.rect(0, 5.1, W, 5, "F");
+    doc.setTextColor(197, 49, 58);
+    doc.setFont("helvetica", "bold").setFontSize(6.8);
+    doc.text(
+      "DOCUMENTO DE USO INTERNO · CONTIENE COSTOS Y MÁRGENES · NO ENVIAR AL CLIENTE",
+      W / 2,
+      8.6,
+      { align: "center" }
+    );
+  }
 }
 
 function bloqueTotales(
@@ -370,12 +471,17 @@ export async function pdfCotizacion(datos: {
   };
   vendedor: string;
   items: ItemPdf[];
+  cargos?: CargoPdf[];
   subtotal: number;
   igv: number;
   total: number;
   condiciones: string | null;
   tiempo_entrega: string | null;
   observaciones: string | null;
+  /** Si es falso, se imprime un total único sin desglosar el IGV. */
+  mostrarIgv?: boolean;
+  /** Si es verdadero, agrega costo y margen y marca el PDF como copia interna. */
+  mostrarMargen?: boolean;
   descargar?: boolean;
 }) {
   const { jsPDF } = await cargarMotor();
@@ -409,22 +515,45 @@ export async function pdfCotizacion(datos: {
     }
   );
 
-  y = tablaItems(doc, y, datos.items, datos.moneda);
+  const cargos = datos.cargos ?? [];
+  const mostrarIgv = datos.mostrarIgv ?? true;
+  const mostrarMargen = datos.mostrarMargen ?? false;
+  const totalCargos = cargos.reduce((s, c) => s + Number(c.monto ?? 0), 0);
+
+  y = tablaItems(doc, y, datos.items, datos.moneda, { cargos, mostrarMargen });
+
+  const totales: [string, string][] = [];
+  if (mostrarIgv) {
+    if (totalCargos > 0) {
+      totales.push(["Mercadería", soles(datos.subtotal - totalCargos, datos.moneda)]);
+      totales.push(["Cargos adicionales", soles(totalCargos, datos.moneda)]);
+    }
+    totales.push(["Subtotal", soles(datos.subtotal, datos.moneda)]);
+    totales.push(["IGV (18%)", soles(datos.igv, datos.moneda)]);
+  }
+  if (mostrarMargen) {
+    const costo = datos.items.reduce(
+      (s, i) => s + Number(i.costo_unitario ?? 0) * Number(i.cantidad), 0
+    ) + cargos.reduce((s, c) => s + Number(c.costo ?? 0), 0);
+    const margen = datos.subtotal > 0 ? ((datos.subtotal - costo) / datos.subtotal) * 100 : 0;
+    totales.push(["Costo total", soles(costo, datos.moneda)]);
+    totales.push(["Margen bruto", `${margen.toFixed(1)} %`]);
+  }
+  totales.push(["TOTAL", soles(datos.total, datos.moneda)]);
 
   y = bloqueTotales(
     doc,
     y,
-    [
-      ["Subtotal", soles(datos.subtotal, datos.moneda)],
-      ["IGV (18%)", soles(datos.igv, datos.moneda)],
-      ["TOTAL", soles(datos.total, datos.moneda)],
-    ],
+    totales,
     undefined,
     {
       titulo: "Condiciones comerciales",
       texto:
-        datos.condiciones ??
-        "Precios expresados en soles e incluyen IGV. Sujeto a disponibilidad de stock al momento de la confirmación.",
+        (datos.condiciones ??
+          "Sujeto a disponibilidad de stock al momento de la confirmación.") +
+        (mostrarIgv
+          ? " Los importes del detalle no incluyen IGV; el impuesto se muestra desglosado."
+          : " Los precios indicados ya incluyen el IGV."),
     }
   );
 
@@ -439,8 +568,20 @@ export async function pdfCotizacion(datos: {
     });
   }
 
-  pie(doc, datos.empresa, "Agradecemos la oportunidad de atenderlo. Quedamos atentos a su confirmación.");
-  finalizar(doc, `Cotizacion-${datos.numero}.pdf`, datos.descargar);
+  pie(
+    doc,
+    datos.empresa,
+    mostrarMargen
+      ? "Copia interna con costos y márgenes. No debe entregarse al cliente."
+      : "Agradecemos la oportunidad de atenderlo. Quedamos atentos a su confirmación."
+  );
+  if (mostrarMargen) marcaCopiaInterna(doc);
+
+  finalizar(
+    doc,
+    `Cotizacion-${datos.numero}${mostrarMargen ? "-INTERNA" : ""}.pdf`,
+    datos.descargar
+  );
 }
 
 /* ========================================================= COMPROBANTE */

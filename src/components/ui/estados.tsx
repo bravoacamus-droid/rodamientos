@@ -3,8 +3,9 @@ import { Badge } from "./primitives";
 type Tone = "neutral" | "brand" | "accent" | "success" | "warning" | "danger" | "info" | "solid";
 
 const COTIZACION: Record<string, { label: string; tone: Tone }> = {
-  borrador:   { label: "Borrador",   tone: "neutral" },
-  enviada:    { label: "Enviada",    tone: "info" },
+  borrador:       { label: "Borrador",       tone: "neutral" },
+  enviada:        { label: "Enviada",        tone: "info" },
+  en_negociacion: { label: "En negociación", tone: "accent" },
   aceptada:   { label: "Aceptada",   tone: "success" },
   convertida: { label: "Convertida", tone: "brand" },
   rechazada:  { label: "Rechazada",  tone: "danger" },

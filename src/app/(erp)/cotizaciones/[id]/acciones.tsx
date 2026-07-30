@@ -1,19 +1,24 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileDown, Send, CheckCircle2, XCircle, MessageCircle, ShoppingCart } from "lucide-react";
+import {
+  FileDown, Send, CheckCircle2, XCircle, MessageCircle, ShoppingCart,
+  Pencil, Handshake, Lock,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Button, Textarea, Field } from "@/components/ui/primitives";
+import { Button, Textarea, Field, Checkbox } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/client";
-import { pdfCotizacion, type EmpresaPdf, type ItemPdf } from "@/lib/pdf/documentos";
+import { pdfCotizacion, type EmpresaPdf, type ItemPdf, type CargoPdf } from "@/lib/pdf/documentos";
 import { money, whatsappUrl } from "@/lib/utils";
 
 type Cotizacion = {
   id: string; numero: string; fecha: string; fecha_vencimiento: string;
   moneda: string; estado: string; subtotal: number; igv: number; total: number;
   condiciones: string | null; tiempo_entrega: string | null; observaciones: string | null;
+  mostrar_igv: boolean; mostrar_margen: boolean;
 };
 
 type Cliente = {
@@ -22,27 +27,39 @@ type Cliente = {
   telefono: string | null; whatsapp: string | null; dias_credito: number;
 };
 
+/** Estados en los que la propuesta sigue viva y puede modificarse. */
+const EDITABLES = ["borrador", "enviada", "en_negociacion"];
+
 export function AccionesCotizacion({
   cotizacion,
   cliente,
   vendedor,
   items,
+  cargos,
   empresa,
 }: {
   cotizacion: Cotizacion;
   cliente: Cliente;
   vendedor: string;
   items: ItemPdf[];
+  cargos: CargoPdf[];
   empresa: EmpresaPdf;
 }) {
   const router = useRouter();
-  const [generando, setGenerando] = React.useState(false);
+  const [generando, setGenerando] = React.useState<string | null>(null);
   const [procesando, setProcesando] = React.useState<string | null>(null);
   const [modalRechazo, setModalRechazo] = React.useState(false);
+  const [modalPdf, setModalPdf] = React.useState(false);
   const [motivo, setMotivo] = React.useState("");
 
+  // Opciones de impresión: parten de lo guardado en la cotización.
+  const [conIgv, setConIgv] = React.useState(cotizacion.mostrar_igv);
+  const [conMargen, setConMargen] = React.useState(cotizacion.mostrar_margen);
+
+  const editable = EDITABLES.includes(cotizacion.estado);
+
   async function generarPdf(descargar: boolean) {
-    setGenerando(true);
+    setGenerando(descargar ? "descargar" : "ver");
     try {
       await pdfCotizacion({
         empresa,
@@ -60,18 +77,32 @@ export function AccionesCotizacion({
         },
         vendedor,
         items,
+        cargos,
         subtotal: cotizacion.subtotal,
         igv: cotizacion.igv,
         total: cotizacion.total,
         condiciones: cotizacion.condiciones,
         tiempo_entrega: cotizacion.tiempo_entrega,
         observaciones: cotizacion.observaciones,
+        mostrarIgv: conIgv,
+        mostrarMargen: conMargen,
         descargar,
       });
+      setModalPdf(false);
     } catch {
       toast.error("No se pudo generar el PDF");
     }
-    setGenerando(false);
+    setGenerando(null);
+  }
+
+  /** Guarda las preferencias de impresión para que persistan en el documento. */
+  async function recordarOpciones() {
+    const supabase = createClient();
+    await supabase
+      .from("cotizaciones")
+      .update({ mostrar_igv: conIgv, mostrar_margen: conMargen })
+      .eq("id", cotizacion.id);
+    router.refresh();
   }
 
   async function cambiarEstado(estado: string, extra?: Record<string, unknown>) {
@@ -91,9 +122,9 @@ export function AccionesCotizacion({
         accion: `cotizacion_${estado}`,
         entidad: "cotizaciones",
         entidad_id: cotizacion.id,
-        descripcion: `Cotización ${cotizacion.numero} marcada como ${estado}`,
+        descripcion: `Cotización ${cotizacion.numero} pasó a ${estado.replace("_", " ")}`,
       });
-      toast.success(`Cotización marcada como ${estado}`);
+      toast.success(`Cotización marcada como ${estado.replace("_", " ")}`);
       router.refresh();
     }
     setProcesando(null);
@@ -151,9 +182,9 @@ export function AccionesCotizacion({
       return;
     }
 
-    const items = (cot.cotizacion_items ?? []) as Record<string, unknown>[];
+    const lineas = (cot.cotizacion_items ?? []) as Record<string, unknown>[];
     await supabase.from("pedido_items").insert(
-      items.map((i) => ({
+      lineas.map((i) => ({
         pedido_id: pedido.id,
         producto_id: i.producto_id,
         orden: i.orden,
@@ -186,17 +217,21 @@ export function AccionesCotizacion({
     `Estimado(a) ${cliente.contacto ?? cliente.razon_social}, le compartimos la cotización ${cotizacion.numero} por ${money(cotizacion.total)}. Quedamos atentos a sus comentarios. — Inversiones Rodatech E.I.R.L.`
   );
 
-  const abierta = ["borrador", "enviada"].includes(cotizacion.estado);
-
   return (
     <>
-      <Button variant="outline" size="md" onClick={() => generarPdf(false)} loading={generando}>
+      <Button variant="outline" size="md" onClick={() => setModalPdf(true)}>
         <FileDown />
-        Ver PDF
+        Generar PDF
       </Button>
-      <Button variant="subtle" size="md" onClick={() => generarPdf(true)}>
-        Descargar
-      </Button>
+
+      {editable && (
+        <Link href={`/cotizaciones/${cotizacion.id}/editar`}>
+          <Button variant="subtle" size="md">
+            <Pencil />
+            Editar
+          </Button>
+        </Link>
+      )}
 
       {wa && (
         <a href={wa} target="_blank" rel="noopener noreferrer">
@@ -219,7 +254,19 @@ export function AccionesCotizacion({
         </Button>
       )}
 
-      {abierta && (
+      {cotizacion.estado === "enviada" && (
+        <Button
+          variant="accent"
+          size="md"
+          loading={procesando === "en_negociacion"}
+          onClick={() => cambiarEstado("en_negociacion")}
+        >
+          <Handshake />
+          Pasar a negociación
+        </Button>
+      )}
+
+      {editable && (
         <>
           <Button
             variant="success"
@@ -237,13 +284,79 @@ export function AccionesCotizacion({
         </>
       )}
 
-      {["aceptada", "enviada"].includes(cotizacion.estado) && (
-        <Button variant="accent" size="md" loading={procesando === "pedido"} onClick={convertirEnPedido}>
+      {["aceptada", "enviada", "en_negociacion"].includes(cotizacion.estado) && (
+        <Button variant="primary" size="md" loading={procesando === "pedido"} onClick={convertirEnPedido}>
           <ShoppingCart />
           Convertir en pedido
         </Button>
       )}
 
+      {/* ------------------------------------------------ Opciones del PDF */}
+      <Modal
+        open={modalPdf}
+        onClose={() => setModalPdf(false)}
+        titulo={`Generar la propuesta ${cotizacion.numero}`}
+        descripcion="Elija qué información incluir antes de emitir el documento."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModalPdf(false)}>Cancelar</Button>
+            <Button
+              variant="outline"
+              loading={generando === "ver"}
+              onClick={() => { recordarOpciones(); generarPdf(false); }}
+            >
+              Ver en pantalla
+            </Button>
+            <Button
+              variant="primary"
+              loading={generando === "descargar"}
+              onClick={() => { recordarOpciones(); generarPdf(true); }}
+            >
+              <FileDown />
+              Descargar
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-2">
+          <Checkbox
+            label="Desglosar el IGV"
+            hint={
+              conIgv
+                ? "El documento lista subtotal, IGV y total por separado."
+                : "El documento muestra un total único con la nota «los precios incluyen IGV»."
+            }
+            checked={conIgv}
+            onChange={(e) => setConIgv(e.target.checked)}
+          />
+          <Checkbox
+            label="Incluir costo y margen"
+            hint="Agrega las columnas de costo y margen por línea. Genera una copia de uso interno."
+            checked={conMargen}
+            onChange={(e) => setConMargen(e.target.checked)}
+          />
+
+          {conMargen && (
+            <div className="flex items-start gap-2 rounded-lg border border-[var(--danger)]/25 bg-[var(--danger-bg)] px-3 py-2.5">
+              <Lock className="mt-0.5 size-4 shrink-0" style={{ color: "var(--danger)" }} />
+              <p className="text-[11px] leading-relaxed" style={{ color: "var(--danger)" }}>
+                El PDF llevará una marca de agua <strong>COPIA INTERNA</strong> en todas sus páginas y
+                el archivo se nombrará con el sufijo <code>-INTERNA</code>. Este documento expone su
+                estructura de costos: no debe enviarse al cliente.
+              </p>
+            </div>
+          )}
+
+          {cargos.length > 0 && (
+            <p className="pt-1 text-[11px] text-muted">
+              Se incluirán {cargos.length} cargo(s) adicional(es) por{" "}
+              {money(cargos.reduce((s, c) => s + Number(c.monto), 0))}, listados al final del detalle.
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* --------------------------------------------------------- Rechazo */}
       <Modal
         open={modalRechazo}
         onClose={() => setModalRechazo(false)}
@@ -251,9 +364,7 @@ export function AccionesCotizacion({
         descripcion="El motivo alimenta el análisis comercial de oportunidades perdidas."
         footer={
           <>
-            <Button variant="ghost" onClick={() => setModalRechazo(false)}>
-              Cancelar
-            </Button>
+            <Button variant="ghost" onClick={() => setModalRechazo(false)}>Cancelar</Button>
             <Button
               variant="danger"
               loading={procesando === "rechazada"}

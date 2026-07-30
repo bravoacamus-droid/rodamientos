@@ -26,7 +26,9 @@ async function Resumen() {
 
   const filas = data ?? [];
   const ganadas = filas.filter((f) => ["aceptada", "convertida"].includes(f.estado));
-  const abiertas = filas.filter((f) => ["borrador", "enviada"].includes(f.estado));
+  const abiertas = filas.filter((f) =>
+    ["borrador", "enviada", "en_negociacion"].includes(f.estado)
+  );
   const conversion = filas.length ? (ganadas.length / filas.length) * 100 : 0;
   const margenProm = filas.length
     ? filas.reduce((s, f) => s + Number(f.margen_pct ?? 0), 0) / filas.length
@@ -109,7 +111,9 @@ async function Tabla({ params }: { params: Params }) {
           {data.map((c) => {
             const cli = c.clientes as unknown as { razon_social: string; ruc: string } | null;
             const usr = c.profiles as unknown as { nombre: string } | null;
-            const vencida = c.fecha_vencimiento < hoy && ["borrador", "enviada"].includes(c.estado);
+            const vencida =
+              c.fecha_vencimiento < hoy &&
+              ["borrador", "enviada", "en_negociacion"].includes(c.estado);
             const margen = Number(c.margen_pct ?? 0);
             return (
               <tr key={c.id}>
@@ -175,6 +179,7 @@ export default async function CotizacionesPage({ searchParams }: { searchParams:
             opciones={[
               { value: "borrador", label: "Borrador" },
               { value: "enviada", label: "Enviada" },
+              { value: "en_negociacion", label: "En negociación" },
               { value: "aceptada", label: "Aceptada" },
               { value: "convertida", label: "Convertida" },
               { value: "rechazada", label: "Rechazada" },

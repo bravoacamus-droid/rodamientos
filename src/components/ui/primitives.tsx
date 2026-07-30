@@ -205,6 +205,41 @@ export const Select = React.forwardRef<
 ));
 Select.displayName = "Select";
 
+export function Checkbox({
+  label,
+  hint,
+  className,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition-colors",
+        props.checked ? "border-brand-300 bg-brand-50" : "hover:bg-[var(--surface-2)]",
+        props.disabled && "cursor-not-allowed opacity-60",
+        className
+      )}
+    >
+      <input
+        type="checkbox"
+        className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-2 accent-[var(--color-brand-600)]"
+        {...props}
+      />
+      <span className="min-w-0">
+        <span
+          className={cn(
+            "block text-[12.5px] font-medium",
+            props.checked ? "text-brand-800" : "text-fg"
+          )}
+        >
+          {label}
+        </span>
+        {hint && <span className="mt-0.5 block text-[10.5px] leading-snug text-muted">{hint}</span>}
+      </span>
+    </label>
+  );
+}
+
 export function Field({
   label,
   hint,
