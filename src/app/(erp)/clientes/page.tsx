@@ -7,6 +7,7 @@ import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
 import { Card, Table, THead, TBody, Badge, EmptyState, SkeletonTable, Progress } from "@/components/ui/primitives";
 import { MiniStat } from "@/components/ui/kpi";
+import { FormularioCliente } from "@/components/comercial/form-cliente";
 import { money, num, fecha } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Clientes" };
@@ -144,6 +145,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Par
       <PageHeader
         titulo="Clientes"
         descripcion="Empresas industriales con línea y plazo de crédito propios, historial de consumo y comportamiento de pago."
+        acciones={<FormularioCliente />}
       >
         <div className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-6">
           <SearchBox placeholder="Buscar por razón social, RUC o código…" className="min-w-[240px] flex-1 sm:max-w-md" />

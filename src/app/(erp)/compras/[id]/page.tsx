@@ -2,10 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft, Factory, Calendar, Ship, PackageCheck, Warehouse } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getSesion } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { Card, CardHeader, CardTitle, CardContent, Table, THead, TBody, Badge } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
+import { AccionesOrdenCompra } from "./acciones";
 import { money, num, fecha } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OrdenCompraPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
+  const sesion = await getSesion();
 
   const { data: o } = await supabase
     .from("ordenes_compra")
@@ -73,12 +75,41 @@ export default async function OrdenCompraPage({ params }: Props) {
             {importacion && (
               <Link
                 href={`/importaciones/${importacion.id}`}
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-700"
+                className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
               >
                 <Ship className="size-4" />
                 Expediente {importacion.numero}
               </Link>
             )}
+            <AccionesOrdenCompra
+              orden={{
+                id: o.id,
+                numero: o.numero,
+                tipo: o.tipo,
+                estado: o.estado,
+                moneda: o.moneda,
+                tipo_cambio: Number(o.tipo_cambio),
+                almacen_id: o.almacen_id,
+                proveedor: prov.razon_social,
+              }}
+              items={lineas.map((i) => ({
+                id: i.id,
+                producto_id: i.producto_id,
+                codigo: i.codigo,
+                descripcion: i.descripcion,
+                cantidad: Number(i.cantidad),
+                cantidad_recibida: Number(i.cantidad_recibida),
+                unidad: i.unidad,
+                costo_unitario: Number(i.costo_unitario),
+                costo_landed: Number(i.costo_landed),
+              }))}
+              tieneImportacion={!!importacion}
+              importacionId={importacion?.id ?? null}
+              usuarioId={sesion?.perfil?.id ?? null}
+              puedeRecibir={["admin", "gerencia", "compras", "almacen"].includes(
+                sesion?.perfil?.rol ?? ""
+              )}
+            />
           </>
         }
       />

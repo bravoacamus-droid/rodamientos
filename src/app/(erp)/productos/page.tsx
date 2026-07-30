@@ -8,6 +8,7 @@ import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
 import { Card, Table, THead, TBody, Badge, EmptyState, SkeletonTable } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
 import { MiniStat } from "@/components/ui/kpi";
+import { FormularioProducto } from "@/components/comercial/form-producto";
 import { money, num, truncar } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Maestro de productos" };
@@ -150,8 +151,8 @@ async function TablaProductos({ params }: { params: Params }) {
 export default async function ProductosPage({ searchParams }: { searchParams: Params }) {
   const supabase = await createClient();
   const [{ data: marcas }, { data: categorias }] = await Promise.all([
-    supabase.from("marcas").select("nombre").eq("activo", true).order("orden"),
-    supabase.from("categorias").select("nombre, slug").order("orden"),
+    supabase.from("marcas").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("categorias").select("id, nombre, slug").order("orden"),
   ]);
 
   return (
@@ -160,13 +161,16 @@ export default async function ProductosPage({ searchParams }: { searchParams: Pa
         titulo="Maestro de productos"
         descripcion="Catálogo multimarca con atributos técnicos, listas de precio y stock consolidado por almacén."
         acciones={
-          <Link
-            href="/equivalencias"
-            className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
-          >
-            <ArrowLeftRight className="size-4" />
-            Buscar equivalencias
-          </Link>
+          <>
+            <Link
+              href="/equivalencias"
+              className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
+            >
+              <ArrowLeftRight className="size-4" />
+              Buscar equivalencias
+            </Link>
+            <FormularioProducto marcas={marcas ?? []} categorias={categorias ?? []} />
+          </>
         }
       >
         <div className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-6">

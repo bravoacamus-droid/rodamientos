@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ShoppingCart, Ship, Truck, PackageCheck, CircleDollarSign } from "lucide-react";
+import { ShoppingCart, Ship, Truck, PackageCheck, CircleDollarSign, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
@@ -130,13 +130,22 @@ export default async function ComprasPage({ searchParams }: { searchParams: Para
         titulo="Órdenes de compra"
         descripcion="Abastecimiento local y del exterior con seguimiento de recepción. Las compras del exterior derivan al expediente de importación con cálculo de costo puesto en almacén."
         acciones={
-          <Link
-            href="/importaciones"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-700"
-          >
-            <Ship className="size-4" />
-            Ver importaciones
-          </Link>
+          <>
+            <Link
+              href="/importaciones"
+              className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
+            >
+              <Ship className="size-4" />
+              Importaciones
+            </Link>
+            <Link
+              href="/compras/nueva"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-700"
+            >
+              <Plus className="size-4" />
+              Nueva orden de compra
+            </Link>
+          </>
         }
       >
         <div className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-6">

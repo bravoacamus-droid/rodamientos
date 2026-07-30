@@ -7,6 +7,7 @@ import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { Card, CardHeader, CardTitle, CardContent, Table, THead, TBody, Badge, Progress } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
 import { SimuladorLandedCost } from "./simulador";
+import { EditorGastosImportacion } from "./editor-gastos";
 import { money, num, pct, fecha } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -90,12 +91,39 @@ export default async function ImportacionPage({ params }: Props) {
             {oc && (
               <Link
                 href={`/compras/${oc.id}`}
-                className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-700"
+                className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
               >
                 <FileText className="size-4" />
                 Orden {oc.numero}
               </Link>
             )}
+            <EditorGastosImportacion
+              importacion={{
+                id: imp.id,
+                numero: imp.numero,
+                dua: imp.dua,
+                puerto_origen: imp.puerto_origen,
+                puerto_destino: imp.puerto_destino,
+                fecha_embarque: imp.fecha_embarque,
+                fecha_llegada: imp.fecha_llegada,
+                fecha_nacionalizacion: imp.fecha_nacionalizacion,
+                tipo_cambio: Number(imp.tipo_cambio),
+                valor_fob: Number(imp.valor_fob),
+                metodo_prorrateo: imp.metodo_prorrateo,
+                flete: Number(imp.flete),
+                seguro: Number(imp.seguro),
+                ad_valorem: Number(imp.ad_valorem),
+                igv_importacion: Number(imp.igv_importacion),
+                ipm: Number(imp.ipm),
+                percepcion: Number(imp.percepcion),
+                agente_aduana: Number(imp.agente_aduana),
+                almacen_portuario: Number(imp.almacen_portuario),
+                transporte_interno: Number(imp.transporte_interno),
+                otros_gastos: Number(imp.otros_gastos),
+                estado: imp.estado,
+                observaciones: imp.observaciones,
+              }}
+            />
           </>
         }
       />

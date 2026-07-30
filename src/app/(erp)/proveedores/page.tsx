@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { Card, CardHeader, CardTitle, CardContent, Badge, EmptyState, SkeletonTable } from "@/components/ui/primitives";
 import { MiniStat } from "@/components/ui/kpi";
+import { FormularioProveedor } from "@/components/comercial/form-proveedor";
 import { money, num, fecha } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Proveedores" };
@@ -134,12 +135,22 @@ async function Listado() {
   );
 }
 
-export default function ProveedoresPage() {
+export default async function ProveedoresPage() {
+  const supabase = await createClient();
+  const { data: marcas } = await supabase
+    .from("marcas")
+    .select("nombre")
+    .eq("activo", true)
+    .order("orden");
+
   return (
     <>
       <PageHeader
         titulo="Proveedores"
         descripcion="Cartera de abastecimiento local y del exterior con marcas representadas, lead time y condiciones de pago."
+        acciones={
+          <FormularioProveedor marcas={(marcas ?? []).map((m) => m.nombre)} />
+        }
       />
       <Contenedor className="space-y-4">
         <Suspense fallback={<SkeletonTable rows={6} cols={4} />}>
