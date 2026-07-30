@@ -13,6 +13,8 @@ import {
   EmptyState, Skeleton, Progress,
 } from "@/components/ui/primitives";
 import { EstadoBadge, TIPO_MOVIMIENTO } from "@/components/ui/estados";
+import { EditorEquivalencias } from "@/components/comercial/editor-equivalencias";
+import { FormularioProducto } from "@/components/comercial/form-producto";
 import { money, num, pct, fecha, fechaHora } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -28,24 +30,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /* ------------------------------------------------------- Equivalencias */
 
-async function Equivalencias({ id }: { id: string }) {
+async function Equivalencias({
+  id,
+  sku,
+  codigo,
+}: {
+  id: string;
+  sku: string;
+  codigo: string;
+}) {
   const supabase = await createClient();
   const { data } = await supabase.rpc("equivalencias_de", { p_producto: id });
   const eq = (data ?? []) as {
     id: string; sku: string; codigo_fabricante: string; descripcion: string;
-    marca: string; marca_segmento: string; tipo: string; nota: string;
+    marca: string; marca_segmento: string; tipo: string; nota: string | null;
     stock: number; precio_mayorista: number; estado_stock: string;
   }[];
-
-  if (!eq.length) {
-    return (
-      <EmptyState
-        icon={<ArrowLeftRight />}
-        titulo="Sin equivalencias registradas"
-        descripcion="Este ítem aún no tiene referencias cruzadas con otras marcas."
-      />
-    );
-  }
 
   const disponibles = eq.filter((e) => Number(e.stock) > 0);
 
@@ -58,50 +58,14 @@ async function Equivalencias({ id }: { id: string }) {
           </p>
         </div>
       )}
-      <Table>
-        <THead>
-          <tr>
-            <th>Equivalente</th>
-            <th>Marca</th>
-            <th>Relación</th>
-            <th className="text-right">Stock</th>
-            <th className="text-right">Precio</th>
-            <th>Estado</th>
-          </tr>
-        </THead>
-        <TBody>
-          {eq
-            .sort((a, b) => Number(b.stock) - Number(a.stock))
-            .map((e) => (
-              <tr key={e.id}>
-                <td>
-                  <Link href={`/productos/${e.id}`} className="group">
-                    <span className="block text-[12.5px] font-semibold text-brand-700 group-hover:underline">
-                      {e.sku}
-                    </span>
-                    <span className="block text-[11px] text-subtle">{e.codigo_fabricante}</span>
-                  </Link>
-                </td>
-                <td>
-                  <Badge
-                    tone={e.marca_segmento === "premium" ? "brand" : e.marca_segmento === "economica" ? "neutral" : "info"}
-                    size="xs"
-                  >
-                    {e.marca}
-                  </Badge>
-                </td>
-                <td>
-                  <Badge tone={e.tipo === "exacta" ? "success" : "warning"} size="xs">
-                    {e.tipo === "exacta" ? "Intercambiable" : e.tipo === "similar" ? "Similar" : "Sustituto"}
-                  </Badge>
-                </td>
-                <td className="text-right text-[12.5px] font-medium tabular">{num(e.stock, 0)}</td>
-                <td className="text-right text-[12.5px] tabular">{money(e.precio_mayorista)}</td>
-                <td><EstadoBadge tipo="stock" valor={e.estado_stock} size="xs" /></td>
-              </tr>
-            ))}
-        </TBody>
-      </Table>
+      <div className="px-5 pb-4">
+        <EditorEquivalencias
+          productoId={id}
+          productoSku={sku}
+          codigoFabricante={codigo}
+          equivalentes={eq}
+        />
+      </div>
     </>
   );
 }
@@ -248,13 +212,16 @@ export default async function ProductoPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: p }, { data: stockAlm }] = await Promise.all([
-    supabase.from("v_stock_productos").select("*").eq("id", id).single(),
-    supabase
-      .from("stock")
-      .select("cantidad, reservado, almacenes(codigo, nombre)")
-      .eq("producto_id", id),
-  ]);
+  const [{ data: p }, { data: stockAlm }, { data: marcas }, { data: categorias }] =
+    await Promise.all([
+      supabase.from("v_stock_productos").select("*").eq("id", id).single(),
+      supabase
+        .from("stock")
+        .select("cantidad, reservado, almacenes(codigo, nombre)")
+        .eq("producto_id", id),
+      supabase.from("marcas").select("id, nombre").eq("activo", true).order("orden"),
+      supabase.from("categorias").select("id, nombre, slug").order("orden"),
+    ]);
 
   if (!p) notFound();
 
@@ -275,13 +242,41 @@ export default async function ProductoPage({ params }: Props) {
           </>
         }
         acciones={
-          <Link
-            href="/productos"
-            className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
-          >
-            <ArrowLeft className="size-4" />
-            Volver al catálogo
-          </Link>
+          <>
+            <Link
+              href="/productos"
+              className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
+            >
+              <ArrowLeft className="size-4" />
+              Volver al catálogo
+            </Link>
+            <FormularioProducto
+              modo="editar"
+              marcas={marcas ?? []}
+              categorias={categorias ?? []}
+              producto={{
+                id: p.id,
+                sku: p.sku,
+                codigo_fabricante: p.codigo_fabricante,
+                descripcion: p.descripcion,
+                marca_id: p.marca_id ?? "",
+                categoria_id: p.categoria_id ?? "",
+                unidad: p.unidad,
+                costo_promedio: Number(p.costo_promedio),
+                precio_mayorista: Number(p.precio_mayorista),
+                precio_fabrica: Number(p.precio_fabrica),
+                precio_importacion: Number(p.precio_importacion),
+                stock_minimo: Number(p.stock_minimo),
+                stock_maximo: Number(p.stock_minimo) * 5,
+                ubicacion: p.ubicacion ?? "",
+                peso_kg: 0,
+                activo: p.activo,
+                atributos: Object.entries(attrs).map(
+                  ([k, v]) => [k, String(v)] as [string, string]
+                ),
+              }}
+            />
+          </>
         }
       />
 
@@ -454,7 +449,7 @@ export default async function ProductoPage({ params }: Props) {
           </CardHeader>
           <CardContent className="px-0 pb-0">
             <Suspense fallback={<div className="px-5 pb-5"><Skeleton className="h-32 w-full" /></div>}>
-              <Equivalencias id={id} />
+              <Equivalencias id={id} sku={p.sku} codigo={p.codigo_fabricante} />
             </Suspense>
           </CardContent>
         </Card>

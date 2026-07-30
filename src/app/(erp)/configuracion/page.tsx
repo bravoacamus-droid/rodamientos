@@ -6,6 +6,10 @@ import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { Card, CardHeader, CardTitle, CardContent, Table, THead, TBody, Badge, Avatar, SkeletonTable } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
 import { Logo } from "@/components/marca/logo";
+import {
+  FormularioEmpresa, GestorSeries, GestorMarcas, GestorCategorias, GestorAlmacenes,
+} from "./formularios";
+import { NuevoUsuario, EditarUsuario } from "./usuarios";
 import { fechaHora, num } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Configuración" };
@@ -29,8 +33,8 @@ async function Contenido() {
       supabase.from("profiles").select("*").order("rol"),
       supabase.from("series_documento").select("*").order("tipo"),
       supabase.from("almacenes").select("*").order("codigo"),
-      supabase.from("marcas").select("nombre, pais, segmento, activo").order("orden"),
-      supabase.from("categorias").select("nombre, slug, descripcion").order("orden"),
+      supabase.from("marcas").select("id, nombre, pais, segmento, activo, orden").order("orden"),
+      supabase.from("categorias").select("id, nombre, slug, descripcion, orden").order("orden"),
     ]);
 
   const rolActual = sesion?.perfil?.rol ?? "ventas";
@@ -46,7 +50,10 @@ async function Contenido() {
               Información utilizada en cotizaciones, comprobantes y estados de cuenta
             </p>
           </div>
-          <Building2 className="size-4 text-subtle" />
+          <div className="flex items-center gap-2">
+            {empresa && <FormularioEmpresa empresa={empresa as never} />}
+            <Building2 className="size-4 text-subtle" />
+          </div>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-[220px_1fr]">
           <div className="flex flex-col items-start gap-3 rounded-lg border bg-[var(--surface-2)] p-4">
@@ -89,34 +96,11 @@ async function Contenido() {
                 Numeración de los comprobantes emitidos por el sistema
               </p>
             </div>
-            <Hash className="size-4 text-subtle" />
+            <div className="flex items-center gap-2">
+              <GestorSeries series={(series ?? []) as never} />
+              <Hash className="size-4 text-subtle" />
+            </div>
           </CardHeader>
-          <Table>
-            <THead>
-              <tr>
-                <th>Tipo</th>
-                <th>Serie</th>
-                <th className="text-right">Último correlativo</th>
-                <th>Estado</th>
-              </tr>
-            </THead>
-            <TBody>
-              {(series ?? []).map((s) => (
-                <tr key={s.id}>
-                  <td className="text-[12.5px] text-fg capitalize">{s.tipo.replace("_", " ")}</td>
-                  <td className="text-[12.5px] font-semibold text-brand-700 tabular">{s.serie}</td>
-                  <td className="text-right text-[12.5px] tabular">
-                    {s.serie}-{String(s.correlativo).padStart(8, "0")}
-                  </td>
-                  <td>
-                    <Badge tone={s.activo ? "success" : "neutral"} size="xs">
-                      {s.activo ? "Activa" : "Inactiva"}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </TBody>
-          </Table>
         </Card>
 
         {/* --------------------------------------------------- Almacenes */}
@@ -126,32 +110,11 @@ async function Contenido() {
               <CardTitle>Almacenes</CardTitle>
               <p className="mt-0.5 text-[11.5px] text-muted">Ubicaciones físicas del inventario</p>
             </div>
-            <Warehouse className="size-4 text-subtle" />
+            <div className="flex items-center gap-2">
+              <GestorAlmacenes almacenes={(almacenes ?? []) as never} />
+              <Warehouse className="size-4 text-subtle" />
+            </div>
           </CardHeader>
-          <Table>
-            <THead>
-              <tr>
-                <th>Código</th>
-                <th>Nombre</th>
-                <th>Responsable</th>
-                <th>Estado</th>
-              </tr>
-            </THead>
-            <TBody>
-              {(almacenes ?? []).map((a) => (
-                <tr key={a.id}>
-                  <td className="text-[12.5px] font-semibold text-fg tabular">{a.codigo}</td>
-                  <td className="text-[12.5px] text-fg">{a.nombre}</td>
-                  <td className="text-[11.5px] text-muted">{a.responsable ?? "—"}</td>
-                  <td>
-                    <Badge tone={a.activo ? "success" : "neutral"} size="xs">
-                      {a.activo ? "Operativo" : "Inactivo"}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </TBody>
-          </Table>
         </Card>
       </div>
 
@@ -165,7 +128,10 @@ async function Contenido() {
               reglas mediante políticas de seguridad a nivel de fila.
             </p>
           </div>
-          <Users className="size-4 text-subtle" />
+          <div className="flex items-center gap-2">
+            <NuevoUsuario />
+            <Users className="size-4 text-subtle" />
+          </div>
         </CardHeader>
         <Table>
           <THead>
@@ -176,6 +142,7 @@ async function Contenido() {
               <th>Permisos principales</th>
               <th>Último acceso</th>
               <th>Estado</th>
+              <th className="w-10" />
             </tr>
           </THead>
           <TBody>
@@ -215,6 +182,9 @@ async function Contenido() {
                     {u.activo ? "Activo" : "Inactivo"}
                   </Badge>
                 </td>
+                <td>
+                  <EditarUsuario usuario={u as never} />
+                </td>
               </tr>
             ))}
           </TBody>
@@ -234,30 +204,7 @@ async function Contenido() {
             <Tag className="size-4 text-subtle" />
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {["premium", "estandar", "economica"].map((seg) => {
-                const items = (marcas ?? []).filter((m) => m.segmento === seg);
-                if (!items.length) return null;
-                return (
-                  <div key={seg}>
-                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-subtle">
-                      {seg === "premium" ? "Prestigio" : seg === "estandar" ? "Estándar" : "Económica"}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {items.map((m) => (
-                        <Badge
-                          key={m.nombre}
-                          tone={seg === "premium" ? "brand" : seg === "estandar" ? "info" : "neutral"}
-                          size="sm"
-                        >
-                          {m.nombre}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <GestorMarcas marcas={(marcas ?? []) as never} />
           </CardContent>
         </Card>
 
@@ -270,13 +217,8 @@ async function Contenido() {
             </div>
             <Layers className="size-4 text-subtle" />
           </CardHeader>
-          <CardContent className="space-y-2">
-            {(categorias ?? []).map((c) => (
-              <div key={c.slug} className="rounded-lg border px-3 py-2">
-                <p className="text-[12.5px] font-medium text-fg">{c.nombre}</p>
-                <p className="mt-0.5 text-[11px] text-muted">{c.descripcion}</p>
-              </div>
-            ))}
+          <CardContent>
+            <GestorCategorias categorias={(categorias ?? []) as never} />
           </CardContent>
         </Card>
       </div>

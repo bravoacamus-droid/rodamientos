@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ClipboardList, Siren, PackageCheck, Clock, AlertTriangle } from "lucide-react";
+import { ClipboardList, Siren, PackageCheck, Clock, AlertTriangle, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
@@ -138,6 +138,29 @@ export default async function PedidosPage({ searchParams }: { searchParams: Para
       <PageHeader
         titulo="Pedidos y emergencias"
         descripcion="Órdenes de venta con seguimiento de estado y gestión de pedidos de emergencia: venta por reponer con stock negativo controlado y aprobación administrativa."
+        acciones={
+          <>
+            <Link
+              href="/pedidos/nuevo?emergencia=1"
+              className="inline-flex h-9 items-center gap-2 rounded-md border px-3.5 text-[13px] font-medium transition-colors"
+              style={{
+                borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)",
+                backgroundColor: "var(--danger-bg)",
+                color: "var(--danger)",
+              }}
+            >
+              <Siren className="size-4" />
+              Pedido de emergencia
+            </Link>
+            <Link
+              href="/pedidos/nuevo"
+              className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-brand-700"
+            >
+              <Plus className="size-4" />
+              Nuevo pedido
+            </Link>
+          </>
+        }
       >
         <div className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-6">
           <SearchBox placeholder="Buscar por número de pedido…" className="min-w-[220px] flex-1 sm:max-w-sm" />

@@ -108,12 +108,16 @@ Variables de entorno:
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | La aplicación | Local y despliegue |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | La aplicación | Local y despliegue |
-| `SUPABASE_SERVICE_ROLE_KEY` | Solo `scripts/seed-usuarios.py` | Solo local |
+| `SUPABASE_SERVICE_ROLE_KEY` | Alta de usuarios y scripts de siembra | Local; en despliegue solo si se quiere crear usuarios desde la interfaz |
 | `SUPABASE_PROJECT_REF` | Solo los scripts de migración | Solo local |
 | `SUPABASE_MGMT_TOKEN` | Solo los scripts de migración | Solo local |
 
-El *service role key* omite por completo las políticas de RLS: no debe cargarse en
-el entorno de despliegue, donde la aplicación nunca lo utiliza.
+El *service role key* omite por completo las políticas de RLS. La aplicación solo
+lo usa en el route handler `/api/usuarios`, que corre en el servidor y verifica
+que quien llama tenga rol de administración antes de tocar la Admin API. Si se
+carga en Vercel debe ser como variable de **servidor**, nunca con el prefijo
+`NEXT_PUBLIC_`. Omitirlo deshabilita únicamente el alta de usuarios desde la
+interfaz; todo lo demás sigue funcionando.
 
 ### Base de datos desde cero
 
