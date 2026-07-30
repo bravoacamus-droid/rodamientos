@@ -28,7 +28,7 @@ export default async function CotizacionPage({ params }: Props) {
     supabase
       .from("cotizaciones")
       .select(
-        "*, clientes(id, codigo, razon_social, ruc, direccion, distrito, contacto, email, telefono, whatsapp, lista_precio, linea_credito, dias_credito), profiles(nombre, email)"
+        "*, clientes(id, codigo, razon_social, ruc, direccion, distrito, contacto, email, telefono, whatsapp, lista_precio, linea_credito, dias_credito), profiles!cotizaciones_vendedor_id_fkey(nombre, email)"
       )
       .eq("id", id)
       .single(),

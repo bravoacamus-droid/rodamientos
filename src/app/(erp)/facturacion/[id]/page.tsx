@@ -26,18 +26,36 @@ export default async function ComprobantePage({ params }: Props) {
   const supabase = await createClient();
   const sesion = await getSesion();
 
-  const [{ data: c }, empresa] = await Promise.all([
+  const [{ data: c, error }, empresa] = await Promise.all([
     supabase
       .from("comprobantes")
       .select(
-        "*, clientes(id, razon_social, ruc, direccion, distrito, contacto, email, telefono, whatsapp, dias_credito, linea_credito), profiles(nombre), pedidos(id, numero), referencia:comprobantes!comprobantes_referencia_id_fkey(id, numero)"
+        "*, clientes(id, razon_social, ruc, direccion, distrito, contacto, email, telefono, whatsapp, dias_credito, linea_credito), profiles(nombre), pedidos(id, numero)"
       )
       .eq("id", id)
-      .single(),
+      .maybeSingle(),
     getEmpresa(),
   ]);
 
+  // Un fallo de consulta no es un documento inexistente: se distingue para que
+  // un error de esquema no vuelva a disfrazarse de 404.
+  if (error) {
+    throw new Error(`No se pudo leer el comprobante ${id}: ${error.message}`);
+  }
   if (!c) notFound();
+
+  /**
+   * El documento afectado por una nota de crédito se lee aparte: PostgREST
+   * resuelve los self-join por columna en sentido hijo→padre invertido, de modo
+   * que embeberlo devolvía la relación contraria a la buscada.
+   */
+  const { data: referencia } = c.referencia_id
+    ? await supabase
+        .from("comprobantes")
+        .select("id, numero")
+        .eq("id", c.referencia_id)
+        .maybeSingle()
+    : { data: null };
 
   const [{ data: items }, { data: pagos }, { data: notas }] = await Promise.all([
     supabase.from("comprobante_items").select("*, productos(id, sku)").eq("comprobante_id", id).order("orden"),
@@ -52,7 +70,6 @@ export default async function ComprobantePage({ params }: Props) {
   };
   const vendedor = c.profiles as unknown as { nombre: string } | null;
   const pedido = c.pedidos as unknown as { id: string; numero: string } | null;
-  const referencia = c.referencia as unknown as { id: string; numero: string } | null;
   const lineas = items ?? [];
   const emp = empresa as unknown as EmpresaPdf & { logo_url: string };
 

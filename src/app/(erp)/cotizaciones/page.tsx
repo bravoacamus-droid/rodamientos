@@ -55,7 +55,7 @@ async function Tabla({ params }: { params: Params }) {
   let consulta = supabase
     .from("cotizaciones")
     .select(
-      "id, numero, fecha, fecha_vencimiento, total, estado, margen_pct, lista_precio, clientes(razon_social, ruc), profiles(nombre)",
+      "id, numero, fecha, fecha_vencimiento, total, estado, margen_pct, lista_precio, clientes(razon_social, ruc), profiles!cotizaciones_vendedor_id_fkey(nombre)",
       { count: "exact" }
     );
 

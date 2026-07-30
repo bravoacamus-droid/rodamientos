@@ -132,7 +132,26 @@ python scripts/run-sql.py supabase/migrations/007_seed_compras.sql
 python scripts/run-sql.py supabase/migrations/008_seed_ventas.sql
 python scripts/run-sql.py supabase/migrations/009_seed_cobranzas.sql
 python scripts/run-sql.py supabase/migrations/010_alertas_v2.sql
+python scripts/run-sql.py supabase/migrations/011_cotizaciones_negociacion.sql
+python scripts/run-sql.py supabase/migrations/012_cotizaciones_cargos.sql
+python scripts/run-sql.py supabase/migrations/013_alertas_v3.sql
+python scripts/run-sql.py supabase/migrations/014_seed_negociacion_cargos.sql
 ```
+
+### Verificación de las consultas
+
+TypeScript no valida las relaciones embebidas de PostgREST: un `select` con una
+relación ambigua o mal referenciada compila igual y solo falla al ejecutarse,
+donde `.single()` devuelve nulo y la página responde 404. Este script recorre el
+código, reconstruye cada consulta y la ejecuta contra la base real:
+
+```bash
+python scripts/verificar-consultas.py
+```
+
+Conviene ejecutarlo después de cada migración que agregue claves foráneas: una
+segunda relación entre dos tablas vuelve ambiguo cualquier embed que antes
+funcionaba.
 
 ### Despliegue en Vercel
 
