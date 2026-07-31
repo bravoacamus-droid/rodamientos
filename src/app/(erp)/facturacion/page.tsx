@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ReceiptText, Wallet, TrendingUp, FileMinus, CircleDollarSign } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getEmpresa } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
 import { Card, Table, THead, TBody, Badge, EmptyState, SkeletonTable } from "@/components/ui/primitives";
 import { EstadoBadge, TIPO_COMPROBANTE } from "@/components/ui/estados";
 import { MiniStat } from "@/components/ui/kpi";
+import { AccionesComprobanteFila, BotonExcel } from "@/components/comercial/acciones-documento";
+import type { EmpresaPdf } from "@/lib/pdf/documentos";
 import { money, num, fecha, inicioDeMesISO } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Facturación" };
@@ -42,6 +44,7 @@ async function Resumen() {
 async function Tabla({ params }: { params: Params }) {
   const sp = await params;
   const supabase = await createClient();
+  const empresa = (await getEmpresa()) as unknown as EmpresaPdf;
 
   const page = Math.max(Number(sp.page ?? 1), 1);
   const q = (sp.q ?? "").trim();
@@ -74,8 +77,51 @@ async function Tabla({ params }: { params: Params }) {
     );
   }
 
+  const paraExcel = data.map((c) => {
+    const cli = c.clientes as unknown as { razon_social: string; ruc: string } | null;
+    return {
+      numero: c.numero,
+      tipo: c.tipo,
+      cliente: cli?.razon_social ?? "",
+      ruc: cli?.ruc ?? "",
+      fecha_emision: c.fecha_emision,
+      fecha_vencimiento: c.fecha_vencimiento,
+      condicion: c.condicion_pago === "credito" ? "Crédito" : "Contado",
+      total: Number(c.total),
+      pagado: Number(c.pagado),
+      saldo: Number(c.saldo),
+      estado: c.estado,
+    };
+  });
+
   return (
     <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
+        <p className="text-[12px] text-muted">
+          {total.toLocaleString("es-PE")} comprobante(s) · página {page}
+        </p>
+        <BotonExcel
+          empresa={empresa}
+          titulo="Comprobantes emitidos"
+          subtitulo="Facturas, boletas y notas de crédito"
+          nombreArchivo={`Rodatech-Comprobantes-${new Date().toISOString().slice(0, 10)}`}
+          filas={paraExcel}
+          columnas={[
+            { titulo: "Documento", clave: "numero", ancho: 18 },
+            { titulo: "Tipo", clave: "tipo", ancho: 14 },
+            { titulo: "Cliente", clave: "cliente", ancho: 42 },
+            { titulo: "RUC", clave: "ruc", ancho: 14 },
+            { titulo: "Emisión", clave: "fecha_emision", formato: "fecha", ancho: 12 },
+            { titulo: "Vencimiento", clave: "fecha_vencimiento", formato: "fecha", ancho: 13 },
+            { titulo: "Condición", clave: "condicion", ancho: 11 },
+            { titulo: "Total", clave: "total", formato: "moneda", ancho: 14, total: true },
+            { titulo: "Pagado", clave: "pagado", formato: "moneda", ancho: 14, total: true },
+            { titulo: "Saldo", clave: "saldo", formato: "moneda", ancho: 14, total: true },
+            { titulo: "Estado", clave: "estado", ancho: 12 },
+          ]}
+          nota="Refleja los filtros aplicados en pantalla"
+        />
+      </div>
       <Table>
         <THead>
           <tr>
@@ -88,6 +134,7 @@ async function Tabla({ params }: { params: Params }) {
             <th className="text-right">Pagado</th>
             <th className="text-right">Saldo</th>
             <th>Estado</th>
+            <th className="w-20 text-right">Documento</th>
           </tr>
         </THead>
         <TBody>
@@ -131,6 +178,13 @@ async function Tabla({ params }: { params: Params }) {
                   </span>
                 </td>
                 <td><EstadoBadge tipo="comprobante" valor={c.estado} size="xs" /></td>
+                <td>
+                  <AccionesComprobanteFila
+                    comprobanteId={c.id}
+                    numero={c.numero}
+                    empresa={empresa}
+                  />
+                </td>
               </tr>
             );
           })}

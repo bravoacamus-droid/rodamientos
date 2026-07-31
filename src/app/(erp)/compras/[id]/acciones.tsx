@@ -4,17 +4,28 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Send, CheckCircle2, XCircle, PackageCheck, Ship, Truck, AlertTriangle,
+  Send, CheckCircle2, XCircle, PackageCheck, Ship, AlertTriangle, Printer,
+  FileDown, FileSpreadsheet,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Field, Table, THead, TBody, Badge } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/client";
+import { pdfOrdenCompra, type EmpresaPdf } from "@/lib/pdf/documentos";
+import { exportarExcel } from "@/lib/excel/exportar";
 import { money, num, hoyISO } from "@/lib/utils";
 
 type Orden = {
   id: string; numero: string; tipo: "local" | "importacion"; estado: string;
   moneda: string; tipo_cambio: number; almacen_id: string | null;
   proveedor: string;
+  fecha: string; fecha_estimada: string | null; incoterm: string | null;
+  subtotal: number; igv: number; total: number; observaciones: string | null;
+  almacen: string | null; comprador: string;
+  proveedorDatos: {
+    razon_social: string; ruc: string | null; pais: string | null;
+    direccion: string | null; contacto: string | null;
+    email: string | null; telefono: string | null;
+  };
 };
 
 type ItemOrden = {
@@ -30,6 +41,7 @@ export function AccionesOrdenCompra({
   importacionId,
   usuarioId,
   puedeRecibir,
+  empresa,
 }: {
   orden: Orden;
   items: ItemOrden[];
@@ -37,9 +49,103 @@ export function AccionesOrdenCompra({
   importacionId: string | null;
   usuarioId: string | null;
   puedeRecibir: boolean;
+  empresa: EmpresaPdf;
 }) {
   const router = useRouter();
   const [proc, setProc] = React.useState<string | null>(null);
+
+  /** Representacion impresa de la orden, para enviar al proveedor. */
+  async function generarPdf(descargar: boolean) {
+    setProc(descargar ? "pdf-descargar" : "pdf-ver");
+    try {
+      await pdfOrdenCompra({
+        empresa,
+        numero: orden.numero,
+        tipo: orden.tipo,
+        fecha: orden.fecha,
+        fecha_estimada: orden.fecha_estimada,
+        moneda: orden.moneda,
+        tipo_cambio: orden.tipo_cambio,
+        incoterm: orden.incoterm,
+        estado: orden.estado,
+        proveedor: orden.proveedorDatos,
+        almacen: orden.almacen,
+        comprador: orden.comprador,
+        items: items.map((i) => ({
+          codigo: i.codigo,
+          descripcion: i.descripcion,
+          cantidad: i.cantidad,
+          unidad: i.unidad,
+          costo_unitario: i.costo_unitario,
+          subtotal: i.cantidad * i.costo_unitario,
+          costo_landed: i.costo_landed,
+        })),
+        subtotal: orden.subtotal,
+        igv: orden.igv,
+        total: orden.total,
+        observaciones: orden.observaciones,
+        descargar,
+      });
+    } catch {
+      toast.error("No se pudo generar el PDF");
+    }
+    setProc(null);
+  }
+
+  /** Detalle en Excel, util para contrastar contra otros proveedores. */
+  async function generarExcel() {
+    setProc("excel");
+    try {
+      await exportarExcel({
+        empresa,
+        titulo: `Orden de compra ${orden.numero}`,
+        subtitulo: `${orden.proveedorDatos.razon_social} - ${
+          orden.tipo === "importacion" ? "Importacion" : "Compra local"
+        }`,
+        nombreArchivo: `Rodatech-${orden.numero}`,
+        hoja: "Detalle",
+        resumen: [
+          ["Proveedor", orden.proveedorDatos.razon_social],
+          ["RUC / Tax ID", orden.proveedorDatos.ruc ?? "-"],
+          ["Emision", orden.fecha],
+          ["Llegada estimada", orden.fecha_estimada ?? "-"],
+          ["Moneda", orden.moneda],
+          ["Tipo de cambio", String(orden.tipo_cambio)],
+          ["Estado", orden.estado],
+        ],
+        columnas: [
+          { titulo: "Codigo", clave: "codigo", ancho: 20 },
+          { titulo: "Descripcion", clave: "descripcion", ancho: 52 },
+          { titulo: "Cantidad", clave: "cantidad", formato: "entero", ancho: 11, total: true },
+          { titulo: "Recibido", clave: "recibido", formato: "entero", ancho: 11, total: true },
+          { titulo: "U.M.", clave: "unidad", ancho: 8 },
+          { titulo: "Costo unitario", clave: "costo", formato: "numero", ancho: 14 },
+          { titulo: "Importe", clave: "importe", formato: "numero", ancho: 15, total: true },
+          ...(orden.tipo === "importacion"
+            ? [{ titulo: "Costo en almacen", clave: "landed", formato: "moneda" as const, ancho: 16 }]
+            : []),
+        ],
+        filas: items.map((i) => ({
+          codigo: i.codigo,
+          descripcion: i.descripcion,
+          cantidad: i.cantidad,
+          recibido: i.cantidad_recibida,
+          unidad: i.unidad,
+          costo: i.costo_unitario,
+          importe: i.cantidad * i.costo_unitario,
+          landed: i.costo_landed,
+        })),
+        nota:
+          orden.tipo === "importacion"
+            ? "Los importes estan en la moneda de origen; el costo en almacen ya incluye el prorrateo de gastos"
+            : undefined,
+      });
+      toast.success("Archivo generado");
+    } catch {
+      toast.error("No se pudo generar el archivo");
+    }
+    setProc(null);
+  }
   const [modalRecepcion, setModalRecepcion] = React.useState(false);
 
   const [guia, setGuia] = React.useState("");
@@ -268,6 +374,29 @@ export function AccionesOrdenCompra({
 
   return (
     <>
+      <Button
+        variant="outline"
+        size="md"
+        loading={proc === "pdf-ver"}
+        onClick={() => generarPdf(false)}
+      >
+        <Printer />
+        Ver PDF
+      </Button>
+      <Button
+        variant="subtle"
+        size="md"
+        loading={proc === "pdf-descargar"}
+        onClick={() => generarPdf(true)}
+      >
+        <FileDown />
+        PDF
+      </Button>
+      <Button variant="subtle" size="md" loading={proc === "excel"} onClick={generarExcel}>
+        <FileSpreadsheet />
+        Excel
+      </Button>
+
       {orden.estado === "borrador" && (
         <Button variant="primary" size="md" loading={proc === "enviada"} onClick={() => cambiarEstado("enviada")}>
           <Send />

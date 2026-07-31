@@ -25,14 +25,8 @@ export default async function NuevaOrdenCompraPage({
       .order("tipo")
       .order("razon_social"),
     supabase.from("almacenes").select("id, codigo, nombre").eq("activo", true).order("codigo"),
-    // Ítems que el motor de alertas recomienda reponer, con su rotación
-    supabase
-      .from("alertas")
-      .select("entidad_id, entidad_nombre, mensaje, valor")
-      .eq("tipo", "reposicion")
-      .eq("archivada", false)
-      .order("valor", { ascending: false })
-      .limit(40),
+    // El análisis de reposición trae la sugerencia con los números que la sustentan
+    supabase.rpc("analisis_reposicion", { p_horizonte_dias: 45, p_limite: 60 }),
   ]);
 
   return (
@@ -54,12 +48,7 @@ export default async function NuevaOrdenCompraPage({
         <ConstructorOrdenCompra
           proveedores={proveedores ?? []}
           almacenes={almacenes ?? []}
-          sugerencias={(sugerencias ?? []).map((s) => ({
-            producto_id: s.entidad_id as string,
-            sku: s.entidad_nombre as string,
-            mensaje: s.mensaje as string,
-            sugerido: Number(s.valor ?? 0),
-          }))}
+          sugerencias={(sugerencias ?? []) as never}
           compradorId={sesion?.perfil?.id ?? null}
           tipoInicial={sp.tipo === "importacion" ? "importacion" : "local"}
           proveedorInicial={sp.proveedor ?? null}

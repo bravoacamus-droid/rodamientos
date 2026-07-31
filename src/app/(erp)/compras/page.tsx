@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ShoppingCart, Ship, Truck, PackageCheck, CircleDollarSign, Plus } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getEmpresa } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
 import { Card, Table, THead, TBody, Badge, EmptyState, SkeletonTable } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
 import { MiniStat } from "@/components/ui/kpi";
+import { BotonExcel } from "@/components/comercial/acciones-documento";
+import type { EmpresaPdf } from "@/lib/pdf/documentos";
 import { money, num, fecha, inicioDeMesISO } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Órdenes de compra" };
@@ -40,6 +42,7 @@ async function Resumen() {
 async function Tabla({ params }: { params: Params }) {
   const sp = await params;
   const supabase = await createClient();
+  const empresa = (await getEmpresa()) as unknown as EmpresaPdf;
 
   const page = Math.max(Number(sp.page ?? 1), 1);
   const q = (sp.q ?? "").trim();
@@ -71,8 +74,49 @@ async function Tabla({ params }: { params: Params }) {
     );
   }
 
+  const paraExcel = data.map((o) => {
+    const prov = o.proveedores as unknown as { razon_social: string; pais: string } | null;
+    return {
+      numero: o.numero,
+      proveedor: prov?.razon_social ?? "",
+      pais: prov?.pais ?? "",
+      tipo: o.tipo === "importacion" ? "Importación" : "Local",
+      incoterm: o.incoterm ?? "",
+      fecha: o.fecha,
+      fecha_estimada: o.fecha_estimada,
+      moneda: o.moneda,
+      total: Number(o.total),
+      estado: o.estado,
+    };
+  });
+
   return (
     <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
+        <p className="text-[12px] text-muted">
+          {total.toLocaleString("es-PE")} orden(es) · página {page}
+        </p>
+        <BotonExcel
+          empresa={empresa}
+          titulo="Órdenes de compra"
+          subtitulo="Abastecimiento local y del exterior"
+          nombreArchivo={`Rodatech-OrdenesCompra-${new Date().toISOString().slice(0, 10)}`}
+          filas={paraExcel}
+          columnas={[
+            { titulo: "Número", clave: "numero", ancho: 16 },
+            { titulo: "Proveedor", clave: "proveedor", ancho: 44 },
+            { titulo: "País", clave: "pais", ancho: 12 },
+            { titulo: "Tipo", clave: "tipo", ancho: 13 },
+            { titulo: "Incoterm", clave: "incoterm", ancho: 10 },
+            { titulo: "Emisión", clave: "fecha", formato: "fecha", ancho: 12 },
+            { titulo: "Llegada estimada", clave: "fecha_estimada", formato: "fecha", ancho: 15 },
+            { titulo: "Moneda", clave: "moneda", ancho: 9 },
+            { titulo: "Total", clave: "total", formato: "moneda", ancho: 15, total: true },
+            { titulo: "Estado", clave: "estado", ancho: 14 },
+          ]}
+          nota="Los montos en dólares se exportan en su moneda de origen"
+        />
+      </div>
       <Table>
         <THead>
           <tr>

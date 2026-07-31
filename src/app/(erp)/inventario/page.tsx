@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Warehouse, PackagePlus, ScrollText, Layers, AlertTriangle, TrendingDown, Boxes } from "lucide-react";
+import { Warehouse, PackagePlus, ScrollText, Layers, AlertTriangle, TrendingDown, Boxes, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { SearchBox, FiltroSelect, Paginacion } from "@/components/ui/client";
@@ -196,6 +196,13 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
         descripcion="Existencias en tiempo real valorizadas al costo promedio ponderado, con alertas de stock mínimo por ítem."
         acciones={
           <>
+            <Link
+              href="/inventario/reposicion"
+              className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"
+            >
+              <Sparkles className="size-4 text-accent-600" />
+              Análisis de reposición
+            </Link>
             <Link
               href="/inventario/movimientos"
               className="inline-flex h-9 items-center gap-2 rounded-md border bg-[var(--surface)] px-3.5 text-[13px] font-medium text-fg transition-colors hover:border-brand-300"

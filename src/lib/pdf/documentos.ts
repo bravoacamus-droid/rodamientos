@@ -836,3 +836,181 @@ function finalizar(doc: jsPDF, nombre: string, descargar?: boolean) {
     window.open(url, "_blank");
   }
 }
+
+/* ==================================================== ORDEN DE COMPRA */
+
+export type ItemCompraPdf = {
+  codigo: string;
+  descripcion: string;
+  cantidad: number;
+  unidad: string;
+  costo_unitario: number;
+  subtotal: number;
+  peso_kg?: number;
+  costo_landed?: number;
+};
+
+export async function pdfOrdenCompra(datos: {
+  empresa: EmpresaPdf;
+  numero: string;
+  tipo: string;
+  fecha: string;
+  fecha_estimada: string | null;
+  moneda: string;
+  tipo_cambio: number;
+  incoterm: string | null;
+  estado: string;
+  proveedor: {
+    razon_social: string;
+    ruc: string | null;
+    pais: string | null;
+    direccion: string | null;
+    contacto: string | null;
+    email: string | null;
+    telefono: string | null;
+  };
+  almacen: string | null;
+  comprador: string;
+  items: ItemCompraPdf[];
+  subtotal: number;
+  igv: number;
+  total: number;
+  observaciones: string | null;
+  descargar?: boolean;
+}) {
+  const { jsPDF } = await cargarMotor();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const esImportacion = datos.tipo === "importacion";
+
+  let y = await cabecera(doc, datos.empresa, {
+    titulo: "Orden de compra",
+    numero: datos.numero,
+    sub: esImportacion ? `Importación · ${datos.incoterm ?? "FOB"}` : "Compra local",
+  });
+
+  y = bloqueDatos(
+    doc,
+    y,
+    {
+      titulo: "Proveedor",
+      filas: [
+        ["Razón social", datos.proveedor.razon_social],
+        ["RUC / Tax ID", datos.proveedor.ruc ?? "—"],
+        ["Dirección", datos.proveedor.direccion ?? "—"],
+        ["Contacto", datos.proveedor.contacto ?? "—"],
+      ],
+    },
+    {
+      titulo: "Datos de la orden",
+      filas: [
+        ["Emisión", fechaTxt(datos.fecha)],
+        [esImportacion ? "Arribo estimado" : "Entrega", fechaTxt(datos.fecha_estimada)],
+        ["Entregar en", datos.almacen ?? "—"],
+        ["Comprador", datos.comprador],
+      ],
+    }
+  );
+
+  const cabeceraTabla = ["#", "Código", "Descripción", "Cant.", "U.M.", "C. Unit.", "Importe"];
+  if (esImportacion) cabeceraTabla.push("C. Almacén");
+
+  motor!.autoTable(doc, {
+    startY: y,
+    margin: { left: MARGEN, right: MARGEN },
+    head: [cabeceraTabla],
+    body: datos.items.map((it, i) => {
+      const fila = [
+        String(i + 1),
+        it.codigo,
+        it.descripcion,
+        Number(it.cantidad).toLocaleString("es-PE"),
+        it.unidad,
+        soles(it.costo_unitario, datos.moneda),
+        soles(it.subtotal, datos.moneda),
+      ];
+      if (esImportacion) fila.push(soles(it.costo_landed ?? 0, "PEN"));
+      return fila;
+    }),
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 7,
+      cellPadding: { top: 1.8, bottom: 1.8, left: 2, right: 2 },
+      lineColor: [225, 230, 236],
+      lineWidth: 0.15,
+      textColor: NEGRO,
+    },
+    headStyles: {
+      fillColor: AZUL,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 6.8,
+      halign: "center",
+      cellPadding: { top: 2.4, bottom: 2.4, left: 2, right: 2 },
+    },
+    alternateRowStyles: { fillColor: [250, 251, 252] },
+    columnStyles: {
+      0: { cellWidth: 7, halign: "center", textColor: GRIS_TXT },
+      1: { cellWidth: 26, fontStyle: "bold", fontSize: 6.8 },
+      2: { cellWidth: "auto" },
+      3: { cellWidth: 14, halign: "right" },
+      4: { cellWidth: 12, halign: "center", textColor: GRIS_TXT },
+      5: { cellWidth: 22, halign: "right" },
+      6: { cellWidth: 24, halign: "right", fontStyle: "bold" },
+      ...(esImportacion ? { 7: { cellWidth: 24, halign: "right", textColor: GRIS_TXT } } : {}),
+    },
+  });
+
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+
+  const totales: [string, string][] = [["Subtotal", soles(datos.subtotal, datos.moneda)]];
+  if (!esImportacion) totales.push(["IGV (18%)", soles(datos.igv, datos.moneda)]);
+  totales.push(["TOTAL", soles(datos.total, datos.moneda)]);
+
+  y = bloqueTotales(doc, y, totales, undefined, {
+    titulo: "Condiciones",
+    texto: esImportacion
+      ? `Valor en origen bajo incoterm ${datos.incoterm ?? "FOB"}. El costo final por ítem se determina ` +
+        `al prorratear los gastos de nacionalización en el expediente de importación. ` +
+        `Tipo de cambio referencial: ${datos.tipo_cambio}.`
+      : "Precios en soles. La mercadería debe entregarse con guía de remisión y factura a nombre de " +
+        `${datos.empresa.razon_social}, RUC ${datos.empresa.ruc}.`,
+  });
+
+  if (datos.observaciones) {
+    doc.setFont("helvetica", "bold").setFontSize(6.6);
+    doc.setTextColor(...AZUL);
+    doc.text("OBSERVACIONES", MARGEN, y + 4);
+    doc.setFont("helvetica", "normal").setFontSize(6.8);
+    doc.setTextColor(...GRIS_TXT);
+    doc.text(datos.observaciones, MARGEN, y + 8, {
+      maxWidth: doc.internal.pageSize.getWidth() - MARGEN * 2,
+    });
+    y += 12;
+  }
+
+  // Espacio de firmas: la orden se imprime y se firma
+  const W = doc.internal.pageSize.getWidth();
+  const anchoFirma = 52;
+  const yFirma = Math.min(y + 14, doc.internal.pageSize.getHeight() - 34);
+  [
+    ["Solicitado por", datos.comprador],
+    ["Autorizado por", ""],
+    ["Recibido por el proveedor", ""],
+  ].forEach(([rol, nombre], i) => {
+    const x = MARGEN + i * ((W - MARGEN * 2) / 3);
+    doc.setDrawColor(...GRIS);
+    doc.setLineWidth(0.2);
+    doc.line(x, yFirma, x + anchoFirma, yFirma);
+    doc.setFont("helvetica", "normal").setFontSize(6.4);
+    doc.setTextColor(...GRIS_TXT);
+    doc.text(rol, x, yFirma + 3.4);
+    if (nombre) {
+      doc.setFont("helvetica", "bold").setTextColor(...NEGRO);
+      doc.text(nombre, x, yFirma - 1.6);
+    }
+  });
+
+  pie(doc, datos.empresa, "Orden de compra emitida desde Rodatech ERP.");
+  finalizar(doc, `OrdenCompra-${datos.numero}.pdf`, datos.descargar);
+}

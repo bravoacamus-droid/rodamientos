@@ -1,14 +1,18 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Trash2, Save, Send, Truck, Ship, Factory, ShoppingCart, Sparkles,
-  Plus, AlertTriangle, Package,
+  Plus, AlertTriangle, Package, BarChart3,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { BuscadorProductos, type ProductoBusqueda } from "@/components/comercial/buscador-productos";
+import {
+  ExplicacionReposicion, CRITICIDAD, type FilaReposicion,
+} from "@/components/comercial/explicacion-reposicion";
 import {
   Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Input, Select,
   Textarea, Field, Table, THead, TBody, Badge, EmptyState, Label,
@@ -22,7 +26,8 @@ type Proveedor = {
   lead_time_dias: number; marcas_provee: string[] | null;
 };
 
-type Sugerencia = { producto_id: string; sku: string; mensaje: string; sugerido: number };
+/** El análisis de reposición ya trae la justificación de cada sugerencia. */
+type Sugerencia = FilaReposicion;
 
 type Linea = {
   key: string;
@@ -129,41 +134,31 @@ export function ConstructorOrdenCompra({
     setCargandoSug(true);
     const supabase = createClient();
 
-    const ids = sugerencias.map((s) => s.producto_id).filter(Boolean);
-    let consulta = supabase
-      .from("v_stock_productos")
-      .select("id, sku, descripcion, unidad, stock_total, costo_promedio, marca")
-      .in("id", ids);
-
     // Solo lo que este proveedor representa
-    if (proveedor?.marcas_provee?.length) {
-      consulta = consulta.in("marca", proveedor.marcas_provee);
-    }
+    const candidatas = proveedor?.marcas_provee?.length
+      ? sugerencias.filter((s) => proveedor.marcas_provee!.includes(s.marca ?? ""))
+      : sugerencias;
 
-    const { data } = await consulta;
-    const { data: pesos } = await supabase
-      .from("productos")
-      .select("id, ultimo_costo, peso_kg")
-      .in("id", ids);
+    const ids = candidatas.map((s) => s.producto_id);
+    const { data: pesos } = ids.length
+      ? await supabase.from("productos").select("id, ultimo_costo, peso_kg").in("id", ids)
+      : { data: [] };
 
-    const nuevas: Linea[] = [];
-    for (const s of sugerencias) {
-      const p = (data ?? []).find((d) => d.id === s.producto_id);
-      if (!p) continue;
+    const nuevas: Linea[] = candidatas.map((s) => {
       const extra = (pesos ?? []).find((x) => x.id === s.producto_id);
-      const costoLocal = Number(extra?.ultimo_costo || p.costo_promedio);
-      nuevas.push({
+      const costoLocal = Number(extra?.ultimo_costo || s.costo_promedio);
+      return {
         key: crypto.randomUUID(),
-        producto_id: p.id,
-        codigo: p.sku,
-        descripcion: p.descripcion,
-        unidad: p.unidad,
-        stock: Number(p.stock_total),
-        cantidad: Math.max(Math.round(s.sugerido), 1),
+        producto_id: s.producto_id,
+        codigo: s.sku,
+        descripcion: s.descripcion,
+        unidad: s.unidad,
+        stock: Number(s.stock_actual),
+        cantidad: Math.max(Math.round(s.cantidad_sugerida), 1),
         costo: moneda === "USD" ? Number((costoLocal * 0.48 / tipoCambio).toFixed(4)) : costoLocal,
         peso: Number(extra?.peso_kg ?? 0),
-      });
-    }
+      };
+    });
 
     setLineas((ls) => {
       const existentes = new Set(ls.map((l) => l.producto_id));
@@ -176,7 +171,9 @@ export function ConstructorOrdenCompra({
         );
       } else {
         toast.success(`${agregadas.length} ítem(s) sugeridos agregados`, {
-          description: "Cantidades calculadas para 45 días de cobertura según rotación.",
+          description:
+            "Cantidades para 45 días de cobertura más el lead time del proveedor. " +
+            "Use el botón «Por qué» de cada sugerencia para ver el sustento.",
         });
       }
       return [...ls, ...agregadas];
@@ -601,16 +598,41 @@ export function ConstructorOrdenCompra({
               </div>
               <Package className="size-4 text-subtle" />
             </CardHeader>
-            <CardContent className="max-h-[320px] space-y-1.5 overflow-y-auto">
-              {sugerencias.slice(0, 12).map((s) => (
-                <div key={s.producto_id} className="rounded-lg bg-[var(--surface-2)] px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[12px] font-semibold text-fg">{s.sku}</span>
-                    <Badge tone="accent" size="xs">{num(s.sugerido, 0)} und</Badge>
+            <CardContent className="max-h-[380px] space-y-1.5 overflow-y-auto">
+              {sugerencias.slice(0, 15).map((s) => {
+                const crit = CRITICIDAD[s.criticidad] ?? CRITICIDAD.holgado;
+                return (
+                  <div key={s.producto_id} className="rounded-lg bg-[var(--surface-2)] px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate text-[12px] font-semibold text-fg">
+                        {s.sku}
+                      </span>
+                      <Badge tone={crit.tone} size="xs">{crit.label}</Badge>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-[10.5px] text-muted">
+                        Stock {num(s.stock_actual, 0)} · cobertura{" "}
+                        {s.cobertura_dias > 900 ? "—" : `${num(s.cobertura_dias, 0)} d`}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-semibold text-brand-700 tabular">
+                        {num(s.cantidad_sugerida, 0)} und
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-[10px] text-subtle">{money(s.inversion)}</span>
+                      <ExplicacionReposicion fila={s} />
+                    </div>
                   </div>
-                  <p className="mt-0.5 line-clamp-2 text-[10.5px] leading-snug text-muted">{s.mensaje}</p>
-                </div>
-              ))}
+                );
+              })}
+
+              <Link
+                href="/inventario/reposicion"
+                className="mt-1 flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[11.5px] font-medium text-brand-600 transition-colors hover:border-brand-300 hover:bg-brand-50"
+              >
+                <BarChart3 className="size-3.5" />
+                Ver el análisis completo con gráficos
+              </Link>
             </CardContent>
           </Card>
         )}

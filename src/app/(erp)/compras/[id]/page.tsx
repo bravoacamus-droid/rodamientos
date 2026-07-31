@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft, Factory, Calendar, Ship, PackageCheck, Warehouse } from "lucide-react";
-import { createClient, getSesion } from "@/lib/supabase/server";
+import { createClient, getSesion, getEmpresa } from "@/lib/supabase/server";
 import { PageHeader, Contenedor } from "@/components/layout/shell";
 import { Card, CardHeader, CardTitle, CardContent, Table, THead, TBody, Badge } from "@/components/ui/primitives";
 import { EstadoBadge } from "@/components/ui/estados";
 import { AccionesOrdenCompra } from "./acciones";
+import type { EmpresaPdf } from "@/lib/pdf/documentos";
 import { money, num, fecha } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function OrdenCompraPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
   const sesion = await getSesion();
+  const empresa = (await getEmpresa()) as unknown as EmpresaPdf;
 
   const { data: o } = await supabase
     .from("ordenes_compra")
@@ -91,6 +93,24 @@ export default async function OrdenCompraPage({ params }: Props) {
                 tipo_cambio: Number(o.tipo_cambio),
                 almacen_id: o.almacen_id,
                 proveedor: prov.razon_social,
+                fecha: o.fecha,
+                fecha_estimada: o.fecha_estimada,
+                incoterm: o.incoterm,
+                subtotal: Number(o.subtotal),
+                igv: Number(o.igv),
+                total: Number(o.total),
+                observaciones: o.observaciones,
+                almacen: alm?.nombre ?? null,
+                comprador: comprador?.nombre ?? "Rodatech",
+                proveedorDatos: {
+                  razon_social: prov.razon_social,
+                  ruc: prov.ruc,
+                  pais: prov.pais,
+                  direccion: null,
+                  contacto: prov.contacto,
+                  email: prov.email,
+                  telefono: prov.telefono,
+                },
               }}
               items={lineas.map((i) => ({
                 id: i.id,
@@ -109,6 +129,7 @@ export default async function OrdenCompraPage({ params }: Props) {
               puedeRecibir={["admin", "gerencia", "compras", "almacen"].includes(
                 sesion?.perfil?.rol ?? ""
               )}
+              empresa={empresa}
             />
           </>
         }
