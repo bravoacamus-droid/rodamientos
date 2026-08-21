@@ -16,7 +16,8 @@
     "SUNAT_CLAVE_SOL",
     "SUNAT_CERT_PFX_BASE64",
     "SUNAT_CERT_CLAVE",
-    "RODATECH_DEV_PASSWORD"
+    "RODATECH_DEV_PASSWORD",
+    "RODATECH_ATAJOS"
   ],
   "tasks": {
     "build": {

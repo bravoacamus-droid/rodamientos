@@ -19,10 +19,27 @@ export const CUENTAS_DEV = [
   { correo: "cobranzas@rodatech.pe", nombre: "Luis Tafur", rol: "Cobranzas" },
 ] as const;
 
-/** ¿Se pueden ofrecer los atajos? Solo fuera de producción y con clave puesta. */
+/**
+ * ¿Se pueden ofrecer los atajos?
+ *
+ * Hacen falta DOS cosas, y las dos son deliberadas:
+ *
+ *   1. Que exista `RODATECH_DEV_PASSWORD`. Sin contraseña no hay atajo que dar.
+ *   2. Que estemos fuera de producción, O que alguien haya puesto
+ *      `RODATECH_ATAJOS=1` a mano.
+ *
+ * El segundo caso existe por el despliegue de pruebas: Vercel compila con
+ * `NODE_ENV=production` aunque sea un preview, así que solo con la primera
+ * condición el panel desaparecía justo donde más falta hace — enseñándole el
+ * sistema al cliente.
+ *
+ * Se pide una variable EXPLÍCITA y no se deduce del nombre del despliegue: el
+ * día de la entrega se borra esa variable y el panel se va, sin depender de
+ * que alguien se acuerde de tocar el código. Mientras esté puesta, cualquiera
+ * con la URL entra con un clic; conviene tenerlo presente.
+ */
 export function hayAtajos(): boolean {
-  return (
-    process.env.NODE_ENV !== "production" &&
-    Boolean(process.env.RODATECH_DEV_PASSWORD)
-  );
+  if (!process.env.RODATECH_DEV_PASSWORD) return false;
+  if (process.env.RODATECH_ATAJOS === "1") return true;
+  return process.env.NODE_ENV !== "production";
 }

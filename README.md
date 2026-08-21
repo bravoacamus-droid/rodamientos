@@ -129,6 +129,23 @@ cargamos nosotros desde el `.env.local` de la raíz, y ese cargador corre
 DESPUÉS del de Next. En Vercel no hay `.env.local`: se leen del panel, y el
 cargador sale sin hacer nada si el archivo no existe.
 
+### Atajos de acceso en el despliegue de pruebas
+
+Vercel compila con `NODE_ENV=production` aunque sea un preview, así que el
+panel de acceso rápido del login desaparecía justo donde más falta hace:
+enseñándole el sistema al cliente.
+
+Se activa con una variable **explícita**:
+
+    RODATECH_ATAJOS=1
+    RODATECH_DEV_PASSWORD=...
+
+En local no hace falta: fuera de producción se activan solos. La contraseña es
+de servidor y nunca viaja al navegador — el botón solo manda qué cuenta quiere.
+
+**Se borra el día de la entrega.** Mientras esté puesta, cualquiera con la URL
+entra con un clic.
+
 ### Antes de dar una URL pública
 
 Nueve funciones de negocio (`crear_cotizacion`, `emitir_comprobante`,

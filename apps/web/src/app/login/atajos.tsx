@@ -4,7 +4,7 @@ import { CUENTAS_DEV, hayAtajos } from "./cuentas-dev";
 /**
  * Accesos rápidos por rol, solo para desarrollo.
  *
- * Es un Server Component: si `hayAtajos()` da falso —producción, o sin
+ * Es un Server Component: si `hayAtajos()` da falso —producción sin RODATECH_ATAJOS, o sin
  * RODATECH_DEV_PASSWORD— no devuelve nada y ni el marcado ni los correos
  * llegan al navegador. La contraseña no aparece por ningún lado; cada botón
  * solo envía el correo a una Server Action que la resuelve en el servidor.

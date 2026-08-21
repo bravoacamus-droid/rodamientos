@@ -66,7 +66,7 @@ export async function iniciarSesion(
  * solo envía qué cuenta quiere.
  *
  * Tres puertas independientes, y basta que falle una para que no haga nada:
- *   1. NODE_ENV distinto de production
+ *   1. hayAtajos(): fuera de producción, o RODATECH_ATAJOS=1 puesto a mano
  *   2. RODATECH_DEV_PASSWORD definida
  *   3. el correo pedido está en CUENTAS_DEV
  */
