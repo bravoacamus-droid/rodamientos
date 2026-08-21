@@ -7,7 +7,7 @@
   "globalPassThroughEnv": [
     "SUPABASE_SERVICE_ROLE_KEY",
     "SUPABASE_PROJECT_REF",
-    "SUPABASE_MGMT_TOKEN",
+    "SUPABASE_ACCESS_TOKEN",
     "SUPABASE_DB_URL",
     "DECOLECTA_TOKEN",
     "SUNAT_AMBIENTE",
@@ -15,7 +15,8 @@
     "SUNAT_USUARIO_SOL",
     "SUNAT_CLAVE_SOL",
     "SUNAT_CERT_PFX_BASE64",
-    "SUNAT_CERT_CLAVE"
+    "SUNAT_CERT_CLAVE",
+    "RODATECH_DEV_PASSWORD"
   ],
   "tasks": {
     "build": {

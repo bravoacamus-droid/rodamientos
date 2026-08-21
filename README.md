@@ -73,7 +73,7 @@ que esté configurada en `.env.local`:
 | Variable | Cómo obtenerla |
 |---|---|
 | `SUPABASE_DB_URL` *(preferida)* | Dashboard → Project Settings → Database → Connection string (URI) |
-| `SUPABASE_MGMT_TOKEN` + `SUPABASE_PROJECT_REF` | Dashboard → Account → Access Tokens |
+| `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_REF` | Dashboard → Account → Access Tokens |
 
 La primera permite transacciones reales, así que una migración que falla a
 mitad no deja el esquema a medias.
@@ -90,6 +90,57 @@ mitad no deja el esquema a medias.
 | `pnpm verificar` | typecheck + tests, lo que corre CI |
 | `pnpm db:aplicar` | aplica las migraciones |
 | `pnpm db:tipos` | regenera `packages/db/src/tipos.generados.ts` |
+
+## Despliegue
+
+Es un monorepo, así que **la raíz del proyecto en Vercel tiene que ser
+`apps/web`**, no la raíz del repositorio. Sin eso el build falla con:
+
+> Error: No Next.js version detected.
+
+y tiene sentido: en la raíz solo vive el `package.json` del workspace, que no
+depende de `next`.
+
+**Settings → Build and Deployment**
+
+| Ajuste | Valor |
+|---|---|
+| Root Directory | `apps/web` |
+| Include files outside of the Root Directory | activado *(viene por defecto)* |
+| Framework Preset | Next.js *(se detecta solo con lo anterior)* |
+| Install / Build Command | los que trae por defecto |
+
+El `packageManager` está fijado en el `package.json` de la raíz y el
+`pnpm-lock.yaml` está versionado, así que la instalación es reproducible.
+
+### Variables de entorno
+
+Sin ellas el middleware **falla cerrado** y todo redirige a `/login`. No es un
+fallo: es lo que queremos si faltan credenciales.
+
+| Variable | Para qué |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | llega al navegador |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | llega al navegador |
+| `SUPABASE_SERVICE_ROLE_KEY` | solo servidor · **nunca** con prefijo `NEXT_PUBLIC_` |
+
+Las dos primeras van declaradas en `env` de `next.config.ts` porque las
+cargamos nosotros desde el `.env.local` de la raíz, y ese cargador corre
+DESPUÉS del de Next. En Vercel no hay `.env.local`: se leen del panel, y el
+cargador sale sin hacer nada si el archivo no existe.
+
+### Antes de dar una URL pública
+
+Nueve funciones de negocio (`crear_cotizacion`, `emitir_comprobante`,
+`importar_productos`, `recepcionar_mercaderia`, `registrar_pagos`,
+`emitir_guia`, `anular_guia`, `aprobar_cotizacion`,
+`generar_guia_desde_cotizacion`) todavía **no comprueban el rol dentro del
+cuerpo**. Son `security definer`, así que se saltan RLS: cualquiera con una
+sesión válida puede llamarlas por la API directa sin pasar por la aplicación.
+
+Para un preview privado no pasa nada. Antes de exponerlo de verdad hay que
+cerrarlas, como ya hacen `registrar_ajuste_inventario` y
+`anular_comprobante`.
 
 ## Credenciales
 
