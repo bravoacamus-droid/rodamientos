@@ -1,0 +1,535 @@
+{
+  "familias": [
+    {
+      "nombre": "RODAMIENTO",
+      "codigo": "ROD",
+      "orden": 1,
+      "subfamilias": [
+        {
+          "nombre": "RIGIDO DE BOLAS",
+          "codigo": "ROD-RIGBOL",
+          "orden": 1,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+              "codigo": "ROD-RIGBOL-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO RIGIDO DE BOLAS 2 HIL.",
+              "codigo": "ROD-RIGBOL-02",
+              "orden": 2
+            }
+          ]
+        },
+        {
+          "nombre": "DE BOLAS DE INSERCION",
+          "codigo": "ROD-BOLINS",
+          "orden": 2,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE BOLAS DE INSERCION MM.",
+              "codigo": "ROD-BOLINS-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE BOLAS DE INSERCION PULG.",
+              "codigo": "ROD-BOLINS-02",
+              "orden": 2
+            }
+          ]
+        },
+        {
+          "nombre": "DE BOLAS A ROTULA",
+          "codigo": "ROD-BOLROT",
+          "orden": 3,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE BOLAS A ROTULA AGUJ. CIL.",
+              "codigo": "ROD-BOLROT-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE BOLAS A ROTULA AGUJ. CONICO",
+              "codigo": "ROD-BOLROT-02",
+              "orden": 2
+            }
+          ]
+        },
+        {
+          "nombre": "DE BOLAS DE CONTACTO ANGULAR",
+          "codigo": "ROD-BOLCON",
+          "orden": 4,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE BOLAS DE CONTACTO ANG. DE 1 HIL.",
+              "codigo": "ROD-BOLCON-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE BOLAS DE CONTACTO ANG. DE 2 HIL.",
+              "codigo": "ROD-BOLCON-02",
+              "orden": 2
+            }
+          ]
+        },
+        {
+          "nombre": "DE RODILLOS CILINDRICO",
+          "codigo": "ROD-RODCIL",
+          "orden": 5,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE RODILLOS CILINDRICOS UN",
+              "codigo": "ROD-RODCIL-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE RODILLOS CILINDRICOS NJ",
+              "codigo": "ROD-RODCIL-02",
+              "orden": 2
+            },
+            {
+              "nombre": "RODAMIENTO DE RODILLOS CILINDRICOS NUP",
+              "codigo": "ROD-RODCIL-03",
+              "orden": 3
+            }
+          ]
+        },
+        {
+          "nombre": "DE RODILLOS ESFERICOS",
+          "codigo": "ROD-RODESF",
+          "orden": 6,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE RODILLOS ESFERICOS AGUJ. CIL.",
+              "codigo": "ROD-RODESF-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE RODILLOS ESFERICOS AGUJ. CONICO",
+              "codigo": "ROD-RODESF-02",
+              "orden": 2
+            },
+            {
+              "nombre": "RODAMIENTO DE RODILLOS ESF. PARA APLIC. VIBRATORIAS",
+              "codigo": "ROD-RODESF-03",
+              "orden": 3
+            }
+          ]
+        },
+        {
+          "nombre": "DE RODILLOS CONICOS",
+          "codigo": "ROD-RODCON",
+          "orden": 7,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO DE RODILLOS CONICOS MM",
+              "codigo": "ROD-RODCON-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO DE RODILLOS CONICOS CONO/PISTA",
+              "codigo": "ROD-RODCON-02",
+              "orden": 2
+            },
+            {
+              "nombre": "CONO SOLO",
+              "codigo": "ROD-RODCON-03",
+              "orden": 3
+            },
+            {
+              "nombre": "PISTA SOLA",
+              "codigo": "ROD-RODCON-04",
+              "orden": 4
+            }
+          ]
+        },
+        {
+          "nombre": "DE AGUJAS",
+          "codigo": "ROD-AGUJAS",
+          "orden": 8,
+          "tipos": [
+            {
+              "nombre": "CORONA DE AGUJAS",
+              "codigo": "ROD-AGUJAS-01",
+              "orden": 1
+            },
+            {
+              "nombre": "CASQUILLOS DE AGUJAS",
+              "codigo": "ROD-AGUJAS-02",
+              "orden": 2
+            },
+            {
+              "nombre": "RODAMIENTO DE AGUJAS CON ARO INTERIOR",
+              "codigo": "ROD-AGUJAS-03",
+              "orden": 3
+            },
+            {
+              "nombre": "RODAMIENTO DE AGUJAS SIN ARO INTERIOR",
+              "codigo": "ROD-AGUJAS-04",
+              "orden": 4
+            },
+            {
+              "nombre": "RODAMIENTO DE AGUJAS/DE BOLAS DE CONTACTO",
+              "codigo": "ROD-AGUJAS-05",
+              "orden": 5
+            },
+            {
+              "nombre": "RODAMIENTO DE AGUJAS/AXIAL DE BOLAS",
+              "codigo": "ROD-AGUJAS-06",
+              "orden": 6
+            }
+          ]
+        },
+        {
+          "nombre": "ROLDANAS",
+          "codigo": "ROD-ROLDAN",
+          "orden": 9,
+          "tipos": [
+            {
+              "nombre": "RODILLOS DE LEVA DE 1 HIL.",
+              "codigo": "ROD-ROLDAN-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODILLOS DE LEVA DE 2 HIL.",
+              "codigo": "ROD-ROLDAN-02",
+              "orden": 2
+            },
+            {
+              "nombre": "RODILLO DE APOYO SIN ARO INTERIOR",
+              "codigo": "ROD-ROLDAN-03",
+              "orden": 3
+            },
+            {
+              "nombre": "RODILLO DE APOYO CON ARO INTERIOR",
+              "codigo": "ROD-ROLDAN-04",
+              "orden": 4
+            }
+          ]
+        },
+        {
+          "nombre": "AXIALES",
+          "codigo": "ROD-AXIALE",
+          "orden": 10,
+          "tipos": [
+            {
+              "nombre": "RODAMIENTO AXIAL DE BOLAS SIMPLE EFECTO",
+              "codigo": "ROD-AXIALE-01",
+              "orden": 1
+            },
+            {
+              "nombre": "RODAMIENTO AXIAL DE BOLAS DOBLE EFECTO",
+              "codigo": "ROD-AXIALE-02",
+              "orden": 2
+            },
+            {
+              "nombre": "RODAMIENTO AXIAL DE RODILLOS CILINDRICOS",
+              "codigo": "ROD-AXIALE-03",
+              "orden": 3
+            },
+            {
+              "nombre": "RODAMIENTO AXIAL DE RODILLOS ESFERICOS",
+              "codigo": "ROD-AXIALE-04",
+              "orden": 4
+            },
+            {
+              "nombre": "RODAMIENTO AXIAL DE AGUJAS",
+              "codigo": "ROD-AXIALE-05",
+              "orden": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "nombre": "CHUMACERA",
+      "codigo": "CHU",
+      "orden": 2,
+      "subfamilias": [
+        {
+          "nombre": "DE PIE",
+          "codigo": "CHU-PIE",
+          "orden": 1,
+          "tipos": [
+            {
+              "nombre": "CHUMACERA DE PIE DE FE. FDDO",
+              "codigo": "CHU-PIE-01",
+              "orden": 1
+            },
+            {
+              "nombre": "CHUMACERA DE PIE TODO INOX.",
+              "codigo": "CHU-PIE-02",
+              "orden": 2
+            },
+            {
+              "nombre": "CHUMACERA DE PIE TERMOPLASTICA",
+              "codigo": "CHU-PIE-03",
+              "orden": 3
+            },
+            {
+              "nombre": "CHUMACERA DE PIE SEMI-PESADA",
+              "codigo": "CHU-PIE-04",
+              "orden": 4
+            },
+            {
+              "nombre": "CHUMACERA DE PIE SERIE PESADA",
+              "codigo": "CHU-PIE-05",
+              "orden": 5
+            }
+          ]
+        },
+        {
+          "nombre": "DE PARED",
+          "codigo": "CHU-PARED",
+          "orden": 2,
+          "tipos": [
+            {
+              "nombre": "CHUMACERA DE PARED DE BASE CUADRADA",
+              "codigo": "CHU-PARED-01",
+              "orden": 1
+            },
+            {
+              "nombre": "CHUMACERA DE PARED DE 2 AGUJEROS",
+              "codigo": "CHU-PARED-02",
+              "orden": 2
+            },
+            {
+              "nombre": "CHUMACERA DE PARED DE BASE CIRCULAR",
+              "codigo": "CHU-PARED-03",
+              "orden": 3
+            },
+            {
+              "nombre": "CHUMACERA DE PARED DE BASE TRIANGULAR",
+              "codigo": "CHU-PARED-04",
+              "orden": 4
+            },
+            {
+              "nombre": "CHUMACERA DE PARED TODO INOX.",
+              "codigo": "CHU-PARED-05",
+              "orden": 5
+            },
+            {
+              "nombre": "CHUMACERA DE PARED TERMOPLASTICA",
+              "codigo": "CHU-PARED-06",
+              "orden": 6
+            },
+            {
+              "nombre": "CHUMACERA DE PARED SEMI-PESADA",
+              "codigo": "CHU-PARED-07",
+              "orden": 7
+            },
+            {
+              "nombre": "CHUMACERA DE PARED SERIE PESADA",
+              "codigo": "CHU-PARED-08",
+              "orden": 8
+            }
+          ]
+        },
+        {
+          "nombre": "TENSORA",
+          "codigo": "CHU-TENSOR",
+          "orden": 3,
+          "tipos": [
+            {
+              "nombre": "CHUMACERA TENSORA DE FE. FUNDIDO",
+              "codigo": "CHU-TENSOR-01",
+              "orden": 1
+            },
+            {
+              "nombre": "CHUMACERA TENSORA TODO INOX.",
+              "codigo": "CHU-TENSOR-02",
+              "orden": 2
+            },
+            {
+              "nombre": "CHUMACERA TENSORA TERMOPLASTICA",
+              "codigo": "CHU-TENSOR-03",
+              "orden": 3
+            },
+            {
+              "nombre": "CHUMACERA TENSORA SEMI-PESADA",
+              "codigo": "CHU-TENSOR-04",
+              "orden": 4
+            },
+            {
+              "nombre": "CHUMACERA TENSORA SERIE PESADA",
+              "codigo": "CHU-TENSOR-05",
+              "orden": 5
+            }
+          ]
+        },
+        {
+          "nombre": "PARTIDA",
+          "codigo": "CHU-PARTID",
+          "orden": 4,
+          "tipos": [
+            {
+              "nombre": "SOPORTE PARTIDO DE FE. FDDO DE 2 AGUJ.",
+              "codigo": "CHU-PARTID-01",
+              "orden": 1
+            },
+            {
+              "nombre": "SOPORTE PARTIDO DE FE. FDDO DE 4 AGUJ.",
+              "codigo": "CHU-PARTID-02",
+              "orden": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "nombre": "ACCESORIOS",
+      "codigo": "ACC",
+      "orden": 3,
+      "subfamilias": [
+        {
+          "nombre": "MANGUITO",
+          "codigo": "ACC-MANGUI",
+          "orden": 1,
+          "tipos": [
+            {
+              "nombre": "MANGUITO DE MONTAJE MM.",
+              "codigo": "ACC-MANGUI-01",
+              "orden": 1
+            },
+            {
+              "nombre": "MANGUITO DE MONTAJE PULG.",
+              "codigo": "ACC-MANGUI-02",
+              "orden": 2
+            },
+            {
+              "nombre": "MANGUITO DE DESMONTAJE",
+              "codigo": "ACC-MANGUI-03",
+              "orden": 3
+            }
+          ]
+        },
+        {
+          "nombre": "OBTURADORES",
+          "codigo": "ACC-OBTURA",
+          "orden": 2,
+          "tipos": [
+            {
+              "nombre": "OBTURADOR DE NITRILO TIPO TSNG",
+              "codigo": "ACC-OBTURA-01",
+              "orden": 1
+            },
+            {
+              "nombre": "OBTURADOR DE ACERO TIPO LER",
+              "codigo": "ACC-OBTURA-02",
+              "orden": 2
+            },
+            {
+              "nombre": "OBTURADOR DE ACERO TACONITE",
+              "codigo": "ACC-OBTURA-03",
+              "orden": 3
+            }
+          ]
+        },
+        {
+          "nombre": "ANILLOS DE FIJACION",
+          "codigo": "ACC-ANIFIJ",
+          "orden": 3,
+          "tipos": [
+            {
+              "nombre": "ANILLO DE FIJACION SR",
+              "codigo": "ACC-ANIFIJ-01",
+              "orden": 1
+            },
+            {
+              "nombre": "ANILLO DE FIJACION FRB",
+              "codigo": "ACC-ANIFIJ-02",
+              "orden": 2
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "productos": [
+    {
+      "codigo": "6205-2RS1/C3",
+      "marca": "SKF",
+      "familia": "RODAMIENTO",
+      "subfamilia": "RIGIDO DE BOLAS",
+      "tipo": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+      "stock": 35,
+      "stockMinimo": 8,
+      "precioCompra": 3.26,
+      "precioVenta": 3.92,
+      "precioMinimo": 3.86
+    },
+    {
+      "codigo": "6209-2RS1/C3",
+      "marca": "SKF",
+      "familia": "RODAMIENTO",
+      "subfamilia": "RIGIDO DE BOLAS",
+      "tipo": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+      "stock": 12,
+      "stockMinimo": 4,
+      "precioCompra": 10.7,
+      "precioVenta": 12.84,
+      "precioMinimo": 11.96
+    },
+    {
+      "codigo": "6308-2Z/C3",
+      "marca": "SKF",
+      "familia": "RODAMIENTO",
+      "subfamilia": "RIGIDO DE BOLAS",
+      "tipo": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+      "stock": 8,
+      "stockMinimo": 2,
+      "precioCompra": 12.63,
+      "precioVenta": 15.16,
+      "precioMinimo": 13.79
+    },
+    {
+      "codigo": "6208LLU/2ASU1",
+      "marca": "NTN",
+      "familia": "RODAMIENTO",
+      "subfamilia": "RIGIDO DE BOLAS",
+      "tipo": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+      "stock": 10,
+      "stockMinimo": 2,
+      "precioCompra": 6.3,
+      "precioVenta": 7.56,
+      "precioMinimo": 6.94
+    },
+    {
+      "codigo": "6310-2Z.C3",
+      "marca": "FAG",
+      "familia": "RODAMIENTO",
+      "subfamilia": "RIGIDO DE BOLAS",
+      "tipo": "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
+      "stock": 8,
+      "stockMinimo": 2,
+      "precioCompra": 11.86,
+      "precioVenta": 14.23,
+      "precioMinimo": 13.4
+    },
+    {
+      "codigo": "7210 BEP",
+      "marca": "SKF",
+      "familia": "RODAMIENTO",
+      "subfamilia": "DE BOLAS DE CONTACTO ANGULAR",
+      "tipo": "RODAMIENTO DE BOLAS DE CONTACTO ANG. DE 1 HIL.",
+      "stock": 8,
+      "stockMinimo": 2,
+      "precioCompra": 34.43,
+      "precioVenta": 41.32,
+      "precioMinimo": 38.76
+    },
+    {
+      "codigo": "7308 BEP",
+      "marca": "SKF",
+      "familia": "RODAMIENTO",
+      "subfamilia": "DE BOLAS DE CONTACTO ANGULAR",
+      "tipo": "RODAMIENTO DE BOLAS DE CONTACTO ANG. DE 1 HIL.",
+      "stock": 6,
+      "stockMinimo": 2,
+      "precioCompra": 32.89,
+      "precioVenta": 39.47,
+      "precioMinimo": 36.18
+    }
+  ]
+}

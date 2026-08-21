@@ -1,0 +1,7 @@
+@import "tailwindcss";
+@import "@rodatech/ui/tokens.css";
+
+/* El paquete declara `@source "../src"` relativo a sí mismo. Aquí hace falta
+   declarar el código de la app, o Tailwind no genera las clases de sus
+   componentes. */
+@source "../../src";

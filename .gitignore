@@ -13,3 +13,10 @@ yarn-error.log*
 next-env.d.ts
 tsconfig.tsbuildinfo
 .claude/
+.next-dev
+
+# Caché y logs de Turborepo
+.turbo/
+
+# Temporales del CLI de Supabase
+supabase/.temp/

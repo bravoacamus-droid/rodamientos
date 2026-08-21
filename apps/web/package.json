@@ -1,0 +1,42 @@
+{
+  "name": "@rodatech/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 4005",
+    "build": "next build",
+    "start": "next start -p 4005",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf .next .next-dev"
+  },
+  "dependencies": {
+    "@rodatech/config": "workspace:*",
+    "@rodatech/consultas": "workspace:*",
+    "@rodatech/db": "workspace:*",
+    "@rodatech/sunat": "workspace:*",
+    "@rodatech/ui": "workspace:*",
+    "@supabase/supabase-js": "^2.111.0",
+    "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.469.0",
+    "next": "^15.5.22",
+    "next-themes": "^0.4.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "recharts": "^2.15.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.5.22",
+    "postcss": "^8.5.1",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.3"
+  }
+}
