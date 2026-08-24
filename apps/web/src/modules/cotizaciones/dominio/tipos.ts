@@ -110,13 +110,34 @@ export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
 };
 
 /** Color semántico por estado: lo que exige acción se distingue de un vistazo. */
+/**
+ * Riel de color del estado, a la izquierda de cada fila.
+ *
+ * Es la única señal cromática del listado y sustituye a mirar la columna de
+ * Estado: en una lista de treinta cotizaciones el ojo encuentra las azules
+ * —las enviadas, las que esperan respuesta— sin leer una sola palabra.
+ *
+ * Va aparte de COLOR_ESTADO porque aquella pinta una pastilla con fondo y
+ * texto, y esto es un borde de tres píxeles. Mezclarlas obligaba a recortar
+ * clases con expresiones regulares.
+ */
+export const RIEL_ESTADO: Record<EstadoCotizacion, string> = {
+  borrador: "bg-[var(--border-strong)]",
+  enviada: "bg-[var(--info)]",
+  aprobada: "bg-[var(--ok)]",
+  rechazada: "bg-[var(--danger)]",
+  vencida: "bg-[var(--warn)]",
+  atendida: "bg-brand-600",
+  anulada: "bg-[var(--border)]",
+};
+
 export const COLOR_ESTADO: Record<EstadoCotizacion, string> = {
   borrador: "bg-[var(--surface-2)] text-[var(--fg-muted)]",
   enviada: "bg-[var(--info-bg)] text-[var(--info)]",
   aprobada: "bg-[var(--ok-bg)] text-[var(--ok)]",
   rechazada: "bg-[var(--danger-bg)] text-[var(--danger)]",
   vencida: "bg-[var(--warn-bg)] text-[var(--warn)]",
-  atendida: "bg-[var(--brand-50)] text-brand-700",
+  atendida: "bg-brand-50 text-brand-700",
   anulada: "bg-[var(--surface-2)] text-[var(--fg-muted)] line-through",
 };
 

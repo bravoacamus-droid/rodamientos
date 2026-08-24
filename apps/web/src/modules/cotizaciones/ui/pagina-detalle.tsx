@@ -87,17 +87,28 @@ export default async function PaginaDetalleCotizacion({
   );
 
   return (
-    <div className="flex flex-col gap-4 p-6 print:p-0">
-      <header className="flex flex-wrap items-start justify-between gap-4 print:hidden">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold">{cabecera.numero}</h1>
+    /*
+      La pantalla es andamio alrededor de un papel.
+
+      Todo lo de fuera —cabecera, acciones, margen— lleva `print:hidden`, así
+      que al imprimir queda solo la hoja. Por eso el documento se pinta como
+      una hoja de verdad, con sombra y sobre el fondo de la aplicación: lo que
+      se ve en pantalla es exactamente lo que va a salir, sin una «vista
+      previa» aparte que se pueda desincronizar del documento real.
+    */
+    <div className="flex flex-col gap-4 print:gap-0">
+      <header className="flex flex-wrap items-start justify-between gap-3 print:hidden">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-mono text-lg font-semibold tracking-tight sm:text-xl">
+              {cabecera.numero}
+            </h1>
             <EstadoBadge
               estado={cabecera.estado}
               etiqueta={ETIQUETA_ESTADO[cabecera.estado]}
             />
           </div>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+          <p className="mt-0.5 truncate text-sm text-[var(--fg-muted)]">
             {cabecera.cliente.razon_social}
           </p>
         </div>
@@ -109,9 +120,15 @@ export default async function PaginaDetalleCotizacion({
         />
       </header>
 
-      {/* Margen y costo: información interna, nunca en el papel del cliente. */}
+      {/*
+        El margen es información INTERNA.
+
+        Borde discontinuo a propósito: es la señal de que ese bloque no forma
+        parte del documento. Quien mira la pantalla al lado de un cliente tiene
+        que ver de un golpe qué se imprime y qué no.
+      */}
       {cabecera.costo_total > 0 ? (
-        <section className="flex flex-wrap gap-6 rounded-md border border-[var(--borde)] bg-[var(--surface-2)] px-4 py-3 text-sm print:hidden">
+        <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-3 text-sm print:hidden">
           <Interno etiqueta="Costo" valor={`$ ${cabecera.costo_total.toFixed(2)}`} />
           <Interno
             etiqueta="Margen"
@@ -128,13 +145,14 @@ export default async function PaginaDetalleCotizacion({
             etiqueta="Utilidad"
             valor={`$ ${(cabecera.subtotal - cabecera.costo_total).toFixed(2)}`}
           />
-          <span className="ml-auto self-center text-xs text-[var(--fg-muted)]">
-            Esto no sale impreso.
+          <span className="text-xs text-[var(--fg-subtle)] sm:ml-auto">
+            Nada de esta franja se imprime.
           </span>
         </section>
       ) : null}
 
-      <div className="rounded-md border border-[var(--borde)] print:border-0">
+      {/* La hoja. La sombra solo existe en pantalla. */}
+      <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">
         <Documento c={impresa} />
       </div>
     </div>

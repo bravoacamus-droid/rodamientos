@@ -296,7 +296,7 @@ function PanelSustitutos({
   }
 
   return (
-    <div className="rounded-md border border-[var(--borde)] bg-[var(--surface-2)] p-2">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2">
       <p className="mb-1.5 text-xs font-medium text-[var(--fg-muted)]">
         Alternativas
       </p>
@@ -359,7 +359,7 @@ function PanelHistorial({
   }
 
   return (
-    <div className="rounded-md border border-[var(--borde)] bg-[var(--surface-2)] p-2">
+    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2">
       <p className="mb-1.5 text-xs font-medium text-[var(--fg-muted)]">
         Ventas anteriores
       </p>

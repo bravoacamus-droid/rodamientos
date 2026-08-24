@@ -34,6 +34,9 @@ export interface ClienteOpcion {
   numero_documento: string | null;
   contacto: string | null;
   condicion_pago: string;
+  /** Al elegir cliente se muestra su condición; «A crédito» sin decir a
+   *  cuántos días no le sirve a nadie. */
+  dias_credito: number;
   bloqueado: boolean;
 }
 
@@ -92,10 +95,24 @@ export function Constructor({
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* ------------------------------------------------- Cabecera */}
-          <section className="rounded-md border border-[var(--borde)] bg-[var(--surface)] p-4">
-            <div className="grid gap-3 md:grid-cols-2">
+          {/*
+            Lo esencial arriba, el resto plegado.
+
+            Antes eran seis campos en rejilla antes de dejarte trabajar. Pero
+            para empezar a cotizar solo hace falta saber PARA QUIÉN: la validez
+            tiene un valor por defecto sensato, la entrega también, y la orden
+            de compra la mitad de las veces no existe todavía.
+
+            Es la misma lección que dejó el cliente sobre la ficha de cliente:
+            «a las justas me dan correo». Pedir todo por adelantado no hace que
+            los datos aparezcan, solo que la pantalla estorbe.
+          */}
+          <section className="card p-4">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Cliente</span>
+                <span className="text-sm font-medium">
+                  Cliente <span className="text-[var(--danger)]">*</span>
+                </span>
                 <SelectNativo
                   value={estado.clienteId ?? ""}
                   onChange={(e) =>
@@ -117,25 +134,20 @@ export function Constructor({
                 </SelectNativo>
                 {cliente ? (
                   <span className="text-xs text-[var(--fg-muted)]">
-                    {cliente.condicion_pago === "credito" ? "A crédito" : "Al contado"}
+                    {cliente.condicion_pago === "credito"
+                      ? `A crédito · ${cliente.dias_credito} días`
+                      : "Al contado"}
                     {cliente.contacto ? ` · ${cliente.contacto}` : ""}
                   </span>
-                ) : null}
+                ) : (
+                  <span className="text-xs text-[var(--fg-subtle)]">
+                    Es lo único que hace falta para empezar.
+                  </span>
+                )}
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Contacto</span>
-                <Input
-                  value={estado.contacto}
-                  onChange={(e) =>
-                    despachar({ tipo: "cabecera", campo: "contacto", valor: e.target.value })
-                  }
-                  placeholder={cliente?.contacto ?? "A quién va dirigida"}
-                />
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Validez</span>
+                <span className="text-sm font-medium">Válida por</span>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -149,66 +161,88 @@ export function Constructor({
                         valor: Number(e.target.value),
                       })
                     }
-                    className="w-24 tabular"
+                    className="w-20 tabular"
                   />
                   <span className="text-sm text-[var(--fg-muted)]">días</span>
                 </div>
               </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Tiempo de entrega</span>
-                <SelectNativo
-                  value={estado.tiempoEntrega}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "tiempoEntrega",
-                      valor: e.target.value,
-                    })
-                  }
-                >
-                  {ENTREGAS.map((x) => (
-                    <option key={x} value={x}>
-                      {x}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Orden de compra del cliente</span>
-                <Input
-                  value={estado.ordenCompraCliente}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "ordenCompraCliente",
-                      valor: e.target.value,
-                    })
-                  }
-                  placeholder="Opcional"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Condiciones</span>
-                <Input
-                  value={estado.condiciones}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "condiciones",
-                      valor: e.target.value,
-                    })
-                  }
-                  placeholder="Forma de pago, garantía…"
-                />
-              </label>
             </div>
+
+            <details className="group mt-3 border-t border-[var(--border-soft)] pt-3">
+              <summary className="cursor-pointer list-none text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]">
+                <span className="inline-block transition-transform group-open:rotate-90">
+                  ›
+                </span>{" "}
+                Más datos del documento
+              </summary>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Contacto</span>
+                  <Input
+                    value={estado.contacto}
+                    onChange={(e) =>
+                      despachar({ tipo: "cabecera", campo: "contacto", valor: e.target.value })
+                    }
+                    placeholder={cliente?.contacto ?? "A quién va dirigida"}
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Tiempo de entrega</span>
+                  <SelectNativo
+                    value={estado.tiempoEntrega}
+                    onChange={(e) =>
+                      despachar({
+                        tipo: "cabecera",
+                        campo: "tiempoEntrega",
+                        valor: e.target.value,
+                      })
+                    }
+                  >
+                    {ENTREGAS.map((x) => (
+                      <option key={x} value={x}>
+                        {x}
+                      </option>
+                    ))}
+                  </SelectNativo>
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Orden de compra del cliente</span>
+                  <Input
+                    value={estado.ordenCompraCliente}
+                    onChange={(e) =>
+                      despachar({
+                        tipo: "cabecera",
+                        campo: "ordenCompraCliente",
+                        valor: e.target.value,
+                      })
+                    }
+                    placeholder="Si ya la tienen"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Condiciones</span>
+                  <Input
+                    value={estado.condiciones}
+                    onChange={(e) =>
+                      despachar({
+                        tipo: "cabecera",
+                        campo: "condiciones",
+                        valor: e.target.value,
+                      })
+                    }
+                    placeholder="Forma de pago, garantía…"
+                  />
+                </label>
+              </div>
+            </details>
           </section>
 
           {/* --------------------------------------------------- Líneas */}
-          <section className="rounded-md border border-[var(--borde)] bg-[var(--surface)] p-4">
+          <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
             <div className="mb-3">
               <BuscadorLineas
                 onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
@@ -257,7 +291,7 @@ export function Constructor({
             )}
           </section>
 
-          <section className="rounded-md border border-[var(--borde)] bg-[var(--surface)] p-4">
+          <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
             <label className="flex flex-col gap-1">
               <span className="text-sm font-medium">Observaciones</span>
               <Textarea

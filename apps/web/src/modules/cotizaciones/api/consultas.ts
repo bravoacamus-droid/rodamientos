@@ -154,6 +154,7 @@ export async function clientesParaCotizar(): Promise<
       numero_documento: string | null;
       contacto: string | null;
       condicion_pago: string;
+      dias_credito: number;
       bloqueado: boolean;
     }[]
   >
@@ -162,7 +163,9 @@ export async function clientesParaCotizar(): Promise<
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("clientes")
-      .select("id, codigo, razon_social, numero_documento, contacto, condicion_pago, bloqueado")
+      .select(
+        "id, codigo, razon_social, numero_documento, contacto, condicion_pago, dias_credito, bloqueado",
+      )
       .eq("activo", true)
       .order("razon_social");
 

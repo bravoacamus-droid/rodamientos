@@ -33,7 +33,7 @@ export default async function PaginaImportacion() {
         </div>
       ) : (
         <>
-          <section className="rounded-md border border-[var(--borde)] bg-[var(--surface-2)] p-4 text-sm">
+          <section className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
             <p className="font-medium">Antes de subir</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--fg-muted)]">
               <li>

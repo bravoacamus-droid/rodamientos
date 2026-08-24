@@ -2,6 +2,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
 import { MenuUsuario } from "@/componentes/menu-usuario";
+import { SelectorTema } from "@/componentes/selector-tema";
 import { menuPara } from "@/lib/navegacion";
 
 export default async function LayoutErp({
@@ -25,7 +26,8 @@ export default async function LayoutErp({
               forma de llegar a ningún módulo desde un teléfono. */}
           <MenuMovil grupos={grupos} />
           <Logo className="h-7 w-auto md:hidden" priority={false} />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <SelectorTema />
             <MenuUsuario
               nombre={perfil?.nombre ?? "Sesión"}
               rol={perfil?.rol ?? null}

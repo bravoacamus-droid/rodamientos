@@ -11,6 +11,7 @@
 import { TTL } from "./cache";
 import { ejecutarConsulta, type ContextoConsultas, type OpcionesConsulta } from "./proveedor";
 import type { Resultado } from "./tipos";
+import { dniValido } from "./validacion";
 
 export type Persona = {
   numeroDocumento: string;
@@ -21,9 +22,7 @@ export type Persona = {
 };
 
 /** Valida un DNI peruano: exactamente 8 dígitos. */
-export function dniValido(valor: string): boolean {
-  return /^\d{8}$/.test(valor);
-}
+export { dniValido } from "./validacion";
 
 function normalizar(cruda: Record<string, unknown>): Persona {
   const nombres = String(cruda.first_name ?? "");

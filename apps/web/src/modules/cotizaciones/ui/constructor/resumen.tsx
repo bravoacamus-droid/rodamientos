@@ -30,7 +30,7 @@ export function ResumenConstructor({
 }) {
   return (
     <aside className="flex w-full flex-col gap-4 lg:w-80">
-      <section className="rounded-md border border-[var(--borde)] bg-[var(--surface)] p-4">
+      <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Totales</h2>
 
         <dl className="flex flex-col gap-1.5 text-sm">
@@ -43,7 +43,7 @@ export function ResumenConstructor({
             />
           ) : null}
           <Fila etiqueta="IGV (18%)" valor={dolar(totales.igv)} />
-          <div className="my-1 border-t border-[var(--borde)]" />
+          <div className="my-1 border-t border-[var(--border)]" />
           <Fila etiqueta="Total" valor={dolar(totales.total)} destacado />
         </dl>
 
@@ -76,7 +76,7 @@ export function ResumenConstructor({
         ) : null}
       </section>
 
-      <section className="rounded-md border border-[var(--borde)] bg-[var(--surface)] p-4">
+      <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold">El documento</h2>
 
         <label className="flex items-start justify-between gap-3">
@@ -93,7 +93,7 @@ export function ResumenConstructor({
           />
         </label>
 
-        <p className="mt-3 border-t border-[var(--borde)] pt-3 text-xs text-[var(--fg-muted)]">
+        <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs text-[var(--fg-muted)]">
           El PDF lleva <strong>valor unitario</strong>, nunca el precio con IGV:
           es la columna que hacía que el cliente comparara mal contra la
           competencia. La moneda es siempre el dólar.

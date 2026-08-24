@@ -111,7 +111,7 @@ export function BuscadorLineas({
       ) : null}
 
       {abierto && (resultados.length > 0 || error) ? (
-        <div className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-md border border-[var(--borde)] bg-[var(--surface)] shadow-lg">
+        <div className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-lg">
           {error && resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>
           ) : null}
@@ -122,7 +122,7 @@ export function BuscadorLineas({
               type="button"
               onClick={() => elegir(p)}
               onMouseEnter={() => setResaltado(i)}
-              className={`flex w-full items-center gap-3 border-b border-[var(--borde)] p-2.5 text-left last:border-0 ${
+              className={`flex w-full items-center gap-3 border-b border-[var(--border)] p-2.5 text-left last:border-0 ${
                 i === resaltado ? "bg-[var(--surface-2)]" : ""
               }`}
             >

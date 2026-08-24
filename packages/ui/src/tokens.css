@@ -43,16 +43,18 @@
   --color-brand-900: #0a2b41;
   --color-brand-950: #061c2c;
 
-  --color-accent-50: #fefce8;
-  --color-accent-100: #fdf8c4;
-  --color-accent-200: #fcf08d;
-  --color-accent-300: #f9e34c;
-  --color-accent-400: #f2e307;
-  --color-accent-500: #dcc706;
-  --color-accent-600: #bd9f04;
-  --color-accent-700: #977407;
-  --color-accent-800: #7d5c0e;
-  --color-accent-900: #6a4b12;
+  /* Dorado del logo, no el limón de antes (#f2e307): el amarillo de RODATECH
+     tira a ámbar, y sobre el azul marino de la marca el limón vibraba. */
+  --color-accent-50: #fff9e8;
+  --color-accent-100: #ffefc0;
+  --color-accent-200: #ffdf85;
+  --color-accent-300: #ffcd47;
+  --color-accent-400: #fdbe16;
+  --color-accent-500: #e8a608;
+  --color-accent-600: #c08205;
+  --color-accent-700: #986307;
+  --color-accent-800: #7b4e0e;
+  --color-accent-900: #684112;
 
   --color-steel-50: #f7f7f8;
   --color-steel-100: #efeff1;

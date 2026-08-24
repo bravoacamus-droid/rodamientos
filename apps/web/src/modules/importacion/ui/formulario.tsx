@@ -67,7 +67,7 @@ export function FormularioImportacion() {
             accept=".xlsx"
             required
             onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
-            className="rounded-sm border border-[var(--borde)] bg-[var(--surface)] p-2 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white"
+            className="rounded-sm border border-[var(--border)] bg-[var(--surface)] p-2 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white"
           />
           <span className="text-xs text-[var(--fg-muted)]">
             Solo .xlsx, hasta 5 MB. No se guarda nada hasta que confirmes.

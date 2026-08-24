@@ -9,6 +9,7 @@
 import { TTL } from "./cache";
 import { ejecutarConsulta, type ContextoConsultas, type OpcionesConsulta } from "./proveedor";
 import type { Resultado } from "./tipos";
+import { rucValido } from "./validacion";
 
 export type Ruc = {
   numeroDocumento: string;
@@ -24,26 +25,10 @@ export type Ruc = {
   esBuenContribuyente: boolean;
 };
 
-const PREFIJOS_VALIDOS = ["10", "15", "17", "20"];
-const PESOS_MODULO_11 = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
-
-/**
- * Valida un RUC peruano: 11 dígitos, prefijo de tipo de contribuyente válido
- * (10 = persona natural, 15 = otro, 17 = otro, 20 = persona jurídica) y
- * dígito verificador módulo 11.
- */
-export function rucValido(valor: string): boolean {
-  if (!/^\d{11}$/.test(valor)) return false;
-  if (!PREFIJOS_VALIDOS.includes(valor.slice(0, 2))) return false;
-
-  let suma = 0;
-  for (let i = 0; i < PESOS_MODULO_11.length; i++) {
-    suma += (PESOS_MODULO_11[i] ?? 0) * Number(valor[i] ?? "0");
-  }
-  const resto = 11 - (suma % 11);
-  const digitoVerificador = resto === 10 ? 0 : resto === 11 ? 1 : resto;
-  return digitoVerificador === Number(valor[10]);
-}
+// La cuenta vive en ./validacion, que NO IMPORTA NADA. Así un componente de
+// navegador puede validar un RUC sin arrastrar el cliente HTTP, la caché ni
+// node:crypto: importar desde aquí reventaba el build del navegador.
+export { rucValido } from "./validacion";
 
 /** Decolecta devuelve "-" en los campos de dirección que no aplican; se limpia a null. */
 function limpiar(valor: unknown): string | null {

@@ -35,10 +35,21 @@ export default function RootLayout({
   return (
     <html lang="es-PE" suppressHydrationWarning className={inter.variable}>
       <body className="min-h-dvh bg-[var(--bg)] font-sans text-[var(--fg)] antialiased">
+        {/*
+          Arranca en CLARO y no sigue al sistema.
+
+          Con `defaultTheme="system"` el ERP heredaba el tema de Windows: quien
+          tuviera el suyo en oscuro abría la aplicación en azul sobre azul, con
+          un logo pensado para fondo claro encima, y parecía una decisión de
+          diseño en vez de un reflejo de su configuración.
+
+          El oscuro sigue estando —los tokens están completos— pero ahora es
+          una elección, con su interruptor en la cabecera.
+        */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}
