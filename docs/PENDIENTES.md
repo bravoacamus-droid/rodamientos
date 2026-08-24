@@ -4,38 +4,38 @@ Estado al 24/08/2026. Ordenado por lo que más duele.
 
 ---
 
-## 1 · BLOQUEANTE — ningún desplegable de Radix se abre
+## 1 · FALSA ALARMA — los desplegables SÍ funcionan
 
-**Síntoma.** No abre ninguno: los tres puntos del catálogo, el diálogo de
-actualizar stock, el de dar de baja, el de cliente nuevo desde la cotización.
-Ni con ratón ni con teclado. **Sin un solo error en consola.**
+Estuvo anotado aquí como el bug que bloqueaba todo. **No lo era.** Se comprobó
+en el navegador el 24/08: los menús de tres puntos abren, los diálogos abren,
+el fondo es blanco sólido y la sombra es la correcta.
 
-Esto es lo que hace que la aplicación se sienta rota: hay funciones construidas
-encima de un componente que no llega a montarse.
+Lo que fallaba era la comprobación, no la aplicación:
 
-**Qué ya está descartado** (comprobado, no supuesto):
+- **Los disparadores de menú de Radix escuchan `pointerdown`, no `click`.** Sus
+  props enganchadas son exactamente `onPointerDown` y `onKeyDown`. Los clics
+  sintéticos de la automatización no emiten eventos de puntero, así que nunca
+  lo activaban — y como no hay error, parecía que el componente estaba roto.
+- **El menú «translúcido» era la animación a medias.** `rt-pop-in` dura 0.15 s
+  y la captura la pilló en vuelo. Medido con el menú abierto: `opacity: 1`,
+  `backgroundColor: rgb(255,255,255)`.
 
-| Hipótesis | Cómo se descartó |
-|---|---|
-| Versiones de Radix viejas | `dialog@1.1.23`, `dropdown-menu@2.1.24` — compatibles con React 19 |
-| Dos copias de React | `apps/web` y `packages/ui` resuelven la MISMA (`react@19.0.0`) |
-| Fallo de hidratación general | El buscador de productos responde en la misma página |
-| Mi componente `ClienteRapido` | El menú de productos, que es anterior, falla igual |
-| Excepción de JavaScript | Consola limpia al pulsar |
+**Para probar un componente de Radix desde automatización**, hay que despachar
+la secuencia de puntero de verdad:
 
-**Pistas sin explotar:**
+```js
+const o = { bubbles: true, cancelable: true, composed: true,
+            pointerId: 1, pointerType: 'mouse', button: 0, isPrimary: true };
+boton.dispatchEvent(new PointerEvent('pointerdown', o));
+boton.dispatchEvent(new PointerEvent('pointerup', o));
+boton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+```
 
-- `find` del navegador reportó **cuatro** copias de cada botón de acciones
-  cuando el HTML del servidor trae **dos** (tabla de escritorio + lista de
-  móvil). Puede ser un artefacto de la herramienta o un árbol duplicado de
-  verdad. **Empezar por aquí**: contar en el DOM real
-  `document.querySelectorAll('[aria-label^="Acciones de"]').length`.
-- `optimizePackageImports: ["@rodatech/ui"]` en `next.config.ts` reescribe los
-  imports del barril. Intenté quitarlo pero **la edición nunca se aplicó**, así
-  que la prueba quedó inconclusa. Repetirla de verdad.
-- Comprobar si el portal llega al DOM:
-  `document.querySelectorAll('[data-radix-popper-content-wrapper]')`.
-- Probar un Radix suelto en una página en blanco, sin el layout del ERP.
+Y esperar más de 150 ms antes de capturar, o se fotografía la animación.
+
+De paso quedó descartado que hubiera un árbol duplicado: el DOM tiene 14
+botones de acciones para 7 productos, que son los 2 esperados por fila (tabla
+de escritorio + tarjeta de móvil). La herramienta los listaba dos veces.
 
 ---
 
