@@ -1,5 +1,5 @@
 import { entrarComoDev } from "./acciones";
-import { CUENTAS_DEV, hayAtajos } from "./cuentas-dev";
+import { ATAJOS_VISIBLES, hayAtajos } from "./cuentas-dev";
 
 /**
  * Accesos rápidos por rol, solo para desarrollo.
@@ -23,8 +23,8 @@ export function AtajosDev({ destino }: { destino: string }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {CUENTAS_DEV.map((cuenta) => (
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {ATAJOS_VISIBLES.map((cuenta) => (
           <form key={cuenta.correo} action={entrarComoDev}>
             <input type="hidden" name="correo" value={cuenta.correo} />
             <input type="hidden" name="destino" value={destino} />
