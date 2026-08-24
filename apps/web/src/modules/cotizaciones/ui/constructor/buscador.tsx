@@ -111,9 +111,15 @@ export function BuscadorLineas({
       ) : null}
 
       {abierto && (resultados.length > 0 || error) ? (
-        <div className="absolute z-20 mt-1 max-h-80 w-full overflow-y-auto rounded-md border border-[var(--border)] bg-[var(--surface)] shadow-lg">
+        <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {error && resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>
+          ) : null}
+
+          {resultados.length > 0 ? (
+            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-[0.7rem] text-[var(--fg-muted)]">
+              {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
+            </p>
           ) : null}
 
           {resultados.map((p, i) => (
@@ -122,11 +128,18 @@ export function BuscadorLineas({
               type="button"
               onClick={() => elegir(p)}
               onMouseEnter={() => setResaltado(i)}
-              className={`flex w-full items-center gap-3 border-b border-[var(--border)] p-2.5 text-left last:border-0 ${
-                i === resaltado ? "bg-[var(--surface-2)]" : ""
+              // 48 px de alto y el resaltado ocupando la fila entera. Antes
+              // era una línea delgada donde había que acertar con el ratón:
+              // fallar el clic parecía que la búsqueda no funcionaba.
+              className={`flex min-h-12 w-full items-center gap-3 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
+                i === resaltado
+                  ? "bg-brand-50 dark:bg-brand-950"
+                  : "hover:bg-[var(--surface-2)]"
               }`}
             >
-              <span className="w-40 shrink-0 font-medium">{p.codigo}</span>
+              <span className="w-40 shrink-0 font-mono text-[0.8rem] font-semibold">
+                {p.codigo}
+              </span>
               <span className="w-14 shrink-0 text-xs text-[var(--fg-muted)]">
                 {p.marca}
               </span>

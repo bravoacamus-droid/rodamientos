@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useReducer } from "react";
+import { useActionState, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
 
@@ -14,6 +14,7 @@ import {
   totalesDe,
 } from "../../dominio/constructor";
 import { BuscadorLineas } from "./buscador";
+import { ClienteRapido } from "./cliente-rapido";
 import { FilaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 
@@ -41,7 +42,7 @@ export interface ClienteOpcion {
 }
 
 export function Constructor({
-  clientes,
+  clientes: clientesIniciales,
   clienteInicial = null,
 }: {
   clientes: ClienteOpcion[];
@@ -49,6 +50,9 @@ export function Constructor({
 }) {
   const router = useRouter();
   const [estado, despachar] = useReducer(reducir, estadoInicial(clienteInicial));
+  // La lista llega del servidor, pero un cliente creado aquí mismo tiene que
+  // aparecer sin recargar: recargar significaría perder la cotización a medias.
+  const [clientes, setClientes] = useState(clientesIniciales);
   const [resultado, guardar, guardando] = useActionState<ResultadoCreacion | null, FormData>(
     async (previo, formData) => {
       const r = await crearCotizacion(previo, formData);
@@ -109,11 +113,32 @@ export function Constructor({
           */}
           <section className="card p-4">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Cliente <span className="text-[var(--danger)]">*</span>
-                </span>
+              {/*
+                Ojo con la estructura: el botón de alta rápida va FUERA del
+                `<label>`, no dentro.
+
+                Un `<label>` reenvía cualquier clic a su control asociado, así
+                que con el botón dentro el clic terminaba en el desplegable y
+                el diálogo no llegaba a abrirse nunca. El campo queda enlazado
+                por `htmlFor`, que hace lo mismo sin envolver.
+              */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <label htmlFor="cot-cliente" className="text-sm font-medium">
+                    Cliente <span className="text-[var(--danger)]">*</span>
+                  </label>
+                  {/* Willy, 34:12: dar de alta pegando el RUC desde la propia
+                      cotización. Mandarlo a otra pantalla significaba perder
+                      lo que llevaba escrito. */}
+                  <ClienteRapido
+                    onCreado={(c) => {
+                      setClientes((previos) => [c, ...previos]);
+                      despachar({ tipo: "cabecera", campo: "clienteId", valor: c.id });
+                    }}
+                  />
+                </div>
                 <SelectNativo
+                  id="cot-cliente"
                   value={estado.clienteId ?? ""}
                   onChange={(e) =>
                     despachar({
@@ -144,7 +169,7 @@ export function Constructor({
                     Es lo único que hace falta para empezar.
                   </span>
                 )}
-              </label>
+              </div>
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Válida por</span>

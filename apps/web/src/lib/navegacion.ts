@@ -1,8 +1,24 @@
 import type { Rol } from "@rodatech/config";
 
+/**
+ * Los iconos del menú. Uno por ítem, ninguno decorativo.
+ *
+ * Es el NOMBRE, no el componente: este archivo lo importa el layout del
+ * servidor, y guardar aquí un icono obligaría a marcar el módulo como cliente
+ * y arrastraría los diecinueve trazos a cada página. El nombre se resuelve en
+ * la barra lateral, que ya es cliente.
+ */
+export type NombreIcono =
+  | "tablero" | "cotizacion" | "guia" | "factura" | "cobranza"
+  | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
+  | "inventario" | "kardex" | "recepcion" | "ajuste"
+  | "compra" | "importacion"
+  | "reporte" | "alerta" | "configuracion";
+
 export interface ItemNav {
   etiqueta: string;
   ruta: string;
+  icono: NombreIcono;
   /** Roles que ven el ítem. Vacío = todos los autenticados. */
   roles?: readonly Rol[];
 }
@@ -25,51 +41,51 @@ export const NAVEGACION: readonly GrupoNav[] = [
   {
     titulo: "Operación",
     items: [
-      { etiqueta: "Tablero", ruta: "/dashboard" },
-      { etiqueta: "Cotizaciones", ruta: "/cotizaciones" },
-      { etiqueta: "Guías de remisión", ruta: "/guias" },
-      { etiqueta: "Facturación", ruta: "/facturacion" },
-      { etiqueta: "Cobranzas", ruta: "/cobranzas", roles: ["gerencia", "admin", "cobranzas"] },
+      { etiqueta: "Tablero", ruta: "/dashboard", icono: "tablero" },
+      { etiqueta: "Cotizaciones", ruta: "/cotizaciones", icono: "cotizacion" },
+      { etiqueta: "Guías de remisión", ruta: "/guias", icono: "guia" },
+      { etiqueta: "Facturación", ruta: "/facturacion", icono: "factura" },
+      { etiqueta: "Cobranzas", ruta: "/cobranzas", icono: "cobranza", roles: ["gerencia", "admin", "cobranzas"] },
     ],
   },
   {
     titulo: "Catálogo",
     items: [
-      { etiqueta: "Productos", ruta: "/productos" },
+      { etiqueta: "Productos", ruta: "/productos", icono: "producto" },
       // Quien mantiene el maestro es Compras; gerencia y admin pueden todo.
       {
         etiqueta: "Cargar productos",
-        ruta: "/productos/cargar",
+        ruta: "/productos/cargar", icono: "cargar",
         roles: ["gerencia", "admin", "compras"],
       },
-      { etiqueta: "Equivalencias", ruta: "/equivalencias" },
-      { etiqueta: "Clientes", ruta: "/clientes" },
-      { etiqueta: "Proveedores", ruta: "/proveedores", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Equivalencias", ruta: "/equivalencias", icono: "equivalencia" },
+      { etiqueta: "Clientes", ruta: "/clientes", icono: "cliente" },
+      { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", roles: ["gerencia", "admin", "compras"] },
     ],
   },
   {
     titulo: "Almacén",
     items: [
-      { etiqueta: "Inventario", ruta: "/inventario" },
-      { etiqueta: "Kardex", ruta: "/inventario/kardex" },
-      { etiqueta: "Recepciones", ruta: "/recepciones", roles: ["gerencia", "admin", "almacen", "compras"] },
+      { etiqueta: "Inventario", ruta: "/inventario", icono: "inventario" },
+      { etiqueta: "Kardex", ruta: "/inventario/kardex", icono: "kardex" },
+      { etiqueta: "Recepciones", ruta: "/recepciones", icono: "recepcion", roles: ["gerencia", "admin", "almacen", "compras"] },
       // El cuadre lo pidió Willy como "un botón que se usa con cuidado" (26:49).
-      { etiqueta: "Ajuste de inventario", ruta: "/inventario/ajuste", roles: ["gerencia"] },
+      { etiqueta: "Ajuste de inventario", ruta: "/inventario/ajuste", icono: "ajuste", roles: ["gerencia"] },
     ],
   },
   {
     titulo: "Abastecimiento",
     items: [
-      { etiqueta: "Compras", ruta: "/compras", roles: ["gerencia", "admin", "compras"] },
-      { etiqueta: "Importaciones", ruta: "/importaciones", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
     ],
   },
   {
     titulo: "Gestión",
     items: [
-      { etiqueta: "Reportes", ruta: "/reportes", roles: ["gerencia", "admin"] },
-      { etiqueta: "Alertas", ruta: "/alertas" },
-      { etiqueta: "Configuración", ruta: "/configuracion", roles: ["gerencia", "admin"] },
+      { etiqueta: "Reportes", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
+      { etiqueta: "Alertas", ruta: "/alertas", icono: "alerta" },
+      { etiqueta: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["gerencia", "admin"] },
     ],
   },
 ];
