@@ -42,6 +42,20 @@ declare
   v_resultado     jsonb;
   v_usuario       uuid := auth.uid();
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y cargar el maestro de productos
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('productos') then
+    raise exception 'Tu rol no puede cargar el maestro de productos'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   if p_filas is null or jsonb_typeof(p_filas) <> 'array' then
     raise exception 'importar_productos espera un array jsonb'
       using errcode = 'invalid_parameter_value';

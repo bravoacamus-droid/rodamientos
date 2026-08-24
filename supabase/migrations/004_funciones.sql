@@ -312,6 +312,20 @@ declare
   v_base      numeric(14,2) := 0;
   v_factor    numeric(12,6) := 1;
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y recepcionar mercadería
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('recepciones') then
+    raise exception 'Tu rol no puede recepcionar mercadería'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   if jsonb_array_length(v_items) = 0 then
     raise exception 'La recepción no tiene ítems' using errcode = 'invalid_parameter_value';
   end if;
@@ -824,6 +838,20 @@ declare
   v_corr   integer := public.siguiente_correlativo('cotizacion', v_serie);
   v_items  jsonb := coalesce(p_datos -> 'items', '[]'::jsonb);
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y emitir una cotización
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('cotizaciones') then
+    raise exception 'Tu rol no puede emitir una cotización'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   insert into cotizaciones (
     serie, correlativo, cliente_id, fecha, validez_dias, orden_compra_cliente,
     mostrar_descuento, vendedor_id, contacto, condiciones, observaciones, tiempo_entrega, estado
@@ -883,6 +911,20 @@ language plpgsql security definer set search_path = public, extensions
 as $$
 declare v_estado estado_cotizacion;
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y aprobar una cotización
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('cotizaciones') then
+    raise exception 'Tu rol no puede aprobar una cotización'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   select estado into v_estado from cotizaciones where id = p_id for update;
   if v_estado is null then
     raise exception 'Cotización % no existe', p_id using errcode = 'no_data_found';
@@ -922,6 +964,20 @@ declare
   v_items  jsonb := coalesce(p_datos -> 'items', '[]'::jsonb);
   v_peso   numeric(12,3);
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y generar una guía
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('guias_remision') then
+    raise exception 'Tu rol no puede generar una guía'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   select c.cliente_id, c.estado, c.orden_compra_cliente
     into v_cliente, v_estado, v_oc
     from cotizaciones c where c.id = v_cot;
@@ -1017,6 +1073,20 @@ declare
   v_numero text;
   v_movs   jsonb;
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y emitir una guía
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('guias_remision') then
+    raise exception 'Tu rol no puede emitir una guía'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   select estado, numero into v_estado, v_numero from guias_remision where id = p_id for update;
   if v_estado is null then
     raise exception 'Guía % no existe', p_id using errcode = 'no_data_found';
@@ -1046,6 +1116,20 @@ returns jsonb
 language plpgsql security definer set search_path = public, extensions
 as $$
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y anular una guía
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.es_gerencia() then
+    raise exception 'Tu rol no puede anular una guía'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   if length(btrim(coalesce(p_motivo,''))) < 5 then
     raise exception 'La anulación requiere un motivo' using errcode = 'check_violation';
   end if;
@@ -1112,6 +1196,20 @@ declare
   v_detr_min numeric(14,2);
   v_movs    jsonb;
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y emitir un comprobante
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('comprobantes') then
+    raise exception 'Tu rol no puede emitir un comprobante'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   if jsonb_array_length(v_items) = 0 then
     raise exception 'El comprobante no tiene ítems' using errcode = 'invalid_parameter_value';
   end if;
@@ -1361,6 +1459,20 @@ language plpgsql security definer set search_path = public, extensions
 as $$
 declare v_n int;
 begin
+  -- Control de rol.
+  --
+  -- Es `security definer`, así que se ejecuta con los privilegios del dueño
+  -- y SE SALTA las políticas de RLS. Sin esta comprobación, cualquier
+  -- usuario con sesión podía llamarla por PostgREST y registrar pagos
+  -- sin pasar por la aplicación.
+  --
+  -- Va lo PRIMERO: validar a media función deja un correlativo quemado o
+  -- stock movido.
+  if not public.puede_escribir('pagos') then
+    raise exception 'Tu rol no puede registrar pagos'
+      using errcode = 'insufficient_privilege';
+  end if;
+
   insert into pagos (comprobante_id, cuota_id, fecha, monto, medio, referencia, observaciones, registrado_por)
   select (i ->> 'comprobante_id')::uuid,
          nullif(i ->> 'cuota_id','')::uuid,
