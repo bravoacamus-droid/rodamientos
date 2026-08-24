@@ -24,6 +24,12 @@ La v1 (la demo que se le mostró al cliente) sigue completa y ejecutable en
 El plan completo —auditoría de la v1, requisitos de la reunión con el cliente
 y el orden de trabajo— está en **[`docs/PLAN-V2.md`](docs/PLAN-V2.md)**.
 
+## Qué falta
+
+Lo pendiente vive en **[docs/PENDIENTES.md](docs/PENDIENTES.md)**, ordenado por
+lo que más duele. Lo primero de esa lista bloquea al resto: ningún desplegable
+de Radix llega a abrirse, y hay funciones construidas encima de ese componente.
+
 ## Estructura
 
 ```
