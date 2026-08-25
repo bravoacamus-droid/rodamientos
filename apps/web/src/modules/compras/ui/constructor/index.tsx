@@ -220,7 +220,7 @@ export function ConstructorCompra({
                   onChange={(e) =>
                     despachar({ tipo: "afectoIgv", valor: e.target.checked })
                   }
-                  className="size-4 accent-[var(--brand-600)]"
+                  className="size-4 accent-brand-600"
                 />
                 <span className="text-sm">La factura lleva IGV</span>
               </label>

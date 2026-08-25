@@ -892,6 +892,86 @@ export type Database = {
           },
         ]
       }
+      config_sunat: {
+        Row: {
+          actualizado_en: string
+          actualizado_por: string | null
+          ambiente: string
+          certificado_caduca_en: string | null
+          certificado_nombre: string | null
+          certificado_sujeto: string | null
+          id: number
+          probado_en: string | null
+          probado_mensaje: string | null
+          probado_ok: boolean | null
+          serie_boleta: string
+          serie_factura: string
+          usuario_sol: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          ambiente?: string
+          certificado_caduca_en?: string | null
+          certificado_nombre?: string | null
+          certificado_sujeto?: string | null
+          id?: number
+          probado_en?: string | null
+          probado_mensaje?: string | null
+          probado_ok?: boolean | null
+          serie_boleta?: string
+          serie_factura?: string
+          usuario_sol?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          actualizado_por?: string | null
+          ambiente?: string
+          certificado_caduca_en?: string | null
+          certificado_nombre?: string | null
+          certificado_sujeto?: string | null
+          id?: number
+          probado_en?: string | null
+          probado_mensaje?: string | null
+          probado_ok?: boolean | null
+          serie_boleta?: string
+          serie_factura?: string
+          usuario_sol?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "config_sunat_actualizado_por_fkey"
+            columns: ["actualizado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      config_sunat_secretos: {
+        Row: {
+          actualizado_en: string
+          certificado_clave_cifrada: string | null
+          certificado_pfx_cifrado: string | null
+          clave_sol_cifrada: string | null
+          id: number
+        }
+        Insert: {
+          actualizado_en?: string
+          certificado_clave_cifrada?: string | null
+          certificado_pfx_cifrado?: string | null
+          clave_sol_cifrada?: string | null
+          id?: number
+        }
+        Update: {
+          actualizado_en?: string
+          certificado_clave_cifrada?: string | null
+          certificado_pfx_cifrado?: string | null
+          clave_sol_cifrada?: string | null
+          id?: number
+        }
+        Relationships: []
+      }
       consultas_cache: {
         Row: {
           clave: string

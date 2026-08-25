@@ -8,6 +8,7 @@
  */
 
 export { BotonReintentar } from "./boton-reintentar";
+export { CifraAnimada } from "./cifra-animada";
 export { BuscadorProductos, type BuscadorProductosProps, type ProductoBuscado } from "./buscador-productos";
 export { EstadoBadge, etiquetaEstado, type EstadoBadgeProps, type EstadoDocumento } from "./estado-badge";
 export { EstadoError } from "./estado-error";
