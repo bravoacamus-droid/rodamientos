@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { fallo } from "@/lib/errores";
+
 import type {
   CompraPendiente,
   FiltrosRecepciones,
@@ -14,10 +16,6 @@ export const POR_PAGINA = 30;
 export type Resultado<T> =
   | { ok: true; datos: T }
   | { ok: false; error: string };
-
-function fallo(e: unknown): { ok: false; error: string } {
-  return { ok: false, error: e instanceof Error ? e.message : String(e) };
-}
 
 /** Lo que PostgREST devuelve al anidar un producto con su marca. */
 interface ProductoAnidado {

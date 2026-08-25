@@ -214,6 +214,42 @@ comparar una por una.
 
 # Resueltos
 
+## R0 · La ficha de producto no abría — y el ERP entero ocultaba sus errores
+
+Reportado como *«no abre nada»* al pulsar un producto. Eran dos cosas, y la
+segunda es la que importa para todo lo demás.
+
+**El fallo:** `productoConDetalle()` pedía `familias!inner(nombre)` colgando de
+`productos`, y PostgREST respondía `PGRST200`. `productos` guarda `familia_id`,
+pero **no tiene ninguna clave ajena a `familias`**: sus claves son compuestas
+—`(familia_id, subfamilia_id) → subfamilias` y `(subfamilia_id, tipo_id) →
+tipos`— precisamente para que un producto no pueda apuntar a una sub-familia
+de otra familia. PostgREST solo anida lo que una clave ajena declara. La
+familia se pide ahora anidada dentro de la sub-familia, que sí tiene su FK.
+
+**Lo que lo hizo invisible:** los siete módulos formateaban sus errores con
+
+```ts
+e instanceof Error ? e.message : String(e)
+```
+
+y el error de PostgREST **no es un `Error`**, es un objeto plano
+`{ message, details, hint, code }`. `String()` sobre él da `[object Object]`,
+que es literalmente lo que salía en pantalla. El mensaje que nombraba la tabla
+culpable —y que además sugería la correcta— se tiraba a la basura en cada
+fallo de consulta de toda la aplicación.
+
+Ahora hay un único `mensajeDeError()` en `apps/web/src/lib/errores.ts`, usado
+por los siete módulos, que conserva `details` y `hint` y pone el código entre
+paréntesis al final. Con su prueba, que fija el `PGRST200` real como caso.
+
+**La lección:** un formateador de errores perezoso no es deuda cosmética. Este
+convirtió un fallo de una línea en algo que desde la pantalla parecía que la
+navegación estaba rota, y mandó a buscar el problema al sitio equivocado.
+
+De paso, comprobado que las 14 rutas principales y las fichas de producto y
+cliente —vista y edición— cargan sin error.
+
 ## R1 · FALSA ALARMA — los desplegables SÍ funcionan
 
 Estuvo anotado como el bug que bloqueaba todo. **No lo era.** Se comprobó en el

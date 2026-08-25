@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { fallo } from "@/lib/errores";
+
 import type {
   FiltrosProductos,
   Opcion,
@@ -22,11 +24,6 @@ export const POR_PAGINA = 50;
 export type Resultado<T> =
   | { ok: true; datos: T }
   | { ok: false; error: string };
-
-function fallo(e: unknown): { ok: false; error: string } {
-  const mensaje = e instanceof Error ? e.message : String(e);
-  return { ok: false, error: mensaje };
-}
 
 /**
  * Una página del catálogo, por keyset.
@@ -320,8 +317,7 @@ export async function productoConDetalle(id: string): Promise<
          ultimo_costo, peso_kg, ubicacion, archivado, motivo_archivado,
          designacion_base,
          marcas!inner(nombre),
-         familias!inner(nombre),
-         subfamilias!inner(nombre),
+         subfamilias!inner(nombre, familias!inner(nombre)),
          tipos(nombre),
          stock(cantidad)`,
       )
@@ -387,8 +383,17 @@ export async function productoConDetalle(id: string): Promise<
       motivo_archivado: string | null;
       designacion_base: string | null;
       marcas: { nombre: string };
-      familias: { nombre: string };
-      subfamilias: { nombre: string };
+      /**
+       * La familia llega ANIDADA dentro de la sub-familia, y no suelta.
+       *
+       * `productos` guarda `familia_id`, pero no tiene ninguna clave ajena a
+       * `familias`: sus claves son compuestas —`(familia_id, subfamilia_id)` a
+       * `subfamilias` y `(subfamilia_id, tipo_id)` a `tipos`— justamente para
+       * que un producto no pueda apuntar a una sub-familia de otra familia.
+       * PostgREST solo sabe anidar lo que una clave ajena declara, así que
+       * pedir `familias!inner(...)` desde `productos` devuelve `PGRST200`.
+       */
+      subfamilias: { nombre: string; familias: { nombre: string } };
       tipos: { nombre: string } | null;
       stock: { cantidad: number } | null;
     };
@@ -401,7 +406,7 @@ export async function productoConDetalle(id: string): Promise<
         codigo_fabricante: f.codigo_fabricante,
         descripcion: f.descripcion,
         marca: f.marcas.nombre,
-        familia: f.familias.nombre,
+        familia: f.subfamilias.familias.nombre,
         subfamilia: f.subfamilias.nombre,
         tipo: f.tipos?.nombre ?? null,
         unidad: f.unidad_codigo,

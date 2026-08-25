@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { fallo } from "@/lib/errores";
+
 import type {
   ClienteDetalle,
   ClienteLista,
@@ -22,10 +24,6 @@ const COLUMNAS_LISTA = `id, codigo, tipo_documento, numero_documento, razon_soci
 
 /** Separador del cursor. Un carácter de control: no aparece en una razón social. */
 const SEPARADOR_CURSOR = "\u001f";
-
-function fallo(e: unknown): { ok: false; error: string } {
-  return { ok: false, error: e instanceof Error ? e.message : String(e) };
-}
 
 /**
  * Espejo en JS de `public.normalizar_texto`: minúsculas y sin tildes.

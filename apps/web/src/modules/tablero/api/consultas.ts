@@ -2,13 +2,11 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { fallo } from "@/lib/errores";
+
 export type Resultado<T> =
   | { ok: true; datos: T }
   | { ok: false; error: string };
-
-function fallo(e: unknown): { ok: false; error: string } {
-  return { ok: false, error: e instanceof Error ? e.message : String(e) };
-}
 
 export interface MesVentas {
   mes: string;
