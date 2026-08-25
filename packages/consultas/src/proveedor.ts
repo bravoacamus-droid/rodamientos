@@ -31,7 +31,7 @@ export type ContextoConsultas = {
   backoffBaseMs?: number;
 };
 
-export type DefinicionConsulta<T> = {
+export type DefinicionConsulta = {
   /** Namespace de caché: 'ruc' | 'dni' | 'tipo_cambio'. */
   espacio: string;
   /** Clave normalizada dentro del espacio (documento, o fecha/mes normalizados). */
@@ -58,7 +58,7 @@ const MAX_INTENTOS = 3;
 
 export async function ejecutarConsulta<T>(
   contexto: ContextoConsultas,
-  def: DefinicionConsulta<T>,
+  def: DefinicionConsulta,
   opciones: OpcionesConsulta = {},
 ): Promise<Resultado<T>> {
   const prioridad = opciones.prioridad ?? "normal";
@@ -92,7 +92,7 @@ export async function ejecutarConsulta<T>(
 
 async function resolverSinCache<T>(
   contexto: ContextoConsultas,
-  def: DefinicionConsulta<T>,
+  def: DefinicionConsulta,
   prioridad: Prioridad,
   ahora: () => Date,
   paramHash: string,
@@ -203,7 +203,7 @@ async function resolverSinCache<T>(
  */
 async function degradarPorCuota<T>(
   contexto: ContextoConsultas,
-  def: DefinicionConsulta<T>,
+  def: DefinicionConsulta,
   cuota: EstadoCuota,
 ): Promise<Resultado<T>> {
   const rancio = await leerCache<T>(contexto.cliente, def.espacio, def.clave);

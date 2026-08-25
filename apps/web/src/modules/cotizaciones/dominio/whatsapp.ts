@@ -20,7 +20,7 @@ export function normalizarTelefono(crudo: string | null | undefined): string | n
   if (!crudo) return null;
 
   // El 00 inicial es el prefijo internacional a la vieja usanza.
-  let d = crudo.replace(/\D/g, "").replace(/^00/, "");
+  const d = crudo.replace(/\D/g, "").replace(/^00/, "");
   if (d === "") return null;
 
   // Ya viene con código de país.

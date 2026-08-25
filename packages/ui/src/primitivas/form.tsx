@@ -52,14 +52,14 @@ export function FormField<TCampos extends FieldValues, TNombre extends FieldPath
   );
 }
 
-function usarCampoForm() {
+function useCampoForm() {
   const campo = React.useContext(CampoContext);
   const item = React.useContext(ItemContext);
   const { getFieldState } = useFormContext();
   const formState = useFormState();
 
-  if (!campo) throw new Error("usarCampoForm debe usarse dentro de un <FormField>.");
-  if (!item) throw new Error("usarCampoForm debe usarse dentro de un <FormItem>.");
+  if (!campo) throw new Error("useCampoForm debe usarse dentro de un <FormField>.");
+  if (!item) throw new Error("useCampoForm debe usarse dentro de un <FormItem>.");
 
   const estado = getFieldState(campo.name, formState);
   const { id } = item;
@@ -88,13 +88,13 @@ export function FormLabel({
   className,
   ...props
 }: React.ComponentPropsWithRef<"label"> & { requerido?: boolean }) {
-  const { error, idItem } = usarCampoForm();
+  const { error, idItem } = useCampoForm();
   return <Label htmlFor={idItem} className={cn(error && "text-danger", className)} {...props} />;
 }
 
 /** Pasa id + ARIA al control real. Úsalo con `asChild`: `<FormControl><Input …/></FormControl>`. */
 export function FormControl(props: React.ComponentPropsWithRef<typeof Slot>) {
-  const { error, idItem, idDescripcion, idMensaje } = usarCampoForm();
+  const { error, idItem, idDescripcion, idMensaje } = useCampoForm();
   return (
     <Slot
       id={idItem}
@@ -106,7 +106,7 @@ export function FormControl(props: React.ComponentPropsWithRef<typeof Slot>) {
 }
 
 export function FormDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {
-  const { idDescripcion } = usarCampoForm();
+  const { idDescripcion } = useCampoForm();
   return <p id={idDescripcion} className={cn("mt-1 text-[11px] text-subtle", className)} {...props} />;
 }
 
@@ -116,7 +116,7 @@ export function FormDescription({ className, ...props }: React.ComponentPropsWit
  * del fallo sin volver a recorrer el formulario.
  */
 export function FormMessage({ className, children, ...props }: React.ComponentPropsWithRef<"p">) {
-  const { error, idMensaje } = usarCampoForm();
+  const { error, idMensaje } = useCampoForm();
   const cuerpo = error ? String(error.message ?? "") : children;
   if (!cuerpo) return null;
   return (

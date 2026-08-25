@@ -159,7 +159,7 @@ export function CommandDialog({
  * Registra el atajo ⌘K / Ctrl+K.
  * Se expone como hook para que la app decida dónde montar la paleta.
  */
-export function usarAtajoPaleta(alAbrir: () => void): void {
+export function useAtajoPaleta(alAbrir: () => void): void {
   React.useEffect(() => {
     const alPulsar = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {

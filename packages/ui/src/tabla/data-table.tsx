@@ -37,7 +37,7 @@ import { EstadoError } from "../dominio/estado-error";
 import { EstadoVacio } from "../dominio/estado-vacio";
 import { BarraLote } from "./barra-lote";
 import type { EstadoTabla } from "./tipos";
-import { usarParamsTabla } from "./usar-params-tabla";
+import { useParamsTabla } from "./use-params-tabla";
 
 export interface DataTableProps<TDato> {
   /** Definiciones de columna. Usa las fábricas de `columnas.tsx`. */
@@ -98,7 +98,7 @@ export function DataTable<TDato>({
   filasEsqueleto = 8,
   className,
 }: DataTableProps<TDato>) {
-  const { orden, alternarOrden, pendiente } = usarParamsTabla();
+  const { orden, alternarOrden, pendiente } = useParamsTabla();
   const [seleccion, setSeleccion] = React.useState<RowSelectionState>({});
 
   // La selección es de la PÁGINA ACTUAL. Al cambiar de página o de filtro se

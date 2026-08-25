@@ -19,6 +19,16 @@ export * from "./dominio/guia";
 export * from "./impresion/qr";
 export { montoEnLetras } from "./ubl/numero-a-letras";
 
+/**
+ * El XML de la guía se genera, pero el conector NO lo envía.
+ *
+ * La guía de remisión electrónica no viaja por el mismo canal que la factura:
+ * SUNAT la recibe por una API REST con OAuth2, no por el SOAP de aquí. Hasta
+ * que exista ese cliente (ver `docs/PENDIENTES.md` §3), la función se exporta
+ * para poder generar y revisar el XML, y el conector no la usa.
+ */
+export { generarGuiaXml } from "./ubl/guia";
+
 import type {
   Comprobante,
   ComprobanteFirmado,
@@ -27,7 +37,6 @@ import type {
 } from "./dominio/index";
 import { generarFacturaXml } from "./ubl/factura";
 import { generarNotaXml } from "./ubl/nota";
-import { generarGuiaXml } from "./ubl/guia";
 import {
   generarResumenXml,
   idResumen,

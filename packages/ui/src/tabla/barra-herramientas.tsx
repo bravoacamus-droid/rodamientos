@@ -16,7 +16,7 @@ import { cn } from "../lib/utils";
 import { Button } from "../primitivas/button";
 import { SelectNativo } from "../primitivas/input";
 import { PARAMS } from "./tipos";
-import { usarParamsTabla } from "./usar-params-tabla";
+import { useParamsTabla } from "./use-params-tabla";
 
 /** Contenedor de la barra: se pega arriba de la tabla, dentro de la tarjeta. */
 export function BarraHerramientas({ className, children, ...props }: React.ComponentPropsWithRef<"div">) {
@@ -24,7 +24,9 @@ export function BarraHerramientas({ className, children, ...props }: React.Compo
     <div
       className={cn("no-print flex flex-wrap items-center gap-2 border-b px-3 py-2.5", className)}
       {...props}
-    />
+    >
+      {children}
+    </div>
   );
 }
 
@@ -48,7 +50,7 @@ export function BuscadorTabla({
   autoFocus?: boolean;
   className?: string;
 }) {
-  const { obtener, fijar, pendiente } = usarParamsTabla();
+  const { obtener, fijar, pendiente } = useParamsTabla();
   const valorUrl = obtener(param) ?? "";
   const [valor, setValor] = React.useState(valorUrl);
 
@@ -113,7 +115,7 @@ export function FiltroSelect({
   placeholder: string;
   className?: string;
 }) {
-  const { obtener, fijar } = usarParamsTabla();
+  const { obtener, fijar } = useParamsTabla();
   const actual = obtener(param) ?? "";
 
   return (
@@ -139,7 +141,7 @@ export function FiltroSelect({
 
 /** Botón "limpiar filtros" con el contador de filtros activos. */
 export function BotonLimpiarFiltros({ className }: { className?: string }) {
-  const { filtrosActivos, limpiarFiltros } = usarParamsTabla();
+  const { filtrosActivos, limpiarFiltros } = useParamsTabla();
   if (filtrosActivos === 0) return null;
   return (
     <Button variant="ghost" size="sm" onClick={limpiarFiltros} className={className}>

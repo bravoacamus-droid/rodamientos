@@ -24,7 +24,7 @@ export {
   CommandLoading,
   CommandSeparator,
   CommandShortcut,
-  usarAtajoPaleta,
+  useAtajoPaleta,
 } from "./command";
 export { DatePicker, type DatePickerProps } from "./date-picker";
 export {

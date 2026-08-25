@@ -24,7 +24,7 @@ import { cn } from "../lib/utils";
 import { Button } from "../primitivas/button";
 import { SelectNativo } from "../primitivas/input";
 import { PARAMS } from "../tabla/tipos";
-import { usarParamsTabla } from "../tabla/usar-params-tabla";
+import { useParamsTabla } from "../tabla/use-params-tabla";
 
 const TAMANOS = [25, 50, 100, 200] as const;
 
@@ -51,7 +51,7 @@ export function PaginacionKeyset({
   tamanoAjustable = true,
   className,
 }: PaginacionKeysetProps) {
-  const { irACursor, fijar, pendiente } = usarParamsTabla();
+  const { irACursor, fijar, pendiente } = useParamsTabla();
 
   const hayAnterior = Boolean(cursorAnterior);
   const haySiguiente = Boolean(cursorSiguiente);

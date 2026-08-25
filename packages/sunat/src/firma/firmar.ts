@@ -21,8 +21,6 @@ const RSA_SHA1 = "http://www.w3.org/2000/09/xmldsig#rsa-sha1";
 const SHA1 = "http://www.w3.org/2000/09/xmldsig#sha1";
 const C14N = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
 const ENVELOPED = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
-const EXT_NS =
-  "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
 
 export interface OpcionesFirma {
   /** Certificado .pfx/.p12 en binario. */

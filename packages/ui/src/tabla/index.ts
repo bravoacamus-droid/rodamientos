@@ -27,7 +27,7 @@ export {
   type OrdenTabla,
   type PaginaKeyset,
 } from "./tipos";
-export { usarParamsTabla, type ParamsTabla } from "./usar-params-tabla";
+export { useParamsTabla, type ParamsTabla } from "./use-params-tabla";
 
 /** Re-export de lo que hace falta para tipar columnas sin depender de TanStack. */
 export type { ColumnDef, Row, Table as TablaTanStack } from "@tanstack/react-table";

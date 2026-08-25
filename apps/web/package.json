@@ -6,7 +6,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "next start -p 4005",
-    "lint": "next lint",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf .next .next-dev"
   },

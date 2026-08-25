@@ -54,7 +54,7 @@ function leerPlegados(): Set<string> {
   }
 }
 
-function usarPlegados() {
+function usePlegados() {
   // Arranca vacío y se rellena al montar: en el servidor no hay
   // `localStorage`, y leerlo en el primer render rompería la hidratación.
   const [plegados, setPlegados] = React.useState<Set<string>>(new Set());
@@ -174,7 +174,7 @@ function Grupos({
 /** Columna fija. Desde `md` hacia arriba. */
 export function BarraLateral({ grupos }: { grupos: GrupoNav[] }) {
   const ruta = usePathname();
-  const { plegados, alternar } = usarPlegados();
+  const { plegados, alternar } = usePlegados();
 
   return (
     <nav
@@ -199,7 +199,7 @@ export function BarraLateral({ grupos }: { grupos: GrupoNav[] }) {
 export function MenuMovil({ grupos }: { grupos: GrupoNav[] }) {
   const ruta = usePathname();
   const [abierto, setAbierto] = React.useState(false);
-  const { plegados, alternar } = usarPlegados();
+  const { plegados, alternar } = usePlegados();
 
   return (
     <Sheet open={abierto} onOpenChange={setAbierto}>

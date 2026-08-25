@@ -14,7 +14,7 @@ volver a caer sale caro.
 | `pnpm typecheck` | 7/7 paquetes |
 | `pnpm test` | 620 en verde |
 | `pnpm e2e` | **25 en verde** (navegación); falta el flujo del dinero (§2) |
-| `pnpm lint` | roto (ver §6) |
+| `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 020, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
@@ -191,9 +191,19 @@ comparar una por una.
 - **Condiciones, contacto y orden de compra** en la cotización son texto libre.
   Al menos «condiciones» debería ser una lista con las opciones habituales
   (forma de pago, garantía) y permitir escribir una distinta.
-- **`pnpm lint` no funciona**: `next lint` quedó obsoleto y abre un asistente
-  interactivo. Se migra con
-  `npx @next/codemod@canary next-lint-to-eslint-cli .`
+- ~~`pnpm lint` no funciona~~ **Arreglado.** `next lint` quedó obsoleto en Next
+  15 y abría un asistente interactivo; ahora hay un `eslint.config.mjs` en la
+  raíz que mira también `packages/` y `e2e/`, y el script llama a `eslint`
+  directo. De las 26 quejas que salieron a la primera, la que importaba: tres
+  ganchos se llamaban `usarCampoForm`, `usarParamsTabla` y `usarAtajoPaleta`.
+  El prefijo `use` no es estilo, es el contrato por el que React reconoce un
+  gancho — sin él, `rules-of-hooks` no comprobaba **nada** dentro de esas
+  funciones, y una llamada condicional a un hook habría pasado sin más. Se
+  renombraron a `useCampoForm` / `useParamsTabla` / `useAtajoPaleta` (más
+  `usePlegados`, del mismo caso, en la barra lateral). También salió que
+  `BarraHerramientas` desestructuraba `children` y no lo pintaba: cualquier
+  hijo se habría perdido en silencio. Nadie la usa todavía, así que no rompía
+  nada; ahora funciona si alguien la usa.
 - **CI puede estar en rojo por los secrets, no por el código.** El workflow
   «Verificar» corre typecheck, tests y `pnpm build` en cada push a `main`, y el
   build necesita `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`

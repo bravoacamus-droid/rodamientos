@@ -38,7 +38,7 @@ export interface ParamsTabla {
 /** Claves que no cuentan como "filtro" al contar filtros activos. */
 const NO_SON_FILTRO = new Set<string>([PARAMS.cursor, PARAMS.direccion, PARAMS.orden, PARAMS.tamano]);
 
-export function usarParamsTabla(): ParamsTabla {
+export function useParamsTabla(): ParamsTabla {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
