@@ -34,8 +34,8 @@ import type {
  *
  * Tres reglas que comparten:
  *
- *  · **Colores por token, no fijos.** `var(--brand-600)` y compañía cambian con
- *    el tema; un `#0e4c73` escrito a mano se queda oscuro sobre fondo oscuro.
+ *  · **Colores por token, no fijos.** Los tokens del tema cambian con él; un
+ *    `#0e4c73` escrito a mano se queda oscuro sobre fondo oscuro.
  *  · **Sin leyenda cuando hay una sola serie.** Una leyenda que dice «venta»
  *    encima de un gráfico titulado «Ventas» solo ocupa sitio.
  *  · **Animación de entrada, pero una vez.** Recharts reanima en cada
