@@ -12,13 +12,13 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **37 reales de 41** · quedan 4 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 582 en verde |
+| `pnpm test` | 620 en verde |
 | `pnpm e2e` | **25 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | roto (ver §6) |
-| Migraciones | **hasta la 018, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 020, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
-013, la 015, la 016, la 017 y la 018 son centinelas: fallan al aplicar si alguien mete una función de
+013, la 015, la 016, la 017, la 018, la 019 y la 020 son centinelas: fallan al aplicar si alguien mete una función de
 escritura sin control de rol, o si la valorización se desalinea del kardex.
 
 **Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
@@ -26,8 +26,8 @@ escritura sin control de rol, o si la valorización se desalinea del kardex.
 `.env*.local`, así que un archivo llamado `env.local` a secas NO está
 protegido y se sube al primer `git add .`.
 
-Lo siguiente sin bloqueos son las **notas de crédito**: hoy una factura mal
-emitida no se puede corregir. De guías solo falta el envío a SUNAT (§3).
+Lo siguiente sin bloqueos es el **flujo del dinero en e2e** (§2), que necesita
+un proyecto Supabase de pruebas. De guías solo falta el envío a SUNAT (§3).
 
 El redondeo de los importes de línea ya está arreglado en todas partes (R7).
 
@@ -55,7 +55,7 @@ ya trae, con control de rol y probadas al aplicar:
 
 | Función | Líneas | Para |
 |---|---|---|
-| ~~`emitir_comprobante`~~ · `anular_comprobante` · `recalcular_comprobante` | ~250 | ~~facturación~~ · **cableada 25/08**; falta anular y notas |
+| ~~`emitir_comprobante` · `anular_comprobante` · `recalcular_comprobante`~~ | ~250 | ~~facturación, notas y anulación~~ · **cableadas 25/08** |
 | ~~`generar_guia_desde_cotizacion` · `emitir_guia` · `anular_guia`~~ | ~165 | ~~guías~~ · **cableadas 25/08**; falta el envío GRE |
 | ~~`recepcionar_mercaderia`~~ | ~110 | ~~recepciones~~ · **cableada 24/08** |
 | ~~`registrar_ajuste_inventario`~~ | ~80 | ~~cuadre~~ · **cableada 24/08** |
@@ -75,12 +75,9 @@ escribir 180 líneas de PL/pgSQL primero.
 
 Orden sugerido, por lo que cierra el ciclo del dinero:
 
-1. **Notas de crédito y anulación** — es lo que falta de facturación. El RPC
-   `anular_comprobante` está escrito y `generarNotaXml` también; falta la
-   pantalla. Sin esto, una factura mal emitida no se puede corregir.
-2. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
+1. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
    stock; falta mandarlo a SUNAT (ver §3).
-3. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
+2. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
    pantalla de inventario), equivalencias, importaciones, configuración.
 
 **El ciclo de abastecimiento ya está entero y probado de punta a punta**: se
@@ -298,6 +295,38 @@ comparar una por una.
 ---
 
 # Resueltos
+
+## R8 · Dos agujeros en las notas que la base no vigilaba
+
+Al cablear las notas de crédito salieron dos fallos que **no se habrían visto
+leyendo el código**: los dos se encontraron emitiendo contra la base de verdad.
+
+**La serie cruzada entraba sin una queja.** SUNAT exige que la nota empiece por
+la misma letra que el documento que corrige —F sobre factura, B sobre boleta—
+y cruzarlas es un rechazo con el correlativo ya gastado. La base solo miraba el
+formato (`^[BF][A-Z0-9]{3}$`), así que emitir `BC01` contra una factura salió
+adelante y devolvió `BC01-00000001` apuntando a `F001-00000001`. La regla vivía
+solo en `dominio/nota.ts`, o sea en el navegador. Migración **019**, como
+trigger: no se puede con un CHECK porque la condición mira otra fila.
+
+**Se podía acreditar el doble de lo facturado.** Reejecutar una prueba emitió
+una segunda nota por el total sobre la misma factura y la base la aceptó:
+**1.057,98 acreditados sobre 528,99**. Ante SUNAT eso es crédito fiscal
+inventado, y no hace falta mala fe — basta con pulsar dos veces, o con que dos
+personas anulen la misma factura sin saberlo. Migración **020**, también
+trigger, con un céntimo de holgura para los redondeos de dos notas parciales.
+Solo vigila las de crédito: una nota de débito no tiene tope, porque unos
+intereses de mora pueden superar el importe original.
+
+Las dos comprobaciones ya existían en `acciones/nota.ts`. **Y eso no bastaba:**
+`emitir_comprobante` es alcanzable por PostgREST para cualquiera con sesión,
+que es exactamente el agujero que se cerró en la 012 para otras funciones. Una
+regla de negocio que solo vive en el navegador no es una regla, es una
+sugerencia.
+
+La 020 además comprueba al aplicarse que no haya quedado ningún documento
+sobre-acreditado de antes: el trigger solo vigila lo nuevo, y lo viejo hay que
+mirarlo una vez.
 
 ## R7 · El redondeo se comía medio céntimo
 

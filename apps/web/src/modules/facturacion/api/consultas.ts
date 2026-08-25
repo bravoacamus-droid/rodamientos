@@ -399,3 +399,63 @@ export async function cotizacionParaFacturar(
     return fallo(e);
   }
 }
+
+/**
+ * Los motivos de nota del catálogo, para el desplegable.
+ *
+ * Se traen los DOS tipos de golpe —crédito y débito— y la pantalla filtra: son
+ * trece filas en total, y pedirlos otra vez al cambiar de tipo sería un viaje
+ * al servidor para nada.
+ */
+export async function motivosNota(): Promise<
+  Resultado<{ codigo: string; descripcion: string; tipo: string }[]>
+> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("motivos_nota")
+      .select("codigo, descripcion, tipo")
+      .eq("activo", true)
+      .order("tipo")
+      .order("codigo");
+
+    if (error) return fallo(error);
+    return {
+      ok: true,
+      datos: (data ?? []).map((m) => ({
+        codigo: String(m.codigo),
+        descripcion: String(m.descripcion),
+        tipo: String(m.tipo),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Cuánto se ha acreditado ya sobre un comprobante con notas de crédito.
+ *
+ * Sin este dato se podrían emitir dos notas por el total y acabar acreditando
+ * el doble de lo que se facturó. Devuelve 0 ante cualquier fallo: la pantalla
+ * enseña un aviso, pero la comprobación de verdad la repite la acción antes de
+ * emitir.
+ */
+export async function yaAcreditadoDe(comprobanteId: string): Promise<number> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("comprobantes")
+      .select("total")
+      .eq("referencia_id", comprobanteId)
+      .eq("tipo", "nota_credito")
+      .neq("estado", "anulado");
+
+    if (error) return 0;
+    return (
+      Math.round((data ?? []).reduce((a, n) => a + Number(n.total ?? 0), 0) * 100) / 100
+    );
+  } catch {
+    return 0;
+  }
+}

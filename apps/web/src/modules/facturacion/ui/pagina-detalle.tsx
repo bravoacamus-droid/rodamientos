@@ -4,8 +4,9 @@ import { Badge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
-import { detalleComprobante } from "../api/consultas";
+import { detalleComprobante, motivosNota, yaAcreditadoDe } from "../api/consultas";
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO, TONO_SUNAT } from "../dominio/tipos";
+import { EmisorNota } from "./emisor-nota";
 import { EnviarASunat } from "./enviar-sunat";
 
 /**
@@ -22,10 +23,12 @@ export default async function PaginaDetalleComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, config] = await Promise.all([
+  const [resultado, perfil, config, motivos, acreditado] = await Promise.all([
     detalleComprobante(id),
     perfilActual(),
     estadoConfiguracion(),
+    motivosNota(),
+    yaAcreditadoDe(id),
   ]);
 
   if (!resultado.ok) {
@@ -42,6 +45,12 @@ export default async function PaginaDetalleComprobante({
   const c = resultado.datos;
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeEnviar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
+
+  // La fecha del servidor con la zona de Lima: acaba en un documento fiscal,
+  // así que no puede depender del reloj del equipo.
+  const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
+    new Date(),
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -74,6 +83,16 @@ export default async function PaginaDetalleComprobante({
             >
               Imprimir
             </Link>
+            {/* Corregir una factura emitida es emitir una nota, no editarla.
+                Por eso el botón vive aquí, junto al documento que corrige. */}
+            {puedeEnviar ? (
+              <EmisorNota
+                documento={c}
+                motivos={motivos.ok ? motivos.datos : []}
+                hoy={hoy}
+                yaAcreditado={acreditado}
+              />
+            ) : null}
           </div>
         </div>
       </header>
