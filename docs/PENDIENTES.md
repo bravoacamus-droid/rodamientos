@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 25/08/2026 (noche). Ordenado por lo que más duele. Lo ya resuelto vive al
+Estado al 25/08/2026 (cierre). Ordenado por lo que más duele. Lo ya resuelto vive al
 final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
@@ -10,15 +10,15 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **33 reales de 39** · quedan 6 carteles |
+| Rutas | **36 reales de 41** · quedan 5 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 511 en verde |
+| `pnpm test` | 541 en verde |
 | `pnpm e2e` | configurado, **0 pruebas escritas** |
 | `pnpm lint` | roto (ver §6) |
-| Migraciones | **hasta la 017, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 018, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
-013, la 015, la 016 y la 017 son centinelas: fallan al aplicar si alguien mete una función de
+013, la 015, la 016, la 017 y la 018 son centinelas: fallan al aplicar si alguien mete una función de
 escritura sin control de rol, o si la valorización se desalinea del kardex.
 
 **Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
@@ -26,8 +26,9 @@ escritura sin control de rol, o si la valorización se desalinea del kardex.
 `.env*.local`, así que un archivo llamado `env.local` a secas NO está
 protegido y se sube al primer `git add .`.
 
-Lo siguiente es **guías de remisión**, que necesita escribir antes el cliente
-REST + OAuth2 de la GRE (§3). Sin ningún bloqueo: **cobranzas**.
+Lo siguiente sin bloqueos es **cobranzas**. De guías ya solo falta el envío a
+SUNAT, que necesita el cliente REST + OAuth2 (§3): el documento interno
+funciona y es el que mueve el stock.
 
 **Ojo con el §0**: el redondeo de cotizaciones sigue sin arreglar, y ahora ese
 número ya viaja a un comprobante que SUNAT mira.
@@ -60,18 +61,19 @@ y sus propias pruebas contra la base.
 
 ## 1 · Los demás módulos están vacíos
 
-De **39 rutas hay 33 reales**. Las otras 6 son carteles de «en construcción».
+De **41 rutas hay 36 reales**. Las otras 5 son carteles de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
 **Reales:** tablero · cotizaciones (listado, constructor, ficha) · productos
 (listado, alta/edición, importador) · clientes (listado, ficha, alta/edición) ·
 **recepciones** e **inventario** ← el 24/08 · **proveedores** y **compras**
-← el 25/08 · **facturación** (listado, emisión, ficha, configuración) e
-**informes** (cinco gráficos) ← el 25/08 por la tarde
+← el 25/08 · **facturación** (listado, emisión, ficha, configuración),
+**informes** (cinco gráficos) y **guías de remisión** (listado, preparación,
+ficha) ← el 25/08 por la tarde
 
-**Carteles:** guías de remisión · cobranzas · equivalencias · importaciones ·
-alertas · configuración
+**Carteles:** cobranzas · equivalencias · importaciones · alertas ·
+configuración
 
 ### El backend de casi todos ya está escrito
 
@@ -81,7 +83,7 @@ ya trae, con control de rol y probadas al aplicar:
 | Función | Líneas | Para |
 |---|---|---|
 | ~~`emitir_comprobante`~~ · `anular_comprobante` · `recalcular_comprobante` | ~250 | ~~facturación~~ · **cableada 25/08**; falta anular y notas |
-| `generar_guia_desde_cotizacion` · `emitir_guia` · `anular_guia` | ~165 | guías |
+| ~~`generar_guia_desde_cotizacion` · `emitir_guia` · `anular_guia`~~ | ~165 | ~~guías~~ · **cableadas 25/08**; falta el envío GRE |
 | ~~`recepcionar_mercaderia`~~ | ~110 | ~~recepciones~~ · **cableada 24/08** |
 | ~~`registrar_ajuste_inventario`~~ | ~80 | ~~cuadre~~ · **cableada 24/08** |
 | ~~`crear_compra` · `anular_compra`~~ | ~180 | ~~compras~~ · **escritas y cableadas 25/08** (migración 016) |
@@ -102,13 +104,11 @@ Orden sugerido, por lo que cierra el ciclo del dinero:
 
 1. **Cobranzas** — `registrar_pagos` y la vista `v_cartera` con aging ya están,
    y el informe de aging ya la enseña. Es lo único grande sin ningún bloqueo.
-2. **Guías de remisión** — la cotización aprobada ya tiene el botón «Generar
-   guía» apuntando a una ruta que no existe, y ahora también la ficha del
-   comprobante depende de ellas para la salida de stock. Hay que escribir antes
-   el cliente REST + OAuth2 (ver §3).
-3. **Notas de crédito y anulación** — es lo que falta de facturación. El RPC
+2. **Notas de crédito y anulación** — es lo que falta de facturación. El RPC
    `anular_comprobante` está escrito y `generarNotaXml` también; falta la
    pantalla. Sin esto, una factura mal emitida no se puede corregir.
+3. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
+   stock; falta mandarlo a SUNAT (ver §3).
 4. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
    pantalla de inventario), equivalencias, importaciones, configuración.
 
@@ -118,10 +118,12 @@ la compra pasó sola a `recibida`, el kardex tomó los dos ingresos y el stock
 del 6205 subió de 35 a 45. La invariante `stock.valorizado = kardex` cuadra en
 los siete productos.
 
-**El ciclo comercial llega hasta la factura**: COT1-000001 aprobada →
-F001-00000001 por 448.30 + 80.69 = 528.99, con su cronograma de cuota única a
-30 días y la cotización pasada sola a `atendida`. Lo que falta para cerrarlo es
-la GUÍA en medio y el COBRO al final.
+**El ciclo comercial ya está entero salvo el cobro**: COT1-000001 aprobada →
+F001-00000001 por 448.30 + 80.69 = 528.99 → T001-00000001 despachada con
+18,400 kg en un bulto y placa B7X-914. El kardex tomó las tres salidas y el
+stock bajó: el 6205 de 45 a 25, el 6209 de 12 a 2 y el 7210 de 12 a 6. La
+invariante `stock.valorizado = kardex` cuadra en los siete productos. Lo único
+que falta para cerrar el círculo es **cobranzas**.
 
 **Dónde sale el stock, que se confundió una vez y conviene no repetir:** entra
 con la recepción y sale con la GUÍA DE REMISIÓN, no con la factura. Facturar
@@ -142,6 +144,9 @@ funciona de extremo a extremo.
 ---
 
 ## 3 · La GRE necesita un cliente que no existe
+
+**Solo bloquea el ENVÍO.** La guía como documento —prepararla, imprimirla y
+sacar el stock del almacén— funciona desde el 25/08 y no depende de SUNAT.
 
 `ConectorSunat` no tiene ningún método de guía, y el transporte REST + OAuth2
 está sin escribir. La investigación está cerrada en
@@ -205,6 +210,19 @@ comparar una por una.
   —viajan al navegador—, pero salen de secrets para no fijarlas en el repo.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
+- **Ningún producto tiene el peso registrado**, y el peso es obligatorio en la
+  guía (`guia_peso_pos` lo rechaza en cero). Willy lo llamó *«lo más
+  importante»* (02:46). Mientras tanto la guía deja declararlo a mano y lo
+  explica en pantalla, pero conviene rellenar `productos.peso_kg` en la carga
+  del catálogo real: con él, el peso bruto sale solo.
+- **El 431 de localhost.** Si el navegador enseña «Esta página no funciona ·
+  HTTP ERROR 431» mientras `curl` sí responde, son las cookies: **no se
+  separan por puerto**, así que todos los proyectos de la máquina comparten
+  bote y las sesiones de Supabase van troceadas. Se pasa de los 16 kB que Node
+  acepta por defecto y falla TODO, incluso `/manifest.webmanifest`. Ya está
+  resuelto: `apps/web/scripts/dev.mjs` arranca con el tope en 32 kB. Si aun así
+  vuelve a pasar, es que hay demasiados proyectos abiertos: borrar cookies de
+  `localhost` o subir más el tope.
 - **Las nueve funciones de negocio ya validan rol** (hecho el 24/08), pero
   conviene repetir la auditoría cada vez que se añada una función que escriba.
   La migración `013` lo comprueba al aplicar.

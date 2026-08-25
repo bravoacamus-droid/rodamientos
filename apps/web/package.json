@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4005",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "next start -p 4005",
     "lint": "next lint",
