@@ -20,3 +20,7 @@ tsconfig.tsbuildinfo
 
 # Temporales del CLI de Supabase
 supabase/.temp/
+
+# Log del servidor de desarrollo. Se regenera solo; versionarlo era ruido
+# en cada diff y en algún momento va a llevarse una credencial de paseo.
+dev.log

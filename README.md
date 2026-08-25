@@ -152,18 +152,22 @@ de servidor y nunca viaja al navegador — el botón solo manda qué cuenta quie
 **Se borra el día de la entrega.** Mientras esté puesta, cualquiera con la URL
 entra con un clic.
 
-### Antes de dar una URL pública
+### Control de rol en las funciones de negocio
 
-Nueve funciones de negocio (`crear_cotizacion`, `emitir_comprobante`,
+Toda función que escriba y sea `security definer` tiene que comprobar el rol
+**dentro del cuerpo**. `security definer` se salta RLS, así que sin esa
+comprobación basta con no pasar por la aplicación: cualquiera con una sesión
+válida la llama por la API directa.
+
+Las nueve que faltaban (`crear_cotizacion`, `emitir_comprobante`,
 `importar_productos`, `recepcionar_mercaderia`, `registrar_pagos`,
 `emitir_guia`, `anular_guia`, `aprobar_cotizacion`,
-`generar_guia_desde_cotizacion`) todavía **no comprueban el rol dentro del
-cuerpo**. Son `security definer`, así que se saltan RLS: cualquiera con una
-sesión válida puede llamarlas por la API directa sin pasar por la aplicación.
+`generar_guia_desde_cotizacion`) **se cerraron el 24/08/2026**.
 
-Para un preview privado no pasa nada. Antes de exponerlo de verdad hay que
-cerrarlas, como ya hacen `registrar_ajuste_inventario` y
-`anular_comprobante`.
+No hay que fiarse de esta frase: la migración `013_verificar_permisos.sql` no
+cambia nada, solo comprueba, y **falla al aplicar** si aparece una función de
+escritura sin control de rol. Es el centinela, y corre en cada
+`pnpm db:aplicar`.
 
 ## Credenciales
 
