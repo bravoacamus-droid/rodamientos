@@ -35,43 +35,41 @@ número ya viaja a un comprobante que SUNAT mira.
 
 ---
 
-## 0 bis · Cobranzas está escrito pero CUELGA EL NAVEGADOR
+## 0 bis · Cobranzas está escrito pero SIN VERIFICAR en pantalla
 
-**La ruta está desconectada a propósito**: `/cobranzas` sigue enseñando el
-cartel de «en construcción». El módulo entero está en
-`apps/web/src/modules/cobranzas/` y no se llega a él desde ninguna parte.
+**La ruta está desconectada**: `/cobranzas` sigue enseñando el cartel de «en
+construcción». El módulo entero está en `apps/web/src/modules/cobranzas/` y no
+se llega a él desde ninguna parte.
 
-Qué hay hecho y funciona: el dominio con **34 tests** en verde
+Qué hay hecho y pasa las comprobaciones: el dominio con **34 tests** en verde
 (`dominio/cobro.ts` — bloqueos, avisos, reparto sobre cuotas, prioridad de
 cobro), las consultas contra `v_cartera` **validadas una por una contra
-PostgREST**, y las dos acciones (`registrar_pagos` y las gestiones).
-`pnpm typecheck`, `pnpm test` y `pnpm build` pasan.
+PostgREST**, y las dos acciones. `pnpm typecheck`, `pnpm test` y `pnpm build`
+pasan.
 
-Qué NO funciona: al abrir la página, **el renderizador de Chrome se queda
-colgado**. No responde ni a una captura ni a ejecutar JavaScript.
+Lo que falta es **verla funcionando**. Y aquí va la corrección de una nota
+anterior de este mismo documento, porque la equivocación es instructiva:
 
-Lo que ya se descartó, para no repetirlo:
+> Estuvo escrito que «la página cuelga el renderizador del navegador», con
+> tres pruebas que supuestamente lo demostraban. **Era falso.** Lo que estaba
+> colgado era Chrome, no la página.
 
-- **No es el servidor.** `GET /cobranzas` responde 200 en 2,5 s y el SSR
-  termina. Se probó tres veces.
-- **No es una inundación de peticiones.** Solo hay 3 GET en el log; si fuera
-  un bucle que rehace consultas, habría cientos.
-- **No es el navegador.** Pasa igual en una pestaña nueva y limpia, así que es
-  del código, no del estado de Chrome.
+Cómo se vio: después de bisecar quitando los diálogos —seguía colgado— y
+quitando los indicadores —seguía colgado—, se probó `/facturacion`, que
+funcionaba una hora antes. **También colgaba.** Y `/productos`, que no se había
+tocado. También. Mientras tanto el servidor respondía las cuatro rutas en
+milisegundos y el registro mostraba `GET /cobranzas 200 in 189ms`.
 
-O sea que es un **bucle de renderizado puramente de cliente**, después de la
-hidratación. Los sospechosos, por orden:
+La lección: **una pestaña nueva NO es un navegador nuevo.** Se abrió una
+pestaña limpia, se vio que también colgaba y se concluyó «entonces es el
+código». Falso: las pestañas comparten proceso de renderizado y estado de la
+extensión. El control que faltaba era probar una página *que ya se sabía
+buena*, y eso habría descartado el código en un minuto en vez de mandar a
+bisecar un módulo sano.
 
-1. `ui/cobrador.tsx` y `ui/gestor.tsx` se montan **uno por fila** de la
-   cartera, cada uno con su `Dialog` de Radix. Es el primer sitio del proyecto
-   donde hay varios diálogos hermanos en una tabla.
-2. `CifraAnimada` dentro de `Indicadores`: usa `requestAnimationFrame` y llama
-   a `setMostrado` en cada fotograma. En `/reportes` funciona, pero allí no
-   convive con diálogos.
-3. El `useEffect` de `cobrador.tsx` que pide las cuotas al abrir.
-
-**Cómo empezar:** bisecar. Renderizar la tabla SIN los dos diálogos; si carga,
-el problema está en 1. Es un cambio de dos líneas y responde la pregunta.
+**Cómo seguir:** reiniciar Chrome, enchufar la ruta (una línea en
+`app/(erp)/cobranzas/page.tsx`, exportando `PaginaCobranzas` en vez del
+cartel) y mirarla. Puede que esté bien del todo.
 
 ---
 
