@@ -26,10 +26,58 @@ escritura sin control de rol, o si la valorización se desalinea del kardex.
 `.env*.local`, así que un archivo llamado `env.local` a secas NO está
 protegido y se sube al primer `git add .`.
 
-Lo siguiente sin bloqueos es el **flujo del dinero en e2e** (§2), que necesita
-un proyecto Supabase de pruebas. De guías solo falta el envío a SUNAT (§3).
-
 El redondeo de los importes de línea ya está arreglado en todas partes (R7).
+
+---
+
+## Qué falta · el resumen
+
+Lo de abajo está desarrollado en las secciones §1 a §7. Esto es para verlo de
+un vistazo sin leerse el documento entero.
+
+### Lo que depende de ti (detalle en §4)
+
+Ninguna de estas dos se desbloquea escribiendo código, y las dos pueden frenar
+el final del proyecto.
+
+1. **Un proyecto Supabase de pruebas.** Es lo que bloquea lo más importante que
+   queda: las pruebas del **flujo del dinero** de punta a punta (cotizar →
+   aprobar → guía → facturar → cobrar, y compra → recepción). Hoy las 25
+   pruebas comprueban que las pantallas abren sin error, que no es poco, pero
+   **no comprueban que el dinero cuadre**. No se pueden correr contra la base
+   del cliente porque esas pruebas ESCRIBEN: mueven stock, gastan correlativos
+   y emiten documentos. Son cuatro pasos: crear el proyecto, `pnpm db:aplicar`,
+   apuntar ahí el `.env.local` y poner `E2E_PERMITIR_ESCRITURA=1`.
+
+2. **Las credenciales de SUNAT y lo que va con ellas** (§4): el certificado
+   `.pfx` con su clave, el usuario SOL secundario, los tres Excel de productos
+   / clientes / proveedores, y los correlativos de arranque por serie. El
+   código está entero, cifrado y esperando; solo falta enchufarlo. Del
+   certificado hay que **mirar la fecha de caducidad en cuanto llegue**: Willy
+   dijo que el suyo *«ya fue el año pasado»*.
+
+### Lo que puedo hacer yo sin esperar a nadie
+
+- **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
+  escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
+  pruebas. La guía como documento interno ya funciona y ya mueve el stock.
+- **Los 4 carteles** que quedan de 41 rutas: equivalencias, importaciones,
+  alertas y configuración (§1).
+- **Comparar la ficha de cliente con la de Defontana** (§5): ellos tienen 18
+  campos y nosotros 32 columnas, así que probablemente sobren.
+- Las cosas menores de §6.
+
+### Dos avisos para el día de la entrega (§7)
+
+- **Hay que rotar las credenciales.** El token y las llaves de Supabase están
+  en texto plano en `.env.local` y son de la cuenta del cliente. Se trabajó así
+  a propósito y quedó dicho que se cambian al entregar: este es el recordatorio.
+  Con ellas va `SUNAT_ENCRYPTION_KEY` en Vercel, que tiene que ser **la misma
+  que en local** o las credenciales guardadas no se pueden descifrar.
+- **Los datos `[DEMO]` se borran pasando antes un ajuste de inventario.** La
+  guía de prueba movió stock de verdad; si se borra el documento sin ajustar,
+  el stock se queda mintiendo — que es exactamente lo que ya pasó una vez con
+  el costo del 6205 (ver R2).
 
 ---
 
@@ -205,7 +253,7 @@ comparar una por una.
   hijo se habría perdido en silencio. Nadie la usa todavía, así que no rompía
   nada; ahora funciona si alguien la usa.
 - **CI puede estar en rojo por los secrets, no por el código.** El workflow
-  «Verificar» corre typecheck, tests y `pnpm build` en cada push a `main`, y el
+  «Verificar» corre typecheck, lint, tests y `pnpm build` en cada push a `main`, y el
   build necesita `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   configurados como *secrets* del repositorio en GitHub. Si nunca se pusieron,
   ese paso falla aunque typecheck y tests pasen. Son públicas por definición
