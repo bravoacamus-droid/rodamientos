@@ -25,6 +25,12 @@ jobs:
       - name: Comprobar tipos
         run: pnpm typecheck
 
+      # Va aquí y no al final porque es lo más rápido de los tres y lo que
+      # antes falla: si hay un gancho mal llamado o una variable muerta, mejor
+      # saberlo en veinte segundos que después de un build de un minuto.
+      - name: Lint
+        run: pnpm lint
+
       - name: Tests unitarios
         run: pnpm test
 
