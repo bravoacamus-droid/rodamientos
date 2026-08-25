@@ -24,3 +24,11 @@ supabase/.temp/
 # Log del servidor de desarrollo. Se regenera solo; versionarlo era ruido
 # en cada diff y en algún momento va a llevarse una credencial de paseo.
 dev.log
+
+# Playwright.
+#
+# `.auth/` guarda el estado de sesión REAL con el que corren las pruebas: son
+# credenciales vivas, no un fichero de configuración. Nunca al repositorio.
+e2e/.auth/
+test-results/
+playwright-report/

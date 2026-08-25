@@ -10,10 +10,10 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **36 reales de 41** · quedan 5 carteles |
+| Rutas | **37 reales de 41** · quedan 4 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
 | `pnpm test` | 582 en verde |
-| `pnpm e2e` | configurado, **0 pruebas escritas** |
+| `pnpm e2e` | **25 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | roto (ver §6) |
 | Migraciones | **hasta la 018, aplicadas** al Supabase del cliente |
 
@@ -26,57 +26,16 @@ escritura sin control de rol, o si la valorización se desalinea del kardex.
 `.env*.local`, así que un archivo llamado `env.local` a secas NO está
 protegido y se sube al primer `git add .`.
 
-Lo siguiente sin bloqueos es **cobranzas**. De guías ya solo falta el envío a
-SUNAT, que necesita el cliente REST + OAuth2 (§3): el documento interno
-funciona y es el que mueve el stock.
+Lo siguiente sin bloqueos son las **notas de crédito**: hoy una factura mal
+emitida no se puede corregir. De guías solo falta el envío a SUNAT (§3).
 
 El redondeo de los importes de línea ya está arreglado en todas partes (R7).
 
 ---
 
-## 0 bis · Cobranzas está escrito pero SIN VERIFICAR en pantalla
-
-**La ruta está desconectada**: `/cobranzas` sigue enseñando el cartel de «en
-construcción». El módulo entero está en `apps/web/src/modules/cobranzas/` y no
-se llega a él desde ninguna parte.
-
-Qué hay hecho y pasa las comprobaciones: el dominio con **34 tests** en verde
-(`dominio/cobro.ts` — bloqueos, avisos, reparto sobre cuotas, prioridad de
-cobro), las consultas contra `v_cartera` **validadas una por una contra
-PostgREST**, y las dos acciones. `pnpm typecheck`, `pnpm test` y `pnpm build`
-pasan.
-
-Lo que falta es **verla funcionando**. Y aquí va la corrección de una nota
-anterior de este mismo documento, porque la equivocación es instructiva:
-
-> Estuvo escrito que «la página cuelga el renderizador del navegador», con
-> tres pruebas que supuestamente lo demostraban. **Era falso.** Lo que estaba
-> colgado era Chrome, no la página.
-
-Cómo se vio: después de bisecar quitando los diálogos —seguía colgado— y
-quitando los indicadores —seguía colgado—, se probó `/facturacion`, que
-funcionaba una hora antes. **También colgaba.** Y `/productos`, que no se había
-tocado. También. Mientras tanto el servidor respondía las cuatro rutas en
-milisegundos y el registro mostraba `GET /cobranzas 200 in 189ms`.
-
-La lección: **una pestaña nueva NO es un navegador nuevo.** Se abrió una
-pestaña limpia, se vio que también colgaba y se concluyó «entonces es el
-código». Falso: las pestañas comparten proceso de renderizado y estado de la
-extensión. El control que faltaba era probar una página *que ya se sabía
-buena*, y eso habría descartado el código en un minuto en vez de mandar a
-bisecar un módulo sano.
-
-**Cómo seguir:** reiniciar Chrome, enchufar la ruta (una línea en
-`app/(erp)/cobranzas/page.tsx`, exportando `PaginaCobranzas` en vez del
-cartel) y mirarla. Puede que esté bien del todo.
-
----
-
-
-
 ## 1 · Los demás módulos están vacíos
 
-De **41 rutas hay 36 reales**. Las otras 5 son carteles de «en construcción».
+De **41 rutas hay 37 reales**. Las otras 4 son carteles de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -84,11 +43,10 @@ alta y edición.)
 (listado, alta/edición, importador) · clientes (listado, ficha, alta/edición) ·
 **recepciones** e **inventario** ← el 24/08 · **proveedores** y **compras**
 ← el 25/08 · **facturación** (listado, emisión, ficha, configuración),
-**informes** (cinco gráficos) y **guías de remisión** (listado, preparación,
-ficha) ← el 25/08 por la tarde
+**informes** (cinco gráficos), **guías de remisión** (listado, preparación,
+ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde
 
-**Carteles:** cobranzas · equivalencias · importaciones · alertas ·
-configuración
+**Carteles:** equivalencias · importaciones · alertas · configuración
 
 ### El backend de casi todos ya está escrito
 
@@ -102,7 +60,7 @@ ya trae, con control de rol y probadas al aplicar:
 | ~~`recepcionar_mercaderia`~~ | ~110 | ~~recepciones~~ · **cableada 24/08** |
 | ~~`registrar_ajuste_inventario`~~ | ~80 | ~~cuadre~~ · **cableada 24/08** |
 | ~~`crear_compra` · `anular_compra`~~ | ~180 | ~~compras~~ · **escritas y cableadas 25/08** (migración 016) |
-| `registrar_pagos` | ~40 | cobranzas |
+| ~~`registrar_pagos`~~ | ~40 | ~~cobranzas~~ · **cableada 25/08** |
 | `generar_alertas` | — | alertas |
 | `recalcular_precios_promedio` | ~45 | precio promedio |
 
@@ -117,14 +75,12 @@ escribir 180 líneas de PL/pgSQL primero.
 
 Orden sugerido, por lo que cierra el ciclo del dinero:
 
-1. **Cobranzas** — `registrar_pagos` y la vista `v_cartera` con aging ya están,
-   y el informe de aging ya la enseña. Es lo único grande sin ningún bloqueo.
-2. **Notas de crédito y anulación** — es lo que falta de facturación. El RPC
+1. **Notas de crédito y anulación** — es lo que falta de facturación. El RPC
    `anular_comprobante` está escrito y `generarNotaXml` también; falta la
    pantalla. Sin esto, una factura mal emitida no se puede corregir.
-3. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
+2. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
    stock; falta mandarlo a SUNAT (ver §3).
-4. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
+3. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
    pantalla de inventario), equivalencias, importaciones, configuración.
 
 **El ciclo de abastecimiento ya está entero y probado de punta a punta**: se
@@ -137,8 +93,9 @@ los siete productos.
 F001-00000001 por 448.30 + 80.69 = 528.99 → T001-00000001 despachada con
 18,400 kg en un bulto y placa B7X-914. El kardex tomó las tres salidas y el
 stock bajó: el 6205 de 45 a 25, el 6209 de 12 a 2 y el 7210 de 12 a 6. La
-invariante `stock.valorizado = kardex` cuadra en los siete productos. Lo único
-que falta para cerrar el círculo es **cobranzas**.
+invariante `stock.valorizado = kardex` cuadra en los siete productos. Y la
+factura aparece en la cartera de **cobranzas** con su saldo de 528,99, lista
+para cobrarse: el círculo está cerrado.
 
 **Dónde sale el stock, que se confundió una vez y conviene no repetir:** entra
 con la recepción y sale con la GUÍA DE REMISIÓN, no con la factura. Facturar
@@ -147,14 +104,37 @@ para el cliente que se lleva la pieza sin guía previa.
 
 ---
 
-## 2 · Cero pruebas de punta a punta
+## 2 · Pruebas de punta a punta: arrancadas, falta el flujo del dinero
 
-`playwright.config.ts` está configurado y apunta al 4005, pero `e2e/` solo
-tiene el README. La **fase 6 del plan está a cero**: ni un flujo completo
-cubierto, justo donde se mueve el dinero.
+**Ya no está a cero.** Hay **25 pruebas** de navegación en verde
+(`e2e/navegacion.spec.ts`): las 19 pantallas reales abren, y las 5 fichas de
+detalle se abren **desde su listado**, que comprueba de paso que el enlace
+funciona.
 
-El primero que hay que escribir es cotizar → aprobar, que es lo único que ya
-funciona de extremo a extremo.
+No solo miran que responda 200. Miran que **no aparezca ningún cartel de
+error** — «No se pudo cargar», «[object Object]»— y que no salte ningún error
+de JavaScript. Una página que responde 200 y pinta «no se pudo cargar» está
+rota igual, y así fue justamente como la ficha de producto pasó días rota sin
+que nadie lo viera.
+
+Corren con su propio Chromium, así que no dependen de la extensión del
+navegador. Eso las hace la forma fiable de verificar pantallas.
+
+```bash
+E2E_BASE_URL=http://localhost:4005 npx playwright test
+```
+
+**Lo que falta es el flujo del dinero**, que es el que de verdad importa:
+`cotizar → aprobar → guía → facturar → cobrar`, y la compra con su recepción.
+Ahí está el detalle incómodo: **esas pruebas ESCRIBEN** —queman correlativos y
+mueven stock— y por eso `e2e/guardia.ts` las corta si el entorno apunta al
+Supabase del cliente. Para escribirlas hace falta antes **un proyecto Supabase
+de pruebas**: crear uno, aplicarle `pnpm db:aplicar`, apuntar ahí el
+`.env.local` y poner `E2E_PERMITIR_ESCRITURA=1`.
+
+La guardia tiene sus propios 8 tests en vitest y no se puede engañar desde el
+entorno: el `ref` del cliente va escrito en el código, porque si saliera del
+mismo `.env` que comprueba se apuntaría a sí misma.
 
 ---
 

@@ -18,7 +18,19 @@ export default defineConfig({
     // suerte. Subirlo no tapa nada: el test que de verdad se cuelgue sigue
     // cayendo, solo que 15 s después.
     testTimeout: 20_000,
-    include: ["packages/**/*.test.ts", "apps/web/src/**/*.test.ts"],
+    // `e2e/**/*.test.ts` son las piezas PURAS de las pruebas de punta a punta
+    // —hoy, la guardia que impide correrlas contra la base del cliente—. Corren
+    // aquí a propósito: es lógica sin navegador, y así se entera de que la ha
+    // roto quien la rompa, no quien lance Playwright tres días después.
+    //
+    // Los ficheros de Playwright son `*.spec.ts` y `*.preparacion.ts`, así que
+    // este patrón no los toca. Si se colaran, vitest intentaría ejecutarlos sin
+    // navegador y fallarían por un motivo que no tiene nada que ver.
+    include: [
+      "packages/**/*.test.ts",
+      "apps/web/src/**/*.test.ts",
+      "e2e/**/*.test.ts",
+    ],
     exclude: [
       "**/node_modules/**",
       "**/dist/**",

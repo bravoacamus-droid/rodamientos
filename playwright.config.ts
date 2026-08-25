@@ -29,6 +29,13 @@ export default defineConfig({
     { name: "preparacion", testMatch: /.*\.preparacion\.ts/ },
     {
       name: "escritorio",
+      // Solo los `.spec.ts`. En `e2e/` conviven dos clases de archivo: estos,
+      // que necesitan navegador, y los `.test.ts` de vitest —hoy la guardia que
+      // impide correr contra la base del cliente—, que son lógica pura. Sin
+      // este filtro, Playwright intenta ejecutar los de vitest y revienta con
+      // «Vitest cannot be imported in a CommonJS module», que no dice nada
+      // sobre el problema real.
+      testMatch: /.*\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], storageState: "e2e/.auth/usuario.json" },
       dependencies: ["preparacion"],
     },
