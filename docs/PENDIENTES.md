@@ -6,6 +6,30 @@ volver a caer sale caro.
 
 ---
 
+## Dónde estamos
+
+| | |
+|---|---|
+| Rutas | **23 reales de 32** · quedan 9 carteles |
+| `pnpm typecheck` | 7/7 paquetes |
+| `pnpm test` | 411 en verde |
+| `pnpm e2e` | configurado, **0 pruebas escritas** |
+| `pnpm lint` | roto (ver §6) |
+| Migraciones | **hasta la 015, aplicadas** al Supabase del cliente |
+
+`main` está en la punta de lo último. Las migraciones son idempotentes y la
+013 y la 015 son centinelas: fallan al aplicar si alguien mete una función de
+escritura sin control de rol, o si la valorización se desalinea del kardex.
+
+**Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
+`.env.local` en la raíz — ojo, **con el punto delante**: el `.gitignore` tapa
+`.env*.local`, así que un archivo llamado `env.local` a secas NO está
+protegido y se sube al primer `git add .`.
+
+Lo siguiente sin bloqueos es **compras** (§1).
+
+---
+
 ## 1 · Los demás módulos están vacíos
 
 De **32 rutas hay 23 reales**. Las otras 9 son carteles de «en construcción».
@@ -80,7 +104,27 @@ hay API de baja** — anular es manual desde el portal SOL.
 
 ---
 
-## 4 · Revisión de campos contra Defontana
+## 4 · Lo que depende del cliente, no de nosotros
+
+Nada de esto se puede desbloquear escribiendo código. Conviene pedirlo ya,
+porque son las dos cosas que pueden frenar el final del proyecto.
+
+- **Certificado `.pfx` + su clave, y usuario/clave SOL secundario** (formato
+  `RUC + usuario`). Sin ellos, facturación y guías solo pueden ir contra beta.
+  Willy dijo que entrega el mismo que usa hoy y que *"ya fue el año pasado"*
+  (51:30), o sea que puede quedarle poco de vigencia: hay que comprobar la
+  fecha de caducidad en cuanto llegue.
+- **Los tres Excel**: productos (~2.000+), clientes y proveedores. No
+  bloquean —se sigue con datos ficticios, como él mismo propuso (23:44)— pero
+  el importador hay que ajustarlo contra el formato real. Una **muestra de 50
+  filas** cuanto antes evita rehacer el mapeo.
+- **Los correlativos de partida.** *"Los correlativos van a iniciar desde el
+  número que usted se quedó"* (06:08). Hace falta el último número de
+  cotización, factura y guía de su sistema actual, por serie.
+
+---
+
+## 5 · Revisión de campos contra Defontana
 
 Pendiente de contrastar la ficha de cliente con la de Defontana. Lo que ya se
 sabe, de `MAPA-DEFONTANA.md` de Kassara:
@@ -96,7 +140,7 @@ comparar una por una.
 
 ---
 
-## 5 · Cosas menores anotadas
+## 6 · Cosas menores anotadas
 
 - **Condiciones, contacto y orden de compra** en la cotización son texto libre.
   Al menos «condiciones» debería ser una lista con las opciones habituales
@@ -104,6 +148,12 @@ comparar una por una.
 - **`pnpm lint` no funciona**: `next lint` quedó obsoleto y abre un asistente
   interactivo. Se migra con
   `npx @next/codemod@canary next-lint-to-eslint-cli .`
+- **CI puede estar en rojo por los secrets, no por el código.** El workflow
+  «Verificar» corre typecheck, tests y `pnpm build` en cada push a `main`, y el
+  build necesita `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  configurados como *secrets* del repositorio en GitHub. Si nunca se pusieron,
+  ese paso falla aunque typecheck y tests pasen. Son públicas por definición
+  —viajan al navegador—, pero salen de secrets para no fijarlas en el repo.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
 - **Las nueve funciones de negocio ya validan rol** (hecho el 24/08), pero
@@ -151,7 +201,7 @@ comparar una por una.
 
 ---
 
-## 6 · Antes de entregar
+## 7 · Antes de entregar
 
 - [ ] Rotar el token de Supabase y las llaves — están en texto plano en
       `.env.local` y son de la cuenta del cliente
