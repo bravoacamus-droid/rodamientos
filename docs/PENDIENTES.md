@@ -12,7 +12,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **36 reales de 41** · quedan 5 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 541 en verde |
+| `pnpm test` | 582 en verde |
 | `pnpm e2e` | configurado, **0 pruebas escritas** |
 | `pnpm lint` | roto (ver §6) |
 | Migraciones | **hasta la 018, aplicadas** al Supabase del cliente |
@@ -30,8 +30,7 @@ Lo siguiente sin bloqueos es **cobranzas**. De guías ya solo falta el envío a
 SUNAT, que necesita el cliente REST + OAuth2 (§3): el documento interno
 funciona y es el que mueve el stock.
 
-**Ojo con el §0**: el redondeo de cotizaciones sigue sin arreglar, y ahora ese
-número ya viaja a un comprobante que SUNAT mira.
+El redondeo de los importes de línea ya está arreglado en todas partes (R7).
 
 ---
 
@@ -73,29 +72,7 @@ cartel) y mirarla. Puede que esté bien del todo.
 
 ---
 
-## 0 · El redondeo de cotizaciones se come medio céntimo
 
-Encontrado al escribir compras, y **no está arreglado en cotizaciones**.
-
-`redondear2(cantidad × precio)` no da lo mismo que Postgres. En la base,
-`round(3 × 1.005, 2)` es **3.02**; en JavaScript, `3 * 1.005` ya vale
-3.0149999999999997 antes de redondear, así que sale **3.01**. El céntimo se
-pierde en la multiplicación, no en el redondeo, y por eso el `Number.EPSILON`
-que lleva la función no lo salva: la diferencia es mil veces mayor que él.
-
-Compras usa `importeExacto()` de `@rodatech/config`, que hace la cuenta con
-enteros y coincide con Postgres en los siete casos frontera comprobados.
-**`cotizaciones/dominio/totales.ts` sigue con el redondeo ingenuo**, y ahí
-importa más: `cotizacion_items.importe` es una columna generada y ese número
-acaba en el comprobante. Es justo la resta de céntimos por la que SUNAT
-observa una factura.
-
-Hace falta cuando se toque facturación, y con cuidado: `importeLinea` de
-cotizaciones multiplica TRES factores —cantidad, valor unitario y el
-descuento—, así que no vale con sustituir la llamada. Merece su propio commit
-y sus propias pruebas contra la base.
-
----
 
 ## 1 · Los demás módulos están vacíos
 
@@ -341,6 +318,49 @@ comparar una por una.
 ---
 
 # Resueltos
+
+## R7 · El redondeo se comía medio céntimo
+
+`redondear2(cantidad × precio)` no daba lo mismo que Postgres. En la base,
+`round(3 × 1.005, 2)` es **3.02**; en JavaScript, `3 * 1.005` ya vale
+3.0149999999999997 antes de redondear nada, así que salía **3.01**. El céntimo
+se perdía en la multiplicación, no en el redondeo, y por eso `Number.EPSILON`
+no lo salvaba: la diferencia es mil veces mayor que él.
+
+Ahora hay un solo `importeConDescuento()` en `@rodatech/config`, réplica exacta
+de la columna generada que comparten `cotizacion_items` y `comprobante_items`:
+
+```sql
+round(cantidad * valor_unitario * (1 - descuento_pct / 100.0), 2)
+```
+
+Tres decisiones que conviene no deshacer:
+
+- **Son TRES factores, no dos.** Facturación aplicaba el descuento al precio
+  unitario y luego multiplicaba por la cantidad. Postgres multiplica los tres
+  con precisión completa y redondea UNA vez; en dos pasos se redondea el precio
+  con descuento por el camino. Con descuentos que no son redondos —12,5 %,
+  7,5 %— las cuentas se separaban.
+- **Se usa `BigInt`.** El numerador exacto ronda 10^17 con valores del todo
+  razonables (mil unidades a cien dólares con un 5 %), muy por encima de 2^53.
+  Perder precisión en el paso que existe para no perderla sería absurdo.
+- **El empate se redondea hacia arriba**, que es lo que hace `round()` sobre
+  `numeric` en Postgres.
+
+**Cuánto pasaba, medido y no estimado:** en 200.000 líneas simuladas con
+valores del negocio, **14 diferían** (0,007 %), siempre por un céntimo exacto.
+
+**Y una corrección de lo que este documento decía antes.** Estaba escrito que
+era «la resta de céntimos por la que SUNAT observa una factura». Exagerado: el
+documento GUARDADO siempre fue coherente, porque las líneas y la cabecera las
+calcula Postgres. Lo que estaba mal era la **previsualización** — el operador
+aprobaba una cotización viendo 9.651,25 y se guardaba 9.651,26. No es un
+rechazo de SUNAT; es enseñar un número distinto del que se va a grabar en un
+documento que el cliente firma. Malo, pero no lo mismo.
+
+Comprobado de tres formas: 20 casos frontera contra la expresión real de la
+columna, un barrido de 200.000 líneas, y las 6 líneas ya guardadas en la base,
+que cuadran con la función nueva.
 
 ## R0 · La ficha de producto no abría — y el ERP entero ocultaba sus errores
 

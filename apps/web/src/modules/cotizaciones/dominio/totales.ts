@@ -1,4 +1,9 @@
-import { IGV, redondear2, redondear4 } from "@rodatech/config";
+import {
+  IGV,
+  importeConDescuento,
+  redondear2,
+  redondear4,
+} from "@rodatech/config";
 
 /**
  * Cálculo de totales de una cotización.
@@ -48,19 +53,33 @@ export { redondear2, redondear4 };
 /**
  * Importe de una línea: cantidad × valor unitario, menos el descuento.
  *
- * Réplica exacta de la columna generada `importe` de `cotizacion_items`. Si
- * las dos fórmulas se separan, el PDF y la base dirían cosas distintas.
+ * Réplica exacta de la columna generada `importe` de `cotizacion_items`:
+ *
+ *     round(cantidad * valor_unitario * (1 - descuento_pct / 100.0), 2)
+ *
+ * Se calcula con `importeConDescuento`, que hace la cuenta con enteros
+ * grandes, y NO con `redondear2(cantidad × valor × factor)`. La diferencia es
+ * de un céntimo y aparece en unas 14 de cada 200.000 líneas —medido, no
+ * estimado—, siempre porque el producto en coma flotante cae justo por debajo
+ * del medio céntimo y el redondeo lo tira para abajo.
+ *
+ * Poco, pero el efecto no es cosmético: el operador aprueba una cotización
+ * viendo 9.651,25 y la base guarda 9.651,26. Lo guardado es coherente —los
+ * dos números los calcula Postgres— pero lo que se enseñó antes de guardar
+ * no era lo que se iba a guardar, y eso en un documento que el cliente firma
+ * no vale.
  */
 export function importeLinea(linea: LineaCalculo): number {
-  const descuento = linea.descuentoPct ?? 0;
-  return redondear2(
-    linea.cantidad * linea.valorUnitario * (1 - descuento / 100),
+  return importeConDescuento(
+    linea.cantidad,
+    linea.valorUnitario,
+    linea.descuentoPct ?? 0,
   );
 }
 
 /** Importe sin descuento, para saber cuánto se rebajó. */
 export function importeSinDescuento(linea: LineaCalculo): number {
-  return redondear2(linea.cantidad * linea.valorUnitario);
+  return importeConDescuento(linea.cantidad, linea.valorUnitario, 0);
 }
 
 /** Totales de la cotización completa. */

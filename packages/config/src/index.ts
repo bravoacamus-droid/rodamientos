@@ -116,16 +116,63 @@ export const redondear6 = (n: number): number =>
  * SUNAT observe un comprobante.
  */
 export function importeExacto(cantidad: number, precio: number): number {
-  if (!Number.isFinite(cantidad) || !Number.isFinite(precio)) return 0;
+  return importeConDescuento(cantidad, precio, 0);
+}
 
-  const c = Math.round(cantidad * 100); // 2 decimales
-  const p = Math.round(precio * 10000); // 4 decimales
-  const producto = c * p; // escalado 1e6
+/**
+ * Importe de una línea CON descuento, igual que lo calcula Postgres.
+ *
+ * Réplica exacta de la columna generada que comparten `cotizacion_items` y
+ * `comprobante_items`:
+ *
+ *     round(cantidad * valor_unitario * (1 - descuento_pct / 100.0), 2)
+ *
+ * Y son TRES factores, no dos, que es lo que hace que no valga arreglarlo
+ * sustituyendo la multiplicación: cada uno pierde su parte por el camino.
+ *
+ * Se hace con `BigInt` y no con enteros normales por una razón concreta. El
+ * numerador exacto es `cantidad×100 · valor×10000 · (10000 − dscto×100)`, que
+ * con valores del todo razonables —mil unidades a cien dólares con un 5 %—
+ * ronda los 10^17. Por encima de 2^53 (unos 9·10^15) los enteros de JavaScript
+ * dejan de ser exactos, y perder precisión en el paso que existe justamente
+ * para no perderla sería absurdo. `BigInt` no tiene tope, y aquí se calculan
+ * decenas de líneas, no millones: el coste no se nota.
+ *
+ * El redondeo es «medio hacia arriba», que es el de `round()` sobre `numeric`
+ * en Postgres. `Math.round` de JavaScript hace lo mismo con positivos, pero
+ * aquí se implementa a mano porque se opera sobre enteros grandes.
+ */
+export function importeConDescuento(
+  cantidad: number,
+  valorUnitario: number,
+  descuentoPct: number,
+): number {
+  if (
+    !Number.isFinite(cantidad) ||
+    !Number.isFinite(valorUnitario) ||
+    !Number.isFinite(descuentoPct)
+  ) {
+    return 0;
+  }
 
-  // Por encima de 2^53 los enteros dejan de ser exactos y el truco deja de
-  // valer. Con cantidades y precios de este negocio no se llega ni de lejos,
-  // pero fallar en silencio sería peor que caer al camino aproximado.
-  if (!Number.isSafeInteger(producto)) return redondear2(cantidad * precio);
+  // Las escalas son las de las columnas: cantidad numeric(14,2),
+  // valor_unitario numeric(14,4), descuento_pct numeric(5,2).
+  const c = BigInt(Math.round(cantidad * 100));
+  const v = BigInt(Math.round(valorUnitario * 10000));
+  const d = BigInt(Math.round(descuentoPct * 100));
 
-  return Math.round(producto / 10000) / 100;
+  // (1 − dscto/100) escalado a 1e4. El numerador queda a escala 1e10.
+  const numerador = c * v * (10_000n - d);
+
+  // Bajar de 1e10 a 1e2 es dividir entre 1e8, redondeando al más cercano.
+  const DIVISOR = 100_000_000n;
+  const negativo = numerador < 0n;
+  const absoluto = negativo ? -numerador : numerador;
+
+  const cociente = absoluto / DIVISOR;
+  const resto = absoluto % DIVISOR;
+  // El empate va hacia arriba, como `round()` de Postgres.
+  const redondeado = resto * 2n >= DIVISOR ? cociente + 1n : cociente;
+
+  return Number(negativo ? -redondeado : redondeado) / 100;
 }

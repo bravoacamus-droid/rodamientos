@@ -171,6 +171,35 @@ describe("totalesDe", () => {
   it("sin líneas todo es cero", () => {
     expect(totalesDe([])).toEqual({ gravada: 0, igv: 0, total: 0, descuento: 0 });
   });
+
+  /**
+   * Estos números salen del Postgres del proyecto, de la MISMA expresión de la
+   * columna generada `comprobante_items.importe`.
+   *
+   * Antes se aplicaba el descuento al precio unitario y luego se multiplicaba
+   * por la cantidad. Postgres multiplica los TRES factores con precisión
+   * completa y redondea una sola vez, al final; hacerlo en dos pasos redondea
+   * el precio con descuento por el camino y separa las cuentas.
+   */
+  it("el descuento va como tercer factor, como en la base", () => {
+    expect(
+      totalesDe([{ cantidad: 3, valor_unitario: 1.005, descuento_pct: 33.33 }]).gravada,
+    ).toBe(2.01);
+    expect(
+      totalesDe([{ cantidad: 7, valor_unitario: 2.4567, descuento_pct: 12.5 }]).gravada,
+    ).toBe(15.05);
+    expect(
+      totalesDe([{ cantidad: 2.5, valor_unitario: 4.005, descuento_pct: 10 }]).gravada,
+    ).toBe(9.01);
+  });
+
+  it("aguanta la línea más grande que admite la base", () => {
+    expect(
+      totalesDe([
+        { cantidad: 9999.99, valor_unitario: 9999.9999, descuento_pct: 99.99 },
+      ]).gravada,
+    ).toBe(9999.99);
+  });
 });
 
 describe("detracción", () => {

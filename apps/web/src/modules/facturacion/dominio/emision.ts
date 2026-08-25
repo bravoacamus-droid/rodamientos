@@ -1,4 +1,4 @@
-import { IGV, importeExacto, redondear2 } from "@rodatech/config";
+import { IGV, importeConDescuento, redondear2 } from "@rodatech/config";
 
 import type { CotizacionFacturable, TipoComprobante } from "./tipos";
 
@@ -138,7 +138,7 @@ export interface TotalesComprobante {
  * céntimos entre la cabecera y el detalle es exactamente por lo que SUNAT
  * observa un comprobante.
  *
- * Usa `importeExacto`, no `redondear2(cantidad × precio)`: con valores
+ * Usa `importeConDescuento`, no `redondear2(cantidad × precio)`: con valores
  * unitarios de cuatro decimales la multiplicación en coma flotante se come
  * medio céntimo.
  */
@@ -155,9 +155,14 @@ export function totalesDe(
 
   for (const l of lineas) {
     const dscto = l.descuento_pct ?? 0;
-    bruto = redondear2(bruto + importeExacto(l.cantidad, l.valor_unitario));
+    bruto = redondear2(bruto + importeConDescuento(l.cantidad, l.valor_unitario, 0));
+    // El descuento va como TERCER factor, no aplicado antes al precio.
+    // `cantidad × (valor × factor)` redondea el precio con descuento a cuatro
+    // decimales por el camino; Postgres multiplica los tres con precisión
+    // completa y redondea UNA vez, al final. Con descuentos que no son redondos
+    // —12,5 %, 7,5 %— las dos cuentas se separan por un céntimo.
     gravada = redondear2(
-      gravada + importeExacto(l.cantidad, l.valor_unitario * (1 - dscto / 100)),
+      gravada + importeConDescuento(l.cantidad, l.valor_unitario, dscto),
     );
   }
 

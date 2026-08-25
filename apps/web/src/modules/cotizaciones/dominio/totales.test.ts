@@ -42,6 +42,64 @@ describe("importeLinea", () => {
   it("un descuento del 100 % deja la línea en cero", () => {
     expect(importeLinea(linea({ descuentoPct: 100 }))).toBe(0);
   });
+
+  /**
+   * Los números de este bloque NO están calculados a mano: salen de ejecutar
+   * `round(cantidad * valor_unitario * (1 - descuento_pct/100.0), 2)` en el
+   * Postgres del proyecto, que es la columna generada `cotizacion_items.importe`.
+   *
+   * Cada uno de ellos daba un céntimo de menos con el redondeo anterior
+   * —`redondear2(cantidad × valor × factor)`—, porque el producto en coma
+   * flotante cae justo por debajo del medio céntimo.
+   */
+  describe("cuadra con la columna generada de Postgres", () => {
+    it("el caso de libro: 3 × 1.005", () => {
+      expect(importeLinea(linea({ cantidad: 3, valorUnitario: 1.005 }))).toBe(3.02);
+    });
+
+    it("con importes de verdad del catálogo", () => {
+      expect(importeLinea(linea({ cantidad: 44.9, valorUnitario: 214.95 }))).toBe(
+        9651.26,
+      );
+      expect(importeLinea(linea({ cantidad: 19, valorUnitario: 216.975 }))).toBe(
+        4122.53,
+      );
+      expect(
+        importeLinea(linea({ cantidad: 156.25, valorUnitario: 294.6584 })),
+      ).toBe(46040.38);
+    });
+
+    it("con descuento por medio, que son TRES factores", () => {
+      expect(
+        importeLinea(linea({ cantidad: 3, valorUnitario: 1.005, descuentoPct: 33.33 })),
+      ).toBe(2.01);
+      expect(
+        importeLinea(linea({ cantidad: 7, valorUnitario: 2.4567, descuentoPct: 12.5 })),
+      ).toBe(15.05);
+      expect(
+        importeLinea(linea({ cantidad: 2.5, valorUnitario: 4.005, descuentoPct: 10 })),
+      ).toBe(9.01);
+    });
+
+    /**
+     * El motivo de usar enteros grandes y no enteros normales: aquí el
+     * numerador exacto ronda 10^17, muy por encima de 2^53. Con enteros
+     * normales el resultado sería silenciosamente distinto.
+     */
+    it("aguanta la línea más grande que la base admite", () => {
+      expect(
+        importeLinea(
+          linea({ cantidad: 9999.99, valorUnitario: 9999.9999, descuentoPct: 99.99 }),
+        ),
+      ).toBe(9999.99);
+    });
+
+    it("una línea de céntimos no se va a cero por el camino", () => {
+      expect(importeLinea(linea({ cantidad: 1, valorUnitario: 0.015, descuentoPct: 50 }))).toBe(
+        0.01,
+      );
+    });
+  });
 });
 
 describe("calcularTotales", () => {
