@@ -35,6 +35,46 @@ número ya viaja a un comprobante que SUNAT mira.
 
 ---
 
+## 0 bis · Cobranzas está escrito pero CUELGA EL NAVEGADOR
+
+**La ruta está desconectada a propósito**: `/cobranzas` sigue enseñando el
+cartel de «en construcción». El módulo entero está en
+`apps/web/src/modules/cobranzas/` y no se llega a él desde ninguna parte.
+
+Qué hay hecho y funciona: el dominio con **34 tests** en verde
+(`dominio/cobro.ts` — bloqueos, avisos, reparto sobre cuotas, prioridad de
+cobro), las consultas contra `v_cartera` **validadas una por una contra
+PostgREST**, y las dos acciones (`registrar_pagos` y las gestiones).
+`pnpm typecheck`, `pnpm test` y `pnpm build` pasan.
+
+Qué NO funciona: al abrir la página, **el renderizador de Chrome se queda
+colgado**. No responde ni a una captura ni a ejecutar JavaScript.
+
+Lo que ya se descartó, para no repetirlo:
+
+- **No es el servidor.** `GET /cobranzas` responde 200 en 2,5 s y el SSR
+  termina. Se probó tres veces.
+- **No es una inundación de peticiones.** Solo hay 3 GET en el log; si fuera
+  un bucle que rehace consultas, habría cientos.
+- **No es el navegador.** Pasa igual en una pestaña nueva y limpia, así que es
+  del código, no del estado de Chrome.
+
+O sea que es un **bucle de renderizado puramente de cliente**, después de la
+hidratación. Los sospechosos, por orden:
+
+1. `ui/cobrador.tsx` y `ui/gestor.tsx` se montan **uno por fila** de la
+   cartera, cada uno con su `Dialog` de Radix. Es el primer sitio del proyecto
+   donde hay varios diálogos hermanos en una tabla.
+2. `CifraAnimada` dentro de `Indicadores`: usa `requestAnimationFrame` y llama
+   a `setMostrado` en cada fotograma. En `/reportes` funciona, pero allí no
+   convive con diálogos.
+3. El `useEffect` de `cobrador.tsx` que pide las cuotas al abrir.
+
+**Cómo empezar:** bisecar. Renderizar la tabla SIN los dos diálogos; si carga,
+el problema está en 1. Es un cambio de dos líneas y responde la pregunta.
+
+---
+
 ## 0 · El redondeo de cotizaciones se come medio céntimo
 
 Encontrado al escribir compras, y **no está arreglado en cotizaciones**.
