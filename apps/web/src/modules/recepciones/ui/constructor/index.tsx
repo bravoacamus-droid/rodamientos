@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useReducer, useState } from "react";
+import { useActionState, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -43,14 +43,36 @@ export function ConstructorRecepcion({
   proveedores: proveedoresIniciales,
   compras,
   hoy,
+  compraInicial = null,
 }: {
   proveedores: ProveedorOpcion[];
   compras: CompraPendiente[];
   /** La fecha la fija el servidor: el dominio es puro y no lee reloj. */
   hoy: string;
+  /**
+   * Compra a precargar, si se llega desde su ficha con «Recibir mercadería».
+   *
+   * Llegar con la compra ya elegida es el caso normal: el operador viene de
+   * mirar qué había pedido. Buscarla otra vez en el desplegable es hacerle
+   * repetir lo que acaba de decir.
+   */
+  compraInicial?: string | null;
 }) {
   const router = useRouter();
   const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
+
+  // Se precarga UNA vez, al montar. Va en un efecto y no en `estadoInicial`
+  // porque `cargarCompra` es una transición del reducer —con su lógica de qué
+  // queda pendiente— y duplicarla en el estado inicial sería tener la misma
+  // regla escrita en dos sitios.
+  const yaCargada = useRef(false);
+  useEffect(() => {
+    if (yaCargada.current || !compraInicial) return;
+    const compra = compras.find((c) => c.id === compraInicial);
+    if (!compra) return;
+    yaCargada.current = true;
+    despachar({ tipo: "cargarCompra", compra });
+  }, [compraInicial, compras]);
   // Un proveedor creado aquí mismo tiene que aparecer sin recargar: recargar
   // significaría perder la recepción a medias.
   const [proveedores, setProveedores] = useState(proveedoresIniciales);

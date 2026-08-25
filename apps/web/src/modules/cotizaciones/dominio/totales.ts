@@ -1,4 +1,4 @@
-import { IGV } from "@rodatech/config";
+import { IGV, redondear2, redondear4 } from "@rodatech/config";
 
 /**
  * Cálculo de totales de una cotización.
@@ -38,15 +38,12 @@ export interface TotalesCotizacion {
   margenPct: number;
 }
 
-/** Redondeo a 2 decimales, resistente al error binario de coma flotante. */
-export function redondear2(n: number): number {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
-
-/** Redondeo a 4 decimales, para valores unitarios. */
-export function redondear4(n: number): number {
-  return Math.round((n + Number.EPSILON) * 10000) / 10000;
-}
+/**
+ * Los redondeos viven en `@rodatech/config` desde que compras fue el tercer
+ * módulo que los necesitó. Se reexportan para no tocar los doce sitios que ya
+ * los importan desde aquí.
+ */
+export { redondear2, redondear4 };
 
 /**
  * Importe de una línea: cantidad × valor unitario, menos el descuento.

@@ -16,7 +16,16 @@ const ROLES = ["gerencia", "admin", "almacen", "compras"];
  * navegador para que sea la del servidor y no la del reloj del equipo del
  * almacén, que es el que suele estar mal.
  */
-export default async function PaginaNuevaRecepcion() {
+export default async function PaginaNuevaRecepcion({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  // `?compra=` lo pone el botón «Recibir mercadería» de la ficha de compra.
+  const crudo = Array.isArray(sp.compra) ? sp.compra[0] : sp.compra;
+  const compraInicial = crudo && crudo.length > 0 ? crudo : null;
+
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
   if (!ROLES.includes(perfil.rol)) {
@@ -58,6 +67,7 @@ export default async function PaginaNuevaRecepcion() {
       // no un requisito. Se degrada a recepción suelta.
       compras={compras.ok ? compras.datos : []}
       hoy={hoy}
+      compraInicial={compraInicial}
     />
   );
 }

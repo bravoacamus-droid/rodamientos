@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 25/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
+Estado al 25/08/2026 (tarde). Ordenado por lo que más duele. Lo ya resuelto vive al
 final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
@@ -10,15 +10,15 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **23 reales de 32** · quedan 9 carteles |
+| Rutas | **28 reales de 36** · quedan 8 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 411 en verde |
+| `pnpm test` | 442 en verde |
 | `pnpm e2e` | configurado, **0 pruebas escritas** |
 | `pnpm lint` | roto (ver §6) |
-| Migraciones | **hasta la 015, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 016, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
-013 y la 015 son centinelas: fallan al aplicar si alguien mete una función de
+013, la 015 y la 016 son centinelas: fallan al aplicar si alguien mete una función de
 escritura sin control de rol, o si la valorización se desalinea del kardex.
 
 **Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
@@ -26,22 +26,50 @@ escritura sin control de rol, o si la valorización se desalinea del kardex.
 `.env*.local`, así que un archivo llamado `env.local` a secas NO está
 protegido y se sube al primer `git add .`.
 
-Lo siguiente sin bloqueos es **compras** (§1).
+Lo siguiente sin bloqueos es **cobranzas** (§1). Antes de tocar facturación,
+hay que arreglar el redondeo del §0.
+
+---
+
+## 0 · El redondeo de cotizaciones se come medio céntimo
+
+Encontrado al escribir compras, y **no está arreglado en cotizaciones**.
+
+`redondear2(cantidad × precio)` no da lo mismo que Postgres. En la base,
+`round(3 × 1.005, 2)` es **3.02**; en JavaScript, `3 * 1.005` ya vale
+3.0149999999999997 antes de redondear, así que sale **3.01**. El céntimo se
+pierde en la multiplicación, no en el redondeo, y por eso el `Number.EPSILON`
+que lleva la función no lo salva: la diferencia es mil veces mayor que él.
+
+Compras usa `importeExacto()` de `@rodatech/config`, que hace la cuenta con
+enteros y coincide con Postgres en los siete casos frontera comprobados.
+**`cotizaciones/dominio/totales.ts` sigue con el redondeo ingenuo**, y ahí
+importa más: `cotizacion_items.importe` es una columna generada y ese número
+acaba en el comprobante. Es justo la resta de céntimos por la que SUNAT
+observa una factura.
+
+Hace falta cuando se toque facturación, y con cuidado: `importeLinea` de
+cotizaciones multiplica TRES factores —cantidad, valor unitario y el
+descuento—, así que no vale con sustituir la llamada. Merece su propio commit
+y sus propias pruebas contra la base.
 
 ---
 
 ## 1 · Los demás módulos están vacíos
 
-De **32 rutas hay 23 reales**. Las otras 9 son carteles de «en construcción».
+De **36 rutas hay 28 reales**. Las otras 8 son carteles de «en construcción».
+(El recuento sale de contar los `page.tsx`, así que incluye login y las de
+alta y edición; los números anteriores de este documento no las contaban todas
+y no cuadraban entre sí.)
 
 **Reales:** tablero · cotizaciones (listado, constructor, ficha) · productos
 (listado, alta/edición, importador) · clientes (listado, ficha, alta/edición) ·
 **recepciones** (listado, registro, ficha) e **inventario** (valorización,
-kardex, cuadre) ← el 24/08 · **proveedores** (listado, ficha, alta/edición)
-← el 25/08
+kardex, cuadre) ← el 24/08 · **proveedores** (listado, ficha, alta/edición) y
+**compras** (listado, registro, ficha) ← el 25/08
 
 **Carteles:** guías de remisión · facturación · cobranzas · equivalencias ·
-compras · importaciones · reportes · alertas · configuración
+importaciones · reportes · alertas · configuración
 
 ### El backend de casi todos ya está escrito
 
@@ -54,30 +82,38 @@ ya trae, con control de rol y probadas al aplicar:
 | `generar_guia_desde_cotizacion` · `emitir_guia` · `anular_guia` | ~165 | guías |
 | ~~`recepcionar_mercaderia`~~ | ~110 | ~~recepciones~~ · **cableada 24/08** |
 | ~~`registrar_ajuste_inventario`~~ | ~80 | ~~cuadre~~ · **cableada 24/08** |
+| ~~`crear_compra` · `anular_compra`~~ | ~180 | ~~compras~~ · **escritas y cableadas 25/08** (migración 016) |
 | `registrar_pagos` | ~40 | cobranzas |
 | `generar_alertas` | — | alertas |
 | `recalcular_precios_promedio` | ~45 | precio promedio |
 
-La app usa **11 de ~30 RPCs**, más cuatro vistas analíticas. Lo que falta por
-módulo es `acciones/` + `ui/`, no diseñar la base.
+La app usa **13 de ~32 RPCs**, más cuatro vistas analíticas. Para el resto de
+módulos falta `acciones/` + `ui/`, no diseñar la base.
+
+**Ojo con la excepción, que se descubrió al hacer compras:** la tabla existía
+desde la 002 pero **no había ningún RPC**, y `numero` es `not null` sin
+trigger de correlativo. O sea que la frase «solo falta la capa de arriba» hay
+que comprobarla módulo a módulo antes de estimar: para compras hubo que
+escribir 180 líneas de PL/pgSQL primero.
 
 Orden sugerido, por lo que cierra el ciclo del dinero:
 
-1. **Compras** — cierra el otro extremo del abastecimiento y es lo único que
-   falta para que el ciclo de abastecimiento funcione entero. El módulo de
-   recepciones ya sabe consumirlas: `comprasPendientes()` las precarga y el
-   reducer arrastra sus gastos de importación. Hoy ese camino está escrito y
-   probado pero no se puede ejercitar en la aplicación, porque no hay forma de
-   crear una compra.
-2. **Cobranzas** — `registrar_pagos` y la vista `v_cartera` con aging ya están.
-3. **Guías de remisión** — la cotización aprobada ya tiene el botón «Generar
+1. **Cobranzas** — `registrar_pagos` y la vista `v_cartera` con aging ya están.
+2. **Guías de remisión** — la cotización aprobada ya tiene el botón «Generar
    guía» apuntando a una ruta que no existe. Bloqueada por el cliente REST
    OAuth2, que hay que escribir (ver §3).
-4. **Facturación** — cierra el ciclo comercial. Bloqueada por el certificado
-   del cliente; contra beta sí se puede avanzar.
-5. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
+3. **Facturación** — cierra el ciclo comercial. Bloqueada por el certificado
+   del cliente; contra beta sí se puede avanzar. Antes de tocarla, arreglar el
+   redondeo del §0.
+4. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
    pantalla de inventario), equivalencias, reportes, importaciones,
    configuración.
+
+**El ciclo de abastecimiento ya está entero y probado de punta a punta**: se
+registró CMP-26-00001 (170.32 + 30.66 = 200.98), se recibió con REC-26-00001,
+la compra pasó sola a `recibida`, el kardex tomó los dos ingresos y el stock
+del 6205 subió de 35 a 45. La invariante `stock.valorizado = kardex` cuadra en
+los siete productos.
 
 ---
 
@@ -162,18 +198,26 @@ comparar una por una.
 - **`buscar_productos` se ha redefinido dos veces** (`004` y luego `011`, que
   le añadió `precio_minimo`). Antes de tocarla hay que mirar cuál es la
   vigente, o la migración falla con «cannot change return type».
-- **`redondear2` y `redondear4` están duplicados** en
-  `cotizaciones/dominio/totales.ts` y `recepciones/dominio/costeo.ts`. No es
-  descuido: el barrel de `cotizaciones` reexporta sus páginas, que son Server
-  Components, así que importarlo desde el constructor de recepciones —que
-  corre en el navegador— rompería el build del cliente. La salida limpia es un
-  paquete compartido de aritmética de dinero, o mover los redondeos a
-  `@rodatech/config`. Cuando haya un tercer módulo que los necesite, hacerlo.
-- **El camino «recepción contra compra» no se puede probar en la aplicación.**
-  Está escrito y con tests de dominio, pero no hay pantalla para crear una
-  compra, así que `comprasPendientes()` siempre devuelve vacío. Se verificó
-  contra la base con SQL; se podrá probar de verdad cuando exista el módulo de
-  compras.
+- ~~**`redondear2` y `redondear4` están duplicados**~~ · **hecho el 25/08.**
+  Vivían en `cotizaciones/dominio/totales.ts` y en
+  `recepciones/dominio/costeo.ts`, duplicados a propósito porque el barrel de
+  cotizaciones arrastra Server Components. Compras fue el tercer módulo que los
+  necesitaba, que era la condición que se había puesto aquí, así que ahora
+  están en `@rodatech/config` —el nivel más bajo del monorepo, sin
+  dependencias— y los dos sitios los reexportan. Ningún llamador tuvo que
+  cambiar.
+- **La compra no se puede editar, solo anular y rehacer.** Es deliberado y es
+  lo mismo que hace la recepción: un documento que se reescribe en silencio no
+  sirve para cuadrar nada. Anular pide motivo y se niega si ya entró
+  mercadería —eso se corrige con un ajuste de inventario, no borrando el
+  documento que el kardex está citando—. Rehacerla quema un correlativo, que
+  es lo normal en un ERP. Si Willy pide editar antes de recibir, se puede
+  añadir; pero que sea una decisión suya, no un descuido.
+- **Los gastos de importación se teclean en la compra y se reparten al
+  recibir.** El constructor los enseña como «costo en almacén» para que se vea
+  el efecto antes de guardar, pero el número que manda es el de la base:
+  `recepcionar_mercaderia()` relee `compras.gastos_importacion` y no acepta lo
+  que le llegue del navegador.
 - **El alta rápida de proveedor desde la recepción no consulta el RUC**, aunque
   el maestro sí. Es deliberado: son 100 consultas de Decolecta al mes, y con la
   mercadería en el mostrador la razón social está impresa en la factura que el
@@ -208,6 +252,13 @@ comparar una por una.
 - [ ] Borrar la variable `RODATECH_ATAJOS` de Vercel: mientras esté, cualquiera
       con la URL entra con un clic
 - [ ] Borrar los dos clientes de prueba marcados `[DEMO]`
+- [ ] Borrar el proveedor `[DEMO] RODAMIENTOS DEL PACIFICO S.A.C.` y, con él,
+      la compra `CMP-26-00001` y la recepción `REC-26-00001` que se crearon
+      para probar el ciclo. **Ojo con el orden y con el stock**: la recepción
+      metió 10 unidades del 6205 y 4 del 7210 al kardex. Borrarla a mano
+      dejaría el stock mintiendo —es exactamente lo que pasó con el costo del
+      6205, ver R2—. Lo correcto es pasar un ajuste de inventario que las
+      saque, y solo después borrar los documentos.
 - [ ] Decidir si los 7 productos de ejemplo se quedan (son datos reales suyos)
 
 ---

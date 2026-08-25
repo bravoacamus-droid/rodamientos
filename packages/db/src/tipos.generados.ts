@@ -415,6 +415,7 @@ export type Database = {
           guia_proveedor: string | null
           id: string
           igv: number
+          motivo_anulacion: string | null
           numero: string
           observaciones: string | null
           proveedor_id: string
@@ -436,6 +437,7 @@ export type Database = {
           guia_proveedor?: string | null
           id?: string
           igv?: number
+          motivo_anulacion?: string | null
           numero: string
           observaciones?: string | null
           proveedor_id: string
@@ -457,6 +459,7 @@ export type Database = {
           guia_proveedor?: string | null
           id?: string
           igv?: number
+          motivo_anulacion?: string | null
           numero?: string
           observaciones?: string | null
           proveedor_id?: string
@@ -3045,6 +3048,7 @@ export type Database = {
     }
     Functions: {
       _tres_letras: { Args: { n: number }; Returns: string }
+      anular_compra: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       anular_comprobante: {
         Args: { p_id: string; p_motivo: string }
         Returns: Json
@@ -3109,6 +3113,7 @@ export type Database = {
           plan: string
         }[]
       }
+      crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }

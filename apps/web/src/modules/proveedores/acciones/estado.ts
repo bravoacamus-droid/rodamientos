@@ -62,7 +62,11 @@ export async function cambiarEstadoProveedor(
 
     revalidatePath("/proveedores");
     revalidatePath(`/proveedores/${datos.id}`);
+    // Dar de baja un proveedor tiene que sacarlo también de los desplegables
+    // de abastecimiento, no solo de su propio maestro.
     revalidatePath("/recepciones/nueva");
+    revalidatePath("/compras");
+    revalidatePath("/compras/nueva");
 
     return { ok: true, activo: data.activo, razonSocial: data.razon_social };
   } catch (e) {

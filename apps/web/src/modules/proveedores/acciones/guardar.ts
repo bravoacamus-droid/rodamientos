@@ -152,8 +152,12 @@ export async function guardarProveedor(
   const revalidar = (id: string) => {
     revalidatePath("/proveedores");
     revalidatePath(`/proveedores/${id}`);
-    // El registro de recepción lee el desplegable de proveedores.
+    // Las tres pantallas que leen el desplegable de proveedores. Sin esto, dar
+    // de alta un proveedor y entrar a comprar enseña «todavía no hay
+    // proveedores», que es exactamente lo contrario de lo que acaba de pasar.
     revalidatePath("/recepciones/nueva");
+    revalidatePath("/compras");
+    revalidatePath("/compras/nueva");
   };
 
   try {

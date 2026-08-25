@@ -15,33 +15,26 @@
  * pequeñas"* (30:01). No hay DUA, ni FOB, ni ad valorem.
  */
 
+import { redondear2, redondear4, redondear6 } from "@rodatech/config";
+
 /**
- * Los tres redondeos, definidos aquí y no importados de `cotizaciones`.
+ * Los tres redondeos vienen de `@rodatech/config`, el nivel más bajo del
+ * monorepo.
  *
- * `redondear2` y `redondear4` son idénticos a los que `cotizaciones` publica
- * en su barrel, y duplicarlos no gusta. El motivo es de empaquetado: ese
- * barrel también reexporta sus páginas, que son Server Components y arrastran
- * `server-only`. Este archivo lo consume el constructor, que corre en el
- * navegador, así que importarlo de ahí rompería el build del cliente.
+ * Estuvieron duplicados aquí a propósito: el barrel de `cotizaciones`, que era
+ * el otro sitio donde vivían, reexporta también sus páginas —Server
+ * Components con `server-only`—, así que importarlos de ahí desde este
+ * archivo, que consume el constructor en el navegador, rompía el build del
+ * cliente. Quedó anotado para resolverlo al tercer módulo que los necesitara.
+ * Compras fue el tercero, y `@rodatech/config` no arrastra nada.
  *
- * La salida correcta sería un paquete compartido de aritmética de dinero. No
- * se hace aquí para no meter un refactor de `cotizaciones` dentro del módulo
- * de recepciones; queda anotado en PENDIENTES.
- *
- * `redondear6` sí es propio: `v_factor` está declarado `numeric(12,6)` en la
- * función, así que Postgres redondea el factor a 6 decimales ANTES de
- * multiplicar. Calcular con la división en coma flotante completa daría un
- * costo distinto en el último decimal — un descuadre invisible hasta que
- * alguien sume una columna.
+ * `redondear6` importa más de lo que parece: `v_factor` está declarado
+ * `numeric(12,6)` en `recepcionar_mercaderia()`, así que Postgres redondea el
+ * factor a 6 decimales ANTES de multiplicar. Calcular con la división en coma
+ * flotante completa daría un costo distinto en el último decimal — un
+ * descuadre invisible hasta que alguien sume una columna.
  */
-export const redondear2 = (n: number): number =>
-  Math.round((n + Number.EPSILON) * 100) / 100;
-
-export const redondear4 = (n: number): number =>
-  Math.round((n + Number.EPSILON) * 10_000) / 10_000;
-
-export const redondear6 = (n: number): number =>
-  Math.round((n + Number.EPSILON) * 1_000_000) / 1_000_000;
+export { redondear2, redondear4, redondear6 };
 
 /** Lo mínimo que hace falta de una línea para costearla. */
 export interface LineaCosteable {
