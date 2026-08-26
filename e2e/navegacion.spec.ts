@@ -47,6 +47,7 @@ const PANTALLAS: { ruta: string; titulo: RegExp }[] = [
   { ruta: "/guias", titulo: /Guías/i },
   { ruta: "/cobranzas", titulo: /Cobranzas/i },
   { ruta: "/reportes", titulo: /Informes|Reportes/i },
+  { ruta: "/alertas", titulo: /Alertas/i },
 ];
 
 for (const { ruta, titulo } of PANTALLAS) {

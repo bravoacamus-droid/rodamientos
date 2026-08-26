@@ -3,6 +3,7 @@ import "server-only";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
+import type { Severidad } from "@/modules/alertas";
 
 export type Resultado<T> =
   | { ok: true; datos: T }
@@ -41,7 +42,12 @@ export interface Cartera {
 export interface AlertaResumen {
   id: string;
   tipo: string;
-  severidad: "critica" | "alta" | "media" | "baja";
+  /**
+   * Los CINCO niveles del enum, no cuatro. Antes faltaba `info`, y como la
+   * consulta se afirma con `as`, una alerta informativa entraba con un tipo
+   * que decía que era imposible.
+   */
+  severidad: Severidad;
   titulo: string;
   mensaje: string;
   entidad_nombre: string | null;
@@ -168,7 +174,14 @@ export async function alertasPrioritarias(
         "id, tipo, severidad, titulo, mensaje, entidad_nombre, valor, accion_url, notificado_en, generada_en",
       )
       .eq("archivada", false)
-      .order("severidad")
+      // `ascending: false` NO es un detalle de gusto.
+      //
+      // `severidad_alerta` se declaró como ('info','baja','media','alta',
+      // 'critica') y un enum de Postgres ordena por su orden de DECLARACIÓN.
+      // Con el orden por defecto, este panel se llamaba «alertas prioritarias»
+      // y enseñaba las seis MENOS importantes: un quiebre de stock quedaba
+      // fuera del recorte mientras dentro había cotizaciones por vencer.
+      .order("severidad", { ascending: false })
       .order("generada_en", { ascending: false })
       .limit(limite);
 

@@ -1,20 +1,20 @@
 import Link from "next/link";
 import { EstadoVacio } from "@rodatech/ui";
 
+// Las etiquetas salen del módulo de alertas y no de una copia local: aquí
+// había una lista de cuatro niveles cuando el enum tiene cinco, así que una
+// alerta `info` se pintaba con el estilo de `baja` y con el texto crudo del
+// enum en minúsculas.
+import { ETIQUETA_SEVERIDAD, type Severidad } from "@/modules/alertas";
+
 import { alertasPrioritarias, alertasSinNotificar } from "../api/consultas";
 
-const COLOR_SEVERIDAD: Record<string, string> = {
+const COLOR_SEVERIDAD: Record<Severidad, string> = {
   critica: "bg-[var(--danger-bg)] text-[var(--danger)]",
   alta: "bg-[var(--warn-bg)] text-[var(--warn)]",
   media: "bg-[var(--info-bg)] text-[var(--info)]",
   baja: "bg-[var(--surface-2)] text-[var(--fg-muted)]",
-};
-
-const ETIQUETA_SEVERIDAD: Record<string, string> = {
-  critica: "Crítica",
-  alta: "Alta",
-  media: "Media",
-  baja: "Baja",
+  info: "bg-[var(--surface-2)] text-[var(--fg-muted)]",
 };
 
 /**

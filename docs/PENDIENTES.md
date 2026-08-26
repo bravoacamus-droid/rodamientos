@@ -10,15 +10,15 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **37 reales de 41** · quedan 4 carteles |
+| Rutas | **38 reales de 41** · quedan 3 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 620 en verde |
-| `pnpm e2e` | **25 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 654 en verde |
+| `pnpm e2e` | **26 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 020, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 021, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
-013, la 015, la 016, la 017, la 018, la 019 y la 020 son centinelas: fallan al aplicar si alguien mete una función de
+013, la 015, la 016, la 017, la 018, la 019, la 020 y la 021 son centinelas: fallan al aplicar si alguien mete una función de
 escritura sin control de rol, o si la valorización se desalinea del kardex.
 
 **Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
@@ -61,8 +61,11 @@ el final del proyecto.
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
   escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
   pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **Los 4 carteles** que quedan de 41 rutas: equivalencias, importaciones,
-  alertas y configuración (§1).
+- **Los 3 carteles** que quedan de 41 rutas: equivalencias, importaciones y
+  configuración (§1). Alertas ya está hecha (26/08).
+- **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
+  mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
+  Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
 - **Comparar la ficha de cliente con la de Defontana** (§5): ellos tienen 18
   campos y nosotros 32 columnas, así que probablemente sobren.
 - Las cosas menores de §6.
@@ -83,7 +86,7 @@ el final del proyecto.
 
 ## 1 · Los demás módulos están vacíos
 
-De **41 rutas hay 37 reales**. Las otras 4 son carteles de «en construcción».
+De **41 rutas hay 38 reales**. Las otras 3 son carteles de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -92,9 +95,10 @@ alta y edición.)
 **recepciones** e **inventario** ← el 24/08 · **proveedores** y **compras**
 ← el 25/08 · **facturación** (listado, emisión, ficha, configuración),
 **informes** (cinco gráficos), **guías de remisión** (listado, preparación,
-ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde
+ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde ·
+**alertas** (bandeja, filtros, leer/archivar y refresco) ← el 26/08
 
-**Carteles:** equivalencias · importaciones · alertas · configuración
+**Carteles:** equivalencias · importaciones · configuración
 
 ### El backend de casi todos ya está escrito
 
@@ -109,10 +113,10 @@ ya trae, con control de rol y probadas al aplicar:
 | ~~`registrar_ajuste_inventario`~~ | ~80 | ~~cuadre~~ · **cableada 24/08** |
 | ~~`crear_compra` · `anular_compra`~~ | ~180 | ~~compras~~ · **escritas y cableadas 25/08** (migración 016) |
 | ~~`registrar_pagos`~~ | ~40 | ~~cobranzas~~ · **cableada 25/08** |
-| `generar_alertas` | — | alertas |
+| ~~`generar_alertas`~~ | ~115 | ~~alertas~~ · **cableada 26/08** (migración 021); falta el worker que las EMPUJE |
 | `recalcular_precios_promedio` | ~45 | precio promedio |
 
-La app usa **13 de ~32 RPCs**, más cuatro vistas analíticas. Para el resto de
+La app usa **14 de ~33 RPCs**, más cuatro vistas analíticas. Para el resto de
 módulos falta `acciones/` + `ui/`, no diseñar la base.
 
 **Ojo con la excepción, que se descubrió al hacer compras:** la tabla existía
@@ -125,8 +129,13 @@ Orden sugerido, por lo que cierra el ciclo del dinero:
 
 1. **El envío GRE de las guías** — el documento interno ya funciona y mueve el
    stock; falta mandarlo a SUNAT (ver §3).
-2. El resto: alertas (`generar_alertas` + `v_reposicion`, que ya alimenta la
-   pantalla de inventario), equivalencias, importaciones, configuración.
+2. **El worker que EMPUJA las alertas.** La bandeja ya existe y se refresca a
+   mano, pero lo que Willy pidió fue que la alerta LLEGUE: *«pero no te llega
+   como una alerta, tú tienes que entrar y ver»* (25:21). La tabla ya está
+   preparada para ello —`alertas.notificado_en` en null significa «todavía no
+   ha salido»— y falta el cron que llame a `generar_alertas()` y el envío por
+   WhatsApp o correo.
+3. El resto: equivalencias, importaciones, configuración.
 
 **El ciclo de abastecimiento ya está entero y probado de punta a punta**: se
 registró CMP-26-00001 (170.32 + 30.66 = 200.98), se recibió con REC-26-00001,
@@ -353,6 +362,56 @@ comparar una por una.
 ---
 
 # Resueltos
+
+## R9 · Las alertas llevaban meses apuntando a ninguna parte
+
+Salió al cablear la bandeja, el 26/08. Tres cosas, y las tres son la misma:
+**nadie había abierto nunca la pantalla, así que nadie había hecho clic**.
+
+**1 · Tres de los siete enlaces daban 404.** `generar_alertas()` guardaba en
+`accion_url` rutas que la aplicación no tiene:
+
+| Guardaba | Existe |
+|---|---|
+| `/inventario/productos/{id}` | `/productos/{id}` |
+| `/inventario/ajustes` | `/inventario/ajuste`, en singular |
+| `/cobranzas/{id}` | `/facturacion/{id}` — cobranzas es una sola pantalla |
+
+O sea que el quiebre de stock, el saldo negativo y **toda la cartera vencida**
+llevaban a una página que no existe. Y no solo desde la bandeja: el panel del
+tablero también enlaza `accion_url`, así que ese enlace estaba roto desde que
+se hizo el tablero.
+
+**2 · El panel «alertas prioritarias» del tablero enseñaba las menos
+importantes.** Ordenaba con `.order("severidad")` a secas. Un enum de Postgres
+ordena por su **orden de declaración**, y `severidad_alerta` se declaró como
+`('info','baja','media','alta','critica')`: ascendente es de lo trivial a lo
+grave. Con `limit(6)`, el panel recortaba justo al revés — dentro cabían
+cotizaciones por vencer y fuera se quedaba un quiebre de stock.
+
+**3 · El tablero tenía su propia lista de severidades, con cuatro de las
+cinco.** Faltaba `info`, y como la consulta se afirma con `as`, el tipo decía
+que era imposible que llegara. Habría pintado el texto crudo del enum.
+
+**La lección**, que es la misma de R0: una pantalla que nadie ha abierto no
+está escrita, está *supuesta*. Lo que se hizo para que no vuelva a pasar:
+
+- `/alertas` entra en la suite de navegación (26 pruebas, antes 25).
+- `apps/web/src/modules/alertas/dominio/enlaces.test.ts` lee las rutas del
+  propio SQL de la migración y comprueba que cada una tiene su `page.tsx`.
+  Es el único punto del proyecto donde una cadena de PL/pgSQL y un directorio
+  de Next están atados: sin esa prueba, nada del compilador los une.
+- Las etiquetas de severidad viven ahora en el módulo de alertas y el tablero
+  las importa, en vez de tener una copia a medias.
+
+De paso, la migración 021 añade `refrescar_alertas()`: `generar_alertas()`
+sigue cerrada a `authenticated` —es trabajo programado— y la envoltura valida
+rol contra `permisos_rol`, que es lo que exige el centinela de la 013.
+Comprobado con una sesión real: con el usuario de almacén devuelve
+`{"nuevas":1}`, la segunda llamada devuelve 0 —es idempotente por `huella`— y
+llamar a `generar_alertas()` directamente sigue dando *permission denied*.
+
+---
 
 ## R8 · Dos agujeros en las notas que la base no vigilaba
 
