@@ -10,16 +10,23 @@ dice «ya está» está verificado en el esquema y en la pantalla.
 
 ## Lo primero, antes de mandarle la URL
 
-**Quitar `RODATECH_ATAJOS`.** Willy lo vio y preguntó por ello a los dos
-minutos: *«¿siempre va a estar así, con accesos rápidos? Porque si no,
-cualquier persona puede entrar»*. Son los botones de sesión rápida del login.
-Ya estaba anotado para la entrega (§7 de PENDIENTES), pero ahora es urgente:
-va a entrar él solo a revisar y es lo primero que ve.
+**`RODATECH_ATAJOS` se queda POR AHORA** — decisión de Luis del 26/08, para que
+Willy pueda entrar a revisar sin pelearse con la contraseña. Pero él ya
+preguntó por ello a los dos minutos —*«¿siempre va a estar así, con accesos
+rápidos? Porque si no, cualquier persona puede entrar»*—, así que conviene
+decírselo antes de que lo vuelva a ver: es de desarrollo y se quita. Sigue
+anotado para la entrega en §7 de PENDIENTES.
 
-**La letra.** *«Yo soy medio corto de vista, las letras las tengo que
-detenerme un poco»* (0:50). No es un capricho de diseño: es el usuario
-principal diciendo que no lee cómodo. Hay que subir el tamaño base y revisar
-los `text-xs` de las tablas, que son los que más cuesta leer.
+**~~La letra~~ · HECHA el 26/08.** *«Yo soy medio corto de vista, las letras
+las tengo que detenerme un poco»* (0:50). No era un capricho de diseño: es el
+usuario principal diciendo que no lee cómodo.
+
+Lo que costaba leer no era el cuerpo del texto sino las etiquetas secundarias:
+había OCHO tamaños sueltos por debajo de `text-xs` —de 10 a 12 px— en 60
+archivos, y la mitad en píxeles fijos, así que ni siquiera crecían al subir la
+base. Ahora hay un suelo: nada por debajo de `text-xs`, y la escala del ERP son
+cuatro tamaños en vez de doce. La base sube a 17 px desde `html`, que arrastra
+también alturas de control y espaciado porque todo está en `rem`.
 
 ---
 
@@ -80,9 +87,9 @@ price»). `precio_minimo` se queda como está hasta que él confirme. La pregunt
 concreta para el viernes: *«en su Excel, ¿la columna P.M. es el mínimo por
 debajo del cual no vende, o el precio al que ve que está el mercado?»*.
 
-### 2.2 · El margen: confirmar que lo quiere sobre el costo
+### 2.2 · ~~El margen~~ · HECHO el 26/08 (migración 023)
 
-Lo dijo claro (28:35): *«ese margen creo que ustedes lo están considerando con
+Ya está cambiado en todas partes; queda solo enseñárselo. Lo dijo claro (28:35): *«ese margen creo que ustedes lo están considerando con
 respecto al precio de venta… lo que me interesa saber es el margen con
 respecto al costo»*. Y tiene razón: hoy todo el sistema calcula
 `(venta − costo) / venta`.
@@ -98,17 +105,29 @@ Su plantilla calcula P.V. = P.C. × 1,20, así que él piensa en 20 % — y la
 pantalla le dice 16,7 %. **Todos los márgenes que ha visto están por debajo de
 lo que él espera**, y eso explica por qué lo notó a los cinco segundos.
 
-Solo hay que confirmar que quiere el cambio en TODAS partes (cotización,
-tablero, informes, top de productos) y no solo en el tablero. Está en cinco
-sitios: `v_ventas_mensuales`, `v_top_productos`, `v_productos_stock`, el
-trigger de cotizaciones (`004_funciones.sql:773`) y `totales.ts` del
-constructor.
+Y había una incoherencia de la que él no se enteró: `v_productos_stock` YA
+dividía entre el costo desde el principio, así que el listado del catálogo
+decía 20 % y el tablero 16,7 % **del mismo producto**. «Margen» significaba dos
+cosas distintas según la pantalla.
+
+Unificado en `v_ventas_mensuales`, `v_top_productos`, el trigger de
+cotizaciones, el constructor y la ficha de producto. Comprobado contra su base:
+agosto pasa de 15,52 % a 18,37 % y el top de productos sale en 20,19 / 20,01,
+que es lo que ya decía el catálogo.
+
+Las cotizaciones ya guardadas se recalcularon: `margen_pct` es un valor
+almacenado, no calculado al leer, así que COT1-000001 habría seguido enseñando
+15,51 % junto a un catálogo que dice 20 % del mismo rodamiento.
+
+De paso, el botón «aplicar margen» proponía precios un 4 % por encima de su
+Excel: hacía `costo / (1 − 20/100)` = costo × 1,25 cuando su plantilla hace
+× 1,20.
 
 ---
 
 ## 3 · Lo que falta de verdad, por orden de lo que más le duele
 
-### 3.1 · Trazabilidad por ítem, de punta a punta ← lo que le dolió HOY
+### 3.1 · ~~Trazabilidad por ítem~~ · HECHA el 26/08
 
 Es lo que contó con más detalle (30:29 y 32:45), y le pasó esta misma mañana:
 un cliente le armó una orden con cinco ítems sacados de cotizaciones viejas
@@ -124,15 +143,17 @@ Y el motivo, que es el que manda: *«si lo he comprado ahí es porque ya lo he
 analizado y he visto que es el mejor precio del mercado. La idea es no volver
 a hacer ese estudio de mercado»*.
 
-**Estado:** las dos mitades existen por separado y ninguna está unida.
-`v_historial_precios` ya da el lado de la venta (cotización y factura, con
-cliente y precio). El lado de la compra está en `compra_items` y en el kardex,
-sin vista. `v_trazabilidad_venta` sigue el hilo cotización → guía → factura,
+**Cómo estaba:** las dos mitades existían por separado y ninguna estaba unida.
+`v_historial_precios` daba el lado de la venta (cotización y factura, con
+cliente y precio). El lado de la compra vivía en `compra_items` y en el kardex,
+sin vista. `v_trazabilidad_venta` seguía el hilo cotización → guía → factura,
 pero por DOCUMENTO, no por ítem.
 
-Falta una vista `v_trazabilidad_item` que una las dos mitades, y una pantalla
-—o una pestaña en la ficha del producto— que la enseñe en una sola línea de
-tiempo. **Es lo primero que haría.**
+**Hecha** (migración 024). `/productos/{id}/trazabilidad`, con botón destacado en la ficha del
+producto. Arriba, las tres cifras que zanjan la duda: a quién comprarle y a
+cuánto, el último precio cotizado y el margen que deja juntar las dos. Debajo,
+proveedores ordenados por el mejor precio y clientes por lo más reciente. Al
+final, la línea de tiempo entera agrupada por día. Ver §6.
 
 ### 3.2 · Reportes con filtros de fecha
 
@@ -207,13 +228,16 @@ Excel y volver a subirla (13:00). El generador ya existe
 
 ---
 
-## 5 · Orden sugerido para llegar al viernes
+## 5 · Orden para llegar al viernes
 
-1. Quitar `RODATECH_ATAJOS` y subir el tamaño de letra. Es lo que él ve primero.
-2. **Margen sobre costo** en los cinco sitios. Es un cambio pequeño y arregla
-   cada número que mira.
-3. **Trazabilidad por ítem.** Es lo que pidió con más ganas y lo que le costó
-   una mañana esta semana.
+Hecho el 26/08:
+
+1. ~~Tamaño de letra~~ · suelo tipográfico y base a 17 px.
+2. ~~Margen sobre costo~~ · migración 023, unificado en todo el sistema.
+3. ~~Trazabilidad por ítem~~ · migración 024 y `/productos/{id}/trazabilidad`.
+
+Lo que queda:
+
 4. `precio_mercado` y `proveedor_id` en el producto.
 5. Filtros de fecha en informes y en el tablero; el cruce producto × cliente.
 6. Familias y subfamilias desde la pantalla.

@@ -3069,6 +3069,27 @@ export type Database = {
           },
         ]
       }
+      v_trazabilidad_item: {
+        Row: {
+          cantidad: number | null
+          contraparte: string | null
+          contraparte_doc: string | null
+          contraparte_id: string | null
+          dia: string | null
+          documento: string | null
+          documento_id: string | null
+          estado: string | null
+          evento: string | null
+          fecha: string | null
+          importe: number | null
+          lado: string | null
+          producto_id: string | null
+          referencia: string | null
+          secuencia: number | null
+          unitario: number | null
+        }
+        Relationships: []
+      }
       v_trazabilidad_venta: {
         Row: {
           cliente: string | null
@@ -3289,6 +3310,7 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      resumen_trazabilidad: { Args: { p_producto: string }; Returns: Json }
       siguiente_correlativo: {
         Args: {
           p_serie?: string

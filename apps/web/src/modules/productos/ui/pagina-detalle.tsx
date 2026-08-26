@@ -63,6 +63,16 @@ export default async function PaginaDetalleProducto({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Va antes que «Editar» y con el estilo destacado a propósito:
+              responde la pregunta que Willy hace a diario —«a quién se lo
+              compré y a cuánto lo cocticé»— y hasta ahora se contestaba
+              rebuscando en WhatsApp (26/08, 34:06). */}
+          <Link
+            href={`/productos/${p.id}/trazabilidad`}
+            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            Ver trazabilidad
+          </Link>
           {puedeEditar ? (
             <Link
               href={`/productos/${p.id}/editar`}

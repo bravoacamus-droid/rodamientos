@@ -121,6 +121,41 @@ test("el cross-reference abre con un producto de verdad", async ({ page }) => {
   }
 });
 
+/**
+ * La trazabilidad de un producto de verdad.
+ *
+ * Es la pantalla con más consultas distintas del ERP —cuatro uniones en la
+ * vista, más un RPC que devuelve JSON— y todas se cruzan con tablas que
+ * pueden estar vacías. El caso que más fácil se rompe no es el producto con
+ * historia, es el que no tiene ninguna: ahí la mitad de las respuestas son
+ * null y el JSON llega con huecos.
+ */
+test("la trazabilidad de un producto abre y no esconde errores", async ({ page }) => {
+  await page.goto("/productos");
+
+  const hrefs = await page
+    .locator("a")
+    .evaluateAll((nodos) =>
+      nodos.map((n) => (n as HTMLAnchorElement).getAttribute("href") ?? ""),
+    );
+  const ficha = hrefs.find((h) => /^\/productos\/[0-9a-f-]{36}$/.test(h));
+
+  test.skip(!ficha, "No hay ningún producto en el catálogo.");
+
+  const fallosDeConsola: string[] = [];
+  page.on("pageerror", (e) => fallosDeConsola.push(e.message));
+
+  await page.goto(`${ficha!}/trazabilidad`);
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Trazabilidad/i);
+
+  const cuerpo = await page.locator("body").innerText();
+  for (const señal of SEÑALES_DE_ERROR) {
+    expect(cuerpo, `La trazabilidad enseña «${señal}»`).not.toContain(señal);
+  }
+  expect(fallosDeConsola, "La trazabilidad lanzó errores de JavaScript").toEqual([]);
+});
+
 for (const { listado, patronEnlace, nombre } of FICHAS) {
   test(`la ficha de ${nombre} abre desde su listado`, async ({ page }) => {
     await page.goto(listado);
