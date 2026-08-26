@@ -10,16 +10,19 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **40 reales de 41** · queda 1 cartel |
+| Rutas | **41 reales de 42** · queda 1 cartel (importaciones) |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 701 en verde |
-| `pnpm e2e` | **29 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 773 en verde |
+| `pnpm e2e` | **39 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 022, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 029, aplicadas** al Supabase del cliente |
+| Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
-`main` está en la punta de lo último. Las migraciones son idempotentes y la
-013, la 015, la 016, la 017, la 018, la 019, la 020 y la 021 son centinelas: fallan al aplicar si alguien mete una función de
-escritura sin control de rol, o si la valorización se desalinea del kardex.
+`main` está en la punta de lo último. Las migraciones son idempotentes y de la
+013 en adelante casi todas llevan centinela: fallan al aplicar si alguien mete
+una función de escritura sin control de rol, si la valorización se desalinea
+del kardex, si una nota de crédito se cuenta como venta o si «días sin
+comprar» empieza a contar días que no han pasado.
 
 **Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
 `.env.local` en la raíz — ojo, **con el punto delante**: el `.gitignore` tapa
@@ -37,12 +40,12 @@ un vistazo sin leerse el documento entero.
 
 ### Lo que depende de ti (detalle en §4)
 
-Ninguna de estas dos se desbloquea escribiendo código, y las dos pueden frenar
-el final del proyecto.
+Nada de esto se desbloquea escribiendo código, y todo puede frenar el final
+del proyecto.
 
 1. **Un proyecto Supabase de pruebas.** Es lo que bloquea lo más importante que
    queda: las pruebas del **flujo del dinero** de punta a punta (cotizar →
-   aprobar → guía → facturar → cobrar, y compra → recepción). Hoy las 25
+   aprobar → guía → facturar → cobrar, y compra → recepción). Hoy las 39
    pruebas comprueban que las pantallas abren sin error, que no es poco, pero
    **no comprueban que el dinero cuadre**. No se pueden correr contra la base
    del cliente porque esas pruebas ESCRIBEN: mueven stock, gastan correlativos
@@ -52,17 +55,35 @@ el final del proyecto.
 2. **Las credenciales de SUNAT y lo que va con ellas** (§4): el certificado
    `.pfx` con su clave, el usuario SOL secundario, los tres Excel de productos
    / clientes / proveedores, y los correlativos de arranque por serie. El
-   código está entero, cifrado y esperando; solo falta enchufarlo. Del
-   certificado hay que **mirar la fecha de caducidad en cuanto llegue**: Willy
-   dijo que el suyo *«ya fue el año pasado»*.
+   código está entero, cifrado y esperando; solo falta enchufarlo.
+
+   **Cambió el 26/08:** Willy va a comprar un certificado NUEVO para no chocar
+   con su ERP actual, que sigue en producción hasta la migración. Hay que
+   **avisarle con unas dos semanas** — él dijo «me avisa nomás cuando se llegue
+   a ese punto». Ya no hace falta comprobar la caducidad del viejo.
+
+   Los correlativos **ya tienen dónde meterse**: `/configuracion` → «Series y
+   correlativos», columna «desde».
+
+3. **Los tres Excel** (§4). Sin ellos el sistema funciona con datos ficticios,
+   pero los informes de ventas, el top de productos y la trazabilidad salen
+   vacíos: son pantallas que solo dicen algo con historia detrás.
+
+   **Antes de que suba el de productos**, preguntarle lo de la columna P.M.
+   (FEEDBACK-26-08 §2.1). La plantilla ya tiene las dos columnas y el
+   importador avisa por pantalla, pero es mejor saberlo que corregir 3.000
+   pisos después.
 
 ### Lo que puedo hacer yo sin esperar a nadie
 
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
   escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
   pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **El cartel** que queda de 41 rutas: importaciones (§1). Alertas,
-  equivalencias y configuración ya están hechas (26/08).
+- **El cartel** que queda de 42 rutas: importaciones (§1). Alertas,
+  equivalencias, configuración y **trazabilidad por ítem** ya están hechas
+  (26/08). Del cartel de importaciones, ojo: el fondo del asunto —el prorrateo
+  de gastos— ya está arreglado en la 022; lo que falta es solo la pantalla de
+  seguimiento de lo que está en tránsito.
 - **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
   mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
   Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
