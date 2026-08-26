@@ -20,6 +20,19 @@ export interface FilaPlantilla {
   precio_compra: number;
   precio_venta: number;
   precio_minimo: number;
+
+  /**
+   * Columnas añadidas el 26/08. Van con `null` cuando la celda viene vacía y
+   * no con cero: es lo que le dice a la base «no me lo digas», para que una
+   * carga parcial no borre lo que ya estaba cargado.
+   */
+  codigo_fabricante: string | null;
+  ubicacion: string | null;
+  proveedor: string | null;
+  stock_maximo: number | null;
+  precio_mercado: number | null;
+  /** En kilos. Sin él no se puede emitir una guía: `guia_peso_pos` la rechaza. */
+  peso: number | null;
 }
 
 export type AccionFila = "nuevo" | "actualizado" | "rechazado";
@@ -43,6 +56,22 @@ export interface ResumenImportacion {
   actualizados: number;
   rechazados: number;
   marcas_nuevas: string[];
+  /**
+   * Proveedores nombrados en el archivo que no están en el maestro.
+   *
+   * NO frenan la carga y NO se crean solos: un proveedor lleva RUC,
+   * condiciones de pago y plazo de entrega, y darlo de alta desde un nombre
+   * suelto llenaría el maestro de fichas huecas. La fila entra sin proveedor
+   * y se informa para darlos de alta bien.
+   */
+  proveedores_desconocidos: string[];
+  /**
+   * Cuántas filas traen peso.
+   *
+   * Es el número que hay que mirar en la carga real: `guia_peso_pos` rechaza
+   * una guía con peso cero, y hoy no hay un solo producto con peso.
+   */
+  con_peso: number;
   /** Cuántos productos nuevos traen stock, que entra como movimiento. */
   stock_inicial: number;
   /**
@@ -60,6 +89,19 @@ export interface ProblemaArchivo {
   mensaje: string;
 }
 
+/**
+ * Aviso sobre CÓMO se va a leer el archivo, no sobre un error en él.
+ *
+ * Un `ProblemaArchivo` dice «esta fila se omitió». Un aviso dice «esto se va a
+ * interpretar así, y conviene que lo sepas antes de aplicar». Son cosas
+ * distintas y mezclarlas haría que un aviso importante se leyera como una
+ * fila más que se cayó.
+ */
+export interface AvisoLectura {
+  titulo: string;
+  detalle: string;
+}
+
 export type ResultadoAnalisis =
   | {
       ok: true;
@@ -67,5 +109,6 @@ export type ResultadoAnalisis =
       /** Las filas válidas, para mandarlas de vuelta al confirmar. */
       filas: FilaPlantilla[];
       problemas: ProblemaArchivo[];
+      avisos: AvisoLectura[];
     }
   | { ok: false; error: string; problemas?: ProblemaArchivo[] };

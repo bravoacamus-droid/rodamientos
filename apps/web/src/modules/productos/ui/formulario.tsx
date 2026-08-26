@@ -27,6 +27,7 @@ export interface CatalogosProducto {
   subfamilias: { id: string; nombre: string; familia_id: string }[];
   tipos: { id: string; nombre: string; subfamilia_id: string }[];
   unidades: { codigo: string; nombre: string }[];
+  proveedores: { id: string; razon_social: string }[];
 }
 
 export interface ProductoEditable {
@@ -46,6 +47,10 @@ export interface ProductoEditable {
   stock_maximo: number;
   peso_kg: number;
   ubicacion: string | null;
+  /** A cuánto se ve que está el mercado. Referencia, no piso ni lista. */
+  precio_mercado: number;
+  /** El proveedor habitual. El historial real lo da la trazabilidad. */
+  proveedor_id: string | null;
 }
 
 const MARKUP = 1.2;
@@ -85,6 +90,8 @@ export function FormularioProducto({
     stock_minimo: String(producto?.stock_minimo ?? "0"),
     stock_maximo: String(producto?.stock_maximo ?? "0"),
     peso_kg: String(producto?.peso_kg ?? "0"),
+    precio_mercado: String(producto?.precio_mercado ?? ""),
+    proveedor_id: producto?.proveedor_id ?? "",
     ubicacion: producto?.ubicacion ?? "",
   });
   // Se recuerda si el P.V. lo escribió una persona: a partir de ahí el costo
@@ -151,6 +158,8 @@ export function FormularioProducto({
     stock_minimo: num(f.stock_minimo),
     stock_maximo: num(f.stock_maximo),
     peso_kg: num(f.peso_kg),
+    precio_mercado: num(f.precio_mercado),
+    proveedor_id: f.proveedor_id || null,
     ubicacion: f.ubicacion.trim() || null,
   };
 
@@ -347,6 +356,24 @@ export function FormularioProducto({
               className={`text-right tabular ${pisoAlto ? "border-[var(--danger)]" : ""}`}
             />
           </Campo>
+
+          {/* No participa en la comprobación del piso a propósito: es a cuánto
+              se ve que está el MERCADO, no un precio nuestro, así que puede
+              estar por encima o por debajo de los otros dos y seguir siendo
+              cierto. */}
+          <Campo
+            etiqueta="Precio de mercado"
+            ayuda="A cuánto se ve que se está vendiendo fuera. Solo de referencia: no bloquea nada ni sale en ningún documento."
+          >
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              value={f.precio_mercado}
+              onChange={(e) => set("precio_mercado", e.target.value)}
+              className="text-right tabular"
+            />
+          </Campo>
         </div>
 
         {margen !== null ? (
@@ -421,6 +448,23 @@ export function FormularioProducto({
               onChange={(e) => set("ubicacion", e.target.value)}
               placeholder="A-3-2"
             />
+          </Campo>
+
+          <Campo
+            etiqueta="Proveedor habitual"
+            ayuda="A quién se le pide normalmente. A quién se le compró de verdad lo dice la trazabilidad."
+          >
+            <SelectNativo
+              value={f.proveedor_id}
+              onChange={(e) => set("proveedor_id", e.target.value)}
+            >
+              <option value="">Sin proveedor fijo</option>
+              {catalogos.proveedores.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.razon_social}
+                </option>
+              ))}
+            </SelectNativo>
           </Campo>
         </div>
 

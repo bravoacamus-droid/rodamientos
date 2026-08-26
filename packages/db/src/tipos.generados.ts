@@ -2231,10 +2231,12 @@ export type Database = {
           margen_objetivo_pct: number
           motivo_archivado: string | null
           peso_kg: number
+          precio_mercado: number
           precio_minimo: number
           precio_promedio: number
           precio_promedio_actualizado_en: string | null
           precio_venta: number
+          proveedor_id: string | null
           stock_maximo: number
           stock_minimo: number
           subfamilia_id: string
@@ -2268,10 +2270,12 @@ export type Database = {
           margen_objetivo_pct?: number
           motivo_archivado?: string | null
           peso_kg?: number
+          precio_mercado?: number
           precio_minimo?: number
           precio_promedio?: number
           precio_promedio_actualizado_en?: string | null
           precio_venta?: number
+          proveedor_id?: string | null
           stock_maximo?: number
           stock_minimo?: number
           subfamilia_id: string
@@ -2305,10 +2309,12 @@ export type Database = {
           margen_objetivo_pct?: number
           motivo_archivado?: string | null
           peso_kg?: number
+          precio_mercado?: number
           precio_minimo?: number
           precio_promedio?: number
           precio_promedio_actualizado_en?: string | null
           precio_venta?: number
+          proveedor_id?: string | null
           stock_maximo?: number
           stock_minimo?: number
           subfamilia_id?: string
@@ -2337,6 +2343,13 @@ export type Database = {
             columns: ["marca_id"]
             isOneToOne: false
             referencedRelation: "marcas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
           {
@@ -2943,8 +2956,12 @@ export type Database = {
           marca_segmento: string | null
           margen_pct: number | null
           peso_kg: number | null
+          precio_mercado: number | null
+          precio_minimo: number | null
           precio_promedio: number | null
           precio_venta: number | null
+          proveedor: string | null
+          proveedor_id: string | null
           reservado: number | null
           stock: number | null
           stock_maximo: number | null
@@ -2965,6 +2982,13 @@ export type Database = {
             columns: ["marca_id"]
             isOneToOne: false
             referencedRelation: "marcas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
           {

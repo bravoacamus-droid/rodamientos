@@ -172,12 +172,40 @@ existe. Falta el cruce producto × cliente y los filtros por fecha en todo.
 El tablero también los quiere (2:00): *«de tal fecha a tal fecha cuánto he
 vendido»*.
 
-### 3.3 · Campos nuevos en el producto
+### 3.3 · ~~Campos nuevos en el producto~~ · HECHOS el 26/08 (migraciones 025 y 026)
 
-- **`precio_mercado`** — ver §2.1.
-- **`proveedor_id`** — *«proveedor de dónde se compró ese ítem»* (7:40). Es la
-  mitad de compra de la trazabilidad de §3.1, y además sirve para saber a quién
-  volver a pedirle.
+- **`precio_mercado`** — campo NUEVO y separado del piso. Ver §2.1.
+- **`proveedor_id`** — el proveedor **habitual**, editable en la ficha. El
+  historial de a quién se le compró de verdad lo responde la trazabilidad
+  (§3.1); esto es «a quién le pido» sin mirar la historia.
+
+**Y de paso, la plantilla de carga**, que es lo urgente de verdad: Willy va a
+subir **más de 3.000 rodamientos** y lo que no tenga columna ese día se pierde.
+Tenía diez columnas y le faltaban seis:
+
+| Columna nueva | Por qué |
+|---|---|
+| **PESO KG** | `guia_peso_pos` rechaza una guía con peso cero y **no hay un solo producto con peso cargado**. Willy lo llamó «lo más importante» (02:46). Sin esto, cada guía se teclea a mano. |
+| P. MERCADO $ | El campo nuevo. |
+| PROVEEDOR | El habitual. Si no está en el maestro, la fila entra igual y se avisa. |
+| UBICACION | Existía en la tabla sin forma de llenarse salvo producto a producto. |
+| STOCK MAXIMO | Igual; alimenta la alerta de sobrestock. |
+| COD. FABRICANTE | Por donde busca medio mundo. |
+
+Dos reglas que había que decidir:
+
+- **El proveedor NO se crea solo.** Con las marcas sí —que aparezca una marca
+  nueva es normal— pero un proveedor lleva RUC, condiciones de pago y plazo de
+  entrega. Crear uno desde un nombre suelto llenaría el maestro de fichas
+  huecas. Se avisa y se dan de alta bien.
+- **Una columna vacía no borra lo que ya había.** Si sube un archivo parcial
+  sin la columna de peso, los pesos ya cargados siguen ahí. Solo se pisa lo que
+  el archivo trae con valor.
+
+Y la previsualización ahora **avisa de la lectura de P.M.** antes de aplicar:
+«se está cargando como precio MÍNIMO en N productos; si para ti significa
+precio de mercado, dilo antes». La decisión de §2.1 se toma mirando, no por
+omisión.
 
 ### 3.4 · Crear familias y subfamilias desde la pantalla
 
@@ -235,13 +263,18 @@ Hecho el 26/08:
 1. ~~Tamaño de letra~~ · suelo tipográfico y base a 17 px.
 2. ~~Margen sobre costo~~ · migración 023, unificado en todo el sistema.
 3. ~~Trazabilidad por ítem~~ · migración 024 y `/productos/{id}/trazabilidad`.
+4. ~~`precio_mercado` y `proveedor_id`~~ · migraciones 025 y 026, más las seis
+   columnas nuevas de la plantilla de carga.
 
 Lo que queda:
 
-4. `precio_mercado` y `proveedor_id` en el producto.
 5. Filtros de fecha en informes y en el tablero; el cruce producto × cliente.
 6. Familias y subfamilias desde la pantalla.
 7. Cuenta bancaria, agencias de transporte, descargar plantilla.
+
+**Antes de que Willy suba los 3.000 productos** hay que preguntarle lo de §2.1.
+La plantilla ya trae las dos columnas y el importador avisa, pero es mejor
+saberlo antes que corregir 3.000 pisos después.
 
 Lo de §2 se pregunta al empezar la reunión del viernes, no al final: si P.M.
 resulta ser precio de mercado, cambia la carga del catálogo entero y conviene

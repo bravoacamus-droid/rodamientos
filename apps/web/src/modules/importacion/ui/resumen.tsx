@@ -1,6 +1,6 @@
 import { Badge, Table, TableContenedor, TBody, TdNum, THead, ThNum } from "@rodatech/ui";
 
-import type { ProblemaArchivo, ResumenImportacion } from "../dominio/tipos";
+import type { AvisoLectura, ProblemaArchivo, ResumenImportacion } from "../dominio/tipos";
 
 /**
  * El plan, antes de aplicarlo.
@@ -39,9 +39,12 @@ function Cifra({
 export function Resumen({
   resumen,
   problemas = [],
+  avisos = [],
 }: {
   resumen: ResumenImportacion;
   problemas?: ProblemaArchivo[];
+  /** Cómo se va a leer el archivo. No son errores: son decisiones. */
+  avisos?: AvisoLectura[];
 }) {
   const rechazadas = resumen.detalle.filter((d) => d.accion === "rechazado");
   const buenas = resumen.detalle.filter((d) => d.accion !== "rechazado");
@@ -56,14 +59,55 @@ export function Resumen({
           etiqueta="rechazados"
           tono={resumen.rechazados > 0 ? "malo" : "neutro"}
         />
-        <Cifra valor={resumen.stock_inicial} etiqueta="con stock inicial" />
+        {/* «Con peso» y no «con stock inicial»: el stock inicial se mira una
+            vez, y el peso decide si se van a poder emitir guías o si habrá que
+            teclearlo en cada una. */}
+        <Cifra
+          valor={resumen.con_peso}
+          etiqueta="traen peso"
+          tono={resumen.con_peso === 0 ? "malo" : "neutro"}
+        />
       </div>
+
+      {/* Los avisos van ARRIBA del todo, antes que las cifras y que los
+          problemas: son decisiones sobre cómo se va a leer el archivo, y una
+          vez aplicado ya no hay dónde tomarlas. */}
+      {avisos.map((a, i) => (
+        <div
+          key={i}
+          className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm"
+        >
+          <p className="font-medium">{a.titulo}</p>
+          <p className="mt-0.5">{a.detalle}</p>
+        </div>
+      ))}
 
       {resumen.marcas_nuevas.length > 0 ? (
         <p className="text-sm">
           <span className="font-medium">Marcas que se van a crear: </span>
           {resumen.marcas_nuevas.join(", ")}
         </p>
+      ) : null}
+
+      {resumen.proveedores_desconocidos.length > 0 ? (
+        <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+          <p className="font-medium">
+            {resumen.proveedores_desconocidos.length}{" "}
+            {resumen.proveedores_desconocidos.length === 1
+              ? "proveedor del archivo no está en el maestro"
+              : "proveedores del archivo no están en el maestro"}
+          </p>
+          <p className="mt-0.5">
+            {resumen.proveedores_desconocidos.join(", ")}.
+          </p>
+          <p className="mt-1 text-xs text-[var(--fg-muted)]">
+            Las filas entran igual, solo que sin proveedor habitual. No se crean
+            solos a propósito: un proveedor lleva RUC, condiciones de pago y
+            plazo de entrega, y darlo de alta desde un nombre suelto llenaría el
+            maestro de fichas a medias. Se dan de alta en Proveedores y se
+            vuelve a subir el archivo.
+          </p>
+        </div>
       ) : null}
 
       {resumen.stock_ignorado > 0 ? (

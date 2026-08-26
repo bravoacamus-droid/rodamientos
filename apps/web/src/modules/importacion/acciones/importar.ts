@@ -8,6 +8,7 @@ import type { Json } from "@rodatech/db/tipos";
 import { leerPlantilla, matrizDeArchivo } from "../api/hoja";
 import { columnasQueFaltan } from "../dominio/plantilla";
 import type {
+  AvisoLectura,
   FilaPlantilla,
   ResultadoAnalisis,
   ResumenImportacion,
@@ -46,6 +47,15 @@ const esquemaFila = z.object({
   precio_compra: z.number().finite(),
   precio_venta: z.number().finite(),
   precio_minimo: z.number().finite(),
+
+  // Columnas del 26/08. Anulables a propósito: `null` significa «la celda
+  // venía vacía», y la base lo usa para no pisar lo que ya estaba cargado.
+  codigo_fabricante: z.string().max(80).nullable(),
+  ubicacion: z.string().max(80).nullable(),
+  proveedor: z.string().max(200).nullable(),
+  stock_maximo: z.number().finite().nullable(),
+  precio_mercado: z.number().finite().nullable(),
+  peso: z.number().finite().nullable(),
 });
 
 const esquemaLote = z.array(esquemaFila).min(1).max(MAX_FILAS);
@@ -128,7 +138,49 @@ export async function analizar(
   const resumen = await pedirPlan(filas, true);
   if (!resumen.ok) return { ok: false, error: resumen.error, problemas };
 
-  return { ok: true, resumen: resumen.datos, filas, problemas };
+  return { ok: true, resumen: resumen.datos, filas, problemas, avisos: avisosDe(filas) };
+}
+
+/**
+ * Avisos sobre cómo se va a leer el archivo. No son errores.
+ *
+ * El primero es el que importa, y sale de una contradicción del propio
+ * cliente: el 21/08 dijo que la columna `P.M.` de su Excel es el precio
+ * MÍNIMO —«no puede vender menos de eso»— y con eso se cargó como un piso
+ * duro, con una restricción en la base que rechaza cotizar por debajo. En la
+ * demo del 26/08 dijo que P.M. es para él el precio de MERCADO, «con ese
+ * precio rápidamente yo ya le agrego un 20 %».
+ *
+ * No pueden ser las dos: a un piso no se le suma margen. Y la diferencia no
+ * es cosmética — si su P.M. era el precio de mercado, cargarlo como piso pone
+ * a más de 3.000 productos un suelo de venta que él nunca fijó, y el cotizador
+ * empezaría a bloquear precios legítimos.
+ *
+ * Se avisa aquí, con el archivo delante y antes de aplicar, en lugar de
+ * decidirlo por omisión. Ver docs/FEEDBACK-26-08.md §2.1.
+ */
+function avisosDe(filas: FilaPlantilla[]): AvisoLectura[] {
+  const avisos: AvisoLectura[] = [];
+
+  const conPiso = filas.filter((f) => f.precio_minimo > 0).length;
+  if (conPiso > 0) {
+    avisos.push({
+      titulo: `La columna P.M. se está cargando como PRECIO MÍNIMO en ${conPiso} ${conPiso === 1 ? "producto" : "productos"}`,
+      detalle:
+        "Eso es un piso duro: el cotizador no dejará vender por debajo. Si en tu archivo P.M. significa «precio de mercado» —una referencia de a cuánto se está vendiendo— avísanos ANTES de aplicar, porque hay una columna aparte para eso (P. MERCADO $) y cargarlo como piso bloquearía cotizaciones válidas.",
+    });
+  }
+
+  const sinPeso = filas.filter((f) => f.peso === null || f.peso === 0).length;
+  if (sinPeso > 0) {
+    avisos.push({
+      titulo: `${sinPeso} ${sinPeso === 1 ? "producto viene" : "productos vienen"} sin peso`,
+      detalle:
+        "El peso es obligatorio para emitir una guía de remisión: la base rechaza una guía con peso cero. Sin él, cada guía habrá que teclearlo a mano. Se puede añadir después con otra carga; una columna vacía no borra los pesos que ya estén cargados.",
+    });
+  }
+
+  return avisos;
 }
 
 /** Paso 2: aplicar. Recibe las filas que la previsualización devolvió. */

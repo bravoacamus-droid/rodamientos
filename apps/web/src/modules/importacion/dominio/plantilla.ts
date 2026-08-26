@@ -14,19 +14,51 @@ import type { FilaPlantilla, ProblemaArchivo } from "./tipos";
  * devolverle el problema al cliente; el trabajo es entenderlo.
  */
 
-/** Columnas de la plantilla, con los nombres que el cliente ve. */
+/**
+ * Columnas de la plantilla, con los nombres que el cliente ve.
+ *
+ * Las seis últimas se añadieron el 26/08 tras la demo. La que más urgía es
+ * PESO: `guia_peso_pos` rechaza una guía con peso cero y hoy no hay un solo
+ * producto con peso cargado, así que cada guía se teclea a mano. Willy lo llamó
+ * «lo más importante» (02:46).
+ *
+ * OJO CON `P.M. $`: se sigue leyendo como el precio MÍNIMO —el piso de venta—,
+ * que es lo que él confirmó el 21/08. En la demo del 26/08 dijo que para él
+ * P.M. es el precio de MERCADO, que es otra cosa y ahora tiene columna propia.
+ * Las dos lecturas no se pueden aplicar a la vez, así que el analizador AVISA
+ * cuando el archivo trae `P.M.` para que la decisión se tome mirando. Ver
+ * docs/FEEDBACK-26-08.md §2.1.
+ */
 export const COLUMNAS = [
   { clave: "codigo", cabecera: "CODIGO", alias: ["CÓDIGO", "COD"] },
+  { clave: "codigo_fabricante", cabecera: "COD. FABRICANTE", alias: ["CODIGO FABRICANTE", "CÓDIGO FABRICANTE", "COD FAB", "REFERENCIA"] },
   { clave: "familia", cabecera: "FAMILIA", alias: [] },
   { clave: "subfamilia", cabecera: "SUB-FAMILIA", alias: ["SUBFAMILIA", "SUB FAMILIA"] },
   { clave: "tipo", cabecera: "DESCRIPCION", alias: ["DESCRIPCIÓN", "TIPO"] },
   { clave: "marca", cabecera: "MARCA", alias: [] },
   { clave: "stock", cabecera: "STOCK ACTUAL", alias: ["STOCK"] },
   { clave: "stock_minimo", cabecera: "STOCK MINIMO", alias: ["STOCK MÍNIMO", "MINIMO", "MÍNIMO"] },
+  { clave: "stock_maximo", cabecera: "STOCK MAXIMO", alias: ["STOCK MÁXIMO", "MAXIMO", "MÁXIMO"] },
   { clave: "precio_compra", cabecera: "P.C. $", alias: ["PC", "P.C.", "PRECIO COMPRA", "COSTO"] },
   { clave: "precio_venta", cabecera: "P.V. $", alias: ["PV", "P.V.", "PRECIO VENTA"] },
   { clave: "precio_minimo", cabecera: "P.M. $", alias: ["PM", "P.M.", "PRECIO MINIMO", "PRECIO MÍNIMO"] },
+  { clave: "precio_mercado", cabecera: "P. MERCADO $", alias: ["PRECIO MERCADO", "P.MERC.", "MERCADO"] },
+  { clave: "peso", cabecera: "PESO KG", alias: ["PESO", "PESO (KG)", "KG"] },
+  { clave: "ubicacion", cabecera: "UBICACION", alias: ["UBICACIÓN", "ALMACEN", "ALMACÉN", "ANAQUEL"] },
+  { clave: "proveedor", cabecera: "PROVEEDOR", alias: ["PROVEEDOR HABITUAL"] },
 ] as const;
+
+/** Las que llevan número. El resto son texto. */
+const NUMERICAS: readonly ClaveColumna[] = [
+  "stock",
+  "stock_minimo",
+  "stock_maximo",
+  "precio_compra",
+  "precio_venta",
+  "precio_minimo",
+  "precio_mercado",
+  "peso",
+];
 
 export type ClaveColumna = (typeof COLUMNAS)[number]["clave"];
 
@@ -183,14 +215,13 @@ export function leerFilas(filas: string[][], cabecera: Cabecera): Lectura {
       subfamilia: texto(celdas, "subfamilia"),
       tipo: texto(celdas, "tipo"),
       marca: texto(celdas, "marca"),
+      codigo_fabricante: texto(celdas, "codigo_fabricante"),
+      ubicacion: texto(celdas, "ubicacion"),
+      proveedor: texto(celdas, "proveedor"),
     };
-    const numericos = {
-      stock: texto(celdas, "stock"),
-      stock_minimo: texto(celdas, "stock_minimo"),
-      precio_compra: texto(celdas, "precio_compra"),
-      precio_venta: texto(celdas, "precio_venta"),
-      precio_minimo: texto(celdas, "precio_minimo"),
-    };
+    const numericos = Object.fromEntries(
+      NUMERICAS.map((clave) => [clave, texto(celdas, clave)]),
+    ) as Record<(typeof NUMERICAS)[number], string>;
 
     const vacia =
       Object.values(crudos).every((v) => v === "") &&
@@ -207,11 +238,17 @@ export function leerFilas(filas: string[][], cabecera: Cabecera): Lectura {
 
     // Un número ilegible NO se convierte en cero en silencio: un costo que se
     // vuelve 0 sin avisar es un margen falso en cada cotización futura.
-    const convertido: Record<string, number> = {};
+    //
+    // Una celda VACÍA sí se distingue de un cero, y se guarda como null. Para
+    // stock y precios da igual —abajo se resuelven a cero, como siempre— pero
+    // para peso, ubicación, mercado y stock máximo es la diferencia entre «no
+    // me lo digas» y «vale cero», y de ella depende que una segunda carga
+    // parcial no borre los pesos que ya estaban.
+    const convertido: Record<string, number | null> = {};
     let ilegible: string | null = null;
     for (const [clave, bruto] of Object.entries(numericos)) {
       if (bruto === "") {
-        convertido[clave] = 0;
+        convertido[clave] = null;
         continue;
       }
       const n = aNumero(bruto);
@@ -236,11 +273,20 @@ export function leerFilas(filas: string[][], cabecera: Cabecera): Lectura {
       subfamilia: crudos.subfamilia.toUpperCase(),
       tipo: crudos.tipo.toUpperCase(),
       marca: crudos.marca.toUpperCase(),
+      codigo_fabricante: crudos.codigo_fabricante || null,
+      ubicacion: crudos.ubicacion || null,
+      proveedor: crudos.proveedor || null,
+      // Los de siempre: vacío es cero, que es como se ha comportado desde el
+      // principio y como está escrito en las pruebas del importador.
       stock: convertido.stock ?? 0,
       stock_minimo: convertido.stock_minimo ?? 0,
       precio_compra: convertido.precio_compra ?? 0,
       precio_venta: convertido.precio_venta ?? 0,
       precio_minimo: convertido.precio_minimo ?? 0,
+      // Los nuevos: vacío es null y viaja así hasta la base.
+      stock_maximo: convertido.stock_maximo ?? null,
+      precio_mercado: convertido.precio_mercado ?? null,
+      peso: convertido.peso ?? null,
     });
   }
 

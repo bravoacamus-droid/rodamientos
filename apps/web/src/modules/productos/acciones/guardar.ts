@@ -37,6 +37,15 @@ const esquema = z.object({
   stock_maximo: z.number().nonnegative().finite(),
   peso_kg: z.number().nonnegative().finite(),
   ubicacion: z.string().trim().max(60).nullable(),
+
+  // Añadidos el 26/08 (migración 025).
+  //
+  // `precio_mercado` es una REFERENCIA de a cuánto se ve que está el mercado,
+  // no un precio de venta ni un piso: por eso no entra en la comprobación de
+  // más abajo que impide que el mínimo supere a la lista. Puede estar por
+  // encima o por debajo de los dos y seguir siendo verdad.
+  precio_mercado: z.number().nonnegative().finite(),
+  proveedor_id: z.string().uuid().nullable(),
 });
 
 export type ResultadoProducto =

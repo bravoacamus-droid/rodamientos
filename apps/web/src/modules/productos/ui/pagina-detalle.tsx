@@ -39,9 +39,12 @@ export default async function PaginaDetalleProducto({
   const puedeEditar = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
   const puedeAjustarStock = rol !== null && ["gerencia", "admin", "almacen"].includes(rol);
 
+  // Sobre el COSTO (023). Era el último sitio que seguía dividiendo entre la
+  // venta, así que la ficha decía un número y el listado del catálogo otro
+  // distinto del mismo producto.
   const margen =
     p.precio_venta > 0 && p.costo_promedio > 0
-      ? ((p.precio_venta - p.costo_promedio) / p.precio_venta) * 100
+      ? ((p.precio_venta - p.costo_promedio) / p.costo_promedio) * 100
       : null;
   const bajoMinimo = p.stock_minimo > 0 && p.stock <= p.stock_minimo;
 
@@ -110,7 +113,14 @@ export default async function PaginaDetalleProducto({
         <Tarjeta
           etiqueta="Precio de venta"
           valor={<Moneda valor={p.precio_venta} />}
-          pie={p.precio_minimo > 0 ? `piso ${p.precio_minimo.toFixed(2)}` : "sin piso definido"}
+          pie={
+            [
+              p.precio_minimo > 0 ? `piso ${p.precio_minimo.toFixed(2)}` : "sin piso",
+              p.precio_mercado > 0 ? `mercado ${p.precio_mercado.toFixed(2)}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          }
         />
         <Tarjeta
           etiqueta="Costo promedio"
@@ -120,10 +130,12 @@ export default async function PaginaDetalleProducto({
         <Tarjeta
           etiqueta="Margen"
           valor={margen !== null ? `${margen.toFixed(1)}%` : "—"}
+          // Los cortes suben con el denominador (023): sobre el costo, 12 y 20
+          // son el equivalente de los 10 y 15 de cuando se medía sobre la venta.
           tono={
-            margen === null ? undefined : margen < 10 ? "malo" : margen < 15 ? "aviso" : "ok"
+            margen === null ? undefined : margen < 12 ? "malo" : margen < 20 ? "aviso" : "ok"
           }
-          pie={margen === null ? "falta el costo" : "sobre la venta"}
+          pie={margen === null ? "falta el costo" : "sobre el costo"}
         />
       </div>
 
@@ -142,6 +154,7 @@ export default async function PaginaDetalleProducto({
               etiqueta="Peso"
               valor={p.peso_kg > 0 ? `${p.peso_kg} kg` : "sin registrar"}
             />
+            <Dato etiqueta="Proveedor habitual" valor={p.proveedor ?? "sin fijar"} />
           </dl>
         </section>
 

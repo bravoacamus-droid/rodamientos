@@ -140,7 +140,52 @@ describe("leerFilas", () => {
       precio_compra: 3.26,
       precio_venta: 3.92,
       precio_minimo: 3.86,
+      // Las columnas del 26/08 salen en NULL, no en cero: el archivo viejo del
+      // cliente no las trae, y null es lo que le dice a la base «no me lo
+      // digas» para que no borre lo que ya hubiera cargado.
+      codigo_fabricante: null,
+      ubicacion: null,
+      proveedor: null,
+      stock_maximo: null,
+      precio_mercado: null,
+      peso: null,
     });
+  });
+
+  it("lee las columnas nuevas cuando el archivo sí las trae", () => {
+    const cab = [
+      "CODIGO", "FAMILIA", "SUB-FAMILIA", "DESCRIPCION", "MARCA",
+      "PESO KG", "UBICACION", "P. MERCADO $", "PROVEEDOR", "COD. FABRICANTE",
+      "STOCK MAXIMO",
+    ];
+    const fila = [
+      "6205-2RS1/C3", "RODAMIENTO", "RIGIDO DE BOLAS", "RODAMIENTO X", "SKF",
+      "0.13", "A-14", "$ 4.10", "RODAMIENTOS DEL PACIFICO", "6205-2RSH", "120",
+    ];
+
+    const c = detectarCabecera([cab]);
+    const { filas } = leerFilas([cab, fila], c!);
+
+    expect(filas[0]?.peso).toBe(0.13);
+    expect(filas[0]?.ubicacion).toBe("A-14");
+    expect(filas[0]?.precio_mercado).toBe(4.1);
+    expect(filas[0]?.proveedor).toBe("RODAMIENTOS DEL PACIFICO");
+    expect(filas[0]?.codigo_fabricante).toBe("6205-2RSH");
+    expect(filas[0]?.stock_maximo).toBe(120);
+  });
+
+  it("un peso de cero explícito NO es lo mismo que la columna vacía", () => {
+    // La base solo pisa el peso guardado si el archivo trae valor. Si el cero
+    // llegara como null, un archivo que dice «este no pesa» no se aplicaría;
+    // si el vacío llegara como cero, borraría los pesos ya cargados.
+    const cab = ["CODIGO", "FAMILIA", "SUB-FAMILIA", "DESCRIPCION", "PESO KG"];
+    const c = detectarCabecera([cab]);
+
+    const conCero = leerFilas([cab, ["A1", "F", "S", "D", "0"]], c!);
+    const conVacio = leerFilas([cab, ["A1", "F", "S", "D", ""]], c!);
+
+    expect(conCero.filas[0]?.peso).toBe(0);
+    expect(conVacio.filas[0]?.peso).toBeNull();
   });
 
   it("conserva el espacio interior del código", () => {

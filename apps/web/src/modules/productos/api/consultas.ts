@@ -178,11 +178,12 @@ export async function catalogosParaProducto(): Promise<
     subfamilias: { id: string; nombre: string; familia_id: string }[];
     tipos: { id: string; nombre: string; subfamilia_id: string }[];
     unidades: { codigo: string; nombre: string }[];
+    proveedores: { id: string; razon_social: string }[];
   }>
 > {
   try {
     const supabase = await clienteServidor();
-    const [marcas, familias, subfamilias, tipos, unidades] = await Promise.all([
+    const [marcas, familias, subfamilias, tipos, unidades, proveedores] = await Promise.all([
       supabase.from("marcas").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("familias").select("id, nombre").eq("activo", true).order("orden"),
       supabase
@@ -201,10 +202,16 @@ export async function catalogosParaProducto(): Promise<
         .select("codigo, etiqueta")
         .eq("activo", true)
         .order("orden"),
+      supabase
+        .from("proveedores")
+        .select("id, razon_social")
+        .eq("activo", true)
+        .order("razon_social"),
     ]);
 
     const primerError =
-      marcas.error ?? familias.error ?? subfamilias.error ?? tipos.error ?? unidades.error;
+      marcas.error ?? familias.error ?? subfamilias.error ?? tipos.error ?? unidades.error ??
+      proveedores.error;
     if (primerError) return fallo(primerError);
 
     return {
@@ -218,6 +225,7 @@ export async function catalogosParaProducto(): Promise<
           codigo: u.codigo,
           nombre: u.etiqueta,
         })),
+        proveedores: proveedores.data ?? [],
       },
     };
   } catch (e) {
@@ -244,6 +252,8 @@ export async function productoPorId(id: string): Promise<
     stock_maximo: number;
     peso_kg: number;
     ubicacion: string | null;
+    precio_mercado: number;
+    proveedor_id: string | null;
     archivado: boolean;
     designacion_base: string | null;
   }>
@@ -256,6 +266,7 @@ export async function productoPorId(id: string): Promise<
         `id, codigo, codigo_fabricante, descripcion, marca_id, familia_id,
          subfamilia_id, tipo_id, unidad_codigo, ultimo_costo, precio_venta,
          precio_minimo, stock_minimo, stock_maximo, peso_kg, ubicacion,
+         precio_mercado, proveedor_id,
          archivado, designacion_base`,
       )
       .eq("id", id)
@@ -294,6 +305,8 @@ export async function productoConDetalle(id: string): Promise<
     ultimo_costo: number;
     peso_kg: number;
     ubicacion: string | null;
+    precio_mercado: number;
+    proveedor: string | null;
     archivado: boolean;
     motivo_archivado: string | null;
     designacion_base: string | null;
@@ -314,9 +327,10 @@ export async function productoConDetalle(id: string): Promise<
       .select(
         `id, codigo, codigo_fabricante, descripcion, unidad_codigo,
          stock_minimo, precio_venta, precio_minimo, costo_promedio,
-         ultimo_costo, peso_kg, ubicacion, archivado, motivo_archivado,
-         designacion_base,
+         ultimo_costo, peso_kg, ubicacion, precio_mercado,
+         archivado, motivo_archivado, designacion_base,
          marcas!inner(nombre),
+         proveedores(razon_social),
          subfamilias!inner(nombre, familias!inner(nombre)),
          tipos(nombre),
          stock(cantidad)`,
@@ -379,10 +393,13 @@ export async function productoConDetalle(id: string): Promise<
       ultimo_costo: number;
       peso_kg: number;
       ubicacion: string | null;
+      precio_mercado: number;
       archivado: boolean;
       motivo_archivado: string | null;
       designacion_base: string | null;
       marcas: { nombre: string };
+      /** Null cuando el producto no tiene proveedor habitual asignado. */
+      proveedores: { razon_social: string } | null;
       /**
        * La familia llega ANIDADA dentro de la sub-familia, y no suelta.
        *
@@ -418,6 +435,8 @@ export async function productoConDetalle(id: string): Promise<
         ultimo_costo: f.ultimo_costo,
         peso_kg: f.peso_kg,
         ubicacion: f.ubicacion,
+        precio_mercado: Number(f.precio_mercado ?? 0),
+        proveedor: f.proveedores?.razon_social ?? null,
         archivado: f.archivado,
         motivo_archivado: f.motivo_archivado,
         designacion_base: f.designacion_base,

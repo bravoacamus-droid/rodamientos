@@ -118,7 +118,16 @@ const main = async () => {
     ["l", "STOCK MINIMO — desde cuántas unidades quiere que el sistema le avise que hay que reponer."],
     ["l", "P.C. $ — lo que a usted le cuesta, en dólares."],
     ["l", "P.V. $ — YA VIENE CALCULADO: es el P.C. por 1.20, que es como lo tiene armado hoy. Si un producto es la excepción, escriba el valor encima y listo."],
-    ["l", "P.M. $ — el precio más bajo que acepta para ese producto. Es el piso: el sistema no va a dejar cotizar por debajo."],
+    ["l", "P.M. $ — el precio más bajo que acepta para ese producto. Es el PISO: el sistema no va a dejar cotizar por debajo. Si para usted P.M. quiere decir otra cosa —el precio al que ve que está el mercado— dígalo antes de cargar, porque para eso está la columna siguiente."],
+    ["l", "P. MERCADO $ — a cuánto ve que se está vendiendo en el mercado. Es solo una referencia para cotizar rápido; no bloquea nada ni sale en ningún documento."],
+    ["l", "PESO KG — cuánto pesa UNA unidad, en kilos, con hasta tres decimales (0.130). Es obligatorio para emitir la guía de remisión: sin peso, la guía hay que llenarla a mano cada vez."],
+    ["l", "UBICACION — dónde está en el almacén: el anaquel, el cajón. Lo que usted diría en voz alta para que alguien lo encuentre."],
+    ["l", "STOCK MAXIMO — a partir de cuántas unidades le sobra mercadería. El sistema le avisa del sobrestock, que es plata parada. Déjelo vacío si no quiere ese aviso."],
+    ["l", "COD. FABRICANTE — el otro código con el que también se conoce el producto, si lo hay. Sirve para encontrarlo buscando por cualquiera de los dos."],
+    ["l", "PROVEEDOR — a quién se lo compra habitualmente. Escriba el nombre tal como está dado de alta, o su RUC. Si no lo tenemos registrado, el producto entra igual y se lo avisamos para darlo de alta bien."],
+    ["", ""],
+    ["h", "Las columnas nuevas puede llenarlas después"],
+    ["p", "Si ahora no tiene el peso o la ubicación de todo, mande el archivo igual. Cuando los tenga, vuelva a subirlo: una columna en blanco NO borra lo que ya se cargó, solo se aplican las celdas que traigan dato."],
     ["", ""],
     ["h", "Lo que NO tiene que hacer"],
     ["l", "No agregue ni quite columnas, ni cambie el orden."],
@@ -231,6 +240,16 @@ const main = async () => {
     { h: "P.C. $", w: 11 },
     { h: "P.V. $", w: 11 },
     { h: "P.M. $", w: 11 },
+    // Añadidas el 26/08 tras la primera demo. Van AL FINAL y no junto a las
+    // que les tocaría por sentido: las fórmulas y los formatos condicionales
+    // de esta hoja referencian columnas por letra (H el costo, I y J los
+    // precios), y meter una en medio los correría a todos en silencio.
+    { h: "P. MERCADO $", w: 13 },
+    { h: "PESO KG", w: 10 },
+    { h: "UBICACION", w: 14 },
+    { h: "STOCK MAXIMO", w: 14 },
+    { h: "COD. FABRICANTE", w: 18 },
+    { h: "PROVEEDOR", w: 28 },
   ];
   COLS.forEach((c, i) => {
     ws.getColumn(i + 1).width = c.w;
@@ -323,10 +342,17 @@ const main = async () => {
       fila.getCell(c).numFmt = "#,##0";
       fila.getCell(c).alignment = { horizontal: "right" };
     }
-    for (const c of [8, 9, 10]) {
+    for (const c of [8, 9, 10, 11]) {
       fila.getCell(c).numFmt = '"$"#,##0.00';
       fila.getCell(c).alignment = { horizontal: "right" };
     }
+    // El peso lleva TRES decimales. Un 6205 pesa 0,130 kg y uno pequeño 0,062;
+    // redondeando a dos, ese último quedaría en 0,06, y sobre mil unidades son
+    // dos kilos de diferencia en el peso bruto de la guía.
+    fila.getCell(12).numFmt = "#,##0.000";
+    fila.getCell(12).alignment = { horizontal: "right" };
+    fila.getCell(14).numFmt = "#,##0";
+    fila.getCell(14).alignment = { horizontal: "right" };
     // El P.V. calculado va en gris, para que se lea que no hay que tipearlo.
     fila.getCell(9).fill = { type: "pattern", pattern: "solid", fgColor: { argb: GRIS } };
     fila.getCell(9).font = { color: { argb: "FF667085" } };
@@ -362,7 +388,7 @@ const main = async () => {
     ],
   });
 
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 10 } };
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 16 } };
 
   mkdirSync("docs/plantillas", { recursive: true });
   await wb.xlsx.writeFile(SALIDA);

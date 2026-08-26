@@ -97,7 +97,11 @@ export function FormularioImportacion() {
 
       {analisis?.ok ? (
         <div className="flex flex-col gap-4">
-          <Resumen resumen={analisis.resumen} problemas={analisis.problemas} />
+          <Resumen
+            resumen={analisis.resumen}
+            problemas={analisis.problemas}
+            avisos={analisis.avisos}
+          />
 
           {analisis.resumen.nuevos + analisis.resumen.actualizados > 0 ? (
             <form action={accionConfirmar} className="flex items-center gap-3">

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { valorCelda } from "./hoja";
-import { detectarCabecera, leerFilas } from "../dominio/plantilla";
+import { COLUMNAS, detectarCabecera, leerFilas } from "../dominio/plantilla";
 
 /**
  * Prueba contra la PLANTILLA DE VERDAD, la misma que se le manda al cliente.
@@ -75,7 +75,17 @@ describe("la plantilla real", () => {
     const c = detectarCabecera(await matriz());
     expect(c).not.toBeNull();
     expect(c?.indice).toBe(0);
-    expect(Object.keys(c!.mapa)).toHaveLength(10);
+
+    // Contra COLUMNAS y no contra un número escrito a mano: el .xlsx lo genera
+    // `scripts/generar-plantilla-productos.mjs` y el analizador lo lee con
+    // esta lista, así que si los dos se separan —una columna nueva en el
+    // generador que aquí nadie sabe leer— la prueba tiene que caer nombrando
+    // cuál falta, no diciendo «esperaba 10 y hay 16».
+    const reconocidas = new Set(Object.keys(c!.mapa));
+    const sinReconocer = COLUMNAS.filter((col) => !reconocidas.has(col.clave)).map(
+      (col) => col.cabecera,
+    );
+    expect(sinReconocer).toEqual([]);
   });
 
   it("lee las tres filas de ejemplo entre 200 filas preparadas", async () => {
