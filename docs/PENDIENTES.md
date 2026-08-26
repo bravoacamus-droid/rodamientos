@@ -10,10 +10,10 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **41 reales de 42** · queda 1 cartel (importaciones) |
+| Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 773 en verde |
-| `pnpm e2e` | **39 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 803 en verde |
+| `pnpm e2e` | **41 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 029, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
@@ -45,7 +45,7 @@ del proyecto.
 
 1. **Un proyecto Supabase de pruebas.** Es lo que bloquea lo más importante que
    queda: las pruebas del **flujo del dinero** de punta a punta (cotizar →
-   aprobar → guía → facturar → cobrar, y compra → recepción). Hoy las 39
+   aprobar → guía → facturar → cobrar, y compra → recepción). Hoy las 41
    pruebas comprueban que las pantallas abren sin error, que no es poco, pero
    **no comprueban que el dinero cuadre**. No se pueden correr contra la base
    del cliente porque esas pruebas ESCRIBEN: mueven stock, gastan correlativos
@@ -79,11 +79,6 @@ del proyecto.
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
   escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
   pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **El cartel** que queda de 42 rutas: importaciones (§1). Alertas,
-  equivalencias, configuración y **trazabilidad por ítem** ya están hechas
-  (26/08). Del cartel de importaciones, ojo: el fondo del asunto —el prorrateo
-  de gastos— ya está arreglado en la 022; lo que falta es solo la pantalla de
-  seguimiento de lo que está en tránsito.
 - **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
   mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
   Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
@@ -107,7 +102,7 @@ del proyecto.
 
 ## 1 · Los demás módulos están vacíos
 
-De **42 rutas hay 41 reales**. La otra es un cartel de «en construcción».
+**Las 42 rutas son reales.** Ya no queda ningún cartel de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -127,11 +122,11 @@ Responde de un vistazo «a quién se lo compré y a cuánto» y «a quién se lo
 ofrecí y a qué precio», que es lo que él resolvía rebuscando en WhatsApp.
 Detalle en [FEEDBACK-26-08.md](FEEDBACK-26-08.md) §3.1.
 
-**Cartel:** importaciones — pero **el fondo del asunto ya está arreglado**: la
-migración 022 corrigió que los gastos de importación se cobraran ENTEROS en
-cada recepción parcial (dos entregas de media compra cargaban el gasto dos
-veces) y ató el detalle de gastos al total. Lo que falta es solo la pantalla
-de seguimiento: qué está en tránsito, con qué courier y para cuándo.
+Y **importaciones** ← el 26/08 por la tarde, que era el último cartel:
+seguimiento de lo que está fuera, con courier, tracking, días de atraso y el
+detalle de gastos —flete, seguro, aduana— que sustituye al total tecleado.
+El fondo ya se había arreglado antes: la migración 022 corrigió que los gastos
+se cobraran ENTEROS en cada recepción parcial.
 
 ### El backend de casi todos ya está escrito
 
