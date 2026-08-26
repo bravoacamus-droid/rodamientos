@@ -85,7 +85,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                   >
                     {p.razon_social}
                   </Link>
-                  <span className="block font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
                     {p.codigo}
                     {p.activo ? "" : " · de baja"}
                   </span>
@@ -93,7 +93,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 <td className="whitespace-nowrap px-4 py-2.5 tabular text-[0.8rem]">
                   {p.numero_documento ? (
                     <>
-                      <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+                      <span className="text-xs text-[var(--fg-subtle)]">
                         {p.tipo_documento}{" "}
                       </span>
                       {p.numero_documento}
@@ -104,26 +104,26 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 </td>
                 <td className="max-w-xs px-4 py-2.5">
                   {p.marcas.length === 0 ? (
-                    <span className="text-[0.75rem] text-[var(--fg-subtle)]">—</span>
+                    <span className="text-xs text-[var(--fg-subtle)]">—</span>
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {p.marcas.slice(0, 4).map((m) => (
                         <span
                           key={m}
-                          className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.7rem]"
+                          className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs"
                         >
                           {m}
                         </span>
                       ))}
                       {p.marcas.length > 4 ? (
-                        <span className="px-1 py-0.5 text-[0.7rem] text-[var(--fg-subtle)]">
+                        <span className="px-1 py-0.5 text-xs text-[var(--fg-subtle)]">
                           +{p.marcas.length - 4}
                         </span>
                       ) : null}
                     </div>
                   )}
                 </td>
-                <td className="hidden max-w-[14rem] px-4 py-2.5 text-[0.75rem] lg:table-cell">
+                <td className="hidden max-w-[14rem] px-4 py-2.5 text-xs lg:table-cell">
                   {p.contacto ? <span className="block truncate">{p.contacto}</span> : null}
                   {p.telefono || p.whatsapp ? (
                     <span className="block truncate text-[var(--fg-muted)]">
@@ -144,7 +144,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 </td>
                 <td className="px-4 py-2.5">
                   <span
-                    className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-[0.7rem] font-medium ${
+                    className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium ${
                       p.tipo === "importacion"
                         ? "bg-[var(--info-bg)] text-[var(--info)]"
                         : "bg-[var(--surface-2)] text-[var(--fg-muted)]"
@@ -190,7 +190,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               </p>
 
               {p.marcas.length > 0 ? (
-                <p className="mt-1 truncate text-[0.7rem] text-[var(--fg-subtle)]">
+                <p className="mt-1 truncate text-xs text-[var(--fg-subtle)]">
                   {p.marcas.join(" · ")}
                 </p>
               ) : null}

@@ -231,7 +231,7 @@ async function Cross({
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="text-xs text-[var(--fg-subtle)]">
                     {d.creado_por ?? "—"} · {d.creado_en.slice(0, 10)}
                   </span>
                   {puedeDeclarar ? (
@@ -315,7 +315,7 @@ function Fila({
           ) : null}
         </div>
         <p className="truncate text-xs text-[var(--fg-muted)]">{sustituto.descripcion}</p>
-        <p className="text-[0.7rem] text-[var(--fg-subtle)]">
+        <p className="text-xs text-[var(--fg-subtle)]">
           {resumenSustituto(sustituto)}
         </p>
       </div>

@@ -204,7 +204,7 @@ export function ConstructorGuia({
                             aria-label={`Cantidad a despachar de ${l.codigo}`}
                           />
                         </td>
-                        <td className="py-2 text-right tabular text-[0.75rem] text-[var(--fg-muted)]">
+                        <td className="py-2 text-right tabular text-xs text-[var(--fg-muted)]">
                           {l.pesoUnitario > 0
                             ? `${(l.pesoUnitario * l.cantidad).toFixed(3)} kg`
                             : "sin peso"}

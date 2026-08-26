@@ -908,7 +908,7 @@ function SelectorUbigeo({
                     }}
                   >
                     <span className="min-w-0 flex-1 truncate">{u.nombre}</span>
-                    <span className="tabular shrink-0 text-[11px] text-[var(--fg-subtle)]">
+                    <span className="tabular shrink-0 text-xs text-[var(--fg-subtle)]">
                       {u.codigo}
                     </span>
                   </CommandItem>

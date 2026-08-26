@@ -130,7 +130,7 @@ function FilaUsuario({
         ) : (
           <span>{ETIQUETA_ROL[usuario.rol]}</span>
         )}
-        <span className="mt-0.5 block text-[0.7rem] text-[var(--fg-subtle)]">
+        <span className="mt-0.5 block text-xs text-[var(--fg-subtle)]">
           {AYUDA_ROL[usuario.rol]}
         </span>
       </td>
@@ -150,7 +150,7 @@ function FilaUsuario({
             {usuario.activo ? "Desactivar" : "Activar"}
           </Button>
         ) : esUnoMismo && puedeEditar ? (
-          <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+          <span className="text-xs text-[var(--fg-subtle)]">
             Tu propia ficha no se toca desde aquí
           </span>
         ) : null}

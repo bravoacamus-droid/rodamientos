@@ -24,7 +24,7 @@ const contenidoBase = [
 ].join(" ");
 
 const itemBase = [
-  "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[13px] text-fg outline-none",
+  "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[0.8rem] text-fg outline-none",
   "focus:bg-surface-2 data-[highlighted]:bg-surface-2",
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
   "[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-subtle",
@@ -92,7 +92,7 @@ export function DropdownMenuRadioItem({
 export function DropdownMenuLabel({ className, ...props }: React.ComponentPropsWithRef<typeof Menu.Label>) {
   return (
     <Menu.Label
-      className={cn("px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-subtle", className)}
+      className={cn("px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-subtle", className)}
       {...props}
     />
   );
@@ -106,7 +106,7 @@ export function DropdownMenuSeparator({
 }
 
 export function DropdownMenuShortcut({ className, ...props }: React.ComponentPropsWithRef<"span">) {
-  return <span className={cn("ml-auto text-[10px] tracking-widest text-subtle", className)} {...props} />;
+  return <span className={cn("ml-auto text-xs tracking-widest text-subtle", className)} {...props} />;
 }
 
 export function DropdownMenuSubTrigger({

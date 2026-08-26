@@ -106,7 +106,7 @@ export async function TablaValorizacion() {
                     {/* Los SKU sin stock son catálogo muerto o rotura: el
                         contraste con el total lo hace visible sin otra columna. */}
                     {f.skus_con_stock < f.skus ? (
-                      <span className="ml-1 text-[0.7rem] text-[var(--fg-subtle)]">
+                      <span className="ml-1 text-xs text-[var(--fg-subtle)]">
                         ({f.skus_con_stock} con stock)
                       </span>
                     ) : null}

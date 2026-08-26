@@ -34,7 +34,7 @@ export function THead({ className, ...props }: React.ComponentPropsWithRef<"thea
     <thead
       className={cn(
         "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface-2",
-        "[&_th]:border-b [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-[11px]",
+        "[&_th]:border-b [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs",
         "[&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-subtle [&_th]:whitespace-nowrap",
         className,
       )}

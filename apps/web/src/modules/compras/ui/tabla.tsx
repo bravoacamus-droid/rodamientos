@@ -76,7 +76,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     {c.numero}
                   </Link>
                   {c.tipo === "importacion" ? (
-                    <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.7rem] text-[var(--fg-muted)]">
+                    <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--fg-muted)]">
                       Import.
                     </span>
                   ) : null}
@@ -84,7 +84,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {c.fecha}
                   {c.fecha_estimada ? (
-                    <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block text-xs text-[var(--fg-subtle)]">
                       llega {c.fecha_estimada}
                     </span>
                   ) : null}
@@ -92,7 +92,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{c.proveedor ?? "—"}</span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
                   {c.documento_proveedor ?? "—"}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">{c.items}</td>
@@ -102,7 +102,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={c.total} tamano="sm" />
                   {c.gastos_importacion > 0 ? (
-                    <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block text-xs text-[var(--fg-subtle)]">
                       +{c.gastos_importacion.toFixed(2)} gastos
                     </span>
                   ) : null}
@@ -195,7 +195,7 @@ function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
       >
         <div className={`h-full ${color}`} style={{ width: `${valor}%` }} />
       </div>
-      <span className="tabular text-[0.7rem] text-[var(--fg-muted)]">{valor}%</span>
+      <span className="tabular text-xs text-[var(--fg-muted)]">{valor}%</span>
     </div>
   );
 }

@@ -259,7 +259,7 @@ function FilaAlerta({
           <Badge tone={tonoSeveridad(alerta.severidad)} size="xs">
             {ETIQUETA_SEVERIDAD[alerta.severidad]}
           </Badge>
-          <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+          <span className="text-xs text-[var(--fg-subtle)]">
             {ETIQUETA_TIPO[alerta.tipo]}
           </span>
           {!alerta.leida ? (
@@ -272,7 +272,7 @@ function FilaAlerta({
 
         <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{alerta.mensaje}</p>
 
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[0.7rem] text-[var(--fg-subtle)]">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-[var(--fg-subtle)]">
           <span className="tabular">{haceCuanto(alerta.generada_en, ahora)}</span>
           {alerta.accion_url ? (
             <Link

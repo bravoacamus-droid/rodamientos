@@ -76,12 +76,12 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                     {r.numero}
                   </Link>
                   {r.anulada ? (
-                    <span className="ml-2 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-[0.7rem] font-medium text-[var(--danger)]">
+                    <span className="ml-2 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
                       Anulada
                     </span>
                   ) : null}
                   {r.compra_numero ? (
-                    <span className="ml-2 font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="ml-2 font-mono text-xs text-[var(--fg-subtle)]">
                       {r.compra_numero}
                     </span>
                   ) : null}
@@ -90,7 +90,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{r.proveedor ?? "—"}</span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
                   {r.guia_proveedor ? <span className="block">G: {r.guia_proveedor}</span> : null}
                   {r.factura_proveedor ? (
                     <span className="block">F: {r.factura_proveedor}</span>
@@ -101,7 +101,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={r.valorizado} tamano="sm" />
                 </td>
-                <td className="hidden px-4 py-2.5 text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
                   {r.recibido_por ?? "—"}
                 </td>
               </tr>

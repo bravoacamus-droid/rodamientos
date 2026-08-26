@@ -75,27 +75,27 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     {g.numero}
                   </Link>
                   {g.cotizacion_numero ? (
-                    <span className="block font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
                       {g.cotizacion_numero}
                     </span>
                   ) : null}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {g.fecha_traslado}
-                  <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="block text-xs text-[var(--fg-subtle)]">
                     {g.motivo ?? "—"}
                   </span>
                 </td>
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{g.cliente ?? "—"}</span>
                 </td>
-                <td className="hidden max-w-xs px-4 py-2.5 text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden max-w-xs px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
                   <span className="block truncate">{g.direccion_llegada ?? "—"}</span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">{g.numero_bultos}</td>
                 <td className="px-4 py-2.5 text-right tabular">
                   {g.peso_bruto_kg.toFixed(3)}
-                  <span className="ml-1 text-[0.7rem] text-[var(--fg-subtle)]">kg</span>
+                  <span className="ml-1 text-xs text-[var(--fg-subtle)]">kg</span>
                 </td>
                 <td className="px-4 py-2.5">
                   <Badge tone={TONO_ESTADO[g.estado]} size="xs">

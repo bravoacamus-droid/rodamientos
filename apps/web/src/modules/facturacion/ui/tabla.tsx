@@ -99,7 +99,7 @@ export async function TablaComprobantes({
                     >
                       {c.numero}
                     </Link>
-                    <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block text-xs text-[var(--fg-subtle)]">
                       {ETIQUETA_TIPO[c.tipo]}
                     </span>
                   </td>
@@ -108,7 +108,7 @@ export async function TablaComprobantes({
                     {c.fecha_emision}
                     {c.fecha_vencimiento ? (
                       <span
-                        className={`block text-[0.7rem] ${
+                        className={`block text-xs ${
                           vencida ? "font-medium text-[var(--danger)]" : "text-[var(--fg-subtle)]"
                         }`}
                       >
@@ -119,12 +119,12 @@ export async function TablaComprobantes({
 
                   <td className="max-w-xs px-4 py-2.5">
                     <span className="block truncate">{c.cliente ?? "—"}</span>
-                    <span className="block font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
                       {c.cliente_documento ?? ""}
                     </span>
                   </td>
 
-                  <td className="hidden px-4 py-2.5 font-mono text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                  <td className="hidden px-4 py-2.5 font-mono text-xs text-[var(--fg-muted)] lg:table-cell">
                     {c.cotizacion_numero ?? "—"}
                   </td>
 
@@ -147,7 +147,7 @@ export async function TablaComprobantes({
                       {ETIQUETA_SUNAT[c.estado_sunat]}
                     </Badge>
                     {c.estado === "anulado" ? (
-                      <span className="ml-1.5 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-[0.7rem] font-medium text-[var(--danger)]">
+                      <span className="ml-1.5 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
                         Anulado
                       </span>
                     ) : null}

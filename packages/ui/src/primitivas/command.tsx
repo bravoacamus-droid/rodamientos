@@ -86,7 +86,7 @@ export function CommandGroup({
       className={cn(
         "overflow-hidden text-fg",
         "[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5",
-        "[&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold",
+        "[&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold",
         "[&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-subtle",
         className,
       )}
@@ -109,7 +109,7 @@ export function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[13px] outline-none",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[0.8rem] outline-none",
         "data-[selected=true]:bg-surface-2 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:size-3.5 [&_svg]:shrink-0",
         className,
@@ -120,7 +120,7 @@ export function CommandItem({
 }
 
 export function CommandShortcut({ className, ...props }: React.ComponentPropsWithRef<"span">) {
-  return <span className={cn("ml-auto text-[10px] tracking-widest text-subtle", className)} {...props} />;
+  return <span className={cn("ml-auto text-xs tracking-widest text-subtle", className)} {...props} />;
 }
 
 export function CommandLoading(props: React.ComponentPropsWithRef<typeof CommandPrimitive.Loading>) {

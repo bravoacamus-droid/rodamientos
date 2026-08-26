@@ -279,7 +279,7 @@ export function ConstructorRecepcion({
                   {conGastos ? (
                     <th className="text-right">
                       Con gastos
-                      <span className="block text-[0.65rem] font-normal text-[var(--fg-subtle)]">
+                      <span className="block text-xs font-normal text-[var(--fg-subtle)]">
                         al kardex
                       </span>
                     </th>
@@ -352,7 +352,7 @@ export function ConstructorRecepcion({
                     <dt>Valor al almacén</dt>
                     <dd className="tabular">${costeo.totalFinal.toFixed(2)}</dd>
                   </div>
-                  <p className="text-[0.7rem] text-[var(--fg-subtle)]">
+                  <p className="text-xs text-[var(--fg-subtle)]">
                     Factor {costeo.factor} sobre cada costo. Es lo que va al
                     kardex, no lo que se le paga al proveedor.
                   </p>

@@ -217,7 +217,7 @@ export function DataTable<TDato>({
                             !ordenable ? undefined : !esteOrden ? "none" : esteOrden.desc ? "descending" : "ascending"
                           }
                           className={cn(
-                            "sticky top-0 z-10 border-b bg-surface-2 text-[11px] font-semibold uppercase",
+                            "sticky top-0 z-10 border-b bg-surface-2 text-xs font-semibold uppercase",
                             "tracking-wide text-subtle whitespace-nowrap",
                             paddingCelda,
                             meta?.alineacion === "derecha" && "text-right",

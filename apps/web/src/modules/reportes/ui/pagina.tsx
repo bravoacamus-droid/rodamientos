@@ -301,9 +301,10 @@ async function BloqueTop() {
                 <td className="py-1.5 pr-3 text-right tabular">{p.venta.toFixed(2)}</td>
                 <td
                   className={`py-1.5 text-right tabular font-medium ${
+                    /* Sobre el costo (023): 20 y 12, no 20 y 10. */
                     p.margenPct >= 20
                       ? "text-[var(--ok)]"
-                      : p.margenPct < 10
+                      : p.margenPct < 12
                         ? "text-[var(--warn)]"
                         : ""
                   }`}
@@ -461,7 +462,7 @@ async function BloqueEmbudo() {
                   }}
                 >
                   {dentro ? (
-                    <span className="tabular text-[0.7rem] font-medium text-white">
+                    <span className="tabular text-xs font-medium text-white">
                       $ {p.valor.toFixed(2)}
                     </span>
                   ) : null}
@@ -469,13 +470,13 @@ async function BloqueEmbudo() {
               </div>
 
               {!dentro ? (
-                <span className="tabular shrink-0 text-[0.7rem] font-medium text-[var(--fg-muted)]">
+                <span className="tabular shrink-0 text-xs font-medium text-[var(--fg-muted)]">
                   $ {p.valor.toFixed(2)}
                 </span>
               ) : null}
             </div>
 
-            <span className="w-32 shrink-0 text-right text-[0.7rem] text-[var(--fg-subtle)]">
+            <span className="w-32 shrink-0 text-right text-xs text-[var(--fg-subtle)]">
               {p.pie}
             </span>
           </div>

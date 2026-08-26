@@ -84,7 +84,7 @@ export function SelectItem({
   return (
     <SelectPrimitive.Item
       className={cn(
-        "relative flex cursor-pointer select-none items-center gap-2 rounded-md py-1.5 pl-7 pr-2 text-[13px] outline-none",
+        "relative flex cursor-pointer select-none items-center gap-2 rounded-md py-1.5 pl-7 pr-2 text-[0.8rem] outline-none",
         "data-[highlighted]:bg-surface-2 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
@@ -106,7 +106,7 @@ export function SelectLabel({
 }: React.ComponentPropsWithRef<typeof SelectPrimitive.Label>) {
   return (
     <SelectPrimitive.Label
-      className={cn("px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-subtle", className)}
+      className={cn("px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-subtle", className)}
       {...props}
     />
   );

@@ -126,17 +126,17 @@ export function KpiCard({
   const contenido = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
         {icono && <span className="shrink-0 text-subtle [&_svg]:size-4">{icono}</span>}
       </div>
 
       <p className="tabular mt-1.5 text-2xl font-semibold leading-none text-fg">{valor}</p>
-      {detalle && <p className="mt-1.5 text-[11px] text-muted">{detalle}</p>}
+      {detalle && <p className="mt-1.5 text-xs text-muted">{detalle}</p>}
 
       {variacion !== null && (
         <p
           className={cn(
-            "mt-2 inline-flex items-center gap-1 text-[11px] font-medium",
+            "mt-2 inline-flex items-center gap-1 text-xs font-medium",
             esBueno && "text-ok",
             esMalo && "text-danger",
             !esBueno && !esMalo && "text-muted",
@@ -159,7 +159,7 @@ export function KpiCard({
 
       {/* Sin base de comparación no se inventa un porcentaje: se dice. */}
       {variacion === null && actual !== undefined && previo !== undefined && (
-        <p className="mt-2 text-[11px] text-subtle">Sin periodo anterior con el que comparar</p>
+        <p className="mt-2 text-xs text-subtle">Sin periodo anterior con el que comparar</p>
       )}
 
       {serie && serie.length > 1 && (

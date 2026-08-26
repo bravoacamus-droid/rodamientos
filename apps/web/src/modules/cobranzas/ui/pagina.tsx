@@ -256,7 +256,7 @@ async function TablaCartera({
                   {d.numero}
                 </Link>
                 {d.orden_compra_cliente ? (
-                  <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="block text-xs text-[var(--fg-subtle)]">
                     OC {d.orden_compra_cliente}
                   </span>
                 ) : null}
@@ -264,7 +264,7 @@ async function TablaCartera({
 
               <td className="max-w-xs px-4 py-2.5">
                 <span className="block truncate">{d.cliente}</span>
-                <span className="block font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                <span className="block font-mono text-xs text-[var(--fg-subtle)]">
                   {d.documento ?? ""}
                 </span>
               </td>
@@ -283,7 +283,7 @@ async function TablaCartera({
               <td className="px-4 py-2.5 text-right tabular font-medium">
                 {d.saldo.toFixed(2)}
                 {d.pagado > 0 ? (
-                  <span className="block text-[0.7rem] font-normal text-[var(--fg-subtle)]">
+                  <span className="block text-xs font-normal text-[var(--fg-subtle)]">
                     pagado {d.pagado.toFixed(2)}
                   </span>
                 ) : null}

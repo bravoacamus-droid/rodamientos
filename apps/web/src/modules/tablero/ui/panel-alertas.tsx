@@ -41,7 +41,7 @@ export async function PanelAlertas() {
         <div className="flex items-center gap-2">
           {sinNotificar > 0 ? (
             <span
-              className="rounded-sm bg-[var(--warn-bg)] px-1.5 py-0.5 text-[0.68rem] font-medium text-[var(--warn)]"
+              className="rounded-sm bg-[var(--warn-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--warn)]"
               title="Generadas pero todavía no enviadas a nadie"
             >
               {sinNotificar} sin avisar
@@ -69,7 +69,7 @@ export async function PanelAlertas() {
             const contenido = (
               <div className="flex items-start gap-3 px-4 py-2.5">
                 <span
-                  className={`mt-0.5 shrink-0 rounded-sm px-1.5 py-0.5 text-[0.65rem] font-medium ${
+                  className={`mt-0.5 shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-medium ${
                     COLOR_SEVERIDAD[a.severidad] ?? COLOR_SEVERIDAD.baja
                   }`}
                 >

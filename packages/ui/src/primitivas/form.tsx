@@ -107,7 +107,7 @@ export function FormControl(props: React.ComponentPropsWithRef<typeof Slot>) {
 
 export function FormDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {
   const { idDescripcion } = useCampoForm();
-  return <p id={idDescripcion} className={cn("mt-1 text-[11px] text-subtle", className)} {...props} />;
+  return <p id={idDescripcion} className={cn("mt-1 text-xs text-subtle", className)} {...props} />;
 }
 
 /**
@@ -123,7 +123,7 @@ export function FormMessage({ className, children, ...props }: React.ComponentPr
     <p
       id={idMensaje}
       role="alert"
-      className={cn("mt-1 text-[11px] font-medium text-danger", className)}
+      className={cn("mt-1 text-xs font-medium text-danger", className)}
       {...props}
     >
       {cuerpo}
@@ -150,7 +150,7 @@ export function FormResumenErrores({ className }: { className?: string }) {
       </p>
       <ul className="mt-1.5 space-y-0.5">
         {entradas.map(([nombre, error]) => (
-          <li key={nombre} className="text-[11px] text-danger">
+          <li key={nombre} className="text-xs text-danger">
             {String((error as { message?: unknown } | undefined)?.message ?? nombre)}
           </li>
         ))}

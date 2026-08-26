@@ -158,14 +158,14 @@ export default async function PaginaDetalleComprobante({
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
                       {l.cantidad}{" "}
-                      <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+                      <span className="text-xs text-[var(--fg-subtle)]">
                         {l.unidad}
                       </span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
                       {l.valor_unitario.toFixed(4)}
                       {l.descuento_pct > 0 ? (
-                        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                        <span className="block text-xs text-[var(--fg-subtle)]">
                           −{l.descuento_pct}%
                         </span>
                       ) : null}
@@ -195,7 +195,7 @@ export default async function PaginaDetalleComprobante({
                   </p>
                 ) : null}
                 {c.sunat_hash_cdr ? (
-                  <p className="mt-1 break-all font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                  <p className="mt-1 break-all font-mono text-xs text-[var(--fg-subtle)]">
                     {c.sunat_hash_cdr}
                   </p>
                 ) : null}

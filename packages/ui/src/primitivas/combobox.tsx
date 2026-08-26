@@ -114,7 +114,7 @@ export function Combobox({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{o.etiqueta}</span>
-                    {o.detalle && <span className="block truncate text-[11px] text-subtle">{o.detalle}</span>}
+                    {o.detalle && <span className="block truncate text-xs text-subtle">{o.detalle}</span>}
                   </span>
                 </CommandItem>
               ))}

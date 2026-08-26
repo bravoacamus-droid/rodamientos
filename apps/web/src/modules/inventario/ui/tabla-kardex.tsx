@@ -92,7 +92,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                 >
                   <td className="whitespace-nowrap px-4 py-2.5 tabular text-[0.8rem]">
                     {m.fecha.slice(0, 10)}
-                    <span className="ml-1 text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="ml-1 text-xs text-[var(--fg-subtle)]">
                       {m.fecha.slice(11, 16)}
                     </span>
                   </td>
@@ -103,13 +103,13 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                     >
                       {m.codigo}
                     </Link>
-                    <span className="block truncate text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block truncate text-xs text-[var(--fg-subtle)]">
                       {m.descripcion}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
                     <span
-                      className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-[0.7rem] font-medium ${COLOR[m.tipo]}`}
+                      className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR[m.tipo]}`}
                     >
                       {ETIQUETA_MOVIMIENTO[m.tipo]}
                     </span>
@@ -129,7 +129,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   <td className="hidden px-4 py-2.5 text-right lg:table-cell">
                     <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
                   </td>
-                  <td className="px-4 py-2.5 text-[0.75rem]">
+                  <td className="px-4 py-2.5 text-xs">
                     {m.referencia_numero ? (
                       enlace ? (
                         <Link
@@ -148,7 +148,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                     )}
                     {m.motivo ? (
                       <span
-                        className="block truncate text-[0.7rem] text-[var(--fg-subtle)]"
+                        className="block truncate text-xs text-[var(--fg-subtle)]"
                         title={m.motivo}
                       >
                         {m.motivo}

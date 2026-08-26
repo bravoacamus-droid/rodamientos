@@ -94,7 +94,7 @@ export async function topProductos(limite = 10): Promise<Resultado<ProductoVendi
     const { data, error } = await supabase
       .from("v_top_productos")
       .select(
-        "producto_id, codigo, descripcion, marca, subfamilia, unidades, venta, costo, margen, clientes, ultima_venta",
+        "producto_id, codigo, descripcion, marca, subfamilia, unidades, venta, costo, margen, margen_pct, clientes, ultima_venta",
       )
       .order("venta", { ascending: false })
       .limit(limite);
@@ -103,26 +103,27 @@ export async function topProductos(limite = 10): Promise<Resultado<ProductoVendi
 
     return {
       ok: true,
-      datos: (data ?? []).map((p) => {
-        const venta = Number(p.venta ?? 0);
-        const margen = Number(p.margen ?? 0);
-        return {
-          id: String(p.producto_id),
-          codigo: String(p.codigo),
-          descripcion: String(p.descripcion ?? ""),
-          marca: p.marca ?? null,
-          subfamilia: p.subfamilia ?? null,
-          unidades: Number(p.unidades ?? 0),
-          venta,
-          costo: Number(p.costo ?? 0),
-          margen,
-          // Sobre la venta, no sobre el costo: es como se mira un margen
-          // comercial y es lo mismo que hace la ficha de producto.
-          margenPct: venta > 0 ? Math.round((margen / venta) * 1000) / 10 : 0,
-          clientes: Number(p.clientes ?? 0),
-          ultimaVenta: p.ultima_venta ?? null,
-        };
-      }),
+      datos: (data ?? []).map((p) => ({
+        id: String(p.producto_id),
+        codigo: String(p.codigo),
+        descripcion: String(p.descripcion ?? ""),
+        marca: p.marca ?? null,
+        subfamilia: p.subfamilia ?? null,
+        unidades: Number(p.unidades ?? 0),
+        venta: Number(p.venta ?? 0),
+        costo: Number(p.costo ?? 0),
+        margen: Number(p.margen ?? 0),
+        // Lo calcula la vista (023), no esta función.
+        //
+        // Antes se calculaba aquí, sobre la venta, con un comentario que decía
+        // que era «lo mismo que hace la ficha de producto». No lo era: la
+        // ficha divide entre el costo desde la 005. La palabra «margen»
+        // significaba dos cosas distintas en la misma aplicación según la
+        // pantalla, y ahora significa una.
+        margenPct: Number(p.margen_pct ?? 0),
+        clientes: Number(p.clientes ?? 0),
+        ultimaVenta: p.ultima_venta ?? null,
+      })),
     };
   } catch (e) {
     return fallo(e);

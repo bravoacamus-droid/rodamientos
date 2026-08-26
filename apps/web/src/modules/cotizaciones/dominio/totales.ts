@@ -104,16 +104,23 @@ export function calcularTotales(
   const igv = redondear2(subtotal * IGV);
   const total = redondear2(subtotal + igv);
 
-  // El margen se mide contra el subtotal (sin IGV): el IGV no es ingreso, se
-  // recauda para SUNAT. Incluirlo inflaría el margen en 18 puntos.
+  // El margen va sobre el COSTO, no sobre la venta.
   //
-  // Con costo en cero se devuelve 0, no 100. Un costo sin cargar es "no se
-  // sabe", y mostrar 100 % de margen le diría al vendedor que está haciendo
-  // un negocio redondo cuando en realidad no hay dato. Prefiere callar antes
-  // que mentir; `margenLinea` hace lo mismo devolviendo null.
+  // Willy, 26/08 (28:35): «lo que me interesa saber es el margen con respecto
+  // al costo». Y es coherente con su plantilla, que calcula P.V. = P.C. × 1,20
+  // exacto: él piensa en «le pongo 20 %». Con el denominador en la venta, un
+  // costo de 10 vendido a 12 daba 16,7 % y él esperaba 20.
+  //
+  // El importe sigue siendo SIN IGV: el IGV no es ingreso, se recauda para
+  // SUNAT, e incluirlo inflaría el número en 18 puntos.
+  //
+  // Con costo en cero se devuelve 0, no infinito. Un costo sin cargar es "no
+  // se sabe", y mostrar un porcentaje enorme le diría al vendedor que está
+  // haciendo un negocio redondo cuando en realidad no hay dato. Prefiere
+  // callar antes que mentir; `margenLinea` hace lo mismo devolviendo null.
   const margenPct =
     subtotal > 0 && costoTotal > 0
-      ? redondear2(((subtotal - costoTotal) / subtotal) * 100)
+      ? redondear2(((subtotal - costoTotal) / costoTotal) * 100)
       : 0;
 
   return { subtotal, descuentoTotal, igv, total, costoTotal, margenPct };
@@ -121,7 +128,9 @@ export function calcularTotales(
 
 /**
  * Margen de una línea suelta, para pintarlo en vivo mientras se cotiza.
- * Devuelve null si no hay costo: 0 % y "no se sabe" no son lo mismo.
+ *
+ * Sobre el costo, como el total. Devuelve null si no hay costo: 0 % y "no se
+ * sabe" no son lo mismo.
  */
 export function margenLinea(linea: LineaCalculo): number | null {
   const costo = linea.costoUnitario ?? 0;
@@ -131,14 +140,26 @@ export function margenLinea(linea: LineaCalculo): number | null {
   if (importe <= 0) return null;
 
   const costoLinea = redondear2(linea.cantidad * costo);
-  return redondear2(((importe - costoLinea) / importe) * 100);
+  if (costoLinea <= 0) return null;
+
+  return redondear2(((importe - costoLinea) / costoLinea) * 100);
 }
 
 /**
  * Valor unitario que alcanza un margen objetivo, partiendo del costo.
  * Sirve para el botón de "aplicar margen" del constructor.
+ *
+ * Con el margen medido sobre el costo esto es una multiplicación, y de paso
+ * arregla un desajuste que nadie había notado: `productos.margen_objetivo_pct`
+ * arranca en 20 porque la plantilla de Willy hace P.V. = P.C. × 1,20, pero la
+ * fórmula anterior —`costo / (1 − 20/100)`— devolvía costo × 1,25. O sea que
+ * el botón de "aplicar margen" venía proponiendo precios un 4 % por encima de
+ * los de su propio Excel.
+ *
+ * Ya no hace falta el tope de 100: un margen del 150 % sobre el costo es
+ * perfectamente posible (costo 10 → 25) y antes era imposible de expresar.
  */
 export function valorParaMargen(costo: number, margenPct: number): number {
-  if (margenPct >= 100) return 0; // margen imposible: evita dividir por cero
-  return redondear4(costo / (1 - margenPct / 100));
+  if (costo <= 0 || margenPct <= -100) return 0;
+  return redondear4(costo * (1 + margenPct / 100));
 }

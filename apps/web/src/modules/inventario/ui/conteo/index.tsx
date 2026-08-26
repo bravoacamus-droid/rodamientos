@@ -311,7 +311,7 @@ export function HojaDeConteo({
                 </div>
               </dl>
 
-              <p className="text-[0.7rem] text-[var(--fg-subtle)]">
+              <p className="text-xs text-[var(--fg-subtle)]">
                 Valorado al costo promedio vigente, que es a lo que la base va a
                 registrar el movimiento.
               </p>

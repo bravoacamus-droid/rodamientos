@@ -152,27 +152,41 @@ describe("calcularTotales", () => {
     expect(t.descuentoTotal).toBe(30);
   });
 
-  it("calcula el margen contra el subtotal, sin incluir IGV", () => {
+  it("mide el margen sobre el COSTO, y sin incluir IGV", () => {
     const t = calcularTotales([
       linea({ cantidad: 1, valorUnitario: 100, costoUnitario: 60 }),
     ]);
-    // (100 - 60) / 100 = 40 %. Si contara el IGV daría ~49 %, que es falso.
-    expect(t.margenPct).toBe(40);
+    // (100 − 60) / 60 = 66,67 %. Con el denominador en la venta daba 40 %, y
+    // contando el IGV daría otra cosa distinta: el IGV no es ingreso.
+    expect(t.margenPct).toBe(66.67);
   });
 
-  it("sin costo cargado devuelve 0, no 100", () => {
-    // Con costoTotal = 0 la fórmula daría 100 %. Sería mentir: el costo no
-    // está cargado, no es que se venda con margen total.
+  it("el caso que Willy tiene en la cabeza: costo × 1,20 son 20 %", () => {
+    // Su plantilla calcula P.V. = P.C. × 1,20 exacto en las siete filas que
+    // mandó. Con la fórmula vieja la pantalla le decía 16,67 % donde él
+    // esperaba 20, y por eso lo cazó a los cinco segundos de ver el tablero
+    // (26/08, 28:35).
+    const t = calcularTotales([
+      linea({ cantidad: 1, valorUnitario: 12, costoUnitario: 10 }),
+    ]);
+    expect(t.margenPct).toBe(20);
+  });
+
+  it("sin costo cargado devuelve 0, no infinito", () => {
+    // Con costoTotal = 0 la división explota. Devolver 0 es callar: el costo
+    // no está cargado, no es que se venda con margen infinito.
     const t = calcularTotales([linea({ valorUnitario: 100 })]);
     expect(t.margenPct).toBe(0);
     expect(Number.isNaN(t.margenPct)).toBe(false);
+    expect(Number.isFinite(t.margenPct)).toBe(true);
   });
 
   it("admite margen negativo: vender bajo el costo se tiene que ver", () => {
     const t = calcularTotales([
       linea({ cantidad: 1, valorUnitario: 50, costoUnitario: 80 }),
     ]);
-    expect(t.margenPct).toBe(-60);
+    // (50 − 80) / 80 = −37,5 %
+    expect(t.margenPct).toBe(-37.5);
   });
 
   it("un caso realista de rodamientos cuadra al céntimo", () => {
@@ -186,14 +200,16 @@ describe("calcularTotales", () => {
     expect(t.total).toBe(474.36);
     // 4×38.50 + 20×3.20 + 6×1.80 = 154 + 64 + 10.80
     expect(t.costoTotal).toBe(228.8);
-    expect(t.margenPct).toBe(43.08);
+    // (402 − 228.8) / 228.8 = 75,70 %. Sobre la venta daba 43,08 %.
+    expect(t.margenPct).toBe(75.7);
   });
 });
 
 describe("margenLinea", () => {
-  it("devuelve el margen porcentual de la línea", () => {
+  it("devuelve el margen porcentual de la línea, sobre el costo", () => {
+    // (100 − 75) / 75 = 33,33 %. Sobre la venta daba 25 %.
     expect(margenLinea(linea({ valorUnitario: 100, costoUnitario: 75 }))).toBe(
-      25,
+      33.33,
     );
   });
 
@@ -207,18 +223,29 @@ describe("margenLinea", () => {
   });
 
   it("tiene en cuenta el descuento", () => {
-    // 100 con 20 % de descuento = 80; costo 60 → (80-60)/80 = 25 %
+    // 100 con 20 % de descuento = 80; costo 60 → (80 − 60) / 60 = 33,33 %
     expect(
       margenLinea(
         linea({ valorUnitario: 100, descuentoPct: 20, costoUnitario: 60 }),
       ),
-    ).toBe(25);
+    ).toBe(33.33);
   });
 });
 
 describe("valorParaMargen", () => {
   it("devuelve el precio que alcanza el margen pedido", () => {
-    expect(valorParaMargen(60, 40)).toBe(100);
+    // 60 con 40 % sobre el costo = 84. Con la fórmula vieja daba 100, que es
+    // el precio que deja un 40 % sobre la VENTA — otra cosa.
+    expect(valorParaMargen(60, 40)).toBe(84);
+  });
+
+  it("el 20 % por defecto reproduce la plantilla de Willy", () => {
+    // `productos.margen_objetivo_pct` arranca en 20 porque su Excel hace
+    // P.V. = P.C. × 1,20. La fórmula anterior devolvía costo × 1,25, así que
+    // el botón de «aplicar margen» proponía precios un 4 % por encima de los
+    // de su propio archivo y nadie lo había notado.
+    expect(valorParaMargen(10, 20)).toBe(12);
+    expect(valorParaMargen(3.26, 20)).toBe(3.912);
   });
 
   it("es coherente de ida y vuelta con margenLinea", () => {
@@ -227,8 +254,16 @@ describe("valorParaMargen", () => {
     expect(margen).toBeCloseTo(30, 1);
   });
 
-  it("un margen del 100 % o más devuelve cero en vez de infinito", () => {
-    expect(valorParaMargen(50, 100)).toBe(0);
-    expect(valorParaMargen(50, 150)).toBe(0);
+  it("un margen por encima del 100 % ya es posible", () => {
+    // Sobre el costo, duplicar el precio son 100 % y triplicarlo 200 %. Con
+    // el denominador en la venta, el 100 % era una asíntota y no se podía
+    // expresar; ahora es un caso corriente en un repuesto de rotación baja.
+    expect(valorParaMargen(50, 100)).toBe(100);
+    expect(valorParaMargen(50, 150)).toBe(125);
+  });
+
+  it("sin costo, o con una rebaja imposible, devuelve cero", () => {
+    expect(valorParaMargen(0, 20)).toBe(0);
+    expect(valorParaMargen(50, -100)).toBe(0);
   });
 });

@@ -102,7 +102,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                     {p.codigo}
                   </Link>
                   {p.codigo_fabricante ? (
-                    <span className="ml-2 font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="ml-2 font-mono text-xs text-[var(--fg-subtle)]">
                       {p.codigo_fabricante}
                     </span>
                   ) : null}
@@ -110,14 +110,14 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="whitespace-nowrap px-4 py-2.5">{p.marca}</td>
                 <td className="max-w-md px-4 py-2.5">
                   <span className="block truncate">{p.descripcion}</span>
-                  <span className="block truncate text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="block truncate text-xs text-[var(--fg-subtle)]">
                     {p.subfamilia}
                     {p.tipo ? ` · ${p.tipo}` : ""}
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">
                   {p.stock.toLocaleString("es-PE")}
-                  <span className="ml-1 text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="ml-1 text-xs text-[var(--fg-subtle)]">
                     {p.unidad}
                   </span>
                 </td>
@@ -201,14 +201,14 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
 function Estado({ p }: { p: ProductoLista }) {
   if (p.archivado) {
     return (
-      <span className="inline-block rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-[0.7rem] font-medium text-[var(--fg-muted)]">
+      <span className="inline-block rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
         De baja
       </span>
     );
   }
   return (
     <span
-      className={`inline-block rounded-sm px-1.5 py-0.5 text-[0.7rem] font-medium ${COLOR_STOCK[p.estado_stock]}`}
+      className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_STOCK[p.estado_stock]}`}
     >
       {ETIQUETA_STOCK[p.estado_stock]}
     </span>

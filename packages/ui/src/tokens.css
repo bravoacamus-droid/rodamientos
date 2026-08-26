@@ -276,9 +276,41 @@
   }
 
   html {
+    /*
+     * 17 px de base, no los 16 del navegador.
+     *
+     * Willy, en la primera demo (0:50): «yo soy medio corto de vista, las
+     * letras las tengo que detenerme un poco». Es el usuario principal
+     * diciendo que no lee cómodo, así que no es una preferencia de diseño.
+     *
+     * Se sube AQUÍ y no clase por clase porque toda la interfaz está en `rem`
+     * —también las alturas de control y el espaciado—, así que un solo número
+     * escala el conjunto sin descuadrar nada. Subir solo el texto habría
+     * dejado letras grandes en botones del tamaño de antes.
+     *
+     * El 6,25 % es deliberadamente moderado: un ERP se opera viendo muchas
+     * filas a la vez, y cada punto que crece la base es una fila menos en
+     * pantalla. El problema de verdad no era el cuerpo del texto sino las
+     * etiquetas secundarias, que iban de 10 a 12 px en ocho tamaños distintos;
+     * eso se arregló poniendo un suelo (ver más abajo).
+     */
+    font-size: 106.25%;
     scroll-behavior: smooth;
     -webkit-text-size-adjust: 100%;
   }
+
+  /*
+   * SUELO TIPOGRÁFICO: nada por debajo de `text-xs` (0,75 rem = 12,75 px).
+   *
+   * Había ocho tamaños sueltos por debajo —`text-[10px]`, `text-[11px]`,
+   * `text-[0.65rem]`, `text-[0.7rem]`…— repartidos por 60 archivos. Eran los
+   * que obligaban a acercarse a la pantalla, y encima en píxeles fijos, así
+   * que no crecían al subir la base.
+   *
+   * Ahora la escala del ERP es: text-xs · text-[0.8rem] · text-sm · text-base
+   * y hacia arriba. Si hace falta algo más pequeño que `text-xs`, la respuesta
+   * es que no cabe la información, no que se encoja la letra.
+   */
 
   body {
     background: var(--bg);

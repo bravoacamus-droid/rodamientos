@@ -3038,6 +3038,7 @@ export type Database = {
           descripcion: string | null
           marca: string | null
           margen: number | null
+          margen_pct: number | null
           producto_id: string | null
           subfamilia: string | null
           ultima_venta: string | null

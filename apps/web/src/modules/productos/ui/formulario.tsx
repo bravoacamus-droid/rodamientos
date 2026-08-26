@@ -110,7 +110,10 @@ export function FormularioProducto({
   const costo = num(f.ultimo_costo);
   const pv = num(f.precio_venta);
   const pm = num(f.precio_minimo);
-  const margen = pv > 0 && costo > 0 ? ((pv - costo) / pv) * 100 : null;
+  // Sobre el COSTO, como todo el sistema desde la 023. Este formulario era el
+  // único sitio que lo decía en voz alta —«margen sobre la venta»— y ahora
+  // habla el mismo idioma que el listado, la cotización y el tablero.
+  const margen = pv > 0 && costo > 0 ? ((pv - costo) / costo) * 100 : null;
   const pisoAlto = pm > 0 && pv > 0 && pm > pv;
 
   const cambiarCosto = (v: string) => {
@@ -348,12 +351,16 @@ export function FormularioProducto({
 
         {margen !== null ? (
           <p className="text-sm text-[var(--fg-muted)]">
-            Margen sobre la venta:{" "}
+            Margen sobre el costo:{" "}
             <span
+              // Los cortes suben con el denominador: sobre la venta, 10 y 15 %
+              // eran «flojo» y «aceptable»; sobre el costo equivalen a 11 y 18.
+              // Se redondean a 12 y 20, que además es el objetivo que trae la
+              // plantilla de Willy.
               className={`font-semibold tabular ${
-                margen < 10
+                margen < 12
                   ? "text-[var(--danger)]"
-                  : margen < 15
+                  : margen < 20
                     ? "text-[var(--warn)]"
                     : "text-[var(--ok)]"
               }`}
@@ -363,7 +370,7 @@ export function FormularioProducto({
             {pm > 0 && costo > 0 ? (
               <>
                 {" "}· en el piso baja a{" "}
-                <span className="tabular">{(((pm - costo) / pm) * 100).toFixed(1)}%</span>
+                <span className="tabular">{(((pm - costo) / costo) * 100).toFixed(1)}%</span>
               </>
             ) : null}
           </p>

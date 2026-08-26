@@ -18,7 +18,7 @@ const dinero = (n: number) =>
 
 export function Documento({ c }: { c: CotizacionImpresa }) {
   return (
-    <article className="mx-auto w-full max-w-[210mm] bg-white p-4 text-[#111] sm:p-8 print:max-w-none print:p-0 print:text-[11px]">
+    <article className="mx-auto w-full max-w-[210mm] bg-white p-4 text-[#111] sm:p-8 print:max-w-none print:p-0 print:text-xs">
       {/* ------------------------------------------------------ Cabecera */}
       <header className="flex flex-col items-start justify-between gap-4 border-b-2 border-[#0E4C73] pb-4 sm:flex-row sm:gap-6 print:flex-row">
         <div className="flex items-start gap-4">
@@ -44,7 +44,7 @@ export function Documento({ c }: { c: CotizacionImpresa }) {
         </div>
 
         <div className="shrink-0 rounded border-2 border-[#0E4C73] px-5 py-3 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0E4C73]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#0E4C73]">
             Cotización
           </p>
           <p className="text-base font-bold tabular">{c.numero}</p>
@@ -165,12 +165,12 @@ export function Documento({ c }: { c: CotizacionImpresa }) {
         </table>
       </section>
 
-      <p className="mt-2 text-right text-[10px] uppercase text-[#444]">
+      <p className="mt-2 text-right text-xs uppercase text-[#444]">
         Son: {c.enLetras}
       </p>
 
       {/* ------------------------------------------------------- Al pie */}
-      <footer className="mt-6 break-inside-avoid border-t border-[#ccc] pt-3 text-[10px] text-[#444]">
+      <footer className="mt-6 break-inside-avoid border-t border-[#ccc] pt-3 text-xs text-[#444]">
         {c.condiciones ? (
           <p className="mb-1">
             <strong>Condiciones:</strong> {c.condiciones}

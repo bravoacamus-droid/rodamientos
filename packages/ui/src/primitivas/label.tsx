@@ -23,7 +23,7 @@ export function Label({ className, requerido, children, ...props }: LabelProps) 
     <label
       data-slot="label"
       className={cn(
-        "mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-subtle",
+        "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-subtle",
         "peer-disabled:opacity-60",
         className,
       )}
@@ -85,12 +85,12 @@ export function Campo({
       )}
       {children}
       {ayuda && !error && (
-        <p id={idAyuda} className="mt-1 text-[11px] text-subtle">
+        <p id={idAyuda} className="mt-1 text-xs text-subtle">
           {ayuda}
         </p>
       )}
       {error && (
-        <p id={idError} role="alert" className="mt-1 text-[11px] font-medium text-danger">
+        <p id={idError} role="alert" className="mt-1 text-xs font-medium text-danger">
           {error}
         </p>
       )}

@@ -35,7 +35,7 @@ export interface MonedaProps {
 }
 
 const TAMANOS: Record<NonNullable<MonedaProps["tamano"]>, string> = {
-  xs: "text-[11px]",
+  xs: "text-xs",
   sm: "text-xs",
   md: "text-sm",
   lg: "text-base",

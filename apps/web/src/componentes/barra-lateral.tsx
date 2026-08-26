@@ -109,7 +109,7 @@ function Grupos({
               type="button"
               onClick={() => alternar(grupo.titulo)}
               aria-expanded={abierto}
-              className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-[0.68rem] font-semibold uppercase tracking-wider text-[var(--fg-subtle)] transition-colors hover:text-[var(--fg-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+              className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--fg-subtle)] transition-colors hover:text-[var(--fg-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
             >
               <svg
                 viewBox="0 0 24 24"

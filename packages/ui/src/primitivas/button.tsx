@@ -41,7 +41,7 @@ export const buttonVariants = cva(
         link: "text-brand-600 underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {
-        xs: "h-control-xs rounded-sm px-2 text-[11px] [&_svg]:size-3.5",
+        xs: "h-control-xs rounded-sm px-2 text-xs [&_svg]:size-3.5",
         sm: "h-control-sm rounded-md px-3 text-xs",
         md: "h-control-md rounded-md px-4 text-sm",
         lg: "h-control-lg rounded-lg px-6 text-sm",

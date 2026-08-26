@@ -56,10 +56,10 @@ export function EstadoError({
 
       {detalle && (
         <details className="mt-5 w-full max-w-lg text-left">
-          <summary className="cursor-pointer text-[11px] font-medium text-subtle hover:text-fg">
+          <summary className="cursor-pointer text-xs font-medium text-subtle hover:text-fg">
             Detalle técnico
           </summary>
-          <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-surface-2 p-3 text-[11px] leading-relaxed text-muted">
+          <pre className="mt-2 max-h-40 overflow-auto rounded-md bg-surface-2 p-3 text-xs leading-relaxed text-muted">
             {detalle}
           </pre>
         </details>

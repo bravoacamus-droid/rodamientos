@@ -32,7 +32,7 @@ export function FilaRecepcion({
     <tr className="border-b border-[var(--border-soft)] last:border-0">
       <td className="px-2 py-2">
         <span className="block font-mono text-[0.8rem] font-medium">{linea.codigo}</span>
-        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">{linea.marca}</span>
+        <span className="block text-xs text-[var(--fg-subtle)]">{linea.marca}</span>
       </td>
 
       <td className="max-w-xs px-2 py-2">
@@ -40,7 +40,7 @@ export function FilaRecepcion({
           {linea.descripcion}
         </span>
         {linea.pendiente !== null ? (
-          <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+          <span className="block text-xs text-[var(--fg-subtle)]">
             la compra esperaba {linea.pendiente} {linea.unidad}
           </span>
         ) : null}
@@ -60,7 +60,7 @@ export function FilaRecepcion({
         />
       </td>
 
-      <td className="px-2 py-2 text-[0.7rem] text-[var(--fg-muted)]">{linea.unidad}</td>
+      <td className="px-2 py-2 text-xs text-[var(--fg-muted)]">{linea.unidad}</td>
 
       <td className="px-2 py-2">
         <Input
@@ -75,7 +75,7 @@ export function FilaRecepcion({
           aria-label={`Costo unitario de ${linea.codigo}`}
         />
         {linea.costoAnterior > 0 ? (
-          <span className="mt-0.5 block text-right text-[0.7rem] text-[var(--fg-subtle)]">
+          <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)]">
             antes {linea.costoAnterior}
           </span>
         ) : null}
@@ -93,13 +93,13 @@ export function FilaRecepcion({
           <span className="block tabular text-sm font-medium">
             {(costeada?.costoFinal ?? 0).toFixed(4)}
           </span>
-          <span className="block text-[0.7rem] text-[var(--fg-subtle)] tabular">
+          <span className="block text-xs text-[var(--fg-subtle)] tabular">
             {(costeada?.importeFinal ?? 0).toFixed(2)}
           </span>
         </td>
       ) : null}
 
-      <td className="px-2 py-2 text-right text-[0.7rem] text-[var(--fg-muted)] tabular">
+      <td className="px-2 py-2 text-right text-xs text-[var(--fg-muted)] tabular">
         {linea.stockAnterior} → <span className="font-medium text-[var(--fg)]">{stockResultante}</span>
       </td>
 

@@ -67,7 +67,7 @@ export function CheckboxCampo({
         <label
           htmlFor={id}
           className={cn(
-            "block cursor-pointer text-[12.5px] font-medium",
+            "block cursor-pointer text-[0.8rem] font-medium",
             props.checked ? "text-brand-800 dark:text-brand-200" : "text-fg",
             props.disabled && "cursor-not-allowed",
           )}
@@ -75,7 +75,7 @@ export function CheckboxCampo({
           {label}
         </label>
         {ayuda && (
-          <p id={idAyuda} className="mt-0.5 text-[10.5px] leading-snug text-muted">
+          <p id={idAyuda} className="mt-0.5 text-xs leading-snug text-muted">
             {ayuda}
           </p>
         )}

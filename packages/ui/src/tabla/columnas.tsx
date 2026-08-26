@@ -82,11 +82,11 @@ export function columnaTexto<TDato>(
       const sub = detalle?.(row.original);
       return (
         <div className="min-w-0">
-          <span className={cn("block truncate text-fg", mono && "font-mono text-[12px]")} title={texto}>
+          <span className={cn("block truncate text-fg", mono && "font-mono text-xs")} title={texto}>
             {texto || "—"}
           </span>
           {sub && (
-            <span className="block truncate text-[11px] text-subtle" title={sub}>
+            <span className="block truncate text-xs text-subtle" title={sub}>
               {sub}
             </span>
           )}
@@ -124,7 +124,7 @@ export function columnaNumero<TDato>(
           )}
         >
           {formatearNumero(n, decimales)}
-          {sufijo ? <span className="ml-0.5 text-[11px] text-subtle">{sufijo}</span> : null}
+          {sufijo ? <span className="ml-0.5 text-xs text-subtle">{sufijo}</span> : null}
         </span>
       );
     },

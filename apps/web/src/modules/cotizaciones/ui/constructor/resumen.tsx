@@ -51,12 +51,15 @@ export function ResumenConstructor({
         {totales.costoTotal > 0 ? (
           <div className="mt-3 rounded-sm bg-[var(--surface-2)] p-2.5">
             <div className="flex items-baseline justify-between">
-              <span className="text-xs text-[var(--fg-muted)]">Margen</span>
+              {/* Se dice «sobre el costo» aquí, y solo aquí, porque es la
+                  pantalla donde se negocia: leer un 20 % como si fuera sobre
+                  la venta cambia lo que el vendedor está dispuesto a ceder. */}
+              <span className="text-xs text-[var(--fg-muted)]">Margen s/ costo</span>
               <span
                 className={`tabular text-sm font-semibold ${
-                  totales.margenPct < 10
+                  totales.margenPct < 12
                     ? "text-[var(--danger)]"
-                    : totales.margenPct < 15
+                    : totales.margenPct < 20
                       ? "text-[var(--warn)]"
                       : "text-[var(--ok)]"
                 }`}

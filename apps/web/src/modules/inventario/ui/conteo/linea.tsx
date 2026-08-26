@@ -32,21 +32,21 @@ export function FilaConteo({
     >
       <td className="px-2 py-2">
         <span className="block font-mono text-[0.8rem] font-medium">{linea.codigo}</span>
-        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">{linea.marca}</span>
+        <span className="block text-xs text-[var(--fg-subtle)]">{linea.marca}</span>
       </td>
 
       <td className="max-w-xs px-2 py-2">
         <span className="block truncate text-sm" title={linea.descripcion}>
           {linea.descripcion}
         </span>
-        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+        <span className="block text-xs text-[var(--fg-subtle)]">
           {linea.subfamilia}
         </span>
       </td>
 
       <td className="px-2 py-2 text-right tabular text-sm text-[var(--fg-muted)]">
         {linea.cantidadSistema.toLocaleString("es-PE")}
-        <span className="ml-1 text-[0.7rem] text-[var(--fg-subtle)]">{linea.unidad}</span>
+        <span className="ml-1 text-xs text-[var(--fg-subtle)]">{linea.unidad}</span>
       </td>
 
       <td className="px-2 py-2">

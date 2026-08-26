@@ -27,7 +27,7 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         months: "flex flex-col gap-4 sm:flex-row",
         month: "space-y-3",
         month_caption: "flex h-8 items-center justify-center",
-        caption_label: "text-[13px] font-semibold capitalize text-fg",
+        caption_label: "text-[0.8rem] font-semibold capitalize text-fg",
         nav: "flex items-center gap-1",
         button_previous: cn(
           "absolute left-3 top-3 inline-flex size-7 items-center justify-center rounded-md",
@@ -39,9 +39,9 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         ),
         month_grid: "w-full border-collapse",
         weekdays: "flex",
-        weekday: "w-8 text-[10px] font-semibold uppercase tracking-wide text-subtle",
+        weekday: "w-8 text-xs font-semibold uppercase tracking-wide text-subtle",
         week: "mt-1 flex w-full",
-        day: "relative size-8 p-0 text-center text-[13px]",
+        day: "relative size-8 p-0 text-center text-[0.8rem]",
         day_button: cn(
           "tabular inline-flex size-8 items-center justify-center rounded-md font-normal text-fg",
           "transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-40",

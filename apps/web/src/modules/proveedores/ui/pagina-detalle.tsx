@@ -149,7 +149,7 @@ function Dato({
         {etiqueta}
       </dt>
       <dd className="mt-0.5 text-sm">{valor}</dd>
-      {pie ? <p className="text-[0.7rem] text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

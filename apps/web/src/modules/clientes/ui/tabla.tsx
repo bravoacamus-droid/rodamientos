@@ -91,7 +91,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                   </Link>
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5">
-                  <span className="text-[0.7rem] text-[var(--fg-subtle)]">
+                  <span className="text-xs text-[var(--fg-subtle)]">
                     {c.tipo_documento}
                   </span>{" "}
                   <span className="tabular">{c.numero_documento ?? "—"}</span>
@@ -99,7 +99,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate font-medium">{c.razon_social}</span>
                   {c.nombre_comercial ? (
-                    <span className="block truncate text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block truncate text-xs text-[var(--fg-subtle)]">
                       {c.nombre_comercial}
                     </span>
                   ) : null}
@@ -203,7 +203,7 @@ function Contacto({ c }: { c: ClienteLista }) {
   return (
     <>
       {c.contacto ? <span className="block truncate">{c.contacto}</span> : null}
-      <span className="block truncate text-[0.7rem] text-[var(--fg-subtle)]">
+      <span className="block truncate text-xs text-[var(--fg-subtle)]">
         {[via, c.email].filter(Boolean).join(" · ")}
       </span>
     </>

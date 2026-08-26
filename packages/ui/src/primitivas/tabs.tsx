@@ -30,7 +30,7 @@ export function TabsTrigger({
     <TabsPrimitive.Trigger
       className={cn(
         "group relative -mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 py-2",
-        "text-[13px] font-medium text-muted transition-colors hover:text-fg",
+        "text-[0.8rem] font-medium text-muted transition-colors hover:text-fg",
         "data-[state=active]:border-brand-600 data-[state=active]:text-brand-700 dark:data-[state=active]:text-brand-300",
         "disabled:pointer-events-none disabled:opacity-50",
         "[&_svg]:size-3.5",
@@ -42,7 +42,7 @@ export function TabsTrigger({
       {contador !== undefined && (
         <span
           className={cn(
-            "tabular rounded-full bg-surface-2 px-1.5 py-px text-[10px] font-semibold text-subtle",
+            "tabular rounded-full bg-surface-2 px-1.5 py-px text-xs font-semibold text-subtle",
             "group-data-[state=active]:bg-brand-100 group-data-[state=active]:text-brand-700",
           )}
         >

@@ -33,7 +33,7 @@ export function FilaCompra({
     <tr className="border-b border-[var(--border-soft)] last:border-0">
       <td className="px-2 py-2">
         <span className="block font-mono text-[0.8rem] font-medium">{linea.codigo}</span>
-        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">{linea.marca}</span>
+        <span className="block text-xs text-[var(--fg-subtle)]">{linea.marca}</span>
       </td>
 
       <td className="max-w-xs px-2 py-2">
@@ -56,7 +56,7 @@ export function FilaCompra({
         />
       </td>
 
-      <td className="px-2 py-2 text-[0.7rem] text-[var(--fg-muted)]">{linea.unidad}</td>
+      <td className="px-2 py-2 text-xs text-[var(--fg-muted)]">{linea.unidad}</td>
 
       <td className="px-2 py-2">
         <Input
@@ -73,11 +73,11 @@ export function FilaCompra({
         {/* La referencia útil no es el promedio del maestro, sino lo que ESTE
             proveedor cobró la última vez: es contra lo que se negocia. */}
         {ultimoCosto ? (
-          <span className="mt-0.5 block text-right text-[0.7rem] text-[var(--fg-subtle)] tabular">
+          <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)] tabular">
             {ultimoCosto.numero}: {ultimoCosto.costo.toFixed(4)}
           </span>
         ) : linea.costoAnterior > 0 ? (
-          <span className="mt-0.5 block text-right text-[0.7rem] text-[var(--fg-subtle)] tabular">
+          <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)] tabular">
             promedio {linea.costoAnterior.toFixed(4)}
           </span>
         ) : null}
@@ -87,7 +87,7 @@ export function FilaCompra({
         {importeLinea(linea).toFixed(2)}
       </td>
 
-      <td className="px-2 py-2 text-right text-[0.7rem] tabular">
+      <td className="px-2 py-2 text-right text-xs tabular">
         <span className="text-[var(--fg-muted)]">{linea.stockActual} → </span>
         <span className={bajoMinimo ? "font-medium text-[var(--warn)]" : "font-medium"}>
           {stockResultante}

@@ -233,7 +233,7 @@ export function BuscadorProductos({
                 <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden="true" />
                 <div>
                   <p className="text-xs font-medium text-fg">No se pudo consultar el catálogo</p>
-                  <p className="mt-0.5 text-[11px] text-muted">{error}</p>
+                  <p className="mt-0.5 text-xs text-muted">{error}</p>
                 </div>
               </div>
             ) : cargando && resultados.length === 0 ? (
@@ -242,14 +242,14 @@ export function BuscadorProductos({
               <CommandEmpty>
                 <PackageSearch className="mx-auto mb-2 size-5 text-subtle" aria-hidden="true" />
                 <p className="text-xs font-medium text-fg">Ningún producto coincide con «{termino.trim()}»</p>
-                <p className="mt-0.5 text-[11px] text-muted">
+                <p className="mt-0.5 text-xs text-muted">
                   Revisa el código: el maestro no admite espacios en el SKU.
                 </p>
                 {onIrAlMaestro && (
                   <button
                     type="button"
                     onClick={() => onIrAlMaestro(termino.trim())}
-                    className="mt-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-brand-600 hover:bg-surface-2"
+                    className="mt-3 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-surface-2"
                   >
                     <Plus className="size-3" />
                     Darlo de alta en el maestro de productos
@@ -280,29 +280,29 @@ export function BuscadorProductos({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline gap-2">
-                          <span className="font-mono text-[12px] font-medium text-fg">{p.sku}</span>
-                          {p.marca && <span className="truncate text-[11px] text-muted">{p.marca}</span>}
+                          <span className="font-mono text-xs font-medium text-fg">{p.sku}</span>
+                          {p.marca && <span className="truncate text-xs text-muted">{p.marca}</span>}
                           {p.archivado && (
-                            <span className="rounded-full bg-surface-2 px-1.5 text-[10px] text-subtle">archivado</span>
+                            <span className="rounded-full bg-surface-2 px-1.5 text-xs text-subtle">archivado</span>
                           )}
                           {yaEsta && (
-                            <span className="rounded-full bg-surface-2 px-1.5 text-[10px] text-subtle">
+                            <span className="rounded-full bg-surface-2 px-1.5 text-xs text-subtle">
                               ya está en el documento
                             </span>
                           )}
                         </div>
-                        <p className="truncate text-[12px] text-muted" title={p.descripcion}>
+                        <p className="truncate text-xs text-muted" title={p.descripcion}>
                           {p.descripcion}
                         </p>
                       </div>
 
                       <div className="shrink-0 text-right">
                         {p.precio !== null && p.precio !== undefined && (
-                          <span className="tabular block text-[12px] font-medium text-fg">
+                          <span className="tabular block text-xs font-medium text-fg">
                             {formatearMoneda(p.precio, moneda)}
                           </span>
                         )}
-                        <span className={cn("tabular block text-[11px]", tonoStock)}>
+                        <span className={cn("tabular block text-xs", tonoStock)}>
                           {stock === null ? "sin dato" : `${formatearNumero(stock, 0)} ${p.unidad ?? "und"}`}
                         </span>
                       </div>

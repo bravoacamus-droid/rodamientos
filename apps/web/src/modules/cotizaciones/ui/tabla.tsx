@@ -124,7 +124,7 @@ export async function TablaCotizaciones({
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {fechaCorta(c.fecha)}
                   {vencida(c) ? (
-                    <span className="ml-1.5 rounded-sm bg-[var(--warn-bg)] px-1 py-0.5 text-[0.65rem] font-medium text-[var(--warn)]">
+                    <span className="ml-1.5 rounded-sm bg-[var(--warn-bg)] px-1 py-0.5 text-xs font-medium text-[var(--warn)]">
                       vencida
                     </span>
                   ) : null}
@@ -133,13 +133,13 @@ export async function TablaCotizaciones({
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{c.cliente}</span>
                   {c.cliente_documento ? (
-                    <span className="block font-mono text-[0.7rem] text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
                       {c.cliente_documento}
                     </span>
                   ) : null}
                 </td>
 
-                <td className="hidden px-4 py-2.5 font-mono text-[0.75rem] text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 font-mono text-xs text-[var(--fg-muted)] lg:table-cell">
                   {c.orden_compra_cliente ?? "—"}
                 </td>
                 <td className="hidden px-4 py-2.5 text-right tabular text-[var(--fg-muted)] lg:table-cell">
@@ -156,7 +156,7 @@ export async function TablaCotizaciones({
 
                 <td className="px-4 py-2.5">
                   <span
-                    className={`inline-block rounded-sm px-1.5 py-0.5 text-[0.7rem] font-medium ${COLOR_ESTADO[c.estado]}`}
+                    className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_ESTADO[c.estado]}`}
                   >
                     {ETIQUETA_ESTADO[c.estado]}
                   </span>
@@ -187,7 +187,7 @@ export async function TablaCotizaciones({
 
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                 <span
-                  className={`rounded-sm px-1.5 py-0.5 text-[0.7rem] font-medium ${COLOR_ESTADO[c.estado]}`}
+                  className={`rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_ESTADO[c.estado]}`}
                 >
                   {ETIQUETA_ESTADO[c.estado]}
                 </span>
@@ -229,10 +229,13 @@ function Margen({ valor }: { valor: number }) {
   if (valor <= 0) {
     return <span className="tabular text-[var(--fg-subtle)]">—</span>;
   }
+  // Los cortes son sobre el COSTO (023): 12 y 20 son el equivalente de los
+  // 10 y 15 que había cuando el denominador era la venta, y el 20 coincide
+  // con el objetivo que trae la plantilla de productos.
   const tono =
-    valor < 10
+    valor < 12
       ? "text-[var(--danger)]"
-      : valor < 15
+      : valor < 20
         ? "text-[var(--warn)]"
         : "text-[var(--ok)]";
   return (

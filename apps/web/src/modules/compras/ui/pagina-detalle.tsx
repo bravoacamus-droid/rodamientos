@@ -136,7 +136,7 @@ export default async function PaginaDetalleCompra({
                         >
                           {l.codigo}
                         </Link>
-                        <span className="block text-[0.7rem] text-[var(--fg-subtle)]">
+                        <span className="block text-xs text-[var(--fg-subtle)]">
                           {l.marca}
                         </span>
                       </td>
@@ -146,7 +146,7 @@ export default async function PaginaDetalleCompra({
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-right tabular">
-                        {l.cantidad} <span className="text-[0.7rem] text-[var(--fg-subtle)]">{l.unidad}</span>
+                        {l.cantidad} <span className="text-xs text-[var(--fg-subtle)]">{l.unidad}</span>
                       </td>
                       <td
                         className={`py-2 pr-3 text-right tabular ${

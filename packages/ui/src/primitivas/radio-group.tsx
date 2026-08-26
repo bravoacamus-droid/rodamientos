@@ -68,11 +68,11 @@ export function RadioCampo({
     >
       <RadioGroupItem id={id} value={value} disabled={disabled} aria-describedby={idAyuda} className="mt-0.5" />
       <div className="min-w-0">
-        <label htmlFor={id} className="block cursor-pointer text-[12.5px] font-medium text-fg">
+        <label htmlFor={id} className="block cursor-pointer text-[0.8rem] font-medium text-fg">
           {label}
         </label>
         {ayuda && (
-          <p id={idAyuda} className="mt-0.5 text-[10.5px] leading-snug text-muted">
+          <p id={idAyuda} className="mt-0.5 text-xs leading-snug text-muted">
             {ayuda}
           </p>
         )}

@@ -26,7 +26,7 @@ export function Toaster(props: ToasterProps) {
       closeButton
       toastOptions={{
         classNames: {
-          toast: "!rounded-lg !border !text-[13px] elev-2",
+          toast: "!rounded-lg !border !text-[0.8rem] elev-2",
           description: "!text-xs !text-[var(--fg-muted)]",
           actionButton: "!bg-brand-600 !text-white !text-xs",
           cancelButton: "!bg-[var(--surface-2)] !text-[var(--fg-muted)] !text-xs",

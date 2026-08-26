@@ -52,11 +52,11 @@ export function SwitchCampo({
   return (
     <div className={cn("flex items-start justify-between gap-4 py-1.5", className)}>
       <div className="min-w-0">
-        <label htmlFor={id} className="block cursor-pointer text-[12.5px] font-medium text-fg">
+        <label htmlFor={id} className="block cursor-pointer text-[0.8rem] font-medium text-fg">
           {label}
         </label>
         {ayuda && (
-          <p id={idAyuda} className="mt-0.5 text-[10.5px] leading-snug text-muted">
+          <p id={idAyuda} className="mt-0.5 text-xs leading-snug text-muted">
             {ayuda}
           </p>
         )}

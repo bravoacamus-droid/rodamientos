@@ -18,7 +18,7 @@ export function AtajosDev({ destino }: { destino: string }) {
         <h2 className="text-xs font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
           Acceso rápido
         </h2>
-        <span className="rounded-sm bg-[var(--warn-bg)] px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--warn)]">
+        <span className="rounded-sm bg-[var(--warn-bg)] px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-[var(--warn)]">
           Solo desarrollo
         </span>
       </div>
@@ -35,7 +35,7 @@ export function AtajosDev({ destino }: { destino: string }) {
               <span className="block text-xs font-medium text-[var(--fg)]">
                 {cuenta.rol}
               </span>
-              <span className="block truncate text-[0.7rem] text-[var(--fg-subtle)]">
+              <span className="block truncate text-xs text-[var(--fg-subtle)]">
                 {cuenta.nombre}
               </span>
             </button>

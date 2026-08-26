@@ -116,7 +116,7 @@ export function BuscadorCompra({
           ) : null}
 
           {resultados.length > 0 ? (
-            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-[0.7rem] text-[var(--fg-muted)]">
+            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
               {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
             </p>
           ) : null}
@@ -166,7 +166,7 @@ export function BuscadorCompra({
                       <span className="tabular block font-medium">
                         ${ultimo.costo.toFixed(4)}
                       </span>
-                      <span className="block text-[0.65rem] text-[var(--fg-subtle)]">
+                      <span className="block text-xs text-[var(--fg-subtle)]">
                         {ultimo.numero}
                       </span>
                     </>
