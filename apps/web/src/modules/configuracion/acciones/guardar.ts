@@ -64,6 +64,12 @@ const esquemaEmpresa = z.object({
   retencion_porcentaje: z.number().min(0).max(100),
   cuenta_detraccion: textoOpcional,
   agente_retencion: z.boolean(),
+
+  // La cuenta a la que cobra. Distinta de la de detracción, que es del Banco
+  // de la Nación y no sirve para que el cliente transfiera.
+  banco: textoOpcional,
+  cuenta_corriente: textoOpcional,
+  cci: textoOpcional,
 });
 
 /**

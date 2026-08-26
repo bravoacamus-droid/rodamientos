@@ -406,3 +406,41 @@ export async function cotizacionParaDespachar(
     return fallo(e);
   }
 }
+
+/**
+ * Las agencias con las que se despacha a provincia.
+ *
+ * Willy, 26/08 (22:31): *«no son muchas, tengo dos o tres agencias»*. Los
+ * campos del transportista ya estaban en la guía; lo que faltaba era la lista
+ * de la que elegir, para no volver a teclear el RUC de Shalom en cada envío.
+ *
+ * Solo las activas: una que se dejó de usar sigue existiendo —hay guías viejas
+ * que la citan— pero no tiene por qué ofrecerse al despachar hoy.
+ */
+export async function agenciasActivas(): Promise<
+  Resultado<{ id: string; razon_social: string; nombre_corto: string | null; numero_documento: string | null }[]>
+> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("agencias_transporte")
+      .select("id, razon_social, nombre_corto, numero_documento")
+      .eq("activo", true)
+      .order("nombre_corto", { nullsFirst: false })
+      .limit(100);
+
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((a) => ({
+        id: String(a.id),
+        razon_social: String(a.razon_social),
+        nombre_corto: (a.nombre_corto as string | null) ?? null,
+        numero_documento: (a.numero_documento as string | null) ?? null,
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

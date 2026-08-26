@@ -31,14 +31,29 @@ import { ETIQUETA_MODALIDAD, type ModalidadTraslado, type MotivoTraslado } from 
  * guardar, y lo que además faltará para emitir. Enseñar solo la segunda haría
  * que pareciera que no se puede guardar todavía, que es justo lo contrario.
  */
+/** Una agencia del maestro, para el atajo del transporte público. */
+export interface AgenciaOpcion {
+  id: string;
+  razon_social: string;
+  nombre_corto: string | null;
+  numero_documento: string | null;
+}
+
 export function ConstructorGuia({
   cotizaciones,
   motivos,
+  agencias = [],
   hoy,
   cotizacionInicial,
 }: {
   cotizaciones: { id: string; numero: string; fecha: string; cliente: string }[];
   motivos: MotivoTraslado[];
+  /**
+   * Las agencias habituales (26/08, 22:31). Puede llegar vacía: si el maestro
+   * falla o está sin poblar, el RUC y la razón social se siguen tecleando como
+   * antes. Es un atajo, no un requisito.
+   */
+  agencias?: AgenciaOpcion[];
   /** La fecha la fija el servidor: el dominio no lee reloj. */
   hoy: string;
   cotizacionInicial?: string | null;
@@ -47,6 +62,9 @@ export function ConstructorGuia({
   const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
 
   const [cotizacionId, setCotizacionId] = useState(cotizacionInicial ?? "");
+  // Qué agencia se eligió. Solo controla el desplegable: lo que viaja a la
+  // guía son el RUC y la razón social ya copiados, no el id.
+  const [agenciaId, setAgenciaId] = useState("");
   const [cargando, cargar] = useTransition();
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
@@ -376,6 +394,45 @@ export function ConstructorGuia({
 
                 {esPublico ? (
                   <>
+                    {/* El atajo de las agencias habituales (26/08, 22:31).
+                        Rellena el RUC y la razón social, que siguen siendo
+                        editables: la guía guarda LO QUE DIGA ella el día que
+                        se emite, no una referencia que pueda cambiar después.
+
+                        Solo aparece si hay agencias cargadas. Sin ellas, esto
+                        se comporta exactamente como antes. */}
+                    {agencias.length > 0 ? (
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">Agencia</span>
+                        <SelectNativo
+                          value={agenciaId}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            setAgenciaId(id);
+                            const a = agencias.find((x) => x.id === id);
+                            if (!a) return;
+                            despachar({
+                              tipo: "campo",
+                              campo: "transportistaDocumento",
+                              valor: a.numero_documento ?? "",
+                            });
+                            despachar({
+                              tipo: "campo",
+                              campo: "transportistaRazonSocial",
+                              valor: a.razon_social,
+                            });
+                          }}
+                        >
+                          <option value="">Otra / a mano…</option>
+                          {agencias.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.nombre_corto ?? a.razon_social}
+                            </option>
+                          ))}
+                        </SelectNativo>
+                      </label>
+                    ) : null}
+
                     <label className="flex flex-col gap-1">
                       <span className="text-sm font-medium">RUC del transportista</span>
                       <Input

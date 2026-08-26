@@ -137,7 +137,7 @@ y ya no hace match y se rompe todo"*.
 
 ### 4.1 La plantilla
 
-`docs/plantillas/Rodatech - Maestro de productos.xlsx`, generada por
+`apps/web/public/plantillas/Rodatech - Maestro de productos.xlsx`, generada por
 `pnpm db:plantillas` a partir del propio árbol del cliente.
 
 Mismas diez columnas que su archivo, en su orden y con sus nombres. Cuatro

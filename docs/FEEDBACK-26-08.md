@@ -261,28 +261,50 @@ que un rol de cobranzas sea rechazado.
 Las **marcas** siguen sin pantalla, pero no hacen falta: el importador crea la
 que no exista, que es como aparecen de verdad.
 
-### 3.5 · Cuenta bancaria en los documentos
+### 3.5 · ~~Cuenta bancaria en los documentos~~ · HECHA el 26/08 (migración 029)
 
 *«Últimamente hay algunos clientes que me piden indicar número de cuenta»*
 (14:40). Su regla, textual: **en la cotización siempre sale; en la factura es
 opcional**.
 
-Falta el dato en la empresa —`empresa` tiene `cuenta_detraccion` pero no la
-cuenta corriente ni el CCI— y el interruptor en el comprobante.
+**Hecho.** `empresa` gana banco, cuenta corriente y CCI, y se editan en
+`/configuracion`. `comprobantes.mostrar_cuenta` arranca en **true** porque él
+lo dijo así: *«es una práctica recomendable que ya lleve pre-impresa la cuenta
+corriente, porque a veces se confunden»*. En la cotización no hay interruptor:
+un dato que sale siempre no necesita una casilla que nadie va a desmarcar.
 
-### 3.6 · Maestro de agencias de transporte
+Ojo con la confusión que estaba servida: `empresa` ya tenía
+`cuenta_detraccion`, que es **otra cosa** —la del Banco de la Nación para el
+SPOT— y a la que el cliente no puede transferir. Son dos columnas distintas y
+la pantalla lo dice.
+
+### 3.6 · ~~Maestro de agencias de transporte~~ · HECHO el 26/08 (migración 029)
 
 *«A veces envío pedidos por agencia a Trujillo»*, tipo Shalom (21:00). Los
-campos del transportista ya están en la guía; lo que falta es la **lista** de
-la que elegir, para no volver a teclear el RUC de Shalom cada vez. Él tiene
-«dos o tres agencias» — se precargan.
+campos del transportista ya estaban en la guía; lo que faltaba era la **lista**
+de la que elegir, para no volver a teclear el RUC de Shalom cada vez.
 
-### 3.7 · Descargar la plantilla de productos
+**Hecho.** Tabla `agencias_transporte`, precargada con Shalom, Cruz del Sur y
+Olva —con su RUC real— y un desplegable en la guía que rellena el RUC y la
+razón social. Los dos siguen siendo editables: **la guía guarda lo que ella
+diga el día que se emite**, no una referencia que pueda cambiar después.
 
-Hoy solo se puede subir. Él pidió poder **bajar** la plantilla, editarla en
-Excel y volver a subirla (13:00). El generador ya existe
-(`scripts/generar-plantilla-productos.mjs`); falta el botón en
-`/productos/cargar`.
+Las agencias se **desactivan, no se borran**: no hay política de DELETE. Una
+guía emitida no puede quedarse apuntando a una agencia que desapareció.
+
+El desplegable solo aparece si hay agencias cargadas. Sin ellas, el transporte
+se teclea exactamente como antes: es un atajo, no un requisito.
+
+### 3.7 · ~~Descargar la plantilla de productos~~ · HECHO el 26/08
+
+*«Voy a poner también que usted pueda descargar esa planilla, editarla y
+subirla de nuevo»* (13:00). Hasta ahora solo se podía subir, y la plantilla
+viajaba por WhatsApp.
+
+**Hecho.** Botón en `/productos/cargar`. La plantilla se movió de `docs/` a
+`apps/web/public/`, que es lo único que el servidor sirve — y es **una sola
+copia**: la prueba de `hoja.test.ts` abre ese mismo archivo, así que lo que se
+descarga el cliente es exactamente lo que está probado.
 
 ---
 
@@ -320,7 +342,11 @@ Lo que queda:
 
 7. ~~Familias y subfamilias desde la pantalla~~ · migración 028 y el «+ nueva»
    en cada nivel del alta de producto.
-8. Cuenta bancaria, agencias de transporte, descargar plantilla.
+8. ~~Cuenta bancaria, agencias de transporte, descargar plantilla~~ · migración
+   029 y el botón de descarga en /productos/cargar.
+
+**Con esto queda cerrado todo el feedback de la reunión.** Lo único que sigue
+abierto es §2.1, que no es código: es una pregunta para Willy.
 
 **Antes de que Willy suba los 3.000 productos** hay que preguntarle lo de §2.1.
 La plantilla ya trae las dos columnas y el importador avisa, pero es mejor

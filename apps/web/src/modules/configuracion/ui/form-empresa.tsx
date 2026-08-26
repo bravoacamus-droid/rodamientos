@@ -127,6 +127,56 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </Campo>
       </div>
 
+      {/* Willy, 26/08 (14:40): «hay clientes que me piden indicar número de
+          cuenta. En la cotización siempre debe salir. En la factura también es
+          una práctica recomendable que ya lleve pre-impresa la cuenta
+          corriente, porque a veces se confunden». */}
+      <div className="rounded-md border border-[var(--border-soft)] p-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+          Cuenta para cobrar
+        </h3>
+        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+          Sale <strong>siempre</strong> en la cotización. En la factura sale por
+          defecto y se puede quitar documento a documento. No es la cuenta de
+          detracción: esa es del Banco de la Nación y el cliente no puede
+          transferir ahí.
+        </p>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <Campo id="banco" label="Banco">
+            <Input
+              id="banco"
+              value={datos.banco ?? ""}
+              onChange={texto("banco")}
+              placeholder="BCP"
+              disabled={!puedeEditar}
+            />
+          </Campo>
+          <Campo id="cuenta_corriente" label="Cuenta corriente">
+            <Input
+              id="cuenta_corriente"
+              value={datos.cuenta_corriente ?? ""}
+              onChange={texto("cuenta_corriente")}
+              className="tabular"
+              disabled={!puedeEditar}
+            />
+          </Campo>
+          <Campo
+            id="cci"
+            label="CCI"
+            ayuda="Para quien transfiere desde otro banco. Es el que más piden."
+          >
+            <Input
+              id="cci"
+              value={datos.cci ?? ""}
+              onChange={texto("cci")}
+              className="tabular"
+              disabled={!puedeEditar}
+            />
+          </Campo>
+        </div>
+      </div>
+
       <div className="rounded-md border border-[var(--border-soft)] p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
           Impuestos y retenciones

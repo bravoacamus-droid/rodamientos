@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { FormularioImportacion } from "./formulario";
@@ -33,6 +34,32 @@ export default async function PaginaImportacion() {
         </div>
       ) : (
         <>
+          {/* Willy, 26/08 (13:00): «voy a poner también que usted pueda
+              descargar esa planilla, editarla y subirla de nuevo». Hasta ahora
+              solo se podía subir, y la plantilla viajaba por WhatsApp.
+
+              Es un enlace normal y no un botón con descarga generada: el
+              archivo está en `public/`, así que lo sirve el propio servidor.
+              Y es EL MISMO que abre `hoja.test.ts`, o sea que lo que se
+              descarga es exactamente lo que está probado. */}
+          <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand-200 bg-brand-50 p-4 text-sm dark:border-brand-800 dark:bg-brand-950">
+            <div>
+              <p className="font-medium">¿No tienes la plantilla a mano?</p>
+              <p className="text-[var(--fg-muted)]">
+                Descárgala, llénala en Excel y súbela aquí. Trae los
+                desplegables de familia, sub-familia y descripción ya cargados.
+              </p>
+            </div>
+            <a
+              href="/plantillas/Rodatech - Maestro de productos.xlsx"
+              download
+              className="inline-flex h-control-md shrink-0 items-center gap-1.5 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Download className="size-4" />
+              Descargar plantilla
+            </a>
+          </section>
+
           <section className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
             <p className="font-medium">Antes de subir</p>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--fg-muted)]">

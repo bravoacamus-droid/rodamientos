@@ -64,6 +64,51 @@ export type Database = {
           },
         ]
       }
+      agencias_transporte: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          busqueda: string | null
+          contacto: string | null
+          creado_en: string
+          direccion: string | null
+          id: string
+          nombre_corto: string | null
+          notas: string | null
+          numero_documento: string | null
+          razon_social: string
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          busqueda?: string | null
+          contacto?: string | null
+          creado_en?: string
+          direccion?: string | null
+          id?: string
+          nombre_corto?: string | null
+          notas?: string | null
+          numero_documento?: string | null
+          razon_social: string
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          busqueda?: string | null
+          contacto?: string | null
+          creado_en?: string
+          direccion?: string | null
+          id?: string
+          nombre_corto?: string | null
+          notas?: string | null
+          numero_documento?: string | null
+          razon_social?: string
+          telefono?: string | null
+        }
+        Relationships: []
+      }
       ajuste_items: {
         Row: {
           ajuste_id: string
@@ -666,6 +711,7 @@ export type Database = {
           guia_id: string | null
           id: string
           igv: number
+          mostrar_cuenta: boolean
           motivo_anulacion: string | null
           motivo_nota_codigo: string | null
           numero: string | null
@@ -718,6 +764,7 @@ export type Database = {
           guia_id?: string | null
           id?: string
           igv?: number
+          mostrar_cuenta?: boolean
           motivo_anulacion?: string | null
           motivo_nota_codigo?: string | null
           numero?: string | null
@@ -770,6 +817,7 @@ export type Database = {
           guia_id?: string | null
           id?: string
           igv?: number
+          mostrar_cuenta?: boolean
           motivo_anulacion?: string | null
           motivo_nota_codigo?: string | null
           numero?: string | null
@@ -1301,7 +1349,10 @@ export type Database = {
         Row: {
           actualizado_en: string
           agente_retencion: boolean
+          banco: string | null
+          cci: string | null
           celular: string | null
+          cuenta_corriente: string | null
           cuenta_detraccion: string | null
           detraccion_monto_minimo: number
           detraccion_porcentaje: number
@@ -1324,7 +1375,10 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           agente_retencion?: boolean
+          banco?: string | null
+          cci?: string | null
           celular?: string | null
+          cuenta_corriente?: string | null
           cuenta_detraccion?: string | null
           detraccion_monto_minimo?: number
           detraccion_porcentaje?: number
@@ -1347,7 +1401,10 @@ export type Database = {
         Update: {
           actualizado_en?: string
           agente_retencion?: boolean
+          banco?: string | null
+          cci?: string | null
           celular?: string | null
+          cuenta_corriente?: string | null
           cuenta_detraccion?: string | null
           detraccion_monto_minimo?: number
           detraccion_porcentaje?: number
@@ -1626,6 +1683,7 @@ export type Database = {
       guias_remision: {
         Row: {
           actualizado_en: string
+          agencia_id: string | null
           anulada_en: string | null
           anulada_por: string | null
           cliente_id: string
@@ -1671,6 +1729,7 @@ export type Database = {
         }
         Insert: {
           actualizado_en?: string
+          agencia_id?: string | null
           anulada_en?: string | null
           anulada_por?: string | null
           cliente_id: string
@@ -1716,6 +1775,7 @@ export type Database = {
         }
         Update: {
           actualizado_en?: string
+          agencia_id?: string | null
           anulada_en?: string | null
           anulada_por?: string | null
           cliente_id?: string
@@ -1760,6 +1820,13 @@ export type Database = {
           unidad_peso?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "guias_remision_agencia_id_fkey"
+            columns: ["agencia_id"]
+            isOneToOne: false
+            referencedRelation: "agencias_transporte"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guias_remision_anulada_por_fkey"
             columns: ["anulada_por"]

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { cotizacionesDespachables, motivosTraslado } from "../api/consultas";
+import { agenciasActivas, cotizacionesDespachables, motivosTraslado } from "../api/consultas";
 import { ConstructorGuia } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
@@ -35,9 +35,10 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
     );
   }
 
-  const [cotizaciones, motivos] = await Promise.all([
+  const [cotizaciones, motivos, agencias] = await Promise.all([
     cotizacionesDespachables(),
     motivosTraslado(),
+    agenciasActivas(),
   ]);
 
   if (!cotizaciones.ok) {
@@ -77,6 +78,9 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
       // Si el catálogo de motivos fallara, «Venta» es el 99 % de los casos y
       // permite seguir trabajando en vez de dejar la pantalla inservible.
       motivos={motivos.ok ? motivos.datos : [{ codigo: "01", descripcion: "Venta" }]}
+      // Si el maestro fallara, el transporte se teclea como siempre: es un
+      // atajo, no un requisito para emitir.
+      agencias={agencias.ok ? agencias.datos : []}
       hoy={hoy}
       cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
     />

@@ -14,9 +14,12 @@ import { COLUMNAS, detectarCabecera, leerFilas } from "../dominio/plantilla";
  * cambia el generador y rompe la lectura, esto se entera.
  */
 
+// En `public/` desde el 26/08, para que el botón de descarga de
+// /productos/cargar la pueda servir. Es la MISMA copia que se baja el cliente,
+// no una réplica: lo que aquí se prueba es exactamente lo que él recibe.
 const RUTA = resolve(
   __dirname,
-  "../../../../../../docs/plantillas/Rodatech - Maestro de productos.xlsx",
+  "../../../../public/plantillas/Rodatech - Maestro de productos.xlsx",
 );
 
 /** Réplica de `matrizDeArchivo` sin el import dinámico, para poder testear. */

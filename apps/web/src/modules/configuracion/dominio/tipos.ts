@@ -100,6 +100,17 @@ export interface Empresa {
   retencion_porcentaje: number;
   cuenta_detraccion: string | null;
   agente_retencion: boolean;
+
+  /**
+   * La cuenta a la que COBRA. Nada que ver con `cuenta_detraccion`, que es la
+   * del Banco de la Nación para el SPOT y no sirve para que le transfieran.
+   *
+   * Willy 26/08 (14:40): en la cotización sale siempre; en la factura por
+   * defecto sí, con opción de quitarla.
+   */
+  banco: string | null;
+  cuenta_corriente: string | null;
+  cci: string | null;
   actualizado_en: string;
 }
 

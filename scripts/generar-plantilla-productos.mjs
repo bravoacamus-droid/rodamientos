@@ -36,7 +36,15 @@ const require = createRequire(import.meta.url);
 const ExcelJS = require("exceljs");
 
 const ORIGEN = "docs/taxonomia.json";
-const SALIDA = "docs/plantillas/Rodatech - Maestro de productos.xlsx";
+// Vive en `public/` y NO en `docs/`.
+//
+// Desde el 26/08 hay un botón para descargarla desde /productos/cargar —Willy
+// lo pidió a los 13:00: bajarla, editarla y volver a subirla—, y para eso el
+// archivo tiene que estar donde el servidor lo sirva. `docs/` no se despliega.
+//
+// Es UNA sola copia a propósito: la prueba de `hoja.test.ts` abre esta misma,
+// así que lo que se descarga el cliente es exactamente lo que está probado.
+const SALIDA = "apps/web/public/plantillas/Rodatech - Maestro de productos.xlsx";
 const FILAS = 200; // capacidad de la plantilla; más de esto, se manda otra tanda
 
 // Marcas del maestro (007_seed_maestros). La validación es de aviso, no de
@@ -390,7 +398,7 @@ const main = async () => {
 
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 16 } };
 
-  mkdirSync("docs/plantillas", { recursive: true });
+  mkdirSync("apps/web/public/plantillas", { recursive: true });
   await wb.xlsx.writeFile(SALIDA);
 
   const nTipos = familias.reduce(
