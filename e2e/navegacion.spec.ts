@@ -48,6 +48,7 @@ const PANTALLAS: { ruta: string; titulo: RegExp }[] = [
   { ruta: "/cobranzas", titulo: /Cobranzas/i },
   { ruta: "/reportes", titulo: /Informes|Reportes/i },
   { ruta: "/alertas", titulo: /Alertas/i },
+  { ruta: "/equivalencias", titulo: /Equivalencias/i },
 ];
 
 for (const { ruta, titulo } of PANTALLAS) {
@@ -85,6 +86,39 @@ const FICHAS: { listado: string; patronEnlace: RegExp; nombre: string }[] = [
   { listado: "/guias", patronEnlace: /^\/guias\/[0-9a-f-]{36}$/, nombre: "guía" },
   { listado: "/facturacion", patronEnlace: /^\/facturacion\/[0-9a-f-]{36}$/, nombre: "comprobante" },
 ];
+
+/**
+ * El cross-reference con un producto de verdad.
+ *
+ * La prueba de arriba solo abre `/equivalencias` vacía, que es el camino sin
+ * consultas. Lo que puede romperse es la otra mitad: `sustitutos_de()` y la
+ * lectura de las declaradas, que lleva una desambiguación de claves foráneas
+ * de PostgREST —dos relaciones distintas a la misma tabla— y ese es
+ * exactamente el tipo de consulta que falla con un PGRST200 en tiempo de
+ * ejecución sin que TypeScript diga nada. Es el fallo de R0, otra vez.
+ */
+test("el cross-reference abre con un producto de verdad", async ({ page }) => {
+  await page.goto("/productos");
+
+  const hrefs = await page
+    .locator("a")
+    .evaluateAll((nodos) =>
+      nodos.map((n) => (n as HTMLAnchorElement).getAttribute("href") ?? ""),
+    );
+  const ficha = hrefs.find((h) => /^\/productos\/[0-9a-f-]{36}$/.test(h));
+
+  test.skip(!ficha, "No hay ningún producto en el catálogo.");
+
+  const id = ficha!.split("/").pop();
+  await page.goto(`/equivalencias?producto=${id}`);
+
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Equivalencias/i);
+
+  const cuerpo = await page.locator("body").innerText();
+  for (const señal of SEÑALES_DE_ERROR) {
+    expect(cuerpo, `El cross-reference enseña «${señal}»`).not.toContain(señal);
+  }
+});
 
 for (const { listado, patronEnlace, nombre } of FICHAS) {
   test(`la ficha de ${nombre} abre desde su listado`, async ({ page }) => {

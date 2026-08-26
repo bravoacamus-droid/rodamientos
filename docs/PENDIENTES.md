@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 25/08/2026 (cierre). Ordenado por lo que más duele. Lo ya resuelto vive al
+Estado al 26/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
 final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
@@ -10,10 +10,10 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **38 reales de 41** · quedan 3 carteles |
+| Rutas | **39 reales de 41** · quedan 2 carteles |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 654 en verde |
-| `pnpm e2e` | **26 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 672 en verde |
+| `pnpm e2e` | **28 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 021, aplicadas** al Supabase del cliente |
 
@@ -61,8 +61,8 @@ el final del proyecto.
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
   escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
   pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **Los 3 carteles** que quedan de 41 rutas: equivalencias, importaciones y
-  configuración (§1). Alertas ya está hecha (26/08).
+- **Los 2 carteles** que quedan de 41 rutas: importaciones y configuración
+  (§1). Alertas y equivalencias ya están hechas (26/08).
 - **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
   mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
   Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
@@ -86,7 +86,7 @@ el final del proyecto.
 
 ## 1 · Los demás módulos están vacíos
 
-De **41 rutas hay 38 reales**. Las otras 3 son carteles de «en construcción».
+De **41 rutas hay 39 reales**. Las otras 2 son carteles de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -96,9 +96,10 @@ alta y edición.)
 ← el 25/08 · **facturación** (listado, emisión, ficha, configuración),
 **informes** (cinco gráficos), **guías de remisión** (listado, preparación,
 ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde ·
-**alertas** (bandeja, filtros, leer/archivar y refresco) ← el 26/08
+**alertas** (bandeja, filtros, leer/archivar y refresco) y **equivalencias**
+(cross-reference y captura a mano) ← el 26/08
 
-**Carteles:** equivalencias · importaciones · configuración
+**Carteles:** importaciones · configuración
 
 ### El backend de casi todos ya está escrito
 
@@ -135,7 +136,17 @@ Orden sugerido, por lo que cierra el ciclo del dinero:
    preparada para ello —`alertas.notificado_en` en null significa «todavía no
    ha salido»— y falta el cron que llame a `generar_alertas()` y el envío por
    WhatsApp o correo.
-3. El resto: equivalencias, importaciones, configuración.
+3. El resto: importaciones y configuración.
+
+**Sobre equivalencias, hecho el 26/08:** la cascada de `sustitutos_de()` ya
+existía y la usaba el constructor de cotizaciones, pero su **primer peldaño
+—la equivalencia declarada a mano— llevaba desde el principio vacío**, porque
+no había ninguna pantalla desde donde capturarla. Ahora la hay, y de paso se
+tapó un agujero: la tabla guarda `(producto_id, equivalente_id)` con un único
+`unique` sobre esa pareja, así que A→B y B→A entraban las dos y
+`sustitutos_de()` —que une los dos sentidos— habría enseñado el mismo producto
+repetido. El par se guarda siempre ordenado (`parCanonico`), y así la
+restricción que ya existía sí sirve.
 
 **El ciclo de abastecimiento ya está entero y probado de punta a punta**: se
 registró CMP-26-00001 (170.32 + 30.66 = 200.98), se recibió con REC-26-00001,
@@ -267,6 +278,14 @@ comparar una por una.
   configurados como *secrets* del repositorio en GitHub. Si nunca se pusieron,
   ese paso falla aunque typecheck y tests pasen. Son públicas por definición
   —viajan al navegador—, pero salen de secrets para no fijarlas en el repo.
+- **`BuscadorProductos` de `@rodatech/ui` no lo usaba nadie.** Su cabecera dice
+  que es «el control más usado del ERP» y lista cinco pantallas: constructor de
+  cotizaciones, compra, recepción, movimiento de inventario y guía. En realidad
+  ninguna lo importaba —cada módulo se había hecho el suyo— y el primer
+  llamador real es la pantalla de equivalencias, del 26/08. Vale la pena
+  revisar si los buscadores propios de esos cinco módulos tienen las mismas
+  protecciones (descartar respuestas tardías, `shouldFilter={false}`), o
+  cambiarlos por este.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
 - **Ningún producto tiene el peso registrado**, y el peso es obligatorio en la
