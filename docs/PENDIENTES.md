@@ -107,7 +107,7 @@ del proyecto.
 
 ## 1 · Los demás módulos están vacíos
 
-De **41 rutas hay 40 reales**. La otra es un cartel de «en construcción».
+De **42 rutas hay 41 reales**. La otra es un cartel de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -117,9 +117,15 @@ alta y edición.)
 ← el 25/08 · **facturación** (listado, emisión, ficha, configuración),
 **informes** (cinco gráficos), **guías de remisión** (listado, preparación,
 ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde ·
-**alertas** (bandeja, filtros, leer/archivar y refresco) y **equivalencias**
-(cross-reference y captura a mano) y **configuración** (empresa, series y
-usuarios) ← el 26/08
+**alertas** (bandeja, filtros, leer/archivar y refresco), **equivalencias**
+(cross-reference y captura a mano), **configuración** (empresa, series y
+usuarios) y **trazabilidad por ítem** ← el 26/08
+
+**La trazabilidad es la que más pidió Willy en la demo** y vive en
+`/productos/{id}/trazabilidad`, con botón destacado en la ficha del producto.
+Responde de un vistazo «a quién se lo compré y a cuánto» y «a quién se lo
+ofrecí y a qué precio», que es lo que él resolvía rebuscando en WhatsApp.
+Detalle en [FEEDBACK-26-08.md](FEEDBACK-26-08.md) §3.1.
 
 **Cartel:** importaciones — pero **el fondo del asunto ya está arreglado**: la
 migración 022 corrigió que los gastos de importación se cobraran ENTEROS en
