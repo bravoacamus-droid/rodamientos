@@ -86,6 +86,20 @@ del proyecto.
   campos y nosotros 32 columnas, así que probablemente sobren.
 - Las cosas menores de §6.
 
+**Por dónde seguir cuando volvamos**, en este orden:
+
+1. **Defontana** (§5). Es lo único de los cuatro que no depende de nadie ni de
+   nada, y lo que sale de ahí es una decisión que Willy toma en una reunión.
+2. **El worker de alertas** — pero **hace falta preguntarle antes por dónde
+   quiere que lleguen**, WhatsApp o correo. Sin saber el canal, lo único que se
+   puede escribir es el cron que llama a `generar_alertas()`; el envío queda en
+   el aire. Es lo único de la PRIMERA reunión que sigue igual que entonces.
+3. **El envío GRE** (§3). Se escribe a ciegas: no hay ambiente de pruebas y
+   además necesita el certificado que todavía no ha comprado. La primera vez
+   que corra de verdad será contra producción, así que conviene hacerlo cuando
+   haya con qué probarlo, no antes.
+4. Las menores de §6.
+
 ### Dos avisos para el día de la entrega (§7)
 
 - **Hay que rotar las credenciales.** El token y las llaves de Supabase están
