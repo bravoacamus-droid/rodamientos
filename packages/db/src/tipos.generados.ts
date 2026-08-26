@@ -3225,6 +3225,10 @@ export type Database = {
           venta: number
         }[]
       }
+      codigo_catalogo: {
+        Args: { p_nombre: string; p_tabla: unknown }
+        Returns: string
+      }
       consultas_liberar_cuota: {
         Args: { p_periodo: string }
         Returns: undefined
@@ -3253,6 +3257,15 @@ export type Database = {
       }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      crear_familia: { Args: { p_nombre: string }; Returns: Json }
+      crear_subfamilia: {
+        Args: { p_familia: string; p_nombre: string }
+        Returns: Json
+      }
+      crear_tipo: {
+        Args: { p_nombre: string; p_subfamilia: string }
+        Returns: Json
+      }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
       es_gerencia: { Args: never; Returns: boolean }

@@ -229,13 +229,37 @@ Y la previsualización ahora **avisa de la lectura de P.M.** antes de aplicar:
 precio de mercado, dilo antes». La decisión de §2.1 se toma mirando, no por
 omisión.
 
-### 3.4 · Crear familias y subfamilias desde la pantalla
+### 3.4 · ~~Crear familias y subfamilias desde la pantalla~~ · HECHO el 26/08 (migración 028)
 
 *«¿Qué pasa si se trata de un producto nuevo… unos pernos que no están en
-rodamientos? Habría que crear»* (10:40). Hoy las familias, subfamilias, tipos y
-marcas se cargan por migración y **no tienen pantalla de edición** — lo dice la
-propia pantalla de configuración que se hizo hoy. Hace falta el botón «+ nueva
-familia» donde se elige, sin salir del alta de producto.
+rodamientos? Habría que crear»* (10:40).
+
+**Hecho.** Un «+ nueva familia / sub-familia / descripción» al lado de cada
+nivel del alta de producto. Es un campo **en línea y no un diálogo**: esto pasa
+en mitad de un formulario a medio llenar, y un modal taparía lo que se lleva
+escrito justo cuando hay que decidir dónde va.
+
+Tres decisiones que no eran obvias:
+
+- **Crear lo que ya existe no es un error.** Si alguien teclea «PERNOS» y ya
+  hay una familia PERNOS, se devuelve la que hay y se dice «ya existía, se usará
+  esa». Quien está dando de alta un producto no quiere una lección sobre
+  duplicados: acaba en la familia que esperaba de todos modos.
+- **El código se genera en la base.** Las tres tablas tienen un `codigo` único
+  en TODA la tabla, no por familia, así que hay que inventarlo, comprobar que
+  esté libre e insertar sin que otra sesión gane la carrera. Eso es una
+  transacción, no dos llamadas desde el navegador.
+- **La descripción no pide la familia: la deduce.** La clave ajena de `tipos`
+  es compuesta —(subfamilia_id, familia_id)— justamente para que no pueda
+  colgar de una sub-familia de otra familia. Pedirla por separado sería abrir
+  la puerta a que llegue equivocada.
+
+Comprobado con el caso literal que puso: crear «Pernos», crearla otra vez en
+mayúsculas —devuelve la misma—, colgarle una sub-familia y una descripción, y
+que un rol de cobranzas sea rechazado.
+
+Las **marcas** siguen sin pantalla, pero no hacen falta: el importador crea la
+que no exista, que es como aparecen de verdad.
 
 ### 3.5 · Cuenta bancaria en los documentos
 
@@ -294,7 +318,8 @@ Hecho el 26/08:
 
 Lo que queda:
 
-7. Familias y subfamilias desde la pantalla.
+7. ~~Familias y subfamilias desde la pantalla~~ · migración 028 y el «+ nueva»
+   en cada nivel del alta de producto.
 8. Cuenta bancaria, agencias de transporte, descargar plantilla.
 
 **Antes de que Willy suba los 3.000 productos** hay que preguntarle lo de §2.1.

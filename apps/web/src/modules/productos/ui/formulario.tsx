@@ -7,7 +7,9 @@ import { useActionState, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo } from "@rodatech/ui";
 
+import { crearFamilia, crearSubfamilia, crearTipo, type NodoCreado } from "../acciones/catalogos";
 import { guardarProducto, type ResultadoProducto } from "../acciones/guardar";
+import { NuevoNodo } from "./nuevo-nodo";
 
 /**
  * Alta y edición de un producto.
@@ -100,13 +102,37 @@ export function FormularioProducto({
 
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
 
+  /**
+   * Lo que se crea sin salir de esta pantalla.
+   *
+   * Se guarda aparte y se mezcla con lo que vino del servidor, en vez de pedir
+   * los catálogos otra vez: recargarlos obligaría a esperar a mitad del alta, y
+   * el nivel recién creado tardaría en aparecer en su propio desplegable. La
+   * lista del servidor se pone al día en la siguiente navegación.
+   */
+  const [nuevas, setNuevas] = useState<{
+    familias: { id: string; nombre: string }[];
+    subfamilias: { id: string; nombre: string; familia_id: string }[];
+    tipos: { id: string; nombre: string; subfamilia_id: string }[];
+  }>({ familias: [], subfamilias: [], tipos: [] });
+
+  const familias = useMemo(
+    () => [...catalogos.familias, ...nuevas.familias],
+    [catalogos.familias, nuevas.familias],
+  );
   const subfamilias = useMemo(
-    () => catalogos.subfamilias.filter((s) => s.familia_id === f.familia_id),
-    [catalogos.subfamilias, f.familia_id],
+    () =>
+      [...catalogos.subfamilias, ...nuevas.subfamilias].filter(
+        (s) => s.familia_id === f.familia_id,
+      ),
+    [catalogos.subfamilias, nuevas.subfamilias, f.familia_id],
   );
   const tipos = useMemo(
-    () => catalogos.tipos.filter((t) => t.subfamilia_id === f.subfamilia_id),
-    [catalogos.tipos, f.subfamilia_id],
+    () =>
+      [...catalogos.tipos, ...nuevas.tipos].filter(
+        (t) => t.subfamilia_id === f.subfamilia_id,
+      ),
+    [catalogos.tipos, nuevas.tipos, f.subfamilia_id],
   );
 
   const num = (s: string) => {
@@ -134,7 +160,9 @@ export function FormularioProducto({
   // Al elegir la descripción, si no hay una escrita se copia el nombre del
   // tipo: en el archivo del cliente la DESCRIPCIÓN del producto ES su tipo.
   const cambiarTipo = (id: string) => {
-    const t = catalogos.tipos.find((x) => x.id === id);
+    // Sobre la lista YA mezclada: si el tipo se acaba de crear aquí, todavía
+    // no está en la del servidor.
+    const t = tipos.find((x) => x.id === id);
     setF((x) => ({
       ...x,
       tipo_id: id,
@@ -251,12 +279,27 @@ export function FormularioProducto({
               }
             >
               <option value="">Elige una familia…</option>
-              {catalogos.familias.map((c) => (
+              {familias.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
                 </option>
               ))}
             </SelectNativo>
+            <NuevoNodo
+              etiqueta="familia"
+              crear={crearFamilia}
+              onCreado={(n: NodoCreado) => {
+                setNuevas((x) => ({
+                  ...x,
+                  familias: x.familias.some((y) => y.id === n.id)
+                    ? x.familias
+                    : [...x.familias, { id: n.id, nombre: n.nombre }],
+                }));
+                // Se deja seleccionada y se limpian los dos niveles de abajo:
+                // la sub-familia que hubiera no pertenece a esta familia.
+                setF((x) => ({ ...x, familia_id: n.id, subfamilia_id: "", tipo_id: "" }));
+              }}
+            />
           </Campo>
 
           <Campo etiqueta="Sub-familia" requerido error={errorDe("subfamilia_id")}>
@@ -276,6 +319,24 @@ export function FormularioProducto({
                 </option>
               ))}
             </SelectNativo>
+            <NuevoNodo
+              etiqueta="sub-familia"
+              deshabilitado={!f.familia_id}
+              ayudaDeshabilitado="Elige antes la familia: una sub-familia cuelga de una."
+              crear={(nombre) => crearSubfamilia(f.familia_id, nombre)}
+              onCreado={(n: NodoCreado) => {
+                setNuevas((x) => ({
+                  ...x,
+                  subfamilias: x.subfamilias.some((y) => y.id === n.id)
+                    ? x.subfamilias
+                    : [
+                        ...x.subfamilias,
+                        { id: n.id, nombre: n.nombre, familia_id: f.familia_id },
+                      ],
+                }));
+                setF((x) => ({ ...x, subfamilia_id: n.id, tipo_id: "" }));
+              }}
+            />
           </Campo>
 
           <Campo etiqueta="Descripción (tipo)" error={errorDe("tipo_id")}>
@@ -293,6 +354,31 @@ export function FormularioProducto({
                 </option>
               ))}
             </SelectNativo>
+            <NuevoNodo
+              etiqueta="descripción"
+              deshabilitado={!f.subfamilia_id}
+              ayudaDeshabilitado="Elige antes la sub-familia."
+              crear={(nombre) => crearTipo(f.subfamilia_id, nombre)}
+              onCreado={(n: NodoCreado) => {
+                setNuevas((x) => ({
+                  ...x,
+                  tipos: x.tipos.some((y) => y.id === n.id)
+                    ? x.tipos
+                    : [
+                        ...x.tipos,
+                        { id: n.id, nombre: n.nombre, subfamilia_id: f.subfamilia_id },
+                      ],
+                }));
+                // Igual que al elegirla de la lista: si no hay descripción
+                // impresa escrita, se copia. En el archivo del cliente la
+                // DESCRIPCIÓN del producto ES su tipo.
+                setF((x) => ({
+                  ...x,
+                  tipo_id: n.id,
+                  descripcion: x.descripcion.trim() === "" ? n.nombre : x.descripcion,
+                }));
+              }}
+            />
           </Campo>
         </div>
 
