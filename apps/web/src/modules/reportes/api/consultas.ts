@@ -11,11 +11,16 @@ import {
   ordenarAging,
   rellenarMeses,
 } from "../dominio/periodo";
+import { etiquetaPeriodo, type Rango } from "../dominio/rango";
 import type {
+  ClienteFrecuente,
   Embudo,
   FamiliaValorizada,
   MesVentas,
+  ProductoConCliente,
   ProductoVendido,
+  PuntoCompras,
+  PuntoVentas,
   ResumenReportes,
   TramoCartera,
 } from "../dominio/tipos";
@@ -324,6 +329,160 @@ export async function resumen(hoy: string): Promise<Resultado<ResumenReportes>> 
         ),
         skusBajoMinimo: reposicion.count ?? 0,
       },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+// ===========================================================================
+// Informes por rango de fechas (migración 027)
+// ===========================================================================
+//
+// Willy, 26/08 (2:00 y 28:47): filtros por día, mes, año y entre fechas, sobre
+// las ventas Y sobre el costo, más los productos asociados a cliente.
+//
+// Todas llaman a un RPC que agrupa EN LA BASE. Traer las líneas para agrupar
+// aquí obligaría a mover el histórico entero por cada cambio de granularidad.
+
+/** Ventas agrupadas por día, semana, mes o año. */
+export async function serieVentas(
+  rango: Rango,
+): Promise<Resultado<PuntoVentas[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("serie_ventas", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_grano: rango.grano,
+    });
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((f) => ({
+        periodo: String(f.periodo),
+        etiqueta: etiquetaPeriodo(String(f.periodo), rango.grano),
+        documentos: Number(f.documentos ?? 0),
+        venta: Number(f.venta ?? 0),
+        costo: Number(f.costo ?? 0),
+        margen: Number(f.margen ?? 0),
+        margenPct: Number(f.margen_pct ?? 0),
+        unidades: Number(f.unidades ?? 0),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * El costo histórico, de las ÓRDENES DE COMPRA.
+ *
+ * Mide lo que se pidió y cuándo, no lo que entró al almacén ni lo que costó lo
+ * vendido. Willy lo pidió así de explícito («que se va a jalar directamente
+ * las órdenes de compra»), y son tres preguntas distintas: mezclarlas es lo
+ * que hace que un informe no cuadre con otro.
+ */
+export async function serieCompras(
+  rango: Rango,
+): Promise<Resultado<PuntoCompras[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("serie_compras", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_grano: rango.grano,
+    });
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((f) => ({
+        periodo: String(f.periodo),
+        etiqueta: etiquetaPeriodo(String(f.periodo), rango.grano),
+        ordenes: Number(f.ordenes ?? 0),
+        proveedores: Number(f.proveedores ?? 0),
+        subtotal: Number(f.subtotal ?? 0),
+        gastos: Number(f.gastos ?? 0),
+        costoTotal: Number(f.costo_total ?? 0),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Lo más vendido del rango, con el cliente que más se lleva de cada código. */
+export async function topProductosRango(
+  rango: Pick<Rango, "desde" | "hasta">,
+  limite = 15,
+): Promise<Resultado<ProductoConCliente[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("top_productos_rango", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_limit: limite,
+    });
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((p) => ({
+        id: String(p.producto_id),
+        codigo: String(p.codigo),
+        descripcion: String(p.descripcion ?? ""),
+        marca: p.marca ?? null,
+        unidades: Number(p.unidades ?? 0),
+        venta: Number(p.venta ?? 0),
+        costo: Number(p.costo ?? 0),
+        margen: Number(p.margen ?? 0),
+        margenPct: Number(p.margen_pct ?? 0),
+        clientes: Number(p.clientes ?? 0),
+        documentos: Number(p.documentos ?? 0),
+        clientePrincipal: p.cliente_principal ?? null,
+        clientePrincipalId: (p.cliente_principal_id as string | null) ?? null,
+        clientePrincipalPct: Number(p.cliente_principal_pct ?? 0),
+        ultimaVenta: p.ultima_venta ?? null,
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Los que más compran, con cada cuánto lo hacen. */
+export async function topClientesRango(
+  rango: Pick<Rango, "desde" | "hasta">,
+  limite = 15,
+): Promise<Resultado<ClienteFrecuente[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("top_clientes_rango", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_limit: limite,
+    });
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((c) => ({
+        id: String(c.cliente_id),
+        cliente: String(c.cliente ?? "—"),
+        documento: (c.documento as string | null) ?? null,
+        documentos: Number(c.documentos ?? 0),
+        venta: Number(c.venta ?? 0),
+        costo: Number(c.costo ?? 0),
+        margen: Number(c.margen ?? 0),
+        margenPct: Number(c.margen_pct ?? 0),
+        primeraCompra: String(c.primera_compra),
+        ultimaCompra: String(c.ultima_compra),
+        diasEntreCompras:
+          c.dias_entre_compras === null ? null : Number(c.dias_entre_compras),
+        diasSinComprar: Number(c.dias_sin_comprar ?? 0),
+      })),
     };
   } catch (e) {
     return fallo(e);

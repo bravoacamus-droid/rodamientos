@@ -36,7 +36,7 @@ export async function SeccionVentas() {
           actual={k.margen}
           previo={k.margenPrevio}
           etiquetaComparacion="vs. mes anterior"
-          detalle={`${k.margenPct.toFixed(1)}% sobre la venta`}
+          detalle={`${k.margenPct.toFixed(1)}% sobre el costo`}
         />
         <KpiCard
           etiqueta="Comprobantes"

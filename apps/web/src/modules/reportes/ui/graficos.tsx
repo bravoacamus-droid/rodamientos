@@ -22,6 +22,8 @@ import type {
   FamiliaValorizada,
   MesVentas,
   ProductoVendido,
+  PuntoCompras,
+  PuntoVentas,
   TramoCartera,
 } from "../dominio/tipos";
 
@@ -299,5 +301,93 @@ export function GraficoValorizacion({ datos }: { datos: FamiliaValorizada[] }) {
         <span className="tabular text-lg font-semibold">{dinero(total)}</span>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Series por rango (26/08)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ventas del rango, con la granularidad que se haya elegido.
+ *
+ * Es el mismo dibujo que `GraficoVentas` pero sobre `PuntoVentas`, que no es
+ * el mismo tipo: la serie mensual trae `ventaNeta` y la del rango trae `venta`.
+ * Se dejan separados en vez de renombrar una de las dos, porque el nombre de
+ * cada campo dice de dónde sale el número, y unificarlo obligaría a tocar el
+ * tablero para arreglar los informes.
+ */
+export function GraficoSerieVentas({ datos }: { datos: PuntoVentas[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={datos} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+        <defs>
+          <linearGradient id="rt-grad-serie" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity={0.45} />
+            <stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+        <XAxis dataKey="etiqueta" {...EJE} />
+        <YAxis tickFormatter={corto} {...EJE} width={52} />
+        <Tooltip content={<Globo />} cursor={{ stroke: "var(--border-strong)" }} />
+        <Area
+          type="monotone"
+          dataKey="venta"
+          name="Venta neta"
+          stroke="var(--color-brand-600)"
+          strokeWidth={2}
+          fill="url(#rt-grad-serie)"
+          isAnimationActive={ANIMAR}
+        />
+        <Line
+          type="monotone"
+          dataKey="margen"
+          name="Margen"
+          stroke="var(--ok)"
+          strokeWidth={2}
+          dot={false}
+          isAnimationActive={ANIMAR}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+/**
+ * Costo de las órdenes de compra, en barras.
+ *
+ * Barras y no área a propósito: una compra es un hecho puntual —se firmó una
+ * orden ese día— y no una magnitud que fluye. El área invita a leer la
+ * pendiente entre dos puntos, y entre dos compras no hay pendiente que leer.
+ *
+ * Los gastos de importación van apilados encima del subtotal, porque son
+ * costo igual y verlos aparte responde «¿cuánto de esto fue flete?».
+ */
+export function GraficoSerieCompras({ datos }: { datos: PuntoCompras[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={datos} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+        <XAxis dataKey="etiqueta" {...EJE} />
+        <YAxis tickFormatter={corto} {...EJE} width={52} />
+        <Tooltip content={<Globo />} cursor={{ fill: "var(--surface-2)" }} />
+        <Bar
+          dataKey="subtotal"
+          name="Mercadería"
+          stackId="costo"
+          fill="var(--color-brand-500)"
+          isAnimationActive={ANIMAR}
+        />
+        <Bar
+          dataKey="gastos"
+          name="Gastos de importación"
+          stackId="costo"
+          fill="var(--color-accent-400)"
+          radius={[4, 4, 0, 0]}
+          isAnimationActive={ANIMAR}
+        />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }

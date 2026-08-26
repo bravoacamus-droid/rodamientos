@@ -85,3 +85,87 @@ export interface FiltrosReportes {
   hasta?: string;
   meses?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Informes por rango (26/08)
+// ---------------------------------------------------------------------------
+
+/** Un punto de la serie de ventas, ya con la etiqueta del eje resuelta. */
+export interface PuntoVentas {
+  /** El inicio del periodo, en `aaaa-mm-dd`. */
+  periodo: string;
+  /** Cómo se lee en el eje: «25 ago», «ago 26», «2026». */
+  etiqueta: string;
+  documentos: number;
+  venta: number;
+  costo: number;
+  margen: number;
+  /** Sobre el COSTO, como todo el sistema desde la 023. */
+  margenPct: number;
+  unidades: number;
+}
+
+/**
+ * Un punto de la serie de compras.
+ *
+ * Mide lo que se PIDIÓ y cuándo, no lo que entró al almacén. Willy lo pidió
+ * así: «que se va a jalar directamente las órdenes de compra».
+ */
+export interface PuntoCompras {
+  periodo: string;
+  etiqueta: string;
+  ordenes: number;
+  proveedores: number;
+  subtotal: number;
+  /** Gastos de importación. Son costo; el IGV no, que es crédito fiscal. */
+  gastos: number;
+  costoTotal: number;
+}
+
+/** Un producto del ranking, con el cliente que más se lleva. */
+export interface ProductoConCliente {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  marca: string | null;
+  unidades: number;
+  venta: number;
+  costo: number;
+  margen: number;
+  margenPct: number;
+  /** Cuántos clientes distintos lo compraron en el rango. */
+  clientes: number;
+  documentos: number;
+  /**
+   * El que más se llevó, y su peso sobre el total.
+   *
+   * Es lo que Willy pidió (9:01): «si yo compro una mercadería, ¿para quién va
+   * dirigida?». Si uno solo se lleva el 90 %, reponer es una conversación con
+   * él, no una apuesta.
+   */
+  clientePrincipal: string | null;
+  clientePrincipalId: string | null;
+  clientePrincipalPct: number;
+  ultimaVenta: string | null;
+}
+
+/** Un cliente del ranking, con cada cuánto compra. */
+export interface ClienteFrecuente {
+  id: string;
+  cliente: string;
+  documento: string | null;
+  documentos: number;
+  venta: number;
+  costo: number;
+  margen: number;
+  margenPct: number;
+  primeraCompra: string;
+  ultimaCompra: string;
+  /**
+   * Promedio de días entre compras. Null con un solo documento: no hay
+   * intervalo que medir, y un cero diría «compra todos los días».
+   */
+  diasEntreCompras: number | null;
+  /** Contra hoy, no contra el fin del rango: no cuenta días que no han pasado. */
+  diasSinComprar: number;
+}

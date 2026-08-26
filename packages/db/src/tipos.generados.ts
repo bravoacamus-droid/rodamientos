@@ -3213,6 +3213,18 @@ export type Database = {
           relevancia: number
         }[]
       }
+      clientes_de_producto: {
+        Args: { p_desde: string; p_hasta: string; p_producto: string }
+        Returns: {
+          cliente: string
+          cliente_id: string
+          documentos: number
+          ultima_compra: string
+          ultimo_precio: number
+          unidades: number
+          venta: number
+        }[]
+      }
       consultas_liberar_cuota: {
         Args: { p_periodo: string }
         Returns: undefined
@@ -3335,6 +3347,29 @@ export type Database = {
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
       resumen_trazabilidad: { Args: { p_producto: string }; Returns: Json }
+      serie_compras: {
+        Args: { p_desde: string; p_grano?: string; p_hasta: string }
+        Returns: {
+          costo_total: number
+          gastos: number
+          ordenes: number
+          periodo: string
+          proveedores: number
+          subtotal: number
+        }[]
+      }
+      serie_ventas: {
+        Args: { p_desde: string; p_grano?: string; p_hasta: string }
+        Returns: {
+          costo: number
+          documentos: number
+          margen: number
+          margen_pct: number
+          periodo: string
+          unidades: number
+          venta: number
+        }[]
+      }
       siguiente_correlativo: {
         Args: {
           p_serie?: string
@@ -3367,6 +3402,44 @@ export type Database = {
         }[]
       }
       tiene_rol: { Args: { p_roles: string[] }; Returns: boolean }
+      top_clientes_rango: {
+        Args: { p_desde: string; p_hasta: string; p_limit?: number }
+        Returns: {
+          cliente: string
+          cliente_id: string
+          costo: number
+          dias_entre_compras: number
+          dias_sin_comprar: number
+          documento: string
+          documentos: number
+          margen: number
+          margen_pct: number
+          primera_compra: string
+          ultima_compra: string
+          venta: number
+        }[]
+      }
+      top_productos_rango: {
+        Args: { p_desde: string; p_hasta: string; p_limit?: number }
+        Returns: {
+          cliente_principal: string
+          cliente_principal_id: string
+          cliente_principal_pct: number
+          clientes: number
+          codigo: string
+          costo: number
+          descripcion: string
+          documentos: number
+          marca: string
+          margen: number
+          margen_pct: number
+          producto_id: string
+          ultima_venta: string
+          unidades: number
+          venta: number
+        }[]
+      }
+      unidad_periodo: { Args: { p_grano: string }; Returns: string }
     }
     Enums: {
       condicion_pago: "contado" | "credito"

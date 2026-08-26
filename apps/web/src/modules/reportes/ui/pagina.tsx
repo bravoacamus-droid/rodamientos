@@ -6,16 +6,20 @@ import {
   agingCartera,
   embudoComercial,
   resumen,
-  topProductos,
+  serieCompras,
+  serieVentas,
+  topClientesRango,
+  topProductosRango,
   valorizacionPorFamilia,
-  ventasMensuales,
 } from "../api/consultas";
 import { etiquetaAging, variacionPct } from "../dominio/periodo";
+import { describirRango, leerRango, type Rango } from "../dominio/rango";
+import { FiltroRango } from "./filtro-rango";
 import {
   GraficoAging,
-  GraficoTopProductos,
+  GraficoSerieCompras,
+  GraficoSerieVentas,
   GraficoValorizacion,
-  GraficoVentas,
 } from "./graficos";
 
 /**
@@ -28,20 +32,52 @@ import {
  * La fecha se calcula en el servidor con la zona de Lima. Sin fijarla, un
  * informe abierto a las 7 de la tarde contaría el mes siguiente.
  */
-export default async function PaginaReportes() {
+interface Props {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+function uno(v: string | string[] | undefined): string | undefined {
+  const valor = Array.isArray(v) ? v[0] : v;
+  return valor && valor.length > 0 ? valor : undefined;
+}
+
+export default async function PaginaReportes({ searchParams }: Props) {
+  const sp = await searchParams;
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
     new Date(),
   );
+
+  const rango = leerRango(
+    {
+      desde: uno(sp.desde),
+      hasta: uno(sp.hasta),
+      grano: uno(sp.grano),
+      atajo: uno(sp.atajo),
+    },
+    hoy,
+  );
+
+  // La clave del Suspense incluye el rango: sin ella, React reutiliza el
+  // resultado anterior al cambiar de fechas y la pantalla se queda con los
+  // datos viejos hasta que algo más la obliga a repintar.
+  const clave = `${rango.desde}|${rango.hasta}|${rango.grano}`;
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Informes</h1>
         <p className="text-sm text-[var(--fg-muted)]">
-          Cómo va el negocio: qué se vende, qué margen deja, qué falta por cobrar y
-          cuánto capital hay parado en el almacén.
+          Cómo va el negocio {describirRango(rango, hoy)}: qué se vende, qué margen
+          deja, qué falta por cobrar y cuánto capital hay parado en el almacén.
         </p>
       </div>
+
+      <FiltroRango
+        desde={rango.desde}
+        hasta={rango.hasta}
+        grano={rango.grano}
+        atajo={rango.atajo}
+      />
 
       <Suspense fallback={<FilaSkeleton alto="h-24" columnas={4} />}>
         <Indicadores hoy={hoy} />
@@ -49,11 +85,11 @@ export default async function PaginaReportes() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
-          titulo="Ventas por mes"
+          titulo="Ventas"
           nota="El área es lo vendido sin IGV; la línea, lo que queda después del costo."
         >
-          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <BloqueVentas hoy={hoy} />
+          <Suspense key={`v-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
+            <BloqueVentas rango={rango} />
           </Suspense>
         </Bloque>
 
@@ -69,11 +105,11 @@ export default async function PaginaReportes() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
-          titulo="Lo que más se vende"
-          nota="El color es el margen: verde por encima del 20 %, ámbar por debajo del 10 %."
+          titulo="Costo de las compras"
+          nota="Lo que se PIDIÓ y cuándo, de las órdenes de compra. No es lo que entró al almacén ni lo que costó lo vendido: son tres preguntas distintas."
         >
-          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-            <BloqueTop />
+          <Suspense key={`c-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
+            <BloqueCompras rango={rango} />
           </Suspense>
         </Bloque>
 
@@ -86,6 +122,29 @@ export default async function PaginaReportes() {
           </Suspense>
         </Bloque>
       </div>
+
+      {/* Estas dos van a ANCHO COMPLETO y no en dos columnas.
+          Puestas al lado, la última columna de cada una —el cliente que se
+          lleva el producto, y los días sin comprar— quedaba fuera de la
+          pantalla. Se podía desplazar, pero una tabla cuyo dato nuevo hay que
+          buscar arrastrando es una tabla que nadie mira. */}
+      <Bloque
+        titulo="Lo que más se vende, y a quién"
+        nota="La última columna es el cliente que más se lleva de ese código. Si uno solo se lleva casi todo, reponer es una conversación con él."
+      >
+        <Suspense key={`p-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
+          <BloqueTop rango={rango} />
+        </Suspense>
+      </Bloque>
+
+      <Bloque
+        titulo="Quién más compra"
+        nota="Cuánto se llevan y cada cuánto vuelven. La última columna es lo que llevan sin aparecer."
+      >
+        <Suspense key={`cl-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
+          <BloqueClientes rango={rango} />
+        </Suspense>
+      </Bloque>
 
       <Bloque
         titulo="Del presupuesto al cobro"
@@ -165,7 +224,7 @@ async function Indicadores({ hoy }: { hoy: string }) {
         valor={d.margenPct}
         sufijo=" %"
         decimales={1}
-        pie="sobre la venta"
+        pie="sobre el costo"
         tono={d.margenPct >= 15 ? "ok" : d.margenPct > 0 ? "aviso" : undefined}
       />
       <Kpi
@@ -235,88 +294,256 @@ function Kpi({
 
 // ---------------------------------------------------------------------------
 
-async function BloqueVentas({ hoy }: { hoy: string }) {
-  const r = await ventasMensuales(hoy, 12);
+async function BloqueVentas({ rango }: { rango: Rango }) {
+  const r = await serieVentas(rango);
   if (!r.ok) return <EstadoError titulo="No se pudo cargar la serie" detalle={r.error} />;
 
-  const conVentas = r.datos.some((m) => m.ventaNeta > 0);
-  if (!conVentas) {
+  if (r.datos.length === 0) {
     return (
       <EstadoVacio
-        titulo="Todavía no hay ventas"
-        descripcion="En cuanto se emita el primer comprobante, la serie empieza a dibujarse."
+        titulo="No hay ventas en este periodo"
+        descripcion="Prueba con un rango más amplio, o mira «Todo»."
       />
     );
   }
 
-  return <GraficoVentas datos={r.datos} />;
+  const venta = r.datos.reduce((a, p) => a + p.venta, 0);
+  const costo = r.datos.reduce((a, p) => a + p.costo, 0);
+  const documentos = r.datos.reduce((a, p) => a + p.documentos, 0);
+  const margenPct = costo > 0 ? ((venta - costo) / costo) * 100 : 0;
+
+  return (
+    <>
+      <GraficoSerieVentas datos={r.datos} />
+      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--fg-muted)]">
+        <span className="font-medium text-[var(--fg)]">$ {venta.toFixed(2)}</span> en{" "}
+        {documentos} {documentos === 1 ? "documento" : "documentos"} · costo ${" "}
+        {costo.toFixed(2)} · margen {margenPct.toFixed(1)} % sobre el costo
+      </p>
+    </>
+  );
 }
 
-async function BloqueTop() {
-  const r = await topProductos(10);
+/**
+ * El costo de las órdenes de compra.
+ *
+ * Willy lo pidió así de explícito (28:47): «el costo también, que se va a
+ * jalar directamente las órdenes de compra». Conviene que la pantalla diga qué
+ * mide, porque hay tres «costos» distintos en el ERP y solo uno cuadra con
+ * cada pregunta.
+ */
+async function BloqueCompras({ rango }: { rango: Rango }) {
+  const r = await serieCompras(rango);
+  if (!r.ok) return <EstadoError titulo="No se pudo cargar la serie" detalle={r.error} />;
+
+  if (r.datos.length === 0) {
+    return (
+      <EstadoVacio
+        titulo="No hay compras en este periodo"
+        descripcion="Aquí sale lo que se pidió a los proveedores, por fecha de la orden."
+      />
+    );
+  }
+
+  const total = r.datos.reduce((a, p) => a + p.costoTotal, 0);
+  const gastos = r.datos.reduce((a, p) => a + p.gastos, 0);
+  const ordenes = r.datos.reduce((a, p) => a + p.ordenes, 0);
+
+  return (
+    <>
+      <GraficoSerieCompras datos={r.datos} />
+      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--fg-muted)]">
+        <span className="font-medium text-[var(--fg)]">$ {total.toFixed(2)}</span> en{" "}
+        {ordenes} {ordenes === 1 ? "orden" : "órdenes"}
+        {gastos > 0
+          ? ` · de los cuales $ ${gastos.toFixed(2)} son gastos de importación`
+          : " · sin gastos de importación"}
+        . Sin IGV: es crédito fiscal, no costo.
+      </p>
+    </>
+  );
+}
+
+/**
+ * Lo más vendido, y a QUIÉN.
+ *
+ * La columna del cliente es la que Willy pidió (9:01): «si yo compro una
+ * mercadería, ¿para quién va dirigida? Puede que lo consuma uno o puede que lo
+ * consuman dos clientes». Con el porcentaje al lado, porque «tres clientes» y
+ * «tres clientes de los que uno se lleva el 95 %» son situaciones distintas.
+ */
+async function BloqueTop({ rango }: { rango: Rango }) {
+  const r = await topProductosRango(rango, 15);
   if (!r.ok) return <EstadoError titulo="No se pudo cargar el ranking" detalle={r.error} />;
 
   if (r.datos.length === 0) {
     return (
       <EstadoVacio
-        titulo="Sin productos vendidos"
+        titulo="No se vendió nada en este periodo"
         descripcion="El ranking se llena solo conforme se factura."
       />
     );
   }
 
   return (
-    <>
-      <GraficoTopProductos datos={r.datos} />
-      <div className="scroll-x mt-3 border-t border-[var(--border-soft)] pt-3">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
-              <th className="py-1.5 pr-3 font-medium">Código</th>
-              <th className="py-1.5 pr-3 font-medium">Descripción</th>
-              <th className="py-1.5 pr-3 text-right font-medium">Uds.</th>
-              <th className="py-1.5 pr-3 text-right font-medium">Vendido</th>
-              <th className="py-1.5 text-right font-medium">Margen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.datos.map((p, i) => (
-              <tr
-                key={p.id}
-                className="anim-entrada border-t border-[var(--border-soft)]"
-                style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
-              >
-                <td className="py-1.5 pr-3">
-                  <Link
-                    href={`/productos/${p.id}`}
-                    className="font-mono font-medium text-brand-600 hover:underline"
-                  >
-                    {p.codigo}
-                  </Link>
-                </td>
-                <td className="max-w-xs py-1.5 pr-3">
-                  <span className="block truncate">{p.descripcion}</span>
-                </td>
-                <td className="py-1.5 pr-3 text-right tabular">{p.unidades}</td>
-                <td className="py-1.5 pr-3 text-right tabular">{p.venta.toFixed(2)}</td>
-                <td
-                  className={`py-1.5 text-right tabular font-medium ${
-                    /* Sobre el costo (023): 20 y 12, no 20 y 10. */
-                    p.margenPct >= 20
-                      ? "text-[var(--ok)]"
-                      : p.margenPct < 12
-                        ? "text-[var(--warn)]"
-                        : ""
-                  }`}
+    <div className="scroll-x">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
+            <th className="py-1.5 pr-3 font-medium">Código</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Uds.</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Vendido</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Margen</th>
+            <th className="py-1.5 font-medium">Quién se lo lleva</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.datos.map((p, i) => (
+            <tr
+              key={p.id}
+              className="anim-entrada border-t border-[var(--border-soft)]"
+              style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
+            >
+              <td className="py-1.5 pr-3">
+                <Link
+                  href={`/productos/${p.id}/trazabilidad`}
+                  className="font-mono font-medium text-brand-600 hover:underline"
+                  title="Ver la trazabilidad de este código"
                 >
-                  {p.margenPct} %
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
+                  {p.codigo}
+                </Link>
+                <span className="block max-w-[16rem] truncate text-[var(--fg-subtle)]">
+                  {p.descripcion}
+                </span>
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular">{p.unidades}</td>
+              <td className="py-1.5 pr-3 text-right tabular">{p.venta.toFixed(2)}</td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular font-medium ${
+                  p.margenPct >= 20
+                    ? "text-[var(--ok)]"
+                    : p.margenPct < 12
+                      ? "text-[var(--warn)]"
+                      : ""
+                }`}
+              >
+                {p.margenPct} %
+              </td>
+              <td className="py-1.5">
+                {p.clientePrincipal ? (
+                  <>
+                    {p.clientePrincipalId ? (
+                      <Link
+                        href={`/clientes/${p.clientePrincipalId}`}
+                        className="block max-w-[14rem] truncate font-medium text-brand-600 hover:underline"
+                      >
+                        {p.clientePrincipal}
+                      </Link>
+                    ) : (
+                      <span className="block max-w-[14rem] truncate">{p.clientePrincipal}</span>
+                    )}
+                    <span className="text-[var(--fg-subtle)]">
+                      {p.clientes === 1
+                        ? "el único que lo compra"
+                        : `${p.clientePrincipalPct} % de ${p.clientes} clientes`}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-[var(--fg-subtle)]">—</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Quién más compra, y cada cuánto.
+ *
+ * «Cuánto le compran y en qué tiempo le compran» (28:47). Lo segundo es lo que
+ * no había: una lista ordenada por importe dice quién es grande, pero no quién
+ * dejó de aparecer. `dias_sin_comprar` se mide contra hoy, no contra el fin
+ * del rango, o contaría días que todavía no han pasado.
+ */
+async function BloqueClientes({ rango }: { rango: Rango }) {
+  const r = await topClientesRango(rango, 15);
+  if (!r.ok) return <EstadoError titulo="No se pudo cargar el ranking" detalle={r.error} />;
+
+  if (r.datos.length === 0) {
+    return (
+      <EstadoVacio
+        titulo="Nadie compró en este periodo"
+        descripcion="Prueba con un rango más amplio."
+      />
+    );
+  }
+
+  return (
+    <div className="scroll-x">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
+            <th className="py-1.5 pr-3 font-medium">Cliente</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Comprado</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Margen</th>
+            <th className="py-1.5 pr-3 text-right font-medium">Cada</th>
+            <th className="py-1.5 text-right font-medium">Sin venir</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.datos.map((c, i) => (
+            <tr
+              key={c.id}
+              className="anim-entrada border-t border-[var(--border-soft)]"
+              style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
+            >
+              <td className="py-1.5 pr-3">
+                <Link
+                  href={`/clientes/${c.id}`}
+                  className="block max-w-[14rem] truncate font-medium text-brand-600 hover:underline"
+                >
+                  {c.cliente}
+                </Link>
+                <span className="text-[var(--fg-subtle)]">
+                  {c.documentos} {c.documentos === 1 ? "documento" : "documentos"}
+                </span>
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular">{c.venta.toFixed(2)}</td>
+              <td
+                className={`py-1.5 pr-3 text-right tabular font-medium ${
+                  c.margenPct >= 20
+                    ? "text-[var(--ok)]"
+                    : c.margenPct < 12
+                      ? "text-[var(--warn)]"
+                      : ""
+                }`}
+              >
+                {c.margenPct} %
+              </td>
+              <td className="py-1.5 pr-3 text-right tabular">
+                {c.diasEntreCompras === null ? (
+                  // Con una sola compra no hay intervalo. Un cero diría
+                  // «compra todos los días», que es lo contrario de la verdad.
+                  <span className="text-[var(--fg-subtle)]">una vez</span>
+                ) : (
+                  `${c.diasEntreCompras} d`
+                )}
+              </td>
+              <td
+                className={`py-1.5 text-right tabular ${
+                  c.diasSinComprar > 90 ? "font-medium text-[var(--warn)]" : ""
+                }`}
+              >
+                {c.diasSinComprar} d
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

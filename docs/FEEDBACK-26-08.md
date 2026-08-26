@@ -155,9 +155,9 @@ cuánto, el último precio cotizado y el margen que deja juntar las dos. Debajo,
 proveedores ordenados por el mejor precio y clientes por lo más reciente. Al
 final, la línea de tiempo entera agrupada por día. Ver §6.
 
-### 3.2 · Reportes con filtros de fecha
+### 3.2 · ~~Reportes con filtros de fecha~~ · HECHOS el 26/08 (migración 027)
 
-Hoy `/informes` tiene cinco gráficos sin filtro de fecha. Él pidió (28:47):
+Tenía cinco gráficos sin filtro de fecha. Él pidió (28:47):
 
 - Ventas históricas, con filtro por día / mes / año / entre fechas.
 - Costo histórico, con los mismos filtros, tirando de las órdenes de compra.
@@ -166,11 +166,33 @@ Hoy `/informes` tiene cinco gráficos sin filtro de fecha. Él pidió (28:47):
   dirigida? Puede que lo consuma uno o puede que lo consuman dos clientes»*.
 - Principales clientes: cuánto compran y **cada cuánto**.
 
-`v_top_productos` ya cuenta `clientes` pero no dice cuáles. `v_resumen_clientes`
-existe. Falta el cruce producto × cliente y los filtros por fecha en todo.
+**Hecho.** `/reportes` lleva una barra de rango con ocho atajos —hoy, esta
+semana, este mes, mes pasado, tres meses, este año, doce meses, todo—, fechas a
+mano, y granularidad por día / semana / mes / año. El rango vive en la URL, así
+que «julio por semana» se pega en un WhatsApp y abre exactamente eso.
 
-El tablero también los quiere (2:00): *«de tal fecha a tal fecha cuánto he
-vendido»*.
+La granularidad se sugiere sola por la longitud del rango: tres años por día
+son mil barras en un ancho de pantalla y un día por mes es una barra. Quien
+quiera otra cosa la cambia a mano.
+
+Bloques nuevos:
+
+- **Costo de las compras**, de las órdenes, con los gastos de importación
+  apilados aparte para que se vea cuánto fue flete. La pantalla dice qué mide y
+  qué no: es lo que se PIDIÓ y cuándo, no lo que entró al almacén ni lo que
+  costó lo vendido. Son tres preguntas distintas, y mezclarlas es lo que hace
+  que un informe no cuadre con otro.
+- **Lo que más se vende, y a quién**, con el cliente que más se lleva de cada
+  código y su peso sobre el total. «Tres clientes» y «tres clientes de los que
+  uno se lleva el 95 %» son situaciones distintas, y solo la segunda te dice
+  con quién hablar antes de reponer.
+- **Quién más compra**, con cada cuánto vuelven y cuántos días llevan sin
+  aparecer. Una lista ordenada por importe dice quién es grande; esta dice
+  además quién dejó de venir.
+
+**Falta el mismo filtro en el TABLERO** (2:00): *«de tal fecha a tal fecha
+cuánto he vendido»*. `v_dashboard` ya acepta el rango desde la 005, así que es
+cablearlo, no diseñarlo.
 
 ### 3.3 · ~~Campos nuevos en el producto~~ · HECHOS el 26/08 (migraciones 025 y 026)
 
@@ -266,11 +288,14 @@ Hecho el 26/08:
 4. ~~`precio_mercado` y `proveedor_id`~~ · migraciones 025 y 026, más las seis
    columnas nuevas de la plantilla de carga.
 
+5. ~~Filtros de fecha en informes y el cruce producto × cliente~~ · migración
+   027 y la barra de rango de `/reportes`.
+
 Lo que queda:
 
-5. Filtros de fecha en informes y en el tablero; el cruce producto × cliente.
-6. Familias y subfamilias desde la pantalla.
-7. Cuenta bancaria, agencias de transporte, descargar plantilla.
+6. El mismo filtro de fecha en el TABLERO. `v_dashboard` ya lo acepta.
+7. Familias y subfamilias desde la pantalla.
+8. Cuenta bancaria, agencias de transporte, descargar plantilla.
 
 **Antes de que Willy suba los 3.000 productos** hay que preguntarle lo de §2.1.
 La plantilla ya trae las dos columnas y el importador avisa, pero es mejor

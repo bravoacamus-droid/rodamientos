@@ -180,3 +180,38 @@ for (const { listado, patronEnlace, nombre } of FICHAS) {
     }
   });
 }
+
+/**
+ * Los informes con rango de fechas.
+ *
+ * Cinco RPC nuevos (027) y todos cruzan tablas que pueden estar vacías. El
+ * caso que más fácil se rompe no es el rango con datos: es el vacío, donde la
+ * mitad de las agregaciones dividen entre cero.
+ */
+for (const consulta of [
+  "?atajo=hoy",
+  "?atajo=anio",
+  "?atajo=todo",
+  "?desde=2026-08-20&hasta=2026-08-26&grano=dia",
+  // Un rango en el que con seguridad no hay nada.
+  "?desde=1999-01-01&hasta=1999-12-31&grano=mes",
+  // Y basura en los parámetros: llegan de la URL, así que cualquiera puede
+  // escribir lo que quiera en ellos.
+  "?desde=ayer&hasta=mañana&grano=siglo&atajo=inventado",
+]) {
+  test(`/reportes${consulta} abre sin errores`, async ({ page }) => {
+    const fallosDeConsola: string[] = [];
+    page.on("pageerror", (e) => fallosDeConsola.push(e.message));
+
+    const respuesta = await page.goto(`/reportes${consulta}`);
+    expect(respuesta?.status()).toBeLessThan(400);
+
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Informes/i);
+
+    const cuerpo = await page.locator("body").innerText();
+    for (const señal of SEÑALES_DE_ERROR) {
+      expect(cuerpo, `/reportes${consulta} enseña «${señal}»`).not.toContain(señal);
+    }
+    expect(fallosDeConsola).toEqual([]);
+  });
+}
