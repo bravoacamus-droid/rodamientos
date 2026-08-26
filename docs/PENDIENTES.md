@@ -15,7 +15,7 @@ volver a caer sale caro.
 | `pnpm test` | 701 en verde |
 | `pnpm e2e` | **29 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 021, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 022, aplicadas** al Supabase del cliente |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y la
 013, la 015, la 016, la 017, la 018, la 019, la 020 y la 021 son centinelas: fallan al aplicar si alguien mete una función de
@@ -100,7 +100,11 @@ ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde ·
 (cross-reference y captura a mano) y **configuración** (empresa, series y
 usuarios) ← el 26/08
 
-**Cartel:** importaciones
+**Cartel:** importaciones — pero **el fondo del asunto ya está arreglado**: la
+migración 022 corrigió que los gastos de importación se cobraran ENTEROS en
+cada recepción parcial (dos entregas de media compra cargaban el gasto dos
+veces) y ató el detalle de gastos al total. Lo que falta es solo la pantalla
+de seguimiento: qué está en tránsito, con qué courier y para cuándo.
 
 ### El backend de casi todos ya está escrito
 
