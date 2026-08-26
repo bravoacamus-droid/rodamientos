@@ -10,10 +10,10 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **39 reales de 41** · quedan 2 carteles |
+| Rutas | **40 reales de 41** · queda 1 cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 672 en verde |
-| `pnpm e2e` | **28 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 701 en verde |
+| `pnpm e2e` | **29 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 021, aplicadas** al Supabase del cliente |
 
@@ -61,8 +61,8 @@ el final del proyecto.
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
   escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
   pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **Los 2 carteles** que quedan de 41 rutas: importaciones y configuración
-  (§1). Alertas y equivalencias ya están hechas (26/08).
+- **El cartel** que queda de 41 rutas: importaciones (§1). Alertas,
+  equivalencias y configuración ya están hechas (26/08).
 - **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
   mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
   Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
@@ -86,7 +86,7 @@ el final del proyecto.
 
 ## 1 · Los demás módulos están vacíos
 
-De **41 rutas hay 39 reales**. Las otras 2 son carteles de «en construcción».
+De **41 rutas hay 40 reales**. La otra es un cartel de «en construcción».
 (El recuento sale de contar los `page.tsx`, así que incluye login y las de
 alta y edición.)
 
@@ -97,9 +97,10 @@ alta y edición.)
 **informes** (cinco gráficos), **guías de remisión** (listado, preparación,
 ficha) y **cobranzas** (cartera, cobro y gestiones) ← el 25/08 por la tarde ·
 **alertas** (bandeja, filtros, leer/archivar y refresco) y **equivalencias**
-(cross-reference y captura a mano) ← el 26/08
+(cross-reference y captura a mano) y **configuración** (empresa, series y
+usuarios) ← el 26/08
 
-**Carteles:** importaciones · configuración
+**Cartel:** importaciones
 
 ### El backend de casi todos ya está escrito
 
@@ -136,7 +137,16 @@ Orden sugerido, por lo que cierra el ciclo del dinero:
    preparada para ello —`alertas.notificado_en` en null significa «todavía no
    ha salido»— y falta el cron que llame a `generar_alertas()` y el envío por
    WhatsApp o correo.
-3. El resto: importaciones y configuración.
+3. El resto: importaciones.
+
+**Sobre configuración, hecho el 26/08:** lo que la justifica es la columna
+`series_documento.correlativo_inicial`. Hasta hoy, poner los correlativos
+«desde el número que usted se quedó» (06:08) era un `update` a mano contra
+producción — y equivocarse ahí significa emitir una factura con un número que
+SUNAT ya tiene. Ahora la pantalla lo enseña con el próximo número calculado,
+cuenta los huecos que se saltan y avisa distinto según la serie sea fiscal o
+interna. También cambia los datos del emisor y el rol de cada usuario. No
+crea usuarios: eso vive en Supabase Auth y el perfil lo crea el trigger.
 
 **Sobre equivalencias, hecho el 26/08:** la cascada de `sustitutos_de()` ya
 existía y la usaba el constructor de cotizaciones, pero su **primer peldaño
@@ -234,7 +244,10 @@ porque son las dos cosas que pueden frenar el final del proyecto.
   filas** cuanto antes evita rehacer el mapeo.
 - **Los correlativos de partida.** *"Los correlativos van a iniciar desde el
   número que usted se quedó"* (06:08). Hace falta el último número de
-  cotización, factura y guía de su sistema actual, por serie.
+  cotización, factura y guía de su sistema actual, por serie. **Ya hay dónde
+  meterlos:** `/configuracion` → «Series y correlativos», columna «desde». La
+  pantalla enseña el próximo número antes de guardar y cuenta los huecos que
+  se saltan; en una serie que ve SUNAT, cada hueco hay que poder explicarlo.
 
 ---
 
