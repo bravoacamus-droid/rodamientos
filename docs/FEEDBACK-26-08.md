@@ -8,6 +8,83 @@ dice «ya está» está verificado en el esquema y en la pantalla.
 
 ---
 
+## Guion para el viernes 28/08
+
+Todo lo que se pidió el 26/08 está hecho. Lo que queda es lo que **solo él
+puede contestar**, y una parte frena trabajo de verdad.
+
+### Lo primero, antes de nada · la pregunta que puede costar 3.000 correcciones
+
+> **«En su Excel, ¿la columna P.M. es el precio MÍNIMO por debajo del cual no
+> vende, o el precio al que ve que está el mercado?»**
+
+Se pregunta al EMPEZAR, no al final. El 21/08 dijo que era el mínimo y con eso
+se cargó como **piso duro**: hay una restricción en la base que rechaza cotizar
+por debajo. El 26/08 dijo que para él P.M. es el precio de mercado, «con ese
+precio le agrego un 20 %». No pueden ser las dos.
+
+Si era el precio de mercado, cada producto tiene hoy un suelo de venta que él
+nunca fijó — y están a punto de entrar 3.000 más. Detalle en §2.1.
+
+### Lo que hay que pedirle
+
+| Qué | Por qué corre prisa |
+|---|---|
+| **Los tres Excel** | Sin ellos, los informes, el top de productos y la trazabilidad salen **vacíos**. Son justo las pantallas nuevas que se van a enseñar. |
+| **Los correlativos de partida** | El último número de cotización, factura y guía de su sistema actual, **por serie**. Ya hay dónde meterlos: `/configuracion`. |
+| **Su cuenta bancaria** | Banco, cuenta corriente y CCI. Sin eso, el campo que pidió sale en blanco en cotizaciones y facturas. |
+| **Sus 2-3 agencias** | Vienen precargadas Shalom, Cruz del Sur y Olva. Si usa otras, que las diga y se cambian. |
+
+### Lo que hay que preguntarle
+
+1. **¿Por dónde quiere que le lleguen las alertas: WhatsApp o correo?** Es lo
+   único de la PRIMERA reunión que sigue igual que entonces («no te llega como
+   una alerta, tú tienes que entrar y ver», 25:21). La bandeja ya existe; falta
+   el envío, y sin saber el canal no se puede escribir.
+
+2. **Que enseñe su ficha de cliente de Defontana.** Quedó pendiente de la
+   primera reunión (§5): la suya son 18 campos y aquí hay 32 columnas. La
+   pregunta no es qué falta, es **qué sobra**: él mismo dijo que «hay muchos
+   clientes técnicos que a las justas me dan correo».
+
+3. **El peso de los productos.** Sin peso NO se puede emitir una guía —la base
+   la rechaza— y hoy no hay un solo producto con peso. La plantilla ya trae la
+   columna; hace falta que la llene, aunque sea después.
+
+4. **El certificado digital: confirmar cuándo.** No es para ahora. Hay que
+   avisarle con unas dos semanas, y él dijo «me avisa nomás cuando se llegue a
+   ese punto».
+
+### Lo que hay que ENSEÑARLE, porque lo dio por faltante y ya existía
+
+Esto no es una lista de tareas: es media reunión que se puede ahorrar. Ver §1.
+
+- El campo de **contacto**, en el cliente Y en la cotización.
+- El **descuento por ítem**, con su casilla para ocultarlo en el PDF.
+- El **aviso de piso** al bajar el precio, y que el unitario sí es editable.
+- El **historial de ventas** del cliente para ese producto, dentro del
+  constructor.
+
+Que dijera «falta contacto» cuando el campo existe significa que la pantalla no
+lo estaba enseñando bien. Vale la pena mirar juntos por qué no lo vio.
+
+### Y una cosa que decirle
+
+Los **accesos rápidos** del login siguen puestos para que pueda entrar sin
+pelearse con la contraseña. Él ya preguntó por ellos («si no, cualquier persona
+puede entrar»). Conviene decirle que son de desarrollo y que se quitan antes de
+entregar, para que no lo vuelva a ver y se preocupe.
+
+### Lo que NO depende de él, y sigue siendo lo más grande que falta
+
+Un **proyecto Supabase de pruebas**. Las 41 pruebas de hoy dicen que las
+pantallas abren; ninguna dice que el kardex cuadre después de cotizar →
+facturar → cobrar. Son cuatro pasos y media hora, y no se puede hacer contra la
+base del cliente porque esas pruebas ESCRIBEN. Detalle en PENDIENTES §2.
+
+
+---
+
 ## Lo primero, antes de mandarle la URL
 
 **`RODATECH_ATAJOS` se queda POR AHORA** — decisión de Luis del 26/08, para que
