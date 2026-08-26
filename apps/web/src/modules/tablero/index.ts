@@ -6,4 +6,4 @@
 
 export { default as PaginaTablero } from "./ui/pagina";
 
-export type { AlertaResumen, Cartera, KpisMes, MesVentas } from "./api/consultas";
+export type { AlertaResumen, Cartera, KpisPeriodo, PuntoSerie } from "./api/consultas";

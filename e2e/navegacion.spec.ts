@@ -215,3 +215,32 @@ for (const consulta of [
     expect(fallosDeConsola).toEqual([]);
   });
 }
+
+/**
+ * El tablero comparte la barra de rango con los informes (26/08).
+ *
+ * Se prueba aparte porque no comparte las consultas: el tablero pide la serie
+ * DOS veces —el periodo y el anterior, para la comparación— y esa segunda
+ * llamada puede caer en fechas donde no hay nada.
+ */
+// Sin la cadena vacía: `/dashboard` a secas ya lo cubre la lista de PANTALLAS,
+// y repetirlo aquí da dos pruebas con el mismo nombre, que Playwright rechaza.
+for (const consulta of [
+  "?atajo=hoy",
+  "?atajo=todo",
+  "?desde=2026-08-01&hasta=2026-08-26&grano=dia",
+]) {
+  test(`/dashboard${consulta} abre sin errores`, async ({ page }) => {
+    const fallosDeConsola: string[] = [];
+    page.on("pageerror", (e) => fallosDeConsola.push(e.message));
+
+    await page.goto(`/dashboard${consulta}`);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Tablero/i);
+
+    const cuerpo = await page.locator("body").innerText();
+    for (const señal of SEÑALES_DE_ERROR) {
+      expect(cuerpo, `/dashboard${consulta} enseña «${señal}»`).not.toContain(señal);
+    }
+    expect(fallosDeConsola).toEqual([]);
+  });
+}

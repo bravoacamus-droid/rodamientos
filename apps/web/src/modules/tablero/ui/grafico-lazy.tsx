@@ -12,13 +12,13 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@rodatech/ui";
 
-import type { MesVentas } from "../api/consultas";
+import type { PuntoSerie } from "../api/consultas";
 
 const Grafico = dynamic(
   () => import("./grafico-ventas").then((m) => m.GraficoVentas),
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> },
 );
 
-export function GraficoVentasLazy({ meses }: { meses: MesVentas[] }) {
+export function GraficoVentasLazy({ meses }: { meses: PuntoSerie[] }) {
   return <Grafico meses={meses} />;
 }

@@ -8,6 +8,7 @@ import {
   granoSugerido,
   inicioDeSemana,
   leerRango,
+  periodoAnterior,
   rangoDeAtajo,
   sumarDias,
   sumarMeses,
@@ -210,5 +211,42 @@ describe("diasDelRango", () => {
 
   it("nunca baja de uno", () => {
     expect(diasDelRango({ desde: "2026-08-31", hasta: "2026-08-01" })).toBe(1);
+  });
+});
+
+describe("periodoAnterior", () => {
+  it("de julio no da junio: da los 31 días anteriores", () => {
+    // Julio tiene 31 días y junio 30. El «mes anterior» del calendario sería
+    // una ventana MÁS CORTA, y comparar 31 días contra 30 dice que se vendió
+    // más sin que nadie haya vendido más. La comparación es por longitud, así
+    // que los 31 días previos al 1 de julio arrancan el 31 de mayo.
+    expect(periodoAnterior({ desde: "2026-07-01", hasta: "2026-07-31" })).toEqual({
+      desde: "2026-05-31",
+      hasta: "2026-06-30",
+    });
+  });
+
+  it("compara por LONGITUD, no por mes natural", () => {
+    // «Este mes» un día 26 son 26 días. Compararlos contra los 31 de julio
+    // diría que se vendió menos aunque se esté vendiendo más por día, y ese
+    // es el error que hace que nadie se fíe de la comparación.
+    expect(periodoAnterior({ desde: "2026-08-01", hasta: "2026-08-26" })).toEqual({
+      desde: "2026-07-06",
+      hasta: "2026-07-31",
+    });
+  });
+
+  it("de un solo día da el día anterior", () => {
+    expect(periodoAnterior({ desde: HOY, hasta: HOY })).toEqual({
+      desde: "2026-08-25",
+      hasta: "2026-08-25",
+    });
+  });
+
+  it("el periodo anterior termina justo antes: no se solapan", () => {
+    const rango = { desde: "2026-08-01", hasta: "2026-08-26" };
+    const previo = periodoAnterior(rango);
+    expect(previo.hasta < rango.desde).toBe(true);
+    expect(diasDelRango(previo)).toBe(diasDelRango(rango));
   });
 });

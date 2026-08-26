@@ -15,18 +15,7 @@ import {
   YAxis,
 } from "recharts";
 
-import type { MesVentas } from "../api/consultas";
-
-const MESES = [
-  "ene", "feb", "mar", "abr", "may", "jun",
-  "jul", "ago", "sep", "oct", "nov", "dic",
-];
-
-function etiquetaMes(iso: string): string {
-  const [, mes] = iso.split("-");
-  const i = Number(mes) - 1;
-  return MESES[i] ?? iso;
-}
+import type { PuntoSerie } from "../api/consultas";
 
 const dolares = (n: number) =>
   n.toLocaleString("es-PE", {
@@ -35,10 +24,18 @@ const dolares = (n: number) =>
     maximumFractionDigits: 0,
   });
 
-export function GraficoVentas({ meses }: { meses: MesVentas[] }) {
+/**
+ * La etiqueta del eje llega YA resuelta desde el servidor.
+ *
+ * Antes se calculaba aquí y solo sabía de meses. Con el filtro de rango (26/08)
+ * el eje puede ser un día, una semana, un mes o un año, y quien sabe cuál es
+ * `etiquetaPeriodo` del dominio de informes — que además es puro y está
+ * probado. Aquí solo se pinta.
+ */
+export function GraficoVentas({ meses }: { meses: PuntoSerie[] }) {
   const datos = meses.map((m) => ({
-    mes: etiquetaMes(m.mes),
-    venta: m.venta_neta,
+    mes: m.etiqueta,
+    venta: m.venta,
     margen: m.margen,
   }));
 

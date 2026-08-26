@@ -1,6 +1,8 @@
-import { EstadoVacio, KpiCard } from "@rodatech/ui";
+import { EstadoError, EstadoVacio, KpiCard } from "@rodatech/ui";
 
-import { kpisDesdeSerie, ventasMensuales } from "../api/consultas";
+import { describirRango, type Rango } from "@/modules/reportes";
+
+import { kpisDeRango } from "../api/consultas";
 // Recharts entra por carga diferida a través de este envoltorio: son ~90 kB
 // que no tienen por qué viajar en el bundle inicial de un ERP que se abre
 // decenas de veces al día. En la demo se importaba estáticamente.
@@ -13,35 +15,58 @@ const dolares = (n: number) =>
     maximumFractionDigits: 0,
   });
 
-export async function SeccionVentas() {
-  const resultado = await ventasMensuales();
-  const meses = resultado.ok ? resultado.datos : [];
-  const k = kpisDesdeSerie(meses);
+/**
+ * Los indicadores del periodo elegido.
+ *
+ * Antes eran fijos: «el mes en curso» contra «el mes anterior». Willy pidió
+ * poder mirar cualquier rango (26/08, 2:00): *«de tal fecha a tal fecha cuánto
+ * he vendido»*.
+ *
+ * La comparación es contra el periodo INMEDIATAMENTE ANTERIOR DE LA MISMA
+ * LONGITUD, no contra el mes natural anterior. Mirando «este mes» un día 26 se
+ * compara contra 26 días de julio, no contra los 31: comparar 26 días contra
+ * 31 diría que se vendió menos aunque se esté vendiendo más por día, y esa es
+ * la clase de cifra que hace que nadie vuelva a mirar la comparación.
+ */
+export async function SeccionVentas({
+  rango,
+  hoy,
+}: {
+  rango: Rango;
+  hoy: string;
+}) {
+  const r = await kpisDeRango(rango);
+  if (!r.ok) {
+    return <EstadoError titulo="No se pudieron cargar los indicadores" detalle={r.error} />;
+  }
+
+  const k = r.datos;
+  const comparacion = `vs. ${describirRango(rango, hoy) === "hoy" ? "ayer" : "el periodo anterior"}`;
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
-          etiqueta="Venta del mes"
+          etiqueta="Vendido"
           valor={dolares(k.ventaNeta)}
           actual={k.ventaNeta}
           previo={k.ventaNetaPrevia}
-          etiquetaComparacion="vs. mes anterior"
-          serie={k.serie}
-          detalle="neta, sin IGV"
+          etiquetaComparacion={comparacion}
+          serie={k.serie.map((p) => p.venta)}
+          detalle="neto, sin IGV"
         />
         <KpiCard
-          etiqueta="Margen del mes"
+          etiqueta="Margen"
           valor={dolares(k.margen)}
           actual={k.margen}
           previo={k.margenPrevio}
-          etiquetaComparacion="vs. mes anterior"
+          etiquetaComparacion={comparacion}
           detalle={`${k.margenPct.toFixed(1)}% sobre el costo`}
         />
         <KpiCard
           etiqueta="Comprobantes"
           valor={k.documentos.toLocaleString("es-PE")}
-          detalle="emitidos este mes"
+          detalle={`${k.unidades.toLocaleString("es-PE")} unidades`}
         />
         <KpiCard
           etiqueta="Ticket promedio"
@@ -51,13 +76,15 @@ export async function SeccionVentas() {
       </div>
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Venta y margen · 12 meses</h2>
-        {meses.length > 0 ? (
-          <GraficoVentasLazy meses={meses} />
+        <h2 className="mb-3 text-sm font-semibold">
+          Venta y margen · {describirRango(rango, hoy)}
+        </h2>
+        {k.serie.length > 0 ? (
+          <GraficoVentasLazy meses={k.serie} />
         ) : (
           <EstadoVacio
-            titulo="Todavía no hay ventas"
-            descripcion="El gráfico se llena solo conforme se emitan comprobantes."
+            titulo="No hay ventas en este periodo"
+            descripcion="Prueba con un rango más amplio, o mira «Todo»."
           />
         )}
       </section>

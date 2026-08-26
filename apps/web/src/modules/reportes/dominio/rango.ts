@@ -215,6 +215,29 @@ function diaLargo(iso: string): string {
 }
 
 /**
+ * El periodo inmediatamente anterior, de la misma longitud.
+ *
+ * Es contra lo que se compara un indicador. Con el rango «este mes» da el mes
+ * pasado; con «últimos 7 días», los 7 anteriores; con un rango a mano de 43
+ * días, los 43 de antes.
+ *
+ * Se hace por longitud y no por «el mes anterior» a propósito: comparar 26 días
+ * de agosto contra los 31 de julio dice que se vendió menos aunque se esté
+ * vendiendo más por día, y ese es exactamente el error que hace que nadie se
+ * fíe de la comparación.
+ */
+export function periodoAnterior(rango: Pick<Rango, "desde" | "hasta">): {
+  desde: string;
+  hasta: string;
+} {
+  const dias = diasDelRango(rango);
+  return {
+    desde: sumarDias(rango.desde, -dias),
+    hasta: sumarDias(rango.desde, -1),
+  };
+}
+
+/**
  * Cuántos días tiene el rango, contando los dos extremos.
  *
  * Del 25 al 25 es UN día, no cero: es el periodo que se está mirando, no la

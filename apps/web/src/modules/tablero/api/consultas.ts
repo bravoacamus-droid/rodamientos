@@ -4,31 +4,11 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 import type { Severidad } from "@/modules/alertas";
+import { etiquetaPeriodo, periodoAnterior, type Rango } from "@/modules/reportes";
 
 export type Resultado<T> =
   | { ok: true; datos: T }
   | { ok: false; error: string };
-
-export interface MesVentas {
-  mes: string;
-  venta_neta: number;
-  costo: number;
-  margen: number;
-  margen_pct: number;
-  documentos: number;
-}
-
-export interface KpisMes {
-  ventaNeta: number;
-  margen: number;
-  margenPct: number;
-  documentos: number;
-  /** Mes anterior, para la comparación de las tarjetas. */
-  ventaNetaPrevia: number;
-  margenPrevio: number;
-  /** Serie de los últimos meses, para el sparkline. */
-  serie: number[];
-}
 
 export interface Cartera {
   porVencer: number;
@@ -56,57 +36,6 @@ export interface AlertaResumen {
   /** null = todavía no se avisó a nadie. */
   notificado_en: string | null;
   generada_en: string;
-}
-
-/**
- * Ventas de los últimos 12 meses.
- *
- * Sale de `v_ventas_mensuales`, que ya agrega sobre comprobantes no anulados.
- * Se piden los 13 últimos: 12 para el gráfico más el previo, que hace falta
- * para comparar el mes en curso contra el anterior.
- */
-export async function ventasMensuales(): Promise<Resultado<MesVentas[]>> {
-  try {
-    const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("v_ventas_mensuales")
-      .select("mes, venta_neta, costo, margen, margen_pct, documentos")
-      .order("mes", { ascending: false })
-      .limit(13);
-
-    if (error) return fallo(error);
-
-    const filas = (data ?? []).map((f) => ({
-      mes: String(f.mes),
-      venta_neta: Number(f.venta_neta ?? 0),
-      costo: Number(f.costo ?? 0),
-      margen: Number(f.margen ?? 0),
-      margen_pct: Number(f.margen_pct ?? 0),
-      documentos: Number(f.documentos ?? 0),
-    }));
-
-    // La vista viene descendente porque el límite tiene que quedarse con los
-    // meses recientes; el gráfico los quiere en orden cronológico.
-    return { ok: true, datos: filas.reverse() };
-  } catch (e) {
-    return fallo(e);
-  }
-}
-
-/** Indicadores del mes en curso, derivados de la serie mensual. */
-export function kpisDesdeSerie(meses: MesVentas[]): KpisMes {
-  const actual = meses[meses.length - 1];
-  const previo = meses[meses.length - 2];
-
-  return {
-    ventaNeta: actual?.venta_neta ?? 0,
-    margen: actual?.margen ?? 0,
-    margenPct: actual?.margen_pct ?? 0,
-    documentos: actual?.documentos ?? 0,
-    ventaNetaPrevia: previo?.venta_neta ?? 0,
-    margenPrevio: previo?.margen ?? 0,
-    serie: meses.slice(-12).map((m) => m.venta_neta),
-  };
 }
 
 /**
@@ -205,6 +134,116 @@ export async function alertasSinNotificar(): Promise<Resultado<number>> {
 
     if (error) return fallo(error);
     return { ok: true, datos: count ?? 0 };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tablero por rango (26/08)
+// ---------------------------------------------------------------------------
+
+/** Lo que resume un periodo, y el mismo periodo anterior para comparar. */
+export interface KpisPeriodo {
+  ventaNeta: number;
+  costo: number;
+  margen: number;
+  /** Sobre el COSTO, como todo el sistema desde la 023. */
+  margenPct: number;
+  documentos: number;
+  unidades: number;
+  ventaNetaPrevia: number;
+  margenPrevio: number;
+  /** La serie del periodo, para el gráfico y el sparkline. */
+  serie: PuntoSerie[];
+}
+
+/** Un punto de la serie del tablero. */
+export interface PuntoSerie {
+  periodo: string;
+  etiqueta: string;
+  venta: number;
+  costo: number;
+  margen: number;
+}
+
+/** Suma una serie de `serie_ventas` en un solo indicador. */
+function sumar(filas: readonly { venta: number; costo: number; documentos: number; unidades: number }[]) {
+  const dos = (n: number) => Math.round(n * 100) / 100;
+  const venta = dos(filas.reduce((a, f) => a + f.venta, 0));
+  const costo = dos(filas.reduce((a, f) => a + f.costo, 0));
+  return {
+    venta,
+    costo,
+    margen: dos(venta - costo),
+    documentos: filas.reduce((a, f) => a + f.documentos, 0),
+    unidades: dos(filas.reduce((a, f) => a + f.unidades, 0)),
+  };
+}
+
+async function serieCruda(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  desde: string,
+  hasta: string,
+  grano: string,
+) {
+  const { data, error } = await supabase.rpc("serie_ventas", {
+    p_desde: desde,
+    p_hasta: hasta,
+    p_grano: grano,
+  });
+  if (error) throw error;
+  return (data ?? []).map((f) => ({
+    periodo: String(f.periodo),
+    venta: Number(f.venta ?? 0),
+    costo: Number(f.costo ?? 0),
+    margen: Number(f.margen ?? 0),
+    documentos: Number(f.documentos ?? 0),
+    unidades: Number(f.unidades ?? 0),
+  }));
+}
+
+/**
+ * Los indicadores de un rango, con el periodo anterior para comparar.
+ *
+ * Las dos consultas van en paralelo: son independientes y encadenarlas
+ * duplicaría la espera para enseñar una flechita.
+ */
+export async function kpisDeRango(
+  rango: Rango,
+): Promise<Resultado<KpisPeriodo>> {
+  try {
+    const supabase = await clienteServidor();
+    const previo = periodoAnterior(rango);
+
+    const [ahora, antes] = await Promise.all([
+      serieCruda(supabase, rango.desde, rango.hasta, rango.grano),
+      serieCruda(supabase, previo.desde, previo.hasta, rango.grano),
+    ]);
+
+    const a = sumar(ahora);
+    const b = sumar(antes);
+
+    return {
+      ok: true,
+      datos: {
+        ventaNeta: a.venta,
+        costo: a.costo,
+        margen: a.margen,
+        margenPct: a.costo > 0 ? Math.round(((a.venta - a.costo) / a.costo) * 10000) / 100 : 0,
+        documentos: a.documentos,
+        unidades: a.unidades,
+        ventaNetaPrevia: b.venta,
+        margenPrevio: b.margen,
+        serie: ahora.map((f) => ({
+          periodo: f.periodo,
+          etiqueta: etiquetaPeriodo(f.periodo, rango.grano),
+          venta: f.venta,
+          costo: f.costo,
+          margen: f.margen,
+        })),
+      },
+    };
   } catch (e) {
     return fallo(e);
   }

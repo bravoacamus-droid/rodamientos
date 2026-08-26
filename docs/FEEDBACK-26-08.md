@@ -287,13 +287,13 @@ Hecho el 26/08:
 3. ~~Trazabilidad por ítem~~ · migración 024 y `/productos/{id}/trazabilidad`.
 4. ~~`precio_mercado` y `proveedor_id`~~ · migraciones 025 y 026, más las seis
    columnas nuevas de la plantilla de carga.
-
 5. ~~Filtros de fecha en informes y el cruce producto × cliente~~ · migración
    027 y la barra de rango de `/reportes`.
+6. ~~El mismo filtro en el TABLERO~~ · la MISMA barra, no una parecida. Abre en
+   «este mes» y compara contra el periodo anterior de la misma longitud.
 
 Lo que queda:
 
-6. El mismo filtro de fecha en el TABLERO. `v_dashboard` ya lo acepta.
 7. Familias y subfamilias desde la pantalla.
 8. Cuenta bancaria, agencias de transporte, descargar plantilla.
 
