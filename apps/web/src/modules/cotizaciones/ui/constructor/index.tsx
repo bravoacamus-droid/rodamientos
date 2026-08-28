@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
 
 import { crearCotizacion, type ResultadoCreacion } from "../../acciones/crear";
+import type { ClienteOpcion } from "../../dominio/cliente";
 import {
   aPayload,
   bloqueos as calcularBloqueos,
@@ -14,7 +15,7 @@ import {
   totalesDe,
 } from "../../dominio/constructor";
 import { BuscadorLineas } from "./buscador";
-import { ClienteRapido } from "./cliente-rapido";
+import { BuscadorClientes } from "./buscador-clientes";
 import { FilaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 
@@ -28,31 +29,28 @@ import { ResumenConstructor } from "./resumen";
  * que no se podía probar sin montar React.
  */
 
-export interface ClienteOpcion {
-  id: string;
-  codigo: string;
-  razon_social: string;
-  numero_documento: string | null;
-  contacto: string | null;
-  condicion_pago: string;
-  /** Al elegir cliente se muestra su condición; «A crédito» sin decir a
-   *  cuántos días no le sirve a nadie. */
-  dias_credito: number;
-  bloqueado: boolean;
-}
-
 export function Constructor({
-  clientes: clientesIniciales,
+  sugeridos,
   clienteInicial = null,
+  hoy,
 }: {
-  clientes: ClienteOpcion[];
-  clienteInicial?: string | null;
+  /** Los últimos cotizados, para que el buscador ofrezca algo sin teclear. */
+  sugeridos: ClienteOpcion[];
+  /** El cliente de `?cliente=…`, ya resuelto por el servidor. */
+  clienteInicial?: ClienteOpcion | null;
+  /** `aaaa-mm-dd` del servidor: el dominio nunca lee el reloj. */
+  hoy: string;
 }) {
   const router = useRouter();
-  const [estado, despachar] = useReducer(reducir, estadoInicial(clienteInicial));
-  // La lista llega del servidor, pero un cliente creado aquí mismo tiene que
-  // aparecer sin recargar: recargar significaría perder la cotización a medias.
-  const [clientes, setClientes] = useState(clientesIniciales);
+  const [estado, despachar] = useReducer(
+    reducir,
+    estadoInicial(clienteInicial?.id ?? null),
+  );
+  // El cliente elegido se guarda ENTERO y no solo su id. El reducer sigue
+  // llevando el id —es lo que se envía— pero la ficha que se pinta necesita la
+  // razón social, el documento y la condición de pago, y ya no existe una
+  // lista completa en memoria donde buscarlos: la cartera vive en la base.
+  const [cliente, setCliente] = useState<ClienteOpcion | null>(clienteInicial);
   const [resultado, guardar, guardando] = useActionState<ResultadoCreacion | null, FormData>(
     async (previo, formData) => {
       const r = await crearCotizacion(previo, formData);
@@ -64,7 +62,6 @@ export function Constructor({
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
-  const cliente = clientes.find((c) => c.id === estado.clienteId);
 
   return (
     <form action={guardar} className="flex flex-col gap-5 p-6">
@@ -112,64 +109,23 @@ export function Constructor({
             los datos aparezcan, solo que la pantalla estorbe.
           */}
           <section className="card p-4">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-              {/*
-                Ojo con la estructura: el botón de alta rápida va FUERA del
-                `<label>`, no dentro.
-
-                Un `<label>` reenvía cualquier clic a su control asociado, así
-                que con el botón dentro el clic terminaba en el desplegable y
-                el diálogo no llegaba a abrirse nunca. El campo queda enlazado
-                por `htmlFor`, que hace lo mismo sin envolver.
-              */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2">
-                  <label htmlFor="cot-cliente" className="text-sm font-medium">
-                    Cliente <span className="text-[var(--danger)]">*</span>
-                  </label>
-                  {/* Willy, 34:12: dar de alta pegando el RUC desde la propia
-                      cotización. Mandarlo a otra pantalla significaba perder
-                      lo que llevaba escrito. */}
-                  <ClienteRapido
-                    onCreado={(c) => {
-                      setClientes((previos) => [c, ...previos]);
-                      despachar({ tipo: "cabecera", campo: "clienteId", valor: c.id });
-                    }}
-                  />
-                </div>
-                <SelectNativo
-                  id="cot-cliente"
-                  value={estado.clienteId ?? ""}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "clienteId",
-                      valor: e.target.value || null,
-                    })
-                  }
-                >
-                  <option value="">Elige un cliente…</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id} disabled={c.bloqueado}>
-                      {c.razon_social}
-                      {c.numero_documento ? ` · ${c.numero_documento}` : ""}
-                      {c.bloqueado ? " (bloqueado)" : ""}
-                    </option>
-                  ))}
-                </SelectNativo>
-                {cliente ? (
-                  <span className="text-xs text-[var(--fg-muted)]">
-                    {cliente.condicion_pago === "credito"
-                      ? `A crédito · ${cliente.dias_credito} días`
-                      : "Al contado"}
-                    {cliente.contacto ? ` · ${cliente.contacto}` : ""}
-                  </span>
-                ) : (
-                  <span className="text-xs text-[var(--fg-subtle)]">
-                    Es lo único que hace falta para empezar.
-                  </span>
-                )}
-              </div>
+            {/* `overflow-visible` no está de más: el panel de resultados se
+                posiciona en el flujo del documento y un ancestro que recorte
+                lo dejaría cortado a media lista. */}
+            <div className="grid gap-3 overflow-visible sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+              <BuscadorClientes
+                sugeridos={sugeridos}
+                elegido={cliente}
+                hoy={hoy}
+                onElegir={(c) => {
+                  setCliente(c);
+                  despachar({ tipo: "cabecera", campo: "clienteId", valor: c.id });
+                }}
+                onQuitar={() => {
+                  setCliente(null);
+                  despachar({ tipo: "cabecera", campo: "clienteId", valor: null });
+                }}
+              />
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Válida por</span>

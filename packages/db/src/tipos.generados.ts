@@ -3248,6 +3248,30 @@ export type Database = {
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       aprobar_cotizacion: { Args: { p_id: string }; Returns: Json }
+      buscar_clientes: {
+        Args: { p_limit?: number; p_q: string }
+        Returns: {
+          activo: boolean
+          bloqueado: boolean
+          codigo: string
+          condicion_pago: Database["public"]["Enums"]["condicion_pago"]
+          contacto: string
+          cotizaciones: number
+          dias_credito: number
+          email: string
+          id: string
+          linea_credito: number
+          motivo_bloqueo: string
+          nombre_comercial: string
+          numero_documento: string
+          puntaje: number
+          razon_social: string
+          telefono: string
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
+          ultima_cotizacion: string
+          whatsapp: string
+        }[]
+      }
       buscar_productos: {
         Args: { p_limit?: number; p_q: string; p_solo_con_stock?: boolean }
         Returns: {
@@ -3290,6 +3314,30 @@ export type Database = {
           ultimo_precio: number
           unidades: number
           venta: number
+        }[]
+      }
+      clientes_sugeridos: {
+        Args: { p_limit?: number }
+        Returns: {
+          activo: boolean
+          bloqueado: boolean
+          codigo: string
+          condicion_pago: Database["public"]["Enums"]["condicion_pago"]
+          contacto: string
+          cotizaciones: number
+          dias_credito: number
+          email: string
+          id: string
+          linea_credito: number
+          motivo_bloqueo: string
+          nombre_comercial: string
+          numero_documento: string
+          puntaje: number
+          razon_social: string
+          telefono: string
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
+          ultima_cotizacion: string
+          whatsapp: string
         }[]
       }
       codigo_catalogo: {

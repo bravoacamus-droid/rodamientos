@@ -197,13 +197,42 @@ export async function guardarCliente(
   }
   const numeroDocumento = revision.numero;
 
+  const supabase = await clienteServidor();
+
+  // 3.bis · El distrito, contra la tabla que existe de verdad.
+  //
+  // `clientes.ubigeo_codigo` tiene clave foránea a `ubigeo`, y `ubigeo` NO es
+  // el padrón completo: la 007 cargó Lima, Callao y las capitales de
+  // departamento —64 distritos— con el resto marcado como pendiente. SUNAT, en
+  // cambio, devuelve el código de CUALQUIER distrito del Perú.
+  //
+  // O sea que «Traer de SUNAT» sobre un cliente de provincia rellenaba un
+  // ubigeo legítimo que aquí no existe, y el guardado moría con un 23503 que
+  // el usuario no puede ni entender ni arreglar: el código lo puso el botón,
+  // no él.
+  //
+  // Se descarta el desconocido y se guarda el cliente. El distrito es un dato
+  // accesorio de la ficha comercial —la dirección, que es lo que hace falta
+  // para la guía, sí se conserva— y perder un código vale infinitamente menos
+  // que rechazar el alta entera. Cuando se cargue el padrón completo, esta
+  // comprobación dejará de descartar nada sola.
+  let ubigeo = datos.ubigeo_codigo;
+  if (ubigeo) {
+    const { data: existe } = await supabase
+      .from("ubigeo")
+      .select("codigo")
+      .eq("codigo", ubigeo)
+      .maybeSingle();
+    if (!existe) ubigeo = null;
+  }
+
   const campos = {
     tipo_documento: datos.tipo_documento,
     numero_documento: numeroDocumento,
     razon_social: datos.razon_social,
     nombre_comercial: datos.nombre_comercial,
     direccion: datos.direccion,
-    ubigeo_codigo: datos.ubigeo_codigo,
+    ubigeo_codigo: ubigeo,
     referencia_direccion: datos.referencia_direccion,
     sector: datos.sector,
     contacto: datos.contacto,
@@ -220,8 +249,6 @@ export async function guardarCliente(
   };
 
   try {
-    const supabase = await clienteServidor();
-
     // 4 · Edición: el código NO se toca. Es la referencia que ya circula en
     // cotizaciones impresas y en la cabeza de la gente; regenerarlo porque
     // cambió la razón social rompería esa referencia.

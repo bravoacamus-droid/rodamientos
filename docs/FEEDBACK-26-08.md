@@ -68,6 +68,17 @@ Esto no es una lista de tareas: es media reunión que se puede ahorrar. Ver §1.
 Que dijera «falta contacto» cuando el campo existe significa que la pantalla no
 lo estaba enseñando bien. Vale la pena mirar juntos por qué no lo vio.
 
+Del mismo caso salió lo del **28/08**: el alta rápida de cliente estaba ahí
+desde el principio —era pedido suyo, 34:12— pero como enlace de 12 px encima de
+un desplegable, y en la demo no la vio. Ahora es un botón al lado de la caja de
+búsqueda, llega con el RUC ya puesto y consulta SUNAT sola. Conviene enseñarlo:
+es de las cosas que va a usar todos los días.
+
+Y de paso el **selector de cliente** dejó de ser un desplegable: busca por
+nombre, RUC o código mientras se teclea, enseña de cada uno cuándo se le cotizó
+por última vez, y ofrece los últimos cotizados antes de escribir nada. Con dos
+clientes de prueba daba igual; con su cartera, no.
+
 ### Y una cosa que decirle
 
 Los **accesos rápidos** del login siguen puestos para que pueda entrar sin

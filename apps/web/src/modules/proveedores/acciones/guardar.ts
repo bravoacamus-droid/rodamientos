@@ -132,6 +132,28 @@ export async function guardarProveedor(
   }
   const numeroDocumento = revision.numero;
 
+  const supabase = await clienteServidor();
+
+  // El distrito, contra la tabla que existe de verdad.
+  //
+  // Mismo caso que en el maestro de clientes: `ubigeo` no es el padrón
+  // completo —la 007 cargó 64 distritos y dejó el resto pendiente— pero SUNAT
+  // devuelve el código de cualquiera. «Traer de SUNAT» sobre un proveedor de
+  // provincia rellenaba un ubigeo que aquí no existe y el alta moría con un
+  // 23503 que el usuario no puso ni puede arreglar.
+  //
+  // Se descarta el desconocido y se guarda igual: la dirección, que es el dato
+  // que se usa, se conserva.
+  let ubigeo = datos.ubigeo_codigo;
+  if (ubigeo) {
+    const { data: existe } = await supabase
+      .from("ubigeo")
+      .select("codigo")
+      .eq("codigo", ubigeo)
+      .maybeSingle();
+    if (!existe) ubigeo = null;
+  }
+
   const campos = {
     tipo_documento: datos.tipo_documento,
     numero_documento: numeroDocumento,
@@ -139,7 +161,7 @@ export async function guardarProveedor(
     tipo: datos.tipo,
     pais: datos.pais,
     direccion: datos.direccion,
-    ubigeo_codigo: datos.ubigeo_codigo,
+    ubigeo_codigo: ubigeo,
     contacto: datos.contacto,
     email: datos.email,
     telefono: datos.telefono,
@@ -161,8 +183,6 @@ export async function guardarProveedor(
   };
 
   try {
-    const supabase = await clienteServidor();
-
     // ---------------------------------------------------------------- Edición
     if (datos.id) {
       const { data, error } = await supabase

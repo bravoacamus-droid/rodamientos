@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 26/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
+Estado al 28/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
 final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
@@ -12,10 +12,10 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 803 en verde |
-| `pnpm e2e` | **41 en verde** (navegación); falta el flujo del dinero (§2) |
+| `pnpm test` | 829 en verde |
+| `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 029, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 030, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -309,9 +309,11 @@ comparar una por una.
 
 ## 6 · Cosas menores anotadas
 
-- **Condiciones, contacto y orden de compra** en la cotización son texto libre.
-  Al menos «condiciones» debería ser una lista con las opciones habituales
-  (forma de pago, garantía) y permitir escribir una distinta.
+- **Condiciones y orden de compra** en la cotización son texto libre. Al menos
+  «condiciones» debería ser una lista con las opciones habituales (forma de
+  pago, garantía) y permitir escribir una distinta. El **contacto** ya se puede
+  guardar en la ficha del cliente desde el alta rápida, así que se rellena solo
+  en la siguiente cotización.
 - ~~`pnpm lint` no funciona~~ **Arreglado.** `next lint` quedó obsoleto en Next
   15 y abría un asistente interactivo; ahora hay un `eslint.config.mjs` en la
   raíz que mira también `packages/` y `e2e/`, y el script llama a `eslint`
@@ -341,6 +343,33 @@ comparar una por una.
   cambiarlos por este.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
+- **`ubigeo` tiene 64 distritos, no los ~1.890 del Perú.** La 007 cargó Lima
+  Metropolitana, Callao y una capital por departamento, y dejó escrito que el
+  padrón INEI completo iría en un `007_seed_ubigeo.sql` que nunca se escribió.
+  Eso **rompía el alta de clientes y proveedores de provincia**: `clientes.
+  ubigeo_codigo` tiene clave foránea a `ubigeo`, SUNAT devuelve el código de
+  cualquier distrito del país, y «Traer de SUNAT» sobre un cliente de Trujillo
+  rellenaba un código legítimo que aquí no existe → el guardado moría con un
+  `23503` que el usuario no podía entender ni arreglar, porque el código lo
+  había puesto el botón.
+
+  **Tapado el 28/08:** las dos acciones de guardado comprueban el distrito
+  contra la tabla y descartan el desconocido en vez de rechazar el alta entera.
+  La dirección —que es el dato que hace falta para la guía— sí se conserva.
+  Pero es un parche: **falta cargar el padrón completo**, y hace falta de
+  verdad, porque la guía de remisión electrónica exige el ubigeo del punto de
+  llegada y Willy despacha a provincia. Cuando se cargue, la comprobación
+  dejará de descartar nada sola.
+- **El selector de cliente ya no es un `<select>`** (28/08). Busca contra la
+  base mientras se teclea (`buscar_clientes`, migración 030) y ordena por
+  documento completo → prefijo → razón social que empieza por lo tecleado. Los
+  desactivados salen marcados y al final **a propósito**: buscar el RUC de un
+  cliente dado de baja y no encontrarlo terminaba en un alta duplicada que
+  `ux_clientes_documento` rechazaba después de teclear la ficha entera.
+
+  El mismo problema lo tienen todavía **los desplegables de proveedor** de
+  compras y recepciones, que siguen bajando la lista entera. Con los que hay
+  hoy da igual; con el Excel de proveedores de Willy, no.
 - **Ningún producto tiene el peso registrado**, y el peso es obligatorio en la
   guía (`guia_peso_pos` lo rechaza en cero). Willy lo llamó *«lo más
   importante»* (02:46). Mientras tanto la guía deja declararlo a mano y lo

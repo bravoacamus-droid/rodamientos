@@ -4,6 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import type { ClienteOpcion } from "../dominio/cliente";
 import type {
   CotizacionLista,
   EstadoCotizacion,
@@ -135,44 +136,78 @@ export async function conteoPorEstado(): Promise<
   }
 }
 
+/** Cuántos clientes se ofrecen antes de que nadie teclee nada. */
+const SUGERIDOS = 8;
+
 /**
- * Clientes para el selector del constructor.
+ * Con qué arranca el selector de cliente del constructor.
  *
- * Se traen enteros y de una vez: Rodatech tiene cientos, no cientos de miles,
- * y un selector que consulta por cada tecla es peor experiencia y más carga.
- * Los bloqueados vienen igual pero marcados, para que se vea POR QUÉ no se
- * puede cotizar a alguien en vez de que simplemente no aparezca.
+ * Antes se traía la cartera ENTERA y se metía en un `<select>`. Funcionaba con
+ * los clientes de prueba; con la cartera de verdad no: el desplegable nativo no
+ * busca —solo salta a la primera letra— y la lista completa viaja además en el
+ * HTML de la página, que se paga en cada carga aunque solo se use una fila.
+ *
+ * Ahora la búsqueda la hace Postgres mientras se teclea (`buscarClientes`), y
+ * de aquí solo salen dos cosas:
+ *
+ *   · los ÚLTIMOS COTIZADOS, para que la caja vacía ofrezca algo. Es lo que
+ *     sirve cuando no se recuerda el nombre exacto («el de Trujillo, el de la
+ *     semana pasada»).
+ *   · el cliente PRESELECCIONADO, cuando se llega desde su ficha con
+ *     `?cliente=…`. Va aparte a propósito: puede no estar entre los sugeridos,
+ *     y llegar con el selector vacío después de pulsar «cotizarle» sería raro.
  */
-export async function clientesParaCotizar(): Promise<
-  Resultado<
-    {
-      id: string;
-      codigo: string;
-      razon_social: string;
-      numero_documento: string | null;
-      contacto: string | null;
-      condicion_pago: string;
-      dias_credito: number;
-      bloqueado: boolean;
-    }[]
-  >
+export async function clientesParaCotizar(preseleccionado?: string | null): Promise<
+  Resultado<{ sugeridos: ClienteOpcion[]; inicial: ClienteOpcion | null }>
 > {
   try {
     const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("clientes")
-      .select(
-        "id, codigo, razon_social, numero_documento, contacto, condicion_pago, dias_credito, bloqueado",
-      )
-      .eq("activo", true)
-      .order("razon_social");
 
-    if (error) return fallo(error);
-    return { ok: true, datos: data ?? [] };
+    // Un id que llega por la URL es entrada hostil: sin forma de uuid no se
+    // consulta, porque entraría tal cual en el filtro de PostgREST.
+    const pedido = preseleccionado && UUID.test(preseleccionado) ? preseleccionado : null;
+
+    // El preseleccionado se busca por id y NO con `buscar_clientes`: esa
+    // función mira las columnas de búsqueda —código, documento, razón social—
+    // y el uuid no está en ninguna, así que no encontraría nada nunca.
+    const [sugeridos, inicial] = await Promise.all([
+      supabase.rpc("clientes_sugeridos", { p_limit: SUGERIDOS }),
+      pedido
+        ? supabase.from("clientes").select(COLUMNAS_OPCION).eq("id", pedido).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    if (sugeridos.error) return fallo(sugeridos.error);
+
+    return {
+      ok: true,
+      datos: {
+        sugeridos: (sugeridos.data ?? []) as unknown as ClienteOpcion[],
+        inicial: inicial.data
+          ? {
+              ...(inicial.data as unknown as Omit<
+                ClienteOpcion,
+                "cotizaciones" | "ultima_cotizacion"
+              >),
+              // El historial no se pide para uno solo: la fila ya viene
+              // elegida y «cotizado hace 3 meses» no cambia esa decisión.
+              cotizaciones: 0,
+              ultima_cotizacion: null,
+            }
+          : null,
+      },
+    };
   } catch (e) {
     return fallo(e);
   }
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Las mismas columnas que devuelven `buscar_clientes` y `clientes_sugeridos`. */
+const COLUMNAS_OPCION = `id, codigo, razon_social, nombre_comercial, numero_documento,
+   tipo_documento, contacto, telefono, condicion_pago, dias_credito,
+   bloqueado, motivo_bloqueo, activo`;
 
 /**
  * Una cotización completa, con sus líneas y lo que hace falta para imprimirla.

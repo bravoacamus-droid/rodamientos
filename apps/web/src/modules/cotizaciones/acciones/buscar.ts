@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { clienteServidor, usuarioActual } from "@rodatech/db/servidor";
 
+import type { ClienteOpcion } from "../dominio/cliente";
 import type { ProductoParaCotizar } from "../dominio/constructor";
 
 /**
@@ -63,6 +64,39 @@ export async function buscarParaCotizar(
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true, datos: (data ?? []) as unknown as ProductoBusqueda[] };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * La caja de búsqueda del selector de cliente.
+ *
+ * Va contra `buscar_clientes` (migración 030) y no contra un `.like()` de
+ * PostgREST porque lo que hace falta no es filtrar, es ORDENAR: media cartera
+ * peruana termina en «S.A.C.», y tres letras devolviendo cuarenta filas por
+ * orden alfabético es la lista de antes con un paso más.
+ *
+ * El límite es 20 igual que en productos: si hay más, el término es demasiado
+ * corto y lo que toca es seguir tecleando, no paginar un desplegable.
+ */
+export async function buscarClientesParaCotizar(
+  termino: string,
+): Promise<Resultado<ClienteOpcion[]>> {
+  if (!(await haySesion())) return { ok: false, error: "Sesión expirada." };
+
+  const q = termino.trim();
+  // Con una letra el trigrama no discrimina y devolvería la cartera entera.
+  if (q.length < 2) return { ok: true, datos: [] };
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("buscar_clientes", {
+      p_q: q,
+      p_limit: 20,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, datos: (data ?? []) as unknown as ClienteOpcion[] };
   } catch (e) {
     return fallo(e);
   }

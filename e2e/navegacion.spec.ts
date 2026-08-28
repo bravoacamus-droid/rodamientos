@@ -184,6 +184,61 @@ for (const { listado, patronEnlace, nombre } of FICHAS) {
 }
 
 /**
+ * El selector de cliente del constructor de cotizaciones.
+ *
+ * No es una pantalla más: es la primera cosa que se toca al cotizar, y desde
+ * la migración 030 depende de DOS funciones nuevas de la base
+ * —`clientes_sugeridos` para la lista de arranque y `buscar_clientes` para lo
+ * que se teclea— más sus GRANT. Nada de eso lo ve TypeScript: si mañana se
+ * renombra un parámetro o se pierde el permiso, la caja se queda muda y el
+ * constructor sigue compilando y renderizando tan tranquilo.
+ *
+ * Solo lee, así que corre contra cualquier base sin ensuciarla.
+ */
+test("el selector de cliente busca y ofrece los últimos cotizados", async ({ page }) => {
+  const fallosDeConsola: string[] = [];
+  page.on("pageerror", (e) => fallosDeConsola.push(e.message));
+
+  await page.goto("/cotizaciones/nueva");
+
+  const caja = page.getByRole("combobox", { name: /Cliente/i });
+  await caja.click();
+
+  const lista = page.getByRole("listbox");
+  await expect(lista).toBeVisible();
+
+  // Con la caja vacía se ofrecen los últimos cotizados. Sin clientes en la
+  // base no hay nada que ofrecer, y eso no es un fallo de la pantalla.
+  const sugeridos = lista.getByRole("option");
+  const cuantos = await sugeridos.count();
+  test.skip(cuantos === 0, "No hay clientes en la base para buscar.");
+
+  // Se busca por el nombre del primero, que por construcción existe.
+  const nombre = (await sugeridos.first().innerText()).split("\n")[0] ?? "";
+  const trozo = nombre.replace(/^\[DEMO\]\s*/i, "").slice(0, 6).trim();
+
+  await caja.fill(trozo);
+  // La búsqueda va contra el servidor con 250 ms de espera; el encabezado del
+  // panel es lo que cambia cuando llega la respuesta.
+  await expect(lista.getByText(/cliente(s)? ·/)).toBeVisible();
+  await expect(sugeridos.first()).toBeVisible();
+
+  // Y elegirlo tiene que dejar la ficha puesta, que es lo que quita el
+  // «Falta elegir el cliente» del resumen.
+  await sugeridos.first().click();
+  // `exact`: el interruptor de tema del encabezado se llama «Cambiar a tema
+  // oscuro» y sin esto el localizador engancha los dos.
+  await expect(page.getByRole("button", { name: "Cambiar", exact: true })).toBeVisible();
+  await expect(page.getByText("Falta elegir el cliente.")).toHaveCount(0);
+
+  const cuerpo = await page.locator("body").innerText();
+  for (const señal of SEÑALES_DE_ERROR) {
+    expect(cuerpo, `El selector de cliente enseña «${señal}»`).not.toContain(señal);
+  }
+  expect(fallosDeConsola, "El selector de cliente lanzó errores de JavaScript").toEqual([]);
+});
+
+/**
  * Los informes con rango de fechas.
  *
  * Cinco RPC nuevos (027) y todos cruzan tablas que pueden estar vacías. El
