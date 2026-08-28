@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Input } from "@rodatech/ui";
+
+import { useBusqueda } from "@/lib/usar-busqueda";
 
 import {
   buscarParaCotizar,
@@ -17,46 +19,32 @@ import {
  * va un solo RPC contra `busqueda`, que sí está indexada.
  */
 
-const ESPERA_MS = 250;
-
 export function BuscadorLineas({
   onElegir,
 }: {
   onElegir: (p: ProductoBusqueda) => void;
 }) {
   const [termino, setTermino] = useState("");
-  const [resultados, setResultados] = useState<ProductoBusqueda[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
-  const [buscando, iniciar] = useTransition();
   const contenedor = useRef<HTMLDivElement>(null);
 
-  // Se espera a que deje de teclear: sin esto, "6205-2RS1/C3" son doce
-  // consultas y once se descartan.
+  // La espera al teclear y el descarte de respuestas tardías viven en el hook.
+  // Sin el descarte, la respuesta de «620» puede llegar DESPUÉS que la de
+  // «6205» y pintar productos que no son los que dice la caja — y en un
+  // constructor de cotizaciones eso es una línea equivocada en un documento
+  // que se manda al cliente. Ver `lib/busqueda.ts`.
+  const { resultados: crudos, error, buscando, limpiar } = useBusqueda({
+    termino,
+    buscar: buscarParaCotizar,
+  });
+  const resultados = crudos ?? [];
+
+  // Al llegar resultados nuevos, el resaltado vuelve arriba.
   useEffect(() => {
-    const q = termino.trim();
-    if (q.length < 2) {
-      setResultados([]);
-      setError(null);
-      return;
-    }
-    const t = setTimeout(() => {
-      iniciar(async () => {
-        const r = await buscarParaCotizar(q);
-        if (r.ok) {
-          setResultados(r.datos);
-          setError(r.datos.length === 0 ? "Sin resultados." : null);
-          setResaltado(0);
-          setAbierto(true);
-        } else {
-          setResultados([]);
-          setError(r.error);
-        }
-      });
-    }, ESPERA_MS);
-    return () => clearTimeout(t);
-  }, [termino]);
+    setResaltado(0);
+    if (crudos !== null) setAbierto(true);
+  }, [crudos]);
 
   // Cerrar al hacer clic fuera.
   useEffect(() => {
@@ -71,7 +59,7 @@ export function BuscadorLineas({
     onElegir(p);
     // Se limpia para poder encadenar: cotizar es agregar muchos seguidos.
     setTermino("");
-    setResultados([]);
+    limpiar();
     setAbierto(false);
   };
 
@@ -110,7 +98,7 @@ export function BuscadorLineas({
         </span>
       ) : null}
 
-      {abierto && (resultados.length > 0 || error) ? (
+      {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {error && resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>

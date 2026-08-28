@@ -3,9 +3,11 @@
 // Cliente: mantiene el término tecleado, la petición en vuelo y el panel
 // abierto. Es el mismo motivo por el que `BuscadorLineas` lo es.
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Button } from "@rodatech/ui";
 import { Building2, Check, Search, X } from "lucide-react";
+
+import { useBusqueda } from "@/lib/usar-busqueda";
 
 import {
   digitosDe,
@@ -16,6 +18,7 @@ import {
   ultimaVez,
   type ClienteOpcion,
 } from "../../dominio/cliente";
+
 import { buscarClientesParaCotizar } from "../../acciones/buscar";
 import { ClienteRapido } from "./cliente-rapido";
 
@@ -52,8 +55,6 @@ import { ClienteRapido } from "./cliente-rapido";
  * abrir la ficha del cliente para ver si era a crédito.
  */
 
-const ESPERA_MS = 250;
-
 export function BuscadorClientes({
   sugeridos,
   elegido,
@@ -70,41 +71,25 @@ export function BuscadorClientes({
   hoy: string;
 }) {
   const [termino, setTermino] = useState("");
-  const [resultados, setResultados] = useState<ClienteOpcion[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
-  const [buscando, iniciar] = useTransition();
   const contenedor = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
 
   const q = termino.trim();
-  // `null` es «todavía no se ha buscado»: entonces se ofrecen los sugeridos.
-  // Una lista vacía es «se buscó y no hay», que es otra cosa y se dice.
-  const lista = resultados ?? sugeridos;
   const buscandoDocumento = pareceDocumento(q);
 
-  useEffect(() => {
-    if (q.length < 2) {
-      setResultados(null);
-      setError(null);
-      return;
-    }
-    const t = setTimeout(() => {
-      iniciar(async () => {
-        const r = await buscarClientesParaCotizar(q);
-        if (r.ok) {
-          setResultados(r.datos);
-          setError(null);
-        } else {
-          setResultados([]);
-          setError(r.error);
-        }
-        setResaltado(0);
-      });
-    }, ESPERA_MS);
-    return () => clearTimeout(t);
-  }, [q]);
+  // La espera al teclear y el descarte de respuestas tardías, en el hook
+  // compartido. `resultados` es `null` mientras no se haya buscado —entonces
+  // se ofrecen los sugeridos— y `[]` cuando se buscó y no hay, que es otra
+  // cosa y se dice distinto. Ver `lib/busqueda.ts`.
+  const { resultados, error, buscando } = useBusqueda({
+    termino,
+    buscar: buscarClientesParaCotizar,
+  });
+  const lista = resultados ?? sugeridos;
+
+  useEffect(() => setResaltado(0), [resultados]);
 
   // Cerrar al pulsar fuera. El diálogo de alta rápida vive en un portal de
   // Radix, o sea FUERA de este contenedor: sin la comprobación del `[data-
@@ -129,7 +114,6 @@ export function BuscadorClientes({
     if (motivoNoSeleccionable(c) !== null) return;
     onElegir(c);
     setTermino("");
-    setResultados(null);
     setAbierto(false);
   };
 
@@ -258,7 +242,6 @@ export function BuscadorClientes({
           nombreInicial={buscandoDocumento ? "" : q}
           onCreado={(c) => {
             setTermino("");
-            setResultados(null);
             setAbierto(false);
             onElegir(c);
           }}

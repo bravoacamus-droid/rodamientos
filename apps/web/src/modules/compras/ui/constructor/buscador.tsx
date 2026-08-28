@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Input } from "@rodatech/ui";
+
+import { useBusqueda } from "@/lib/usar-busqueda";
 
 import { buscarParaComprar, type ProductoComprable } from "../../acciones/buscar";
 
@@ -13,8 +15,6 @@ import { buscarParaComprar, type ProductoComprable } from "../../acciones/buscar
  * marca. NO se filtra por stock: lo que se compra es justo lo que falta.
  */
 
-const ESPERA_MS = 250;
-
 export function BuscadorCompra({
   onElegir,
   ultimosCostos,
@@ -24,38 +24,25 @@ export function BuscadorCompra({
   ultimosCostos: Record<string, { costo: number; numero: string; fecha: string }>;
 }) {
   const [termino, setTermino] = useState("");
-  const [resultados, setResultados] = useState<ProductoComprable[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
-  const [buscando, iniciar] = useTransition();
   const contenedor = useRef<HTMLDivElement>(null);
 
-  // Se espera a que deje de teclear: sin esto, "6205-2RS1/C3" son doce
-  // consultas y once se descartan.
+  // La espera al teclear y el DESCARTE DE RESPUESTAS TARDÍAS viven en el hook.
+  // Sin lo segundo, la respuesta de «620» puede llegar después que la de
+  // «6205» y pintar productos que no son los que dice la caja. Ver
+  // `lib/busqueda.ts`.
+  const { resultados: crudos, error, buscando, limpiar } = useBusqueda({
+    termino,
+    buscar: buscarParaComprar,
+  });
+  const resultados = crudos ?? [];
+
+  // Resultados nuevos: el resaltado vuelve arriba y se abre la lista.
   useEffect(() => {
-    const q = termino.trim();
-    if (q.length < 2) {
-      setResultados([]);
-      setError(null);
-      return;
-    }
-    const t = setTimeout(() => {
-      iniciar(async () => {
-        const r = await buscarParaComprar(q);
-        if (r.ok) {
-          setResultados(r.datos);
-          setError(r.datos.length === 0 ? "Sin resultados." : null);
-          setResaltado(0);
-          setAbierto(true);
-        } else {
-          setResultados([]);
-          setError(r.error);
-        }
-      });
-    }, ESPERA_MS);
-    return () => clearTimeout(t);
-  }, [termino]);
+    setResaltado(0);
+    if (crudos !== null) setAbierto(true);
+  }, [crudos]);
 
   // Cerrar al hacer clic fuera.
   useEffect(() => {
@@ -70,7 +57,7 @@ export function BuscadorCompra({
     onElegir(p);
     // Se limpia para poder encadenar: una compra es agregar muchos seguidos.
     setTermino("");
-    setResultados([]);
+    limpiar();
     setAbierto(false);
   };
 
@@ -109,10 +96,12 @@ export function BuscadorCompra({
         </span>
       ) : null}
 
-      {abierto && (resultados.length > 0 || error) ? (
+      {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
-          {error && resultados.length === 0 ? (
-            <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>
+          {resultados.length === 0 ? (
+            <p className="p-3 text-sm text-[var(--fg-muted)]">
+              {error ?? "Sin resultados."}
+            </p>
           ) : null}
 
           {resultados.length > 0 ? (

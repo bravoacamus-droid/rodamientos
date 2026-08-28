@@ -12,7 +12,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 829 en verde |
+| `pnpm test` | 840 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 031, aplicadas** al Supabase del cliente |
@@ -385,14 +385,31 @@ comparar una por una.
   configurados como *secrets* del repositorio en GitHub. Si nunca se pusieron,
   ese paso falla aunque typecheck y tests pasen. Son públicas por definición
   —viajan al navegador—, pero salen de secrets para no fijarlas en el repo.
-- **`BuscadorProductos` de `@rodatech/ui` no lo usaba nadie.** Su cabecera dice
-  que es «el control más usado del ERP» y lista cinco pantallas: constructor de
-  cotizaciones, compra, recepción, movimiento de inventario y guía. En realidad
-  ninguna lo importaba —cada módulo se había hecho el suyo— y el primer
-  llamador real es la pantalla de equivalencias, del 26/08. Vale la pena
-  revisar si los buscadores propios de esos cinco módulos tienen las mismas
-  protecciones (descartar respuestas tardías, `shouldFilter={false}`), o
-  cambiarlos por este.
+- ~~**`BuscadorProductos` de `@rodatech/ui` no lo usaba nadie.**~~ · **la mitad
+  que importaba, HECHA el 28/08.** Su cabecera decía que era «el control más
+  usado del ERP» y listaba cinco pantallas; en realidad ninguna lo importaba
+  —cada módulo se había hecho el suyo— y este aviso pedía comprobar si esas
+  copias tenían sus protecciones.
+
+  **No las tenían: ninguna de las cuatro descartaba las respuestas tardías.**
+  Esperar a que dejes de teclear no basta. Con 250 ms y una red normal siguen
+  saliendo dos consultas en vuelo, y nada garantiza que vuelvan en orden: si la
+  de «620» tarda 400 ms y la de «6205» tarda 150, la segunda pinta y la primera
+  la pisa. La caja dice «6205» y la lista enseña otra cosa — y en el
+  constructor de una cotización eso es una LÍNEA EQUIVOCADA en un documento que
+  se manda al cliente.
+
+  Con 7 productos de prueba no se veía. Con los 790 reales, sí.
+
+  Ahora las cuatro —cotizaciones (productos y clientes), compras y
+  recepciones— usan `lib/usar-busqueda.ts`, y la parte delicada vive en
+  `lib/busqueda.ts` como reducer puro con 11 pruebas: es el único sitio donde
+  una carrera se puede probar de verdad, porque ahí las respuestas se ordenan a
+  mano en vez de depender de que la red se porte mal justo cuando miras.
+
+  Queda pendiente lo otro que decía el aviso: unificar los cuatro con el
+  `BuscadorProductos` del design system. Ya comparten la lógica, que era lo
+  que dolía; lo que falta es el marcado.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
 - ~~**La consulta de RUC/DNI nunca funcionó**~~ · **arreglado el 28/08**
