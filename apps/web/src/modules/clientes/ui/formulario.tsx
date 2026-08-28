@@ -343,44 +343,57 @@ export function FormularioCliente({
                   ? `${largoEsperado} dígitos.`
                   : undefined
             }
-            className="sm:col-span-5"
+            className="sm:col-span-9"
           >
-            <Input
-              id="numero_documento"
-              // Numérico solo cuando el documento lo es: el carné de
-              // extranjería y el pasaporte llevan letras, y abrir el teclado
-              // de cifras en un móvil dejaría a la persona sin poder escribirlo.
-              inputMode={largoEsperado === null ? "text" : "numeric"}
-              autoComplete="off"
-              aria-invalid={errorDocumento ? true : undefined}
-              className={`${ALTO_TACTIL} tabular`}
-              disabled={sinDocumento}
-              maxLength={largoEsperado ?? 20}
-              value={f.numero_documento}
-              onChange={(e) => {
-                setPadron(null);
-                set("numero_documento", e.target.value);
-              }}
-              placeholder={tipoDocumento === "RUC" ? "20512345678" : ""}
-              autoFocus={!cliente}
-            />
-          </Campo>
+            {/*
+              El botón va DENTRO del campo del número, en la misma fila que el
+              input.
 
-          {/* El botón ocupa su propia celda para no empujar al input. En móvil
-              va a ancho completo: es el segundo gesto del alta y tiene que ser
-              imposible de fallar. */}
-          <div className="flex items-end sm:col-span-4">
-            <Button
-              type="button"
-              variant="subtle"
-              className="h-11 w-full md:h-control-md"
-              disabled={!puedeConsultar}
-              loading={consultando}
-              onClick={traerDatos}
-            >
-              {consultando ? "Consultando…" : "Traer datos"}
-            </Button>
-          </div>
+              Antes ocupaba su propia celda de la rejilla con `items-end`, y eso
+              lo alineaba con el fondo de la FILA, no con el input: la fila la
+              estiran la etiqueta de arriba y el «11 dígitos» de abajo, así que
+              el botón quedaba caído media altura y desalineado. Y al ser una
+              celda de 4 de 12 salía absurdamente ancho.
+
+              Aquí se alinea solo, porque comparte contenedor con el input. Es
+              además lo que ya hacía el maestro de proveedores, que tenía el
+              mismo botón bien puesto desde el principio.
+
+              En móvil se apila y va a ancho completo: es el segundo gesto del
+              alta y tiene que ser imposible de fallar.
+            */}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="numero_documento"
+                // Numérico solo cuando el documento lo es: el carné de
+                // extranjería y el pasaporte llevan letras, y abrir el teclado
+                // de cifras en un móvil dejaría a la persona sin poder escribirlo.
+                inputMode={largoEsperado === null ? "text" : "numeric"}
+                autoComplete="off"
+                aria-invalid={errorDocumento ? true : undefined}
+                className={`${ALTO_TACTIL} tabular`}
+                disabled={sinDocumento}
+                maxLength={largoEsperado ?? 20}
+                value={f.numero_documento}
+                onChange={(e) => {
+                  setPadron(null);
+                  set("numero_documento", e.target.value);
+                }}
+                placeholder={tipoDocumento === "RUC" ? "20512345678" : ""}
+                autoFocus={!cliente}
+              />
+              <Button
+                type="button"
+                variant="subtle"
+                className={`${ALTO_TACTIL} w-full shrink-0 sm:w-auto`}
+                disabled={!puedeConsultar}
+                loading={consultando}
+                onClick={traerDatos}
+              >
+                {consultando ? "Consultando…" : "Traer datos"}
+              </Button>
+            </div>
+          </Campo>
         </div>
 
         {/* Ni Decolecta ni nadie expone un padrón de carnés de extranjería o
