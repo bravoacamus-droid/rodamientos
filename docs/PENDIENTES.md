@@ -15,7 +15,7 @@ volver a caer sale caro.
 | `pnpm test` | 829 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 030, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 031, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -343,6 +343,23 @@ comparar una por una.
   cambiarlos por este.
 - **Nada verificado en móvil real.** Las comprobaciones son sobre el HTML
   servido; el comportamiento táctil no lo ha probado nadie.
+- ~~**La consulta de RUC/DNI nunca funcionó**~~ · **arreglado el 28/08**
+  (migración 031). Al poner por fin el `DECOLECTA_TOKEN`, «Traer» respondía
+  siempre `column reference "periodo" is ambiguous`: en plpgsql los nombres de
+  un `returns table` son VARIABLES de salida, y `consultas_reservar_cuota`
+  devuelve `periodo`, `plan`, `consumidas` y `limite`, que son cuatro columnas
+  de `consultas_cuota`. Cada `where periodo = p_periodo` tenía dos candidatos.
+
+  **La lección es la que vale.** Dos capas lo taparon dos meses: sin token el
+  paquete degrada a «escribe a mano» ANTES de pedir cuota, así que la función
+  no se llamaba nunca; y plpgsql no valida el cuerpo al crearlo —la ambigüedad
+  se resuelve al ejecutar—, así que la 003 se aplicó sin una queja. Existía
+  rota desde el primer día y habría aparecido en producción.
+
+  Por eso el centinela de la 031 **la llama de verdad** cinco veces (reservar,
+  sumar, liberar, tope, modo reserva y agotado) en vez de comprobar que existe:
+  la versión rota también existía. Regla para lo que venga: *una función
+  plpgsql sin una llamada real en su centinela no está probada.*
 - **`ubigeo` tiene 64 distritos, no los ~1.890 del Perú.** La 007 cargó Lima
   Metropolitana, Callao y una capital por departamento, y dejó escrito que el
   padrón INEI completo iría en un `007_seed_ubigeo.sql` que nunca se escribió.
