@@ -12,6 +12,7 @@
 > | Familias | 3 | **9** |
 > | Sub-familias | 17 | **35** |
 > | Unidades | 4 | 6 (`PK` y `CEN`) |
+> | Comprobantes | 3 `[DEMO]` | **518 facturas y notas reales** |
 > | Stock y kardex | 14 movimientos | **0** — a propósito, ver §9.3 |
 >
 > Se respaldó todo a JSON antes de borrar
@@ -241,11 +242,8 @@ El original no se tocó.
 5. Y seguir pidiendo el **maestro de productos**, que es el que trae costo,
    stock, peso y P.M. (§6).
 
-Cargar el histórico de ventas **como documentos emitidos** es otra conversación
-y no es para ahora: quemaría 518 correlativos de la serie F002 y movería stock
-de dos años. Si se quiere el histórico dentro del ERP, la vía es una tabla de
-ventas históricas de solo lectura que alimente informes y trazabilidad sin
-tocar el kardex ni SUNAT.
+~~Cargar el histórico como documentos emitidos es otra conversación.~~
+**Se hizo el 28/08 y resultó ser mucho más simple de lo que yo temía. Ver §10.**
 
 ---
 
@@ -332,3 +330,134 @@ compras, guías ni comprobantes, que es lo correcto). Y a mano: el catálogo
 enseña los 790 con su sub-familia, el maestro de clientes los 37, y en el
 constructor de cotizaciones «cofaco» encuentra a COFACO INDUSTRIES y «6205»
 devuelve los cuatro rodamientos reales con sus precios.
+
+---
+
+## 10 · Las 518 facturas, dentro
+
+Yo había escrito que cargar el histórico como documentos emitidos «quemaría
+518 correlativos y movería stock de dos años». **Lo segundo era falso**, y vale
+la pena dejarlo escrito porque es el tipo de suposición que frena trabajo sin
+motivo.
+
+### 10.1 · Por qué no toca el inventario
+
+En este esquema **el stock no lo mueve ningún disparador de `comprobantes`**.
+Lo mueve `emitir_comprobante()` llamándolo a mano. Los cuatro disparadores que
+tiene la tabla validan crédito acumulado, serie de nota, inmutabilidad y la
+marca de tiempo — ninguno escribe en el kardex.
+
+O sea que un `INSERT` directo carga la historia sin inventar un solo
+movimiento de almacén. Que es justo lo que hace falta: estos documentos
+salieron hace hasta dos años y su stock ya se movió en el sistema viejo.
+
+Y con `estado_sunat = 'aceptado'` no entran en ninguna cola de envío: ya fueron
+aceptadas por SUNAT en su día. Nada se reenvía.
+
+### 10.2 · La decisión que no era técnica: el estado de pago
+
+El Excel marca **450 de 482 facturas como «Pendiente»**, USD 191.936, y están
+repartidas por igual desde setiembre de 2024 — hay facturas de hace dos años
+marcadas como pendientes. Su sistema no lleva bien el cobro.
+
+Cargarlas tal cual habría puesto **USD 191.936 de deuda falsa** en `/cobranzas`
+y llenado las alertas de vencidos el primer día.
+
+**Decisión de Luis:** el histórico entra como **libro cerrado**, todo pagado.
+`/cobranzas` arranca en cero y el tablero, los informes y la trazabilidad sí
+tienen los dos años completos. Si Willy tiene deuda viva de verdad, dice cuáles
+y se marcan — que es un `UPDATE` de un minuto, y el error va en la dirección
+menos grave: no inventa deuda que no existe.
+
+### 10.3 · Lo demás que hubo que resolver
+
+- **Sus series no existían.** La base traía `F001` y `FC01`; las suyas de
+  verdad son **`F002`** y **`FC02`**. Se crearon, y los correlativos quedan al
+  día con el último cargado. Cuando dé sus números de partida reales se ajustan
+  por `/configuracion`.
+
+- **Las anuladas TAMBIÉN entran**, con `estado = 'anulado'`. Consumieron su
+  correlativo en la realidad y saltárselas dejaría huecos en la numeración. Las
+  vistas de venta ya las excluyen por estado. Se comprueba que la serie F002 no
+  tenga ni un hueco.
+
+- **Las tres notas de crédito no decían a qué factura apuntan.** El Excel no
+  trae esa columna, y la base lo EXIGE (`comp_nota_referencia`). Se emparejaron
+  por cliente, SKU y fecha, y los tres empates son inequívocos: la factura más
+  cercana anterior del mismo cliente que contiene todos los ítems devueltos y
+  con cantidades suficientes.
+
+  | Nota | Factura | Distancia |
+  |---|---|---|
+  | FC02-1 | F002-277 | 1 día |
+  | FC02-2 | F002-348 | 10 días |
+  | FC02-3 | F002-441 | 39 días |
+
+  Las tres cubren todas las líneas de su factura, así que el motivo es
+  «06 · Devolución total». **Conviene que Willy las confirme**: es lo único de
+  toda la carga que se dedujo en vez de leerse.
+
+- **Sin vendedor.** Los perfiles de la base son usuarios de prueba sembrados y
+  «FERNANDEZ PAREDES WILLY ANGEL» no es ninguno. Se deja el nombre original en
+  las observaciones de cada documento y `vendedor_id` en nulo, en vez de
+  atribuirle dos años de ventas a un usuario inventado.
+
+- **Los 31 documentos en soles** se convirtieron con el tipo de cambio de su
+  propia factura, y lo dicen en sus observaciones. `comprobantes` no tiene
+  columna de moneda: el ERP trabaja en dólares, como el cotizador.
+
+### 10.4 · Lo que ahora SÍ funciona
+
+Las pantallas que estaban vacías porque no había historia detrás:
+
+- **Informes** — dos años de ventas por día, semana, mes y año.
+- **Tablero** — con su comparación contra el periodo anterior.
+- **Trazabilidad por ítem** — «a quién le vendí este rodamiento y a cuánto»,
+  que es lo que más pidió en la demo.
+- **Historial de precios** dentro del constructor de cotizaciones: al agregar
+  una línea, a cuánto se le vendió antes a ESE cliente.
+- **Top de productos y de clientes** con datos de verdad.
+
+### 10.5 · El cuadre, que es lo que de verdad prueba que salió bien
+
+Que el `INSERT` no reviente no dice nada. Lo que importa es que el dinero que
+enseña el ERP sea el mismo del archivo, y eso se comprueba una por una:
+
+| | |
+|---|---|
+| Documentos | 518 = 518 ✓ |
+| Líneas | 1.262 = 1.262 ✓ |
+| Anulados | 36 = 36 ✓ |
+| Notas de crédito | 3 = 3 ✓ |
+| **Líneas sin producto enlazado** | **0** ✓ |
+| Venta | USD 201.796,79 contra 201.796,99 · **20 céntimos en 515 facturas** ✓ |
+| Notas | USD 482,93 = 482,93 ✓ |
+| Por cobrar | USD 0 ✓ (decisión de §10.2) |
+| **Movimientos de kardex** | **0** ✓ |
+| Huecos en la numeración de F002 | 0 ✓ |
+| Notas apuntando a otro cliente | 0 ✓ |
+
+Los 20 céntimos son redondeo: el Excel suma la base imponible línea a línea y
+la base la recompone desde el importe generado de cada línea.
+
+Y **40 pruebas e2e en verde** contra la base ya cargada.
+
+### 10.6 · El fallo que salté, y por qué es interesante
+
+Las 515 facturas entraron a la primera; **las 3 notas de crédito fallaron**:
+
+```
+23514: comp_montos_pos — new row violates check constraint
+```
+
+Las notas vienen en NEGATIVO en el Excel, y la base exige importes ≥ 0. El
+signo lo lleva el TIPO de documento, no el número — y hace bien: un total
+negativo restaría dos veces en cuanto una vista sumara notas y facturas
+juntas. Lo había visto al leer las restricciones y se me olvidó implementarlo.
+
+Lo caro no fue el error, fue que el cargador **no era reanudable**: al fallar
+en el documento 516 no había forma de seguir sin borrar los 515 y repetir
+media hora de llamadas. Se le añadió la comprobación de lo ya cargado, y con
+eso la segunda pasada insertó solo las 3 que faltaban. **Un cargador de datos
+que no se puede reanudar está a medio hacer**, y es el tipo de cosa que solo
+se aprende cuando ya has esperado la media hora.

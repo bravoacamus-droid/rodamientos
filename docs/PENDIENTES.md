@@ -93,10 +93,31 @@ del proyecto.
    clasificar». Stock y kardex quedan **en cero a propósito**: el historial no
    dice qué hay en el almacén, y eso entra con el cuadre inicial.
 
-   **La taxonomía es una PROPUESTA y hay que validarla el viernes.** Cómo
-   agrupa sus retenes y sus fajas es decisión suya y gobierna sus informes
-   durante años; las familias llevan escrito que están pendientes de que él las
-   confirme. Renombrar o reagrupar son minutos desde `/configuracion`.
+   **Y las 518 facturas también entraron.** Yo había supuesto que cargarlas
+   movería stock de dos años; era falso — en este esquema el kardex solo lo
+   toca `emitir_comprobante()`, no un disparador, así que un INSERT directo
+   carga la historia sin inventar un movimiento de almacén. Con eso funcionan
+   ya los informes, el tablero, la trazabilidad por ítem y el historial de
+   precios del cotizador: USD 201.796 en 479 documentos, cuadrado contra el
+   Excel al céntimo.
+
+   **Dos cosas que Willy tiene que confirmar el viernes:**
+
+   1. **La taxonomía es una PROPUESTA.** Cómo agrupa sus retenes y sus fajas es
+      decisión suya y gobierna sus informes durante años; las familias llevan
+      escrito que están pendientes de que él las confirme. Renombrar o
+      reagrupar son minutos desde `/configuracion`.
+   2. **El histórico entró como PAGADO.** El Excel marcaba 450 facturas como
+      pendientes —USD 191.936, algunas de hace dos años— porque su sistema no
+      lleva bien el cobro. Cargarlas así habría puesto deuda falsa en
+      `/cobranzas` el primer día. Si tiene deuda viva de verdad, que diga
+      cuáles y se marcan.
+
+   Y de paso: **las 3 notas de crédito no decían a qué factura apuntan** (el
+   Excel no trae la columna) y se dedujeron por cliente, SKU y fecha. Los tres
+   empates son inequívocos, pero es lo único de toda la carga que no se leyó
+   sino que se infirió. Detalle en [HISTORIAL-VENTAS.md](HISTORIAL-VENTAS.md)
+   §10.3.
 
 ### Lo que puedo hacer yo sin esperar a nadie
 
