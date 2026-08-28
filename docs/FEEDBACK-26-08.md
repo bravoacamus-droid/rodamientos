@@ -63,10 +63,19 @@ tiene que resolver él.
    una alerta, tú tienes que entrar y ver», 25:21). La bandeja ya existe; falta
    el envío, y sin saber el canal no se puede escribir.
 
-2. **Que enseñe su ficha de cliente de Defontana.** Quedó pendiente de la
-   primera reunión (§5): la suya son 18 campos y aquí hay 32 columnas. La
-   pregunta no es qué falta, es **qué sobra**: él mismo dijo que «hay muchos
-   clientes técnicos que a las justas me dan correo».
+2. **Cuatro campos de la ficha de cliente, por nombre.** El 28/08 se auditaron
+   los nuestros contra sus dos años de facturas, así que ya no hace falta
+   comparar pantallas: se le pregunta directamente.
+
+   > «¿Usa **sector**, **referencia de dirección**, **cargo del contacto** y
+   > **días de gracia**? En sus dos años de facturas no hay ninguno relleno.»
+
+   No los pide SUNAT, no salen en ningún PDF y no gobiernan ninguna regla. Si
+   dice que no a los cuatro, la ficha baja de 22 campos a 18 — que son
+   exactamente los de Defontana. Y de paso, que enseñe la suya para cerrar §5.
+
+   El dato que más habla: de sus 37 clientes reales, **uno solo tiene correo**.
+   Es «a las justas me dan correo», medido.
 
 3. **El peso de los productos.** Sin peso NO se puede emitir una guía —la base
    la rechaza— y hoy no hay un solo producto con peso. La plantilla ya trae la

@@ -127,23 +127,31 @@ del proyecto.
 - **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
   mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
   Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
-- **Comparar la ficha de cliente con la de Defontana** (§5): ellos tienen 18
-  campos y nosotros 32 columnas, así que probablemente sobren.
 - Las cosas menores de §6.
 
-**Por dónde seguir cuando volvamos**, en este orden:
+~~1. Defontana~~ · **hecha la mitad que no dependía de nadie el 28/08** (§5):
+auditados nuestros campos contra sus dos años de facturas. Ya no es «comparar
+pantallas», es una pregunta de cuatro nombres que está en el guion del viernes.
 
-1. **Defontana** (§5). Es lo único de los cuatro que no depende de nadie ni de
-   nada, y lo que sale de ahí es una decisión que Willy toma en una reunión.
-2. **El worker de alertas** — pero **hace falta preguntarle antes por dónde
-   quiere que lleguen**, WhatsApp o correo. Sin saber el canal, lo único que se
-   puede escribir es el cron que llama a `generar_alertas()`; el envío queda en
-   el aire. Es lo único de la PRIMERA reunión que sigue igual que entonces.
-3. **El envío GRE** (§3). Se escribe a ciegas: no hay ambiente de pruebas y
+**Lo que queda, y los tres dependen de algo:**
+
+1. **El worker de alertas** — **hace falta preguntarle antes por dónde quiere
+   que lleguen**, WhatsApp o correo. Sin saber el canal, lo único que se puede
+   escribir es el cron que llama a `generar_alertas()`; el envío queda en el
+   aire. Es lo único de la PRIMERA reunión que sigue igual que entonces.
+
+   Nota del 28/08: con los datos reales cargados, `generar_alertas()` devuelve
+   **cero**, y está bien. Las reglas de stock exigen `stock_minimo > 0` y
+   ninguno de los 790 lo tiene; las de cartera exigen saldo pendiente y el
+   histórico entró pagado. O sea que la bandeja no se llena de ruido el primer
+   día — pero tampoco dirá nada hasta que haya mínimos y facturas vivas.
+2. **El envío GRE** (§3). Se escribe a ciegas: no hay ambiente de pruebas y
    además necesita el certificado que todavía no ha comprado. La primera vez
    que corra de verdad será contra producción, así que conviene hacerlo cuando
    haya con qué probarlo, no antes.
-4. Las menores de §6.
+3. Las menores de §6. La más gorda de todas, y no es menor: **el padrón de
+   ubigeo completo**, que la guía de remisión necesita para despachar a
+   provincia.
 
 ### Dos avisos para el día de la entrega (§7)
 
@@ -345,19 +353,78 @@ porque son las dos cosas que pueden frenar el final del proyecto.
 
 ## 5 · Revisión de campos contra Defontana
 
-Pendiente de contrastar la ficha de cliente con la de Defontana. Lo que ya se
-sabe, de `MAPA-DEFONTANA.md` de Kassara:
+Sigue pendiente **la mitad que solo Willy puede dar**: hay que ver su ficha de
+Defontana. Está en el guion del viernes.
 
-- Su ficha son **18 campos en la primera de tres pestañas**
-- Se **descartan** Fax, Casilla, Sitio Web y ZIP
-- La razón, textual: *«hay muchos clientes técnicos que a las justas me dan
-  correo»* → alta rápida con lo indispensable, el resto detrás de «más datos»
+Lo que sí se puede saber sin él está hecho el 28/08, y cambia la conversación:
+en vez de «probablemente sobren campos», ahora hay evidencia de CUÁLES.
 
-El esquema tiene **32 columnas** en `clientes`, así que probablemente sobren
-campos antes que falten. Hay que sentarse con la ficha de Defontana delante y
-comparar una por una.
+### Primero, el recuento estaba mal
 
----
+`clientes` no tiene 32 columnas: tiene **29**, y de esas **tres son generadas**
+para la búsqueda (`busqueda`, `busq_razon_social`, `busq_documento`) y **cuatro
+son de fontanería** (`id`, `activo`, `creado_en`, `actualizado_en`). Nadie las
+teclea ni las ve.
+
+**Campos de verdad, los que alguien podría tener que llenar: 22.** La ficha de
+Defontana son 18. La diferencia real no son catorce campos, son cuatro.
+
+### Lo que EXIGE cada consumidor
+
+| Consumidor | Qué necesita del cliente |
+|---|---|
+| **SUNAT** (`Receptor`, en `packages/sunat/src/dominio`) | `tipo_documento`, `numero_documento`, `razon_social`; opcionales `direccion` y `email`. **Cinco.** |
+| **El PDF de la cotización** | razón social, tipo y número de documento, dirección y **contacto** |
+| **La guía de remisión** | dirección de llegada + **ubigeo** |
+| **Cobranzas** | `condicion_pago`, `dias_credito`, `linea_credito` |
+
+### Lo que su histórico REAL llenó, de los 37 clientes
+
+| Campo | Llenos | Lectura |
+|---|---:|---|
+| código, tipo/número doc, razón social, dirección, condición | 37 | el núcleo, siempre |
+| `notas` | 37 | lo puso la carga, no él |
+| `email` | **1** | *«a las justas me dan correo»*, literalmente |
+| `nombre_comercial` | 0 | |
+| `ubigeo_codigo` | 0 | y hace falta para la guía (§6) |
+| `referencia_direccion` | 0 | |
+| `sector` | 0 | |
+| `contacto` / `cargo_contacto` | 0 | y el PDF imprime el contacto |
+| `telefono` / `whatsapp` | 0 | |
+| `linea_credito` / `dias_credito` / `dias_gracia` | 0 | los pone él, no el histórico |
+| `vendedor_id` | 0 | |
+
+### Los cuatro candidatos a sobrar
+
+Ninguno lo pide SUNAT, ninguno sale en un PDF, ninguno lo llenó su histórico y
+ninguno gobierna una regla de negocio:
+
+1. **`sector`** — texto libre sin lista ni uso; no filtra nada.
+2. **`referencia_direccion`** — «a media cuadra del grifo». Útil para repartir,
+   pero la guía usa la dirección, no esto.
+3. **`cargo_contacto`** — el nombre del contacto sí sale en el PDF; su cargo no
+   sale en ninguna parte.
+4. **`dias_gracia`** — separado de `dias_credito` sin que nada los distinga hoy
+   en cobranzas.
+
+Y **`nombre_comercial`** es el quinto dudoso: se busca por él —entra en la
+columna generada `busqueda`— así que quitarlo obliga a tocar esa columna y su
+índice. No vale la pena a menos que diga que no lo usa nunca.
+
+**Lo que NO hay que quitar aunque esté vacío:** `ubigeo_codigo` (la GRE lo
+exige), `contacto` (sale en el PDF y él lo pidió el 26/08) y los tres de
+crédito (los llena él, no el histórico).
+
+### Qué preguntarle exactamente
+
+Con esto delante son dos minutos:
+
+> «De su ficha de cliente, ¿usa **sector**, **referencia de dirección**, **cargo
+> del contacto** y **días de gracia**? En sus dos años de facturas no hay
+> ninguno relleno.»
+
+Si dice que no a los cuatro, la ficha baja de 22 a 18 campos — exactamente los
+de Defontana.
 
 ## 6 · Cosas menores anotadas
 
