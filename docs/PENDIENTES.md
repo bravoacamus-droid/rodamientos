@@ -86,12 +86,17 @@ del proyecto.
    > (8 %), cadenas (4 %)… no tienen dónde entrar, y son la mayoría del
    > negocio: los rodamientos son el 16 % de sus productos.
 
-   No me la puedo inventar: cómo agrupa sus retenes y sus fajas es decisión
-   suya y gobierna sus informes durante años. **Es la pregunta más rentable
-   del viernes.** Crear los grupos, en cambio, son minutos: `/configuracion`
-   ya deja darlos de alta desde el navegador (migración 028).
+   **Cargado esa misma tarde.** Se borraron los datos `[DEMO]` —con respaldo a
+   JSON antes— y entró la cartera real: **37 clientes y 790 productos**. La
+   taxonomía se amplió de 3 familias a 9 (SELLADO, TRANSMISION, TRANSPORTE,
+   FERRETERIA, LUBRICANTES, OTROS) y los 790 quedan clasificados, cero en «por
+   clasificar». Stock y kardex quedan **en cero a propósito**: el historial no
+   dice qué hay en el almacén, y eso entra con el cuadre inicial.
 
-   Los **37 clientes sí se pueden cargar ya**, validados y sin choques.
+   **La taxonomía es una PROPUESTA y hay que validarla el viernes.** Cómo
+   agrupa sus retenes y sus fajas es decisión suya y gobierna sus informes
+   durante años; las familias llevan escrito que están pendientes de que él las
+   confirme. Renombrar o reagrupar son minutos desde `/configuracion`.
 
 ### Lo que puedo hacer yo sin esperar a nadie
 
@@ -126,10 +131,17 @@ del proyecto.
   a propósito y quedó dicho que se cambian al entregar: este es el recordatorio.
   Con ellas va `SUNAT_ENCRYPTION_KEY` en Vercel, que tiene que ser **la misma
   que en local** o las credenciales guardadas no se pueden descifrar.
-- **Los datos `[DEMO]` se borran pasando antes un ajuste de inventario.** La
-  guía de prueba movió stock de verdad; si se borra el documento sin ajustar,
-  el stock se queda mintiendo — que es exactamente lo que ya pasó una vez con
-  el costo del 6205 (ver R2).
+- ~~**Los datos `[DEMO]` se borran pasando antes un ajuste de inventario.**~~
+  **HECHO el 28/08**: ya no queda ninguno. Entró la cartera real (37 clientes,
+  790 productos) con respaldo previo a JSON.
+
+  El ajuste de inventario que este aviso exigía **no hizo falta, y por un
+  motivo que conviene entender**: se borró el kardex ENTERO, no solo los
+  documentos. El peligro era dejar movimientos huérfanos citando documentos que
+  ya no existen; sin kardex y sin stock no hay nada que pueda mentir. Si algún
+  día hay que borrar solo una parte, el aviso vuelve a valer tal cual: la guía
+  de prueba movió stock de verdad, y borrar el documento sin ajustar deja el
+  stock mintiendo — que es lo que ya pasó con el costo del 6205 (ver R2).
 
 ---
 

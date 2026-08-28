@@ -1,5 +1,23 @@
 # El historial de ventas de Willy · 28/08/2026
 
+> ## ✅ YA ESTÁ CARGADO EN LA BASE
+>
+> El 28/08 por la tarde se borraron los datos de prueba y entró la cartera
+> real. **La base ya no tiene ni un `[DEMO]`**:
+>
+> | | Antes | Ahora |
+> |---|---:|---:|
+> | Clientes | 2 `[DEMO]` | **37 reales** |
+> | Productos | 7 `[DEMO]` | **790 reales** |
+> | Familias | 3 | **9** |
+> | Sub-familias | 17 | **35** |
+> | Unidades | 4 | 6 (`PK` y `CEN`) |
+> | Stock y kardex | 14 movimientos | **0** — a propósito, ver §9.3 |
+>
+> Se respaldó todo a JSON antes de borrar
+> (`documentosrodamiento/respaldo-2026-08-28/`, 79 filas). Comprobado en
+> pantalla y con las 39 pruebas e2e en verde. El detalle de cómo, en §9.
+
 Llegó `historial de ventas.xlsx`: **dos años de facturación real** exportados
 del sistema que usa hoy. Es el primero de los tres Excel que estaban pendientes
 (PENDIENTES §4), y el que más cambia lo que sabemos del proyecto.
@@ -228,3 +246,89 @@ y no es para ahora: quemaría 518 correlativos de la serie F002 y movería stock
 de dos años. Si se quiere el histórico dentro del ERP, la vía es una tabla de
 ventas históricas de solo lectura que alimente informes y trazabilidad sin
 tocar el kardex ni SUNAT.
+
+---
+
+## 9 · Cómo se cargó, el 28/08 por la tarde
+
+### 9.1 · El borrado
+
+Todo lo que había era de prueba: se sembró para poder enseñar pantallas. Se
+respaldó a JSON —25 tablas, 79 filas, en `respaldo-2026-08-28/`— y se borró en
+orden de clave foránea: primero cobranzas y documentos, después inventario,
+después los maestros.
+
+Los **correlativos vuelven a cero**. Los que se gastaron fueron pruebas, y los
+de partida de verdad los da Willy por `/configuracion`.
+
+Lo que **no** se tocó: marcas, la taxonomía, unidades, ubigeo, empresa,
+perfiles, permisos y la configuración de SUNAT.
+
+### 9.2 · La taxonomía, ampliada de 3 familias a 9
+
+Se crearon **SELLADO, TRANSMISION, TRANSPORTE, FERRETERIA, LUBRICANTES** y
+**OTROS**, con 18 sub-familias nuevas. Con eso los **790 productos quedan
+clasificados: cero en «por clasificar»**.
+
+| Familia | Productos |
+|---|---:|
+| RODAMIENTO | 247 |
+| SELLADO | 213 |
+| TRANSMISION | 176 |
+| CHUMACERA | 49 |
+| FERRETERIA | 47 |
+| ACCESORIOS | 41 |
+| OTROS | 8 |
+| TRANSPORTE | 6 |
+| LUBRICANTES | 3 |
+
+Dos decisiones que conviene conocer:
+
+- **«OTROS · SERVICIOS»** existe porque en su histórico hay líneas que no son
+  artículos: «ENVIO POR AGENCIA» y «SERVICIO DE ENVIO POR MOTORIZADO». No
+  tienen stock y no deberían salir en un top de productos.
+- **«OTROS · ÚTILES DE OFICINA»** son seis: bolígrafos, papel A4, clips,
+  grapas. Salieron en una sola factura y no son su negocio, pero están en su
+  historia. En su propio cajón para que se vean y él decida.
+
+**Todo esto es una PROPUESTA.** Las familias llevan escrito en su descripción
+«Creada el 28/08/2026 desde el historial de ventas. Pendiente de que Willy
+confirme el agrupamiento». Renombrarlas o reagruparlas el viernes son minutos.
+
+### 9.3 · Lo que se cargó vacío A PROPÓSITO
+
+- **Stock cero y ni un movimiento de kardex.** El historial de ventas no dice
+  qué hay en el almacén. Un stock inventado es la forma más rápida de que el
+  ERP mienta desde el primer día. Entra con el cuadre inicial de inventario,
+  que es como se hace.
+- **`tipo_id` nulo en los 790.** Los «tipos» son la tercera capa —«RIGIDO DE
+  BOLAS 1 HIL.» frente a «2 HIL.»— y esa distinción no está en la descripción
+  de una factura. Se rellena cuando llegue el maestro de productos.
+- **Costo solo en 32.** Es lo que traía el archivo.
+
+### 9.4 · Las marcas
+
+406 productos llevan marca reconocida; **384 se quedaron en «SIN MARCA»**.
+
+No es dejadez: los sufijos de la descripción se parecen a marcas pero no
+siempre lo son. En la misma lista salían `FSQ`, `LYO`, `TTO`, `SWF` —que
+pueden ser marcas o abreviaturas de proveedor— junto a `MUESTRA`, `AZUL`,
+`VITON` y `LABIO`, que no son marca de nada. Crear una marca por cada sufijo
+de tres letras llena el catálogo de basura que después nadie limpia.
+
+Se creó solo lo inequívoco: **PARKER** e **IKO**, y `OPT` se mapeó a la
+OPTIBELT que ya existía.
+
+**Lo que decía la factura no se perdió:** está en
+`productos.atributos->>'marca_origen'`. Cuando Willy confirme cuáles son marcas
+de verdad, se arreglan en bloque con un UPDATE. Ahí van también sus ventas
+históricas (`ventas_historicas`, `unidades_vendidas`, `clientes`,
+`ultima_venta`), que es de donde salen los precios cargados.
+
+### 9.5 · Comprobado
+
+Las 39 pruebas e2e en verde contra la base ya cargada (3 se saltan: no hay
+compras, guías ni comprobantes, que es lo correcto). Y a mano: el catálogo
+enseña los 790 con su sub-familia, el maestro de clientes los 37, y en el
+constructor de cotizaciones «cofaco» encuentra a COFACO INDUSTRIES y «6205»
+devuelve los cuatro rodamientos reales con sus precios.
