@@ -24,14 +24,75 @@ una función de escritura sin control de rol, si la valorización se desalinea
 del kardex, si una nota de crédito se cuenta como venta o si «días sin
 comprar» empieza a contar días que no han pasado.
 
-**Para retomar:** `pnpm install && pnpm dev` (puerto 4005). Hace falta un
-`.env.local` en la raíz — ojo, **con el punto delante**: el `.gitignore` tapa
-`.env*.local`, así que un archivo llamado `env.local` a secas NO está
-protegido y se sube al primer `git add .`.
-
 El redondeo de los importes de línea ya está arreglado en todas partes (R7).
 
 ---
+
+## Retomar en otra máquina · lo que NO viaja en el repositorio
+
+`main` tiene todo el código. La **base de datos también está al día**: es el
+Supabase del cliente, en la nube, con sus 37 clientes, 790 productos y 518
+facturas ya cargados. No hay que volver a ejecutar ninguna carga.
+
+Lo que falta al clonar son **dos cosas**, las dos ignoradas a propósito:
+
+### 1 · `.env.local` en la raíz
+
+No está en git y no debe estarlo. Hay que recrearlo con estas 11 claves —
+`.env.example` explica cada una y de dónde sale:
+
+| Clave | De dónde |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `SUPABASE_PROJECT_REF` | Supabase → Project Settings → API |
+| `SUPABASE_ACCESS_TOKEN` | Supabase → Account → Access Tokens (cuenta **dueña** del proyecto) |
+| `SUNAT_ENCRYPTION_KEY` | **NO se regenera.** Tiene que ser la MISMA o las credenciales SUNAT guardadas no se pueden descifrar y hay que reescribirlas a mano |
+| `DECOLECTA_TOKEN` | decolecta.pe → cuenta → API |
+| `RODATECH_DEV_PASSWORD` · `RODATECH_ATAJOS=1` | la clave de las cuentas sembradas; los atajos del login |
+| `E2E_PERMITIR_ESCRITURA=0` | **en cero mientras apunte al Supabase del cliente** |
+
+La forma más rápida y segura: **copiarlo tal cual desde esta máquina** por USB
+o gestor de contraseñas. Nunca por chat ni por correo.
+
+> Ojo con el nombre: **con el punto delante**. El `.gitignore` tapa
+> `.env*.local`, así que un archivo llamado `env.local` a secas NO está
+> protegido y se sube al primer `git add .`.
+
+### 2 · La carpeta `documentosrodamiento/` — 464 KB
+
+Ignorada desde el 28/08 porque son datos comerciales del cliente. Contiene:
+
+- `historial de ventas.xlsx` — **el original que mandó Willy**
+- Los tres archivos separados (clientes, productos, ventas y decisiones)
+- `respaldo-2026-08-28/` — el respaldo de los datos `[DEMO]` antes de borrarlos
+
+**Se copia a mano.** No hace falta para programar ni para que la aplicación
+funcione —los datos ya están en la base—; hace falta si se quiere volver a
+mirar el Excel o deshacer la carga.
+
+### Y ya está
+
+```
+pnpm install
+pnpm dev          # puerto 4005
+```
+
+Lo demás se regenera solo: `e2e/.auth/` en la primera pasada de Playwright, y
+`next-env.d.ts` al arrancar.
+
+**Comprobación de que quedó bien**, en este orden:
+
+```
+pnpm typecheck    # 7/7
+pnpm test         # 846
+pnpm lint         # limpio
+pnpm e2e          # 40 pasan, 2 se saltan (no hay compras ni guías)
+```
+
+Si `pnpm e2e` se queja de la guardia, es que `E2E_PERMITIR_ESCRITURA` está en 1
+apuntando al Supabase del cliente. Tiene que estar en 0.
+
+---
+
 
 ## Qué falta · el resumen
 
@@ -121,45 +182,76 @@ del proyecto.
 
 ### Lo que puedo hacer yo sin esperar a nadie
 
-- **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede
-  escribir, pero **no se puede probar de verdad** — la GRE no tiene ambiente de
-  pruebas. La guía como documento interno ya funciona y ya mueve el stock.
-- **El worker que empuja las alertas** (§1): la bandeja existe y se refresca a
-  mano, pero lo que se pidió fue que la alerta LLEGUE por WhatsApp o correo.
-  Falta el cron y el envío; la tabla ya lleva la marca de «todavía no salió».
-- Las cosas menores de §6.
+Ya casi nada, y es la primera vez en el proyecto. **El detalle actualizado
+está en «Cierre del 28/08» aquí abajo**, con lo que espera a Willy, lo que
+espera a Luis y lo que está bloqueado — que es donde vive la verdad desde hoy.
 
-~~1. Defontana~~ · **hecha la mitad que no dependía de nadie el 28/08** (§5):
-auditados nuestros campos contra sus dos años de facturas. Ya no es «comparar
-pantallas», es una pregunta de cuatro nombres que está en el guion del viernes.
+Lo anterior de esta sección se cerró el 28/08: el refresco de alertas
+(migración 032), la auditoría de campos contra Defontana (§5) y los enlaces
+del kardex (§6). Queda el envío GRE, y ese está bloqueado.
 
-**Lo que queda, y los tres dependen de algo:**
+---
 
-1. **El worker de alertas** — **hace falta preguntarle antes por dónde quiere
-   que lleguen**, WhatsApp o correo. Es lo único de la PRIMERA reunión que
-   sigue igual que entonces.
+## Cierre del 28/08 · qué queda, y de qué depende cada cosa
 
-   **La mitad que no dependía de él está hecha el 28/08** (migración 032): la
-   bandeja se refresca sola todos los días a las 07:00 de Lima, con `pg_cron`.
-   Antes había que entrar y pulsar «Refrescar». Ojo: **esto NO cierra su
-   pedido** — él quiere que la alerta LLEGUE, y para eso falta el canal.
+El día fue: el selector de cliente, el historial de ventas de Willy entero
+—analizado, separado y cargado—, y cuatro cosas que estaban anotadas y se
+cerraron. **Ya no hay ni un dato `[DEMO]` en la base.**
 
-   Detalle de por qué el cron llama a `generar_alertas()` y no a
-   `refrescar_alertas()`: la segunda comprueba `puede_escribir()`, que
-   necesita `auth.uid()`, y en un cron no hay sesión.
+### Lo que se puede hacer sin hablar con nadie
 
-   Nota del 28/08: con los datos reales cargados, `generar_alertas()` devuelve
-   **cero**, y está bien. Las reglas de stock exigen `stock_minimo > 0` y
-   ninguno de los 790 lo tiene; las de cartera exigen saldo pendiente y el
-   histórico entró pagado. O sea que la bandeja no se llena de ruido el primer
-   día — pero tampoco dirá nada hasta que haya mínimos y facturas vivas.
-2. **El envío GRE** (§3). Se escribe a ciegas: no hay ambiente de pruebas y
-   además necesita el certificado que todavía no ha comprado. La primera vez
-   que corra de verdad será contra producción, así que conviene hacerlo cuando
-   haya con qué probarlo, no antes.
-3. Las menores de §6. La más gorda de todas, y no es menor: **el padrón de
-   ubigeo completo**, que la guía de remisión necesita para despachar a
-   provincia.
+**Nada urgente.** Es la primera vez en el proyecto que la lista está así, y
+conviene decirlo en vez de inventarse trabajo:
+
+- Unificar los cuatro buscadores con el `BuscadorProductos` del design system.
+  Ya comparten la LÓGICA desde hoy —que era lo que dolía—; lo que falta es el
+  marcado, y es cosmético.
+- Que «condiciones» de la cotización sea una lista en vez de texto libre (§6).
+  Necesita saber cuáles usa él, así que en realidad tampoco es independiente.
+- Verificar en un móvil de verdad. Nadie lo ha hecho (§6).
+
+### Lo que espera a WILLY · el viernes
+
+Por orden de lo que desbloquea:
+
+1. **Cómo agrupa lo que no son rodamientos.** La taxonomía que hay es una
+   PROPUESTA mía: nueve familias inventadas desde sus propias facturas para que
+   los 790 productos tuvieran dónde entrar. Las familias llevan escrito en su
+   descripción que están pendientes de que él las confirme. Es la conversación
+   más rentable y son diez minutos con la tabla de HISTORIAL-VENTAS §4 delante.
+2. **La columna P.M.** — ¿piso duro o precio de mercado? Sigue sin contestarse
+   y ahora hay 790 productos que dependen de la respuesta (§2.1 del feedback).
+3. **Por dónde quiere las alertas**, WhatsApp o correo. Es lo único de la
+   PRIMERA reunión que sigue exactamente igual.
+4. **Los cuatro campos de la ficha de cliente** (§5): sector, referencia de
+   dirección, cargo del contacto, días de gracia. Ninguno relleno en dos años.
+5. **Confirmar las tres notas de crédito.** Es lo único de toda la carga que se
+   dedujo en vez de leerse (HISTORIAL-VENTAS §10.3).
+6. **Si tiene deuda viva de verdad.** El histórico entró como pagado a
+   propósito; si hay facturas por cobrar, que diga cuáles.
+7. Sus **correlativos de partida**, su **cuenta bancaria** y sus **agencias**.
+8. El **maestro de productos** — el que trae costo, stock, peso y P.M. Sin
+   costo no hay margen, y el margen es media pantalla del ERP.
+
+### Lo que espera a LUIS
+
+1. **El proyecto Supabase de pruebas.** Sigue siendo lo más grande que falta y
+   nadie más lo puede crear. Es lo que separa «las pantallas abren» de «el
+   dinero cuadra»: hoy 40 pruebas dicen lo primero y ninguna lo segundo. Son
+   cuatro pasos y media hora (§2).
+2. **El padrón de ubigeo completo.** `ubigeo` tiene 64 distritos de ~1.890, y
+   la guía de remisión exige el ubigeo del punto de llegada — o sea que hoy no
+   se puede despachar a provincia como es debido. Hace falta el archivo oficial
+   del INEI: **no me lo invento**, porque ese código va en un documento que
+   SUNAT valida.
+3. El **certificado digital**, cuando toque. Avisarle con dos semanas.
+
+### Lo que está bloqueado y no es culpa de nadie
+
+**El envío GRE** (§3). Se escribiría a ciegas: la guía electrónica no tiene
+ambiente de pruebas y encima necesita el certificado. La primera ejecución real
+sería contra producción. Mejor cuando haya con qué probarlo.
+
 
 ### Dos avisos para el día de la entrega (§7)
 
