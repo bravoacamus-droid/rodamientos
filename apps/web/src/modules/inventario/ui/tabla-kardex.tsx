@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
 
 import { kardex } from "../api/consultas";
+import { enlaceDeReferencia } from "../dominio/enlaces";
 import { ETIQUETA_MOVIMIENTO, type FiltrosKardex, type TipoMovimiento } from "../dominio/tipos";
 
 const COLOR: Record<TipoMovimiento, string> = {
@@ -11,15 +12,6 @@ const COLOR: Record<TipoMovimiento, string> = {
   ajuste_negativo: "bg-[var(--warn-bg)] text-[var(--warn)]",
 };
 
-/** A dónde lleva la referencia de un movimiento, cuando hay a dónde ir. */
-function enlaceReferencia(tipo: string | null, id: string | null): string | null {
-  if (!id) return null;
-  if (tipo === "recepcion") return `/recepciones/${id}`;
-  // El resto —comprobante, guia, compra, ajuste— apuntará a su ficha cuando
-  // esos módulos existan. Hasta entonces se enseña el número sin enlazar, que
-  // es más honesto que un enlace a una pantalla en construcción.
-  return null;
-}
 
 /**
  * El kardex: todos los movimientos, del más reciente al más antiguo.
@@ -84,7 +76,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
           </thead>
           <tbody>
             {filas.map((m) => {
-              const enlace = enlaceReferencia(m.referencia_tipo, m.referencia_id);
+              const enlace = enlaceDeReferencia(m.referencia_tipo, m.referencia_id);
               return (
                 <tr
                   key={m.id}

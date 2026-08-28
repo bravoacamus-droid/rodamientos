@@ -12,7 +12,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 840 en verde |
+| `pnpm test` | 846 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 032, aplicadas** al Supabase del cliente |
@@ -590,10 +590,22 @@ de Defontana.
   recorta. Con el catálogo real de 2.000+ SKU un cuadre completo hay que
   hacerlo por familias, que es como se cuenta de verdad, pero conviene tenerlo
   presente antes del cuadre inicial.
-- **El kardex solo enlaza las referencias de recepción.** Las de comprobante,
-  guía, compra y ajuste enseñan el número sin enlazar, porque esas fichas
-  todavía no existen. Al crear cada módulo hay que añadir su caso en
-  `enlaceReferencia()` de `inventario/ui/tabla-kardex.tsx`.
+- ~~**El kardex solo enlaza las referencias de recepción.**~~ · **cerrado el
+  28/08.** Decía «al crear cada módulo hay que añadir su caso»; ya existen
+  todos. Ahora enlazan **recepción, comprobante y guía**.
+
+  Los otros dos NO enlazan, y por motivos distintos que conviene no confundir:
+  el **ajuste** sí trae su id, pero `/inventario/ajuste` es el formulario para
+  hacer uno nuevo —enlazar ahí llevaría a empezar otro—; y **`importacion`** ni
+  siquiera trae id, y ojo con el nombre, que engaña: NO es el módulo de
+  importaciones sino la carga inicial del maestro desde el Excel. Un stock que
+  entró por una hoja de cálculo no tiene documento que abrir.
+
+  El mapa está en `inventario/dominio/enlaces.ts` con centinela: su prueba lee
+  las migraciones, saca los `referencia_tipo` que la base graba de verdad y
+  falla si alguno no está contemplado o si una ruta no tiene su `page.tsx`.
+  Es el mismo acoplamiento que la 021 dejó roto en las alertas —texto en
+  PL/pgSQL, directorio en `app/(erp)`, nada que los una— y ahora lo hay.
 
 ---
 
