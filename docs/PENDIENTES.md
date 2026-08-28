@@ -74,6 +74,25 @@ del proyecto.
    importador avisa por pantalla, pero es mejor saberlo que corregir 3.000
    pisos después.
 
+   **Llegó el primero el 28/08: el HISTORIAL DE VENTAS.** Dos años, 518
+   facturas, 37 clientes, 790 productos, USD 201.314. Analizado y separado en
+   [HISTORIAL-VENTAS.md](HISTORIAL-VENTAS.md). Los datos son limpios —ningún
+   RUC duplicado, ningún correlativo repetido, una sola línea repetida en
+   1.262—, pero destapó **lo que ahora es el mayor bloqueo del catálogo**:
+
+   > **Solo el 20 % de lo que Willy vende cabe en la taxonomía que tenemos.**
+   > FAMILIA, SUB-FAMILIA y DESCRIPCION son listas cerradas y las nuestras son
+   > solo de rodamientos. Retenes (24 % del catálogo), fajas (17 %), transporte
+   > (8 %), cadenas (4 %)… no tienen dónde entrar, y son la mayoría del
+   > negocio: los rodamientos son el 16 % de sus productos.
+
+   No me la puedo inventar: cómo agrupa sus retenes y sus fajas es decisión
+   suya y gobierna sus informes durante años. **Es la pregunta más rentable
+   del viernes.** Crear los grupos, en cambio, son minutos: `/configuracion`
+   ya deja darlos de alta desde el navegador (migración 028).
+
+   Los **37 clientes sí se pueden cargar ya**, validados y sin choques.
+
 ### Lo que puedo hacer yo sin esperar a nadie
 
 - **El envío de la guía a SUNAT** (§3): el cliente REST + OAuth2. Se puede

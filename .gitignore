@@ -25,6 +25,18 @@ supabase/.temp/
 # en cada diff y en algún momento va a llevarse una credencial de paseo.
 dev.log
 
+# Documentos que manda el cliente, y todo lo que se derive de ellos.
+#
+# El 28/08 llegó «historial de ventas.xlsx»: dos años de facturación real de
+# Rodatech —37 clientes con su RUC, 790 productos con sus precios de venta y
+# 201.000 USD de facturación— y estaba SIN IGNORAR dentro del repositorio. Un
+# `git add .` distraído lo publicaba entero.
+#
+# No es código, no hace falta versionarlo, y es exactamente la clase de dato
+# que no se puede despublicar. Va la carpeta completa, no un patrón por
+# extensión: lo siguiente que mande será un .csv o un .pdf.
+documentosrodamiento/
+
 # Playwright.
 #
 # `.auth/` guarda el estado de sesión REAL con el que corren las pruebas: son

@@ -26,11 +26,32 @@ precio le agrego un 20 %». No pueden ser las dos.
 Si era el precio de mercado, cada producto tiene hoy un suelo de venta que él
 nunca fijó — y están a punto de entrar 3.000 más. Detalle en §2.1.
 
+### Lo segundo · la pregunta que desbloquea 629 productos
+
+Llegó su historial de ventas y está limpio, pero destapó esto:
+
+> **«De lo que no son rodamientos —los retenes, las fajas, las cadenas, las
+> ruedas— ¿cómo los agrupa usted? ¿Qué familias usaría?»**
+
+Su catálogo real es **790 productos y solo 161 caben** en las familias que
+tenemos, que salieron de una muestra que era toda de rodamientos. Los
+rodamientos son el 16 % de sus productos y el 24 % de su facturación: el resto
+del negocio no tiene dónde entrar.
+
+Llevar la tabla de [HISTORIAL-VENTAS.md](HISTORIAL-VENTAS.md) §4 impresa: con
+ella delante son diez minutos. Crear las familias después son minutos más,
+porque `/configuracion` ya las da de alta desde el navegador.
+
+De paso, cuatro códigos suyos tienen DOS productos distintos debajo
+(§3.3) — un `RET-42174382` que es un retén en una factura y un resorte en
+otra— y tres cadenas se venden por metro y por unidad a la vez. Eso también lo
+tiene que resolver él.
+
 ### Lo que hay que pedirle
 
 | Qué | Por qué corre prisa |
 |---|---|
-| **Los tres Excel** | Sin ellos, los informes, el top de productos y la trazabilidad salen **vacíos**. Son justo las pantallas nuevas que se van a enseñar. |
+| **Los dos Excel que faltan** | Ya mandó el historial de ventas (28/08). Faltan el **maestro de productos** —que es el que trae costo, stock, peso y P.M.— y el de proveedores. Sin costo no hay margen, y el margen es media pantalla. |
 | **Los correlativos de partida** | El último número de cotización, factura y guía de su sistema actual, **por serie**. Ya hay dónde meterlos: `/configuracion`. |
 | **Su cuenta bancaria** | Banco, cuenta corriente y CCI. Sin eso, el campo que pidió sale en blanco en cotizaciones y facturas. |
 | **Sus 2-3 agencias** | Vienen precargadas Shalom, Cruz del Sur y Olva. Si usa otras, que las diga y se cambian. |
