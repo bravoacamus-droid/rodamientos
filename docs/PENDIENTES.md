@@ -15,7 +15,7 @@ volver a caer sale caro.
 | `pnpm test` | 840 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 031, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 032, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -136,9 +136,17 @@ pantallas», es una pregunta de cuatro nombres que está en el guion del viernes
 **Lo que queda, y los tres dependen de algo:**
 
 1. **El worker de alertas** — **hace falta preguntarle antes por dónde quiere
-   que lleguen**, WhatsApp o correo. Sin saber el canal, lo único que se puede
-   escribir es el cron que llama a `generar_alertas()`; el envío queda en el
-   aire. Es lo único de la PRIMERA reunión que sigue igual que entonces.
+   que lleguen**, WhatsApp o correo. Es lo único de la PRIMERA reunión que
+   sigue igual que entonces.
+
+   **La mitad que no dependía de él está hecha el 28/08** (migración 032): la
+   bandeja se refresca sola todos los días a las 07:00 de Lima, con `pg_cron`.
+   Antes había que entrar y pulsar «Refrescar». Ojo: **esto NO cierra su
+   pedido** — él quiere que la alerta LLEGUE, y para eso falta el canal.
+
+   Detalle de por qué el cron llama a `generar_alertas()` y no a
+   `refrescar_alertas()`: la segunda comprueba `puede_escribir()`, que
+   necesita `auth.uid()`, y en un cron no hay sesión.
 
    Nota del 28/08: con los datos reales cargados, `generar_alertas()` devuelve
    **cero**, y está bien. Las reglas de stock exigen `stock_minimo > 0` y
