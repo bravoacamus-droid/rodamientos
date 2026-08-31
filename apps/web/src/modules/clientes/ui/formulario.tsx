@@ -13,16 +13,7 @@ import {
   Button,
   Campo,
   Combobox,
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
   Input,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   RadioCampo,
   RadioGroup,
   SelectNativo,
@@ -31,6 +22,7 @@ import {
 
 import { buscarPorDocumento } from "../acciones/consultar";
 import { EditorContactos } from "./editor-contactos";
+import { SelectorUbigeoCascada, type DistritoUbigeo } from "./selector-ubigeo";
 import { guardarCliente } from "../acciones/guardar";
 import { esConsultable, revisarDocumento } from "../dominio/documento";
 import {
@@ -65,12 +57,6 @@ export interface CatalogosCliente {
   vendedores: { id: string; nombre: string }[];
 }
 
-/** Un distrito, tal como lo devuelve la búsqueda de ubigeo. */
-export interface OpcionUbigeo {
-  codigo: string;
-  nombre: string;
-}
-
 /**
  * 44 px de alto en móvil y la altura de control del ERP a partir de `md`.
  *
@@ -103,16 +89,16 @@ function chip(activo: boolean): string {
 export function FormularioCliente({
   catalogos,
   cliente,
-  buscarDistrito,
+  cargarDepartamentos,
+  cargarProvincias,
+  cargarDistritos,
 }: {
   catalogos: CatalogosCliente;
   cliente?: ClienteDetalle;
-  /**
-   * Búsqueda de distrito contra el servidor. Los casi 1.900 distritos del país
-   * NO se precargan en el navegador: el orden por relevancia lo calcula
-   * Postgres sobre su índice, no esta página sobre una lista traída entera.
-   */
-  buscarDistrito: (q: string) => Promise<OpcionUbigeo[]>;
+  /** Los tres niveles de la cascada. Van al servidor, no precargados. */
+  cargarDepartamentos: () => Promise<string[]>;
+  cargarProvincias: (departamento: string) => Promise<string[]>;
+  cargarDistritos: (d: string, p: string) => Promise<DistritoUbigeo[]>;
 }) {
   const router = useRouter();
 
@@ -195,6 +181,18 @@ export function FormularioCliente({
   // de la ficha guardada (que lo trae ya resuelto). Sin esto, al editar un
   // cliente el selector mostraría «150131» en vez de «San Isidro».
   const [ubigeoNombre, setUbigeoNombre] = React.useState(cliente?.ubigeo_nombre ?? "");
+
+  /**
+   * Dónde está parada la cascada de ubigeo.
+   *
+   * Se lleva aparte del código porque los tres desplegables se rellenan de
+   * arriba abajo y el de abajo no puede saber solo en qué provincia está.
+   * Al editar viene de la ficha; al pulsar «Traer datos», de lo que respondió
+   * SUNAT.
+   */
+  const [ubigeoDep, setUbigeoDep] = React.useState(cliente?.ubigeo_departamento ?? "");
+  const [ubigeoProv, setUbigeoProv] = React.useState(cliente?.ubigeo_provincia ?? "");
+  const [ubigeoDist, setUbigeoDist] = React.useState(cliente?.ubigeo_distrito ?? "");
 
   // Si el servidor rechaza el guardado señalando un campo que vive dentro del
   // panel, el panel se abre solo. Si no, el mensaje de error apuntaría a un
@@ -282,6 +280,17 @@ export function FormularioCliente({
                 .join(" · ")
             : "",
         );
+        // Y la cascada queda parada donde corresponde, para que al pulsar
+        // «Corregir» los tres desplegables salgan ya puestos en vez de vacíos.
+        //
+        // Se guardan los nombres TAL COMO LOS MANDA SUNAT (mayúsculas, sin
+        // tildes) y no los de nuestra tabla. Es a propósito: `ubigeo_provincias`
+        // compara con `normalizar_texto`, así que «LIMA» encuentra «Lima», y
+        // así el payload de guardado sigue llevando lo que dijo SUNAT, que es
+        // lo que `asegurar_ubigeo` necesita si el distrito no existiera.
+        setUbigeoDep(d.ubigeo_departamento ?? "");
+        setUbigeoProv(d.ubigeo_provincia ?? "");
+        setUbigeoDist(d.ubigeo_distrito ?? "");
       }
 
       // El panel de «Más datos» ya NO se abre solo. Lo hacía porque la
@@ -365,9 +374,13 @@ export function FormularioCliente({
     // Los tres nombres del distrito, para que el servidor pueda darlo de alta
     // si no lo tenemos (036). Van vacíos cuando el código lo eligió a mano de
     // la lista: entonces el distrito ya existe y no hay nada que crear.
-    ubigeo_departamento: padron?.ubigeo_departamento ?? null,
-    ubigeo_provincia: padron?.ubigeo_provincia ?? null,
-    ubigeo_distrito: padron?.ubigeo_distrito ?? null,
+    // Los tres nombres salen de la CASCADA, que es donde está lo elegido de
+    // verdad —a mano o rellenado por «Traer datos»—. Antes salían del padrón
+    // y llegaban en null cuando el distrito se elegía a mano, que es cuando
+    // más falta harían si el distrito no existiera todavía.
+    ubigeo_departamento: ubigeoDep || padron?.ubigeo_departamento || null,
+    ubigeo_provincia: ubigeoProv || padron?.ubigeo_provincia || null,
+    ubigeo_distrito: ubigeoDist || padron?.ubigeo_distrito || null,
     // Solo en el alta. Al editar, los contactos ya se guardaron por su cuenta.
     contacto_inicial:
       !cliente && f.contacto_nombre.trim() !== ""
@@ -624,23 +637,35 @@ export function FormularioCliente({
             </Campo>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Campo
-                id="ubigeo_codigo"
-                label="Distrito"
-                error={errorDe("ubigeo_codigo")}
-                ayuda="SUNAT lo exige en la guía de remisión."
-              >
-                <SelectorUbigeo
+              {/* Departamento → provincia → distrito, que es lo que pidió
+                  Willy. Antes era UNA caja que buscaba por nombre, y con 64
+                  distritos cargados era lo único que se podía ofrecer: una
+                  cascada sobre un padrón incompleto se ve rota —elegir Cusco y
+                  que solo salga la provincia «Cusco»—. Con el padrón entero
+                  (037) ya son 25 · 196 · 1.874. */}
+              <div className="sm:col-span-2">
+                <SelectorUbigeoCascada
                   id="ubigeo_codigo"
                   codigo={f.ubigeo_codigo}
-                  nombre={ubigeoNombre}
-                  buscar={buscarDistrito}
+                  departamento={ubigeoDep}
+                  provincia={ubigeoProv}
+                  cargarDepartamentos={cargarDepartamentos}
+                  cargarProvincias={cargarProvincias}
+                  cargarDistritos={cargarDistritos}
                   onElegir={(u) => {
-                    set("ubigeo_codigo", u?.codigo ?? "");
-                    setUbigeoNombre(u?.nombre ?? "");
+                    setUbigeoDep(u.departamento);
+                    setUbigeoProv(u.provincia);
+                    setUbigeoDist(u.distrito);
+                    set("ubigeo_codigo", u.codigo);
+                    // La tarjeta de resumen lee de aquí.
+                    setUbigeoNombre(
+                      u.distrito
+                        ? [u.departamento, u.provincia, u.distrito].filter(Boolean).join(" · ")
+                        : "",
+                    );
                   }}
                 />
-              </Campo>
+              </div>
 
               <Campo id="referencia_direccion" label="Referencia">
                 <Input
@@ -1072,155 +1097,3 @@ export function FormularioCliente({
   );
 }
 
-/**
- * Selector de distrito.
- *
- * Vive aquí y no en `@rodatech/ui` porque es el único sitio del ERP que lo usa;
- * el día que lo pida otro módulo, se sube al paquete. No es el `Combobox` de
- * las primitivas porque aquel filtra en memoria y esta lista son casi 1.900
- * distritos que no tiene sentido mandarle al navegador.
- *
- * Descarta las respuestas que llegan tarde: si la búsqueda de «san» vuelve
- * después que la de «san isi», se ignora. Sin eso la lista muestra resultados
- * que no corresponden a lo escrito y se termina eligiendo el distrito de al lado.
- */
-function SelectorUbigeo({
-  id,
-  codigo,
-  nombre,
-  buscar,
-  onElegir,
-}: {
-  id: string;
-  codigo: string;
-  nombre: string;
-  buscar: (q: string) => Promise<OpcionUbigeo[]>;
-  onElegir: (u: OpcionUbigeo | null) => void;
-}) {
-  const [abierto, setAbierto] = React.useState(false);
-  const [termino, setTermino] = React.useState("");
-  const [resultados, setResultados] = React.useState<OpcionUbigeo[]>([]);
-  const [cargando, setCargando] = React.useState(false);
-
-  // Número de orden de la petición. Una ref y no estado: cambiarlo no tiene
-  // que repintar nada, solo sirve para saber cuál es la respuesta vigente.
-  const peticion = React.useRef(0);
-
-  React.useEffect(() => {
-    const t = termino.trim();
-    // El servidor ya corta por debajo de dos letras; se corta también aquí
-    // para no gastar el viaje.
-    if (t.length < 2) {
-      setResultados([]);
-      setCargando(false);
-      return;
-    }
-
-    const propia = ++peticion.current;
-    setCargando(true);
-
-    const temporizador = setTimeout(() => {
-      void buscar(t)
-        .then((lista) => {
-          if (propia !== peticion.current) return;
-          setResultados(lista);
-          setCargando(false);
-        })
-        .catch(() => {
-          if (propia !== peticion.current) return;
-          setResultados([]);
-          setCargando(false);
-        });
-    }, 250);
-
-    return () => clearTimeout(temporizador);
-  }, [termino, buscar]);
-
-  // Con nombre se lee el distrito; sin él —código traído de SUNAT— al menos se
-  // ve el código, que es mejor que un campo aparentemente vacío.
-  const etiqueta = nombre || codigo;
-
-  return (
-    <Popover open={abierto} onOpenChange={setAbierto}>
-      <PopoverTrigger
-        id={id}
-        type="button"
-        role="combobox"
-        aria-expanded={abierto}
-        className={`${ALTO_TACTIL} flex w-full items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-left text-sm`}
-      >
-        <span className={`min-w-0 truncate ${etiqueta ? "" : "text-[var(--fg-subtle)]"}`}>
-          {etiqueta || "Busca el distrito…"}
-        </span>
-        {codigo ? (
-          <span
-            role="button"
-            tabIndex={0}
-            aria-label="Quitar el distrito"
-            // Un `<button>` dentro del trigger sería un botón dentro de un
-            // botón, que el HTML no permite. Con `span` + rol se conserva el
-            // teclado sin anidar controles.
-            onClick={(e) => {
-              e.stopPropagation();
-              onElegir(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-                onElegir(null);
-              }
-            }}
-            className="shrink-0 rounded-sm px-1 text-xs text-[var(--fg-muted)] hover:text-[var(--fg)]"
-          >
-            ✕
-          </span>
-        ) : null}
-      </PopoverTrigger>
-
-      <PopoverContent className="w-[min(22rem,calc(100vw-2rem))] p-0" align="start">
-        {/* `shouldFilter={false}`: el orden por relevancia ya lo decidió
-            Postgres; volver a filtrar aquí descartaría aciertos. */}
-        <Command shouldFilter={false} loop label="Buscar distrito">
-          <CommandInput
-            value={termino}
-            onValueChange={setTermino}
-            placeholder="Distrito, provincia o departamento"
-          />
-          <CommandList>
-            {cargando && resultados.length === 0 ? (
-              <div className="px-3 py-6 text-center text-xs text-[var(--fg-muted)]">
-                Buscando…
-              </div>
-            ) : resultados.length === 0 ? (
-              <CommandEmpty>
-                {termino.trim().length < 2
-                  ? "Escribe al menos dos letras."
-                  : `Ningún distrito coincide con «${termino.trim()}».`}
-              </CommandEmpty>
-            ) : (
-              <CommandGroup>
-                {resultados.map((u) => (
-                  <CommandItem
-                    key={u.codigo}
-                    value={u.codigo}
-                    onSelect={() => {
-                      onElegir(u);
-                      setAbierto(false);
-                      setTermino("");
-                    }}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{u.nombre}</span>
-                    <span className="tabular shrink-0 text-xs text-[var(--fg-subtle)]">
-                      {u.codigo}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}

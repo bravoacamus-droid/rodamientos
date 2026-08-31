@@ -15,7 +15,7 @@ volver a caer sale caro.
 | `pnpm test` | 865 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 036, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 038, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -356,6 +356,74 @@ de esconderlos. Abriendo AICACOLOR S.A.C. (Quillabamba, Cusco) se lee:
 >
 > **Con 0 días la factura nace vencida el mismo día que se emite.** Elige un plazo.
 
+### 6 · La cascada de ubigeo, y lo que había escondido debajo
+
+*«¿La idea es ponerlo por select que traiga los datos, no? O sea provincia,
+distrito, aparte de la dirección que trae.»* — sí, y eso es lo que había
+pedido Willy. La 036 solo había dejado escritas las funciones del servidor.
+
+**No se podía cablear todavía, y ese era el problema de fondo.** Con 64
+distritos de 1.874, una cascada se ve rota: elegir Cusco y que solo salga la
+provincia «Cusco» —con el cliente real de La Convención sin aparecer— es peor
+que no tener cascada. Así que primero el padrón.
+
+#### De dónde salió
+
+De dos fuentes públicas cruzadas, porque ninguna sirve sola:
+
+| Fuente | Para qué | Por qué no sola |
+|---|---|---|
+| **CONCYTEC** · concordancia de ubigeos | Los códigos de INEI, RENIEC y SUNAT en la misma fila | Nombres en MAYÚSCULA y sin tildes |
+| **ernestorivero/Ubigeo-Peru** · padrón 2016 | Los nombres bien escritos: «Áncash», «Junín», «Daniel Hernández» | Numera Tayacaja como SUNAT y Putumayo como INEI: sus códigos no son un sistema |
+
+Se cruzaron **comprobando el nombre**, no por orden de preferencia. No es un
+detalle: al cruzar por orden, Ñahuimpuquio se llevó el nombre de Huaribamba,
+que es su vecino en la otra numeración. Se vio porque salieron dos
+«Huaribamba».
+
+**La validación fue contra los 64 que ya teníamos**, que estaban revisados a
+mano: **64 de 64 coinciden**, y en dos casos los nuestros están mejor escritos
+(«Lurín», «Pachacámac»), así que no se pisan. Y contra las cinco respuestas
+reales que hay en la caché de consultas de RUC: las cinco cuadran.
+
+#### Lo que apareció debajo, que era lo importante
+
+**INEI y SUNAT no usan el mismo código en 11 distritos**, y no por poco:
+
+```
+Tayacaja (Huancavelica)   INEI 090708 Huaribamba  →  SUNAT 090709
+                          INEI 090712 Salcabamba  →  SUNAT 090714
+Putumayo (Loreto)         INEI 160801 Putumayo    →  SUNAT 160109
+```
+
+En Tayacaja SUNAT va corrido uno o dos desde Huaribamba. En Putumayo, que es
+provincia desde 2014, el INEI le dio código propio y SUNAT dejó sus distritos
+colgando de Maynas.
+
+> ⚠️ **Y ahí había un fallo vivo desde la 036.** La consulta de RUC devuelve el
+> código de **SUNAT**, y `asegurar_ubigeo` lo buscaba en `ubigeo.codigo`, que es
+> el del **INEI**. Un contribuyente de Huaribamba habría quedado guardado en
+> **Ñahuimpuquio**, sin un solo error por ninguna parte — y la guía habría
+> salido despachada a otro sitio. Arreglado en la 038, que busca primero por
+> `codigo_sunat`, con centinela que lo comprueba.
+
+Otros **41 distritos no tienen código en SUNAT**: son los creados después de
+su última actualización (Quichuas, Andaymarca, Roble, Pichos, Santiago de
+Tucuma…). A esos no se les puede emitir guía electrónica.
+
+> **REGLA PARA QUIEN ESCRIBA LA GRE:** el documento lleva **`codigo_sunat`**, no
+> `codigo`. Y si es null hay que **negarse a emitir** con un mensaje que lo
+> explique, no mandar el del INEI. `ubigeo_de_sunat()` (038) lo devuelve.
+
+#### Por qué la clave sigue siendo el código del INEI
+
+También costó un intento. Usar el de SUNAT donde exista y el del INEI donde no
+**mezcla dos numeraciones y colisiona**: Surcubamba (SUNAT 090717) y Quichuas
+(INEI 090717) caían en la misma clave. El INEI es biyectivo sobre los 1.874;
+SUNAT tiene 41 huecos. La clave tiene que ser la completa.
+
+---
+
 ### Lo que dijo y NO hacía falta tocar
 
 - *«Tiene que crearse aquí una cuenta que es gratuito para hacer las consultas»*
@@ -429,11 +497,11 @@ Por orden de lo que desbloquea:
    nadie más lo puede crear. Es lo que separa «las pantallas abren» de «el
    dinero cuadra»: hoy 40 pruebas dicen lo primero y ninguna lo segundo. Son
    cuatro pasos y media hora (§2).
-2. **El padrón de ubigeo completo.** `ubigeo` tiene 64 distritos de ~1.890, y
-   la guía de remisión exige el ubigeo del punto de llegada — o sea que hoy no
-   se puede despachar a provincia como es debido. Hace falta el archivo oficial
-   del INEI: **no me lo invento**, porque ese código va en un documento que
-   SUNAT valida.
+2. ~~**El padrón de ubigeo completo.**~~ · **hecho el 31/08** (migraciones 037
+   y 038). Ya son **1.874 distritos, 196 provincias y 25 departamentos**, con
+   la concordancia INEI ↔ SUNAT. Ver §6 de la reunión del 31/08: la parte que
+   importa es que los dos códigos NO son el mismo en 11 distritos, y que eso
+   escondía un fallo que habría despachado mercadería al sitio equivocado.
 3. El **certificado digital**, cuando toque. Avisarle con dos semanas.
 
 ### Lo que está bloqueado y no es culpa de nadie

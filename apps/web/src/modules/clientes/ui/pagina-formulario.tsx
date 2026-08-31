@@ -3,26 +3,41 @@ import { notFound } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { buscarUbigeo, catalogosCliente, clientePorId } from "../api/consultas";
-import { FormularioCliente, type OpcionUbigeo } from "./formulario";
+import {
+  catalogosCliente,
+  clientePorId,
+  ubigeoDepartamentos,
+  ubigeoDistritos,
+  ubigeoProvincias,
+} from "../api/consultas";
+import { FormularioCliente } from "./formulario";
 
 /**
- * Búsqueda de distrito para el formulario.
+ * Los tres niveles del ubigeo, para la cascada departamento → provincia →
+ * distrito que pidió Willy el 31/08.
  *
- * Es una lectura, no una mutación, así que no vive en `acciones/`: se declara
- * aquí y se le pasa al componente cliente como prop. Existe solo porque
- * `api/consultas` es `server-only` y el selector la necesita mientras la
- * persona teclea; envolverla es lo único que hace.
+ * Mismo motivo que `buscarDistrito` para vivir aquí: `api/consultas` es
+ * `server-only` y el selector las necesita mientras la persona elige.
  *
- * Que quede expuesta como endpoint no añade riesgo: el ubigeo es la lista
+ * Que queden expuestas como endpoints no añade riesgo: el ubigeo es la lista
  * pública de distritos del Perú, la misma que publica el INEI.
  */
-async function buscarDistrito(q: string): Promise<OpcionUbigeo[]> {
+async function cargarDepartamentos(): Promise<string[]> {
   "use server";
-  const r = await buscarUbigeo(q);
-  // Si la búsqueda falla, se devuelve vacío en vez de reventar: el selector
-  // dirá «ningún distrito coincide» y el alta sigue su curso.
-  return r.ok ? r.datos : [];
+  return ubigeoDepartamentos();
+}
+
+async function cargarProvincias(departamento: string): Promise<string[]> {
+  "use server";
+  return ubigeoProvincias(departamento);
+}
+
+async function cargarDistritos(
+  departamento: string,
+  provincia: string,
+): Promise<{ codigo: string; distrito: string }[]> {
+  "use server";
+  return ubigeoDistritos(departamento, provincia);
 }
 
 /**
@@ -109,7 +124,9 @@ export default async function PaginaFormularioCliente({
       <FormularioCliente
         catalogos={datosCatalogos}
         cliente={c}
-        buscarDistrito={buscarDistrito}
+        cargarDepartamentos={cargarDepartamentos}
+        cargarProvincias={cargarProvincias}
+        cargarDistritos={cargarDistritos}
       />
     </div>
   );

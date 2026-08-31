@@ -343,3 +343,57 @@ export async function buscarUbigeo(
     return fallo(e);
   }
 }
+
+/**
+ * Los tres niveles del ubigeo, para la cascada del formulario.
+ *
+ * Van al servidor en tres viajes en vez de precargarse enteros: los 1.874
+ * distritos son ~120 kB que el 90 % de las altas no usa, porque «Traer datos»
+ * ya rellena el distrito solo. Se piden los 25 departamentos al abrir y lo
+ * demás cuando se elige el nivel de arriba.
+ *
+ * Las tres son `stable` en Postgres y leen una tabla de referencia pública:
+ * el ubigeo es la lista de distritos del Perú que publica el INEI.
+ */
+export async function ubigeoDepartamentos(): Promise<string[]> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("ubigeo_departamentos");
+    if (error) return [];
+    return (data ?? []).map((d) => d.departamento);
+  } catch {
+    return [];
+  }
+}
+
+export async function ubigeoProvincias(departamento: string): Promise<string[]> {
+  if (departamento.trim() === "") return [];
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("ubigeo_provincias", {
+      p_departamento: departamento,
+    });
+    if (error) return [];
+    return (data ?? []).map((p) => p.provincia);
+  } catch {
+    return [];
+  }
+}
+
+export async function ubigeoDistritos(
+  departamento: string,
+  provincia: string,
+): Promise<{ codigo: string; distrito: string }[]> {
+  if (departamento.trim() === "" || provincia.trim() === "") return [];
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("ubigeo_distritos", {
+      p_departamento: departamento,
+      p_provincia: provincia,
+    });
+    if (error) return [];
+    return (data ?? []).map((d) => ({ codigo: d.codigo, distrito: d.distrito }));
+  } catch {
+    return [];
+  }
+}
