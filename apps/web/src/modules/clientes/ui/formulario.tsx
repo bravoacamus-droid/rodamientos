@@ -7,6 +7,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Check, Pencil, Plus } from "lucide-react";
 import {
   Badge,
   Button,
@@ -22,6 +23,8 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  RadioCampo,
+  RadioGroup,
   SelectNativo,
   Textarea,
 } from "@rodatech/ui";
@@ -75,6 +78,27 @@ export interface OpcionUbigeo {
  * están bien; en el almacén se opera con el pulgar, y ahí 38 px se falla.
  */
 const ALTO_TACTIL = "h-11 md:h-control-md";
+
+/**
+ * Los plazos de crédito que se usan de verdad en el Perú.
+ *
+ * Cuatro botones en vez de una caja de número. No es un capricho: escribir
+ * «30» a mano cuesta más que pulsarlo, y sobre todo un campo vacío se queda
+ * en 0 — que es exactamente cómo acabaron 30 de los 37 clientes de Willy «a
+ * crédito con 0 días», o sea con la factura vencida el día que se emite.
+ * Quien necesite otro plazo tiene «Otro…».
+ */
+const PLAZOS = [15, 30, 45, 60] as const;
+
+/** Botón-chip: pulsado se pinta de marca, sin pulsar es un borde. */
+function chip(activo: boolean): string {
+  return [
+    "inline-flex min-h-9 items-center rounded-full border px-3 text-sm transition-colors",
+    activo
+      ? "border-brand-600 bg-brand-600 font-medium text-white"
+      : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]",
+  ].join(" ");
+}
 
 export function FormularioCliente({
   catalogos,
@@ -140,6 +164,26 @@ export function FormularioCliente({
   });
 
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+
+  /**
+   * ¿Se está corrigiendo a mano lo que trajo SUNAT?
+   *
+   * Cuando la consulta responde, sus cuatro campos —razón social, dirección,
+   * distrito y su código— se pliegan en una TARJETA DE RESUMEN en vez de
+   * quedarse como cuatro cajas de texto. El motivo es que casi nunca se
+   * corrigen: son el dato oficial, y tenerlos abiertos solo hace la pantalla
+   * más larga. Quien necesite tocarlos pulsa «corregir».
+   */
+  const [corrigiendo, setCorrigiendo] = React.useState(false);
+
+  /** Días de crédito escritos a mano, fuera de los cuatro botones. */
+  const [diasAMano, setDiasAMano] = React.useState(false);
+  /** ¿Se le pone tope de deuda? Casi nunca, así que va detrás de un clic. */
+  const [conTope, setConTope] = React.useState(false);
+  /** El bloque del primer contacto, en el alta. */
+  const [contactoAbierto, setContactoAbierto] = React.useState(false);
+  /** Correo, teléfono y área del contacto: casi nadie los tiene a mano. */
+  const [contactoMas, setContactoMas] = React.useState(false);
 
   // Al editar el panel arranca abierto: los datos ya existen y esconderlos
   // obligaría a un clic extra para ver lo que se viene a cambiar. Al crear
@@ -240,9 +284,15 @@ export function FormularioCliente({
         );
       }
 
-      // Si vino dirección o ubigeo, se despliega el panel: hay que poder ver
-      // lo que se acaba de rellenar sin tener que ir a buscarlo.
-      if (d.direccion || d.ubigeo_codigo) setMasDatos(true);
+      // El panel de «Más datos» ya NO se abre solo. Lo hacía porque la
+      // dirección y el distrito vivían dentro y había que poder ver lo que se
+      // acababa de rellenar; ahora salen en la tarjeta de resumen, arriba y a
+      // la vista. Abrirlo aquí solo alargaría la pantalla con siete campos que
+      // nadie ha llenado nunca.
+      //
+      // Y se pliega lo que estuviera corrigiéndose: la consulta acaba de traer
+      // el dato oficial, así que hay algo que resumir otra vez.
+      setCorrigiendo(false);
       setAvisoConsulta(null);
     });
   };
@@ -260,6 +310,35 @@ export function FormularioCliente({
   };
 
   const aCredito = condicionPago === "credito";
+
+  /**
+   * Lo que vive detrás de «Más datos», y cuántos tienen algo escrito.
+   *
+   * El contador existe para no tener que abrir el panel a comprobar si hay
+   * algo dentro. En un alta nueva dice «0 de 7» y se puede ignorar entero;
+   * al editar un cliente que sí los tiene, dice cuántos y se abre a mirar.
+   */
+  const campos = [
+    f.nombre_comercial,
+    f.sector,
+    f.email,
+    f.telefono,
+    f.whatsapp,
+    f.vendedor_id,
+    f.notas,
+  ];
+  const llenosDeMas = campos.filter((v) => v.trim() !== "").length;
+
+  /**
+   * ¿Se puede plegar lo de SUNAT en la tarjeta de resumen?
+   *
+   * Solo si hay algo que resumir. Con la razón social vacía la tarjeta diría
+   * un nombre en blanco, y en un alta a mano —CE, pasaporte, o SUNAT caída—
+   * no hay consulta que plegar: ahí los campos van abiertos desde el primer
+   * momento, que es lo correcto.
+   */
+  const puedePlegar = f.razon_social.trim() !== "" && (padron !== null || Boolean(cliente));
+  const resumenPlegado = puedePlegar && !corrigiendo;
 
   const payload = {
     ...(cliente ? { id: cliente.id } : {}),
@@ -325,10 +404,10 @@ export function FormularioCliente({
       {/* ═════════════════════════════════════════════════ Alta rápida ═══ */}
       <section className="card flex flex-col gap-3 p-4">
         <div>
-          <h2 className="text-sm font-semibold">Identificación</h2>
+          <h2 className="text-sm font-semibold">¿Quién es?</h2>
           <p className="text-xs text-[var(--fg-muted)]">
-            Con el documento y la razón social ya se puede guardar. Lo demás
-            puede esperar.
+            Pega el RUC y dale a «Traer datos»: razón social, dirección y
+            distrito se rellenan solos. Con eso ya se puede guardar.
           </p>
         </div>
 
@@ -479,24 +558,340 @@ export function FormularioCliente({
           </div>
         ) : null}
 
-        <Campo
-          id="razon_social"
-          label="Razón social"
-          requerido
-          error={errorDe("razon_social")}
-          ayuda="Es el nombre que sale impreso en la factura."
-        >
-          <Input
-            id="razon_social"
-            className={ALTO_TACTIL}
-            value={f.razon_social}
-            onChange={(e) => set("razon_social", e.target.value)}
-            placeholder="INDUSTRIAS SAN MIGUEL S.A.C."
-          />
-        </Campo>
+        {/* ─────────────────────────────────────── Lo que trajo SUNAT ───
+            Cuatro campos —razón social, dirección, distrito y referencia— que
+            en el 95 % de las altas NO se tocan: son el dato oficial. Se
+            pliegan en una tarjeta, y quien necesite corregirlos lo pide.
+            Antes eran cuatro cajas abiertas, o sea cuatro de las 22 que hacían
+            la pantalla larga. */}
+        {resumenPlegado ? (
+          <div className="flex items-start gap-3 rounded-md border border-brand-300 bg-brand-50 p-3 dark:bg-brand-950/40">
+            <Check className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold">{f.razon_social}</p>
+              <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+                {f.direccion || "Sin dirección"}
+                {ubigeoNombre ? ` · ${ubigeoNombre}` : ""}
+              </p>
+              {/* Que el distrito NO haya venido importa lo suyo: sin él no se
+                  puede emitir una guía de remisión a ese cliente. */}
+              {!f.ubigeo_codigo ? (
+                <p className="mt-1 text-xs text-[var(--warn)]">
+                  Sin distrito. Hace falta para la guía de remisión; se puede
+                  poner después.
+                </p>
+              ) : null}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setCorrigiendo(true)}
+            >
+              <Pencil aria-hidden="true" />
+              Corregir
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Campo
+              id="razon_social"
+              label="Razón social"
+              requerido
+              error={errorDe("razon_social")}
+              ayuda="Es el nombre que sale impreso en la factura."
+            >
+              <Input
+                id="razon_social"
+                className={ALTO_TACTIL}
+                value={f.razon_social}
+                onChange={(e) => set("razon_social", e.target.value)}
+                placeholder="INDUSTRIAS SAN MIGUEL S.A.C."
+              />
+            </Campo>
+
+            <Campo
+              id="direccion"
+              label="Dirección fiscal"
+              ayuda="La que sale en la factura y en la guía de remisión."
+            >
+              <Input
+                id="direccion"
+                className={ALTO_TACTIL}
+                value={f.direccion}
+                onChange={(e) => set("direccion", e.target.value)}
+              />
+            </Campo>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Campo
+                id="ubigeo_codigo"
+                label="Distrito"
+                error={errorDe("ubigeo_codigo")}
+                ayuda="SUNAT lo exige en la guía de remisión."
+              >
+                <SelectorUbigeo
+                  id="ubigeo_codigo"
+                  codigo={f.ubigeo_codigo}
+                  nombre={ubigeoNombre}
+                  buscar={buscarDistrito}
+                  onElegir={(u) => {
+                    set("ubigeo_codigo", u?.codigo ?? "");
+                    setUbigeoNombre(u?.nombre ?? "");
+                  }}
+                />
+              </Campo>
+
+              <Campo id="referencia_direccion" label="Referencia">
+                <Input
+                  id="referencia_direccion"
+                  className={ALTO_TACTIL}
+                  value={f.referencia_direccion}
+                  onChange={(e) => set("referencia_direccion", e.target.value)}
+                  placeholder="Frente al grifo, portón azul"
+                />
+              </Campo>
+            </div>
+
+            {puedePlegar ? (
+              <button
+                type="button"
+                onClick={() => setCorrigiendo(false)}
+                className="self-start text-xs font-medium text-brand-600 hover:underline"
+              >
+                Listo, plegar
+              </button>
+            ) : null}
+          </>
+        )}
       </section>
 
-      {/* ═════════════════════════════════════════════════ Más datos ═════ */}
+      {/* ═══════════════════════════════════════════════ ¿Cómo paga? ═════
+          Era un desplegable de dos opciones más tres cajas de números. Un
+          desplegable para elegir entre DOS cosas es un clic de más, y los
+          plazos de crédito del Perú son cuatro números: escribirlos a mano no
+          aporta nada. Los días de gracia bajan a «más datos» — es el campo que
+          Willy no entendía y que nadie ha llenado nunca. */}
+      <section className="card flex flex-col gap-3 p-4">
+        <h2 className="text-sm font-semibold">¿Cómo paga?</h2>
+
+        <RadioGroup
+          value={condicionPago}
+          onValueChange={(v) => setCondicionPago(v as CondicionPago)}
+          className="grid gap-2 sm:grid-cols-2"
+        >
+          <RadioCampo
+            id="pago-contado"
+            value="contado"
+            label={ETIQUETA_CONDICION.contado}
+            ayuda="Paga al entregar."
+          />
+          <RadioCampo
+            id="pago-credito"
+            value="credito"
+            label={ETIQUETA_CONDICION.credito}
+            ayuda="Se le factura y paga después."
+          />
+        </RadioGroup>
+
+        {aCredito ? (
+          <div className="flex flex-col gap-3 border-t border-[var(--border-soft)] pt-3">
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium">¿A cuántos días?</span>
+              <div className="flex flex-wrap gap-2">
+                {PLAZOS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => {
+                      setDiasAMano(false);
+                      set("dias_credito", String(d));
+                    }}
+                    aria-pressed={!diasAMano && num(f.dias_credito) === d}
+                    className={chip(!diasAMano && num(f.dias_credito) === d)}
+                  >
+                    {d} días
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setDiasAMano(true)}
+                  aria-pressed={diasAMano}
+                  className={chip(diasAMano)}
+                >
+                  Otro…
+                </button>
+              </div>
+
+              {diasAMano ? (
+                <Input
+                  id="dias_credito"
+                  type="number"
+                  min={0}
+                  step="1"
+                  numerico
+                  autoFocus
+                  className={`${ALTO_TACTIL} w-32`}
+                  value={f.dias_credito}
+                  onChange={(e) => set("dias_credito", e.target.value)}
+                />
+              ) : null}
+
+              {num(f.dias_credito) === 0 ? (
+                <p className="text-xs text-[var(--warn)]">
+                  Con 0 días la factura nace vencida el mismo día que se emite.
+                  Elige un plazo.
+                </p>
+              ) : null}
+            </div>
+
+            {/* El tope de deuda, detrás de un clic: ninguno de los 37 clientes
+                reales tiene uno puesto, y es justo el campo que Willy entendió
+                al revés —creía que era un máximo mensual—. */}
+            {conTope || num(f.linea_credito) > 0 ? (
+              <Campo
+                id="linea_credito"
+                label="Tope de deuda"
+                ayuda="Cuánto puede DEBER a la vez, sumando todas sus facturas sin pagar. No es un tope mensual."
+              >
+                <Input
+                  id="linea_credito"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  numerico
+                  className={`${ALTO_TACTIL} w-48`}
+                  value={f.linea_credito}
+                  onChange={(e) => set("linea_credito", e.target.value)}
+                />
+              </Campo>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConTope(true)}
+                className="self-start text-xs font-medium text-brand-600 hover:underline"
+              >
+                + Ponerle un tope de deuda
+              </button>
+            )}
+          </div>
+        ) : null}
+      </section>
+
+      {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════
+          En la EDICIÓN, el editor completo: altas, bajas y quién es el
+          principal, cada uno guardando por su cuenta. En el ALTA basta con
+          uno, y ni siquiera abierto: dos campos detrás de un botón. */}
+      {cliente ? (
+        <EditorContactos clienteId={cliente.id} iniciales={cliente.contactos_lista} />
+      ) : (
+        <section className="card flex flex-col gap-3 p-4">
+          <div>
+            <h2 className="text-sm font-semibold">¿Con quién hablas ahí?</h2>
+            <p className="text-xs text-[var(--fg-muted)]">
+              A esta persona van dirigidas sus cotizaciones. Se pueden añadir
+              más después de guardar.
+            </p>
+          </div>
+
+          {contactoAbierto ? (
+            <div className="flex flex-col gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Campo id="contacto_nombre" label="Nombre">
+                  <Input
+                    id="contacto_nombre"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_nombre}
+                    onChange={(e) => set("contacto_nombre", e.target.value)}
+                    autoComplete="off"
+                    autoFocus
+                    placeholder="Juan Pérez"
+                  />
+                </Campo>
+
+                <Campo id="contacto_cargo" label="Cargo">
+                  <Input
+                    id="contacto_cargo"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_cargo}
+                    onChange={(e) => set("contacto_cargo", e.target.value)}
+                    list="cargos-contacto-alta"
+                    placeholder="Jefe de compras"
+                    autoComplete="off"
+                  />
+                  {/* Los tres que nombró Willy, y hueco para escribir otro. */}
+                  <datalist id="cargos-contacto-alta">
+                    <option value="Jefe de compras" />
+                    <option value="Asistente de logística" />
+                    <option value="Jefe de mantenimiento" />
+                  </datalist>
+                </Campo>
+              </div>
+
+              {contactoMas ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Campo id="contacto_area" label="Área">
+                    <Input
+                      id="contacto_area"
+                      className={ALTO_TACTIL}
+                      value={f.contacto_area}
+                      onChange={(e) => set("contacto_area", e.target.value)}
+                      placeholder="Compras"
+                      autoComplete="off"
+                    />
+                  </Campo>
+                  <Campo id="contacto_email" label="Su correo">
+                    <Input
+                      id="contacto_email"
+                      type="email"
+                      inputMode="email"
+                      className={ALTO_TACTIL}
+                      value={f.contacto_email}
+                      onChange={(e) => set("contacto_email", e.target.value)}
+                      autoComplete="off"
+                    />
+                  </Campo>
+                  <Campo id="contacto_telefono" label="Su teléfono">
+                    <Input
+                      id="contacto_telefono"
+                      type="tel"
+                      inputMode="tel"
+                      className={ALTO_TACTIL}
+                      value={f.contacto_telefono}
+                      onChange={(e) => set("contacto_telefono", e.target.value)}
+                    />
+                  </Campo>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setContactoMas(true)}
+                  className="self-start text-xs font-medium text-brand-600 hover:underline"
+                >
+                  + Su correo, teléfono y área
+                </button>
+              )}
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start"
+              onClick={() => setContactoAbierto(true)}
+            >
+              <Plus aria-hidden="true" />
+              Añadir contacto
+            </Button>
+          )}
+        </section>
+      )}
+
+      {/* ═════════════════════════════════════════════════ Más datos ═════
+          Aquí abajo va todo lo que en dos años del sistema anterior no se
+          llenó NI UNA VEZ en 37 clientes: sector, teléfono, WhatsApp, días de
+          gracia, vendedor, notas. No se borra —puede servirle— pero deja de
+          ocupar pantalla, y el contador dice si hay algo dentro para no tener
+          que abrirlo a comprobar. */}
       <button
         type="button"
         onClick={() => setMasDatos((v) => !v)}
@@ -507,7 +902,8 @@ export function FormularioCliente({
         <span>
           Más datos
           <span className="ml-2 font-normal text-[var(--fg-muted)]">
-            contacto, dirección, crédito y vendedor · todo opcional
+            nombre comercial, sector, teléfonos, vendedor, notas ·{" "}
+            {llenosDeMas} de {campos.length}
           </span>
         </span>
         <svg
@@ -526,25 +922,11 @@ export function FormularioCliente({
       </button>
 
       {/* Se monta y desmonta en vez de ocultarse con CSS: si un error del
-          servidor apunta a un campo de aquí, el panel se abre solo (ver abajo)
-          y el campo existe con su valor. */}
+          servidor apunta a un campo de aquí, el panel se abre solo y el campo
+          existe con su valor. */}
       {masDatos ? (
         <div id="mas-datos" className="flex flex-col gap-4">
-          {/* ────────────────────────────────────────── Datos de la empresa
-              Antes esta caja se llamaba «Datos comerciales» y mezclaba dos
-              cosas: lo que es de la EMPRESA (nombre comercial, sector, su
-              central, su correo de facturación) y lo que es de una PERSONA
-              dentro de ella. Willy lo dijo el 31/08 y tenía razón; separarlas
-              es la mitad de lo que pidió, y la otra mitad es que las personas
-              puedan ser varias. */}
           <section className="card flex flex-col gap-3 p-4">
-            <div>
-              <h2 className="text-sm font-semibold">Datos de la empresa</h2>
-              <p className="text-xs text-[var(--fg-muted)]">
-                Lo que es de la empresa, no de una persona. Sus contactos van
-                más abajo.
-              </p>
-            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Campo id="nombre_comercial" label="Nombre comercial">
                 <Input
@@ -609,248 +991,26 @@ export function FormularioCliente({
                   placeholder="9XX XXX XXX"
                 />
               </Campo>
-            </div>
-          </section>
 
-          {/* ────────────────────────────────────────────────── Contactos
-              En el ALTA se pide uno solo, porque es el que se tiene delante y
-              porque el cliente todavía no existe: sin id no hay a qué colgar
-              una lista. En la EDICIÓN manda el editor, que sabe de altas,
-              bajas y de quién es el principal. */}
-          {cliente ? (
-            <EditorContactos clienteId={cliente.id} iniciales={cliente.contactos_lista} />
-          ) : (
-            <section className="card flex flex-col gap-3 p-4">
-              <div>
-                <h2 className="text-sm font-semibold">Contacto</h2>
-                <p className="text-xs text-[var(--fg-muted)]">
-                  La persona a la que se le cotiza. Opcional, y se pueden añadir
-                  más después de guardar: al hacer una cotización se elige a
-                  cuál va dirigida.
-                </p>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <Campo id="contacto_nombre" label="Nombre">
-                  <Input
-                    id="contacto_nombre"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_nombre}
-                    onChange={(e) => set("contacto_nombre", e.target.value)}
-                    autoComplete="off"
-                    placeholder="Juan Pérez"
-                  />
-                </Campo>
-
-                <Campo id="contacto_cargo" label="Cargo">
-                  <Input
-                    id="contacto_cargo"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_cargo}
-                    onChange={(e) => set("contacto_cargo", e.target.value)}
-                    placeholder="Jefe de compras"
-                  />
-                </Campo>
-
-                <Campo id="contacto_area" label="Área">
-                  <Input
-                    id="contacto_area"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_area}
-                    onChange={(e) => set("contacto_area", e.target.value)}
-                    list="areas-contacto-alta"
-                    placeholder="Compras"
-                    autoComplete="off"
-                  />
-                  <datalist id="areas-contacto-alta">
-                    <option value="Compras" />
-                    <option value="Logística" />
-                    <option value="Mantenimiento" />
-                    <option value="Almacén" />
-                    <option value="Gerencia" />
-                  </datalist>
-                </Campo>
-
+              {aCredito ? (
                 <Campo
-                  id="contacto_email"
-                  label="Su correo"
-                  ayuda="A donde llega la cotización en PDF."
-                >
-                  <Input
-                    id="contacto_email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="off"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_email}
-                    onChange={(e) => set("contacto_email", e.target.value)}
-                  />
-                </Campo>
-
-                <Campo id="contacto_telefono" label="Su teléfono">
-                  <Input
-                    id="contacto_telefono"
-                    type="tel"
-                    inputMode="tel"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_telefono}
-                    onChange={(e) => set("contacto_telefono", e.target.value)}
-                  />
-                </Campo>
-              </div>
-            </section>
-          )}
-
-          {/* ───────────────────────────────────────────────── Dirección */}
-          <section className="card flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Dirección</h2>
-
-            <Campo
-              id="direccion"
-              label="Dirección fiscal"
-              ayuda="La que sale en la factura y en la guía de remisión."
-            >
-              <Input
-                id="direccion"
-                className={ALTO_TACTIL}
-                value={f.direccion}
-                onChange={(e) => set("direccion", e.target.value)}
-              />
-            </Campo>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Campo
-                id="ubigeo_codigo"
-                label="Distrito"
-                error={errorDe("ubigeo_codigo")}
-                ayuda="SUNAT lo exige en la guía de remisión."
-              >
-                <SelectorUbigeo
-                  id="ubigeo_codigo"
-                  codigo={f.ubigeo_codigo}
-                  nombre={ubigeoNombre}
-                  buscar={buscarDistrito}
-                  onElegir={(u) => {
-                    set("ubigeo_codigo", u?.codigo ?? "");
-                    setUbigeoNombre(u?.nombre ?? "");
-                  }}
-                />
-              </Campo>
-
-              <Campo id="referencia_direccion" label="Referencia">
-                <Input
-                  id="referencia_direccion"
-                  className={ALTO_TACTIL}
-                  value={f.referencia_direccion}
-                  onChange={(e) => set("referencia_direccion", e.target.value)}
-                  placeholder="Frente al grifo, portón azul"
-                />
-              </Campo>
-            </div>
-          </section>
-
-          {/* ─────────────────────────────────────────────────── Crédito
-              Willy preguntó qué significaba cada uno (31/08, 8:xx) y se
-              respondió a sí mismo con la lectura equivocada: *«la línea de
-              crédito es hasta cuánto máximo le puedo facturar en el mes»*.
-              No es al mes: es cuánto puede DEBER a la vez.
-              Que el usuario principal tenga que preguntarlo significa que la
-              pantalla no lo decía, así que ahora lo dice. */}
-          <section className="card flex flex-col gap-3 p-4">
-            <div>
-              <h2 className="text-sm font-semibold">Condiciones comerciales</h2>
-              <p className="text-xs text-[var(--fg-muted)]">
-                Cuánto se le fía y por cuánto tiempo. Las tres cosas se vigilan
-                solas: cobranzas avisa y el sistema bloquea antes de facturar de
-                más.
-              </p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Campo id="condicion_pago" label="Condición">
-                <SelectNativo
-                  id="condicion_pago"
-                  className={ALTO_TACTIL}
-                  value={condicionPago}
-                  onChange={(e) => setCondicionPago(e.target.value as CondicionPago)}
-                >
-                  <option value="contado">{ETIQUETA_CONDICION.contado}</option>
-                  <option value="credito">{ETIQUETA_CONDICION.credito}</option>
-                </SelectNativo>
-              </Campo>
-            </div>
-
-            {/* Los tres campos de crédito se deshabilitan en vez de esconderse:
-                así se ve que existen y que dependen de la condición, y al
-                volver a crédito siguen ahí los valores que ya se habían puesto. */}
-            <fieldset
-              disabled={!aCredito}
-              className="grid gap-3 disabled:opacity-60 sm:grid-cols-3"
-            >
-              <Campo
-                id="linea_credito"
-                label="Línea de crédito"
-                ayuda="Cuánto puede DEBER a la vez, sumando todas sus facturas sin pagar. No es un tope mensual. 0 = sin tope."
-              >
-                <Input
-                  id="linea_credito"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  numerico
-                  className={ALTO_TACTIL}
-                  value={f.linea_credito}
-                  onChange={(e) => set("linea_credito", e.target.value)}
-                />
-              </Campo>
-
-              <Campo
-                id="dias_credito"
-                label="Días de crédito"
-                ayuda="Desde que se emite la factura hasta que vence. 30 es lo habitual."
-              >
-                <Input
-                  id="dias_credito"
-                  type="number"
-                  min={0}
-                  step="1"
-                  numerico
-                  className={ALTO_TACTIL}
-                  value={f.dias_credito}
-                  onChange={(e) => set("dias_credito", e.target.value)}
-                />
-              </Campo>
-
-              <Campo
-                id="dias_gracia"
-                label="Días de gracia"
-                ayuda="Lo que se le aguanta DESPUÉS de vencer antes de perseguirlo. Un cliente bueno que paga a los 3 días no debería salir en morosos."
-              >
-                <Input
                   id="dias_gracia"
-                  type="number"
-                  min={0}
-                  step="1"
-                  numerico
-                  className={ALTO_TACTIL}
-                  value={f.dias_gracia}
-                  onChange={(e) => set("dias_gracia", e.target.value)}
-                />
-              </Campo>
-            </fieldset>
+                  label="Días de gracia"
+                  ayuda="Lo que se le aguanta DESPUÉS de vencer antes de perseguirlo."
+                >
+                  <Input
+                    id="dias_gracia"
+                    type="number"
+                    min={0}
+                    step="1"
+                    numerico
+                    className={ALTO_TACTIL}
+                    value={f.dias_gracia}
+                    onChange={(e) => set("dias_gracia", e.target.value)}
+                  />
+                </Campo>
+              ) : null}
 
-            {aCredito && num(f.dias_credito) === 0 ? (
-              <p className="text-xs text-[var(--warn)]">
-                A crédito con 0 días: la factura nace vencida el mismo día que se
-                emite. Revisa si es lo que quieres.
-              </p>
-            ) : null}
-          </section>
-
-          {/* ────────────────────────────────────────────── Seguimiento */}
-          <section className="card flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Seguimiento</h2>
-
-            <div className="grid gap-3 sm:grid-cols-2">
               <Campo
                 id="vendedor_id"
                 label="Vendedor asignado"

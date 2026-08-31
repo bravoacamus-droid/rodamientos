@@ -313,6 +313,49 @@ decía. Los tres campos ahora se explican solos:
 > invento. Hace falta que diga su plazo estándar; si es 30, se corrige en una
 > sentencia.
 
+### 5 · Y lo que se pidió después: «el relleno es largo»
+
+Fuera de la reunión, mirando la pantalla: *«mejora el proceso de relleno que
+es largo, cómo podríamos hacerlo más interactivo»*.
+
+El diagnóstico salió de contar. La ficha pedía **22 campos**. Y de sus 37
+clientes reales, en dos años del sistema anterior:
+
+| Campo | Llenos |
+|---|---|
+| `direccion` | 37 de 37 |
+| `email` | 1 de 37 |
+| `sector`, `telefono`, `whatsapp`, `referencia_direccion`, `linea_credito`, `dias_credito`, `dias_gracia` | **0 de 37** |
+
+**Le pedíamos 22 cosas y llenaba 2.** Eso no se arregla con mejor maquetación:
+se arregla dejando de preguntar. Lo que se hizo:
+
+1. **Lo que trae SUNAT se pliega en una tarjeta.** Razón social, dirección,
+   distrito y referencia eran cuatro cajas abiertas; ahora son dos líneas de
+   resumen con un «Corregir» al lado. En el 95 % de las altas no se tocan.
+2. **Las decisiones son clics, no cajas.** «¿Cómo paga?» son dos tarjetas en
+   vez de un desplegable —un desplegable para elegir entre DOS cosas es un
+   clic de más— y los días de crédito son botones **15 / 30 / 45 / 60** más
+   «Otro…». Esto además ataca el problema de los 30 clientes con 0 días: un
+   campo numérico vacío se queda en cero y nadie lo nota; un botón hay que
+   pulsarlo, y si no se pulsa ninguno sale el aviso en amarillo.
+3. **El tope de deuda, detrás de un clic.** Ninguno de los 37 lo tiene puesto.
+4. **El contacto, detrás de un botón**, y con dos campos (nombre y cargo); su
+   correo, teléfono y área detrás de otro clic.
+5. **Los siete campos que nadie llenó nunca**, detrás de «Más datos · N de 7»
+   —con contador, para no tener que abrirlo a comprobar si hay algo dentro—.
+   **No se borró ninguno**: puede que le sirvan, y esa decisión es suya.
+
+El resultado es que **el alta entera cabe en una pantalla sin desplazarse**,
+de las cuatro que ocupaba antes.
+
+Y de regalo, la pantalla ahora **enseña los dos problemas de la carga** en vez
+de esconderlos. Abriendo AICACOLOR S.A.C. (Quillabamba, Cusco) se lee:
+
+> **Sin distrito.** Hace falta para la guía de remisión; se puede poner después.
+>
+> **Con 0 días la factura nace vencida el mismo día que se emite.** Elige un plazo.
+
 ### Lo que dijo y NO hacía falta tocar
 
 - *«Tiene que crearse aquí una cuenta que es gratuito para hacer las consultas»*
