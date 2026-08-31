@@ -34,6 +34,19 @@ export interface DatosSunat {
   nombre_comercial: string | null;
   direccion: string | null;
   ubigeo_codigo: string | null;
+  /**
+   * Los tres nombres del distrito, tal como los devuelve SUNAT.
+   *
+   * Se propagan desde la 036 porque `ubigeo` no es el padrón completo: con el
+   * código a secas, un distrito que no tengamos cargado no se puede dar de
+   * alta y se pierde. Con los tres nombres sí — y quien los da es la misma
+   * autoridad que después valida el documento.
+   *
+   * Vienen como los manda SUNAT: MAYÚSCULAS y sin tildes.
+   */
+  ubigeo_departamento: string | null;
+  ubigeo_provincia: string | null;
+  ubigeo_distrito: string | null;
   /** Estado del contribuyente: ACTIVO, BAJA DE OFICIO… Solo informativo. */
   estado: string | null;
   /** HABIDO / NO HABIDO. Importa: a un NO HABIDO no se le factura tranquilo. */
@@ -117,6 +130,9 @@ export async function consultarDocumentoSunat(
           nombre_comercial: null,
           direccion: r.datos.direccion,
           ubigeo_codigo: ubigeoUtilizable(r.datos.ubigeo),
+          ubigeo_departamento: r.datos.departamento,
+          ubigeo_provincia: r.datos.provincia,
+          ubigeo_distrito: r.datos.distrito,
           estado: r.datos.estado,
           condicion: r.datos.condicion,
         },
@@ -137,6 +153,9 @@ export async function consultarDocumentoSunat(
         nombre_comercial: null,
         direccion: null,
         ubigeo_codigo: null,
+        ubigeo_departamento: null,
+        ubigeo_provincia: null,
+        ubigeo_distrito: null,
         estado: null,
         condicion: null,
       },

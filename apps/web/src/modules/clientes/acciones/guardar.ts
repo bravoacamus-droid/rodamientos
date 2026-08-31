@@ -80,10 +80,15 @@ const esquema = z.object({
     (v) => v === null || /^\d{6}$/.test(v),
     "El ubigeo debe tener 6 dígitos. Elígelo de la lista.",
   ),
+  // Los tres nombres del distrito, tal como los devolvió la consulta de RUC.
+  // Viajan con el código porque `asegurar_ubigeo` los necesita para dar de
+  // alta el distrito que todavía no tengamos (036). No se guardan en
+  // `clientes`: viven en `ubigeo`, que es su sitio.
+  ubigeo_departamento: opcional(80, "El departamento"),
+  ubigeo_provincia: opcional(80, "La provincia"),
+  ubigeo_distrito: opcional(80, "El distrito"),
   referencia_direccion: opcional(200, "La referencia"),
   sector: opcional(80, "El sector"),
-  contacto: opcional(120, "El contacto"),
-  cargo_contacto: opcional(80, "El cargo del contacto"),
   email: opcional(160, "El correo").refine(
     (v) => v === null || z.string().email().safeParse(v).success,
     "El correo no tiene un formato válido.",
@@ -106,6 +111,30 @@ const esquema = z.object({
     "El vendedor elegido no es válido.",
   ),
   notas: opcional(2000, "Las notas"),
+
+  /**
+   * Un primer contacto, solo en el ALTA.
+   *
+   * Los contactos viven en su propia tabla y tienen su propia acción desde la
+   * 035, pero en el alta no hay todavía a qué cliente colgarlos. En vez de
+   * obligar a guardar y volver a entrar para escribir el nombre del comprador
+   * —que es el dato que se tiene delante justo en ese momento—, se acepta uno
+   * aquí y se crea con la ficha, marcado como principal.
+   *
+   * En la EDICIÓN se ignora: allí manda el editor de contactos, que sabe de
+   * altas, bajas y de quién es el principal.
+   */
+  contacto_inicial: z
+    .object({
+      nombre: z.string().trim().min(1).max(120),
+      cargo: opcional(80, "El cargo"),
+      area: opcional(60, "El área"),
+      email: opcional(160, "El correo"),
+      telefono: opcional(40, "El teléfono"),
+      whatsapp: opcional(40, "El WhatsApp"),
+    })
+    .nullable()
+    .default(null),
 });
 
 /** ¿Es una violación de índice único? */
@@ -199,31 +228,31 @@ export async function guardarCliente(
 
   const supabase = await clienteServidor();
 
-  // 3.bis · El distrito, contra la tabla que existe de verdad.
+  // 3.bis · El distrito: si no lo tenemos, se da de alta con lo que dijo SUNAT.
   //
   // `clientes.ubigeo_codigo` tiene clave foránea a `ubigeo`, y `ubigeo` NO es
-  // el padrón completo: la 007 cargó Lima, Callao y las capitales de
-  // departamento —64 distritos— con el resto marcado como pendiente. SUNAT, en
-  // cambio, devuelve el código de CUALQUIER distrito del Perú.
+  // el padrón completo: la 007 cargó 64 distritos de los ~1.890 del Perú.
+  // SUNAT devuelve el código de CUALQUIERA, así que «Traer datos» sobre un
+  // cliente de Trujillo rellenaba un código legítimo que aquí no existía.
   //
-  // O sea que «Traer de SUNAT» sobre un cliente de provincia rellenaba un
-  // ubigeo legítimo que aquí no existe, y el guardado moría con un 23503 que
-  // el usuario no puede ni entender ni arreglar: el código lo puso el botón,
-  // no él.
+  // Hasta la 036 esto se resolvía DESCARTANDO el desconocido: el alta se
+  // salvaba pero el distrito se perdía en silencio. Ahora se da de alta, con
+  // los tres nombres que la misma consulta trajo (`asegurar_ubigeo`, 036). El
+  // código no lo deduce nadie: lo dice SUNAT sobre ese contribuyente.
   //
-  // Se descarta el desconocido y se guarda el cliente. El distrito es un dato
-  // accesorio de la ficha comercial —la dirección, que es lo que hace falta
-  // para la guía, sí se conserva— y perder un código vale infinitamente menos
-  // que rechazar el alta entera. Cuando se cargue el padrón completo, esta
-  // comprobación dejará de descartar nada sola.
-  let ubigeo = datos.ubigeo_codigo;
-  if (ubigeo) {
-    const { data: existe } = await supabase
-      .from("ubigeo")
-      .select("codigo")
-      .eq("codigo", ubigeo)
-      .maybeSingle();
-    if (!existe) ubigeo = null;
+  // Sigue devolviendo null si el código es ilegible o si vino suelto sin
+  // departamento/provincia/distrito —el formulario los manda cuando el botón
+  // los trajo—, porque perder un dato accesorio vale infinitamente menos que
+  // rechazar el alta entera.
+  let ubigeo: string | null = null;
+  if (datos.ubigeo_codigo) {
+    const { data: codigo } = await supabase.rpc("asegurar_ubigeo", {
+      p_codigo: datos.ubigeo_codigo,
+      p_departamento: datos.ubigeo_departamento ?? "",
+      p_provincia: datos.ubigeo_provincia ?? "",
+      p_distrito: datos.ubigeo_distrito ?? "",
+    });
+    ubigeo = (codigo as string | null) ?? null;
   }
 
   const campos = {
@@ -235,8 +264,6 @@ export async function guardarCliente(
     ubigeo_codigo: ubigeo,
     referencia_direccion: datos.referencia_direccion,
     sector: datos.sector,
-    contacto: datos.contacto,
-    cargo_contacto: datos.cargo_contacto,
     email: datos.email,
     telefono: datos.telefono,
     whatsapp: datos.whatsapp,
@@ -292,6 +319,20 @@ export async function guardarCliente(
         .maybeSingle();
 
       if (!error && data) {
+        // El primer contacto, si lo escribieron. Va DESPUÉS y no en la misma
+        // sentencia porque son dos tablas y PostgREST no da transacciones.
+        //
+        // Si falla, el alta NO se deshace: el cliente creado es lo que importa
+        // y el contacto se puede añadir desde su ficha en diez segundos.
+        // Deshacer el alta por esto obligaría a teclear el RUC otra vez y a
+        // gastar otra consulta de cuota, que es peor negocio.
+        if (datos.contacto_inicial) {
+          await supabase.from("cliente_contactos").insert({
+            cliente_id: data.id,
+            ...datos.contacto_inicial,
+            principal: true,
+          });
+        }
         revalidar(data.id);
         return { ok: true, id: data.id, codigo: data.codigo, razonSocial: data.razon_social };
       }

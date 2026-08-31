@@ -20,6 +20,7 @@ function cliente(cambios: Partial<ClienteOpcion> = {}): ClienteOpcion {
     numero_documento: "20100047218",
     tipo_documento: "RUC",
     contacto: null,
+    contactos: 0,
     telefono: null,
     condicion_pago: "contado",
     dias_credito: 0,

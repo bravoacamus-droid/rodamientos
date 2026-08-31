@@ -12,6 +12,26 @@
 export type CondicionPago = "contado" | "credito";
 export type TipoDocumento = "RUC" | "DNI" | "CE" | "PAS" | "SIN_DOC";
 
+/**
+ * Una persona dentro de la empresa cliente.
+ *
+ * Willy, 31/08: la cotización va dirigida al jefe de compras, al asistente
+ * de logística o al de mantenimiento según quién la haya pedido. Antes cabía
+ * uno solo, en una columna de texto de `clientes`.
+ */
+export interface ContactoCliente {
+  id: string;
+  nombre: string;
+  cargo: string | null;
+  /** «compras», «logistica», «mantenimiento»… Texto libre: la lista la sabe él. */
+  area: string | null;
+  email: string | null;
+  telefono: string | null;
+  whatsapp: string | null;
+  /** A quién se dirige la cotización si nadie elige. Uno como mucho. */
+  principal: boolean;
+}
+
 /** Una fila del listado. Solo lo que se pinta en la tabla. */
 export interface ClienteLista {
   id: string;
@@ -20,7 +40,10 @@ export interface ClienteLista {
   numero_documento: string | null;
   razon_social: string;
   nombre_comercial: string | null;
+  /** El contacto PRINCIPAL, si tiene. Desde la 035 sale de `cliente_contactos`. */
   contacto: string | null;
+  /** Cuántos contactos activos tiene. La tabla enseña «+2» cuando hay más. */
+  contactos: number;
   telefono: string | null;
   whatsapp: string | null;
   email: string | null;
@@ -39,7 +62,12 @@ export interface ClienteDetalle extends ClienteLista {
   ubigeo_nombre: string | null;
   referencia_direccion: string | null;
   sector: string | null;
-  cargo_contacto: string | null;
+  /** Departamento, provincia y distrito por separado: Willy los quiere ver. */
+  ubigeo_departamento: string | null;
+  ubigeo_provincia: string | null;
+  ubigeo_distrito: string | null;
+  /** Su gente, la principal primero. */
+  contactos_lista: ContactoCliente[];
   dias_gracia: number;
   motivo_bloqueo: string | null;
   vendedor_id: string | null;
@@ -74,10 +102,17 @@ export interface ClienteEditable {
   nombre_comercial: string | null;
   direccion: string | null;
   ubigeo_codigo: string | null;
+  /**
+   * Los tres nombres del distrito, tal como los devolvió la consulta de RUC.
+   * Viajan con el código para que `asegurar_ubigeo` (036) pueda dar de alta
+   * el que todavía no tengamos. No se guardan en `clientes`: viven en
+   * `ubigeo`, que es su sitio.
+   */
+  ubigeo_departamento?: string | null;
+  ubigeo_provincia?: string | null;
+  ubigeo_distrito?: string | null;
   referencia_direccion: string | null;
   sector: string | null;
-  contacto: string | null;
-  cargo_contacto: string | null;
   email: string | null;
   telefono: string | null;
   whatsapp: string | null;
@@ -105,6 +140,10 @@ export interface DatosDocumento {
   nombre_comercial: string | null;
   direccion: string | null;
   ubigeo_codigo: string | null;
+  /** Los tres nombres del distrito, para poder darlo de alta si no lo tenemos. */
+  ubigeo_departamento: string | null;
+  ubigeo_provincia: string | null;
+  ubigeo_distrito: string | null;
   /** Estado del contribuyente: ACTIVO, BAJA DE OFICIO… Solo informativo. */
   estado: string | null;
   /** HABIDO / NO HABIDO. Importa: a un NO HABIDO no se le factura tranquilo. */

@@ -33,7 +33,10 @@ export interface ClienteOpcion {
   nombre_comercial: string | null;
   numero_documento: string | null;
   tipo_documento: string;
+  /** El contacto PRINCIPAL, si tiene. Desde la 035 sale de `cliente_contactos`. */
   contacto: string | null;
+  /** Cuántos contactos activos tiene. La fila lo dice cuando hay más de uno. */
+  contactos: number;
   telefono: string | null;
   condicion_pago: string;
   /** Al elegir cliente se muestra su condición; «A crédito» sin decir a

@@ -263,6 +263,79 @@ export type Database = {
         }
         Relationships: []
       }
+      cliente_contactos: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          area: string | null
+          busqueda: string | null
+          cargo: string | null
+          cliente_id: string
+          creado_en: string
+          email: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          principal: boolean
+          telefono: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          area?: string | null
+          busqueda?: string | null
+          cargo?: string | null
+          cliente_id: string
+          creado_en?: string
+          email?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          principal?: boolean
+          telefono?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          area?: string | null
+          busqueda?: string | null
+          cargo?: string | null
+          cliente_id?: string
+          creado_en?: string
+          email?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          principal?: boolean
+          telefono?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_contactos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_contactos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_contactos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           activo: boolean
@@ -271,10 +344,8 @@ export type Database = {
           busq_documento: string | null
           busq_razon_social: string | null
           busqueda: string | null
-          cargo_contacto: string | null
           codigo: string
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
-          contacto: string | null
           creado_en: string
           dias_credito: number
           dias_gracia: number
@@ -302,10 +373,8 @@ export type Database = {
           busq_documento?: string | null
           busq_razon_social?: string | null
           busqueda?: string | null
-          cargo_contacto?: string | null
           codigo: string
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
-          contacto?: string | null
           creado_en?: string
           dias_credito?: number
           dias_gracia?: number
@@ -333,10 +402,8 @@ export type Database = {
           busq_documento?: string | null
           busq_razon_social?: string | null
           busqueda?: string | null
-          cargo_contacto?: string | null
           codigo?: string
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
-          contacto?: string | null
           creado_en?: string
           dias_credito?: number
           dias_gracia?: number
@@ -1224,6 +1291,7 @@ export type Database = {
           cliente_id: string
           condiciones: string | null
           contacto: string | null
+          contacto_id: string | null
           correlativo: number
           costo_total: number
           creado_en: string
@@ -1254,6 +1322,7 @@ export type Database = {
           cliente_id: string
           condiciones?: string | null
           contacto?: string | null
+          contacto_id?: string | null
           correlativo: number
           costo_total?: number
           creado_en?: string
@@ -1284,6 +1353,7 @@ export type Database = {
           cliente_id?: string
           condiciones?: string | null
           contacto?: string | null
+          contacto_id?: string | null
           correlativo?: number
           costo_total?: number
           creado_en?: string
@@ -1335,6 +1405,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_contacto_id_fkey"
+            columns: ["contacto_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_contactos"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "cotizaciones_vendedor_id_fkey"
@@ -2854,6 +2931,7 @@ export type Database = {
           departamento: string
           distrito: string
           etiqueta: string | null
+          origen: string
           provincia: string
         }
         Insert: {
@@ -2863,6 +2941,7 @@ export type Database = {
           departamento: string
           distrito: string
           etiqueta?: string | null
+          origen?: string
           provincia: string
         }
         Update: {
@@ -2872,6 +2951,7 @@ export type Database = {
           departamento?: string
           distrito?: string
           etiqueta?: string | null
+          origen?: string
           provincia?: string
         }
         Relationships: []
@@ -3254,6 +3334,15 @@ export type Database = {
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       aprobar_cotizacion: { Args: { p_id: string }; Returns: Json }
+      asegurar_ubigeo: {
+        Args: {
+          p_codigo: string
+          p_departamento: string
+          p_distrito: string
+          p_provincia: string
+        }
+        Returns: string
+      }
       buscar_clientes: {
         Args: { p_limit?: number; p_q: string }
         Returns: {
@@ -3262,6 +3351,7 @@ export type Database = {
           codigo: string
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           contacto: string
+          contactos: number
           cotizaciones: number
           dias_credito: number
           email: string
@@ -3354,6 +3444,7 @@ export type Database = {
           codigo: string
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           contacto: string
+          contactos: number
           cotizaciones: number
           dias_credito: number
           email: string
@@ -3398,6 +3489,19 @@ export type Database = {
           limite: number
           periodo: string
           plan: string
+        }[]
+      }
+      contactos_de_cliente: {
+        Args: { p_cliente: string }
+        Returns: {
+          area: string
+          cargo: string
+          email: string
+          id: string
+          nombre: string
+          principal: boolean
+          telefono: string
+          whatsapp: string
         }[]
       }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
@@ -3619,6 +3723,28 @@ export type Database = {
           ultima_venta: string
           unidades: number
           venta: number
+        }[]
+      }
+      ubigeo_departamentos: {
+        Args: never
+        Returns: {
+          departamento: string
+          distritos: number
+        }[]
+      }
+      ubigeo_distritos: {
+        Args: { p_departamento: string; p_provincia: string }
+        Returns: {
+          codigo: string
+          distrito: string
+          origen: string
+        }[]
+      }
+      ubigeo_provincias: {
+        Args: { p_departamento: string }
+        Returns: {
+          distritos: number
+          provincia: string
         }[]
       }
       unidad_periodo: { Args: { p_grano: string }; Returns: string }

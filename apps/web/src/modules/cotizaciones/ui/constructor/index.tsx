@@ -16,6 +16,7 @@ import {
 } from "../../dominio/constructor";
 import { BuscadorLineas } from "./buscador";
 import { BuscadorClientes } from "./buscador-clientes";
+import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 
@@ -112,7 +113,10 @@ export function Constructor({
             {/* `overflow-visible` no está de más: el panel de resultados se
                 posiciona en el flujo del documento y un ancestro que recorte
                 lo dejaría cortado a media lista. */}
-            <div className="grid gap-3 overflow-visible sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            {/* Tres columnas desde `lg`: cliente, a quién va dirigida, y la
+                validez. En `sm` el destinatario baja a su propia fila entera
+                antes que quedarse en una columna donde no cabe un nombre. */}
+            <div className="grid gap-3 overflow-visible sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,0.6fr)]">
               <BuscadorClientes
                 sugeridos={sugeridos}
                 elegido={cliente}
@@ -124,6 +128,26 @@ export function Constructor({
                 onQuitar={() => {
                   setCliente(null);
                   despachar({ tipo: "cabecera", campo: "clienteId", valor: null });
+                }}
+              />
+
+              {/* Aquí y no dentro de «Más datos del documento», que está
+                  plegado por defecto: es pedido de Willy (31/08) y estando
+                  escondido no lo rellenaba nadie. */}
+              <SelectorContacto
+                clienteId={estado.clienteId}
+                contactoId={estado.contactoId}
+                contacto={estado.contacto}
+                onElegir={(id, nombre) => {
+                  despachar({ tipo: "cabecera", campo: "contactoId", valor: id });
+                  despachar({ tipo: "cabecera", campo: "contacto", valor: nombre });
+                }}
+                onEscribir={(nombre) => {
+                  // Escrito a mano: se suelta el enlace a la ficha. Guardar un
+                  // id que ya no corresponde al nombre impreso sería peor que
+                  // no guardar ninguno.
+                  despachar({ tipo: "cabecera", campo: "contactoId", valor: null });
+                  despachar({ tipo: "cabecera", campo: "contacto", valor: nombre });
                 }}
               />
 
@@ -158,16 +182,6 @@ export function Constructor({
               </summary>
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Contacto</span>
-                  <Input
-                    value={estado.contacto}
-                    onChange={(e) =>
-                      despachar({ tipo: "cabecera", campo: "contacto", valor: e.target.value })
-                    }
-                    placeholder={cliente?.contacto ?? "A quién va dirigida"}
-                  />
-                </label>
 
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Tiempo de entrega</span>

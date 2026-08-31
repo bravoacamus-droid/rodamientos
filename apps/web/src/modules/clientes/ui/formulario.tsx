@@ -27,6 +27,7 @@ import {
 } from "@rodatech/ui";
 
 import { buscarPorDocumento } from "../acciones/consultar";
+import { EditorContactos } from "./editor-contactos";
 import { guardarCliente } from "../acciones/guardar";
 import { esConsultable, revisarDocumento } from "../dominio/documento";
 import {
@@ -117,8 +118,14 @@ export function FormularioCliente({
     razon_social: cliente?.razon_social ?? "",
     nombre_comercial: cliente?.nombre_comercial ?? "",
     sector: cliente?.sector ?? "",
-    contacto: cliente?.contacto ?? "",
-    cargo_contacto: cliente?.cargo_contacto ?? "",
+    // Solo para el ALTA: un primer contacto que se crea junto con la ficha.
+    // Al editar no se usan — allí manda `EditorContactos`, que habla con el
+    // servidor contacto a contacto.
+    contacto_nombre: "",
+    contacto_cargo: "",
+    contacto_area: "",
+    contacto_email: "",
+    contacto_telefono: "",
     email: cliente?.email ?? "",
     telefono: cliente?.telefono ?? "",
     whatsapp: cliente?.whatsapp ?? "",
@@ -218,10 +225,20 @@ export function FormularioCliente({
         direccion: d.direccion ?? x.direccion,
         ubigeo_codigo: d.ubigeo_codigo ?? x.ubigeo_codigo,
       }));
-      // SUNAT manda el código de ubigeo, no el nombre del distrito. Se deja el
-      // nombre vacío a propósito: el selector mostrará el código y quien
-      // quiera verlo escrito lo confirma buscándolo.
-      if (d.ubigeo_codigo) setUbigeoNombre("");
+      // SUNAT manda el código Y los tres nombres —comprobado contra la
+      // respuesta real—, así que desde la 036 el selector puede enseñar el
+      // distrito escrito en vez del código pelado, aunque ese distrito no
+      // esté todavía en nuestra tabla. Al guardar se da de alta con esto
+      // mismo (`asegurar_ubigeo`).
+      if (d.ubigeo_codigo) {
+        setUbigeoNombre(
+          d.ubigeo_distrito
+            ? [d.ubigeo_departamento, d.ubigeo_provincia, d.ubigeo_distrito]
+                .filter(Boolean)
+                .join(" · ")
+            : "",
+        );
+      }
 
       // Si vino dirección o ubigeo, se despliega el panel: hay que poder ver
       // lo que se acaba de rellenar sin tener que ir a buscarlo.
@@ -254,8 +271,6 @@ export function FormularioCliente({
     ubigeo_codigo: f.ubigeo_codigo || null,
     referencia_direccion: f.referencia_direccion.trim() || null,
     sector: f.sector.trim() || null,
-    contacto: f.contacto.trim() || null,
-    cargo_contacto: f.cargo_contacto.trim() || null,
     email: f.email.trim() || null,
     telefono: f.telefono.trim() || null,
     whatsapp: f.whatsapp.trim() || null,
@@ -268,6 +283,24 @@ export function FormularioCliente({
     dias_gracia: aCredito ? num(f.dias_gracia) : 0,
     vendedor_id: f.vendedor_id || null,
     notas: f.notas.trim() || null,
+    // Los tres nombres del distrito, para que el servidor pueda darlo de alta
+    // si no lo tenemos (036). Van vacíos cuando el código lo eligió a mano de
+    // la lista: entonces el distrito ya existe y no hay nada que crear.
+    ubigeo_departamento: padron?.ubigeo_departamento ?? null,
+    ubigeo_provincia: padron?.ubigeo_provincia ?? null,
+    ubigeo_distrito: padron?.ubigeo_distrito ?? null,
+    // Solo en el alta. Al editar, los contactos ya se guardaron por su cuenta.
+    contacto_inicial:
+      !cliente && f.contacto_nombre.trim() !== ""
+        ? {
+            nombre: f.contacto_nombre.trim(),
+            cargo: f.contacto_cargo.trim() || null,
+            area: f.contacto_area.trim() || null,
+            email: f.contacto_email.trim() || null,
+            telefono: f.contacto_telefono.trim() || null,
+            whatsapp: null,
+          }
+        : null,
   };
 
   // Lo mínimo del contrato: documento utilizable y razón social. Nada más.
@@ -497,9 +530,21 @@ export function FormularioCliente({
           y el campo existe con su valor. */}
       {masDatos ? (
         <div id="mas-datos" className="flex flex-col gap-4">
-          {/* ───────────────────────────────────────────────── Comercial */}
+          {/* ────────────────────────────────────────── Datos de la empresa
+              Antes esta caja se llamaba «Datos comerciales» y mezclaba dos
+              cosas: lo que es de la EMPRESA (nombre comercial, sector, su
+              central, su correo de facturación) y lo que es de una PERSONA
+              dentro de ella. Willy lo dijo el 31/08 y tenía razón; separarlas
+              es la mitad de lo que pidió, y la otra mitad es que las personas
+              puedan ser varias. */}
           <section className="card flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Datos comerciales</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Datos de la empresa</h2>
+              <p className="text-xs text-[var(--fg-muted)]">
+                Lo que es de la empresa, no de una persona. Sus contactos van
+                más abajo.
+              </p>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <Campo id="nombre_comercial" label="Nombre comercial">
                 <Input
@@ -521,31 +566,11 @@ export function FormularioCliente({
                 />
               </Campo>
 
-              <Campo id="contacto" label="Persona de contacto">
-                <Input
-                  id="contacto"
-                  className={ALTO_TACTIL}
-                  value={f.contacto}
-                  onChange={(e) => set("contacto", e.target.value)}
-                  autoComplete="off"
-                />
-              </Campo>
-
-              <Campo id="cargo_contacto" label="Cargo">
-                <Input
-                  id="cargo_contacto"
-                  className={ALTO_TACTIL}
-                  value={f.cargo_contacto}
-                  onChange={(e) => set("cargo_contacto", e.target.value)}
-                  placeholder="Jefe de mantenimiento"
-                />
-              </Campo>
-
               <Campo
                 id="email"
-                label="Correo"
+                label="Correo de la empresa"
                 error={errorDe("email")}
-                ayuda="A donde llega la cotización en PDF."
+                ayuda="El general. El de la persona va en su contacto."
               >
                 <Input
                   id="email"
@@ -586,6 +611,94 @@ export function FormularioCliente({
               </Campo>
             </div>
           </section>
+
+          {/* ────────────────────────────────────────────────── Contactos
+              En el ALTA se pide uno solo, porque es el que se tiene delante y
+              porque el cliente todavía no existe: sin id no hay a qué colgar
+              una lista. En la EDICIÓN manda el editor, que sabe de altas,
+              bajas y de quién es el principal. */}
+          {cliente ? (
+            <EditorContactos clienteId={cliente.id} iniciales={cliente.contactos_lista} />
+          ) : (
+            <section className="card flex flex-col gap-3 p-4">
+              <div>
+                <h2 className="text-sm font-semibold">Contacto</h2>
+                <p className="text-xs text-[var(--fg-muted)]">
+                  La persona a la que se le cotiza. Opcional, y se pueden añadir
+                  más después de guardar: al hacer una cotización se elige a
+                  cuál va dirigida.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <Campo id="contacto_nombre" label="Nombre">
+                  <Input
+                    id="contacto_nombre"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_nombre}
+                    onChange={(e) => set("contacto_nombre", e.target.value)}
+                    autoComplete="off"
+                    placeholder="Juan Pérez"
+                  />
+                </Campo>
+
+                <Campo id="contacto_cargo" label="Cargo">
+                  <Input
+                    id="contacto_cargo"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_cargo}
+                    onChange={(e) => set("contacto_cargo", e.target.value)}
+                    placeholder="Jefe de compras"
+                  />
+                </Campo>
+
+                <Campo id="contacto_area" label="Área">
+                  <Input
+                    id="contacto_area"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_area}
+                    onChange={(e) => set("contacto_area", e.target.value)}
+                    list="areas-contacto-alta"
+                    placeholder="Compras"
+                    autoComplete="off"
+                  />
+                  <datalist id="areas-contacto-alta">
+                    <option value="Compras" />
+                    <option value="Logística" />
+                    <option value="Mantenimiento" />
+                    <option value="Almacén" />
+                    <option value="Gerencia" />
+                  </datalist>
+                </Campo>
+
+                <Campo
+                  id="contacto_email"
+                  label="Su correo"
+                  ayuda="A donde llega la cotización en PDF."
+                >
+                  <Input
+                    id="contacto_email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="off"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_email}
+                    onChange={(e) => set("contacto_email", e.target.value)}
+                  />
+                </Campo>
+
+                <Campo id="contacto_telefono" label="Su teléfono">
+                  <Input
+                    id="contacto_telefono"
+                    type="tel"
+                    inputMode="tel"
+                    className={ALTO_TACTIL}
+                    value={f.contacto_telefono}
+                    onChange={(e) => set("contacto_telefono", e.target.value)}
+                  />
+                </Campo>
+              </div>
+            </section>
+          )}
 
           {/* ───────────────────────────────────────────────── Dirección */}
           <section className="card flex flex-col gap-3 p-4">
@@ -635,9 +748,22 @@ export function FormularioCliente({
             </div>
           </section>
 
-          {/* ─────────────────────────────────────────────────── Crédito */}
+          {/* ─────────────────────────────────────────────────── Crédito
+              Willy preguntó qué significaba cada uno (31/08, 8:xx) y se
+              respondió a sí mismo con la lectura equivocada: *«la línea de
+              crédito es hasta cuánto máximo le puedo facturar en el mes»*.
+              No es al mes: es cuánto puede DEBER a la vez.
+              Que el usuario principal tenga que preguntarlo significa que la
+              pantalla no lo decía, así que ahora lo dice. */}
           <section className="card flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Condición de pago</h2>
+            <div>
+              <h2 className="text-sm font-semibold">Condiciones comerciales</h2>
+              <p className="text-xs text-[var(--fg-muted)]">
+                Cuánto se le fía y por cuánto tiempo. Las tres cosas se vigilan
+                solas: cobranzas avisa y el sistema bloquea antes de facturar de
+                más.
+              </p>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <Campo id="condicion_pago" label="Condición">
@@ -663,7 +789,7 @@ export function FormularioCliente({
               <Campo
                 id="linea_credito"
                 label="Línea de crédito"
-                ayuda="Tope de deuda. 0 = sin tope."
+                ayuda="Cuánto puede DEBER a la vez, sumando todas sus facturas sin pagar. No es un tope mensual. 0 = sin tope."
               >
                 <Input
                   id="linea_credito"
@@ -677,7 +803,11 @@ export function FormularioCliente({
                 />
               </Campo>
 
-              <Campo id="dias_credito" label="Días de crédito">
+              <Campo
+                id="dias_credito"
+                label="Días de crédito"
+                ayuda="Desde que se emite la factura hasta que vence. 30 es lo habitual."
+              >
                 <Input
                   id="dias_credito"
                   type="number"
@@ -693,7 +823,7 @@ export function FormularioCliente({
               <Campo
                 id="dias_gracia"
                 label="Días de gracia"
-                ayuda="Antes de contarla como vencida."
+                ayuda="Lo que se le aguanta DESPUÉS de vencer antes de perseguirlo. Un cliente bueno que paga a los 3 días no debería salir en morosos."
               >
                 <Input
                   id="dias_gracia"

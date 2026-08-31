@@ -52,7 +52,17 @@ export interface EstadoConstructor {
   validezDias: number;
   tiempoEntrega: string;
   ordenCompraCliente: string;
+  /**
+   * A quién va dirigida, por NOMBRE. Es lo que se imprime.
+   *
+   * Sigue siendo texto libre aunque desde la 035 se pueda elegir de una
+   * lista: hay clientes donde el comprador de hoy no es el de la ficha, y
+   * obligar a darlo de alta antes de poder cotizar es poner una puerta
+   * donde hacía falta un pasillo.
+   */
   contacto: string;
+  /** La ficha del contacto elegido, si salió de la lista del cliente. */
+  contactoId: string | null;
   condiciones: string;
   observaciones: string;
   /** C5 (15:52): el descuento es una casilla habilitable, no una columna fija. */
@@ -68,6 +78,7 @@ export type CampoCabecera =
   | "tiempoEntrega"
   | "ordenCompraCliente"
   | "contacto"
+  | "contactoId"
   | "condiciones"
   | "observaciones"
   | "mostrarDescuento";
@@ -100,6 +111,7 @@ export function estadoInicial(clienteId: string | null = null): EstadoConstructo
     tiempoEntrega: ENTREGAS[0],
     ordenCompraCliente: "",
     contacto: "",
+    contactoId: null,
     condiciones: "",
     observaciones: "",
     mostrarDescuento: false,
@@ -334,6 +346,10 @@ export function aPayload(estado: EstadoConstructor) {
     tiempo_entrega: estado.tiempoEntrega,
     orden_compra_cliente: estado.ordenCompraCliente || null,
     contacto: estado.contacto || null,
+    // El id Y el nombre. No es redundancia: la cotización guarda el nombre
+    // TAL COMO ESTABA al emitirla, porque un documento dice lo que decía
+    // cuando se mandó, aunque esa persona se vaya de la empresa (035).
+    contacto_id: estado.contactoId,
     condiciones: estado.condiciones || null,
     observaciones: estado.observaciones || null,
     mostrar_descuento: estado.mostrarDescuento,

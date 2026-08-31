@@ -82,6 +82,18 @@ export function ClienteRapido({
   // De SUNAT, no se teclean: se guardan tal cual vienen.
   const [direccion, setDireccion] = React.useState<string | null>(null);
   const [ubigeo, setUbigeo] = React.useState<string | null>(null);
+  /**
+   * Los tres nombres del distrito que devolvió SUNAT.
+   *
+   * Viajan con el código para que el servidor pueda dar de alta el distrito
+   * si no lo tenemos (036). Sin esto, un cliente de Trujillo se guardaba sin
+   * distrito y nadie se enteraba.
+   */
+  const [ubigeoNombres, setUbigeoNombres] = React.useState<{
+    departamento: string | null;
+    provincia: string | null;
+    distrito: string | null;
+  } | null>(null);
   const [aviso, setAviso] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [consultando, consultar] = React.useTransition();
@@ -97,6 +109,7 @@ export function ClienteRapido({
     setEmail("");
     setDireccion(null);
     setUbigeo(null);
+    setUbigeoNombres(null);
     setAviso(null);
     setError(null);
   };
@@ -119,6 +132,11 @@ export function ClienteRapido({
         setRazonSocial(r.datos.razon_social);
         setDireccion(r.datos.direccion);
         setUbigeo(r.datos.ubigeo_codigo);
+        setUbigeoNombres({
+          departamento: r.datos.ubigeo_departamento,
+          provincia: r.datos.ubigeo_provincia,
+          distrito: r.datos.ubigeo_distrito,
+        });
         if (r.datos.condicion === "NO HABIDO") {
           setAviso("SUNAT lo marca como NO HABIDO. Su crédito fiscal es observable.");
         } else if (r.datos.estado && r.datos.estado !== "ACTIVO") {
@@ -172,8 +190,6 @@ export function ClienteRapido({
           ubigeo_codigo: ubigeo,
           referencia_direccion: null,
           sector: null,
-          contacto: contacto.trim() || null,
-          cargo_contacto: cargo.trim() || null,
           email: email.trim() || null,
           telefono: telefono.trim() || null,
           whatsapp: null,
@@ -183,6 +199,25 @@ export function ClienteRapido({
           dias_gracia: 0,
           vendedor_id: null,
           notas: null,
+          // Los tres nombres del distrito, para que el servidor pueda darlo
+          // de alta si no lo tenemos (036). Antes se perdía el distrito de
+          // cualquier cliente que no fuera de Lima.
+          ubigeo_departamento: ubigeoNombres?.departamento ?? null,
+          ubigeo_provincia: ubigeoNombres?.provincia ?? null,
+          ubigeo_distrito: ubigeoNombres?.distrito ?? null,
+          // El contacto ya no es una columna del cliente: es su propia ficha
+          // (035). Se manda aquí y el servidor lo crea junto con la empresa,
+          // marcado como principal.
+          contacto_inicial: contacto.trim()
+            ? {
+                nombre: contacto.trim(),
+                cargo: cargo.trim() || null,
+                area: null,
+                email: email.trim() || null,
+                telefono: telefono.trim() || null,
+                whatsapp: null,
+              }
+            : null,
         }),
       );
 
@@ -200,6 +235,7 @@ export function ClienteRapido({
         numero_documento: numero.trim() || null,
         tipo_documento: tipo,
         contacto: contacto.trim() || null,
+        contactos: contacto.trim() ? 1 : 0,
         telefono: telefono.trim() || null,
         // Nace al contado: dar crédito a alguien de quien no se sabe nada es
         // una decisión, no un valor por defecto.

@@ -18,9 +18,54 @@ export const POR_PAGINA = 50;
  * generadas de búsqueda (`busqueda`, `busq_razon_social`, `busq_documento`),
  * que son texto largo, duplican la fila entera y no se pintan en ningún sitio.
  */
-const COLUMNAS_LISTA = `id, codigo, tipo_documento, numero_documento, razon_social,
-   nombre_comercial, contacto, telefono, whatsapp, email, condicion_pago,
-   dias_credito, linea_credito, bloqueado, activo`;
+/**
+ * Las columnas de la fila del listado.
+ *
+ * `contacto` dejó de ser una columna de `clientes` en la 035: ahora es una
+ * tabla aparte, porque una empresa tiene al de compras, al de logística y al
+ * de mantenimiento. Se trae embebida en la MISMA consulta —PostgREST resuelve
+ * el join— para no hacer 50 viajes más por página.
+ *
+ * Solo `nombre` y `principal`: la fila de la tabla enseña a uno y cuenta los
+ * demás. Traer sus correos y teléfonos aquí sería cargar datos que no se
+ * pintan, multiplicados por página.
+ */
+
+/**
+ * Lo mismo con los contactos en `left join`: un cliente sin gente también sale,
+ * que es el caso de los 37 de Willy hasta que los llene.
+ *
+ * Escrita entera y no derivada de la de arriba con un `.replace()`: supabase-js
+ * infiere el tipo de la fila a partir del LITERAL de la cadena, y una cadena
+ * calculada en tiempo de ejecución le deja `GenericStringError`.
+ */
+const COLUMNAS_LISTA_LEFT = `id, codigo, tipo_documento, numero_documento, razon_social,
+   nombre_comercial, telefono, whatsapp, email, condicion_pago,
+   dias_credito, linea_credito, bloqueado, activo,
+   cliente_contactos(nombre, principal, activo)`;
+
+/** Aplana los contactos embebidos: el principal al frente y cuántos hay. */
+function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
+  contacto: string | null;
+  contactos: number;
+} {
+  const { cliente_contactos, ...resto } = fila;
+  const gente = (cliente_contactos ?? []) as {
+    nombre: string;
+    principal: boolean;
+    activo: boolean;
+  }[];
+  const activos = gente.filter((g) => g.activo);
+  // El principal si lo hay; si no, el primero. Un cliente puede no tener
+  // principal marcado —al dar de baja al que lo era, el hueco queda libre a
+  // propósito— y enseñar un nombre cualquiera es mejor que enseñar ninguno.
+  const principal = activos.find((g) => g.principal) ?? activos[0] ?? null;
+  return {
+    ...(resto as T),
+    contacto: principal?.nombre ?? null,
+    contactos: activos.length,
+  };
+}
 
 /** Separador del cursor. Un carácter de control: no aparece en una razón social. */
 const SEPARADOR_CURSOR = "\u001f";
@@ -102,7 +147,7 @@ export async function listarClientes(
 
     let consulta = supabase
       .from("clientes")
-      .select(COLUMNAS_LISTA)
+      .select(COLUMNAS_LISTA_LEFT)
       .order("razon_social", { ascending: true })
       .order("id", { ascending: true })
       .limit(POR_PAGINA + 1);
@@ -138,7 +183,7 @@ export async function listarClientes(
     const { data, error } = await consulta;
     if (error) return fallo(error);
 
-    const todas = (data ?? []) as unknown as ClienteLista[];
+    const todas = (data ?? []).map((f) => conContactos(f)) as unknown as ClienteLista[];
     const hayMas = todas.length > POR_PAGINA;
     const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
     const ultima = filas[filas.length - 1];
@@ -171,8 +216,8 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
     const { data, error } = await supabase
       .from("clientes")
       .select(
-        `${COLUMNAS_LISTA}, direccion, ubigeo_codigo, referencia_direccion, sector,
-         cargo_contacto, dias_gracia, motivo_bloqueo, vendedor_id, notas, creado_en,
+        `${COLUMNAS_LISTA_LEFT}, direccion, ubigeo_codigo, referencia_direccion, sector,
+         dias_gracia, motivo_bloqueo, vendedor_id, notas, creado_en,
          ubigeo(departamento, provincia, distrito),
          perfiles(nombre)`,
       )
@@ -182,15 +227,31 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
     if (error) return fallo(error);
     if (!data) return { ok: false, error: "El cliente no existe." };
 
-    const fila = data as unknown as Omit<
+    const fila = conContactos(data as { cliente_contactos?: unknown }) as unknown as Omit<
       ClienteDetalle,
-      "ubigeo_nombre" | "vendedor_nombre"
+      | "ubigeo_nombre"
+      | "vendedor_nombre"
+      | "ubigeo_departamento"
+      | "ubigeo_provincia"
+      | "ubigeo_distrito"
+      | "contactos_lista"
     > & {
       ubigeo: { departamento: string; provincia: string; distrito: string } | null;
       perfiles: { nombre: string } | null;
     };
 
     const { ubigeo, perfiles, ...cliente } = fila;
+
+    // La gente, completa y ordenada como la devuelve `contactos_de_cliente`:
+    // la principal primero. La ficha los pinta enteros, así que aquí sí se
+    // piden sus datos —a diferencia del listado, que solo cuenta—.
+    const { data: gente } = await supabase
+      .from("cliente_contactos")
+      .select("id, nombre, cargo, area, email, telefono, whatsapp, principal")
+      .eq("cliente_id", id)
+      .eq("activo", true)
+      .order("principal", { ascending: false })
+      .order("nombre", { ascending: true });
 
     return {
       ok: true,
@@ -203,6 +264,12 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
         ubigeo_nombre: ubigeo
           ? `${ubigeo.departamento} · ${ubigeo.provincia} · ${ubigeo.distrito}`
           : null,
+        // Y por separado, porque Willy los quiere ver como tres campos y no
+        // como una cadena que hay que partir en la pantalla.
+        ubigeo_departamento: ubigeo?.departamento ?? null,
+        ubigeo_provincia: ubigeo?.provincia ?? null,
+        ubigeo_distrito: ubigeo?.distrito ?? null,
+        contactos_lista: (gente ?? []) as ClienteDetalle["contactos_lista"],
         vendedor_nombre: perfiles?.nombre ?? null,
       },
     };

@@ -15,7 +15,7 @@ volver a caer sale caro.
 | `pnpm test` | 865 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 034, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 036, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -218,6 +218,109 @@ del kardex (§6). Queda el envío GRE, y ese está bloqueado.
 
 ---
 
+## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
+
+Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
+que hacía falta. Grabación en el grupo. **Los cuatro cambios están hechos**
+(migraciones 035 y 036).
+
+### 1 · Una empresa tiene VARIOS contactos, y la cotización elige a cuál
+
+Lo explicó él, y la explicación es el motivo (2:36):
+
+> *«La cotización puede ir dirigida al de compras generalmente, al de
+> logística, que es el asistente o el jefe de compras, rara vez el jefe de
+> compras, o en otros casos también al personal de mantenimiento, puesto que
+> en algunas empresas el mismo usuario es el encargado de pedir las
+> cotizaciones según su requerimiento.»*
+
+Y después (4:02): *«Cuando hago la cotización debo tener la opción para
+elegir a qué contacto de los ya creados va dirigido el presupuesto»*.
+
+Había UNO, en una columna de texto de `clientes`. Ahora hay una tabla
+(`cliente_contactos`) con nombre, cargo, área, correo y teléfono propios, uno
+marcable como principal, y el constructor de cotizaciones trae un desplegable
+**«A quién va dirigida»** que se rellena solo al elegir cliente y propone al
+principal.
+
+Dos decisiones que conviene saber por si él pregunta:
+
+- **Se puede escribir un nombre suelto** («Otra persona…»). Hay clientes
+  donde quien pide hoy no es quien está en la ficha, y obligar a darlo de alta
+  antes de poder cotizar es poner una puerta donde hacía falta un pasillo.
+- **La cotización guarda el id Y el nombre.** No es redundancia: un documento
+  dice lo que decía cuando se emitió. Si el jefe de compras se va de la
+  empresa, la cotización de hace seis meses sigue diciendo a quién se le mandó.
+
+### 2 · Departamento, provincia y distrito
+
+*«Aquí en el ubigeo, que es el distrito, debería traer, aquí tenemos que
+tener todos los distritos y provincias, departamentos»* (7:23).
+
+Tenía razón y el problema estaba anotado desde el 28/08: `ubigeo` tiene 64
+distritos de ~1.890, y el guardado DESCARTABA el que no conocía. O sea que un
+cliente de Trujillo se guardaba sin distrito y nadie se enteraba.
+
+**Lo que cambió es que el dato ya lo teníamos y lo estábamos tirando.** La
+consulta de RUC devuelve las cuatro cosas, no solo el código — comprobado
+contra la respuesta real que hay en caché:
+
+```
+"ubigeo": "150130", "distrito": "SAN BORJA",
+"provincia": "LIMA", "departamento": "LIMA"
+```
+
+Ahora la tabla **aprende**: el distrito que no está se da de alta con lo que
+respondió SUNAT, marcado con `origen = 'sunat'` para distinguirlo de los 64
+revisados a mano. El formulario enseña «LIMA · LIMA · SAN BORJA» en vez del
+código pelado.
+
+Esto **no** contradice lo de «el padrón no se inventa». La diferencia es la
+fuente: el código no lo deduce nadie, lo dice SUNAT sobre ese contribuyente —
+la misma autoridad que después valida el documento. **El padrón completo del
+INEI sigue pendiente** y sigue siendo la solución de verdad: los distritos a
+los que Willy despacha pero de los que no ha consultado ningún RUC siguen sin
+estar. Esto llena la tabla por uso, no de golpe.
+
+### 3 · La ficha de cliente estaba desordenada
+
+*«Vamos a ordenar bien cliente y nuevo cliente que está desordenado.»*
+
+La caja se llamaba «Datos comerciales» y mezclaba dos cosas: lo que es de la
+EMPRESA (nombre comercial, sector, su central) y lo que es de una PERSONA
+dentro de ella. Ahora son tres secciones: **Datos de la empresa**,
+**Contactos** y **Dirección**.
+
+### 4 · La línea de crédito no se entendía
+
+Preguntó qué significaba y se respondió a sí mismo con la lectura equivocada:
+*«la línea de crédito es hasta cuánto máximo le puedo facturar en el mes»*.
+**No es al mes: es cuánto puede DEBER a la vez.**
+
+Que el usuario principal tenga que preguntarlo significa que la pantalla no lo
+decía. Los tres campos ahora se explican solos:
+
+| Campo | Lo que dice ahora |
+|---|---|
+| Línea de crédito | Cuánto puede DEBER a la vez, sumando todas sus facturas sin pagar. No es un tope mensual. 0 = sin tope. |
+| Días de crédito | Desde que se emite la factura hasta que vence. 30 es lo habitual. |
+| Días de gracia | Lo que se le aguanta DESPUÉS de vencer antes de perseguirlo. |
+
+> ⚠️ **Y hay un dato que hay que preguntarle.** De los 37 clientes cargados,
+> **30 están «a crédito» con 0 días, 0 de gracia y 0 de línea**. Con 0 días la
+> factura nace vencida el mismo día que se emite. Salió así de la carga del
+> 28/08 —su histórico decía crédito pero no decía cuántos días— y no me lo
+> invento. Hace falta que diga su plazo estándar; si es 30, se corrige en una
+> sentencia.
+
+### Lo que dijo y NO hacía falta tocar
+
+- *«Tiene que crearse aquí una cuenta que es gratuito para hacer las consultas»*
+  (5:02) — **ya está**. El token de Decolecta se configuró el 28/08 y la
+  consulta funciona: 4 de 100 usadas este mes.
+
+---
+
 ## Cierre del 28/08 · qué queda, y de qué depende cada cosa
 
 El día fue: el selector de cliente, el historial de ventas de Willy entero
@@ -254,8 +357,11 @@ Por orden de lo que desbloquea:
    y ahora hay 790 productos que dependen de la respuesta (§2.1 del feedback).
 3. **Por dónde quiere las alertas**, WhatsApp o correo. Es lo único de la
    PRIMERA reunión que sigue exactamente igual.
-4. **Los cuatro campos de la ficha de cliente** (§5): sector, referencia de
-   dirección, cargo del contacto, días de gracia. Ninguno relleno en dos años.
+4. ~~**Los cuatro campos de la ficha de cliente**~~ · **medio contestado el
+   31/08.** El «cargo del contacto» resultó ser la punta de otra cosa: no era
+   un campo de más, era que faltaban VARIOS contactos (035). Los «días de
+   gracia» tampoco sobraban: no se entendían, y ahora la pantalla los explica.
+   Siguen sin respuesta `sector` y `referencia_direccion`.
 5. **Confirmar las tres notas de crédito.** Es lo único de toda la carga que se
    dedujo en vez de leerse (HISTORIAL-VENTAS §10.3).
 6. **Si tiene deuda viva de verdad.** El histórico entró como pagado a
@@ -265,7 +371,10 @@ Por orden de lo que desbloquea:
    costo no hay margen, y el margen es media pantalla del ERP. Hoy el tablero
    enseña «margen 0.0% sobre el costo» con USD 19.394 vendidos, y no es un
    error de cálculo: es que el costo de los 790 productos es cero.
-9. Su **lista de proveedores**. El Excel que mandó era de VENTAS, así que
+9. **Su plazo de crédito estándar.** 30 de sus 37 clientes quedaron «a
+   crédito con 0 días», o sea con la factura vencida el día que se emite. Es
+   una sentencia de arreglo en cuanto diga el número.
+10. Su **lista de proveedores**. El Excel que mandó era de VENTAS, así que
    `proveedores` está a cero y las pantallas de compra y recepción no se pueden
    enseñar funcionando. Con la lista basta —RUC y razón social—; el resto de la
    ficha se completa después. Desde el 31/08 el selector busca también por

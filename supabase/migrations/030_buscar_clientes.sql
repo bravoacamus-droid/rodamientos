@@ -45,6 +45,31 @@
 set search_path = public, extensions;
 
 -- ---------------------------------------------------------------------------
+-- Por qué esto empieza tirando las funciones
+-- ---------------------------------------------------------------------------
+-- Mismo caso que la 005 con sus vistas, y descubierto igual: reaplicando la
+-- cadena entera. La 035 le AÑADE una columna de salida a las dos (`contactos`,
+-- cuántas personas tiene el cliente), y `create or replace function` no admite
+-- cambiar el tipo de retorno --error 42P13--. Así que reaplicar la versión
+-- estrecha de aquí encima de la ancha de allí es justo lo que Postgres
+-- prohíbe, y la cadena moría en el archivo 30 de 36.
+--
+-- Tirarlas primero lo arregla: en una pasada completa se recrean aquí en su
+-- versión de la 030 y la 035 las vuelve a ensanchar, que es el orden correcto.
+--
+-- REGLA, que es la que dejó R10 aplicada a funciones: si una migración
+-- POSTERIOR puede cambiar la firma de salida de una función, esta tiene que
+-- tirarla antes de crearla. Si no, deja de poderse reaplicar la cadena — y con
+-- ella dejan de correr todos los centinelas que vengan después.
+-- Y por lo mismo, el cuerpo de aquí ya no nombra `clientes.contacto`: la 035
+-- borra esa columna —los contactos pasan a ser una tabla, porque una empresa
+-- tiene al de compras y al de logística— y una función `language sql` SÍ se
+-- valida al crearse. Nombrarla dejaría este archivo imposible de reaplicar.
+-- Aquí devuelve null y la 035 lo rellena de verdad.
+drop function if exists public.buscar_clientes(text, int);
+drop function if exists public.clientes_sugeridos(int);
+
+-- ---------------------------------------------------------------------------
 -- 1 · buscar_clientes — la caja del selector
 -- ---------------------------------------------------------------------------
 -- `stable` y no `volatile`: solo lee. Por eso el centinela de la 013 no le
@@ -127,7 +152,13 @@ as $$
      group by ct.cliente_id
   )
   select c.id, c.codigo, c.tipo_documento, c.numero_documento,
-         c.razon_social, c.nombre_comercial, c.contacto, c.telefono,
+         c.razon_social, c.nombre_comercial,
+         -- El contacto lo rellena la 035, que es donde deja de ser una columna
+         -- de `clientes` para pasar a ser su propia tabla. Aquí va null y no
+         -- `c.contacto` por una razón concreta: una función `language sql` SÍ
+         -- se valida al crearse, así que nombrar una columna que la 035 borra
+         -- impide volver a aplicar este archivo. Ver la cabecera.
+         null::text, c.telefono,
          c.whatsapp, c.email, c.condicion_pago, c.dias_credito,
          c.linea_credito, c.bloqueado, c.motivo_bloqueo, c.activo,
          coalesce(h.veces, 0), h.ultima, e.puntaje
@@ -181,7 +212,13 @@ as $$
      group by ct.cliente_id
   )
   select c.id, c.codigo, c.tipo_documento, c.numero_documento,
-         c.razon_social, c.nombre_comercial, c.contacto, c.telefono,
+         c.razon_social, c.nombre_comercial,
+         -- El contacto lo rellena la 035, que es donde deja de ser una columna
+         -- de `clientes` para pasar a ser su propia tabla. Aquí va null y no
+         -- `c.contacto` por una razón concreta: una función `language sql` SÍ
+         -- se valida al crearse, así que nombrar una columna que la 035 borra
+         -- impide volver a aplicar este archivo. Ver la cabecera.
+         null::text, c.telefono,
          c.whatsapp, c.email, c.condicion_pago, c.dias_credito,
          c.linea_credito, c.bloqueado, c.motivo_bloqueo, c.activo,
          coalesce(h.veces, 0), h.ultima, 0

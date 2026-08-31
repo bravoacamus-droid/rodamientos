@@ -145,16 +145,67 @@ export default async function PaginaDetalleCliente({
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ------------------------------------------------------ Contacto */}
+        {/* La empresa y su gente, separadas. Antes iban en la misma caja
+            llamada «Contacto» y con un solo nombre dentro; desde la 035 son
+            varios, y el correo de la empresa no es el de la persona. */}
         <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Contacto</h2>
+          <h2 className="mb-3 text-sm font-semibold">La empresa</h2>
           <dl className="flex flex-col gap-2 text-sm">
-            <Dato etiqueta="Persona" valor={c.contacto} />
-            <Dato etiqueta="Cargo" valor={c.cargo_contacto} />
             <Dato etiqueta="Correo" valor={c.email} />
             <Dato etiqueta="Teléfono" valor={c.telefono} />
             <Dato etiqueta="WhatsApp" valor={c.whatsapp} />
             <Dato etiqueta="Sector" valor={c.sector} />
           </dl>
+        </section>
+
+        <section className="card p-4">
+          <h2 className="mb-3 text-sm font-semibold">
+            Contactos{" "}
+            {c.contactos_lista.length > 0 ? (
+              <span className="font-normal text-[var(--fg-muted)]">
+                · {c.contactos_lista.length}
+              </span>
+            ) : null}
+          </h2>
+
+          {c.contactos_lista.length === 0 ? (
+            <p className="text-sm text-[var(--fg-muted)]">
+              Sin contactos. La cotización sale sin nombre de destinatario;
+              añádelos desde «Editar».
+            </p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+              {c.contactos_lista.map((p) => (
+                <li key={p.id} className="py-2 first:pt-0 last:pb-0">
+                  <p className="flex items-center gap-2 text-sm font-medium">
+                    <span className="truncate">{p.nombre}</span>
+                    {p.principal ? (
+                      <Badge tone="brand" size="xs">
+                        Principal
+                      </Badge>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
+                    {p.cargo ? <span>{p.cargo}</span> : null}
+                    {p.cargo && p.area ? <span aria-hidden="true">·</span> : null}
+                    {p.area ? <span>{p.area}</span> : null}
+                    {p.email ? (
+                      <>
+                        {p.cargo || p.area ? <span aria-hidden="true">·</span> : null}
+                        <span className="truncate">{p.email}</span>
+                      </>
+                    ) : null}
+                    {p.telefono ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="tabular">{p.telefono}</span>
+                      </>
+                    ) : null}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* ----------------------------------------------------- Dirección */}
