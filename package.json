@@ -16,6 +16,7 @@
     "e2e": "playwright test",
     "verificar": "pnpm typecheck && pnpm test",
     "db:aplicar": "node scripts/aplicar-migraciones.mjs",
+    "db:respaldar": "node scripts/respaldar.mjs",
     "db:tipos": "node scripts/generar-tipos.mjs",
     "db:usuarios": "node scripts/sembrar-usuarios.mjs",
     "db:estructura": "node scripts/importar-estructura.mjs",

@@ -532,6 +532,138 @@ sería contra producción. Mejor cuando haya con qué probarlo.
 
 ---
 
+## 0 · Auditoría de sistema · 31/08
+
+Revisión del sistema con ojos de operación, no de funcionalidad: qué pasa
+cuando esto lleve seis meses funcionando y alguien se equivoque. Ordenado por
+lo que más duele.
+
+### 0.1 · ~~No había NI UNA copia de seguridad~~ · mitigado el 31/08
+
+Lo más grave de todo, y comprobado contra la API de gestión de Supabase:
+
+```
+GET /v1/projects/{ref}/database/backups
+→ { "pitr_enabled": false, "backups": [] }
+
+GET /v1/organizations/{org}
+→ { "plan": "free" }
+```
+
+**Cero copias.** El plan free de Supabase no las tiene. Y dentro hay dos años
+del histórico de ventas de Willy, su cartera y su catálogo — datos que él no
+puede volver a dar porque salieron de un Excel que se armó una vez.
+
+Un `delete` sin `where`, una migración mal escrita o que alguien borre el
+proyecto del panel, y no hay vuelta atrás.
+
+**Mitigado, no resuelto:** `pnpm db:respaldar` vuelca las 43 tablas a JSON en
+`documentosrodamiento/respaldos/` (gitignorado), con manifiesto de recuentos y
+el orden de dependencias para poder restaurar. La primera copia de la historia
+de este proyecto son 4.800 filas. **Correrlo antes de cada migración que borre
+o reescriba datos, y una vez por semana.**
+
+**Lo que falta de verdad:** plan Pro (~25 USD/mes) con PITR. Es decisión del
+cliente y de coste, no técnica — pero hay que planteársela antes de entregar,
+no después del primer susto.
+
+> ⚠️ Y otra del plan free: **el proyecto se pausa solo tras 7 días sin
+> actividad.** Si el proyecto se para dos semanas por vacaciones, Willy entra y
+> se encuentra el ERP caído. Se reactiva desde el panel, pero conviene saberlo
+> antes de que pase.
+
+### 0.2 · Cero observabilidad sobre un ERP que factura a SUNAT
+
+No hay Sentry ni equivalente, ni logging de servidor, ni `global-error.tsx`.
+Cuando una Server Action falla, el error se pinta en la pantalla del operador
+**y muere ahí**: nadie más se entera.
+
+Y esto ya nos pasó. `lib/errores.ts` lleva escrito en su cabecera que la ficha
+de producto estuvo días rota por un `PGRST200` sin que nadie lo supiera. Se
+arregló el síntoma; la causa —que no hay forma de enterarse— sigue.
+
+En una pantalla de listado es molesto. En `facturacion/acciones/emitir.ts` es
+una factura que no salió y nadie sabe por qué.
+
+### 0.3 · Tres contadores que dan un número EQUIVOCADO en silencio
+
+La peor clase de fallo: no revientan, mienten.
+
+| Dónde | Tope | Qué calcula mal |
+|---|---|---|
+| `alertas/api/consultas.ts` · `resumenBandeja` | 2.000 | El contador de la campana. Con el cron diario (032) generando alertas, es cuestión de meses. |
+| `cobranzas/api/consultas.ts` · `carteraPorCliente` | 1.000 | La deuda por cliente. El comentario de arriba dice «llamar en el orden equivocado cuesta dinero» — y a partir de 1.000 documentos abiertos la suma es falsa. |
+| `equivalencias/api/consultas.ts` · `totalDeclaradas` | 2.000 | El recuento de equivalencias. |
+
+Los tres agregan **sobre la página**, no sobre la tabla. Se arreglan contando
+en Postgres (`count` exacto o una función) en vez de en JavaScript sobre un
+`.limit()`.
+
+Es exactamente la misma clase de fallo que el truncado mudo de los
+desplegables de proveedor (§6), que ya mordió una vez.
+
+### 0.4 · Consultas sin techo
+
+Traen la tabla entera y crecen con el uso:
+
+- `reportes/api/consultas.ts` · `embudoComercial` → `v_trazabilidad_venta`
+  **completa**. Crece con cada cotización y cada venta. El más peligroso.
+- `inventario/api/consultas.ts` → `v_valorizacion_inventario` con `select("*")`
+  y sin límite, **leída desde cuatro sitios** (productos, reportes ×2).
+- `reportes` · `agingCartera` y `resumen` → `v_cartera` completa.
+
+### 0.5 · La bitácora existe y no la escribe nadie
+
+La tabla `actividad` está creada, con su RLS y sus permisos… y **cero filas,
+porque ningún sitio inserta en ella**. En un ERP donde seis personas comparten
+roles y se emiten documentos fiscales, «quién anuló esta factura» es una
+pregunta que se va a hacer.
+
+### 0.6 · Nadie reintenta los envíos a SUNAT
+
+El modelo del ciclo SUNAT está bien —`estado_sunat` separado del comercial,
+ticket, idempotencia si ya está aceptado— y hay un índice parcial
+`ix_comprobantes_sunat_pend` sobre los pendientes, que es justo lo que
+necesitaría un barrendero.
+
+**El barrendero no existe.** La única tarea programada es la de alertas:
+
+```
+select jobname from cron.job;
+→ rodatech-alertas-diarias
+```
+
+Si la red se cae después de mandar el XML, el comprobante se queda en
+«enviado» para siempre salvo que alguien vuelva a pulsar el botón.
+
+### 0.7 · Lo que el CI no hace
+
+`verificar.yml` corre typecheck, lint, tests y build. **No aplica migraciones,
+no despliega y no corre los e2e.** Y el build depende de dos secrets, así que
+puede salir en rojo por configuración y no por código — ya anotado en §6.
+
+### 0.8 · `apps/demo` · 130 archivos que nadie usa
+
+Una app Next.js paralela y completa, con su propio `package-lock.json` (npm
+dentro de un monorepo pnpm), sus propias migraciones y scripts en Python.
+Nadie la importa desde `apps/web`, pero está dentro del workspace, así que
+**CI la typechequea y la construye en cada push**.
+
+### 0.9 · Lo que SÍ está bien, para no tocarlo
+
+Conviene dejarlo escrito para que nadie lo «mejore»:
+
+- **Los correlativos no se pisan.** `siguiente_correlativo` usa
+  `update … returning`, que toma cerrojo de fila: dos usuarios emitiendo a la
+  vez se serializan. No hay huecos ni duplicados.
+- **Ningún N+1.** Los dos sitios que lo parecían —`cobranzas/acciones/cobrar`
+  y `cotizaciones/acciones/gestionar`— resuelven con un `.in()` y un `Map`.
+- **Ni un `TODO`, `FIXME`, `HACK` o `@ts-ignore`** en todo el código.
+- **Los listados paginan por keyset**, no por offset, en las ocho pantallas
+  que importan.
+
+---
+
 ## 1 · Los demás módulos están vacíos
 
 **Las 42 rutas son reales.** Ya no queda ningún cartel de «en construcción».
