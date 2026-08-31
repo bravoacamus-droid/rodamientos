@@ -8,6 +8,40 @@
 -- ============================================================================
 
 set search_path = public, extensions;
+-- ---------------------------------------------------------------------------
+-- Por qué esto empieza tirando las vistas
+-- ---------------------------------------------------------------------------
+-- Volver a aplicar este archivo sobre una base YA migrada fallaba con
+-- `42P16: cannot drop columns from view`, y el fallo cortaba la aplicación
+-- entera en el quinto archivo de treinta y tres.
+--
+-- El motivo: migraciones posteriores ENSANCHAN tres de estas vistas —la 023
+-- le añade columnas a `v_ventas_mensuales` y `v_top_productos`, la 025 a
+-- `v_productos_stock`—. `create or replace view` sabe AÑADIR columnas por el
+-- final, pero no sabe quitarlas, así que reaplicar la versión estrecha de aquí
+-- encima de la ancha de allí es justamente lo que Postgres prohíbe.
+--
+-- Tirarlas primero lo arregla y no cuesta nada: son vistas, no tienen datos.
+-- En una pasada completa se recrean aquí en su versión de la 005 y las
+-- posteriores las vuelven a ensanchar, que es el orden correcto.
+--
+-- `v_reposicion` va PRIMERO porque lee de `v_productos_stock`: es la única
+-- dependencia entre vistas de todo el esquema, y al revés el drop falla.
+--
+-- Los permisos los repone la 006 (`grant select on all tables in schema
+-- public`), que corre justo después. Aplicar SOLO este archivo deja las vistas
+-- sin grant hasta que se aplique la 006.
+drop view if exists v_reposicion;
+drop view if exists v_productos_stock;
+drop view if exists v_valorizacion_inventario;
+drop view if exists v_kardex;
+drop view if exists v_cartera;
+drop view if exists v_resumen_clientes;
+drop view if exists v_ventas_mensuales;
+drop view if exists v_top_productos;
+drop view if exists v_historial_precios;
+drop view if exists v_trazabilidad_venta;
+
 
 -- ---------------------------------------------------------------------------
 -- Catálogo con stock, jerarquía y semáforo de reposición

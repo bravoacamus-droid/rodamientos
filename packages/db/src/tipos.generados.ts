@@ -16,7 +16,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -2476,6 +2476,8 @@ export type Database = {
         Row: {
           activo: boolean
           actualizado_en: string
+          busq_documento: string | null
+          busq_razon_social: string | null
           busqueda: string | null
           codigo: string
           contacto: string | null
@@ -2498,6 +2500,8 @@ export type Database = {
         Insert: {
           activo?: boolean
           actualizado_en?: string
+          busq_documento?: string | null
+          busq_razon_social?: string | null
           busqueda?: string | null
           codigo: string
           contacto?: string | null
@@ -2520,6 +2524,8 @@ export type Database = {
         Update: {
           activo?: boolean
           actualizado_en?: string
+          busq_documento?: string | null
+          busq_razon_social?: string | null
           busqueda?: string | null
           codigo?: string
           contacto?: string | null
@@ -3293,6 +3299,30 @@ export type Database = {
           unidad: string
         }[]
       }
+      buscar_proveedores: {
+        Args: { p_limit?: number; p_q: string }
+        Returns: {
+          activo: boolean
+          codigo: string
+          compras: number
+          contacto: string
+          dias_pago: number
+          direccion: string
+          email: string
+          id: string
+          lead_time_dias: number
+          marcas: string[]
+          numero_documento: string
+          pais: string
+          puntaje: number
+          razon_social: string
+          telefono: string
+          tipo: Database["public"]["Enums"]["tipo_compra"]
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
+          ultima_compra: string
+          whatsapp: string
+        }[]
+      }
       buscar_ubigeo: {
         Args: { p_limit?: number; p_q: string }
         Returns: {
@@ -3445,6 +3475,30 @@ export type Database = {
           subfamilia: string
           tipo: string
           unidad: string
+        }[]
+      }
+      proveedores_sugeridos: {
+        Args: { p_limit?: number }
+        Returns: {
+          activo: boolean
+          codigo: string
+          compras: number
+          contacto: string
+          dias_pago: number
+          direccion: string
+          email: string
+          id: string
+          lead_time_dias: number
+          marcas: string[]
+          numero_documento: string
+          pais: string
+          puntaje: number
+          razon_social: string
+          telefono: string
+          tipo: Database["public"]["Enums"]["tipo_compra"]
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
+          ultima_compra: string
+          whatsapp: string
         }[]
       }
       puede_escribir: { Args: { p_tabla: string }; Returns: boolean }

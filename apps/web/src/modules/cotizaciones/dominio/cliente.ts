@@ -6,10 +6,24 @@
  * se puede elegir y qué trozo del texto coincide con lo tecleado—, que es puro,
  * se prueba sin base y sin React, y es justo donde estaban los errores.
  *
+ * Lo que NO es propio del cliente —resaltar, reconocer un documento, decir
+ * cuánto hace— vive en `lib/texto-busqueda.ts` desde la 033, cuando el
+ * selector de proveedor necesitó lo mismo. Se reexporta aquí para que ningún
+ * llamador tuviera que cambiar.
+ *
  * Igual que en `reportes/dominio/rango.ts`: el «hoy» lo inyecta quien llama.
  * Un «cotizado ayer» no puede cambiar según la zona horaria del equipo que
  * abre la pantalla.
  */
+
+import { hace } from "@/lib/texto-busqueda";
+
+export {
+  digitosDe,
+  pareceDocumento,
+  resaltar,
+  type Trozo,
+} from "@/lib/texto-busqueda";
 
 /** Un cliente tal y como lo devuelven `buscar_clientes` y `clientes_sugeridos`. */
 export interface ClienteOpcion {
@@ -75,129 +89,16 @@ export function resumenCredito(
 
 /* ------------------------------------------------------------- Cuánto hace */
 
-/** Días enteros entre dos fechas `aaaa-mm-dd`, sin tocar el reloj. */
-function diasEntre(desde: string, hasta: string): number {
-  const a = Date.parse(`${desde}T00:00:00Z`);
-  const b = Date.parse(`${hasta}T00:00:00Z`);
-  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
-  return Math.round((b - a) / 86_400_000);
-}
-
 /**
- * «Cotizado ayer», «hace 3 meses», «nunca cotizado».
+ * «Cotizado ayer», «Cotizado hace 3 meses», «Nunca cotizado».
  *
- * Se redondea a la unidad grande en cuanto se puede: al elegir cliente lo que
- * importa es si fue hace nada o hace mucho, no si fueron 47 o 52 días.
- *
- * Una fecha en el futuro se trata como hoy. Pasa —una cotización fechada a
- * mano— y «hace -3 días» no lo entiende nadie.
+ * El cálculo está en `lib/texto-busqueda.ts`; aquí solo va el verbo, que es lo
+ * único propio del cliente. El selector de proveedor dice «Comprado …» con la
+ * misma cuenta detrás.
  */
 export function ultimaVez(fecha: string | null, hoy: string): string {
   if (!fecha) return "Nunca cotizado";
-
-  const dias = diasEntre(fecha, hoy);
-  if (dias <= 0) return "Cotizado hoy";
-  if (dias === 1) return "Cotizado ayer";
-  if (dias < 7) return `Cotizado hace ${dias} días`;
-  if (dias < 31) {
-    const semanas = Math.floor(dias / 7);
-    return semanas === 1 ? "Cotizado hace 1 semana" : `Cotizado hace ${semanas} semanas`;
-  }
-  if (dias < 365) {
-    const meses = Math.max(1, Math.round(dias / 30));
-    return meses === 1 ? "Cotizado hace 1 mes" : `Cotizado hace ${meses} meses`;
-  }
-  const años = Math.floor(dias / 365);
-  return años === 1 ? "Cotizado hace 1 año" : `Cotizado hace ${años} años`;
-}
-
-/* --------------------------------------------------------------- Resaltado */
-
-/**
- * Normaliza SIN mover las posiciones: minúsculas y sin tildes, carácter a
- * carácter.
- *
- * Es la parte delicada del resaltado. `texto.normalize("NFD")` quitando las
- * marcas también quita tildes, pero cambia el largo de la cadena, así que los
- * índices que devuelve `indexOf` sobre la versión normalizada ya no sirven
- * para cortar el texto ORIGINAL: el resaltado se desplaza una letra por cada
- * tilde que hubiera antes.
- *
- * Aquí cada carácter se sustituye solo si su versión plana ocupa lo mismo. Si
- * no —una ligadura, una «İ» turca—, se deja como está: peor es resaltar mal.
- */
-function aplanarConservandoPosiciones(texto: string): string {
-  let salida = "";
-  for (const caracter of texto) {
-    const plano = caracter.normalize("NFD").replace(/\p{Mn}/gu, "").toLowerCase();
-    salida += plano.length === caracter.length ? plano : caracter;
-  }
-  return salida;
-}
-
-export interface Trozo {
-  texto: string;
-  coincide: boolean;
-}
-
-/**
- * Parte un texto en trozos según lo que se tecleó, para poder resaltarlo.
- *
- * Compara sin tildes y sin mayúsculas —«peru» tiene que resaltar «PERÚ»— pero
- * devuelve SIEMPRE los trozos del texto original: se resalta lo que el usuario
- * está leyendo, no una versión aplanada de ello.
- *
- * Resalta todas las apariciones, no solo la primera: en «FERRETERÍA FERRETERA»
- * dejar la segunda sin marcar parece un fallo.
- */
-export function resaltar(texto: string, termino: string): Trozo[] {
-  const aguja = aplanarConservandoPosiciones(termino.trim());
-  if (aguja === "" || texto === "") return [{ texto, coincide: false }];
-
-  const pajar = aplanarConservandoPosiciones(texto);
-  const trozos: Trozo[] = [];
-  let cursor = 0;
-
-  for (;;) {
-    const golpe = pajar.indexOf(aguja, cursor);
-    if (golpe === -1) break;
-    if (golpe > cursor) {
-      trozos.push({ texto: texto.slice(cursor, golpe), coincide: false });
-    }
-    trozos.push({ texto: texto.slice(golpe, golpe + aguja.length), coincide: true });
-    cursor = golpe + aguja.length;
-  }
-
-  if (cursor < texto.length) {
-    trozos.push({ texto: texto.slice(cursor), coincide: false });
-  }
-  return trozos;
-}
-
-/* ----------------------------------------------------------- Qué se tecleó */
-
-/**
- * Los dígitos de lo tecleado, como los extrae `buscar_clientes`.
- *
- * Sirve para dos cosas en la pantalla: decir «buscando por documento» y
- * ofrecer el alta rápida con el RUC ya escrito cuando la búsqueda no encuentra
- * nada. Es el gesto que pidió Willy (34:12): pegar el RUC y seguir.
- */
-export function digitosDe(termino: string): string {
-  return termino.replace(/\D/g, "");
-}
-
-/**
- * ¿Lo tecleado es un documento y no un nombre?
- *
- * Ocho dígitos es un DNI y once un RUC. Por debajo de ocho puede ser cualquier
- * cosa —un año, parte de un código— así que no se afirma nada.
- */
-export function pareceDocumento(termino: string): boolean {
-  const q = termino.trim();
-  if (q === "") return false;
-  const digitos = digitosDe(q);
-  // Que sea SOLO dígitos y separadores: «SAC 20» no es un documento.
-  if (!/^[\d\s.\-/]+$/.test(q)) return false;
-  return digitos.length === 8 || digitos.length === 11;
+  const cuando = hace(fecha, hoy);
+  // «hoy» y «ayer» no llevan «hace» delante; el resto sí, y ya viene puesto.
+  return `Cotizado ${cuando}`;
 }

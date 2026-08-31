@@ -4,6 +4,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      // El mismo `@/*` que `apps/web/tsconfig.json`. Hasta la 033 ningún
+      // fichero con pruebas lo usaba —los dominios importaban por ruta
+      // relativa— así que faltaba y no se notaba. Al bajar `resaltar()` y
+      // compañía a `lib/texto-busqueda.ts` para que el selector de proveedor
+      // no hiciera una segunda copia, se notó de golpe.
+      "@": fileURLToPath(new URL("./apps/web/src", import.meta.url)),
       // Ver pruebas/server-only.ts: el paquete real solo existe dentro del
       // empaquetado de Next.
       "server-only": fileURLToPath(new URL("./pruebas/server-only.ts", import.meta.url)),

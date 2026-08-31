@@ -1,6 +1,6 @@
 # Pendientes
 
-Estado al 28/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
+Estado al 31/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
 final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
@@ -12,10 +12,10 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 846 en verde |
+| `pnpm test` | 865 en verde |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 032, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 034, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -23,6 +23,32 @@ volver a caer sale caro.
 una función de escritura sin control de rol, si la valorización se desalinea
 del kardex, si una nota de crédito se cuenta como venta o si «días sin
 comprar» empieza a contar días que no han pasado.
+
+**Y desde el 31/08 la cadena entera se puede reaplicar de verdad.** Hasta ese
+día la frase de arriba era mentira a medias: `pnpm db:aplicar` moría en la 005
+sobre cualquier base ya migrada, y por tanto ningún centinela posterior al
+quinto archivo se había vuelto a ejecutar nunca. Ver R10.
+
+**Qué hay dentro de la base, hoy.** Conviene tenerlo delante antes de enseñar
+nada, porque el ERP tiene un pasado rico y un presente vacío:
+
+| Tabla | Filas | |
+|---|---|---|
+| `clientes` | 37 | la cartera real de Willy |
+| `productos` | 790 | su catálogo real |
+| `comprobantes` | 518 | dos años de ventas |
+| `proveedores` | **0** | no llegaron en el Excel de ventas |
+| `stock` | **0** | las 518 entraron por INSERT directo, sin tocar el kardex |
+| `movimientos_inventario` | **0** | ídem |
+| cotizaciones, compras, recepciones, guías, pagos, alertas | **0** | |
+
+Los ceros son consecuencia buscada de la carga del 28/08 —las facturas
+históricas NO debían mover stock— pero tienen un efecto en la demo: los
+informes salen llenos y **todas las pantallas donde se trabaja salen vacías**.
+`/compras/nueva` y `/recepciones/nueva` lo dicen bien («Primero hace falta un
+proveedor»), no se rompen; pero no hay forma de enseñar una operación de punta
+a punta hasta que Willy mande su maestro de productos —con costo y stock— y su
+lista de proveedores.
 
 El redondeo de los importes de línea ya está arreglado en todas partes (R7).
 
@@ -203,9 +229,14 @@ cerraron. **Ya no hay ni un dato `[DEMO]` en la base.**
 **Nada urgente.** Es la primera vez en el proyecto que la lista está así, y
 conviene decirlo en vez de inventarse trabajo:
 
+- ~~El selector de proveedor de compras y recepciones~~ · **hecho el 31/08**
+  (migración 033), y de camino salió R10, que era lo gordo del día. Ver §6.
 - Unificar los cuatro buscadores con el `BuscadorProductos` del design system.
-  Ya comparten la LÓGICA desde hoy —que era lo que dolía—; lo que falta es el
-  marcado, y es cosmético.
+  Ya comparten la LÓGICA —que era lo que dolía— y desde el 31/08 comparten
+  también el resaltado (`lib/texto-busqueda.ts`); lo que falta es el marcado, y
+  es cosmético.
+- El truncado mudo de los desplegables de FILTRO de `/compras` y
+  `/recepciones`, que se quedó fuera de la 033 a propósito (§6).
 - Que «condiciones» de la cotización sea una lista en vez de texto libre (§6).
   Necesita saber cuáles usa él, así que en realidad tampoco es independiente.
 - Verificar en un móvil de verdad. Nadie lo ha hecho (§6).
@@ -231,7 +262,14 @@ Por orden de lo que desbloquea:
    propósito; si hay facturas por cobrar, que diga cuáles.
 7. Sus **correlativos de partida**, su **cuenta bancaria** y sus **agencias**.
 8. El **maestro de productos** — el que trae costo, stock, peso y P.M. Sin
-   costo no hay margen, y el margen es media pantalla del ERP.
+   costo no hay margen, y el margen es media pantalla del ERP. Hoy el tablero
+   enseña «margen 0.0% sobre el costo» con USD 19.394 vendidos, y no es un
+   error de cálculo: es que el costo de los 790 productos es cero.
+9. Su **lista de proveedores**. El Excel que mandó era de VENTAS, así que
+   `proveedores` está a cero y las pantallas de compra y recepción no se pueden
+   enseñar funcionando. Con la lista basta —RUC y razón social—; el resto de la
+   ficha se completa después. Desde el 31/08 el selector busca también por
+   MARCA, así que si dice qué marca trae cada uno, mejor.
 
 ### Lo que espera a LUIS
 
@@ -620,9 +658,42 @@ de Defontana.
   cliente dado de baja y no encontrarlo terminaba en un alta duplicada que
   `ux_clientes_documento` rechazaba después de teclear la ficha entera.
 
-  El mismo problema lo tienen todavía **los desplegables de proveedor** de
-  compras y recepciones, que siguen bajando la lista entera. Con los que hay
-  hoy da igual; con el Excel de proveedores de Willy, no.
+  ~~El mismo problema lo tienen todavía **los desplegables de proveedor** de
+  compras y recepciones, que siguen bajando la lista entera.~~ · **hecho el
+  31/08** (migración 033).
+
+  Era peor de lo que decía este aviso. No es que bajaran la lista: es que la
+  bajaban **truncada y sin decirlo**. `proveedoresActivos()` de compras traía
+  `.limit(500)`; `proveedoresParaSelector()` de recepciones **no tenía límite
+  ninguno**, o sea que se comía el tope por defecto de PostgREST. Un
+  desplegable que se corta no avisa — el proveedor que falta parece no estar
+  dado de alta, y se crea otra vez con otro código.
+
+  Ahora los dos son la misma caja de búsqueda (`proveedores/ui/buscador.tsx`),
+  contra `buscar_proveedores`. Lo que la diferencia del selector de cliente y
+  la hace algo más que un copiar-pegar: **busca por MARCA**. «¿Quién me trae
+  SKF?» es media de las veces que se abre este selector, y la relación estaba
+  en `proveedor_marcas` desde la 002 sin que la usara nadie. Un proveedor que
+  se LLAMA como la marca va por delante del que solo la vende, y el centinela
+  lo comprueba.
+
+  De paso, el alta rápida de proveedor se mudó de dentro de recepciones al
+  módulo `proveedores`, porque ahora la usan las dos pantallas. Compras no la
+  tenía: con el maestro vacío la página corta antes con «Primero hace falta un
+  proveedor», pero para dar de alta al proveedor número 2 había que salirse.
+
+  **Sigue pendiente el mismo truncado en los desplegables de FILTRO** de los
+  listados `/compras` y `/recepciones`, que usan las consultas de antes. En un
+  filtro molesta; en el constructor era una ficha duplicada. Por eso este iba
+  primero.
+
+- **El alta rápida de proveedor no consulta el RUC**, ni desde la recepción ni
+  desde la compra. En la recepción es deliberado y está razonado: son 100
+  consultas de Decolecta al mes y la razón social está impresa en la factura
+  que el operador tiene delante. **En la compra el argumento es más flojo** —
+  quien pide mercadería está en un escritorio, no en el mostrador. Cambiarlo es
+  decisión de cuota, no de código: preguntarle a Willy cuántas altas de
+  proveedor hace al mes.
 - **Ningún producto tiene el peso registrado**, y el peso es obligatorio en la
   guía (`guia_peso_pos` lo rechaza en cero). Willy lo llamó *«lo más
   importante»* (02:46). Mientras tanto la guía deja declararlo a mano y lo
@@ -728,6 +799,90 @@ de Defontana.
 ---
 
 # Resueltos
+
+## R10 · La auditoría de permisos llevaba veinte migraciones sin mirar nada
+
+Salió el 31/08, y hacen falta **tres** fallos encadenados para contarlo. El
+primero tapaba al segundo, y el segundo era el síntoma del tercero, que es el
+que de verdad importaba.
+
+### 1 · La cadena no se podía reaplicar
+
+`pnpm db:aplicar` sobre una base ya migrada moría en el quinto archivo:
+
+```
+005_vistas.sql … ERROR
+  42P16: cannot drop columns from view
+```
+
+Porque la 023 y la 025 **ensanchan** tres vistas que la 005 declara estrechas
+(`v_ventas_mensuales`, `v_top_productos`, `v_productos_stock`). En una base
+virgen el orden funciona —005 las crea, 023 y 025 les añaden columnas— pero al
+reaplicar, la 005 intenta volver a la versión corta y `create or replace view`
+solo sabe AÑADIR columnas por el final, nunca quitarlas.
+
+Arreglado tirando las diez vistas al empezar la 005. No cuesta nada —son
+vistas, no tienen datos— y `v_reposicion` va primero porque lee de
+`v_productos_stock`: es la única dependencia entre vistas del esquema.
+
+### 2 · Detrás había una función de escritura abierta
+
+Con la 005 pasando, la cadena llegó por fin a la 013 y **saltó su centinela**:
+
+```
+Estas funciones escriben, son security definer y las puede llamar
+cualquiera con sesión, pero NO validan rol: sincronizar_gastos_importacion
+```
+
+La 006 concede `execute` sobre TODAS las funciones a `authenticated`. La 022
+—treinta y tres archivos después— revoca la suya. Entre las dos queda abierta,
+y ahí es donde audita la 013.
+
+Arreglado en la 006: después del `grant` a bulto, un bloque cierra sola toda
+función volátil `security definer` que no mencione guardián de rol. Es la misma
+regla que la 013 verifica, escrita como acción en vez de como comprobación.
+Quitarle `execute` a una función de disparador no la rompe: el disparador lo
+ejecuta Postgres, que no comprueba ese permiso.
+
+### 3 · Y esa es la parte que hay que recordar
+
+**La auditoría corre en el puesto 13 de 34.** Cuando corre, las funciones de la
+014 en adelante todavía no existen. Veinte migraciones —el constructor, el
+importador, las alertas, las importaciones, la trazabilidad, los catálogos
+desde pantalla— pasaron por delante de un guardián que no podía verlas.
+
+Y la 006 tiene esto:
+
+```sql
+alter default privileges in schema public
+  grant execute on functions to authenticated, service_role;
+```
+
+O sea que **toda función creada después de la 006 nace con `EXECUTE` concedido
+a `authenticated`**. Es lo que se quiere para las de negocio, que validan rol
+por dentro. Es exactamente lo que no se quiere para un disparador. Y dependía
+de que cada archivo se acordara de cerrarse solo.
+
+La 022 se acordó. Que se acordara es la razón por la que esto no fue un agujero
+de verdad — y que dependiera de acordarse es el problema.
+
+Arreglado con la **034**, que repite la auditoría AL FINAL de la cadena. La
+duplicación es el punto: la misma regla, en dos posiciones, porque cada una ve
+cosas distintas.
+
+**La lección, que es hermana de la de la 031.** Aquella decía *«una función
+plpgsql sin una llamada real en su centinela no está probada»*. Esta dice:
+**un centinela solo vigila lo que existe cuando él corre.** Si comprueba una
+propiedad del SISTEMA —y «ninguna función de escritura está abierta» lo es—
+tiene que correr cuando el sistema está terminado, no a mitad.
+
+Y una tercera, más incómoda: **dos fallos se estuvieron tapando meses**. Nadie
+llegaba al 013 porque el 005 mataba la corrida antes; y como el 013 nunca
+volvía a correr, nadie veía lo que tenía detrás. Que una cadena de migraciones
+se pueda reaplicar entera no es comodidad — es lo que mantiene vivos a todos
+los centinelas que vienen después del primero que falla.
+
+---
 
 ## R9 · Las alertas llevaban meses apuntando a ninguna parte
 

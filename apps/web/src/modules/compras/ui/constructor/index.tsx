@@ -23,7 +23,8 @@ import {
   reducir,
   totalesDe,
 } from "../../dominio/constructor";
-import type { ProveedorOpcion } from "../../dominio/tipos";
+import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
+import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import { BuscadorCompra } from "./buscador";
 import { FilaCompra } from "./linea";
 
@@ -38,15 +39,26 @@ import { FilaCompra } from "./linea";
  * registrando es el compromiso con el proveedor.
  */
 export function ConstructorCompra({
-  proveedores,
+  sugeridos,
   hoy,
 }: {
-  proveedores: ProveedorOpcion[];
+  /**
+   * Los últimos a los que se compró. NO es el maestro: desde la 033 el
+   * selector busca contra el servidor, así que la página ya no manda la lista
+   * entera —que además venía truncada a 500 sin decirlo—.
+   */
+  sugeridos: ProveedorOpcion[];
   /** La fecha la fija el servidor: el dominio no lee reloj, para poder probarlo. */
   hoy: string;
 }) {
   const router = useRouter();
   const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
+
+  // El proveedor elegido, entero. Antes se buscaba en la lista con un `find`;
+  // ahora la lista no está —el elegido puede venir de una búsqueda o de un alta
+  // recién hecha— así que la ficha se guarda al elegirla. `estado.proveedorId`
+  // sigue siendo la única fuente para el payload: esto es solo para pintar.
+  const [proveedor, setProveedor] = useState<ProveedorOpcion | null>(null);
 
   // Lo que este proveedor cobró la última vez, por producto. Se recarga al
   // cambiar de proveedor: es la referencia contra la que se negocia.
@@ -67,7 +79,6 @@ export function ConstructorCompra({
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
   const avisos = useMemo(() => calcularAvisos(estado), [estado]);
-  const proveedor = proveedores.find((p) => p.id === estado.proveedorId);
 
   useEffect(() => {
     if (!estado.proveedorId) {
@@ -116,43 +127,30 @@ export function ConstructorCompra({
           {/* ------------------------------------------------- Cabecera */}
           <section className="card p-4">
             <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Proveedor <span className="text-[var(--danger)]">*</span>
-                </span>
-                <SelectNativo
-                  value={estado.proveedorId ?? ""}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "proveedorId",
-                      valor: e.target.value || null,
-                    })
-                  }
-                >
-                  <option value="">Elige un proveedor…</option>
-                  {proveedores.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.razon_social}
-                      {p.numero_documento ? ` · ${p.numero_documento}` : ""}
-                    </option>
-                  ))}
-                </SelectNativo>
-                {proveedor ? (
-                  <span className="text-xs text-[var(--fg-muted)]">
-                    {proveedor.dias_pago > 0
-                      ? `Paga a ${proveedor.dias_pago} días`
-                      : "Al contado"}
-                    {proveedor.lead_time_dias > 0
-                      ? ` · suele tardar ${proveedor.lead_time_dias} días`
-                      : ""}
-                  </span>
-                ) : (
+              {/* La caja de búsqueda ya enseña cómo paga y cuánto tarda en la
+                  ficha del elegido, así que aquí solo queda el porqué de que
+                  sea lo primero que se rellena. */}
+              <div className="flex flex-col gap-1">
+                <BuscadorProveedores
+                  id="com-proveedor"
+                  sugeridos={sugeridos}
+                  elegido={proveedor}
+                  onElegir={(p) => {
+                    setProveedor(p);
+                    despachar({ tipo: "cabecera", campo: "proveedorId", valor: p.id });
+                  }}
+                  onQuitar={() => {
+                    setProveedor(null);
+                    despachar({ tipo: "cabecera", campo: "proveedorId", valor: null });
+                  }}
+                  hoy={hoy}
+                />
+                {proveedor ? null : (
                   <span className="text-xs text-[var(--fg-subtle)]">
                     Es lo primero: los precios que se enseñan son los suyos.
                   </span>
                 )}
-              </label>
+              </div>
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Tipo</span>

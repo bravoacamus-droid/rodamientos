@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { proveedoresActivos } from "../api/consultas";
+import { proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
 import { ConstructorCompra } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -29,7 +29,9 @@ export default async function PaginaNuevaCompra() {
     );
   }
 
-  const proveedores = await proveedoresActivos();
+  // Ocho, no el maestro entero: desde la 033 el selector busca contra el
+  // servidor. La lista completa venía con `.limit(500)` y truncaba en silencio.
+  const proveedores = await proveedoresSugeridos();
 
   if (!proveedores.ok) {
     return (
@@ -41,8 +43,13 @@ export default async function PaginaNuevaCompra() {
     );
   }
 
-  // Sin proveedores el formulario no lleva a ningún sitio: el desplegable
-  // estaría vacío y el guardado siempre fallaría por el bloqueo del dominio.
+  // Sin NINGÚN proveedor activo no se corta el paso: el selector trae su alta
+  // rápida dentro y crear el primero desde aquí es un paso menos. Pero cuando
+  // el maestro está vacío conviene decirlo antes, porque una caja de búsqueda
+  // que no encuentra nada se lee como «está roto» y no como «no hay ninguno».
+  //
+  // `proveedores_sugeridos` solo devuelve activos, así que cero aquí es cero
+  // de verdad, no ocho que no caben.
   if (proveedores.datos.length === 0) {
     return (
       <EstadoVacio
@@ -68,5 +75,5 @@ export default async function PaginaNuevaCompra() {
     new Date(),
   );
 
-  return <ConstructorCompra proveedores={proveedores.datos} hoy={hoy} />;
+  return <ConstructorCompra sugeridos={proveedores.datos} hoy={hoy} />;
 }

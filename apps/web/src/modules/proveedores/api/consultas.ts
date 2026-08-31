@@ -4,6 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import type { ProveedorOpcion } from "../dominio/opcion";
 import type {
   FiltrosProveedores,
   ProveedorDetalle,
@@ -254,11 +255,17 @@ export async function marcasDisponibles(): Promise<
 }
 
 /**
- * Proveedores activos en forma mínima, para desplegables de otras pantallas.
+ * Proveedores activos en forma mínima, para el desplegable de FILTRO del
+ * listado de recepciones.
  *
- * Lo usa el registro de recepción. Vive aquí y no duplicado allí para que
- * añadir un filtro —por ejemplo, esconder los dados de baja— se haga en un
- * solo sitio.
+ * Hasta la 033 lo usaba también el registro de recepción, que es lo que decía
+ * este comentario. Ya no: elegir a quién comprarle se hace buscando
+ * (`proveedoresSugeridos` + `buscar_proveedores`), y filtrar un listado por un
+ * proveedor que no se recuerda es otra cosa — ahí la lista sí ayuda.
+ *
+ * Sigue sin límite, o sea contra el tope por defecto de PostgREST, y por tanto
+ * sigue pudiendo truncar en silencio. En un FILTRO eso molesta; en el
+ * constructor era un proveedor duplicado. Queda anotado en PENDIENTES §6.
  */
 export async function proveedoresParaSelector(): Promise<
   Resultado<
@@ -275,6 +282,32 @@ export async function proveedoresParaSelector(): Promise<
 
     if (error) return fallo(error);
     return { ok: true, datos: data ?? [] };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Los últimos proveedores a los que se compró, para abrir el selector con algo
+ * útil dentro.
+ *
+ * Sustituye a `proveedoresParaSelector` en las dos pantallas que ELIGEN
+ * proveedor —la compra y la recepción—. Aquella traía el maestro entero sin
+ * límite, o sea contra el tope por defecto de PostgREST, y truncaba sin
+ * decirlo. Esta trae ocho y el resto se busca (`buscar_proveedores`, 033).
+ *
+ * Sigue existiendo la otra: los desplegables de FILTRO de los listados sí
+ * quieren la lista, porque filtrar por un proveedor que no se recuerda es
+ * distinto de elegir a quién comprarle.
+ */
+export async function proveedoresSugeridos(): Promise<Resultado<ProveedorOpcion[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("proveedores_sugeridos", {
+      p_limit: 8,
+    });
+    if (error) return fallo(error);
+    return { ok: true, datos: (data ?? []) as unknown as ProveedorOpcion[] };
   } catch (e) {
     return fallo(e);
   }

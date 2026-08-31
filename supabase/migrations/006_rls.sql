@@ -221,3 +221,41 @@ alter default privileges in schema public
 -- toda función que se agregue mañana volvería a quedar abierta a `anon`.
 alter default privileges in schema public
   revoke execute on functions from public;
+-- ---------------------------------------------------------------------------
+-- Y se vuelven a cerrar las peligrosas, porque el GRANT de arriba es a bulto
+-- ---------------------------------------------------------------------------
+-- `grant execute on all functions` no distingue, y hay funciones que NADIE con
+-- sesión debe poder llamar a mano: las de disparador y las internas que mueven
+-- kardex o queman correlativos. La 012 las cierra UNA A UNA, por nombre, y esa
+-- lista se queda corta en cuanto alguien añade una función nueva.
+--
+-- Eso ya pasó. `sincronizar_gastos_importacion` nació en la 022, se cierra
+-- sola al final de su propio archivo, y al REAPLICAR la cadena entera quedaba
+-- abierta entre este `grant` y la 022 —treinta y tres archivos después—, que
+-- es justo donde corre la auditoría de la 013. La cadena completa no se podía
+-- reaplicar por eso.
+--
+-- La regla es la MISMA que verifica la 013, escrita aquí como acción en vez de
+-- como comprobación: si escribe (`volatile`), se salta el RLS (`security
+-- definer`) y no menciona ningún guardián de rol, no la llama nadie a mano.
+--
+-- Quitarle EXECUTE a una función de disparador no la rompe: el disparador lo
+-- ejecuta Postgres, que no comprueba ese permiso. Solo cierra la puerta de
+-- llamarla suelta por PostgREST, que es la que sobra.
+do $$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as firma
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.prokind = 'f'
+       and p.provolatile = 'v'
+       and p.prosecdef
+       and pg_get_functiondef(p.oid) !~* '(puede_escribir|tiene_rol|es_gerencia)'
+  loop
+    execute format('revoke execute on function %s from public, anon, authenticated', f.firma);
+  end loop;
+end $$;
+

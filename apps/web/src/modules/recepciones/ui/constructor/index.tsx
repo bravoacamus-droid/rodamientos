@@ -22,10 +22,11 @@ import {
   estadoInicial,
   reducir,
 } from "../../dominio/constructor";
-import type { CompraPendiente, ProveedorOpcion } from "../../dominio/tipos";
+import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
+import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
+import type { CompraPendiente } from "../../dominio/tipos";
 import { BuscadorRecepcion } from "./buscador";
 import { FilaRecepcion } from "./linea";
-import { ProveedorRapido } from "./proveedor-rapido";
 
 /**
  * Registro de recepción de mercadería.
@@ -40,12 +41,17 @@ import { ProveedorRapido } from "./proveedor-rapido";
  * documento y su motivo, no un «editar».
  */
 export function ConstructorRecepcion({
-  proveedores: proveedoresIniciales,
+  sugeridos,
   compras,
   hoy,
   compraInicial = null,
 }: {
-  proveedores: ProveedorOpcion[];
+  /**
+   * Los últimos a los que se compró. NO es el maestro: desde la 033 el
+   * selector busca contra el servidor. La consulta anterior no tenía límite
+   * ninguno y truncaba contra el tope por defecto de PostgREST sin decirlo.
+   */
+  sugeridos: ProveedorOpcion[];
   compras: CompraPendiente[];
   /** La fecha la fija el servidor: el dominio es puro y no lee reloj. */
   hoy: string;
@@ -73,9 +79,10 @@ export function ConstructorRecepcion({
     yaCargada.current = true;
     despachar({ tipo: "cargarCompra", compra });
   }, [compraInicial, compras]);
-  // Un proveedor creado aquí mismo tiene que aparecer sin recargar: recargar
-  // significaría perder la recepción a medias.
-  const [proveedores, setProveedores] = useState(proveedoresIniciales);
+  // El proveedor elegido, entero, para pintar su ficha. `estado.proveedorId`
+  // sigue siendo la única fuente del payload. Uno creado aquí mismo entra
+  // directo: recargar la página significaría perder la recepción a medias.
+  const [proveedor, setProveedor] = useState<ProveedorOpcion | null>(null);
 
   const [resultado, guardar, guardando] = useActionState<
     ResultadoRecepcion | null,
@@ -126,49 +133,50 @@ export function ConstructorRecepcion({
 
       {/* ----------------------------------------------------- Cabecera */}
       <section className="card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-baseline justify-between gap-2">
-              {/* El botón va FUERA del <label>: un label reenvía el clic a su
-                  control, y dentro el diálogo no llegaría a abrirse nunca. */}
-              <label htmlFor="rec-proveedor" className="text-sm font-medium">
-                Proveedor <span className="text-[var(--danger)]">*</span>
-              </label>
-              <ProveedorRapido
-                onCreado={(p) => {
-                  setProveedores((previos) => [p, ...previos]);
+        {/* Cinco columnas y no cuatro: el selector de proveedor ocupa dos.
+            Con cuatro iguales el placeholder se cortaba en «Busca por nombre,
+            RUC o…» justo antes de la palabra que menos se espera —marca—, que
+            es la que hay que anunciar porque nadie la busca sola. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Con la compra enlazada el proveedor lo MANDA ELLA: cambiarlo a
+              mano dejaría la recepción colgando de una compra de otro. Se
+              enseña como campo de solo lectura y no como la ficha completa del
+              buscador, porque de la compra solo viene el nombre: pintar la
+              ficha obligaría a rellenar «al contado» y «entrega en 3 días» sin
+              haberlos leído de ningún sitio. */}
+          {compraElegida ? (
+            <div className="flex flex-col gap-1 lg:col-span-2">
+              <span className="text-sm font-medium">Proveedor</span>
+              <div className="flex h-control-md items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3">
+                <span className="truncate text-sm">{compraElegida.proveedor}</span>
+              </div>
+              <span className="text-xs text-[var(--fg-subtle)]">
+                Lo manda la compra {compraElegida.numero}.
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1 lg:col-span-2">
+              <BuscadorProveedores
+                id="rec-proveedor"
+                sugeridos={sugeridos}
+                elegido={proveedor}
+                onElegir={(p) => {
+                  setProveedor(p);
                   despachar({ tipo: "cabecera", campo: "proveedorId", valor: p.id });
                 }}
+                onQuitar={() => {
+                  setProveedor(null);
+                  despachar({ tipo: "cabecera", campo: "proveedorId", valor: null });
+                }}
+                hoy={hoy}
               />
+              {sugeridos.length === 0 && proveedor === null ? (
+                <span className="text-xs text-[var(--fg-subtle)]">
+                  Todavía no hay proveedores. Crea el primero con «Nuevo».
+                </span>
+              ) : null}
             </div>
-            <SelectNativo
-              id="rec-proveedor"
-              value={estado.proveedorId ?? ""}
-              onChange={(e) =>
-                despachar({
-                  tipo: "cabecera",
-                  campo: "proveedorId",
-                  valor: e.target.value || null,
-                })
-              }
-              // Con la compra enlazada el proveedor lo manda ella: cambiarlo a
-              // mano dejaría la recepción colgando de una compra de otro.
-              disabled={compraElegida !== null}
-            >
-              <option value="">Elige un proveedor…</option>
-              {proveedores.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.razon_social}
-                  {p.numero_documento ? ` · ${p.numero_documento}` : ""}
-                </option>
-              ))}
-            </SelectNativo>
-            {proveedores.length === 0 ? (
-              <span className="text-xs text-[var(--fg-subtle)]">
-                Todavía no hay proveedores. Crea el primero con «Nuevo proveedor».
-              </span>
-            ) : null}
-          </div>
+          )}
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Fecha de recepción</span>

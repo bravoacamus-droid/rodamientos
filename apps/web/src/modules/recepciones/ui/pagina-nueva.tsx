@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { comprasPendientes, proveedoresActivos } from "../api/consultas";
+import { proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
+import { comprasPendientes } from "../api/consultas";
 import { ConstructorRecepcion } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `recepciones`. */
@@ -38,7 +39,7 @@ export default async function PaginaNuevaRecepcion({
   }
 
   const [proveedores, compras] = await Promise.all([
-    proveedoresActivos(),
+    proveedoresSugeridos(),
     comprasPendientes(),
   ]);
 
@@ -62,7 +63,7 @@ export default async function PaginaNuevaRecepcion({
 
   return (
     <ConstructorRecepcion
-      proveedores={proveedores.datos}
+      sugeridos={proveedores.datos}
       // Que fallen las compras pendientes no impide recibir: es una comodidad,
       // no un requisito. Se degrada a recepción suelta.
       compras={compras.ok ? compras.datos : []}
