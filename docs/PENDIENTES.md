@@ -1,8 +1,28 @@
 # Pendientes
 
-Estado al 31/08/2026. Ordenado por lo que más duele. Lo ya resuelto vive al
-final, con la lección, porque los tres casos se habían diagnosticado mal y
+Estado al **01/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
+al final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
+
+> **Si retomas y solo lees una cosa, que sea esta.**
+>
+> El día 01/09 hubo reunión con Willy (§ «Reunión del 01/09»), salió el plan
+> del flujo de compras (§G) y se construyó su primer bloque (§H).
+>
+> **Lo siguiente, por orden:**
+>
+> 1. La bandeja **«Por comprar»**. La vista ya existe en la base
+>    (`v_comprometido`, migración 041); falta la pantalla. Es lo primero del
+>    bloque 2 y no depende de nadie.
+> 2. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
+>    hay que inventar de cero.
+> 3. Los **tres contadores que dan cifras falsas** (§0.3). Llevan desde el
+>    31/08 esperando y siguen siendo la deuda técnica más barata de pagar.
+>
+> **Y antes de construir nada del bloque 2, enseñarle el plan a Willy**:
+> https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
+> Son cinco preguntas y una de ellas —si confirmar un pedido aparta la
+> mercadería— cambia cómo se construye la bandeja.
 
 ---
 
@@ -12,10 +32,10 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **42 de 42 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | 865 en verde |
+| `pnpm test` | **901 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 038, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 044, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -37,10 +57,17 @@ nada, porque el ERP tiene un pasado rico y un presente vacío:
 | `clientes` | 37 | la cartera real de Willy |
 | `productos` | 790 | su catálogo real |
 | `comprobantes` | 518 | dos años de ventas |
+| `ubigeo` | 1.874 | el padrón entero (037) |
+| `unidades_medida` | 42 | el catálogo 03 de SUNAT (039) |
 | `proveedores` | **0** | no llegaron en el Excel de ventas |
-| `stock` | **0** | las 518 entraron por INSERT directo, sin tocar el kardex |
-| `movimientos_inventario` | **0** | ídem |
+| `stock` | **1** | y ese uno es un dato de prueba, ver abajo |
+| `movimientos_inventario` | **1** | ídem |
 | cotizaciones, compras, recepciones, guías, pagos, alertas | **0** | |
+
+**Ese 1 hay que borrarlo.** Es el ajuste `AJU-26-00001`, «Conteo de prueba»,
+de 20 unidades del producto `0-230`, creado el 01/09 durante la demo en vivo
+de la reunión. Si se queda, el primer inventario real de Willy arranca con 20
+unidades que no existen.
 
 Los ceros son consecuencia buscada de la carga del 28/08 —las facturas
 históricas NO debían mover stock— pero tienen un efecto en la demo: los
@@ -208,9 +235,26 @@ del proyecto.
 
 ### Lo que puedo hacer yo sin esperar a nadie
 
-Ya casi nada, y es la primera vez en el proyecto. **El detalle actualizado
-está en «Cierre del 28/08» aquí abajo**, con lo que espera a Willy, lo que
-espera a Luis y lo que está bloqueado — que es donde vive la verdad desde hoy.
+Del 28/08 al 31/08 esto estaba casi vacío. **Desde la reunión del 01/09 ya
+no**: el plan de compras (§G) abrió trabajo para semanas que no depende de
+que nadie conteste nada.
+
+Por orden de lo que más vale:
+
+1. **La bandeja «Por comprar»** (§G paso 4). `v_comprometido` ya está en la
+   base desde la 041 y sabe qué falta para entregar lo confirmado; falta la
+   pantalla, que junta eso con lo que bajó del mínimo (`v_reposicion`, que
+   también existe ya).
+2. **El comparador de proveedores** (§G paso 5). Lo único del plan entero que
+   hay que inventar de cero. Necesita que la bandeja funcione antes.
+3. **Los tres contadores que dan cifras falsas** (§0.3). Medio día, y evitan
+   dar números equivocados en la campana de alertas y en la deuda por cliente
+   en cuanto los datos crezcan.
+4. **El aviso de cambio de costo** (§G paso 7). El dato ya se guarda —
+   `v_precios_compra` de la 042 trae el costo anterior al lado— y falta
+   decirlo en el momento de recibir, con el efecto en el margen.
+5. **La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
+   (§0.6), que llevan esperando desde la auditoría del 31/08.
 
 Lo anterior de esta sección se cerró el 28/08: el refresco de alertas
 (migración 032), la auditoría de campos contra Defontana (§5) y los enlaces
@@ -858,6 +902,28 @@ conviene decirlo en vez de inventarse trabajo:
 - Verificar en un móvil de verdad. Nadie lo ha hecho (§6).
 
 ### Lo que espera a WILLY · el viernes
+
+> **Actualizado el 01/09.** Cuatro de esta lista se movieron en la reunión de
+> ese día, y se añadieron seis cosas nuevas. Lo que cambió:
+>
+> - **La columna P.M. quedó zanjada** (punto 2): es el precio MÍNIMO. Él lo
+>   dijo — *«yo lo había tomado como precio de mercado, pero está bien,
+>   podría considerarse como precio mínimo también»*.
+> - **El maestro de productos llegó** (punto 8), pero **sin precios ni
+>   stock**: las columnas P.C., P.V., P.M., STOCK ACTUAL y STOCK MINIMO están
+>   vacías en las 2.230 filas. Se puede cargar el catálogo; no se podrá
+>   cotizar con él. Ver «Reunión del 01/09» §C.
+> - **Y el maestro trae un problema que hay que decidir antes de cargarlo**:
+>   17 códigos existen en DOS marcas —`6205` es de SKF y también de FAG— y el
+>   índice único actual no lo admite. Tres salidas, mi recomendación y el
+>   porqué, en «Reunión del 01/09» §D.
+>
+> **Lo nuevo que espera a Willy son las cinco preguntas del plan de compras**
+> (§G): si confirmar un pedido aparta la mercadería, en qué moneda registra la
+> compra local, si el comparador es obligatorio, si el sistema le avisa cuando
+> llega el pedido de un cliente, y el plazo por defecto de la compra local —
+> dio 15 días para exterior y 2–4 para fabricación, pero no el de local, que
+> es la más frecuente y va a salir impresa en todas sus cotizaciones.
 
 Por orden de lo que desbloquea:
 
