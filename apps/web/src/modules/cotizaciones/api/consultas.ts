@@ -250,6 +250,8 @@ export async function cotizacionPorId(id: string): Promise<
       vendedor: string | null;
     };
     lineas: {
+      /** Hace falta para poder confirmar línea a línea (041). */
+      id: string;
       producto_id: string | null;
       orden: number;
       codigo: string;
@@ -293,7 +295,7 @@ export async function cotizacionPorId(id: string): Promise<
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, contacto, whatsapp, telefono),
            perfiles!cotizaciones_vendedor_id_fkey(nombre),
-           cotizacion_items(producto_id, orden, codigo, marca, descripcion,
+           cotizacion_items(id, producto_id, orden, codigo, marca, descripcion,
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,

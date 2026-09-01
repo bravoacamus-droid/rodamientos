@@ -101,5 +101,16 @@ export interface CompraPendiente {
   proveedor_id: string;
   proveedor: string;
   gastos_importacion: number;
+  /**
+   * La moneda de los costos de esta compra (042).
+   *
+   * Viaja hasta aquí para poder DECIRLO en pantalla. La conversión la hace
+   * la base al mover el kardex, así que funcionalmente no haría falta —
+   * pero sin enseñarlo, quien recibe lee «costo 15.20» y entiende dólares
+   * cuando son soles, y no tiene forma de notar la diferencia.
+   */
+  moneda: "USD" | "PEN";
+  /** Soles por dólar. Null en las compras en dólares. */
+  tipo_cambio: number | null;
   lineas: LineaPendiente[];
 }

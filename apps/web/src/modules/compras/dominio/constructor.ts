@@ -2,6 +2,21 @@ import { IGV, importeExacto, redondear2, redondear4 } from "@rodatech/config";
 
 import type { TipoCompra } from "./tipos";
 
+/** Las dos monedas que admite `compras.moneda` (042). */
+export type Moneda = "USD" | "PEN";
+
+/** Lo que se lee en el desplegable. */
+export const ETIQUETA_MONEDA: Record<Moneda, string> = {
+  USD: "Dólares (US$)",
+  PEN: "Soles (S/)",
+};
+
+/** El símbolo, para las cifras de la pantalla. */
+export const SIMBOLO_MONEDA: Record<Moneda, string> = {
+  USD: "US$",
+  PEN: "S/",
+};
+
 /**
  * El estado del registro de compra, como reducer PURO.
  *
@@ -63,6 +78,24 @@ export interface EstadoCompra {
    * existe. Lo decide quien registra, mirando el papel que tiene delante.
    */
   afectoIgv: boolean;
+  /**
+   * La moneda de la FACTURA DEL PROVEEDOR (042).
+   *
+   * Willy compra local casi siempre (01/09, 28:05) y en Lima se factura
+   * en soles, pero todo el sistema vende y valoriza en dólares. Se guarda
+   * lo que dice el papel que tiene delante, y la conversión ocurre una
+   * sola vez: al recibir la mercadería, que es cuando el costo entra al
+   * kardex.
+   */
+  moneda: Moneda;
+  /**
+   * Soles por dólar. Solo cuando la moneda no es USD.
+   *
+   * 0 significa «todavía no se ha puesto» y NO se manda: la base rechaza
+   * una compra en soles sin tipo de cambio, que es exactamente lo que
+   * queremos que pase.
+   */
+  tipoCambio: number;
   gastosImportacion: number;
   tracking: string;
   courier: string;
@@ -84,6 +117,8 @@ export type CampoCabecera =
 export type Accion =
   | { tipo: "cabecera"; campo: CampoCabecera; valor: string | null }
   | { tipo: "tipoCompra"; valor: TipoCompra }
+  | { tipo: "moneda"; valor: Moneda }
+  | { tipo: "tipoCambio"; valor: number }
   | { tipo: "afectoIgv"; valor: boolean }
   | { tipo: "gastos"; valor: number }
   | { tipo: "agregar"; producto: ProductoParaComprar; cantidad?: number }
@@ -103,6 +138,12 @@ export function estadoInicial(fecha: string): EstadoCompra {
     // La mayoría de sus compras son locales y con IGV; es el valor por defecto
     // que menos veces hay que corregir.
     afectoIgv: true,
+    // Dólares por defecto porque es la moneda del sistema, no porque sea
+    // la más frecuente en sus compras. Cambiarlo a soles es un clic; lo
+    // que no puede pasar es que se escriban soles "sin querer" en un
+    // campo que el resto del sistema lee como dólares.
+    moneda: "USD",
+    tipoCambio: 0,
     gastosImportacion: 0,
     tracking: "",
     courier: "",
@@ -151,6 +192,27 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
       }
       return { ...estado, tipo: "importacion" };
     }
+
+    case "moneda":
+      return {
+        ...estado,
+        moneda: accion.valor,
+        // Volver a dólares limpia el tipo de cambio. Dejarlo puesto haría
+        // que un cambio de opinión guardara un dato que ya no significa
+        // nada, y la base lo rechazaría al enviar.
+        tipoCambio: accion.valor === "USD" ? 0 : estado.tipoCambio,
+      };
+
+    case "tipoCambio":
+      return {
+        ...estado,
+        // Cuatro decimales: es lo que publica SUNAT y lo que admite la
+        // columna `numeric(9,4)`.
+        tipoCambio:
+          Number.isFinite(accion.valor) && accion.valor > 0
+            ? redondear4(accion.valor)
+            : 0,
+      };
 
     case "afectoIgv":
       return { ...estado, afectoIgv: accion.valor };
@@ -374,6 +436,10 @@ export function aPayload(estado: EstadoCompra) {
     documento_proveedor: estado.documentoProveedor.trim() || null,
     guia_proveedor: estado.guiaProveedor.trim() || null,
     afecto_igv: estado.afectoIgv,
+    moneda: estado.moneda,
+    // En dólares no se manda: la base exige que sea null y la RPC lo
+    // limpiaría igual, pero mandarlo sugeriría que significa algo.
+    tipo_cambio: estado.moneda === "USD" ? null : estado.tipoCambio || null,
     // Los campos de importación NO viajan en una compra local, aunque el
     // estado los tuviera de antes de cambiar el tipo.
     gastos_importacion: esImportacion ? estado.gastosImportacion : 0,

@@ -27,6 +27,7 @@ import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import { BuscadorCompra } from "./buscador";
 import { FilaCompra } from "./linea";
+import { BloqueMoneda } from "./moneda";
 
 /**
  * Registro de una compra.
@@ -222,6 +223,18 @@ export function ConstructorCompra({
                 />
                 <span className="text-sm">La factura lleva IGV</span>
               </label>
+            </div>
+
+            {/* En qué moneda vino la factura (042). Va justo debajo de la
+                casilla del IGV porque son la misma pregunta hecha dos
+                veces: ambas salen de mirar el papel del proveedor. */}
+            <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+              <BloqueMoneda
+                moneda={estado.moneda}
+                tipoCambio={estado.tipoCambio}
+                fecha={estado.fecha}
+                despachar={despachar}
+              />
             </div>
 
             {/* Los campos de importación solo aparecen cuando lo son. Un

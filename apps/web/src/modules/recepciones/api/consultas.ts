@@ -70,6 +70,8 @@ export async function listarRecepciones(
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
         proveedores: { razon_social: string } | null;
+        moneda: string | null;
+        tipo_cambio: number | string | null;
         compras: { numero: string } | null;
         perfiles: { nombre: string } | null;
         // Se traen los ítems en vez de pedir `recepcion_items(count)` porque
@@ -223,7 +225,7 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
     const { data, error } = await supabase
       .from("compras")
       .select(
-        `id, numero, fecha, proveedor_id, gastos_importacion,
+        `id, numero, fecha, proveedor_id, gastos_importacion, moneda, tipo_cambio,
          proveedores(razon_social),
          compra_items(
            producto_id, cantidad, cantidad_recibida, costo_unitario, unidad_codigo,
@@ -257,6 +259,8 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
       proveedor_id: String(c.proveedor_id),
       proveedor: c.proveedores?.razon_social ?? "—",
       gastos_importacion: Number(c.gastos_importacion ?? 0),
+      moneda: (c.moneda === "PEN" ? "PEN" : "USD") as "USD" | "PEN",
+      tipo_cambio: c.tipo_cambio === null ? null : Number(c.tipo_cambio),
       lineas: (c.compra_items ?? []).map((i) => ({
         producto_id: i.producto_id,
         codigo: i.productos?.codigo ?? "—",

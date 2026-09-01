@@ -15,8 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@rodatech/ui";
 
-import { aprobar, cambiarEstado, clonar } from "../../acciones/gestionar";
+import { cambiarEstado, clonar } from "../../acciones/gestionar";
 import type { EstadoCotizacion } from "../../dominio/tipos";
+import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
 
 /**
  * Acciones de una cotización.
@@ -33,14 +34,18 @@ export function AccionesCotizacion({
   id,
   estado,
   enlaceWhatsapp,
+  lineas,
 }: {
   id: string;
   estado: EstadoCotizacion;
   enlaceWhatsapp: string | null;
+  /** Para poder preguntar qué confirmó el cliente antes de aprobar. */
+  lineas: LineaParaConfirmar[];
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
 
   const correr = (f: () => Promise<{ ok: boolean; error?: string; id?: string }>) => {
     setError(null);
@@ -57,11 +62,21 @@ export function AccionesCotizacion({
 
   return (
     <div className="flex flex-col items-stretch gap-2 sm:items-end print:hidden">
+      <DialogoConfirmar
+        cotizacionId={id}
+        lineas={lineas}
+        abierto={confirmando}
+        onCerrar={() => setConfirmando(false)}
+      />
+
       <div className="flex items-center justify-end gap-2">
         {/* El siguiente paso, según dónde esté el documento. */}
         {enCurso ? (
-          <Button disabled={pendiente} onClick={() => correr(() => aprobar(id))}>
-            Aprobar
+          // Ya no aprueba directo: pregunta QUÉ confirmó el cliente.
+          // Aprobar la cotización entera daba por vendidas las seis líneas
+          // siempre, y de esa cuenta sale después lo que hay que comprar.
+          <Button disabled={pendiente} onClick={() => setConfirmando(true)}>
+            Confirmar pedido
           </Button>
         ) : estado === "aprobada" ? (
           <Button onClick={() => router.push(`/guias/nueva?cotizacion=${id}`)}>

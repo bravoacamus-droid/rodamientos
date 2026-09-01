@@ -116,6 +116,8 @@ describe("recepción contra una compra", () => {
     fecha: "2026-08-20",
     proveedor_id: "44444444-4444-4444-8444-444444444444",
     proveedor: "Importaciones del Norte S.A.C.",
+    moneda: "USD",
+    tipo_cambio: null,
     gastos_importacion: 25,
     lineas: [
       {
@@ -284,6 +286,8 @@ describe("avisos", () => {
       fecha: "2026-08-20",
       proveedor_id: "44444444-4444-4444-8444-444444444444",
       proveedor: "Importaciones del Norte S.A.C.",
+      moneda: "USD",
+      tipo_cambio: null,
       gastos_importacion: 0,
       lineas: [
         {

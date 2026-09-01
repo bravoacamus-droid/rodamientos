@@ -120,6 +120,20 @@ export default async function PaginaDetalleCotizacion({
           id={cabecera.id}
           estado={cabecera.estado}
           enlaceWhatsapp={whatsapp}
+          // Las líneas viajan para poder preguntar QUÉ confirmó el
+          // cliente. Se mandan crudas, sin el `id` de la cotización
+          // repetido dentro: el diálogo solo necesita qué, cuánto y a
+          // cuánto, para poder decir el total de lo que se está
+          // confirmando mientras se ajusta.
+          lineas={lineas.map((l) => ({
+            id: l.id,
+            codigo: l.codigo,
+            descripcion: l.descripcion,
+            cantidad: l.cantidad,
+            unidad: l.unidad_codigo,
+            valorUnitario: l.valor_unitario,
+            descuentoPct: l.descuento_pct,
+          }))}
         />
       </header>
 

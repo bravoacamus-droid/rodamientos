@@ -439,6 +439,96 @@ fabricación, pero no el de local, que es la más frecuente).
 
 ---
 
+### H · Bloque 1 del plan de compras · HECHO el 01/09
+
+Lo que no dependía de ninguna de las cinco preguntas a Willy. Migraciones 040
+a 044.
+
+| | Estado |
+|---|---|
+| Columna **Disponibilidad** por ítem (inmediata / exterior 15 d / fabricación 3 d) | ✅ con su casilla para imprimir o no |
+| **Confirmar por línea** al aprobar una cotización | ✅ diálogo «¿Qué te confirmó el cliente?» |
+| **Moneda y tipo de cambio** en la compra | ✅ con el tipo de cambio de SUNAT en un botón |
+| Botón **Recibir** desde la compra | ✅ **ya existía** — ver abajo |
+
+#### Lo que me había equivocado al listar
+
+En el plan puse el botón «Recibir desde la compra» como pendiente. **No lo
+estaba.** `pagina-detalle.tsx` de compras ya tenía el enlace a
+`/recepciones/nueva?compra=<id>`, la pantalla de recepción ya leía ese
+parámetro y el constructor ya precargaba las líneas que faltaban por llegar.
+Estaba completo desde antes.
+
+Lo que sí faltaba, y se hizo, es que la recepción **diga en qué moneda** están
+los costos que precarga. La conversión la hace la base sola, así que ningún
+número cambia — pero sin decirlo, quien recibe lee «15.20» en la columna de
+costo, entiende dólares, y «corregiría» un número que estaba bien.
+
+#### El tipo de cambio: un paquete que llevaba meses escrito sin usarse
+
+`packages/consultas/src/tipo-cambio.ts` estaba construido, probado y con su
+caché desde el principio del proyecto. **Cero llamadas desde la aplicación** —
+comprobado con grep sobre `apps/web/src`. Se escribió para un caso que no
+llegó, porque el sistema vende siempre en dólares.
+
+Ahora lo usa el botón «SUNAT» del registro de compra. Probado en pantalla el
+01/09: devolvió compra 3.357 · venta 3.367 y rellenó el campo con el de venta,
+que es el que se paga al comprar dólares para pagar la factura.
+
+#### Prueba de punta a punta contra la base del cliente
+
+Compra en soles → recepción → kardex, que es donde estaba el agujero:
+
+```
+compra    CMP-26-00003 · 10 u a S/ 15.20 · TC 3.7520 · subtotal S/ 152.00
+recepción REC-26-00001 · hereda PEN y 3.7520 de la compra
+kardex    costo_unitario 4.0512   ← el arreglo. Antes habría entrado 15.2000
+productos ultimo_costo 4.0512 · costo_promedio 4.0512
+```
+
+El subtotal de la compra se queda en **soles** a propósito: es la cifra que se
+cuadra contra la factura del proveedor, y una factura en soles se cuadra en
+soles. La conversión ocurre una sola vez, en `recepcionar_mercaderia`, que es
+la única puerta por la que entra stock.
+
+Todo borrado después. Censo: 0 compras, 0 recepciones, 0 proveedores, 790
+productos, 37 clientes — como estaba.
+
+#### Detalles que conviene recordar
+
+- **La columna de disponibilidad se ve SIEMPRE en el constructor**, aunque no
+  se imprima. La casilla decide si sale en el PDF, no si el dato existe: el
+  dato es de donde va a salir la bandeja «Por comprar».
+- **Prometer «inmediata» sin stock avisa pero NO bloquea.** Willy consigue en
+  el día casi todo lo que no tiene; suponer «exterior» porque el almacén está
+  en cero sería equivocarse casi siempre.
+- **La confirmación parte de CERO** cuando llega detalle. Al revés —dejar lo no
+  mencionado en su cantidad— una línea que se olvidara de listar se daría por
+  vendida en silencio, que es el fallo que la 041 viene a arreglar.
+- **`cantidad_aprobada` nace en null**, y null es «todavía no ha contestado».
+  No se puede usar 0 para eso: 0 es una respuesta —«esta no la quiero»— y las
+  dos llevan a acciones opuestas.
+- **La unidad de medida NO se inventa** (039) y **la moneda tampoco se
+  adivina** (042): `a_dolares` FALLA si le falta el tipo de cambio en vez de
+  devolver el monto sin convertir. Devolverlo era exactamente el fallo.
+
+#### Falta antes de dar el bloque por cerrado
+
+- La bandeja **«Por comprar»** ya tiene su vista en la base (`v_comprometido`,
+  migración 041) pero **no tiene pantalla**. Es lo primero del bloque 2.
+- La **aprobación parcial no reserva stock**: sigue pendiente de que Willy
+  decida si confirmar un pedido aparta la mercadería (pregunta 1 de §G).
+
+#### Un dato de prueba que quedó en la base del cliente
+
+Hay un movimiento de inventario `AJU-26-00001`, «Conteo de prueba», de 20
+unidades del producto `0-230`, del 01/09. **No es mío** — salió de la demo en
+vivo de la reunión de ese día. Conviene borrarlo antes de que Willy empiece a
+operar de verdad, o su primer inventario arrancará con 20 unidades que no
+existen.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

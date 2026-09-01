@@ -46,6 +46,9 @@ const esquema = z.object({
   documento_proveedor: z.string().max(60).nullable(),
   guia_proveedor: z.string().max(60).nullable(),
   afecto_igv: z.boolean(),
+  // 042. El check de la base es quien manda; esto da el mensaje legible.
+  moneda: z.enum(["USD", "PEN"]).default("USD"),
+  tipo_cambio: z.number().positive().finite().nullable().default(null),
   gastos_importacion: z.number().nonnegative().finite(),
   tracking: z.string().max(80).nullable(),
   courier: z.string().max(60).nullable(),
@@ -88,6 +91,18 @@ export async function registrarCompra(
   } catch (e) {
     const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
     return { ok: false, error: `Los datos no son válidos: ${detalle}.` };
+  }
+
+  // Una compra en soles sin tipo de cambio se para AQUÍ, con un mensaje
+  // que dice qué falta. Si llegara a la base, el check `compras_tc_coherente`
+  // la rechazaría igual, pero con «viola una restricción», que no le sirve
+  // a nadie. Es el mismo invariante en tres capas, a propósito.
+  if (datos.moneda !== "USD" && !datos.tipo_cambio) {
+    return {
+      ok: false,
+      error:
+        "Falta el tipo de cambio. Una compra en soles necesita saber a cuánto estaba el dólar ese día, o el costo entraría al inventario multiplicado por cuatro.",
+    };
   }
 
   // Dos líneas del mismo producto harían saltar el UNIQUE

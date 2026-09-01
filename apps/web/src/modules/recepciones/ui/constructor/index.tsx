@@ -250,7 +250,29 @@ export function ConstructorRecepcion({
                 <p className="text-xs text-[var(--fg-muted)]">
                   Se han precargado las líneas que faltaban por llegar.
                   {compraElegida.gastos_importacion > 0
-                    ? ` La compra trae $${compraElegida.gastos_importacion.toFixed(2)} de gastos, que se reparten por valor.`
+                    ? ` La compra trae ${compraElegida.gastos_importacion.toFixed(2)} de gastos, que se reparten por valor.`
+                    : ""}
+                </p>
+              ) : null}
+
+              {/*
+                En qué moneda están los costos que se acaban de precargar.
+
+                La conversión la hace la base sola (042), así que esto no
+                cambia ningún número. Existe porque sin decirlo, quien
+                recibe lee «15.20» en la columna de costo y entiende
+                dólares — y si la factura viene en soles, «corregiría» un
+                número que estaba bien.
+              */}
+              {compraElegida && compraElegida.moneda !== "USD" ? (
+                <p
+                  role="status"
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm"
+                >
+                  Los costos de esta compra están en{" "}
+                  <strong>soles</strong>, como la factura del proveedor.
+                  {compraElegida.tipo_cambio
+                    ? ` Entran al inventario en dólares, a ${compraElegida.tipo_cambio}.`
                     : ""}
                 </p>
               ) : null}

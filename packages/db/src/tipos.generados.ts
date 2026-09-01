@@ -3728,6 +3728,20 @@ export type Database = {
         Args: { p_moneda?: string; p_monto: number }
         Returns: string
       }
+      pendiente_de_recibir: {
+        Args: { p_compra: string }
+        Returns: {
+          codigo: string
+          costo_unitario: number
+          descripcion: string
+          marca: string
+          pedido: number
+          pendiente: number
+          producto_id: string
+          recibido: number
+          unidad_codigo: string
+        }[]
+      }
       productos_pagina: {
         Args: {
           p_archivados?: boolean

@@ -32,15 +32,51 @@ function refrescar(id: string) {
   revalidatePath("/dashboard");
 }
 
-/** Aprobar: es el paso que habilita facturar y generar la guía. */
-export async function aprobar(id: string): Promise<ResultadoGestion> {
+/**
+ * Lo que el cliente confirmó de una línea.
+ *
+ * Se manda la lista SOLO cuando confirmó una parte. Sin lista, la RPC aprueba
+ * todas las líneas por su cantidad cotizada, que es lo que pasa casi siempre.
+ */
+const esquemaLinea = z.object({
+  item_id: z.string().uuid(),
+  cantidad: z.number().nonnegative().finite(),
+});
+
+/**
+ * Aprobar: es el paso que habilita facturar y generar la guía.
+ *
+ * Willy, 01/09 (29:05): *«me están confirmando el total o parte de lo
+ * cotizado»*. Por eso admite el detalle — y por eso lo admite OPCIONAL: pedir
+ * que enumere seis líneas para decir «me confirmaron las seis» sería trabajo
+ * inventado en el caso que ocurre casi siempre.
+ */
+export async function aprobar(
+  id: string,
+  lineas?: { item_id: string; cantidad: number }[],
+): Promise<ResultadoGestion> {
   const problema = await exigirPermiso();
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
 
+  let detalle: { item_id: string; cantidad: number }[] | null = null;
+  if (lineas !== undefined) {
+    const revision = z.array(esquemaLinea).min(1).max(200).safeParse(lineas);
+    if (!revision.success) {
+      return { ok: false, error: "Las cantidades confirmadas no son válidas." };
+    }
+    // Las que quedaron en cero se mandan igual: la RPC parte de cero y sube lo
+    // que llega, así que da lo mismo — pero mandarlas deja constancia de que
+    // se miraron y se descartaron, en vez de que se olvidaran.
+    detalle = revision.data;
+  }
+
   try {
     const supabase = await clienteServidor();
-    const { error } = await supabase.rpc("aprobar_cotizacion", { p_id: id });
+    const { error } = await supabase.rpc("aprobar_cotizacion", {
+      p_id: id,
+      p_lineas: detalle,
+    });
     if (error) return { ok: false, error: error.message };
     refrescar(id);
     return { ok: true };
