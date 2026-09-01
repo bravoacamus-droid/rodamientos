@@ -527,12 +527,14 @@ export type Database = {
           guia_proveedor: string | null
           id: string
           igv: number
+          moneda: string
           motivo_anulacion: string | null
           numero: string
           observaciones: string | null
           proveedor_id: string
           subtotal: number
           tipo: Database["public"]["Enums"]["tipo_compra"]
+          tipo_cambio: number | null
           total: number
           tracking: string | null
         }
@@ -549,12 +551,14 @@ export type Database = {
           guia_proveedor?: string | null
           id?: string
           igv?: number
+          moneda?: string
           motivo_anulacion?: string | null
           numero: string
           observaciones?: string | null
           proveedor_id: string
           subtotal?: number
           tipo?: Database["public"]["Enums"]["tipo_compra"]
+          tipo_cambio?: number | null
           total?: number
           tracking?: string | null
         }
@@ -571,12 +575,14 @@ export type Database = {
           guia_proveedor?: string | null
           id?: string
           igv?: number
+          moneda?: string
           motivo_anulacion?: string | null
           numero?: string
           observaciones?: string | null
           proveedor_id?: string
           subtotal?: number
           tipo?: Database["public"]["Enums"]["tipo_compra"]
+          tipo_cambio?: number | null
           total?: number
           tracking?: string | null
         }
@@ -1189,11 +1195,14 @@ export type Database = {
       cotizacion_items: {
         Row: {
           cantidad: number
+          cantidad_aprobada: number | null
           codigo: string
           costo_unitario: number
           cotizacion_id: string
           descripcion: string
           descuento_pct: number
+          dias_entrega: number | null
+          disponibilidad: Database["public"]["Enums"]["disponibilidad_item"]
           entrega: string | null
           id: string
           importe: number | null
@@ -1206,11 +1215,14 @@ export type Database = {
         }
         Insert: {
           cantidad?: number
+          cantidad_aprobada?: number | null
           codigo: string
           costo_unitario?: number
           cotizacion_id: string
           descripcion: string
           descuento_pct?: number
+          dias_entrega?: number | null
+          disponibilidad?: Database["public"]["Enums"]["disponibilidad_item"]
           entrega?: string | null
           id?: string
           importe?: number | null
@@ -1223,11 +1235,14 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          cantidad_aprobada?: number | null
           codigo?: string
           costo_unitario?: number
           cotizacion_id?: string
           descripcion?: string
           descuento_pct?: number
+          dias_entrega?: number | null
+          disponibilidad?: Database["public"]["Enums"]["disponibilidad_item"]
           entrega?: string | null
           id?: string
           importe?: number | null
@@ -1304,6 +1319,7 @@ export type Database = {
           igv: number
           margen_pct: number
           mostrar_descuento: boolean
+          mostrar_disponibilidad: boolean
           motivo_rechazo: string | null
           numero: string | null
           observaciones: string | null
@@ -1335,6 +1351,7 @@ export type Database = {
           igv?: number
           margen_pct?: number
           mostrar_descuento?: boolean
+          mostrar_disponibilidad?: boolean
           motivo_rechazo?: string | null
           numero?: string | null
           observaciones?: string | null
@@ -1366,6 +1383,7 @@ export type Database = {
           igv?: number
           margen_pct?: number
           mostrar_descuento?: boolean
+          mostrar_disponibilidad?: boolean
           motivo_rechazo?: string | null
           numero?: string | null
           observaciones?: string | null
@@ -1712,6 +1730,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cotizacion_items"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guia_items_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_comprometido"
+            referencedColumns: ["item_id"]
           },
           {
             foreignKeyName: "guia_items_guia_id_fkey"
@@ -2683,6 +2708,13 @@ export type Database = {
             referencedRelation: "recepciones"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "recepcion_items_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "v_precios_compra"
+            referencedColumns: ["recepcion_id"]
+          },
         ]
       }
       recepciones: {
@@ -2694,10 +2726,12 @@ export type Database = {
           fecha: string
           guia_proveedor: string | null
           id: string
+          moneda: string
           numero: string
           observaciones: string | null
           proveedor_id: string | null
           recibido_por: string | null
+          tipo_cambio: number | null
         }
         Insert: {
           anulada?: boolean
@@ -2707,10 +2741,12 @@ export type Database = {
           fecha?: string
           guia_proveedor?: string | null
           id?: string
+          moneda?: string
           numero: string
           observaciones?: string | null
           proveedor_id?: string | null
           recibido_por?: string | null
+          tipo_cambio?: number | null
         }
         Update: {
           anulada?: boolean
@@ -2720,10 +2756,12 @@ export type Database = {
           fecha?: string
           guia_proveedor?: string | null
           id?: string
+          moneda?: string
           numero?: string
           observaciones?: string | null
           proveedor_id?: string | null
           recibido_por?: string | null
+          tipo_cambio?: number | null
         }
         Relationships: [
           {
@@ -3030,6 +3068,87 @@ export type Database = {
           },
         ]
       }
+      v_comprometido: {
+        Row: {
+          cliente: string | null
+          cliente_id: string | null
+          codigo: string | null
+          comprometido: number | null
+          costo_referencia: number | null
+          cotizacion: string | null
+          cotizacion_id: string | null
+          cotizado: number | null
+          descripcion: string | null
+          dias_entrega: number | null
+          disponibilidad:
+            | Database["public"]["Enums"]["disponibilidad_item"]
+            | null
+          falta: number | null
+          fecha: string | null
+          item_id: string | null
+          marca: string | null
+          producto_id: string | null
+          stock: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       v_historial_precios: {
         Row: {
           cantidad: number | null
@@ -3085,6 +3204,54 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_precios_compra: {
+        Row: {
+          cantidad: number | null
+          codigo: string | null
+          costo_anterior_usd: number | null
+          costo_moneda: number | null
+          costo_usd: number | null
+          descripcion: string | null
+          documento: string | null
+          fecha: string | null
+          moneda: string | null
+          producto_id: string | null
+          proveedor: string | null
+          proveedor_id: string | null
+          recepcion_id: string | null
+          tipo_cambio: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepcion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepcion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepcion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -3327,13 +3494,20 @@ export type Database = {
     }
     Functions: {
       _tres_letras: { Args: { n: number }; Returns: string }
+      a_dolares: {
+        Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
+        Returns: number
+      }
       anular_compra: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       anular_comprobante: {
         Args: { p_id: string; p_motivo: string }
         Returns: Json
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
-      aprobar_cotizacion: { Args: { p_id: string }; Returns: Json }
+      aprobar_cotizacion: {
+        Args: { p_id: string; p_lineas?: Json }
+        Returns: Json
+      }
       asegurar_ubigeo: {
         Args: {
           p_codigo: string
@@ -3515,6 +3689,10 @@ export type Database = {
       crear_tipo: {
         Args: { p_nombre: string; p_subfamilia: string }
         Returns: Json
+      }
+      dias_por_defecto: {
+        Args: { p_disp: Database["public"]["Enums"]["disponibilidad_item"] }
+        Returns: number
       }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
@@ -3753,6 +3931,7 @@ export type Database = {
     }
     Enums: {
       condicion_pago: "contado" | "credito"
+      disponibilidad_item: "inmediata" | "exterior" | "fabricacion"
       estado_compra: "registrada" | "recibida_parcial" | "recibida" | "anulada"
       estado_comprobante:
         | "emitido"
@@ -3936,6 +4115,7 @@ export const Constants = {
   public: {
     Enums: {
       condicion_pago: ["contado", "credito"],
+      disponibilidad_item: ["inmediata", "exterior", "fabricacion"],
       estado_compra: ["registrada", "recibida_parcial", "recibida", "anulada"],
       estado_comprobante: [
         "emitido",

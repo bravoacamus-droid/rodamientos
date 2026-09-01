@@ -91,6 +91,13 @@ export function Documento({ c }: { c: CotizacionImpresa }) {
             </th>
             <th className="border border-[#0E4C73] px-1.5 py-1.5 text-right">Cant.</th>
             <th className="border border-[#0E4C73] px-1.5 py-1.5 text-center">U.M.</th>
+            {/* C7 (01/09): cierra el bloque de «qué y cuándo» antes de empezar
+                el de «cuánto». Solo si hay algo que no sea inmediato. */}
+            {c.mostrarDisponibilidad ? (
+              <th className="border border-[#0E4C73] px-1.5 py-1.5 text-left">
+                Entrega
+              </th>
+            ) : null}
             <th className="border border-[#0E4C73] px-1.5 py-1.5 text-right">
               Valor unit.
             </th>
@@ -121,6 +128,11 @@ export function Documento({ c }: { c: CotizacionImpresa }) {
               <td className="border border-[#ccc] px-1.5 py-1 text-center">
                 {l.unidad}
               </td>
+              {c.mostrarDisponibilidad ? (
+                <td className="border border-[#ccc] px-1.5 py-1 whitespace-nowrap">
+                  {l.entrega}
+                </td>
+              ) : null}
               <td className="border border-[#ccc] px-1.5 py-1 text-right tabular">
                 {dinero(l.valorUnitario)}
               </td>

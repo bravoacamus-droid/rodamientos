@@ -5,6 +5,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 
 import type { ClienteOpcion } from "../dominio/cliente";
+import type { Disponibilidad } from "../dominio/disponibilidad";
 import type {
   CotizacionLista,
   EstadoCotizacion,
@@ -224,6 +225,7 @@ export async function cotizacionPorId(id: string): Promise<
       fecha: string;
       validez_dias: number;
       tiempo_entrega: string | null;
+      mostrar_disponibilidad: boolean;
       orden_compra_cliente: string | null;
       contacto: string | null;
       condiciones: string | null;
@@ -259,6 +261,9 @@ export async function cotizacionPorId(id: string): Promise<
       descuento_pct: number;
       costo_unitario: number;
       precio_minimo_ref: number;
+      disponibilidad: Disponibilidad;
+      dias_entrega: number | null;
+      cantidad_aprobada: number | null;
       importe: number;
     }[];
     emisor: {
@@ -283,15 +288,16 @@ export async function cotizacionPorId(id: string): Promise<
         .select(
           `id, numero, estado, fecha, validez_dias, tiempo_entrega,
            orden_compra_cliente, contacto, condiciones, observaciones,
-           mostrar_descuento, subtotal, descuento_total, igv, total,
-           costo_total, margen_pct, cliente_id,
+           mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
+           igv, total, costo_total, margen_pct, cliente_id,
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, contacto, whatsapp, telefono),
            perfiles!cotizaciones_vendedor_id_fkey(nombre),
            cotizacion_items(producto_id, orden, codigo, marca, descripcion,
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
-                            importe)`,
+                            importe, disponibilidad, dias_entrega,
+                            cantidad_aprobada)`,
         )
         .eq("id", id)
         .maybeSingle(),

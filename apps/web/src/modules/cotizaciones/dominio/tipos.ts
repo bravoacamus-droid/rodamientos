@@ -11,6 +11,9 @@ import type { EstadoCotizacion } from "@rodatech/db/tipos";
 
 export type { EstadoCotizacion };
 
+import type { Disponibilidad } from "./disponibilidad";
+export type { Disponibilidad };
+
 /** Una fila del listado. */
 export interface CotizacionLista {
   id: string;
@@ -56,6 +59,12 @@ export interface LineaCotizacion {
   importe: number;
   costo_unitario: number;
   entrega: string | null;
+  /** 040: cuándo puede entregarse esta línea. */
+  disponibilidad: Disponibilidad;
+  /** Plazo propio. Null = el habitual de su tipo. */
+  dias_entrega: number | null;
+  /** 041: lo que el cliente confirmó. Null = todavía no ha contestado. */
+  cantidad_aprobada: number | null;
 }
 
 /** Cabecera completa, para la ficha y el PDF. */

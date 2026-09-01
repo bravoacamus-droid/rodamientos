@@ -20,12 +20,19 @@ export function ResumenConstructor({
   bloqueos,
   mostrarDescuento,
   onMostrarDescuento,
+  mostrarDisponibilidad,
+  onMostrarDisponibilidad,
+  hayNoInmediatos,
   guardando,
 }: {
   totales: TotalesCotizacion;
   bloqueos: Bloqueo[];
   mostrarDescuento: boolean;
   onMostrarDescuento: (v: boolean) => void;
+  mostrarDisponibilidad: boolean;
+  onMostrarDisponibilidad: (v: boolean) => void;
+  /** Si alguna línea no es inmediata. Decide si vale la pena imprimir. */
+  hayNoInmediatos: boolean;
   guardando: boolean;
 }) {
   return (
@@ -93,6 +100,31 @@ export function ResumenConstructor({
             checked={mostrarDescuento}
             onCheckedChange={onMostrarDescuento}
             aria-label="Mostrar columna de descuento"
+          />
+        </label>
+
+        {/*
+          Willy, 01/09 (8:38): *«esa columna se puede incluir o no según el
+          caso, porque rara vez es importación; por lo general todo es de
+          entrada inmediata»*. Mismo trato que el descuento.
+
+          La ayuda cambia según lo que haya en la cotización porque la
+          decisión también cambia: con todo inmediato la columna diría lo
+          mismo seis veces, y ahí sí molesta.
+        */}
+        <label className="mt-3 flex items-start justify-between gap-3 border-t border-[var(--border)] pt-3">
+          <span className="text-sm">
+            Mostrar columna de entrega
+            <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">
+              {hayNoInmediatos
+                ? "Hay ítems que no son inmediatos: conviene que el cliente lo vea."
+                : "Todo es inmediato, así que diría lo mismo en cada línea."}
+            </span>
+          </span>
+          <Switch
+            checked={mostrarDisponibilidad}
+            onCheckedChange={onMostrarDisponibilidad}
+            aria-label="Mostrar columna de entrega"
           />
         </label>
 

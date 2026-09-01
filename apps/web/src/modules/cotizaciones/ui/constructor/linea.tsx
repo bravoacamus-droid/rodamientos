@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Badge, Button, Input } from "@rodatech/ui";
+import { Badge, Button, Input, SelectNativo } from "@rodatech/ui";
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
+import {
+  DIAS_POR_DEFECTO,
+  DISPONIBILIDADES,
+  ETIQUETA_DISPONIBILIDAD,
+  prometeDeMas,
+  type Disponibilidad,
+} from "../../dominio/disponibilidad";
 import { importeLinea } from "../../dominio/totales";
 
 /**
@@ -116,6 +123,70 @@ export function FilaLinea({
         </td>
 
         <td className="text-xs text-[var(--fg-muted)]">{linea.unidad}</td>
+
+        {/*
+          Cuándo se puede entregar (040).
+
+          Esta columna se ve SIEMPRE, a diferencia de la del descuento, que
+          aparece solo si se activa. No es una incoherencia: la casilla de la
+          cabecera decide si la columna se IMPRIME, no si el dato existe. Y el
+          dato hace falta aunque no se imprima, porque es de donde va a salir
+          la bandeja «Por comprar»: lo que no es inmediato hay que pedirlo.
+        */}
+        <td className="w-40">
+          <SelectNativo
+            value={linea.disponibilidad}
+            onChange={(e) =>
+              despachar({
+                tipo: "disponibilidad",
+                key: linea.key,
+                // El `as` es honesto: las opciones del select SON el enum.
+                valor: e.target.value as Disponibilidad,
+              })
+            }
+            className="h-control-sm text-xs"
+            aria-label={`Disponibilidad de ${linea.codigo}`}
+          >
+            {DISPONIBILIDADES.map((d) => (
+              <option key={d} value={d}>
+                {ETIQUETA_DISPONIBILIDAD[d]}
+              </option>
+            ))}
+          </SelectNativo>
+
+          {linea.disponibilidad !== "inmediata" ? (
+            <div className="mt-1 flex items-center gap-1">
+              <Input
+                type="number"
+                min={1}
+                max={365}
+                step="1"
+                value={linea.diasEntrega ?? ""}
+                onChange={(e) =>
+                  despachar({
+                    tipo: "diasEntrega",
+                    key: linea.key,
+                    // Vaciar la caja vuelve al plazo habitual, no a cero.
+                    valor: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                placeholder={String(DIAS_POR_DEFECTO[linea.disponibilidad] ?? "")}
+                className="h-control-sm w-14 text-right tabular text-xs"
+                aria-label={`Días de entrega de ${linea.codigo}`}
+              />
+              <span className="text-xs text-[var(--fg-muted)]">días</span>
+            </div>
+          ) : null}
+
+          {/* Prometer «inmediata» sin stock no se bloquea —Willy consigue en
+              el día casi todo lo que no tiene— pero sí se dice: lo que salga
+              en esa columna es una promesa impresa. */}
+          {prometeDeMas(linea.disponibilidad, linea.cantidad, linea.stock) ? (
+            <span className="mt-1 block text-xs text-[var(--warn)]">
+              sin stock para prometer entrega inmediata
+            </span>
+          ) : null}
+        </td>
 
         {/* C1: SOLO valor unitario. La columna "precio unitario" (valor x 1.18)
             desaparece del modelo, no solo del PDF: es la que le hizo perder

@@ -28,6 +28,8 @@ export interface ProductoParaCotizar {
   costo_promedio?: number;
 }
 
+import type { Disponibilidad } from "./disponibilidad";
+
 export interface LineaConstructor {
   /** Clave estable para React. Determinista: sale de un contador. */
   key: string;
@@ -45,6 +47,19 @@ export interface LineaConstructor {
   /** P.V. del maestro, para poder volver a él tras negociar. */
   precioLista: number;
   stock: number;
+  /**
+   * Cuándo puede entregarse ESTA línea (040).
+   *
+   * Nace `inmediata` siempre, incluso sin stock, y es lo que pidió Willy:
+   * *«podemos ponerle por defecto stock inmediato, que son los que más
+   * venden ustedes, y los que no, se les puede cambiar»* (7:56). Él
+   * consigue en el día casi todo lo que no tiene, así que suponer
+   * «exterior» porque el almacén está en cero sería equivocarse casi
+   * siempre. Cuando no cuadra, la pantalla lo dice sin bloquear.
+   */
+  disponibilidad: Disponibilidad;
+  /** Plazo propio de la línea. Null = el habitual de su tipo. */
+  diasEntrega: number | null;
 }
 
 export interface EstadoConstructor {
@@ -67,6 +82,14 @@ export interface EstadoConstructor {
   observaciones: string;
   /** C5 (15:52): el descuento es una casilla habilitable, no una columna fija. */
   mostrarDescuento: boolean;
+  /**
+   * Igual que el descuento, y por el mismo motivo que dio él (8:38):
+   * *«esa columna se puede incluir o no según el caso, porque rara vez es
+   * importación; por lo general todo es de entrada inmediata»*. Una columna
+   * que dice «Inmediata» seis veces es ruido en un documento que el cliente
+   * compara contra el de la competencia.
+   */
+  mostrarDisponibilidad: boolean;
   lineas: LineaConstructor[];
   /** Contador de claves. No se muestra; existe para que las keys sean estables. */
   proximaKey: number;
@@ -81,7 +104,8 @@ export type CampoCabecera =
   | "contactoId"
   | "condiciones"
   | "observaciones"
-  | "mostrarDescuento";
+  | "mostrarDescuento"
+  | "mostrarDisponibilidad";
 
 export type Accion =
   | { tipo: "cabecera"; campo: CampoCabecera; valor: string | number | boolean | null }
@@ -92,6 +116,8 @@ export type Accion =
   | { tipo: "descuento"; key: string; valor: number }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
+  | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
+  | { tipo: "diasEntrega"; key: string; valor: number | null }
   | { tipo: "sustituir"; key: string; producto: ProductoParaCotizar }
   | { tipo: "mover"; key: string; direccion: -1 | 1 }
   | { tipo: "cargar"; estado: EstadoConstructor };
@@ -115,6 +141,7 @@ export function estadoInicial(clienteId: string | null = null): EstadoConstructo
     condiciones: "",
     observaciones: "",
     mostrarDescuento: false,
+    mostrarDisponibilidad: false,
     lineas: [],
     proximaKey: 1,
   };
@@ -127,6 +154,15 @@ const montoValido = (n: number) =>
   Number.isFinite(n) && n >= 0 ? redondear4(n) : 0;
 const pctValido = (n: number) =>
   Number.isFinite(n) ? Math.min(100, Math.max(0, redondear2(n))) : 0;
+/**
+ * El plazo escrito a mano en una línea.
+ *
+ * Null es un valor legítimo y significa «usa el habitual de su tipo», así que
+ * vaciar la caja no puede convertirse en un 0: el check de la base rechaza el
+ * 0 y el PDF imprimiría «0 días · exterior».
+ */
+const diasValidos = (n: number | null): number | null =>
+  n === null || !Number.isFinite(n) || n <= 0 ? null : Math.min(365, Math.round(n));
 
 function mapear(
   estado: EstadoConstructor,
@@ -158,6 +194,8 @@ function desdeProducto(
     precioMinimo: producto.precio_minimo ?? 0,
     precioLista: producto.precio_venta,
     stock: producto.stock ?? 0,
+    disponibilidad: "inmediata",
+    diasEntrega: null,
   };
 }
 
@@ -220,6 +258,25 @@ export function reducir(estado: EstadoConstructor, accion: Accion): EstadoConstr
         ...l,
         descuentoPct: pctValido(accion.valor),
       }));
+
+    case "disponibilidad":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        disponibilidad: accion.valor,
+        // Cambiar a inmediata borra el plazo. Sin esto, un ítem que estaba
+        // en «exterior 30 días» y pasa a inmediato conservaría el 30 y la
+        // base lo rechazaría (check `cotiz_item_dias_ok`) al guardar — o
+        // peor, imprimiría «Inmediata» con 30 días guardados detrás.
+        diasEntrega: accion.valor === "inmediata" ? null : l.diasEntrega,
+      }));
+
+    case "diasEntrega":
+      return mapear(estado, accion.key, (l) =>
+        // En inmediata no se acepta plazo, venga de donde venga.
+        l.disponibilidad === "inmediata"
+          ? l
+          : { ...l, diasEntrega: diasValidos(accion.valor) },
+      );
 
     case "bajarAlPiso":
       return mapear(estado, accion.key, (l) =>
@@ -353,6 +410,7 @@ export function aPayload(estado: EstadoConstructor) {
     condiciones: estado.condiciones || null,
     observaciones: estado.observaciones || null,
     mostrar_descuento: estado.mostrarDescuento,
+    mostrar_disponibilidad: estado.mostrarDisponibilidad,
     items: estado.lineas.map((l, i) => ({
       producto_id: l.productoId,
       orden: i + 1,
@@ -364,6 +422,11 @@ export function aPayload(estado: EstadoConstructor) {
       valor_unitario: l.valorUnitario,
       descuento_pct: l.descuentoPct,
       costo_unitario: l.costoUnitario,
+      disponibilidad: l.disponibilidad,
+      // Se manda solo el escrito a mano. El habitual del tipo NO se copia:
+      // si mañana el exterior pasa a 20 días, las cotizaciones que no
+      // pusieron plazo propio tienen que decir 20, no quedarse en 15.
+      dias_entrega: l.diasEntrega,
       // OJO: `precio_minimo_ref` NO va aquí. Lo impone el trigger
       // `trg_cotiz_items_piso` desde el maestro. Mandarlo sería ofrecerle a
       // quien llame la posibilidad de desactivar el piso.

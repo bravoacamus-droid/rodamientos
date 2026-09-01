@@ -260,6 +260,9 @@ export function Constructor({
                       <th className="text-left">Descripción</th>
                       <th className="text-right">Cant.</th>
                       <th className="text-left">U.M.</th>
+                      {/* Siempre visible, aunque no se imprima: es de donde
+                          sale lo que hay que salir a comprar. */}
+                      <th className="text-left">Entrega</th>
                       <th className="text-right">Valor unit.</th>
                       {estado.mostrarDescuento ? (
                         <th className="text-right">Dscto. %</th>
@@ -312,6 +315,11 @@ export function Constructor({
           onMostrarDescuento={(v) =>
             despachar({ tipo: "cabecera", campo: "mostrarDescuento", valor: v })
           }
+          mostrarDisponibilidad={estado.mostrarDisponibilidad}
+          onMostrarDisponibilidad={(v) =>
+            despachar({ tipo: "cabecera", campo: "mostrarDisponibilidad", valor: v })
+          }
+          hayNoInmediatos={estado.lineas.some((l) => l.disponibilidad !== "inmediata")}
           guardando={guardando}
         />
       </div>

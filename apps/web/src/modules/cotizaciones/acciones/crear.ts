@@ -28,6 +28,13 @@ const esquemaItem = z.object({
   valor_unitario: z.number().nonnegative().finite(),
   descuento_pct: z.number().min(0).max(100),
   costo_unitario: z.number().nonnegative().finite(),
+  // 040. Los tres valores son los del enum de Postgres: si llega otro, se
+  // rechaza aquí con un mensaje legible en vez de dejar que la base tire un
+  // error de casteo a mitad del insert.
+  disponibilidad: z.enum(["inmediata", "exterior", "fabricacion"]).default("inmediata"),
+  // El check `cotiz_item_dias_ok` de la base es quien manda; esto solo acota
+  // el rango para dar un mensaje entendible.
+  dias_entrega: z.number().int().min(1).max(365).nullable().default(null),
 });
 
 const esquema = z.object({
@@ -39,6 +46,7 @@ const esquema = z.object({
   condiciones: z.string().max(1000).nullable(),
   observaciones: z.string().max(2000).nullable(),
   mostrar_descuento: z.boolean(),
+  mostrar_disponibilidad: z.boolean().default(false),
   items: z.array(esquemaItem).min(1).max(200),
 });
 

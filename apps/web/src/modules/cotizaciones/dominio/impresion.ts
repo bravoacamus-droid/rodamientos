@@ -1,6 +1,7 @@
 import { IGV } from "@rodatech/config";
 import { montoEnLetras } from "@rodatech/sunat";
 
+import { textoEntrega, type Disponibilidad } from "./disponibilidad";
 import { importeLinea, redondear2 } from "./totales";
 
 /**
@@ -46,6 +47,10 @@ export interface LineaCruda {
   unidad: string;
   valorUnitario: number;
   descuentoPct: number;
+  /** 040. Sin valor se asume inmediata, que es lo que era antes de existir. */
+  disponibilidad?: Disponibilidad;
+  /** Plazo propio de la línea. Null = el habitual de su tipo. */
+  diasEntrega?: number | null;
 }
 
 export interface DatosImpresion {
@@ -67,6 +72,8 @@ export interface DatosImpresion {
   observaciones: string | null;
   ordenCompraCliente: string | null;
   mostrarDescuento: boolean;
+  /** C7 (01/09, 8:38): la columna de entrega también es opcional. */
+  mostrarDisponibilidad?: boolean;
   lineas: LineaCruda[];
 }
 
@@ -80,6 +87,8 @@ export interface LineaImpresa {
   valorUnitario: number;
   descuentoPct: number;
   importe: number;
+  /** Ya resuelto a texto: «Inmediata», «15 días · exterior». */
+  entrega: string;
 }
 
 export interface CotizacionImpresa {
@@ -99,6 +108,8 @@ export interface CotizacionImpresa {
   simbolo: "$";
   /** C5: si es false, la columna de descuento no se dibuja. */
   mostrarDescuento: boolean;
+  /** C7: igual, para la columna de entrega. */
+  mostrarDisponibilidad: boolean;
   /** C4, en este orden. */
   columnas: string[];
   lineas: LineaImpresa[];
@@ -182,6 +193,10 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
       valorUnitario: l.valorUnitario,
       descuentoPct: l.descuentoPct,
     }),
+    // Resuelto aquí y no en la plantilla: el texto que lee el cliente sale de
+    // una sola función, y así el PDF y lo que se manda por WhatsApp dicen lo
+    // mismo sin que nadie tenga que acordarse.
+    entrega: textoEntrega(l.disponibilidad ?? "inmediata", l.diasEntrega ?? null),
   }));
 
   // Se suman importes YA redondeados, igual que la columna generada de la base
@@ -199,6 +214,14 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
   // mostrar. Activarla y que salga una columna de ceros es peor que no tenerla.
   const conDescuento = d.mostrarDescuento && descuento > 0;
 
+  // Misma regla que el descuento y por el mismo motivo: activarla y que salga
+  // «Inmediata» en las seis líneas es peor que no tenerla. Si TODO es
+  // inmediato no hay nada que comunicar — la promesa general ya va en el pie
+  // del documento, en «tiempo de entrega».
+  const conEntrega =
+    (d.mostrarDisponibilidad ?? false) &&
+    d.lineas.some((l) => (l.disponibilidad ?? "inmediata") !== "inmediata");
+
   return {
     emisor: d.emisor,
     numero: d.numero,
@@ -214,13 +237,16 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     moneda: "USD",
     simbolo: "$",
     mostrarDescuento: conDescuento,
-    // C4, en este orden exacto.
+    mostrarDisponibilidad: conEntrega,
+    // C4, en este orden exacto. La entrega se cuela entre U.M. y el valor:
+    // cierra el bloque de «qué y cuándo» antes de empezar el de «cuánto».
     columnas: [
       "Código",
       "Marca",
       "Descripción",
       "Cant.",
       "U.M.",
+      ...(conEntrega ? ["Entrega"] : []),
       "Valor unit.",
       ...(conDescuento ? ["Dscto."] : []),
       "Importe",

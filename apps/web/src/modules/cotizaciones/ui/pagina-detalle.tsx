@@ -64,6 +64,7 @@ export default async function PaginaDetalleCotizacion({
     observaciones: cabecera.observaciones,
     ordenCompraCliente: cabecera.orden_compra_cliente,
     mostrarDescuento: cabecera.mostrar_descuento,
+    mostrarDisponibilidad: cabecera.mostrar_disponibilidad,
     lineas: lineas.map((l) => ({
       codigo: l.codigo,
       marca: l.marca,
@@ -72,6 +73,8 @@ export default async function PaginaDetalleCotizacion({
       unidad: l.unidad_codigo,
       valorUnitario: l.valor_unitario,
       descuentoPct: l.descuento_pct,
+      disponibilidad: l.disponibilidad,
+      diasEntrega: l.dias_entrega,
     })),
   });
 
