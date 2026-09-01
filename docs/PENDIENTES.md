@@ -341,7 +341,8 @@ se arregla dejando de preguntar. Lo que se hizo:
    pulsarlo, y si no se pulsa ninguno sale el aviso en amarillo.
 3. **El tope de deuda, detrás de un clic.** Ninguno de los 37 lo tiene puesto.
 4. **El contacto, detrás de un botón**, y con dos campos (nombre y cargo); su
-   correo, teléfono y área detrás de otro clic.
+   correo, teléfono y área detrás de otro clic. *(Superado el 01/09: ahora es
+   una lista de varios contactos con «Guardar y añadir otro» — ver §7.c.)*
 5. **Los siete campos que nadie llenó nunca**, detrás de «Más datos · N de 7»
    —con contador, para no tener que abrirlo a comprobar si hay algo dentro—.
    **No se borró ninguno**: puede que le sirvan, y esa decisión es suya.
@@ -421,6 +422,96 @@ También costó un intento. Usar el de SUNAT donde exista y el del INEI donde no
 **mezcla dos numeraciones y colisiona**: Surcubamba (SUNAT 090717) y Quichuas
 (INEI 090717) caían en la misma clave. El INEI es biyectivo sobre los 1.874;
 SUNAT tiene 41 huecos. La clave tiene que ser la completa.
+
+---
+
+### 7 · Repaso del 01/09 · «el lápiz no se ve» y «faltan más contactos»
+
+Willy volvió a mirar la pantalla de cliente nuevo. Tres cosas, y las tres
+tenía razón.
+
+**a · El lápiz de «Corregir» no se veía.**
+
+> *«Hay que poner diseño en editar, corregir con el lápiz no se ve mucho; para
+> el cliente que es corto de vista no ve bien.»*
+
+Era peor de lo que suena. El botón era `ghost` en tamaño `xs`: 24 px de alto,
+texto de 12 px en gris, icono de 14 px, **sin borde**, sobre un fondo azul
+claro. Eso no es un botón, es una decoración — y era el único camino para
+corregir un dato oficial equivocado. Ahora es un `outline` a altura completa,
+con borde, y dice **«Corregir datos»**, no «Corregir».
+
+De paso subió el tamaño de lo que hay dentro de la tarjeta: la razón social a
+16 px y la dirección a 14 px. Es el dato que se viene a comprobar; estaba en
+12 px gris.
+
+**b · «Listo, plegar» era un enlace, no un botón.**
+
+> *«Después de corregir, el "listo plegar" debería ser un botón de listo.»*
+
+Lo era: 12 px azul subrayado al pasar por encima. Ahora es un botón de verdad
+con su marca de comprobado, y dice **«Listo, ya está bien»**.
+
+No dice «Guardar» a propósito, aunque él usó esa palabra: ese botón **no
+guarda nada**. Lo escrito ya está en el formulario y se manda con «Crear
+cliente». Llamarlo «Guardar» prometería un guardado que no ocurre y dejaría a
+la persona pensando que ya terminó.
+
+**c · En el alta solo cabía UN contacto.**
+
+> *«Recuerda que puede tener uno o varios contactos, entonces esos datos se
+> guardan con la empresa; falta un botón que guarde y añada más contactos.»*
+
+Aquí tenía razón en algo que se nos había quedado a medias el 31/08. La tabla
+de contactos existía y la ficha del cliente ya dejaba meter varios — pero **el
+alta aceptaba uno solo**. Para el segundo había que crear la empresa, entrar
+en su ficha y volver a escribir, justo cuando se tienen los tres nombres
+delante en el correo que acaba de llegar.
+
+Ahora el alta lleva una lista: se añaden de uno en uno con **«Guardar y añadir
+otro»** —que deja el bloque abierto, en blanco y con el cursor en el nombre—
+y se cierra con «Listo». La lista se ve mientras se escribe, con quién es el
+principal, y se puede corregir o quitar cualquiera antes de guardar. Al pulsar
+«Crear cliente» viajan todos dentro del mismo envío.
+
+Detalles que importan y no se ven:
+
+- **Se acumulan en memoria, no se guardan de uno en uno.** No hay más remedio:
+  `cliente_contactos.cliente_id` es NOT NULL con clave foránea, y el cliente
+  todavía no existe. La alternativa —crear la empresa al vuelo con el primer
+  contacto— dejaría un cliente a medias en el maestro si se cancela el alta.
+- **El nombre repetido se avisa al escribirlo.** `ux_cliente_contactos_nombre`
+  lo pararía igual, pero con la empresa YA creada y un 23505 que no significa
+  nada: se vería el cliente sin ningún contacto y sin explicación. La regla
+  vive en `dominio/contactos.ts` y la usan los dos lados.
+- **El primero es el principal sin preguntar.** Si solo hay uno, es a él a
+  quien van las cotizaciones. Y si se quita al principal, hereda el siguiente:
+  una empresa con contactos y sin principal cotizaría sin destinatario.
+
+**d · Y lo mismo en la ficha del cliente.** Los botones de la lista eran un
+lápiz y una papelera sueltos, en `xs`, con el significado escondido en un
+`sr-only` que solo lee un lector de pantalla. Quien ve poco no tiene forma de
+saber cuál es cuál — y una de las dos da de baja al contacto. Ahora las dos
+llevan texto: **«Corregir»** y **«Dar de baja»**. También se le añadió el
+«Guardar y añadir otro».
+
+**Y un fallo que salió por el camino.** Al corregir a un contacto, el botón
+«Guardar» mandaba siempre `principal: false`. O sea que corregirle el teléfono
+al jefe de compras **le quitaba la estrella**, y esa empresa se quedaba sin
+destinatario por defecto sin que nadie lo pidiera. Ahora reenvía la marca que
+tenía.
+
+**Comprobado, no supuesto.** Se creó un cliente de prueba con dos contactos,
+se verificó contra la base que llegaron los dos con el principal correcto y
+que `buscar_clientes` devuelve `contactos: 2`, y se borró. Censo después:
+37 clientes, 0 contactos — como estaba.
+
+**Una diferencia que apareció al comprobarlo.** La comparación de nombres de
+JavaScript recorta los espacios de los extremos y `normalizar_texto` de
+Postgres no (`normalizar_texto('  María Ángeles  ')` devuelve los espacios).
+Es seguro porque el esquema pasa todo nombre por `trim()` antes de insertar,
+pero queda anotado en `dominio/contactos.ts` por si algún día alguien inserta
+sin pasar por ahí.
 
 ---
 

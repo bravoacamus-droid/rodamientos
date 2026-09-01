@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
+import { contactosListosParaGuardar } from "../dominio/contactos";
 import { codigoDeCliente, revisarDocumento, variante } from "../dominio/documento";
 import type { ClienteEditable, ResultadoCliente } from "../dominio/tipos";
 
@@ -113,28 +114,39 @@ const esquema = z.object({
   notas: opcional(2000, "Las notas"),
 
   /**
-   * Un primer contacto, solo en el ALTA.
+   * Los contactos que nacen CON la empresa, solo en el ALTA.
    *
    * Los contactos viven en su propia tabla y tienen su propia acción desde la
-   * 035, pero en el alta no hay todavía a qué cliente colgarlos. En vez de
-   * obligar a guardar y volver a entrar para escribir el nombre del comprador
-   * —que es el dato que se tiene delante justo en ese momento—, se acepta uno
-   * aquí y se crea con la ficha, marcado como principal.
+   * 035, pero en el alta no hay todavía a qué cliente colgarlos: `cliente_id`
+   * es NOT NULL con clave foránea. En vez de obligar a guardar la empresa y
+   * volver a entrar para escribir a quién se le compra —que es justo el dato
+   * que se tiene delante en ese momento—, se aceptan aquí y se crean con la
+   * ficha.
    *
-   * En la EDICIÓN se ignora: allí manda el editor de contactos, que sabe de
+   * Son varios y no uno desde el 01/09. Willy: una empresa tiene al de
+   * compras, al de logística y a veces al de mantenimiento, y los tres nombres
+   * llegan juntos en el mismo correo.
+   *
+   * En la EDICIÓN se ignoran: allí manda el editor de contactos, que sabe de
    * altas, bajas y de quién es el principal.
    */
-  contacto_inicial: z
-    .object({
-      nombre: z.string().trim().min(1).max(120),
-      cargo: opcional(80, "El cargo"),
-      area: opcional(60, "El área"),
-      email: opcional(160, "El correo"),
-      telefono: opcional(40, "El teléfono"),
-      whatsapp: opcional(40, "El WhatsApp"),
-    })
-    .nullable()
-    .default(null),
+  contactos_iniciales: z
+    .array(
+      z.object({
+        nombre: z.string().trim().min(1, "El contacto necesita un nombre.").max(120),
+        cargo: opcional(80, "El cargo"),
+        area: opcional(60, "El área"),
+        email: opcional(160, "El correo"),
+        telefono: opcional(40, "El teléfono"),
+        whatsapp: opcional(40, "El WhatsApp"),
+        principal: z.coerce.boolean().default(false),
+      }),
+    )
+    // Un tope por si acaso: esto llega de un JSON del navegador y no hay
+    // ninguna empresa con 50 compradores. Sin él, un payload manipulado
+    // insertaría lo que quisiera en una sola llamada.
+    .max(50, "Demasiados contactos de golpe.")
+    .default([]),
 });
 
 /** ¿Es una violación de índice único? */
@@ -319,19 +331,22 @@ export async function guardarCliente(
         .maybeSingle();
 
       if (!error && data) {
-        // El primer contacto, si lo escribieron. Va DESPUÉS y no en la misma
+        // Los contactos, si los escribieron. Van DESPUÉS y no en la misma
         // sentencia porque son dos tablas y PostgREST no da transacciones.
         //
         // Si falla, el alta NO se deshace: el cliente creado es lo que importa
-        // y el contacto se puede añadir desde su ficha en diez segundos.
+        // y los contactos se pueden añadir desde su ficha en diez segundos.
         // Deshacer el alta por esto obligaría a teclear el RUC otra vez y a
         // gastar otra consulta de cuota, que es peor negocio.
-        if (datos.contacto_inicial) {
-          await supabase.from("cliente_contactos").insert({
-            cliente_id: data.id,
-            ...datos.contacto_inicial,
-            principal: true,
-          });
+        //
+        // Se limpian antes de insertar porque van todos en una sentencia: un
+        // nombre repetido o dos principales harían fallar a los demás, y el
+        // usuario vería la empresa creada y ni un contacto, sin explicación.
+        const nuevos = contactosListosParaGuardar(datos.contactos_iniciales);
+        if (nuevos.length > 0) {
+          await supabase
+            .from("cliente_contactos")
+            .insert(nuevos.map((c) => ({ cliente_id: data.id, ...c })));
         }
         revalidar(data.id);
         return { ok: true, id: data.id, codigo: data.codigo, razonSocial: data.razon_social };

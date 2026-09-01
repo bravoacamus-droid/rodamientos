@@ -21,6 +21,7 @@ import {
 } from "@rodatech/ui";
 
 import { buscarPorDocumento } from "../acciones/consultar";
+import { ContactosNuevos, type ContactoNuevo } from "./contactos-nuevos";
 import { EditorContactos } from "./editor-contactos";
 import { SelectorUbigeoCascada, type DistritoUbigeo } from "./selector-ubigeo";
 import { guardarCliente } from "../acciones/guardar";
@@ -128,14 +129,6 @@ export function FormularioCliente({
     razon_social: cliente?.razon_social ?? "",
     nombre_comercial: cliente?.nombre_comercial ?? "",
     sector: cliente?.sector ?? "",
-    // Solo para el ALTA: un primer contacto que se crea junto con la ficha.
-    // Al editar no se usan — allí manda `EditorContactos`, que habla con el
-    // servidor contacto a contacto.
-    contacto_nombre: "",
-    contacto_cargo: "",
-    contacto_area: "",
-    contacto_email: "",
-    contacto_telefono: "",
     email: cliente?.email ?? "",
     telefono: cliente?.telefono ?? "",
     whatsapp: cliente?.whatsapp ?? "",
@@ -166,10 +159,15 @@ export function FormularioCliente({
   const [diasAMano, setDiasAMano] = React.useState(false);
   /** ¿Se le pone tope de deuda? Casi nunca, así que va detrás de un clic. */
   const [conTope, setConTope] = React.useState(false);
-  /** El bloque del primer contacto, en el alta. */
-  const [contactoAbierto, setContactoAbierto] = React.useState(false);
-  /** Correo, teléfono y área del contacto: casi nadie los tiene a mano. */
-  const [contactoMas, setContactoMas] = React.useState(false);
+
+  /**
+   * Los contactos que se crean junto con la empresa, solo en el ALTA.
+   *
+   * Viven aquí y no dentro de `ContactosNuevos` porque el payload que viaja al
+   * servidor se arma en este componente: si el estado estuviera abajo habría
+   * que subirlo con un efecto, que es la forma cara de hacer lo mismo.
+   */
+  const [contactos, setContactos] = React.useState<ContactoNuevo[]>([]);
 
   // Al editar el panel arranca abierto: los datos ya existen y esconderlos
   // obligaría a un clic extra para ver lo que se viene a cambiar. Al crear
@@ -382,17 +380,21 @@ export function FormularioCliente({
     ubigeo_provincia: ubigeoProv || padron?.ubigeo_provincia || null,
     ubigeo_distrito: ubigeoDist || padron?.ubigeo_distrito || null,
     // Solo en el alta. Al editar, los contactos ya se guardaron por su cuenta.
-    contacto_inicial:
-      !cliente && f.contacto_nombre.trim() !== ""
-        ? {
-            nombre: f.contacto_nombre.trim(),
-            cargo: f.contacto_cargo.trim() || null,
-            area: f.contacto_area.trim() || null,
-            email: f.contacto_email.trim() || null,
-            telefono: f.contacto_telefono.trim() || null,
-            whatsapp: null,
-          }
-        : null,
+    //
+    // Van en el mismo envío que la empresa porque hasta que esta no exista no
+    // hay `cliente_id` al que colgarlos. El orden se conserva: el servidor los
+    // inserta tal cual llegan y el marcado como principal es el que manda.
+    contactos_iniciales: cliente
+      ? []
+      : contactos.map((c) => ({
+          nombre: c.nombre.trim(),
+          cargo: c.cargo.trim() || null,
+          area: c.area.trim() || null,
+          email: c.email.trim() || null,
+          telefono: c.telefono.trim() || null,
+          whatsapp: c.whatsapp.trim() || null,
+          principal: c.principal,
+        })),
   };
 
   // Lo mínimo del contrato: documento utilizable y razón social. Nada más.
@@ -578,18 +580,32 @@ export function FormularioCliente({
             Antes eran cuatro cajas abiertas, o sea cuatro de las 22 que hacían
             la pantalla larga. */}
         {resumenPlegado ? (
-          <div className="flex items-start gap-3 rounded-md border border-brand-300 bg-brand-50 p-3 dark:bg-brand-950/40">
-            <Check className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
+          /*
+           * La tarjeta de lo que trajo SUNAT.
+           *
+           * Willy, 01/09: *«el lápiz no se ve mucho, para el cliente que es
+           * corto de vista no ve bien»*. Tenía razón y era peor de lo que
+           * parece: el botón era `ghost` en tamaño `xs`, o sea 12 px de texto
+           * gris sobre un fondo de color, sin borde. En una pantalla de
+           * oficina a metro y medio, eso no es un botón, es una decoración.
+           *
+           * Ahora es un `outline` a altura completa, con borde, con el nombre
+           * de lo que hace —«Corregir datos», no «Corregir»— y a ancho
+           * completo en móvil. Y el nombre de la empresa sube a `text-base`:
+           * es el dato que se viene a comprobar.
+           */
+          <div className="flex flex-col gap-3 rounded-md border-2 border-brand-300 bg-brand-50 p-4 sm:flex-row sm:items-center dark:bg-brand-950/40">
+            <Check className="size-5 shrink-0 text-brand-600" aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold">{f.razon_social}</p>
-              <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+              <p className="text-base font-semibold">{f.razon_social}</p>
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">
                 {f.direccion || "Sin dirección"}
                 {ubigeoNombre ? ` · ${ubigeoNombre}` : ""}
               </p>
               {/* Que el distrito NO haya venido importa lo suyo: sin él no se
                   puede emitir una guía de remisión a ese cliente. */}
               {!f.ubigeo_codigo ? (
-                <p className="mt-1 text-xs text-[var(--warn)]">
+                <p className="mt-1 text-sm font-medium text-[var(--warn)]">
                   Sin distrito. Hace falta para la guía de remisión; se puede
                   poner después.
                 </p>
@@ -597,12 +613,12 @@ export function FormularioCliente({
             </div>
             <Button
               type="button"
-              variant="ghost"
-              size="xs"
+              variant="outline"
+              className="h-11 w-full shrink-0 sm:w-auto md:h-control-md"
               onClick={() => setCorrigiendo(true)}
             >
               <Pencil aria-hidden="true" />
-              Corregir
+              Corregir datos
             </Button>
           </div>
         ) : (
@@ -678,14 +694,25 @@ export function FormularioCliente({
               </Campo>
             </div>
 
+            {/* Cerrar la corrección es un BOTÓN, no un enlace de 12 px.
+                Willy, 01/09: *«después de corregir, el "listo plegar" debería
+                ser un botón de listo»*. Y no dice «plegar», que es jerga de
+                interfaz: dice qué acabas de hacer.
+
+                No guarda nada —lo que se escribe ya está en el estado del
+                formulario y se manda con «Crear cliente»—, así que la etiqueta
+                no puede ser «Guardar»: prometería un guardado que no ocurre y
+                dejaría a la persona pensando que ya terminó. */}
             {puedePlegar ? (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                className="h-11 self-start md:h-control-md"
                 onClick={() => setCorrigiendo(false)}
-                className="self-start text-xs font-medium text-brand-600 hover:underline"
               >
-                Listo, plegar
-              </button>
+                <Check aria-hidden="true" />
+                Listo, ya está bien
+              </Button>
             ) : null}
           </>
         )}
@@ -791,124 +818,40 @@ export function FormularioCliente({
                 />
               </Campo>
             ) : (
-              <button
+              <Button
                 type="button"
+                variant="subtle"
+                className="h-11 self-start md:h-control-md"
                 onClick={() => setConTope(true)}
-                className="self-start text-xs font-medium text-brand-600 hover:underline"
               >
-                + Ponerle un tope de deuda
-              </button>
+                <Plus aria-hidden="true" />
+                Ponerle un tope de deuda
+              </Button>
             )}
           </div>
         ) : null}
       </section>
 
       {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════
-          En la EDICIÓN, el editor completo: altas, bajas y quién es el
-          principal, cada uno guardando por su cuenta. En el ALTA basta con
-          uno, y ni siquiera abierto: dos campos detrás de un botón. */}
+          Una empresa tiene VARIOS contactos, y hay que poder escribirlos en
+          los dos sitios donde aparecen: al darla de alta y después en su
+          ficha.
+
+          · EDITANDO, `EditorContactos`: cada contacto guarda contra el
+            servidor por su cuenta, porque el cliente ya existe.
+          · CREANDO, `ContactosNuevos`: se acumulan en memoria y viajan dentro
+            del mismo envío, porque todavía no hay `cliente_id` al que
+            colgarlos.
+
+          Hasta el 01/09 el alta aceptaba UNO. Willy: *«recuerda que puede
+          tener uno o varios contactos; falta un botón que guarde y añada más
+          contactos»*. Para el segundo había que crear la empresa, entrar en su
+          ficha y volver a escribir — justo cuando se tienen los tres nombres
+          delante, en el correo que acaba de llegar. */}
       {cliente ? (
         <EditorContactos clienteId={cliente.id} iniciales={cliente.contactos_lista} />
       ) : (
-        <section className="card flex flex-col gap-3 p-4">
-          <div>
-            <h2 className="text-sm font-semibold">¿Con quién hablas ahí?</h2>
-            <p className="text-xs text-[var(--fg-muted)]">
-              A esta persona van dirigidas sus cotizaciones. Se pueden añadir
-              más después de guardar.
-            </p>
-          </div>
-
-          {contactoAbierto ? (
-            <div className="flex flex-col gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Campo id="contacto_nombre" label="Nombre">
-                  <Input
-                    id="contacto_nombre"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_nombre}
-                    onChange={(e) => set("contacto_nombre", e.target.value)}
-                    autoComplete="off"
-                    autoFocus
-                    placeholder="Juan Pérez"
-                  />
-                </Campo>
-
-                <Campo id="contacto_cargo" label="Cargo">
-                  <Input
-                    id="contacto_cargo"
-                    className={ALTO_TACTIL}
-                    value={f.contacto_cargo}
-                    onChange={(e) => set("contacto_cargo", e.target.value)}
-                    list="cargos-contacto-alta"
-                    placeholder="Jefe de compras"
-                    autoComplete="off"
-                  />
-                  {/* Los tres que nombró Willy, y hueco para escribir otro. */}
-                  <datalist id="cargos-contacto-alta">
-                    <option value="Jefe de compras" />
-                    <option value="Asistente de logística" />
-                    <option value="Jefe de mantenimiento" />
-                  </datalist>
-                </Campo>
-              </div>
-
-              {contactoMas ? (
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Campo id="contacto_area" label="Área">
-                    <Input
-                      id="contacto_area"
-                      className={ALTO_TACTIL}
-                      value={f.contacto_area}
-                      onChange={(e) => set("contacto_area", e.target.value)}
-                      placeholder="Compras"
-                      autoComplete="off"
-                    />
-                  </Campo>
-                  <Campo id="contacto_email" label="Su correo">
-                    <Input
-                      id="contacto_email"
-                      type="email"
-                      inputMode="email"
-                      className={ALTO_TACTIL}
-                      value={f.contacto_email}
-                      onChange={(e) => set("contacto_email", e.target.value)}
-                      autoComplete="off"
-                    />
-                  </Campo>
-                  <Campo id="contacto_telefono" label="Su teléfono">
-                    <Input
-                      id="contacto_telefono"
-                      type="tel"
-                      inputMode="tel"
-                      className={ALTO_TACTIL}
-                      value={f.contacto_telefono}
-                      onChange={(e) => set("contacto_telefono", e.target.value)}
-                    />
-                  </Campo>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setContactoMas(true)}
-                  className="self-start text-xs font-medium text-brand-600 hover:underline"
-                >
-                  + Su correo, teléfono y área
-                </button>
-              )}
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="self-start"
-              onClick={() => setContactoAbierto(true)}
-            >
-              <Plus aria-hidden="true" />
-              Añadir contacto
-            </Button>
-          )}
-        </section>
+        <ContactosNuevos lista={contactos} onCambio={setContactos} />
       )}
 
       {/* ═════════════════════════════════════════════════ Más datos ═════

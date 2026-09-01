@@ -208,16 +208,23 @@ export function ClienteRapido({
           // El contacto ya no es una columna del cliente: es su propia ficha
           // (035). Se manda aquí y el servidor lo crea junto con la empresa,
           // marcado como principal.
-          contacto_inicial: contacto.trim()
-            ? {
-                nombre: contacto.trim(),
-                cargo: cargo.trim() || null,
-                area: null,
-                email: email.trim() || null,
-                telefono: telefono.trim() || null,
-                whatsapp: null,
-              }
-            : null,
+          //
+          // Aquí va uno solo, y a propósito: esto es el alta al vuelo desde
+          // una cotización, con el cliente esperando al teléfono. Los demás
+          // contactos se añaden luego en su ficha, que es donde caben.
+          contactos_iniciales: contacto.trim()
+            ? [
+                {
+                  nombre: contacto.trim(),
+                  cargo: cargo.trim() || null,
+                  area: null,
+                  email: email.trim() || null,
+                  telefono: telefono.trim() || null,
+                  whatsapp: null,
+                  principal: true,
+                },
+              ]
+            : [],
         }),
       );
 

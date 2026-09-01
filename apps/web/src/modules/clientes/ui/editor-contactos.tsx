@@ -4,10 +4,16 @@
 // contacto, sin recargar la ficha entera.
 
 import * as React from "react";
-import { Badge, Button, Input } from "@rodatech/ui";
-import { Pencil, Plus, Star, Trash2, X } from "lucide-react";
+import { Button } from "@rodatech/ui";
+import { Check, Plus, Star, Trash2, X } from "lucide-react";
 
 import { desactivarContacto, guardarContacto } from "../acciones/contactos";
+import {
+  CONTACTO_VACIO,
+  CamposContacto,
+  FilaContacto,
+  type BorradorContacto,
+} from "./contacto-campos";
 import type { ContactoCliente } from "../dominio/tipos";
 
 /**
@@ -27,7 +33,8 @@ import type { ContactoCliente } from "../dominio/tipos";
  * un cambio que hizo otra persona mientras tanto.
  *
  * En el ALTA no se usa: no hay todavía cliente al que colgarlos. Allí va
- * `ContactoInicial`, que manda uno dentro del payload del cliente.
+ * `ContactosNuevos`, que los acumula en memoria y los manda dentro del payload
+ * de la empresa.
  */
 export function EditorContactos({
   clienteId,
@@ -40,23 +47,33 @@ export function EditorContactos({
   const [editando, setEditando] = React.useState<string | null>(null);
   const [creando, setCreando] = React.useState(iniciales.length === 0);
   const [error, setError] = React.useState<string | null>(null);
+  const [errorNombre, setErrorNombre] = React.useState<string | null>(null);
   const [ocupado, ejecutar] = React.useTransition();
+  const refNombre = React.useRef<HTMLInputElement>(null);
 
-  const vacio = { nombre: "", cargo: "", area: "", email: "", telefono: "", whatsapp: "" };
-  const [f, setF] = React.useState(vacio);
-  const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+  const [f, setF] = React.useState<BorradorContacto>(CONTACTO_VACIO);
 
   const cerrar = () => {
     setEditando(null);
     setCreando(false);
-    setF(vacio);
+    setF(CONTACTO_VACIO);
     setError(null);
+    setErrorNombre(null);
+  };
+
+  const abrirNuevo = () => {
+    setCreando(true);
+    setEditando(null);
+    setF(CONTACTO_VACIO);
+    setError(null);
+    setErrorNombre(null);
   };
 
   const abrirEdicion = (c: ContactoCliente) => {
     setCreando(false);
     setEditando(c.id);
     setError(null);
+    setErrorNombre(null);
     setF({
       nombre: c.nombre,
       cargo: c.cargo ?? "",
@@ -67,8 +84,16 @@ export function EditorContactos({
     });
   };
 
-  const guardar = (principal: boolean) => {
+  /**
+   * Guarda contra el servidor.
+   *
+   * `seguir` deja el bloque abierto y en blanco para el siguiente, que es lo
+   * que se necesita cuando llegan tres nombres en el mismo correo. Sin él hay
+   * que volver a buscar el botón «Añadir» después de cada uno.
+   */
+  const guardar = (principal: boolean, seguir = false) => {
     setError(null);
+    setErrorNombre(null);
     ejecutar(async () => {
       const fd = new FormData();
       fd.set(
@@ -88,7 +113,10 @@ export function EditorContactos({
 
       const r = await guardarContacto(fd);
       if (!r.ok) {
-        setError(r.error);
+        // El nombre repetido se pinta en su campo y no en la banda de error de
+        // abajo: es ahí donde hay que escribir para arreglarlo.
+        if (r.campo === "nombre") setErrorNombre(r.error);
+        else setError(r.error);
         return;
       }
 
@@ -117,6 +145,14 @@ export function EditorContactos({
               : 1,
         );
       });
+
+      if (seguir) {
+        setEditando(null);
+        setCreando(true);
+        setF(CONTACTO_VACIO);
+        refNombre.current?.focus();
+        return;
+      }
       cerrar();
     });
   };
@@ -137,11 +173,11 @@ export function EditorContactos({
   const abierto = creando || editando !== null;
 
   return (
-    <section className="card flex flex-col gap-3 p-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className="card flex flex-col gap-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold">Contactos</h2>
-          <p className="text-xs text-[var(--fg-muted)]">
+          <h2 className="text-base font-semibold">Contactos</h2>
+          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
             Las personas a las que se les cotiza en esta empresa. Al hacer una
             cotización se elige a cuál va dirigida.
           </p>
@@ -150,22 +186,17 @@ export function EditorContactos({
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            onClick={() => {
-              setCreando(true);
-              setEditando(null);
-              setF(vacio);
-              setError(null);
-            }}
+            className="h-11 md:h-control-md"
+            onClick={abrirNuevo}
           >
             <Plus aria-hidden="true" />
-            Añadir
+            {lista.length === 0 ? "Añadir contacto" : "Añadir otro"}
           </Button>
         ) : null}
       </div>
 
       {lista.length === 0 && !abierto ? (
-        <p className="rounded-md border border-dashed border-[var(--border)] px-3 py-6 text-center text-sm text-[var(--fg-muted)]">
+        <p className="rounded-md border border-dashed border-[var(--border)] px-4 py-5 text-center text-sm text-[var(--fg-muted)]">
           Todavía no hay contactos. La cotización saldrá sin nombre de destinatario.
         </p>
       ) : null}
@@ -173,168 +204,157 @@ export function EditorContactos({
       {lista.length > 0 ? (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
           {lista.map((c) => (
-            <li key={c.id} className="flex items-start gap-3 py-2 first:pt-0">
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-sm font-medium">
-                  <span className="truncate">{c.nombre}</span>
-                  {c.principal ? (
-                    <Badge tone="brand" size="xs">
-                      <Star aria-hidden="true" className="size-3" />
-                      Principal
-                    </Badge>
-                  ) : null}
-                </p>
-                <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
-                  {c.cargo ? <span>{c.cargo}</span> : null}
-                  {c.cargo && c.area ? <span aria-hidden="true">·</span> : null}
-                  {c.area ? <span>{c.area}</span> : null}
-                  {(c.cargo || c.area) && c.email ? <span aria-hidden="true">·</span> : null}
-                  {c.email ? <span className="truncate">{c.email}</span> : null}
-                  {c.telefono ? (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="tabular">{c.telefono}</span>
-                    </>
-                  ) : null}
-                </p>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  disabled={ocupado}
-                  onClick={() => abrirEdicion(c)}
-                >
-                  <Pencil aria-hidden="true" />
-                  <span className="sr-only">Editar a {c.nombre}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  disabled={ocupado}
-                  onClick={() => quitar(c)}
-                >
-                  <Trash2 aria-hidden="true" />
-                  <span className="sr-only">Dar de baja a {c.nombre}</span>
-                </Button>
-              </div>
-            </li>
+            <FilaContacto
+              key={c.id}
+              contacto={{
+                nombre: c.nombre,
+                cargo: c.cargo ?? "",
+                area: c.area ?? "",
+                email: c.email ?? "",
+                telefono: c.telefono ?? "",
+                whatsapp: c.whatsapp ?? "",
+              }}
+              principal={c.principal}
+              /*
+               * Botones CON TEXTO, no un lápiz y una papelera sueltos.
+               *
+               * Willy, 01/09: *«el lápiz no se ve mucho, para el cliente que
+               * es corto de vista no ve bien»*. Eran `ghost` en tamaño `xs`
+               * —24 px de alto, icono de 14 px, sin borde— con el significado
+               * escondido en un `sr-only` que solo lee un lector de pantalla.
+               * Quien ve poco no tiene forma de saber cuál es cuál sin
+               * acercarse a la pantalla, y una de las dos da de baja al
+               * contacto.
+               */
+              acciones={
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-10"
+                    disabled={ocupado}
+                    onClick={() => abrirEdicion(c)}
+                  >
+                    Corregir
+                    <span className="sr-only"> a {c.nombre}</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-10"
+                    disabled={ocupado}
+                    onClick={() => quitar(c)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Dar de baja
+                    <span className="sr-only"> a {c.nombre}</span>
+                  </Button>
+                </>
+              }
+            />
           ))}
         </ul>
       ) : null}
 
       {abierto ? (
-        <div className="flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                Nombre <span className="text-[var(--danger)]">*</span>
-              </span>
-              <Input
-                value={f.nombre}
-                onChange={(e) => set("nombre", e.target.value)}
-                placeholder="Juan Pérez"
-                autoComplete="off"
-              />
-            </label>
+        <div className="flex flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4">
+          <p className="text-sm font-semibold">
+            {editando ? "Corregir el contacto" : "Nuevo contacto"}
+          </p>
 
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Cargo</span>
-              <Input
-                value={f.cargo}
-                onChange={(e) => set("cargo", e.target.value)}
-                placeholder="Jefe de compras"
-                autoComplete="off"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Área</span>
-              {/* Lista con las tres que nombró Willy, y hueco para escribir
-                  otra: la lista real la sabe él, no nosotros. */}
-              <Input
-                value={f.area}
-                onChange={(e) => set("area", e.target.value)}
-                list="areas-contacto"
-                placeholder="Compras"
-                autoComplete="off"
-              />
-              <datalist id="areas-contacto">
-                <option value="Compras" />
-                <option value="Logística" />
-                <option value="Mantenimiento" />
-                <option value="Almacén" />
-                <option value="Gerencia" />
-              </datalist>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Correo</span>
-              <Input
-                type="email"
-                value={f.email}
-                onChange={(e) => set("email", e.target.value)}
-                placeholder="jperez@empresa.com"
-                autoComplete="off"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Teléfono</span>
-              <Input
-                value={f.telefono}
-                onChange={(e) => set("telefono", e.target.value)}
-                autoComplete="off"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">WhatsApp</span>
-              <Input
-                value={f.whatsapp}
-                onChange={(e) => set("whatsapp", e.target.value)}
-                autoComplete="off"
-              />
-            </label>
-          </div>
+          <CamposContacto
+            idPrefijo="contacto-ficha"
+            valor={f}
+            onCambio={setF}
+            errorNombre={errorNombre ?? undefined}
+            refNombre={refNombre}
+            autoFocus={lista.length > 0}
+          />
 
           {error ? (
             <p
               role="alert"
-              className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2 text-xs text-[var(--danger)]"
+              className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]"
             >
               {error}
             </p>
           ) : null}
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button type="button" variant="ghost" size="sm" onClick={cerrar} disabled={ocupado}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 md:h-control-md"
+              onClick={cerrar}
+              disabled={ocupado}
+            >
               <X aria-hidden="true" />
               Cancelar
             </Button>
-            {/* Dos botones y no una casilla: «guardar» y «guardar y que sea el
-                principal» son dos intenciones distintas, y una casilla marcada
-                por descuido le cambia el destinatario por defecto a todas las
+
+            {/* Dos intenciones distintas y no una casilla: «guardar» y
+                «guardar y que sea el principal». Una casilla marcada por
+                descuido le cambia el destinatario por defecto a todas las
                 cotizaciones futuras de esa empresa. */}
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              className="h-11 md:h-control-md"
               onClick={() => guardar(true)}
               disabled={!puedeGuardar}
             >
               <Star aria-hidden="true" />
               Guardar como principal
             </Button>
-            <Button type="button" size="sm" onClick={() => guardar(false)} disabled={!puedeGuardar}>
-              {ocupado ? "Guardando…" : "Guardar"}
+
+            {/* Solo al crear: al corregir a alguien no hay «el siguiente». */}
+            {!editando ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 md:h-control-md"
+                onClick={() => guardar(lista.length === 0, true)}
+                disabled={!puedeGuardar}
+              >
+                <Plus aria-hidden="true" />
+                Guardar y añadir otro
+              </Button>
+            ) : null}
+
+            <Button
+              type="button"
+              className="h-11 md:h-control-md"
+              onClick={() => guardar(editando ? isPrincipal(lista, editando) : lista.length === 0)}
+              disabled={!puedeGuardar}
+              loading={ocupado}
+            >
+              {ocupado ? (
+                "Guardando…"
+              ) : (
+                <>
+                  <Check aria-hidden="true" />
+                  {editando ? "Guardar cambios" : "Guardar"}
+                </>
+              )}
             </Button>
           </div>
         </div>
       ) : null}
     </section>
   );
+}
+
+/**
+ * ¿Este contacto era ya el principal?
+ *
+ * Al corregir a alguien hay que reenviar su marca tal como estaba: el servidor
+ * escribe `principal` con lo que llegue, así que mandar `false` porque el botón
+ * se llama «Guardar cambios» le quitaría la estrella al principal cada vez que
+ * se le corrige el teléfono, y la empresa se quedaría sin destinatario por
+ * defecto sin que nadie lo pidiera.
+ */
+function isPrincipal(lista: ContactoCliente[], id: string): boolean {
+  return lista.find((c) => c.id === id)?.principal ?? false;
 }
