@@ -349,6 +349,96 @@ Por orden de lo que él espera:
 
 ---
 
+### G · El plan de compras · propuesta escrita, pendiente de que Willy la corrija
+
+**https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da**
+
+Es lo que él pidió (32:03): *«toma tu tiempo, a ver cómo diseñamos esto; yo le
+muestro y usted mira, ah sí, o me dice cámbiale mejor esto por esto»*. Está
+escrito para enseñárselo en pantalla y que lo corrija ANTES de construir.
+
+Resumen de lo que dice, para no tener que abrirlo:
+
+**Lo que ya existe** y solo hay que coser: cotización con stock a la vista,
+registro de compras con recibido por línea, recepciones, y el kardex —que ya
+mueve saldo, recalcula costo promedio ponderado y guarda `ultimo_costo` en cada
+entrada—. La parte sólida del sistema es justo la del final de la cadena.
+
+**Lo que falta**, por orden del flujo:
+
+1. Columna **Disponibilidad** por ítem (Inmediata / Exterior 15 d /
+   Fabricación 2–4 d), incluible o no en el PDF. **Es la misma pieza que el
+   aviso de stock**: lo que se marque como no inmediato es lo que después cae
+   en la bandeja de compras.
+2. **Confirmar por línea.** Hoy una cotización se aprueba entera. Él dijo que
+   le confirman *«el total o parte de lo cotizado»*, y sin esto no se puede
+   calcular qué comprar.
+3. Bandeja **Por comprar**: lo comprometido sin stock + lo que bajó del mínimo
+   (esto último ya está calculado en `v_reposicion`, solo hay que enseñarlo).
+4. El **comparador** de proveedores. Es lo único que hay que inventar.
+5. Botón **Recibir** desde la propia compra, y **aviso cuando el costo cambia**
+   respecto de la compra anterior, con el efecto en el margen. Eso es el
+   *«que haya historial y mejorar los precios»*.
+
+**Cómo NO hacer el comparador:** un módulo de solicitud de cotización formal
+que emita y mande documentos. Willy pregunta por WhatsApp y le contestan por
+WhatsApp; obligarlo a redactar un documento por proveedor sería MÁS trabajo del
+que hace hoy. Lo que necesita es una hoja donde apuntar lo que le dijeron, ver
+quién gana, y convertir eso en compras de un botón. Y guardar **las tres
+respuestas**, no solo la ganadora: eso es lo que construye el historial.
+
+#### Los dos agujeros que salieron revisando el código
+
+**1 · La compra local viene en soles y el sistema entero está en dólares.**
+
+No hay columna `moneda` en ninguna tabla, y es deliberado: Willy cotiza y
+factura en USD (002, línea 7). Pero él compra *«compras locales, generalmente»*
+y un proveedor de Lima factura en soles con IGV.
+
+Hoy no hay dónde ponerlo. Si alguien registra `S/ 15.20` en el campo de costo,
+se guarda como `$ 15.20`: el costo queda inflado ~3.7×, el margen sale negativo
+y el inventario valorizado deja de significar nada. Y no salta ningún error.
+
+`packages/consultas/src/tipo-cambio.ts` **ya existe, está probado y no lo llama
+nadie** — comprobado con grep sobre `apps/web/src`. Falta añadir moneda y tipo
+de cambio a `compras` y conectarlo.
+
+**2 · Dos pedidos se pueden comer el mismo stock.**
+
+`stock.reservado` existe en el esquema desde la 002 y `v_productos_stock` ya
+calcula `disponible = cantidad - reservado`. **Nadie escribe nunca en
+`reservado`.** Así que dos cotizaciones aprobadas del mismo producto ven las
+mismas unidades libres.
+
+No es un fallo a arreglar en silencio: es una decisión de Willy —*¿confirmar
+un pedido aparta la mercadería?*—. La columna ya está lista para el día que
+diga que sí.
+
+#### Las cinco preguntas para él
+
+Reserva de stock al confirmar · moneda de la compra local · si el comparador es
+obligatorio u opcional · si el sistema avisa al cliente cuando llega su pedido ·
+y el plazo por defecto de la compra local (dio 15 días para exterior y 2–4 para
+fabricación, pero no el de local, que es la más frecuente).
+
+#### Orden de construcción propuesto
+
+| | Qué | Por qué ahí |
+|---|---|---|
+| **1** | Disponibilidad · confirmar por línea · moneda · botón Recibir | Deja la cadena entera cerrada de punta a punta |
+| **2** | Bandeja Por comprar · reserva · enlace compra↔pedido · aviso de costo | Aquí deja de ser un cuaderno y empieza a avisar |
+| **3** | El comparador y el historial por proveedor | Es lo único que no existe, y necesita la bandeja del 2 |
+
+#### Lo que NO se construye, y por qué
+
+- **Stock futuro** — lo mencioné yo, no lo pidió él. Cotizar contra mercadería
+  que está en un barco es prometer lo que no se puede entregar.
+- **Landed cost prorrateado** — sus importaciones son cajas por DHL, no
+  contenedores con DUA. El registro simple de gastos que ya existe basta.
+- **Aprobación de órdenes de compra** — compra él solo.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
