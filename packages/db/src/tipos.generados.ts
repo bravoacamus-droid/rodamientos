@@ -3507,6 +3507,7 @@ export type Database = {
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       crear_familia: { Args: { p_nombre: string }; Returns: Json }
+      crear_marca: { Args: { p_nombre: string }; Returns: Json }
       crear_subfamilia: {
         Args: { p_familia: string; p_nombre: string }
         Returns: Json
@@ -3725,6 +3726,7 @@ export type Database = {
           venta: number
         }[]
       }
+      ubigeo_de_sunat: { Args: { p_codigo: string }; Returns: string }
       ubigeo_departamentos: {
         Args: never
         Returns: {

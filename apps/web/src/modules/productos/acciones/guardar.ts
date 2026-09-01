@@ -28,7 +28,10 @@ const esquema = z.object({
   marca_id: z.string().uuid("Elige una marca"),
   familia_id: z.string().uuid("Elige una familia"),
   subfamilia_id: z.string().uuid("Elige una sub-familia"),
-  tipo_id: z.string().uuid().nullable(),
+  // Ya no llega del formulario: desde el 01/09 la pantalla enseña UN campo
+  // de descripción y el tipo se resuelve aquí a partir de ella. Se sigue
+  // aceptando por si algún llamador lo manda.
+  tipo_id: z.string().uuid().nullable().optional().default(null),
   unidad_codigo: z.string().min(2).max(4),
   ultimo_costo: z.number().nonnegative().finite(),
   precio_venta: z.number().nonnegative().finite(),
@@ -140,6 +143,35 @@ export async function guardarProducto(
           campo: "tipo_id",
           error: "Esa descripción no pertenece a la sub-familia elegida.",
         };
+      }
+    } else {
+      // El `tipo_id` se DEDUCE de la descripción escrita.
+      //
+      // Willy, 01/09: «la descripción, tipo, es la descripción impresa; así
+      // que solo deja el input». En su catálogo son lo mismo, y preguntarlo
+      // dos veces en la pantalla era pedirle que mantuviera a mano una
+      // correspondencia que ya está implícita en lo que escribe.
+      //
+      // Pero la columna NO se puede dejar en null y olvidarla: es lo que
+      // empareja un rodamiento con el mismo de otra marca en el buscador de
+      // equivalentes (004, `p.tipo_id = b.tipo_id`). Sin ella, «buscar
+      // equivalentes de este SKF» dejaría de encontrar el FAG.
+      //
+      // `crear_tipo` es idempotente por diseño (028): si esa descripción ya
+      // existe en la sub-familia devuelve la que hay, y solo crea cuando de
+      // verdad es nueva. Así escribir la misma descripción en veinte
+      // productos los agrupa a los veinte bajo el mismo tipo.
+      const { data: tipo, error: eTipo } = await supabase.rpc("crear_tipo", {
+        p_subfamilia: campos.subfamilia_id,
+        p_nombre: campos.descripcion,
+      });
+      // Un fallo aquí NO tumba el alta: el producto con su descripción es lo
+      // que importa, y sin `tipo_id` lo único que se pierde es aparecer entre
+      // los equivalentes — que se arregla volviendo a guardar. Rechazar el
+      // producto entero por esto sería cambiar un problema pequeño por uno
+      // grande.
+      if (!eTipo && tipo && typeof tipo === "object" && "id" in tipo) {
+        campos.tipo_id = String((tipo as { id: unknown }).id);
       }
     }
 

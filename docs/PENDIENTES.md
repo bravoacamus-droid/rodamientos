@@ -218,6 +218,137 @@ del kardex (§6). Queda el envío GRE, y ese está bloqueado.
 
 ---
 
+## Reunión del 01/09 · 34 min con Willy, y su maestro de productos
+
+Grabación en el grupo. Fue la primera en la que él conduce la revisión pantalla
+por pantalla, y salieron tres cosas: retoques de diseño (hechos), decisiones de
+producto (aquí abajo) y **un maestro de 2.230 productos que no entra tal cual en
+el esquema actual**.
+
+### A · Lo que se hizo el mismo día
+
+| Lo que pidió | Dónde |
+|---|---|
+| Buscador en todo desplegable con lista larga | Producto (marca, familia, sub-familia, unidad, proveedor) y barra de filtros del catálogo |
+| Crear marca sin salir del alta | Migración 039 · `crear_marca` |
+| Crear proveedor desde el producto | Botón «+ Nuevo», el mismo diálogo del maestro |
+| «La descripción, tipo, es la descripción impresa: solo deja el input» | Un campo, con sugerencias de la sub-familia |
+| «Si los inputs los hacemos más pequeños entran los 4 en una línea» | Precios y Almacén, cuatro por fila |
+
+### B · La unidad de medida NO se puede crear, y hay que saber por qué
+
+Él la pidió junto con la marca, como si fueran lo mismo. No lo son.
+
+`unidades_medida` es el **catálogo 03 de SUNAT**, y su código es el que viaja
+dentro del XML de la factura:
+
+```xml
+<cbc:InvoicedQuantity unitCode="NIU">2</cbc:InvoicedQuantity>
+```
+
+Un código inventado —«UND», «PZA»— no lo rechaza nuestra pantalla: lo rechaza
+SUNAT, con la factura ya emitida y el cliente esperando. Así que en vez de
+abrir un «crear unidad» se cargó **el catálogo entero**: había 6 unidades de
+las 42 que un almacén industrial puede necesitar. Con el buscador, 42 no
+estorban. Si alguna vez falta una, se añade a la migración; no la teclea un
+usuario.
+
+### C · El maestro que mandó · `ESTRUCTURA DE BASE DE PRODUCTOS.xlsx`
+
+**2.230 productos**, y la estructura por fin es consistente — que era justo lo
+que él dijo que quería arreglar:
+
+- **1 familia** (RODAMIENTO), **10 sub-familias**, **32 descripciones**
+- **6 marcas**: SKF 951, FAG 496, NTN 381, NSK 166, INA 140, TIMKEN 96
+- De 1 a 6 descripciones por sub-familia, sin las variantes sueltas del archivo
+  viejo. Confirmado lo que dijo: *«en este nuevo maestro cada familia ya está
+  definida, tiene una única descripción»*.
+
+**Lo que NO trae, y hay que pedírselo:**
+
+- **Cero precios.** Las columnas `P.C. $`, `P.V. $` y `P.M. $` están vacías en
+  las 2.230 filas.
+- **Cero stock.** `STOCK ACTUAL` y `STOCK MINIMO`, vacías.
+
+O sea que se puede cargar el catálogo —códigos, marcas, jerarquía y
+descripciones— pero **no se podrá cotizar con él hasta que lleguen los
+precios**. Conviene decírselo antes de que lo dé por hecho.
+
+### D · El problema de verdad: 6205 es de SKF y también de FAG
+
+En el archivo hay **35 códigos repetidos**, y son dos casos distintos:
+
+- **17 son el mismo código en DOS marcas.** `6205` aparece bajo SKF y bajo FAG.
+  Y es correcto: `6205` es una designación ISO que fabrican todas las marcas.
+- **18 son la misma fila dos veces** dentro de la misma marca. Esos se
+  deduplican solos.
+
+Los 17 primeros son el problema, porque el esquema dice:
+
+```sql
+create unique index ux_productos_codigo_norm on productos (codigo_norm);
+```
+
+**Único en TODA la tabla, no por marca.** Con eso, cargar el maestro mete el
+`6205` de SKF y **rechaza el de FAG**, y Willy se queda sin poder vender un
+rodamiento que sí tiene.
+
+Hay tres salidas y **la decisión es suya, no nuestra**:
+
+1. **Único por (marca, código).** Es lo que dice la realidad del negocio. Es
+   una migración pequeña, pero cambia lo que significa «el código 6205» en el
+   buscador de la cotización: pasarían a salir dos resultados y habría que
+   elegir marca. Es lo que hace cualquier distribuidor multimarca.
+2. **Código compuesto** al cargar: `6205-SKF`, `6205-FAG`. No toca el esquema,
+   pero ensucia lo que se teclea y lo que se imprime.
+3. **Una sola marca por código**, la que él vende de verdad. Es lo que hay hoy
+   de facto, y es perder catálogo.
+
+**Mi recomendación es la 1**, y hay que preguntárselo antes de cargar nada: es
+la única de las tres que no obliga a rehacer la carga después.
+
+### E · Lo que quedó comprometido y NO está hecho
+
+Por orden de lo que él espera:
+
+1. **El flujo de compras.** Le prometí un diseño en dos días. Su flujo real,
+   dicho por él (29:05): cotiza a varios clientes → confirman a los dos o tres
+   días → cotiza el mismo ítem a 3 o 4 proveedores locales → compra al mejor →
+   recibe → **ajusta stock a mano** → factura. Y compra de más a propósito para
+   dejar saldo. Lo que pide es que eso no sea engorroso: *«hago de frente con
+   un solo botón, hago una orden de compras, relleno, compré, cambio el stock
+   y ya»*.
+2. **Columna «Disponibilidad» por ítem en la cotización**: `Inmediata` (por
+   defecto), `Exterior` (15 días por defecto, editable) y `Fabricación` (2–4
+   días). Y que la columna se pueda incluir o no en el formato impreso, igual
+   que la de descuento.
+3. **El tope de crédito, aplicado.** Él fue claro (4:30): al llegar al tope
+   **cotizar sí, vender no** — *«con la cotización ya se le condiciona a que se
+   pongan al día»*. Y quiere aviso cuando un cliente llega al tope. Hoy el
+   campo se guarda pero **no bloquea nada**.
+4. **Botón de añadir contacto DENTRO de la cotización**, no solo en la ficha.
+   Su razón (6:20): *«los contactos cambian frecuentemente, no duran mucho,
+   van rotando»*.
+5. **Log de movimientos por producto.** Ya existe kardex; lo que pide es verlo
+   desde la ficha del producto: qué ajuste, qué motivo, qué día.
+6. **Buscador en los maestros** de familias/sub-familias/marcas dentro de
+   configuración (en el alta de producto ya está).
+
+### F · Lo que dejó zanjado
+
+- **P.M. = precio mínimo.** Llevaba desde el 21/08 sin cerrar, con el
+  importador avisando antes de aplicar. Él, 19:37: *«yo lo había tomado como
+  precio de mercado (...) está bien, podría considerarse como precio mínimo
+  también»*. Aviso del importador: se queda, pero ya sabemos la respuesta.
+- **Todos los precios sin IGV.** *«Yo trabajo generalmente con precios sin IGV;
+  el IGV ya es aparte, no me interesa»*.
+- **Stock inicial**: sigue sin ponerse a mano en el alta. Entra por recepción
+  o por ajuste, que es lo que él ya hace.
+- **«Stock futuro»** para importaciones: lo mencioné yo como algo que hace otro
+  cliente. Él no lo pidió. **No construirlo** hasta que lo pida.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

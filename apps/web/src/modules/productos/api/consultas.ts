@@ -177,7 +177,7 @@ export async function catalogosParaProducto(): Promise<
     familias: { id: string; nombre: string }[];
     subfamilias: { id: string; nombre: string; familia_id: string }[];
     tipos: { id: string; nombre: string; subfamilia_id: string }[];
-    unidades: { codigo: string; nombre: string }[];
+    unidades: { codigo: string; nombre: string; abreviatura: string }[];
     proveedores: { id: string; razon_social: string }[];
   }>
 > {
@@ -196,10 +196,13 @@ export async function catalogosParaProducto(): Promise<
         .select("id, nombre, subfamilia_id")
         .eq("activo", true)
         .order("orden"),
-      // La columna se llama `etiqueta`, no `nombre`.
+      // La columna se llama `etiqueta`, no `nombre`. La abreviatura viaja
+      // también: el desplegable enseña «Kilogramo · kg · KGM», y con 42
+      // unidades del catálogo 03 (039) el código es lo que desempata entre
+      // dos que suenan parecido.
       supabase
         .from("unidades_medida")
-        .select("codigo, etiqueta")
+        .select("codigo, etiqueta, abreviatura")
         .eq("activo", true)
         .order("orden"),
       supabase
@@ -224,6 +227,7 @@ export async function catalogosParaProducto(): Promise<
         unidades: (unidades.data ?? []).map((u) => ({
           codigo: u.codigo,
           nombre: u.etiqueta,
+          abreviatura: u.abreviatura,
         })),
         proveedores: proveedores.data ?? [],
       },

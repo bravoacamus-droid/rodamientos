@@ -6,6 +6,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Combobox } from "@rodatech/ui";
 
 import type { Opcion } from "../dominio/tipos";
 
@@ -72,8 +73,19 @@ export function FiltrosProductosBarra({
     [familia, subfamilias],
   );
 
-  const claseSelect =
-    "h-9 min-w-0 flex-1 rounded-sm border sm:flex-none border-[var(--border)] bg-[var(--surface)] px-2 text-sm text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+  /**
+   * Ancho de cada filtro.
+   *
+   * Willy, 01/09: *«en todos los select que hay tenemos que tener un buscador,
+   * porque es una lista larga»*. Los tres de aquí son justo eso —24 marcas, 9
+   * familias, 35 sub-familias, y creciendo con cada alta— y son los que más se
+   * usan, porque esta barra está encima del catálogo entero.
+   *
+   * Con ancho fijo y no `flex-1`: un `Combobox` es un botón cuyo texto cambia
+   * al elegir, y dejándolo crecer la barra se recolocaba entera cada vez que
+   * se aplicaba un filtro.
+   */
+  const anchoFiltro = "w-full sm:w-48";
 
   return (
     <div
@@ -85,34 +97,32 @@ export function FiltrosProductosBarra({
       <label className="sr-only" htmlFor="f-marca">
         Marca
       </label>
-      <select
+      <Combobox
         id="f-marca"
-        className={claseSelect}
-        // Controlado por la URL, no `defaultValue`: al volver atrás en el
-        // navegador o al limpiar los filtros, el desplegable tiene que
-        // reflejar lo que de verdad está aplicado.
-        value={marca}
-        onChange={(e) => aplicar("marca", e.target.value)}
-      >
-        <option value="">Todas las marcas</option>
-        {marcas.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.nombre}
-          </option>
-        ))}
-      </select>
+        className={anchoFiltro}
+        opciones={marcas.map((m) => ({ valor: m.id, etiqueta: m.nombre }))}
+        // Controlado por la URL, no por estado propio: al volver atrás en el
+        // navegador o al limpiar los filtros tiene que reflejar lo que de
+        // verdad está aplicado.
+        valor={marca || null}
+        onCambio={(v) => aplicar("marca", v ?? "")}
+        placeholder="Todas las marcas"
+        placeholderBusqueda="SKF, FAG, NTN…"
+        textoVacio="Ninguna marca coincide."
+      />
 
       <label className="sr-only" htmlFor="f-familia">
         Familia
       </label>
-      <select
+      <Combobox
         id="f-familia"
-        className={claseSelect}
-        value={familia}
-        onChange={(e) => {
+        className={anchoFiltro}
+        opciones={familias.map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+        valor={familia || null}
+        onCambio={(v) => {
           // Cambiar de familia invalida la subfamilia elegida.
           const siguientes = new URLSearchParams(vigentes.current.toString());
-          if (e.target.value) siguientes.set("familia", e.target.value);
+          if (v) siguientes.set("familia", v);
           else siguientes.delete("familia");
           siguientes.delete("subfamilia");
           siguientes.delete("cursor");
@@ -121,31 +131,24 @@ export function FiltrosProductosBarra({
             router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false });
           });
         }}
-      >
-        <option value="">Todas las familias</option>
-        {familias.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nombre}
-          </option>
-        ))}
-      </select>
+        placeholder="Todas las familias"
+        placeholderBusqueda="Rodamiento, retén…"
+        textoVacio="Ninguna familia coincide."
+      />
 
       <label className="sr-only" htmlFor="f-subfamilia">
         Subfamilia
       </label>
-      <select
+      <Combobox
         id="f-subfamilia"
-        className={claseSelect}
-        value={subfamilia}
-        onChange={(e) => aplicar("subfamilia", e.target.value)}
-      >
-        <option value="">Todas las subfamilias</option>
-        {subfamiliasVisibles.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.nombre}
-          </option>
-        ))}
-      </select>
+        className={anchoFiltro}
+        opciones={subfamiliasVisibles.map((x) => ({ valor: x.id, etiqueta: x.nombre }))}
+        valor={subfamilia || null}
+        onCambio={(v) => aplicar("subfamilia", v ?? "")}
+        placeholder="Todas las subfamilias"
+        placeholderBusqueda="Rígido de bolas, cónicos…"
+        textoVacio="Ninguna sub-familia coincide."
+      />
 
       {hayFiltros ? (
         <button

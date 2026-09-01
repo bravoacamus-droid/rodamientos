@@ -162,3 +162,36 @@ export async function crearTipo(
     return { ok: false, error: mensajeDeError(e) };
   }
 }
+
+/**
+ * Una marca nueva desde el alta de producto.
+ *
+ * Willy, 01/09 (17:47): *«marcas también, porque no estoy considerando todas
+ * las marcas; de pronto se presenta alguna marca que no está registrada y
+ * tengo que crearla para crear el producto en sí»*.
+ *
+ * No pide nada más que el nombre. `marcas` tiene país, segmento y descripción,
+ * pero ninguno hace falta para poder vender y preguntarlos aquí sería parar un
+ * alta a medias para rellenar una ficha de marketing. Se completan después
+ * desde configuración, si alguna vez importan.
+ */
+export async function crearMarca(texto: string): Promise<ResultadoCatalogo> {
+  const problema = await exigirPermiso();
+  if (problema) return { ok: false, error: problema };
+
+  const valido = nombre.safeParse(texto);
+  if (!valido.success) {
+    return { ok: false, error: valido.error.issues[0]?.message ?? "Nombre no válido." };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("crear_marca", { p_nombre: valido.data });
+    if (error) return { ok: false, error: mensajeDeError(error) };
+
+    revalidar();
+    return { ok: true, datos: aNodo(data) };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}
