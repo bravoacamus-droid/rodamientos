@@ -10,6 +10,7 @@ import {
   fechaPrometida,
   resumirPorComprar,
   type LineaComprometida,
+  type OfertaProveedor,
   type PedidoPendiente,
   type ProductoPorComprar,
   type ResumenPorComprar,
@@ -362,5 +363,59 @@ export async function paraQuienEs(
     // Es un adorno informativo sobre una pantalla que tiene que abrir igual.
     // Tumbarla porque no se pudo averiguar para quién es sería absurdo.
     return [];
+  }
+}
+
+/**
+ * Quién vende cada uno de estos productos, y a cuánto lo dejó.
+ *
+ * Es lo que la bandeja necesita para repartir la compra: sin esto, marcar diez
+ * productos de dos proveedores obliga a separarlos a mano y a hacer dos
+ * compras adivinando cuál va en cada una.
+ *
+ * Sale de lo que el sistema aprendió solo de las compras anteriores (046).
+ */
+export async function ofertasDeLosProductos(
+  productoIds: readonly string[],
+): Promise<Record<string, OfertaProveedor[]>> {
+  if (productoIds.length === 0) return {};
+
+  try {
+    const supabase = await clienteServidor();
+    const salida: Record<string, OfertaProveedor[]> = {};
+
+    for (let i = 0; i < productoIds.length; i += POR_TANDA) {
+      const { data, error } = await supabase
+        .from("v_proveedores_de_producto")
+        .select("producto_id, proveedor_id, proveedor, ultimo_costo_usd, comprado_veces, proveedor_activo")
+        .in("producto_id", productoIds.slice(i, i + POR_TANDA))
+        .eq("proveedor_activo", true);
+
+      // Sin esto la bandeja sigue funcionando: solo deja de proponer el
+      // reparto. Es una ayuda, no un requisito para comprar.
+      if (error || !data) continue;
+
+      for (const f of data as unknown as {
+        producto_id: string;
+        proveedor_id: string;
+        proveedor: string | null;
+        ultimo_costo_usd: number | string | null;
+        comprado_veces: number | string;
+      }[]) {
+        (salida[f.producto_id] ??= []).push({
+          proveedor_id: f.proveedor_id,
+          proveedor: f.proveedor ?? "—",
+          costoUsd:
+            f.ultimo_costo_usd === null || f.ultimo_costo_usd === undefined
+              ? null
+              : num(f.ultimo_costo_usd),
+          veces: num(f.comprado_veces),
+        });
+      }
+    }
+
+    return salida;
+  } catch {
+    return {};
   }
 }

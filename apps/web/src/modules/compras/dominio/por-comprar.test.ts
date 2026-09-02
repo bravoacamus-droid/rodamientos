@@ -7,10 +7,12 @@ import {
   agruparPorComprar,
   diasEntre,
   fechaPrometida,
+  repartirPorProveedor,
   resumirPorComprar,
   urgenciaDe,
   type LineaComprometida,
   type PedidoPendiente,
+  type ProductoPorComprar,
 } from "./por-comprar";
 
 /**
@@ -442,5 +444,97 @@ describe("el resumen de la cabecera", () => {
       clientes: 0,
       estimado: 0,
     });
+  });
+});
+
+/**
+ * Repartir mal es peor que no repartir: manda a comprarle caro a alguien, o
+ * esconde el producto que justo hay que salir a buscar.
+ */
+describe("repartir la compra entre proveedores", () => {
+  const fila = (codigo: string, falta: number, costoRef = 10): ProductoPorComprar =>
+    (agrupar([
+      linea({ producto_id: `p-${codigo}`, codigo, comprometido: falta, costo_referencia: costoRef }),
+    ])[0] as ProductoPorComprar);
+
+  const A = { proveedor_id: "prov-a", proveedor: "ALFA", costoUsd: 5, veces: 3 };
+  const B = { proveedor_id: "prov-b", proveedor: "BETA", costoUsd: 4, veces: 1 };
+
+  it("cada producto va al que lo dejó más barato", () => {
+    const f = fila("6205", 10);
+    const g = repartirPorProveedor([f], { [f.producto_id]: [A, B] });
+    expect(g).toHaveLength(1);
+    expect(g[0]?.proveedor).toBe("BETA");
+  });
+
+  it("a igual precio gana el que más veces lo ha vendido", () => {
+    const f = fila("6205", 10);
+    const g = repartirPorProveedor([f], {
+      [f.producto_id]: [{ ...A, costoUsd: 4 }, B],
+    });
+    expect(g[0]?.proveedor).toBe("ALFA");
+  });
+
+  it("el que nunca lo ha cobrado va detrás del que sí", () => {
+    // Sin precio no se puede afirmar que sea barato.
+    const f = fila("6205", 10);
+    const g = repartirPorProveedor([f], {
+      [f.producto_id]: [{ ...A, costoUsd: null }, { ...B, costoUsd: 99 }],
+    });
+    expect(g[0]?.proveedor).toBe("BETA");
+  });
+
+  it("junta en un grupo los productos del mismo proveedor", () => {
+    const f1 = fila("6205", 10);
+    const f2 = fila("6305", 4);
+    const g = repartirPorProveedor([f1, f2], {
+      [f1.producto_id]: [B],
+      [f2.producto_id]: [B],
+    });
+    expect(g).toHaveLength(1);
+    expect(g[0]?.filas.map((x) => x.codigo)).toEqual(["6205", "6305"]);
+  });
+
+  it("y los separa cuando son de proveedores distintos", () => {
+    const f1 = fila("6205", 10);
+    const f2 = fila("6305", 4);
+    const g = repartirPorProveedor([f1, f2], {
+      [f1.producto_id]: [A],
+      [f2.producto_id]: [B],
+    });
+    expect(g).toHaveLength(2);
+  });
+
+  it("el estimado usa el costo del proveedor, no el de la cotización", () => {
+    // Lo que se va a pagar, no lo que se supuso al cotizar.
+    const f = fila("6205", 10, 40);
+    const g = repartirPorProveedor([f], { [f.producto_id]: [B] });
+    expect(g[0]?.estimado).toBe(40); // 10 que faltan × 4
+  });
+
+  it("un producto sin proveedor conocido NO se esconde: va a su propio grupo", () => {
+    // Es justo el que hay que salir a buscar.
+    const f = fila("RARO", 2, 15);
+    const g = repartirPorProveedor([f], {});
+    expect(g).toHaveLength(1);
+    expect(g[0]?.proveedor_id).toBeNull();
+    // Sin proveedor, el estimado se cae al costo de la cotización.
+    expect(g[0]?.estimado).toBe(30);
+  });
+
+  it("los que tienen proveedor van primero, y el que más resuelve delante", () => {
+    const f1 = fila("A", 1);
+    const f2 = fila("B", 1);
+    const f3 = fila("C", 1);
+    const g = repartirPorProveedor([f1, f2, f3], {
+      [f1.producto_id]: [A],
+      [f2.producto_id]: [B],
+      [f3.producto_id]: [B],
+    });
+    expect(g.map((x) => x.proveedor)).toEqual(["BETA", "ALFA"]);
+  });
+
+  it("sin nada marcado no hay grupos", () => {
+    expect(repartirPorProveedor([], {})).toEqual([]);
   });
 });

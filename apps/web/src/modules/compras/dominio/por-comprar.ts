@@ -325,3 +325,95 @@ export function resumirPorComprar(
     estimado: dos(filas.reduce((a, f) => a + f.estimado, 0)),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Repartir la compra entre proveedores
+// ---------------------------------------------------------------------------
+
+/** Un proveedor que vende un producto, con lo que cobró la última vez. */
+export interface OfertaProveedor {
+  proveedor_id: string;
+  proveedor: string;
+  /** En dólares, para poder comparar. Null si nunca se le compró. */
+  costoUsd: number | null;
+  veces: number;
+}
+
+export interface GrupoDeCompra {
+  /** Null cuando no consta que nadie venda esos productos. */
+  proveedor_id: string | null;
+  proveedor: string | null;
+  /** Los productos que le tocan, en el orden en que venían. */
+  filas: ProductoPorComprar[];
+  /** Lo que costaría comprárselo a él, con lo que cobró la última vez. */
+  estimado: number;
+}
+
+/**
+ * A quién le toca cada producto.
+ *
+ * Gana **el que lo dejó más barato la última vez**, en dólares. Empata el que
+ * más veces lo ha vendido, y después el nombre — el orden tiene que ser
+ * siempre el mismo o la pantalla repartiría distinto entre dos cargas.
+ *
+ * No se busca «el proveedor que cubra más productos». Sería una optimización
+ * bonita y una recomendación mala: agrupar por comodidad puede mandar a
+ * comprarle caro a alguien para ahorrarse una llamada, y quien decide eso es
+ * Willy, no un algoritmo. Aquí solo se propone lo barato y se deja mover.
+ *
+ * Un producto sin proveedor conocido no se reparte: cae en su propio grupo,
+ * que se compra eligiendo a mano. Esconderlo sería peor — es justo el que hay
+ * que salir a buscar.
+ */
+export function repartirPorProveedor(
+  filas: readonly ProductoPorComprar[],
+  ofertas: Readonly<Record<string, readonly OfertaProveedor[]>>,
+): GrupoDeCompra[] {
+  const grupos = new Map<string, GrupoDeCompra>();
+
+  for (const f of filas) {
+    const suyas = ofertas[f.producto_id] ?? [];
+
+    const mejor = [...suyas].sort((a, b) => {
+      // Sin precio no se puede afirmar que sea barato: va detrás de cualquiera
+      // que sí lo tenga.
+      if (a.costoUsd === null && b.costoUsd === null) {
+        return b.veces - a.veces || a.proveedor.localeCompare(b.proveedor);
+      }
+      if (a.costoUsd === null) return 1;
+      if (b.costoUsd === null) return -1;
+      return (
+        a.costoUsd - b.costoUsd ||
+        b.veces - a.veces ||
+        a.proveedor.localeCompare(b.proveedor)
+      );
+    })[0];
+
+    const clave = mejor?.proveedor_id ?? "";
+    const previo = grupos.get(clave);
+    // El estimado de ESTE grupo usa el costo del proveedor al que se le va a
+    // comprar, no el de la cotización: es lo que de verdad va a pagar.
+    const costo = mejor?.costoUsd ?? f.costoReferencia;
+
+    if (previo) {
+      previo.filas.push(f);
+      previo.estimado = dos(previo.estimado + f.falta * costo);
+    } else {
+      grupos.set(clave, {
+        proveedor_id: mejor?.proveedor_id ?? null,
+        proveedor: mejor?.proveedor ?? null,
+        filas: [f],
+        estimado: dos(f.falta * costo),
+      });
+    }
+  }
+
+  // Los que tienen proveedor primero, y entre ellos el que más líneas se
+  // lleva: es el pedido que más resuelve de una vez.
+  return [...grupos.values()].sort(
+    (a, b) =>
+      Number(a.proveedor_id === null) - Number(b.proveedor_id === null) ||
+      b.filas.length - a.filas.length ||
+      (a.proveedor ?? "").localeCompare(b.proveedor ?? ""),
+  );
+}

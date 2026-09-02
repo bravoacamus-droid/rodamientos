@@ -48,6 +48,7 @@ export function ConstructorCompra({
   precarga = [],
   candidatos = [],
   esperan = [],
+  elegido = null,
 }: {
   /**
    * Los últimos a los que se compró. NO es el maestro: desde la 033 el
@@ -82,15 +83,23 @@ export function ConstructorCompra({
     codigos: string[];
     prometida: string;
   }[];
+  /**
+   * El proveedor ya elegido, cuando la bandeja repartió lo marcado y este
+   * botón traía el suyo. Preguntarlo otra vez sería preguntar dos veces.
+   */
+  elegido?: ProveedorOpcion | null;
 }) {
   const router = useRouter();
   // El estado inicial se calcula UNA vez, aplicando la precarga sobre el
   // estado vacío con el mismo reducer que usa todo lo demás. Hacerlo con un
   // efecto duplicaría las líneas en cuanto React montara dos veces.
   const [estado, despachar] = useReducer(reducir, null, () => {
+    const base = elegido
+      ? reducir(estadoInicial(hoy), { tipo: "cabecera", campo: "proveedorId", valor: elegido.id })
+      : estadoInicial(hoy);
     const conLineas = precarga.reduce(
       (e, i) => reducir(e, { tipo: "agregar", producto: i.producto, cantidad: i.cantidad }),
-      estadoInicial(hoy),
+      base,
     );
     // El porqué viaja con la compra, no solo en la pantalla: las
     // observaciones se ven en la ficha y es lo que lee quien recibe.
@@ -112,7 +121,7 @@ export function ConstructorCompra({
   // ahora la lista no está —el elegido puede venir de una búsqueda o de un alta
   // recién hecha— así que la ficha se guarda al elegirla. `estado.proveedorId`
   // sigue siendo la única fuente para el payload: esto es solo para pintar.
-  const [proveedor, setProveedor] = useState<ProveedorOpcion | null>(null);
+  const [proveedor, setProveedor] = useState<ProveedorOpcion | null>(elegido);
 
   // Lo que este proveedor cobró la última vez, por producto. Se recarga al
   // cambiar de proveedor: es la referencia contra la que se negocia.

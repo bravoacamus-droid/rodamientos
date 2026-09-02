@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **44 de 44 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **981 en verde** |
+| `pnpm test` | **990 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 050, aplicadas** al Supabase del cliente |
@@ -1099,9 +1099,64 @@ mejor no proponer que proponer algo que al pulsarlo rompe la pantalla.
 
 1. **Las respuestas de precio no se guardan** (el comparador). Depende de la
    pregunta 3 a Willy.
-2. **Una compra por proveedor.** Si en la bandeja marca diez productos de dos
-   proveedores, hoy hace dos compras separando a mano cuáles van en cada una.
-   Con §K el sistema ya sabría repartirlas.
+2. ~~**Una compra por proveedor.**~~ · **hecho el 02/09**, §O: la bandeja
+   reparte lo marcado y saca un botón por proveedor.
+
+---
+
+### O · La bandeja reparte la compra por proveedor · HECHO el 02/09
+
+Lo último del bloque que no dependía de nadie. Una compra es de UN proveedor:
+si en la bandeja se marcan diez productos y son de dos, había que separarlos a
+mano y adivinar cuál iba en cada compra.
+
+Ahora, al marcar, la barra dice:
+
+    2 productos marcados · aproximadamente $ 280.00
+    Son de 2 proveedores distintos, así que van en 2 compras.
+    Cada botón lleva lo suyo.
+    [ B.C. BEARING PERU S.R.L.  1 producto ]  [ BEARING COMPANY S.A.C.  1 producto ]
+
+Y cada botón abre la compra **con su proveedor ya elegido**, solo con sus
+productos y con los costos rellenos. De la bandeja a una compra guardable: un
+clic.
+
+#### La regla del reparto, y lo que NO hace
+
+Cada producto va **al que lo dejó más barato la última vez**, en dólares.
+Empata el que más veces lo ha vendido, y después el nombre — el orden tiene
+que ser siempre el mismo, o la pantalla repartiría distinto entre dos cargas.
+
+**No busca «el proveedor que cubra más productos».** Sería una optimización
+bonita y una recomendación mala: agrupar por comodidad puede mandar a
+comprarle caro a alguien para ahorrarse una llamada, y eso lo decide Willy, no
+un algoritmo. Aquí solo se propone lo barato y se deja mover.
+
+Un producto que no consta que venda nadie **no se esconde**: cae en su propio
+grupo, «Sin proveedor conocido», que se compra eligiendo a mano. Es justo el
+que hay que salir a buscar.
+
+#### Comprobado con dos proveedores de verdad
+
+    *VS-190*    BEARING $30 · B.C. $45   → va a BEARING
+    1030H-T10   solo B.C. $12            → va a B.C.
+
+Marcados los dos, salieron dos botones con un producto cada uno; el de BEARING
+abrió la compra con su ficha puesta, el costo en 30 y el total en $106.20.
+
+#### Con esto, el flujo de compras queda cerrado salvo el comparador
+
+    cotiza → confirma (todo o parte)
+      → la bandeja: qué falta, para quién, para cuándo, y ya repartido
+      → «Pedir precio»: el mismo WhatsApp a varios
+      → «Comprar»: un clic por proveedor, todo relleno
+      → recibir: kardex, moneda y inventario
+      → facturar: entero o en partes
+
+Lo único que falta del plan es **el comparador** —guardar lo que contesta cada
+proveedor para poder elegir— y sigue esperando la pregunta 3 a Willy: si es
+obligatorio o va al lado. Con los teléfonos de los proveedores (§J) y esa
+respuesta, se cierra.
 
 ---
 

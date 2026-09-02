@@ -11,6 +11,8 @@ import { ChevronDown, ChevronRight, MessageCircle, ShoppingCart } from "lucide-r
 
 import {
   ETIQUETA_URGENCIA,
+  repartirPorProveedor,
+  type OfertaProveedor,
   type ProductoPorComprar,
   type Urgencia,
 } from "../../dominio/por-comprar";
@@ -34,7 +36,14 @@ function plazo(dias: number): string {
 const cantidad = (n: number): string =>
   Number.isInteger(n) ? String(n) : n.toFixed(2);
 
-export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
+export function TablaPorComprar({
+  filas,
+  ofertas = {},
+}: {
+  filas: ProductoPorComprar[];
+  /** Quién vende cada producto, para repartir la compra. */
+  ofertas?: Record<string, OfertaProveedor[]>;
+}) {
   // Solo se puede marcar lo que hay que comprar: marcar algo que ya viene en
   // camino llevaría a pedirlo dos veces, que es justo lo que la bandeja evita.
   const comprables = React.useMemo(
@@ -63,14 +72,24 @@ export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
   const items = (elegidos: ProductoPorComprar[]) =>
     elegidos.map((f) => `${f.producto_id}:${f.falta}`).join(",");
 
-  const enlaceCompra = (elegidos: ProductoPorComprar[]) =>
-    `/compras/nueva?items=${items(elegidos)}`;
+  const enlaceCompra = (elegidos: ProductoPorComprar[], proveedor?: string | null) =>
+    `/compras/nueva?items=${items(elegidos)}` +
+    (proveedor ? `&proveedor=${proveedor}` : "");
 
   // El paso de ANTES de comprar: preguntar precio. Va al mismo sitio y con
   // el mismo formato, porque es el mismo gesto —«esto me falta»— resuelto
   // de dos maneras según se sepa ya a quién comprárselo o no.
   const enlacePedir = (elegidos: ProductoPorComprar[]) =>
     `/compras/pedir-precio?items=${items(elegidos)}`;
+
+  // Lo marcado, repartido entre los proveedores que lo venden más barato.
+  // Una compra es de UN proveedor: si lo marcado es de varios, hay que
+  // hacer varias, y separarlas a mano era el trabajo que quedaba.
+  const grupos = React.useMemo(
+    () => repartirPorProveedor(seleccion, ofertas),
+    [seleccion, ofertas],
+  );
+  const repartida = grupos.length > 1;
 
   return (
     <div className="flex flex-col">
@@ -324,6 +343,13 @@ export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
                 <Moneda valor={estimadoSeleccion} />
               </>
             ) : null}
+            {repartida ? (
+              <span className="block text-sm text-[var(--fg-muted)]">
+                Son de {grupos.length} proveedores distintos, así que van en
+                {" "}
+                {grupos.length} compras. Cada botón lleva lo suyo.
+              </span>
+            ) : null}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -343,9 +369,34 @@ export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
               <MessageCircle className="size-4" aria-hidden="true" />
               Pedir precio
             </Link>
+            {/* Una compra es de UN proveedor. Si lo marcado es de varios,
+                sale un botón por cada uno con lo que le toca: separarlas a
+                mano era el trabajo que quedaba, y hacerlo mal es comprarle
+                a alguien algo que no vende. */}
+            {repartida
+              ? grupos.map((g) => (
+                  <Link
+                    key={g.proveedor_id ?? "sin"}
+                    href={enlaceCompra(g.filas, g.proveedor_id)}
+                    className="inline-flex h-11 flex-col items-start justify-center rounded-sm bg-brand-600 px-4 text-white hover:bg-brand-700"
+                  >
+                    <span className="text-sm font-medium">
+                      {g.proveedor ?? "Sin proveedor conocido"}
+                    </span>
+                    <span className="text-xs opacity-80">
+                      {g.filas.length}
+                      {g.filas.length === 1 ? " producto" : " productos"}
+                    </span>
+                  </Link>
+                ))
+              : null}
             <Link
-              href={enlaceCompra(seleccion)}
-              className="inline-flex h-11 items-center gap-2 rounded-sm bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+              href={enlaceCompra(seleccion, grupos[0]?.proveedor_id)}
+              className={
+                repartida
+                  ? "hidden"
+                  : "inline-flex h-11 items-center gap-2 rounded-sm bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+              }
             >
               <ShoppingCart className="size-4" aria-hidden="true" />
               Registrar la compra

@@ -4,7 +4,7 @@ import { EstadoError, EstadoVacio, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 import { PackageCheck } from "lucide-react";
 
-import { bandejaPorComprar } from "../../api/por-comprar";
+import { bandejaPorComprar, ofertasDeLosProductos } from "../../api/por-comprar";
 import { TablaPorComprar } from "./tabla";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -51,6 +51,11 @@ export default async function PaginaPorComprar() {
   }
 
   const { filas, resumen, truncado } = r.datos;
+
+  // Quién vende cada cosa, para poder repartir la compra por proveedor en
+  // vez de dejarle separarlas a mano. Si no se puede averiguar, la bandeja
+  // funciona igual: solo deja de proponer el reparto.
+  const ofertas = await ofertasDeLosProductos(filas.map((f) => f.producto_id));
 
   return (
     <div className="flex flex-col gap-5">
@@ -127,7 +132,7 @@ export default async function PaginaPorComprar() {
           </section>
 
           <section className="card pt-2">
-            <TablaPorComprar filas={filas} />
+            <TablaPorComprar filas={filas} ofertas={ofertas} />
           </section>
 
           <p className="text-xs text-[var(--fg-subtle)]">

@@ -65,7 +65,12 @@ export default async function PaginaNuevaCompra({
   const mejores = quienesVenden?.ok
     ? quienesVenden.datos.filter((c) => c.coincidencias > 0).slice(0, 3)
     : [];
-  const fichas = await proveedoresPorId(mejores.map((m) => m.id));
+  // Y el que ya viene elegido desde la bandeja, si viene: allí se repartió
+  // lo marcado entre los proveedores que lo venden, y cada botón trae el
+  // suyo. Volver a elegirlo aquí sería preguntar dos veces lo mismo.
+  const pedido = Array.isArray(sp.proveedor) ? sp.proveedor[0] : sp.proveedor;
+  const aPedir = [...new Set([...mejores.map((m) => m.id), ...(pedido ? [pedido] : [])])];
+  const fichas = await proveedoresPorId(aPedir);
   const candidatos = mejores.flatMap((m) => {
     const ficha = fichas.ok ? fichas.datos.find((f) => f.id === m.id) : undefined;
     // Sin ficha no se ofrece el botón. Es mejor no proponerlo que proponer
@@ -124,6 +129,11 @@ export default async function PaginaNuevaCompra({
       precarga={precarga}
       candidatos={candidatos}
       esperan={esperan}
+      elegido={
+        pedido && fichas.ok
+          ? (fichas.datos.find((f) => f.id === pedido) ?? null)
+          : null
+      }
     />
   );
 }
