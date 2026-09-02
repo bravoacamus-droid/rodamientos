@@ -1897,12 +1897,28 @@ correcto — están todos en `aceptado` o `baja_aceptada`.
 no despliega y no corre los e2e.** Y el build depende de dos secrets, así que
 puede salir en rojo por configuración y no por código — ya anotado en §6.
 
-### 0.8 · `apps/demo` · 130 archivos que nadie usa
+### 0.8 · ~~`apps/demo` · 130 archivos que nadie usa~~ · borrada el 02/09
 
 Una app Next.js paralela y completa, con su propio `package-lock.json` (npm
 dentro de un monorepo pnpm), sus propias migraciones y scripts en Python.
-Nadie la importa desde `apps/web`, pero está dentro del workspace, así que
-**CI la typechequea y la construye en cada push**.
+Nadie la importaba desde `apps/web`, pero estaba dentro del workspace, así que
+**CI la typechequeaba y la construía en cada push**.
+
+**Borrada el 02/09.** Era la v1, la demo que se le enseñó a Willy en agosto, y
+el README decía desde el principio que se eliminaba en la fase 7 — que es
+donde estamos. Su último commit es `962aa77`, el mismo que la sustituyó.
+
+Lo que más pesaba no era el tiempo de CI: era que traía **una segunda carpeta
+`supabase/migrations` numerada del 001 al 015**. Dos juegos de migraciones con
+los mismos números en el mismo repositorio, y solo uno que hay que aplicar. El
+día que alguien —un agente, un compañero, yo mismo con prisa— abriera «la 004»
+de la carpeta equivocada, el error no habría sido evidente.
+
+Sigue entera en el historial. Se recupera con:
+
+```bash
+git checkout 962aa77^ -- apps/demo
+```
 
 ### 0.9 · Lo que SÍ está bien, para no tocarlo
 

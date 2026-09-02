@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/demo/logo.png" alt="Inversiones Rodatech E.I.R.L." height="90" />
+<img src="apps/web/public/logo.png" alt="Inversiones Rodatech E.I.R.L." height="90" />
 
 # Rodatech ERP
 
@@ -16,10 +16,17 @@ Next.js 15 · React 19 · TypeScript · Tailwind v4 · Supabase · pnpm + Turbor
 
 ## Estado
 
-Reconstrucción **v2** en curso, sobre la rama `v2/monorepo`.
+La **v2** está construida y sus migraciones aplicadas al Supabase del cliente.
+Las 23 pantallas existen; lo que queda son decisiones del cliente y el
+endurecimiento previo a la entrega, que es la fase 7 del plan.
 
-La v1 (la demo que se le mostró al cliente) sigue completa y ejecutable en
-`apps/demo/`, como referencia. Se elimina en la fase 7, no antes.
+La v1 —la demo que se le enseñó a Willy en agosto— **se borró el 02/09**, ya
+cumplida su función de referencia. Sigue entera en el historial: vive en
+`962aa77^` y se recupera con `git checkout 962aa77^ -- apps/demo`. Estaba
+dentro del workspace, así que CI la typechequeaba y la construía en cada push,
+y traía su propia carpeta `supabase/migrations` numerada del 001 al 015 — que
+es lo que de verdad preocupaba: dos juegos de migraciones con los mismos
+números en el mismo repositorio, y solo uno que hay que aplicar.
 
 El plan completo —auditoría de la v1, requisitos de la reunión con el cliente
 y el orden de trabajo— está en **[`docs/PLAN-V2.md`](docs/PLAN-V2.md)**.
@@ -27,15 +34,13 @@ y el orden de trabajo— está en **[`docs/PLAN-V2.md`](docs/PLAN-V2.md)**.
 ## Qué falta
 
 Lo pendiente vive en **[docs/PENDIENTES.md](docs/PENDIENTES.md)**, ordenado por
-lo que más duele. Lo grueso es que 15 de las 23 pantallas siguen siendo
-carteles de «en construcción».
+lo que más duele.
 
 ## Estructura
 
 ```
 apps/
-  web/          la aplicación v2
-  demo/         la v1 intacta, como referencia
+  web/          la aplicación
 packages/
   config/       constantes del negocio, tsconfig base
   db/           clientes de Supabase y tipos generados
