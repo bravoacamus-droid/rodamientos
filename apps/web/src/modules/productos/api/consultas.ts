@@ -328,13 +328,18 @@ export async function productoConDetalle(id: string): Promise<
 
     const { data, error } = await supabase
       .from("productos")
+      // `proveedores!productos_proveedor_id_fkey` con el nombre de la clave
+      // foránea, no `proveedores` a secas. Desde la 046 hay TRES caminos entre
+      // `productos` y `proveedores` —esta columna, la tabla
+      // `proveedor_productos` y su vista— y PostgREST se niega a elegir uno:
+      // devuelve PGRST201 y la ficha del producto deja de abrir entera.
       .select(
         `id, codigo, codigo_fabricante, descripcion, unidad_codigo,
          stock_minimo, precio_venta, precio_minimo, costo_promedio,
          ultimo_costo, peso_kg, ubicacion, precio_mercado,
          archivado, motivo_archivado, designacion_base,
          marcas!inner(nombre),
-         proveedores(razon_social),
+         proveedores!productos_proveedor_id_fkey(razon_social),
          subfamilias!inner(nombre, familias!inner(nombre)),
          tipos(nombre),
          stock(cantidad)`,

@@ -2574,6 +2574,77 @@ export type Database = {
           },
         ]
       }
+      proveedor_productos: {
+        Row: {
+          actualizado_en: string
+          comprado_veces: number
+          creado_en: string
+          declarado: boolean
+          moneda: string | null
+          notas: string | null
+          producto_id: string
+          proveedor_id: string
+          ultima_compra: string | null
+          ultimo_costo: number | null
+          ultimo_costo_usd: number | null
+        }
+        Insert: {
+          actualizado_en?: string
+          comprado_veces?: number
+          creado_en?: string
+          declarado?: boolean
+          moneda?: string | null
+          notas?: string | null
+          producto_id: string
+          proveedor_id: string
+          ultima_compra?: string | null
+          ultimo_costo?: number | null
+          ultimo_costo_usd?: number | null
+        }
+        Update: {
+          actualizado_en?: string
+          comprado_veces?: number
+          creado_en?: string
+          declarado?: boolean
+          moneda?: string | null
+          notas?: string | null
+          producto_id?: string
+          proveedor_id?: string
+          ultima_compra?: string | null
+          ultimo_costo?: number | null
+          ultimo_costo_usd?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedores: {
         Row: {
           activo: boolean
@@ -3366,6 +3437,55 @@ export type Database = {
           },
         ]
       }
+      v_proveedores_de_producto: {
+        Row: {
+          comprado_veces: number | null
+          declarado: boolean | null
+          dias_pago: number | null
+          es_habitual: boolean | null
+          lead_time_dias: number | null
+          moneda: string | null
+          notas: string | null
+          producto_id: string | null
+          proveedor: string | null
+          proveedor_activo: boolean | null
+          proveedor_codigo: string | null
+          proveedor_id: string | null
+          ultima_compra: string | null
+          ultimo_costo: number | null
+          ultimo_costo_usd: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proveedor_productos_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_reposicion: {
         Row: {
           codigo: string | null
@@ -3528,6 +3648,18 @@ export type Database = {
       _tres_letras: { Args: { n: number }; Returns: string }
       a_dolares: {
         Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
+        Returns: number
+      }
+      anotar_productos_de_proveedor: {
+        Args: {
+          p_comprado?: boolean
+          p_fecha?: string
+          p_items: Json
+          p_moneda?: string
+          p_notas?: string
+          p_proveedor: string
+          p_tipo_cambio?: number
+        }
         Returns: number
       }
       anular_compra: { Args: { p_id: string; p_motivo: string }; Returns: Json }
@@ -3759,6 +3891,10 @@ export type Database = {
       numero_a_letras: {
         Args: { p_moneda?: string; p_monto: number }
         Returns: string
+      }
+      olvidar_producto_de_proveedor: {
+        Args: { p_producto: string; p_proveedor: string }
+        Returns: boolean
       }
       pendiente_de_recibir: {
         Args: { p_compra: string }

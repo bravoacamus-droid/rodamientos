@@ -8,14 +8,17 @@ volver a caer sale caro.
 >
 > El día 01/09 hubo reunión con Willy (§ «Reunión del 01/09»), salió el plan
 > del flujo de compras (§G) y se construyó su primer bloque (§H). El 02/09
-> se hizo la bandeja **«Por comprar»** (§I), primera pantalla del bloque 2,
-> y se cargó **su lista de clientes y proveedores** (§J): la base pasó de 0
-> a 97 proveedores, así que compras y recepciones ya se pueden usar.
+> se hizo la bandeja **«Por comprar»** (§I), primera pantalla del bloque 2;
+> se cargó **su lista de clientes y proveedores** (§J) —la base pasó de 0 a
+> 97 proveedores, así que compras y recepciones ya se pueden usar— y se
+> añadió **qué vende cada proveedor** (§K), que se aprende solo de cada
+> compra.
 >
 > **Lo siguiente, por orden:**
 >
 > 1. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
->    hay que inventar de cero, y ya tiene de dónde partir: la bandeja.
+>    hay que inventar de cero, y ya tiene las dos piezas que necesita: la
+>    bandeja (§I) y qué vende cada proveedor (§K).
 > 2. Los **tres contadores que dan cifras falsas** (§0.3). Llevan desde el
 >    31/08 esperando y siguen siendo la deuda técnica más barata de pagar.
 > 3. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
@@ -37,7 +40,7 @@ volver a caer sale caro.
 | `pnpm test` | **937 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 045, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 046, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -751,6 +754,84 @@ rubro se compra y se vende al mismo distribuidor.
 
 ---
 
+### K · Qué vende cada proveedor · HECHO el 02/09
+
+Luis, 02/09: *«el proveedor no tiene qué marca o productos vende; aparte que
+pueda editar también cuando va a comprar o cotizar esa compra, ahí también
+pueda nutrir el sistema, o sea poner qué productos vende. La cosa es
+ayudar»*.
+
+El ERP no sabía contestar la pregunta con la que empieza cualquier compra:
+**¿a quién le pido esto?** Tenía `proveedor_marcas` desde la 002 —con editor
+y todo, pero vacía— y `productos.proveedor_id` (025), que es el proveedor
+habitual: uno solo, y en el sentido contrario.
+
+#### La decisión: que no haya que teclearlo
+
+Un maestro que hay que mantener a mano no se mantiene. Sentar a Willy a
+escribir qué vende cada uno de sus 97 proveedores es pedirle algo que no va a
+pasar.
+
+Pero **él ya lo dice cada vez que registra una compra**. Comprarle diez
+rodamientos a Bearing Company ES la afirmación «Bearing Company vende esto, de
+esta marca, y la última vez me lo dejó a tanto». Ahora lo apunta un disparador
+sobre `compra_items`, por sentencia y no por fila, así que vale para
+cualquier camino por el que se cree una compra —hoy y el día que haya otro.
+
+**La marca se rellena sola** con la del producto comprado. Era la mitad del
+problema: el filtro «vende la marca» del listado llevaba desde la 002 sin nada
+que filtrar.
+
+Y **la recepción corrige el costo**: lo que se pactó al comprar y lo que acaba
+diciendo la factura no siempre coinciden, y para comparar proveedores manda lo
+segundo. No cuenta como una compra más, es la misma.
+
+#### Lo que se ve
+
+| Dónde | Qué |
+|---|---|
+| Ficha del proveedor | **«Qué vende»** — productos, cuántas compras lleva cada uno, cuándo fue la última y a cuánto |
+| Ficha del producto | **«Quién lo vende»** — proveedores del más barato al más caro, en dólares |
+
+El costo se guarda **en las dos monedas**: en la suya porque es la cifra que
+Willy reconoce cuando llama a preguntar, y en dólares porque es la única con
+la que se puede comparar a dos proveedores entre sí.
+
+#### La puerta manual, y lo que no deja hacer
+
+Se pueden añadir productos a mano desde la ficha del proveedor, para lo que
+todavía NO se le ha comprado: «me pasó su lista de precios de FAG». Eso la
+base no puede saberlo.
+
+Pero **lo comprado no se puede quitar**. La regla vive en el RPC, no en la
+pantalla: quitarlo dejaría la ficha diciendo que no lo vende mientras el
+kardex dice que lo trajo él. El botón ni siquiera aparece en esas filas.
+
+Y una declaración a mano **no pisa un costo real**. Una compra sí pisa lo
+declarado: es un hecho contra una intención.
+
+#### Un fallo que esto provocó, y que se vio a tiempo
+
+Añadir la tabla **rompió la ficha del producto**. Al haber tres caminos entre
+`productos` y `proveedores` —la columna del proveedor habitual, la tabla
+nueva y su vista— PostgREST se niega a elegir uno y devuelve `PGRST201`: la
+pantalla entera dejaba de abrir con un error incomprensible.
+
+Se arregla nombrando la clave foránea en el `select`
+(`proveedores!productos_proveedor_id_fkey`). **Conviene recordarlo**: cada
+tabla nueva que apunte a dos que ya se cruzan puede romper una consulta que
+llevaba meses funcionando, y no lo dice ningún tipo ni ninguna prueba — solo
+abrir la pantalla.
+
+#### Lo siguiente que se apoya en esto
+
+El **comparador de proveedores** (§G paso 5). Ya tiene a quién preguntar: con
+esta tabla, la bandeja «Por comprar» puede decir «para este código tienes tres
+proveedores, y el más barato la última vez fue este». Es el último paso del
+plan de compras que queda por construir.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
@@ -1137,8 +1218,10 @@ Por orden de lo que desbloquea:
    ya se pueden enseñar funcionando. Lo que ese archivo NO traía, y sigue
    haciendo falta:
 
-   a. **Qué marcas trae cada proveedor.** `proveedor_marcas` está vacía, y
-      sin ella el comparador no puede sugerir a quién pedirle un SKF.
+   a. ~~**Qué marcas trae cada proveedor.**~~ · **ya no hace falta
+      preguntarlo**: desde la 046 la marca se rellena sola con cada compra
+      (§K). Si él quiere adelantarlo, la ficha del proveedor lo admite a
+      mano; pero no es un bloqueo.
    b. **Condiciones de pago.** Los 97 quedaron en «contado», que es el valor
       por defecto; con varios tendrá crédito.
    c. **Teléfonos, correos y personas de contacto**, ni de clientes ni de

@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { Badge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { proveedoresDeProducto } from "@/modules/proveedores";
+
 import { productoConDetalle } from "../api/consultas";
 import { AccionesFila } from "./acciones-fila";
+import { QuienLoVende } from "./quien-lo-vende";
 
 /**
  * Ficha de un producto.
@@ -20,9 +23,10 @@ export default async function PaginaDetalleProducto({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil] = await Promise.all([
+  const [resultado, perfil, quienVende] = await Promise.all([
     productoConDetalle(id),
     perfilActual(),
+    proveedoresDeProducto(id),
   ]);
 
   if (!resultado.ok) {
@@ -198,6 +202,11 @@ export default async function PaginaDetalleProducto({
             </ul>
           )}
         </section>
+
+        {/* Quién lo vende. Al lado de los equivalentes a propósito: las dos
+            son salidas del mismo callejón —«no tengo esto»—, una por otra
+            marca y la otra por otro proveedor. */}
+        <QuienLoVende proveedores={quienVende.ok ? quienVende.datos : []} />
       </div>
     </div>
   );

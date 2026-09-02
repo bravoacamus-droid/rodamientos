@@ -8,6 +8,16 @@ export { default as PaginaProveedores } from "./ui/pagina";
 export { default as PaginaFormularioProveedor } from "./ui/pagina-formulario";
 export { default as PaginaDetalleProveedor } from "./ui/pagina-detalle";
 
+// Qué vende cada proveedor (046). Lo publica el módulo porque lo consume la
+// ficha del PRODUCTO —la pregunta al revés, «¿quién me vende esto?»— y lo va
+// a consumir el comparador de proveedores.
+export {
+  proveedoresDeProducto,
+  productosDeProveedor,
+  type ProductoDeProveedor,
+  type ProveedorDeProducto,
+} from "./api/catalogo";
+
 // Las reglas del documento son puras y están probadas. Las reutilizará el
 // módulo de compras al dar de alta un proveedor sobre la marcha.
 export {

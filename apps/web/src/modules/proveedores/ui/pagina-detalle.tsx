@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { productosDeProveedor } from "../api/catalogo";
 import { detalleProveedor } from "../api/consultas";
 import { ETIQUETA_DOCUMENTO, ETIQUETA_TIPO } from "../dominio/tipos";
+import { QueVende } from "./que-vende";
 
 /** La ficha de un proveedor. */
 export default async function PaginaDetalleProveedor({
@@ -13,7 +15,11 @@ export default async function PaginaDetalleProveedor({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil] = await Promise.all([detalleProveedor(id), perfilActual()]);
+  const [resultado, perfil, catalogo] = await Promise.all([
+    detalleProveedor(id),
+    perfilActual(),
+    productosDeProveedor(id),
+  ]);
 
   if (!resultado.ok) {
     return (
@@ -93,8 +99,9 @@ export default async function PaginaDetalleProveedor({
         <h2 className="text-sm font-semibold">Marcas que representa</h2>
         {p.marcas.length === 0 ? (
           <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-            Ninguna anotada. Al ponerlas, este proveedor aparece al filtrar el
-            maestro por marca.
+            Ninguna todavía. No hace falta escribirlas: se rellenan solas con
+            la marca de lo que se le vaya comprando. Y en cuanto haya alguna,
+            este proveedor aparece al filtrar por marca.
           </p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-2">
@@ -109,6 +116,15 @@ export default async function PaginaDetalleProveedor({
           </div>
         )}
       </section>
+
+      {/* Qué vende. Va aquí, justo debajo de las marcas, porque las dos
+          contestan a la misma pregunta —«¿le pido esto a él?»— y la de
+          arriba se rellena a partir de la de abajo. */}
+      <QueVende
+        proveedorId={p.id}
+        productos={catalogo.ok ? catalogo.datos : []}
+        puedeEditar={puedeEditar}
+      />
 
       {p.direccion || p.email || p.notas ? (
         <section className="card grid gap-4 p-4 sm:grid-cols-2">
