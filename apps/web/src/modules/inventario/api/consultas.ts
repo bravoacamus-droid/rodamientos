@@ -37,9 +37,15 @@ export type Resultado<T> =
 export async function valorizacion(): Promise<Resultado<FilaValorizacion[]>> {
   try {
     const supabase = await clienteServidor();
+    // Columnas explícitas y no `select("*")`: es la regla del archivo, y
+    // aquí faltaba. La vista SÍ se puede leer entera —agrupa por subfamilia
+    // en Postgres, así que son decenas de filas y no una por producto— pero
+    // con `*` viajan columnas que nadie pinta. Ver PENDIENTES §0.4.
     const { data, error } = await supabase
       .from("v_valorizacion_inventario")
-      .select("*")
+      .select(
+        "familia_id, familia, subfamilia_id, subfamilia, skus, skus_con_stock, unidades, valor_costo, valor_venta, margen_potencial",
+      )
       .order("valor_costo", { ascending: false });
 
     if (error) return fallo(error);

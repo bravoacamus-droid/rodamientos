@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 052, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 053, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -1739,15 +1739,40 @@ nombres de columna exactos que pide la aplicación. Es lo único que la
 pantalla no puede enseñar cuando la tabla está vacía: un nombre mal escrito
 daría cero sin error, que es el mismo fallo otra vez.
 
-### 0.4 · Consultas sin techo
+### 0.4 · ~~Consultas sin techo~~ · arregladas el 02/09
 
-Traen la tabla entera y crecen con el uso:
+Traían la tabla entera y crecen con el uso:
 
 - `reportes/api/consultas.ts` · `embudoComercial` → `v_trazabilidad_venta`
   **completa**. Crece con cada cotización y cada venta. El más peligroso.
 - `inventario/api/consultas.ts` → `v_valorizacion_inventario` con `select("*")`
   y sin límite, **leída desde cuatro sitios** (productos, reportes ×2).
 - `reportes` · `agingCartera` y `resumen` → `v_cartera` completa.
+
+**Arreglado el 02/09, migración 053** (`v_embudo_comercial` y
+`v_aging_cartera`).
+
+Que no llevaran `.limit()` no significaba que no tuvieran tope: **PostgREST
+corta a las 1.000 filas y no lo dice**. O sea, exactamente el mismo fallo
+que los tres contadores de §0.3 —agregar sobre la página en vez de sobre la
+tabla— con la misma forma de morir: aciertan hoy y empiezan a mentir el día
+que se pase el tope.
+
+**Una corrección a la propia auditoría.** El tercero de la lista,
+`v_valorizacion_inventario`, **no crece**: ya agrupa por subfamilia en
+Postgres y devuelve 34 filas hoy y 34 dentro de tres años. Estaba junto a
+los otros dos y no era el mismo caso; lo único que le hacía falta era dejar
+de pedirse con `select("*")`.
+
+Y al hacerlo, otro `as` tapó un fallo: al listar las columnas a mano se me
+quedaron fuera tres que el tipo declara, y el `as unknown as
+FilaValorizacion[]` lo silenció — habrían llegado `undefined` a la pantalla.
+Es el segundo `as` que muerde hoy; el primero tumbó la compra (§Ñ).
+
+En `agingCartera` había una excepción **razonada** a la regla del archivo:
+«la cartera viva de esta empresa son decenas de documentos, no miles». El
+razonamiento era bueno; lo que fallaba era otra cosa —el tope mudo— y una
+vista más cuesta menos que el día en que se pase.
 
 ### 0.5 · ~~La bitácora existe y no la escribe nadie~~ · hecha el 02/09
 

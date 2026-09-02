@@ -139,26 +139,31 @@ export async function topProductos(limite = 10): Promise<Resultado<ProductoVendi
 export async function agingCartera(): Promise<Resultado<TramoCartera[]>> {
   try {
     const supabase = await clienteServidor();
+
+    // Se agrupa en Postgres (`v_aging_cartera`, migración 053).
+    //
+    // Aquí había una excepción razonada a la regla del archivo: «la cartera
+    // viva de esta empresa son decenas de documentos, no miles». El
+    // razonamiento era bueno y el fallo estaba en otro sitio — PostgREST
+    // corta a las 1.000 filas sin decirlo, así que el día que se pasara, el
+    // aging daría de menos y nadie lo notaría. Una vista más cuesta menos
+    // que ese día. Ver PENDIENTES §0.4.
     const { data, error } = await supabase
-      .from("v_cartera")
-      .select("tramo_aging, saldo")
-      .gt("saldo", 0);
+      .from("v_aging_cartera")
+      .select("tramo, documentos, saldo");
 
     if (error) return fallo(error);
 
-    // Agrupar aquí y no en SQL es la excepción a la regla del archivo, y es a
-    // propósito: la cartera viva de esta empresa son decenas de documentos, no
-    // miles, y una vista más solo para esto habría que mantenerla.
-    const porTramo = new Map<string, TramoCartera>();
-    for (const f of data ?? []) {
-      const tramo = String(f.tramo_aging ?? "Sin clasificar");
-      const actual = porTramo.get(tramo) ?? { tramo, documentos: 0, saldo: 0 };
-      actual.documentos += 1;
-      actual.saldo = Math.round((actual.saldo + Number(f.saldo ?? 0)) * 100) / 100;
-      porTramo.set(tramo, actual);
-    }
-
-    return { ok: true, datos: ordenarAging([...porTramo.values()]) };
+    return {
+      ok: true,
+      datos: ordenarAging(
+        (data ?? []).map((f) => ({
+          tramo: String(f.tramo ?? "Sin clasificar"),
+          documentos: Number(f.documentos ?? 0),
+          saldo: Number(f.saldo ?? 0),
+        })),
+      ),
+    };
   } catch (e) {
     return fallo(e);
   }
@@ -222,55 +227,41 @@ export async function valorizacionPorFamilia(): Promise<
 export async function embudoComercial(): Promise<Resultado<Embudo>> {
   try {
     const supabase = await clienteServidor();
+
+    // Se cuenta en Postgres (`v_embudo_comercial`, migración 053).
+    //
+    // Antes se leía `v_trazabilidad_venta` ENTERA y se recorría aquí con
+    // tres `Set` para no contar dos veces el mismo documento. No llevaba
+    // `.limit()`, pero PostgREST corta a las 1.000 filas y no lo dice: esa
+    // vista crece con cada cotización y cada venta, así que el embudo iba a
+    // empezar a mentir sin avisar. Ver PENDIENTES §0.4.
     const { data, error } = await supabase
-      .from("v_trazabilidad_venta")
-      .select("cotizacion_id, total_cotizado, guia_id, comprobante_id, total_facturado, saldo");
+      .from("v_embudo_comercial")
+      .select("cotizado, cotizaciones, despachado, guias, facturado, comprobantes, cobrado, por_cobrar")
+      .maybeSingle();
 
     if (error) return fallo(error);
 
-    const filas = data ?? [];
-    const dos = (n: number) => Math.round(n * 100) / 100;
+    const n = (v: unknown): number => {
+      const x = Number(v ?? 0);
+      return Number.isFinite(x) ? x : 0;
+    };
 
-    // Una cotización con dos guías aparece dos veces: se cuentan documentos
-    // ÚNICOS o el embudo saldría más ancho abajo que arriba.
-    const cotizaciones = new Set<string>();
-    const guias = new Set<string>();
-    const comprobantes = new Set<string>();
-
-    let cotizado = 0;
-    let facturado = 0;
-    let porCobrar = 0;
-
-    for (const f of filas) {
-      if (f.cotizacion_id && !cotizaciones.has(String(f.cotizacion_id))) {
-        cotizaciones.add(String(f.cotizacion_id));
-        cotizado += Number(f.total_cotizado ?? 0);
-      }
-      if (f.guia_id) guias.add(String(f.guia_id));
-      if (f.comprobante_id && !comprobantes.has(String(f.comprobante_id))) {
-        comprobantes.add(String(f.comprobante_id));
-        facturado += Number(f.total_facturado ?? 0);
-        porCobrar += Number(f.saldo ?? 0);
-      }
-    }
-
+    // El «contar documentos únicos» —una cotización con dos guías aparece
+    // dos veces— lo hace ahora la vista con `distinct`. Vivía aquí con tres
+    // `Set`, y era correcto: lo que no era correcto es que se armaba sobre
+    // las 1.000 primeras filas.
     return {
       ok: true,
       datos: {
-        cotizado: dos(cotizado),
-        cotizaciones: cotizaciones.size,
-        // El despachado se mide por el importe facturado de las ventas que SÍ
-        // llevaron guía: la guía no lleva importes, solo mercadería.
-        despachado: dos(
-          filas
-            .filter((f) => f.guia_id && f.comprobante_id)
-            .reduce((a, f) => a + Number(f.total_facturado ?? 0), 0),
-        ),
-        guias: guias.size,
-        facturado: dos(facturado),
-        comprobantes: comprobantes.size,
-        cobrado: dos(facturado - porCobrar),
-        porCobrar: dos(porCobrar),
+        cotizado: n(data?.cotizado),
+        cotizaciones: n(data?.cotizaciones),
+        despachado: n(data?.despachado),
+        guias: n(data?.guias),
+        facturado: n(data?.facturado),
+        comprobantes: n(data?.comprobantes),
+        cobrado: n(data?.cobrado),
+        porCobrar: n(data?.por_cobrar),
       },
     };
   } catch (e) {
@@ -290,7 +281,12 @@ export async function resumen(hoy: string): Promise<Resultado<ResumenReportes>> 
         .from("v_ventas_mensuales")
         .select("mes, venta_neta, margen_pct")
         .gte("mes", mesAnterior),
-      supabase.from("v_cartera").select("saldo, dias_vencido").gt("saldo", 0),
+      // Por tramos y no documento a documento: la suma es la misma y no
+      // depende de cuántos documentos abiertos haya (053).
+      supabase.from("v_aging_cartera").select("saldo, vencido"),
+      // `v_valorizacion_inventario` sí se puede leer entera: ya agrupa por
+      // subfamilia en Postgres y devuelve unas decenas de filas, no una por
+      // producto. Lo único que sobraba era el `select("*")`.
       supabase.from("v_valorizacion_inventario").select("valor_costo"),
       supabase
         .from("v_reposicion")
@@ -320,9 +316,7 @@ export async function resumen(hoy: string): Promise<Resultado<ResumenReportes>> 
           (cartera.data ?? []).reduce((a, c) => a + Number(c.saldo ?? 0), 0),
         ),
         vencido: dos(
-          (cartera.data ?? [])
-            .filter((c) => Number(c.dias_vencido ?? 0) > 0)
-            .reduce((a, c) => a + Number(c.saldo ?? 0), 0),
+          (cartera.data ?? []).reduce((a, c) => a + Number(c.vencido ?? 0), 0),
         ),
         inventarioCosto: dos(
           (inventario.data ?? []).reduce((a, i) => a + Number(i.valor_costo ?? 0), 0),

@@ -3144,6 +3144,15 @@ export type Database = {
       }
     }
     Views: {
+      v_aging_cartera: {
+        Row: {
+          documentos: number | null
+          saldo: number | null
+          tramo: string | null
+          vencido: number | null
+        }
+        Relationships: []
+      }
       v_cartera: {
         Row: {
           cliente: string | null
@@ -3307,6 +3316,19 @@ export type Database = {
             referencedColumns: ["cliente_id"]
           },
         ]
+      }
+      v_embudo_comercial: {
+        Row: {
+          cobrado: number | null
+          comprobantes: number | null
+          cotizaciones: number | null
+          cotizado: number | null
+          despachado: number | null
+          facturado: number | null
+          guias: number | null
+          por_cobrar: number | null
+        }
+        Relationships: []
       }
       v_historial_precios: {
         Row: {
@@ -4129,6 +4151,7 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      rescatar_envios_sunat: { Args: never; Returns: Json }
       resumen_trazabilidad: { Args: { p_producto: string }; Returns: Json }
       serie_compras: {
         Args: { p_desde: string; p_grano?: string; p_hasta: string }
