@@ -59,7 +59,7 @@ export async function listarCotizaciones(
     }
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cotizaciones/listarCotizaciones");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -98,7 +98,7 @@ export async function listarCotizaciones(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cotizaciones/listarCotizaciones");
   }
 }
 
@@ -133,7 +133,7 @@ export async function conteoPorEstado(): Promise<
 
     return { ok: true, datos: conteo };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cotizaciones/conteoPorEstado");
   }
 }
 
@@ -199,7 +199,7 @@ export async function clientesParaCotizar(preseleccionado?: string | null): Prom
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cotizaciones/clientesParaCotizar");
   }
 }
 
@@ -336,6 +336,6 @@ export async function cotizacionPorId(id: string): Promise<
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cotizaciones/cotizacionPorId");
   }
 }

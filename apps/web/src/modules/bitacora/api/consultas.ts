@@ -133,3 +133,53 @@ export async function quienesAparecen(): Promise<
     return fallo(e);
   }
 }
+
+export interface Fallo {
+  id: number;
+  origen: string;
+  mensaje: string;
+  codigo: string | null;
+  usuario_nombre: string;
+  ruta: string | null;
+  veces: number;
+  primera_vez: string;
+  ultima_vez: string;
+}
+
+/**
+ * Los fallos de servidor que nadie ha revisado todavía.
+ *
+ * Apilados por huella (migración 054): un fallo que ocurre cien veces es un
+ * fallo, no cien. Lo que decide si esta lista se mira es que quepa de un
+ * vistazo.
+ */
+export async function fallosPendientes(): Promise<Resultado<Fallo[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("fallos")
+      .select("id, origen, mensaje, codigo, usuario_nombre, ruta, veces, primera_vez, ultima_vez")
+      .eq("revisado", false)
+      .order("ultima_vez", { ascending: false })
+      .limit(50);
+
+    if (error) return fallo(error, "bitacora/fallosPendientes");
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((f) => ({
+        id: Number(f.id),
+        origen: String(f.origen),
+        mensaje: String(f.mensaje),
+        codigo: (f.codigo as string | null) ?? null,
+        usuario_nombre: String(f.usuario_nombre ?? "sistema"),
+        ruta: (f.ruta as string | null) ?? null,
+        veces: Number(f.veces ?? 1),
+        primera_vez: String(f.primera_vez),
+        ultima_vez: String(f.ultima_vez),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "bitacora/fallosPendientes");
+  }
+}

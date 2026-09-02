@@ -110,7 +110,7 @@ export async function bandejaPorComprar(): Promise<Resultado<BandejaPorComprar>>
       .order("fecha", { ascending: true })
       .limit(TOPE_LINEAS + 1);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/bandejaPorComprar");
 
     const crudas = (data ?? []) as unknown as FilaComprometido[];
     const truncado = crudas.length > TOPE_LINEAS;
@@ -147,7 +147,7 @@ export async function bandejaPorComprar(): Promise<Resultado<BandejaPorComprar>>
 
     return { ok: true, datos: { filas, resumen: resumirPorComprar(filas), hoy, truncado } };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "compras/bandejaPorComprar");
   }
 }
 
@@ -174,7 +174,7 @@ async function pedidosDe(
       .select("producto_id, pendiente, compras, proxima_llegada, primera_compra")
       .in("producto_id", tanda);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/bandejaPorComprar");
 
     for (const f of (data ?? []) as unknown as FilaPedido[]) {
       salida.push({

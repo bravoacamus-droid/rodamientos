@@ -122,5 +122,13 @@ begin
   delete from proveedores where id = v_prov;
   perform set_config('request.jwt.claims', '', true);
 
+
+  -- Y se borra el rastro que esta prueba dejó en la bitácora (051). Estas
+  -- migraciones se reaplican, y una bitácora que acumula documentos de
+  -- prueba deja de servir para lo que se hizo.
+  delete from actividad
+   where entidad in ('compras')
+     and creado_en > now() - interval '2 minutes';
+
   raise notice 'v_pedido_pendiente suma lo que viene en camino y olvida lo anulado.';
 end $$;

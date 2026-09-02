@@ -48,10 +48,10 @@ export async function valorizacion(): Promise<Resultado<FilaValorizacion[]>> {
       )
       .order("valor_costo", { ascending: false });
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "inventario/valorizacion");
     return { ok: true, datos: (data ?? []) as unknown as FilaValorizacion[] };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/valorizacion");
   }
 }
 
@@ -121,10 +121,10 @@ export async function reposicion(
       .order("valorizado", { ascending: false })
       .limit(limite);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "inventario/reposicion");
     return { ok: true, datos: (data ?? []) as unknown as FilaReposicion[] };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/reposicion");
   }
 }
 
@@ -163,7 +163,7 @@ export async function kardex(
     if (filtros.hasta) consulta = consulta.lte("fecha", `${filtros.hasta}T23:59:59.999Z`);
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "inventario/kardex");
 
     const todas = (data ?? []) as unknown as FilaKardex[];
     const hayMas = todas.length > POR_PAGINA;
@@ -177,7 +177,7 @@ export async function kardex(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/kardex");
   }
 }
 
@@ -193,7 +193,7 @@ export async function productoDelKardex(
       .eq("id", id)
       .maybeSingle();
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "inventario/productoDelKardex");
     return {
       ok: true,
       datos: data
@@ -205,7 +205,7 @@ export async function productoDelKardex(
         : null,
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/productoDelKardex");
   }
 }
 
@@ -236,7 +236,7 @@ export async function productosParaContar(
     if (filtros.soloConStock) consulta = consulta.gt("stock", 0);
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "inventario/productosParaContar");
 
     const todas = (data ?? []) as unknown as ProductoContable[];
     const truncado = todas.length > limite;
@@ -246,7 +246,7 @@ export async function productosParaContar(
       datos: { filas: truncado ? todas.slice(0, limite) : todas, truncado },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/productosParaContar");
   }
 }
 
@@ -275,6 +275,6 @@ export async function opcionesDeInventario(): Promise<
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "inventario/opcionesDeInventario");
   }
 }

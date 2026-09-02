@@ -337,5 +337,13 @@ begin
   delete from clientes where id = v_cliente;
   perform set_config('request.jwt.claims', '', true);
 
+
+  -- Y se borra el rastro que esta prueba dejó en la bitácora (051). Estas
+  -- migraciones se reaplican, y una bitácora que acumula documentos de
+  -- prueba deja de servir para lo que se hizo.
+  delete from actividad
+   where entidad in ('comprobantes', 'cotizaciones', 'clientes')
+     and creado_en > now() - interval '2 minutes';
+
   raise notice 'Una cotización se puede facturar en dos veces sin perder lo que falta.';
 end $$;

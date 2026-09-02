@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 053, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 054, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -264,6 +264,9 @@ Por orden de lo que más vale:
    cobraba lo cotizado en vez de lo que el cliente confirmó.
 6. ~~**La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
    (§0.6)~~ · **hechos el 02/09**, migraciones 051 y 052.
+7. ~~**Que un fallo de servidor muera en la pantalla del operador**~~ (§0.2)
+   · **hecho el 02/09**, migración 054: se apuntan, se apilan y salen en
+   «Qué ha pasado».
 
 Lo anterior de esta sección se cerró el 28/08: el refresco de alertas
 (migración 032), la auditoría de campos contra Defontana (§5) y los enlaces
@@ -1688,18 +1691,49 @@ no después del primer susto.
 > se encuentra el ERP caído. Se reactiva desde el panel, pero conviene saberlo
 > antes de que pase.
 
-### 0.2 · Cero observabilidad sobre un ERP que factura a SUNAT
+### 0.2 · ~~Cero observabilidad sobre un ERP que factura a SUNAT~~ · arreglado el 02/09
 
-No hay Sentry ni equivalente, ni logging de servidor, ni `global-error.tsx`.
-Cuando una Server Action falla, el error se pinta en la pantalla del operador
-**y muere ahí**: nadie más se entera.
+No había Sentry ni equivalente, ni logging de servidor, ni `global-error.tsx`.
+Cuando una Server Action fallaba, el error se pintaba en la pantalla del
+operador **y moría ahí**: nadie más se enteraba.
 
-Y esto ya nos pasó. `lib/errores.ts` lleva escrito en su cabecera que la ficha
-de producto estuvo días rota por un `PGRST200` sin que nadie lo supiera. Se
-arregló el síntoma; la causa —que no hay forma de enterarse— sigue.
+Y esto ya nos había pasado. `lib/errores.ts` lleva escrito en su cabecera que
+la ficha de producto estuvo días rota por un `PGRST200` sin que nadie lo
+supiera. Se arregló el síntoma; la causa —que no hay forma de enterarse—
+seguía.
 
 En una pantalla de listado es molesto. En `facturacion/acciones/emitir.ts` es
 una factura que no salió y nadie sabe por qué.
+
+**Arreglado el 02/09, migración 054.** Una tabla `fallos` y un
+`registrar_fallo(origen, mensaje, codigo, ruta)`, más `anotarFallo()` en
+`lib/errores.ts` conectado a **55 sitios repartidos en 7 módulos**
+(facturación, compras, recepciones, cotizaciones, cobranzas, inventario). Lo
+roto sale **arriba** de la bitácora en `/actividad`, con un botón de «Ya está
+visto».
+
+Cuatro decisiones que conviene recordar:
+
+- **Se apila por huella.** `md5(origen | código | primeros 120 caracteres del
+  mensaje)`. Un fallo que ocurre cien veces es un fallo, no cien; una lista de
+  cien filas iguales no la mira nadie. El índice único es parcial —`where not
+  revisado`— para que marcar uno como visto deje que el siguiente vuelva a
+  abrir fila.
+- **No guarda payloads.** Ni el cuerpo de la acción ni el de la petición: en
+  este ERP eso serían RUC, direcciones y precios de clientes reales. Se guarda
+  dónde pasó, qué dijo el error y quién lo vio, que es con lo que se reproduce.
+- **`anotarFallo` no lanza nunca**, y escribe con `after()`. Un registro de
+  fallos que rompe la pantalla que intentaba salvar, o que la hace más lenta,
+  no sirve de nada.
+- **No hay política de INSERT.** Se escribe solo por el RPC, que es quien
+  normaliza la huella; una inserción directa rompería el apilado.
+
+`global-error.tsx` y `app/acciones-error.ts` cubren lo que revienta en el
+navegador. Son autónomos a propósito —no importan nada del proyecto—: un
+`global-error` que depende del módulo que acaba de fallar no se llega a pintar.
+
+Cuando llegue Sentry esto se apaga en un sitio. Mientras tanto, contesta la
+única pregunta que importaba: *¿está fallando algo que nadie me está contando?*
 
 ### 0.3 · ~~Tres contadores que dan un número EQUIVOCADO en silencio~~ · arreglado el 02/09
 

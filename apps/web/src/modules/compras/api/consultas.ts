@@ -106,7 +106,7 @@ export async function listarCompras(
     }
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/listarCompras");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -144,7 +144,7 @@ export async function listarCompras(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "compras/listarCompras");
   }
 }
 
@@ -174,7 +174,7 @@ export async function detalleCompra(
       .eq("id", id)
       .maybeSingle();
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/detalleCompra");
     if (!data) return { ok: true, datos: null };
 
     const c = data as unknown as Record<string, unknown> & {
@@ -229,7 +229,7 @@ export async function detalleCompra(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "compras/detalleCompra");
   }
 }
 
@@ -244,7 +244,7 @@ export async function proveedoresActivos(): Promise<Resultado<ProveedorOpcion[]>
       .order("razon_social")
       .limit(500);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/proveedoresActivos");
 
     return {
       ok: true,
@@ -259,7 +259,7 @@ export async function proveedoresActivos(): Promise<Resultado<ProveedorOpcion[]>
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "compras/proveedoresActivos");
   }
 }
 
@@ -285,7 +285,7 @@ export async function ultimosCostosDelProveedor(
       .order("numero", { ascending: false })
       .limit(20);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "compras/ultimosCostosDelProveedor");
 
     const crudas = (data ?? []) as unknown as Array<{
       numero: string;
@@ -309,6 +309,6 @@ export async function ultimosCostosDelProveedor(
 
     return { ok: true, datos: ultimos };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "compras/ultimosCostosDelProveedor");
   }
 }

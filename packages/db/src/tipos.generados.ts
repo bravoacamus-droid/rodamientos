@@ -1532,6 +1532,59 @@ export type Database = {
           },
         ]
       }
+      fallos: {
+        Row: {
+          codigo: string | null
+          huella: string
+          id: number
+          mensaje: string
+          origen: string
+          primera_vez: string
+          revisado: boolean
+          ruta: string | null
+          ultima_vez: string
+          usuario_id: string | null
+          usuario_nombre: string | null
+          veces: number
+        }
+        Insert: {
+          codigo?: string | null
+          huella: string
+          id?: never
+          mensaje: string
+          origen: string
+          primera_vez?: string
+          revisado?: boolean
+          ruta?: string | null
+          ultima_vez?: string
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+          veces?: number
+        }
+        Update: {
+          codigo?: string | null
+          huella?: string
+          id?: never
+          mensaje?: string
+          origen?: string
+          primera_vez?: string
+          revisado?: boolean
+          ruta?: string | null
+          ultima_vez?: string
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+          veces?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fallos_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       familias: {
         Row: {
           activo: boolean
@@ -4130,6 +4183,15 @@ export type Database = {
       registrar_ajuste_inventario: { Args: { p_datos: Json }; Returns: Json }
       registrar_atencion_de_cotizacion: {
         Args: { p_comprobante: string; p_cotizacion: string }
+        Returns: undefined
+      }
+      registrar_fallo: {
+        Args: {
+          p_codigo?: string
+          p_mensaje: string
+          p_origen: string
+          p_ruta?: string
+        }
         Returns: undefined
       }
       registrar_movimiento: {

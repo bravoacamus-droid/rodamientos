@@ -106,7 +106,7 @@ export async function listarComprobantes(
     }
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "facturacion/listarComprobantes");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -144,7 +144,7 @@ export async function listarComprobantes(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "facturacion/listarComprobantes");
   }
 }
 
@@ -178,7 +178,7 @@ export async function detalleComprobante(
       .eq("id", id)
       .maybeSingle();
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "facturacion/detalleComprobante");
     if (!data) return { ok: true, datos: null };
 
     const c = data as unknown as Record<string, unknown> & {
@@ -288,7 +288,7 @@ export async function detalleComprobante(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "facturacion/detalleComprobante");
   }
 }
 
@@ -320,7 +320,7 @@ export async function cotizacionesFacturables(): Promise<
       .order("numero", { ascending: false })
       .limit(100);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "facturacion/cotizacionesFacturables");
 
     const filas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -365,7 +365,7 @@ export async function cotizacionesFacturables(): Promise<
         })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "facturacion/cotizacionesFacturables");
   }
 }
 
@@ -390,7 +390,7 @@ export async function cotizacionParaFacturar(
       .eq("id", id)
       .maybeSingle();
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "facturacion/cotizacionParaFacturar");
     if (!data) return { ok: true, datos: null };
 
     const c = data as unknown as Record<string, unknown> & {
@@ -464,7 +464,7 @@ export async function cotizacionParaFacturar(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "facturacion/cotizacionParaFacturar");
   }
 }
 
@@ -487,7 +487,7 @@ export async function motivosNota(): Promise<
       .order("tipo")
       .order("codigo");
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "facturacion/motivosNota");
     return {
       ok: true,
       datos: (data ?? []).map((m) => ({
@@ -497,7 +497,7 @@ export async function motivosNota(): Promise<
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "facturacion/motivosNota");
   }
 }
 

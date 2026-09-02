@@ -72,7 +72,7 @@ export async function cartera(
     }
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/cartera");
 
     return {
       ok: true,
@@ -101,7 +101,7 @@ export async function cartera(
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/cartera");
   }
 }
 
@@ -128,7 +128,7 @@ export async function carteraPorCliente(): Promise<Resultado<ClienteEnCartera[]>
       .select("cliente_id, cliente, documento, documentos, saldo, vencido, dias_mas_antiguo")
       .limit(1000);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/carteraPorCliente");
 
     const lista: ClienteEnCartera[] = (data ?? []).map((d) => ({
       cliente_id: String(d.cliente_id),
@@ -150,7 +150,7 @@ export async function carteraPorCliente(): Promise<Resultado<ClienteEnCartera[]>
       ),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/carteraPorCliente");
   }
 }
 
@@ -166,7 +166,7 @@ export async function cuotasDe(
       .eq("comprobante_id", comprobanteId)
       .order("numero");
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/cuotasDe");
 
     return {
       ok: true,
@@ -180,7 +180,7 @@ export async function cuotasDe(
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/cuotasDe");
   }
 }
 
@@ -199,7 +199,7 @@ export async function ultimosPagos(limite = 50): Promise<Resultado<PagoRegistrad
       .order("creado_en", { ascending: false })
       .limit(limite);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/ultimosPagos");
 
     const crudos = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -224,7 +224,7 @@ export async function ultimosPagos(limite = 50): Promise<Resultado<PagoRegistrad
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/ultimosPagos");
   }
 }
 
@@ -248,7 +248,7 @@ export async function gestiones(
     if (clienteId) consulta = consulta.eq("cliente_id", clienteId);
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/gestiones");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -273,7 +273,7 @@ export async function gestiones(
       })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/gestiones");
   }
 }
 
@@ -299,7 +299,7 @@ export async function compromisosVencidos(hoy: string): Promise<Resultado<Gestio
       .order("compromiso_fecha")
       .limit(50);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "cobranzas/compromisosVencidos");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -329,6 +329,6 @@ export async function compromisosVencidos(hoy: string): Promise<Resultado<Gestio
         })),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "cobranzas/compromisosVencidos");
   }
 }

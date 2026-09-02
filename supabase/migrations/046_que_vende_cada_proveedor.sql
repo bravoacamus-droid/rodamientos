@@ -494,6 +494,14 @@ begin
   delete from proveedores where id = v_prov;
   perform set_config('request.jwt.claims', '', true);
 
+
+  -- Y se borra el rastro que esta prueba dejó en la bitácora (051). Estas
+  -- migraciones se reaplican, y una bitácora que acumula documentos de
+  -- prueba deja de servir para lo que se hizo.
+  delete from actividad
+   where entidad in ('compras')
+     and creado_en > now() - interval '2 minutes';
+
   raise notice 'La compra enseña qué vende el proveedor, y la marca se rellena sola.';
 end $$;
 
@@ -537,6 +545,14 @@ insert into permisos_rol (tabla, rol, escribir, nota) values
   ('proveedor_productos', 'admin',    true, 'acceso total'),
   ('proveedor_productos', 'compras',  true, 'abastecimiento')
 on conflict (tabla, rol) do update set escribir = excluded.escribir;
+
+-- `permisos_rol` está vigilada por la bitácora (051), así que este INSERT
+-- deja filas diciendo que «el sistema» tocó los permisos, y una más por cada
+-- reaplicación. Se borran: la bitácora sirve para saber quién CAMBIÓ los
+-- permisos, no para contar que se instalaron.
+delete from actividad
+ where entidad = 'permisos_rol'
+   and creado_en > now() - interval '1 minute';
 
 do $$
 declare v_n int;

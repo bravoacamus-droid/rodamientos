@@ -151,6 +151,14 @@ insert into permisos_rol (tabla, rol, escribir, nota) values
   ('plantillas_mensaje', 'compras',  true, 'redacta sus pedidos de precio')
 on conflict (tabla, rol) do update set escribir = excluded.escribir;
 
+-- `permisos_rol` está vigilada por la bitácora (051), así que este INSERT
+-- deja filas diciendo que «el sistema» tocó los permisos, y una más por cada
+-- reaplicación. Se borran: la bitácora sirve para saber quién CAMBIÓ los
+-- permisos, no para contar que se instalaron.
+delete from actividad
+ where entidad = 'permisos_rol'
+   and creado_en > now() - interval '1 minute';
+
 -- ---------------------------------------------------------------------------
 -- Verificación
 -- ---------------------------------------------------------------------------

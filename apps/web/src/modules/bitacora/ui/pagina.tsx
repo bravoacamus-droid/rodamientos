@@ -12,7 +12,12 @@ import {
 import { perfilActual } from "@rodatech/db/servidor";
 import { History } from "lucide-react";
 
-import { POR_PAGINA, movimientos, quienesAparecen } from "../api/consultas";
+import {
+  POR_PAGINA,
+  fallosPendientes,
+  movimientos,
+  quienesAparecen,
+} from "../api/consultas";
 import {
   ETIQUETA_ACCION,
   ETIQUETA_ENTIDAD,
@@ -21,6 +26,7 @@ import {
   enlaceDe,
   type FiltrosBitacora,
 } from "../dominio/tipos";
+import { Fallos } from "./fallos";
 import { FiltrosBarra } from "./filtros";
 
 /** Solo quien puede verlo todo. La bitácora dice quién hizo qué. */
@@ -77,6 +83,20 @@ export default async function PaginaBitacora({ searchParams }: Props) {
         </p>
       </div>
 
+      {/* Lo roto va ARRIBA de lo que pasó. Si algo está fallando, eso es
+          lo que hay que ver primero; el historial se consulta cuando se
+          busca algo concreto. */}
+      <section className="card p-4">
+        <h2 className="mb-1 text-sm font-semibold">Lo que se rompió</h2>
+        <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          Errores de servidor sin revisar. Hasta ahora morían en la pantalla
+          de quien los provocaba y nadie más se enteraba.
+        </p>
+        <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+          <BloqueFallos />
+        </Suspense>
+      </section>
+
       <section className="card pt-4">
         <FiltrosBarra personas={personas.ok ? personas.datos : []} />
 
@@ -96,6 +116,19 @@ export default async function PaginaBitacora({ searchParams }: Props) {
       </p>
     </div>
   );
+}
+
+async function BloqueFallos() {
+  const r = await fallosPendientes();
+  if (!r.ok) {
+    return (
+      <EstadoError
+        titulo="No se pudo leer el registro de fallos"
+        descripcion={r.error}
+      />
+    );
+  }
+  return <Fallos fallos={r.datos} />;
 }
 
 async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {

@@ -65,7 +65,7 @@ export async function listarRecepciones(
     }
 
     const { data, error } = await consulta;
-    if (error) return fallo(error);
+    if (error) return fallo(error, "recepciones/listarRecepciones");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -118,7 +118,7 @@ export async function listarRecepciones(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "recepciones/listarRecepciones");
   }
 }
 
@@ -145,7 +145,7 @@ export async function detalleRecepcion(
       .eq("id", id)
       .maybeSingle();
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "recepciones/detalleRecepcion");
     if (!data) return { ok: true, datos: null };
 
     const r = data as unknown as Record<string, unknown> & {
@@ -197,7 +197,7 @@ export async function detalleRecepcion(
       },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "recepciones/detalleRecepcion");
   }
 }
 
@@ -236,7 +236,7 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
       .order("numero", { ascending: false })
       .limit(50);
 
-    if (error) return fallo(error);
+    if (error) return fallo(error, "recepciones/comprasPendientes");
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
@@ -282,6 +282,6 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
       ),
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "recepciones/comprasPendientes");
   }
 }
