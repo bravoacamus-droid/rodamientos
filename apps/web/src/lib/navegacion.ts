@@ -12,7 +12,7 @@ export type NombreIcono =
   | "tablero" | "cotizacion" | "guia" | "factura" | "cobranza"
   | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
-  | "compra" | "importacion"
+  | "compra" | "porcomprar" | "importacion"
   | "reporte" | "alerta" | "configuracion";
 
 export interface ItemNav {
@@ -76,6 +76,10 @@ export const NAVEGACION: readonly GrupoNav[] = [
   {
     titulo: "Abastecimiento",
     items: [
+      // Antes que «Compras» a propósito: es la pantalla desde la que se
+      // empieza. Willy no abre el ERP para registrar una compra, la abre
+      // para saber qué le falta.
+      { etiqueta: "Por comprar", ruta: "/compras/por-comprar", icono: "porcomprar", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
     ],
@@ -89,6 +93,35 @@ export const NAVEGACION: readonly GrupoNav[] = [
     ],
   },
 ];
+
+/**
+ * Cuál de los ítems del menú corresponde a la ruta actual.
+ *
+ * Gana el MÁS ESPECÍFICO. Con `/compras` y `/compras/por-comprar` en la
+ * misma lista, un simple «empieza por» marcaría los dos a la vez, y un menú
+ * con dos ítems encendidos no dice dónde estás: dice que el menú está roto.
+ * Pasaba ya con `/inventario` contra `/inventario/kardex` y con `/productos`
+ * contra `/productos/cargar`.
+ *
+ * Devuelve la ruta del ítem, o null si ninguno encaja —una pantalla que no
+ * está en el menú, como el detalle de un cliente— y entonces no se marca
+ * nada, que es la verdad.
+ */
+export function rutaActiva(
+  ruta: string,
+  grupos: readonly GrupoNav[] = NAVEGACION,
+): string | null {
+  let mejor: string | null = null;
+  for (const grupo of grupos) {
+    for (const item of grupo.items) {
+      const encaja = ruta === item.ruta || ruta.startsWith(item.ruta + "/");
+      if (encaja && (mejor === null || item.ruta.length > mejor.length)) {
+        mejor = item.ruta;
+      }
+    }
+  }
+  return mejor;
+}
 
 /** Filtra el menú para un rol. Sin rol conocido, solo lo abierto a todos. */
 export function menuPara(rol: Rol | null): GrupoNav[] {

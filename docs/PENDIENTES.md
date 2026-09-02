@@ -1,28 +1,29 @@
 # Pendientes
 
-Estado al **01/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
+Estado al **02/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
 al final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
 > **Si retomas y solo lees una cosa, que sea esta.**
 >
 > El día 01/09 hubo reunión con Willy (§ «Reunión del 01/09»), salió el plan
-> del flujo de compras (§G) y se construyó su primer bloque (§H).
+> del flujo de compras (§G) y se construyó su primer bloque (§H). El 02/09
+> se hizo la bandeja **«Por comprar»** (§I), que es la primera pantalla del
+> bloque 2.
 >
 > **Lo siguiente, por orden:**
 >
-> 1. La bandeja **«Por comprar»**. La vista ya existe en la base
->    (`v_comprometido`, migración 041); falta la pantalla. Es lo primero del
->    bloque 2 y no depende de nadie.
-> 2. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
->    hay que inventar de cero.
-> 3. Los **tres contadores que dan cifras falsas** (§0.3). Llevan desde el
+> 1. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
+>    hay que inventar de cero, y ya tiene de dónde partir: la bandeja.
+> 2. Los **tres contadores que dan cifras falsas** (§0.3). Llevan desde el
 >    31/08 esperando y siguen siendo la deuda técnica más barata de pagar.
+> 3. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
+>    guardado desde la 042.
 >
-> **Y antes de construir nada del bloque 2, enseñarle el plan a Willy**:
+> **Y antes de construir nada más, enseñarle el plan a Willy**:
 > https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
 > Son cinco preguntas y una de ellas —si confirmar un pedido aparta la
-> mercadería— cambia cómo se construye la bandeja.
+> mercadería— cambia cómo se comporta la bandeja que ya está construida.
 
 ---
 
@@ -30,12 +31,12 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **42 de 42 reales** · no queda ningún cartel |
+| Rutas | **43 de 43 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **901 en verde** |
+| `pnpm test` | **937 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 044, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 045, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -241,19 +242,20 @@ que nadie conteste nada.
 
 Por orden de lo que más vale:
 
-1. **La bandeja «Por comprar»** (§G paso 4). `v_comprometido` ya está en la
-   base desde la 041 y sabe qué falta para entregar lo confirmado; falta la
-   pantalla, que junta eso con lo que bajó del mínimo (`v_reposicion`, que
-   también existe ya).
+1. ~~**La bandeja «Por comprar»**~~ · **hecha el 02/09**, ver §I.
 2. **El comparador de proveedores** (§G paso 5). Lo único del plan entero que
-   hay que inventar de cero. Necesita que la bandeja funcione antes.
+   hay que inventar de cero. Ya tiene de dónde partir: la bandeja sabe qué
+   falta de cada producto y a quién se le prometió.
 3. **Los tres contadores que dan cifras falsas** (§0.3). Medio día, y evitan
    dar números equivocados en la campana de alertas y en la deuda por cliente
    en cuanto los datos crezcan.
 4. **El aviso de cambio de costo** (§G paso 7). El dato ya se guarda —
    `v_precios_compra` de la 042 trae el costo anterior al lado— y falta
    decirlo en el momento de recibir, con el efecto en el margen.
-5. **La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
+5. **Una factura parcial saca la cotización entera de la bandeja.** El
+   agujero está explicado en §I; hay que decidir cómo se arregla y cuesta
+   una columna nueva.
+6. **La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
    (§0.6), que llevan esperando desde la auditoría del 31/08.
 
 Lo anterior de esta sección se cerró el 28/08: el refresco de alertas
@@ -558,8 +560,7 @@ productos, 37 clientes — como estaba.
 
 #### Falta antes de dar el bloque por cerrado
 
-- La bandeja **«Por comprar»** ya tiene su vista en la base (`v_comprometido`,
-  migración 041) pero **no tiene pantalla**. Es lo primero del bloque 2.
+- ~~La bandeja «Por comprar» no tiene pantalla~~ · **hecha el 02/09**, §I.
 - La **aprobación parcial no reserva stock**: sigue pendiente de que Willy
   decida si confirmar un pedido aparta la mercadería (pregunta 1 de §G).
 
@@ -570,6 +571,96 @@ unidades del producto `0-230`, del 01/09. **No es mío** — salió de la demo e
 vivo de la reunión de ese día. Conviene borrarlo antes de que Willy empiece a
 operar de verdad, o su primer inventario arrancará con 20 unidades que no
 existen.
+
+---
+
+### I · La bandeja «Por comprar» · HECHA el 02/09
+
+La primera pantalla del bloque 2, y la que responde a la frase con la que
+Willy describió su problema (01/09): *«si no tiene, que en compras le avise
+que no tiene y tiene que pedir o comprar a sus proveedores»*.
+
+Está en **Abastecimiento → Por comprar**, antes que «Compras» a propósito: él
+no abre el ERP para registrar una compra, lo abre para saber qué le falta.
+
+#### El fallo que apareció al construirla
+
+`v_comprometido` (041) trae un `falta` por línea, y es correcto para lo que
+esa vista responde. **Pero sumarlo da un número equivocado**, porque cada
+línea mira el stock entero como si fuera solo para ella:
+
+    stock 10 · el cliente A confirmó 10 · el cliente B confirmó 10
+      falta de A = 0    falta de B = 0    suma = 0
+      y hay que comprar 10.
+
+Verificado contra la base real con dos cotizaciones de prueba: la vista decía
+2 y 2 sobre un producto con 4 en almacén y 12 comprometidas. Lo que hay que
+comprar son **8**.
+
+El reparto se hace ahora una sola vez por producto, en
+`modules/compras/dominio/por-comprar.ts`, con 27 pruebas. **El stock que hay
+se le da entero al que confirmó primero**, desempatando por número de
+cotización: repartir 2 y 2 entre dos clientes deja a los dos sin poder
+entregar, que es peor que servir a uno.
+
+#### Lo que la bandeja descuenta
+
+| | |
+|---|---|
+| Lo confirmado por los clientes | `v_comprometido` · 041 |
+| Menos lo que hay en almacén | repartido por orden de confirmación |
+| Menos **lo que ya está pedido** al proveedor | `v_pedido_pendiente` · **045, nueva** |
+
+Sin lo tercero la bandeja repite el mismo consejo cada día hasta que llega la
+mercadería, y quien lo sigue compra dos veces. `pendiente_de_recibir` (044) no
+servía: responde *por compra*, y aquí hay que preguntar *por producto* y sumar
+todas las compras abiertas a la vez.
+
+#### De la bandeja a la compra, sin volver a teclear
+
+Cada fila lleva un botón **Comprar**, y se pueden marcar varias y registrarlas
+juntas. Va por la URL —`/compras/nueva?items=<producto>:<cantidad>,…`— y los
+ids se resuelven contra el maestro en el servidor: nada de lo que venga en la
+dirección se cree.
+
+#### Lo que se arregló de paso: el menú encendía dos ítems
+
+Con `/compras` y `/compras/por-comprar` en la misma lista, la barra lateral
+marcaba los dos. **Ya pasaba antes** con `/inventario` contra
+`/inventario/kardex` y con `/productos` contra `/productos/cargar`; se ve
+raro pero nadie lo había mirado. Ahora gana el más específico
+(`rutaActiva()` en `lib/navegacion.ts`, con pruebas que recorren el menú
+entero y comprueban que ninguna ruta enciende a otra).
+
+#### El agujero que queda, y no es pequeño
+
+**Facturar parte de una cotización la saca entera de la bandeja.**
+`emitir_comprobante` pone la cotización en `atendida` en cuanto se le emite un
+comprobante, sin mirar cuánto se entregó. Si el cliente confirmó 6 y se le
+facturan 4, las 2 que faltan **desaparecen** de «Por comprar» y de cualquier
+sitio que mire lo comprometido.
+
+Hoy no hace daño porque no hay ninguna cotización viva en la base. Arreglarlo
+pide una columna `cantidad_atendida` en `cotizacion_items` y que la vista
+reste contra ella en vez de contra el estado de la cabecera. **Antes de que
+Willy empiece a facturar de verdad.**
+
+#### Y lo que sigue esperando a Willy
+
+La bandeja **no aparta mercadería**. Reparte para poder decir cuánto comprar y
+a quién avisar, pero mientras `stock.reservado` siga sin usarse nada impide
+facturarle antes al segundo. Es la pregunta 1 de las cinco de §G, y está
+escrita al pie de la propia pantalla para que quien la use no se confunda.
+
+#### Probado contra la base del cliente, y devuelto a como estaba
+
+Dos clientes de prueba, dos cotizaciones aprobadas, una compra abierta. La
+pantalla dio 8 y 5 donde tenía que dar 8 y 5, el traspaso a la compra llegó
+con las cantidades y el stock correctos, y después se borró todo. Censo final:
+37 clientes · 790 productos · 0 proveedores · 0 compras · 0 recepciones · 0
+cotizaciones · 1 fila de stock (la del ajuste de la demo). **También se
+devolvieron los correlativos consumidos** (CMP 8→7, COT1 4→2): si no, la
+primera compra de Willy arrancaría en un número que no le corresponde.
 
 ---
 

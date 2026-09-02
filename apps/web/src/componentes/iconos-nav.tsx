@@ -133,6 +133,15 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <circle cx="16.5" cy="19" r="1.5" {...T} />
     </>
   ),
+  // Por comprar: una lista con lo que falta marcado. No es un carrito:
+  // pegado al de Compras, dos carritos no se distinguen de un vistazo, y
+  // esta pantalla no es comprar, es saber qué falta.
+  porcomprar: (
+    <>
+      <path d="M4 6h9M4 12h9M4 18h5" {...T} />
+      <path d="M17.5 14v7M14 17.5h7" {...T} />
+    </>
+  ),
   // Importación: contenedor con el mundo detrás.
   importacion: (
     <>

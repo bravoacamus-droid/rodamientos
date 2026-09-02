@@ -22,6 +22,7 @@ import {
   estadoInicial,
   reducir,
   totalesDe,
+  type ProductoParaComprar,
 } from "../../dominio/constructor";
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
@@ -42,6 +43,7 @@ import { BloqueMoneda } from "./moneda";
 export function ConstructorCompra({
   sugeridos,
   hoy,
+  precarga = [],
 }: {
   /**
    * Los últimos a los que se compró. NO es el maestro: desde la 033 el
@@ -51,9 +53,23 @@ export function ConstructorCompra({
   sugeridos: ProveedorOpcion[];
   /** La fecha la fija el servidor: el dominio no lee reloj, para poder probarlo. */
   hoy: string;
+  /**
+   * Líneas ya puestas al abrir. Viene de la bandeja «Por comprar»: allí se
+   * ve qué falta y con qué urgencia, y de nada serviría si al pulsar
+   * «Comprar» hubiera que volver a buscar los mismos códigos a mano.
+   */
+  precarga?: { producto: ProductoParaComprar; cantidad: number }[];
 }) {
   const router = useRouter();
-  const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
+  // El estado inicial se calcula UNA vez, aplicando la precarga sobre el
+  // estado vacío con el mismo reducer que usa todo lo demás. Hacerlo con un
+  // efecto duplicaría las líneas en cuanto React montara dos veces.
+  const [estado, despachar] = useReducer(reducir, null, () =>
+    precarga.reduce(
+      (e, i) => reducir(e, { tipo: "agregar", producto: i.producto, cantidad: i.cantidad }),
+      estadoInicial(hoy),
+    ),
+  );
 
   // El proveedor elegido, entero. Antes se buscaba en la lista con un `find`;
   // ahora la lista no está —el elegido puede venir de una búsqueda o de un alta

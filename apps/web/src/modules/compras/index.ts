@@ -7,6 +7,21 @@
 export { default as PaginaCompras } from "./ui/pagina";
 export { default as PaginaNuevaCompra } from "./ui/pagina-nueva";
 export { default as PaginaDetalleCompra } from "./ui/pagina-detalle";
+export { default as PaginaPorComprar } from "./ui/por-comprar/pagina";
+
+// El reparto del stock entre los clientes que esperan lo mismo. Se publica
+// porque el comparador de proveedores —el siguiente paso del plan— parte de
+// estas mismas filas, y porque el tablero va a querer el resumen.
+export {
+  ETIQUETA_URGENCIA,
+  agruparPorComprar,
+  resumirPorComprar,
+  type LineaComprometida,
+  type PedidoPendiente,
+  type ProductoPorComprar,
+  type ResumenPorComprar,
+  type Urgencia,
+} from "./dominio/por-comprar";
 
 // El estado del registro es un reducer PURO: se puede probar sin React. Se
 // publica porque cobranzas va a necesitar los mismos totales para cuadrar lo

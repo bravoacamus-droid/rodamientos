@@ -4,6 +4,8 @@ import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
+
+import { precargaDeCompra } from "../api/por-comprar";
 import { ConstructorCompra } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -16,8 +18,17 @@ const ROLES = ["gerencia", "admin", "compras"];
  * le pasa todo al constructor, que sí es de cliente. La fecha se calcula AQUÍ y
  * no en el navegador para que sea la del servidor y no la del reloj del equipo,
  * que es el que suele estar mal.
+ *
+ * Puede llegar con líneas puestas desde la bandeja «Por comprar»:
+ * `?items=<producto>:<cantidad>,…`. Es la mitad que faltaba del flujo — la
+ * bandeja dice qué falta, y esto lo convierte en una compra sin volver a
+ * teclear los códigos.
  */
-export default async function PaginaNuevaCompra() {
+export default async function PaginaNuevaCompra({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
   if (!ROLES.includes(perfil.rol)) {
@@ -32,6 +43,10 @@ export default async function PaginaNuevaCompra() {
   // Ocho, no el maestro entero: desde la 033 el selector busca contra el
   // servidor. La lista completa venía con `.limit(500)` y truncaba en silencio.
   const proveedores = await proveedoresSugeridos();
+
+  const sp = searchParams ? await searchParams : {};
+  const items = Array.isArray(sp.items) ? sp.items[0] : sp.items;
+  const precarga = await precargaDeCompra(items);
 
   if (!proveedores.ok) {
     return (
@@ -75,5 +90,11 @@ export default async function PaginaNuevaCompra() {
     new Date(),
   );
 
-  return <ConstructorCompra sugeridos={proveedores.datos} hoy={hoy} />;
+  return (
+    <ConstructorCompra
+      sugeridos={proveedores.datos}
+      hoy={hoy}
+      precarga={precarga}
+    />
+  );
 }

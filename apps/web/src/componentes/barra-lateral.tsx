@@ -16,7 +16,7 @@ import {
 } from "@rodatech/ui";
 import { Logo } from "@/componentes/logo";
 import { IconoNav } from "@/componentes/iconos-nav";
-import type { GrupoNav } from "@/lib/navegacion";
+import { rutaActiva, type GrupoNav } from "@/lib/navegacion";
 
 /**
  * Navegación de módulos.
@@ -79,8 +79,9 @@ function usePlegados() {
   return { plegados, alternar };
 }
 
-const activoEn = (ruta: string, item: string) =>
-  ruta === item || ruta.startsWith(item + "/");
+// Un solo ítem encendido, el más específico. La regla vive en
+// `lib/navegacion.ts` y está probada allí.
+const activoEn = (ruta: string, item: string) => rutaActiva(ruta) === item;
 
 function Grupos({
   grupos,
