@@ -8,8 +8,9 @@ volver a caer sale caro.
 >
 > El día 01/09 hubo reunión con Willy (§ «Reunión del 01/09»), salió el plan
 > del flujo de compras (§G) y se construyó su primer bloque (§H). El 02/09
-> se hizo la bandeja **«Por comprar»** (§I), que es la primera pantalla del
-> bloque 2.
+> se hizo la bandeja **«Por comprar»** (§I), primera pantalla del bloque 2,
+> y se cargó **su lista de clientes y proveedores** (§J): la base pasó de 0
+> a 97 proveedores, así que compras y recepciones ya se pueden usar.
 >
 > **Lo siguiente, por orden:**
 >
@@ -55,12 +56,12 @@ nada, porque el ERP tiene un pasado rico y un presente vacío:
 
 | Tabla | Filas | |
 |---|---|---|
-| `clientes` | 37 | la cartera real de Willy |
+| `clientes` | **97** | 37 del histórico + 60 de su lista del 02/09 (§J) |
 | `productos` | 790 | su catálogo real |
 | `comprobantes` | 518 | dos años de ventas |
 | `ubigeo` | 1.874 | el padrón entero (037) |
 | `unidades_medida` | 42 | el catálogo 03 de SUNAT (039) |
-| `proveedores` | **0** | no llegaron en el Excel de ventas |
+| `proveedores` | **97** | su lista del 02/09 · **ya se puede comprar** (§J) |
 | `stock` | **1** | y ese uno es un dato de prueba, ver abajo |
 | `movimientos_inventario` | **1** | ídem |
 | cotizaciones, compras, recepciones, guías, pagos, alertas | **0** | |
@@ -664,6 +665,92 @@ primera compra de Willy arrancaría en un número que no le corresponde.
 
 ---
 
+### J · Su lista de clientes y proveedores · CARGADA el 02/09
+
+Willy mandó `LISTA DE CLIENTES Y PROVEEDORES.xlsx`: dos hojas, 100 clientes y
+103 proveedores, con razón social, RUC, condición y la dirección tal como la
+devuelve SUNAT.
+
+**Es lo que desbloquea el módulo de compras.** Hasta hoy `proveedores` estaba
+a cero, y sin proveedor no se puede registrar una compra ni recibir nada: la
+pantalla de alta enseñaba un cartel diciendo justo eso.
+
+| | Antes | Ahora |
+|---|---|---|
+| `clientes` | 37 | **97** |
+| `proveedores` | 0 | **97** |
+| Clientes con ubigeo | **0** | 96 |
+| Proveedores con ubigeo | — | 94 |
+
+Se carga con `node scripts/importar-clientes-proveedores.mjs`. Sin
+`--aplicar` solo informa; es idempotente, volver a lanzarlo no hace nada.
+
+#### Por qué es un script y no una migración
+
+Son 203 filas con los datos comerciales reales de Rodatech. `documentosrodamiento/`
+está en `.gitignore` justo por eso, y una migración con esas filas dentro las
+metería en el repositorio para siempre. El precio —que no se aplique sola al
+levantar una base nueva— es el correcto.
+
+#### El ubigeo, que es lo que más valor añadió
+
+Las direcciones de SUNAT terminan en «… DISTRITO - PROVINCIA - DEPARTAMENTO»
+y **nadie lo había resuelto nunca**: los 37 clientes que ya estaban tenían
+`ubigeo_codigo` en null desde la carga del 28/08. Hace falta para la guía de
+remisión electrónica, que sin el ubigeo del punto de llegada no se emite.
+
+Se resolvieron 200 de 203 contra el padrón (037). Hicieron falta dos cosas que
+no son obvias:
+
+- **«PROV. CONST. DEL CALLAO»**, que es como lo escribe SUNAT, contra
+  «Callao», que es como está en el padrón. Son 10 direcciones.
+- El distrito **no se puede cortar por el último punto**: hay direcciones con
+  numeración tipo «NRO. 441 - 447)» que meten puntos y guiones por medio. Se
+  busca qué distrito de esa provincia termina la cadena, y gana el más largo,
+  para que «SAN JUAN DE LURIGANCHO» no se lea como «SAN JUAN».
+
+Los tres que no salieron: **RG CORPORATION** (su dirección no trae distrito),
+**FORUN TRANSMISSION** (Shanghái, no tiene ubigeo peruano) y **PISCOCHI
+BARRIOS JAIDER GLICERIO** (su dirección es literalmente «-. - -»).
+
+#### Lo que el archivo traía mal, y qué se hizo
+
+- **9 filas repetidas** (4 clientes, 5 proveedores; R & C HIDRAULICA está tres
+  veces). Se queda la primera, que es la que Willy escribió antes; las otras
+  suelen ser el mismo nombre peor escrito.
+- **RG CORPORATION S.A.C. tiene un RUC que no valida**: `10465742185`.
+  Empieza por 10 —persona natural— siendo una S.A.C., y falla el dígito
+  verificador. **No se inventó nada**: entró como `SIN_DOC` con el número
+  anotado en `notas`. **Hay que preguntárselo a Willy**, y hasta entonces no
+  se le puede emitir ni recibir un comprobante.
+- **FORUN TRANSMISSION CO., LIMITED viene sin documento.** Es correcto: es de
+  Shanghái. Entró como `SIN_DOC`, tipo *importación*, país *Exterior* y
+  `lead_time` de 15 días, el mismo plazo que la cotización usa para
+  «exterior» (040).
+
+#### Una cosa que conviene saber
+
+**BEARING COMPANY S.A.C. está en las dos tablas.** Era el único cliente del
+histórico que no aparece en la hoja de clientes de Willy —él lo tiene como
+proveedor— pero tiene una factura emitida en enero de 2025 por $158.84. Se
+queda de cliente y además se dio de alta de proveedor. No es un error: en este
+rubro se compra y se vende al mismo distribuidor.
+
+#### Lo que el Excel NO trae, y hace falta preguntarle a Willy
+
+1. **Qué marcas trae cada proveedor.** La tabla `proveedor_marcas` existe y
+   está vacía. Sin ella el comparador —el siguiente paso del plan de compras—
+   no puede sugerir *a quién* pedirle un SKF.
+2. **Condiciones de pago.** Los 97 quedaron en «contado» (`dias_pago` 0), que
+   es el valor por defecto de la tabla. Es lo prudente, pero seguro que con
+   varios tiene crédito.
+3. **Teléfonos, correos y personas de contacto.** Ni de clientes ni de
+   proveedores. Sin el correo del proveedor, «mandarle la solicitud a cuatro»
+   sigue siendo trabajo manual.
+4. **Cuál es el RUC bueno de RG CORPORATION.**
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
@@ -1043,12 +1130,23 @@ Por orden de lo que desbloquea:
    error de cálculo: es que el costo de los 790 productos es cero.
 9. **Su plazo de crédito estándar.** 30 de sus 37 clientes quedaron «a
    crédito con 0 días», o sea con la factura vencida el día que se emite. Es
-   una sentencia de arreglo en cuanto diga el número.
-10. Su **lista de proveedores**. El Excel que mandó era de VENTAS, así que
-   `proveedores` está a cero y las pantallas de compra y recepción no se pueden
-   enseñar funcionando. Con la lista basta —RUC y razón social—; el resto de la
-   ficha se completa después. Desde el 31/08 el selector busca también por
-   MARCA, así que si dice qué marca trae cada uno, mejor.
+   una sentencia de arreglo en cuanto diga el número. **Desde el 02/09 son
+   97 clientes**, así que la respuesta vale para el triple.
+10. ~~Su **lista de proveedores**~~ · **llegó el 02/09 y está cargada** (§J).
+   97 proveedores y 60 clientes nuevos. Las pantallas de compra y recepción
+   ya se pueden enseñar funcionando. Lo que ese archivo NO traía, y sigue
+   haciendo falta:
+
+   a. **Qué marcas trae cada proveedor.** `proveedor_marcas` está vacía, y
+      sin ella el comparador no puede sugerir a quién pedirle un SKF.
+   b. **Condiciones de pago.** Los 97 quedaron en «contado», que es el valor
+      por defecto; con varios tendrá crédito.
+   c. **Teléfonos, correos y personas de contacto**, ni de clientes ni de
+      proveedores. Sin el correo del proveedor, pedirle precio a cuatro
+      sigue siendo trabajo a mano.
+   d. **El RUC bueno de RG CORPORATION S.A.C.** El del archivo,
+      `10465742185`, no valida. Entró sin documento; así no se le puede
+      emitir ni recibir un comprobante.
 
 ### Lo que espera a LUIS
 
