@@ -40,12 +40,12 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **44 de 44 reales** · no queda ningún cartel |
+| Rutas | **45 de 45 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **990 en verde** |
+| `pnpm test` | **999 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 050, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 052, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -263,8 +263,8 @@ Por orden de lo que más vale:
 5. ~~**Una factura parcial saca la cotización entera de la bandeja.**~~ ·
    **arreglado el 02/09** (§L), y resultó ser dos fallos: la factura además
    cobraba lo cotizado en vez de lo que el cliente confirmó.
-6. **La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
-   (§0.6), que llevan esperando desde la auditoría del 31/08.
+6. ~~**La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
+   (§0.6)~~ · **hechos el 02/09**, migraciones 051 y 052.
 
 Lo anterior de esta sección se cerró el 28/08: el refresco de alertas
 (migración 032), la auditoría de campos contra Defontana (§5) y los enlaces
@@ -1702,14 +1702,46 @@ Traen la tabla entera y crecen con el uso:
   y sin límite, **leída desde cuatro sitios** (productos, reportes ×2).
 - `reportes` · `agingCartera` y `resumen` → `v_cartera` completa.
 
-### 0.5 · La bitácora existe y no la escribe nadie
+### 0.5 · ~~La bitácora existe y no la escribe nadie~~ · hecha el 02/09
 
-La tabla `actividad` está creada, con su RLS y sus permisos… y **cero filas,
-porque ningún sitio inserta en ella**. En un ERP donde seis personas comparten
-roles y se emiten documentos fiscales, «quién anuló esta factura» es una
-pregunta que se va a hacer.
+La tabla `actividad` estaba creada, con su RLS y sus permisos… y **cero filas,
+porque ningún sitio insertaba en ella**. En un ERP donde seis personas
+comparten roles y se emiten documentos fiscales, «quién anuló esta factura»
+es una pregunta que se va a hacer.
 
-### 0.6 · Nadie reintenta los envíos a SUNAT
+**Hecha el 02/09, migración 051**, y se lee en **Gestión → Qué ha pasado**
+(solo gerencia y administración: dice quién hizo qué).
+
+La escriben **disparadores**, no la aplicación. Una bitácora que hay que
+acordarse de escribir es incompleta, y una incompleta es peor que ninguna:
+da una respuesta que parece completa. Con disparadores da igual por dónde
+entre el cambio — la pantalla, un RPC o alguien con SQL en la mano.
+
+**Y no se apunta todo, que es la decisión que importa.** Un registro que lo
+apunta todo entierra la respuesta el día que hace falta. Se vigila lo que
+cambia **dinero, stock o permisos**, y de eso solo los campos que importan:
+cambiar la dirección de un cliente no entra, cambiarle la línea de crédito
+sí. Nueve tablas: comprobantes, cotizaciones, compras, recepciones, ajustes
+de inventario, permisos, usuarios, clientes y productos.
+
+Tres cosas que conviene recordar:
+
+- **Es append-only.** Se le quitaron las políticas de UPDATE y DELETE, y el
+  centinela falla si alguien se las devuelve. Una bitácora que se puede
+  corregir no sirve de prueba, y el rol que borrara sus huellas sería justo
+  el que hay que vigilar.
+- **El nombre de quien lo hizo se COPIA**, no se deja para el join: si mañana
+  ese perfil se borra, la bitácora tiene que seguir diciendo quién fue.
+- **Comprobado que captura al usuario de verdad**: un cambio hecho desde la
+  pantalla quedó como «Willy Rodríguez», no como «sistema».
+
+Y un efecto secundario que valió la pena: **el centinela de la 052 se cazó a
+sí mismo**. Al fabricar un envío atascado para probar el barrendero, la
+bitácora apuntó las tres manipulaciones sobre una factura real. La migración
+ahora las borra al terminar — una migración reaplicable que deja historia
+falsa sobre un documento fiscal es peor que no tener bitácora.
+
+### 0.6 · ~~Nadie reintenta los envíos a SUNAT~~ · hecho el 02/09
 
 El modelo del ciclo SUNAT está bien —`estado_sunat` separado del comercial,
 ticket, idempotencia si ya está aceptado— y hay un índice parcial
@@ -1725,6 +1757,33 @@ select jobname from cron.job;
 
 Si la red se cae después de mandar el XML, el comprobante se queda en
 «enviado» para siempre salvo que alguien vuelva a pulsar el botón.
+
+**Hecho el 02/09, migración 052**: `rescatar_envios_sunat()`, cada quince
+minutos.
+
+**No reenvía, y no debe.** No puede: el envío firma el XML con el
+certificado digital, que vive en la aplicación y no en la base. Y aunque
+pudiera, reenviar un comprobante fiscal sin que nadie mire es la clase de
+automatismo que un día manda dos veces la misma factura.
+
+El agujero real no era la falta de reintento: era que **un documento
+atascado no se ve**. `enviar.ts` marca «enviado» ANTES de llamar a SUNAT —a
+propósito, para no reenviar algo que quizá llegó— y si el proceso muere ahí,
+el comprobante se queda invisible. El barrendero:
+
+1. Devuelve a «pendiente» lo que lleva más de 15 minutos en «enviado». Un
+   envío tarda segundos; quince minutos significa que el proceso murió.
+2. Levanta una alerta por cada comprobante que lleva **un día** emitido sin
+   respuesta de SUNAT. Un día y no diez minutos porque hoy se factura sin
+   certificado, y avisar antes sería una alerta que nadie querría.
+
+El botón lo sigue pulsando una persona. Lo que cambia es que ahora **sabe
+que hay algo que pulsar**.
+
+El centinela no se conforma con que la tarea quede programada: fabrica un
+envío atascado de verdad, comprueba que vuelve a la cola y lo deja como
+estaba. Sobre los 518 comprobantes reales la corrida sale a cero, que es lo
+correcto — están todos en `aceptado` o `baja_aceptada`.
 
 ### 0.7 · Lo que el CI no hace
 

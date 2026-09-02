@@ -13,7 +13,7 @@ export type NombreIcono =
   | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
   | "compra" | "porcomprar" | "importacion"
-  | "reporte" | "alerta" | "configuracion";
+  | "reporte" | "alerta" | "bitacora" | "configuracion";
 
 export interface ItemNav {
   etiqueta: string;
@@ -89,6 +89,8 @@ export const NAVEGACION: readonly GrupoNav[] = [
     items: [
       { etiqueta: "Reportes", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
       { etiqueta: "Alertas", ruta: "/alertas", icono: "alerta" },
+      // Dice quién hizo qué, así que la ve quien responde de ello.
+      { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", roles: ["gerencia", "admin"] },
       { etiqueta: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["gerencia", "admin"] },
     ],
   },

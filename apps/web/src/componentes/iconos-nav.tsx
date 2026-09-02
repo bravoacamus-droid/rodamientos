@@ -149,6 +149,13 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18-2.5-2.6-2.5-15.4 0-18" {...T} />
     </>
   ),
+  // Bitácora: un reloj con la aguja hacia atrás.
+  bitacora: (
+    <>
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" {...T} />
+      <path d="M3 4v4h4M12 8v4l3 2" {...T} />
+    </>
+  ),
   // Reporte: barras.
   reporte: (
     <>
