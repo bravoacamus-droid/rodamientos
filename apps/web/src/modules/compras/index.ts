@@ -8,6 +8,7 @@ export { default as PaginaCompras } from "./ui/pagina";
 export { default as PaginaNuevaCompra } from "./ui/pagina-nueva";
 export { default as PaginaDetalleCompra } from "./ui/pagina-detalle";
 export { default as PaginaPorComprar } from "./ui/por-comprar/pagina";
+export { default as PaginaPedirPrecio } from "./ui/pedir-precio/pagina";
 
 // El reparto del stock entre los clientes que esperan lo mismo. Se publica
 // porque el comparador de proveedores —el siguiente paso del plan— parte de

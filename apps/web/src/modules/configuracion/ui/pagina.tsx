@@ -3,6 +3,8 @@ import Link from "next/link";
 import { EstadoError, Skeleton } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { EditorPlantillas, plantillas } from "@/modules/mensajes";
+
 import { conteosCatalogo, empresa, series, usuarios } from "../api/consultas";
 import { FormEmpresa } from "./form-empresa";
 import { TablaSeries } from "./series";
@@ -63,6 +65,17 @@ export default async function PaginaConfiguracion() {
       </section>
 
       <section className="card p-4">
+        <h2 className="mb-1 text-sm font-semibold">Mensajes que se mandan</h2>
+        <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          El texto con el que se le pide precio a un proveedor por WhatsApp o
+          por correo. Lo que va entre llaves se rellena solo al mandarlo.
+        </p>
+        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+          <BloqueMensajes puedeEditar={esConfig || rol === "compras"} />
+        </Suspense>
+      </section>
+
+      <section className="card p-4">
         <h2 className="mb-1 text-sm font-semibold">Lo que se toca en otro sitio</h2>
         <p className="mb-3 text-xs text-[var(--fg-subtle)]">
           Se dice aquí en lugar de dejar formularios a medias.
@@ -76,6 +89,19 @@ export default async function PaginaConfiguracion() {
 }
 
 // ---------------------------------------------------------------------------
+
+async function BloqueMensajes({ puedeEditar }: { puedeEditar: boolean }) {
+  const r = await plantillas();
+  if (!r.ok) {
+    return (
+      <EstadoError
+        titulo="No se pudieron cargar los mensajes"
+        descripcion={r.error}
+      />
+    );
+  }
+  return <EditorPlantillas iniciales={r.datos} puedeEditar={puedeEditar} />;
+}
 
 async function BloqueEmpresa({ puedeEditar }: { puedeEditar: boolean }) {
   const r = await empresa();

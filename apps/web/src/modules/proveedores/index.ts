@@ -13,9 +13,11 @@ export { default as PaginaDetalleProveedor } from "./ui/pagina-detalle";
 // a consumir el comparador de proveedores.
 export {
   proveedoresDeProducto,
+  proveedoresParaPedir,
   productosDeProveedor,
   type ProductoDeProveedor,
   type ProveedorDeProducto,
+  type ProveedorParaPedir,
 } from "./api/catalogo";
 
 // Las reglas del documento son puras y están probadas. Las reutilizará el

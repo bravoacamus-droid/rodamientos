@@ -195,3 +195,97 @@ export async function proveedoresDeProducto(
     return fallo(e);
   }
 }
+
+/** Un proveedor al que tiene sentido pedirle precio de una lista de productos. */
+export interface ProveedorParaPedir {
+  id: string;
+  razon_social: string;
+  telefono: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  /** Cuántos de los productos pedidos le constan como que vende. */
+  coincidencias: number;
+  /** Y de esos, el último costo más reciente en dólares, si lo hay. */
+  ultimoCostoUsd: number | null;
+}
+
+/**
+ * A quién pedirle precio de estos productos.
+ *
+ * Sale de lo que el sistema ha aprendido de cada compra (`proveedor_productos`,
+ * migración 046). Ordenados por cuántos de los productos pedidos vende: al que
+ * le vende los cinco se le pide una vez, y a cinco proveedores de uno cada uno
+ * se les pide cinco veces.
+ *
+ * Trae los datos de contacto porque son los que deciden si el botón de mandar
+ * existe. Hoy los 97 proveedores están sin teléfono y sin correo —el Excel del
+ * 02/09 no los traía— así que la pantalla los va a enseñar sin botón y
+ * diciendo por qué, que es más útil que no enseñarlos.
+ */
+export async function proveedoresParaPedir(
+  productoIds: readonly string[],
+): Promise<Resultado<ProveedorParaPedir[]>> {
+  if (productoIds.length === 0) return { ok: true, datos: [] };
+
+  try {
+    const supabase = await clienteServidor();
+
+    const { data, error } = await supabase
+      .from("proveedor_productos")
+      .select(
+        `proveedor_id, ultimo_costo_usd,
+         proveedores!inner(id, razon_social, telefono, whatsapp, email, activo)`,
+      )
+      .in("producto_id", [...productoIds].slice(0, 150))
+      .eq("proveedores.activo", true);
+
+    if (error) return fallo(error);
+
+    const filas = (data ?? []) as unknown as {
+      proveedor_id: string;
+      ultimo_costo_usd: number | string | null;
+      proveedores: {
+        id: string;
+        razon_social: string;
+        telefono: string | null;
+        whatsapp: string | null;
+        email: string | null;
+      } | null;
+    }[];
+
+    const porProveedor = new Map<string, ProveedorParaPedir>();
+    for (const f of filas) {
+      const p = f.proveedores;
+      if (!p) continue;
+      const previo = porProveedor.get(f.proveedor_id);
+      const costo = opcional(f.ultimo_costo_usd);
+      if (previo) {
+        previo.coincidencias += 1;
+        // El más reciente no se sabe desde aquí; se queda el primero que trae
+        // precio, que basta como referencia de «a este ya le compraba».
+        previo.ultimoCostoUsd ??= costo;
+      } else {
+        porProveedor.set(f.proveedor_id, {
+          id: p.id,
+          razon_social: p.razon_social,
+          telefono: p.telefono,
+          whatsapp: p.whatsapp,
+          email: p.email,
+          coincidencias: 1,
+          ultimoCostoUsd: costo,
+        });
+      }
+    }
+
+    return {
+      ok: true,
+      datos: [...porProveedor.values()].sort(
+        (a, b) =>
+          b.coincidencias - a.coincidencias ||
+          a.razon_social.localeCompare(b.razon_social),
+      ),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

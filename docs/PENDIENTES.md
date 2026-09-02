@@ -25,8 +25,9 @@ volver a caer sale caro.
 >    (§0.6), que llevan esperando desde la auditoría del 31/08.
 >
 > Y lo que se cerró el 02/09 después de subir: **facturar por partes** (§L),
-> que escondía dos fallos en el flujo del dinero, y los **tres contadores**
-> de §0.3, que llevaban desde el 31/08.
+> que escondía dos fallos en el flujo del dinero; los **tres contadores** de
+> §0.3, que llevaban desde el 31/08; y **pedir precio por WhatsApp con
+> mensajes que Willy escribe** (§M), que es media pieza del comparador.
 >
 > **Y antes de construir nada más, enseñarle el plan a Willy**:
 > https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
@@ -39,12 +40,12 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **43 de 43 reales** · no queda ningún cartel |
+| Rutas | **44 de 44 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **936 en verde** |
+| `pnpm test` | **974 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 048, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 049, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -908,6 +909,84 @@ lleva los saltos de línea con los que se aplicó la 004 —CRLF— y un
 
 ---
 
+### M · Pedir precio por WhatsApp, con mensajes que él escribe · HECHO el 02/09
+
+Luis, 02/09: *«ya teniendo los proveedores sus números de celular, ayudar a él
+en compras a mandar a su WhatsApp para preguntar los precios»*, con *«mensajes
+predeterminados que puede crear»*.
+
+Es el paso 5 del plan de compras —*«manda a sus proveedores a ver cuál es más
+barato»*— y la mitad que le faltaba al comparador.
+
+#### Cómo funciona
+
+Desde la bandeja «Por comprar» se marca lo que falta y se pulsa **Pedir
+precio**. La pantalla llega con la lista puesta —el mismo `?items=` con el que
+se llega al registro de compra— propone los proveedores que ya venden algo de
+eso (lo aprendido en §K) y genera un mensaje por cada uno. Botón de WhatsApp,
+de correo y de copiar.
+
+**No manda nada solo, y no debería.** El envío automático es la Cloud API de
+Meta: número dedicado, verificación del negocio, plantillas aprobadas por Meta
+y **pago por conversación**, más el riesgo de que baneen el número por escribir
+en masa a quien no ha escrito. Para pedirle precio a cuatro proveedores
+conocidos no compensa. Lo que ahorra esto no es el envío: es **no teclear
+quince códigos cuatro veces**, y que a los cuatro les llegue la misma lista.
+
+#### Los mensajes los escribe él
+
+Tabla `plantillas_mensaje` (migración 049), editable en **Configuración →
+Mensajes que se mandan**. Las variables van entre llaves —`{proveedor}`,
+`{items}`, `{empresa}`, `{yo}`, `{fecha}`— y se pulsan para insertarlas donde
+está el cursor. Hay vista previa con datos de ejemplo.
+
+Va en una tabla y no en el código porque **la forma de pedir precio en este
+rubro no la sabe quien programa**. Dejarlo en el código convierte cada cambio
+de una coma en un despliegue.
+
+Vienen dos escritas para que no arranque en blanco, una de WhatsApp y otra de
+correo. Están para que él las corrija.
+
+#### Decisiones que conviene recordar
+
+- **Una variable mal escrita se manda TAL CUAL, no se borra.** Un hueco en
+  blanco no se ve al revisar y sí lo ve el proveedor. Así el `{provedor}` sale
+  en la vista previa, que es donde tiene que verse — y además se avisa.
+- **El tope de la plantilla es 3.000 y el de WhatsApp 4.096.** El margen es
+  para lo que crece al sustituir: `{items}` son ocho caracteres en la plantilla
+  y trescientos en el mensaje. WhatsApp corta por el FINAL, que es justo donde
+  va la lista de códigos.
+- **Nada de puntos después de `{proveedor}` ni de `{empresa}`.** Casi toda
+  razón social peruana ya termina en uno: «BEARING COMPANY S.A.C..» salía con
+  dos, y se vio en la vista previa antes de que lo viera un proveedor.
+
+#### Lo que lo tiene a medias
+
+**Los 97 proveedores están sin un solo teléfono ni correo.** El Excel del 02/09
+no los traía (§J). La pantalla los enseña igual, con el botón de copiar y
+diciendo que le falta el número, con enlace a su ficha — pero **sin contactos
+esto sirve a medias, y con ellos sirve entero**. Es lo que más valor tiene de
+todo lo que espera a Willy.
+
+Dos formas de arreglarlo que valen la pena:
+
+1. Que se **capturen solos**: al registrar una compra, si ese proveedor no
+   tiene WhatsApp, pedirlo ahí. Es la misma idea de §K.
+2. Que él mande la lista con los números, que es un rato de copiar y pegar.
+
+#### Un fallo que solo se ve abriendo la pantalla
+
+Un componente de cliente importaba `@/modules/mensajes`, y ese índice
+reexporta su `api/`, que es `server-only`. Next falla al construir con
+*«You're importing a component that needs server-only»*.
+
+**No lo caza el typecheck ni el lint.** El arreglo es importar por la ruta
+profunda —`@/modules/mensajes/dominio/enlaces`— que es lo que ya hacía el
+constructor de compras con el buscador de proveedores. Y el TIPO tampoco puede
+venir del índice: se movió `Plantilla` al dominio, que además es su sitio.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
@@ -1301,8 +1380,9 @@ Por orden de lo que desbloquea:
    b. **Condiciones de pago.** Los 97 quedaron en «contado», que es el valor
       por defecto; con varios tendrá crédito.
    c. **Teléfonos, correos y personas de contacto**, ni de clientes ni de
-      proveedores. Sin el correo del proveedor, pedirle precio a cuatro
-      sigue siendo trabajo a mano.
+      proveedores. **Es lo que más valor tiene ahora mismo**: desde el 02/09
+      existe la pantalla que le pide precio a varios de golpe por WhatsApp
+      (§M), y sin los números funciona a medias — solo deja copiar el texto.
    d. **El RUC bueno de RG CORPORATION S.A.C.** El del archivo,
       `10465742185`, no valida. Entró sin documento; así no se le puede
       emitir ni recibir un comprobante.

@@ -2297,6 +2297,56 @@ export type Database = {
         }
         Relationships: []
       }
+      plantillas_mensaje: {
+        Row: {
+          activa: boolean
+          actualizado_en: string
+          asunto: string | null
+          canal: Database["public"]["Enums"]["canal_mensaje"]
+          creado_en: string
+          creado_por: string | null
+          cuerpo: string
+          id: string
+          nombre: string
+          predeterminada: boolean
+          uso: Database["public"]["Enums"]["uso_plantilla"]
+        }
+        Insert: {
+          activa?: boolean
+          actualizado_en?: string
+          asunto?: string | null
+          canal?: Database["public"]["Enums"]["canal_mensaje"]
+          creado_en?: string
+          creado_por?: string | null
+          cuerpo: string
+          id?: string
+          nombre: string
+          predeterminada?: boolean
+          uso?: Database["public"]["Enums"]["uso_plantilla"]
+        }
+        Update: {
+          activa?: boolean
+          actualizado_en?: string
+          asunto?: string | null
+          canal?: Database["public"]["Enums"]["canal_mensaje"]
+          creado_en?: string
+          creado_por?: string | null
+          cuerpo?: string
+          id?: string
+          nombre?: string
+          predeterminada?: boolean
+          uso?: Database["public"]["Enums"]["uso_plantilla"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantillas_mensaje_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producto_equivalencias: {
         Row: {
           clase: string
@@ -4174,6 +4224,7 @@ export type Database = {
       unidad_periodo: { Args: { p_grano: string }; Returns: string }
     }
     Enums: {
+      canal_mensaje: "whatsapp" | "correo"
       condicion_pago: "contado" | "credito"
       disponibilidad_item: "inmediata" | "exterior" | "fabricacion"
       estado_compra: "registrada" | "recibida_parcial" | "recibida" | "anulada"
@@ -4231,6 +4282,7 @@ export type Database = {
         | "salida"
         | "ajuste_positivo"
         | "ajuste_negativo"
+      uso_plantilla: "pedido_precio" | "cotizacion" | "cobranza" | "general"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4358,6 +4410,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      canal_mensaje: ["whatsapp", "correo"],
       condicion_pago: ["contado", "credito"],
       disponibilidad_item: ["inmediata", "exterior", "fabricacion"],
       estado_compra: ["registrada", "recibida_parcial", "recibida", "anulada"],
@@ -4422,6 +4475,7 @@ export const Constants = {
         "ajuste_positivo",
         "ajuste_negativo",
       ],
+      uso_plantilla: ["pedido_precio", "cotizacion", "cobranza", "general"],
     },
   },
 } as const

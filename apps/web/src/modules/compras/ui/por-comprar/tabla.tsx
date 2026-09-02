@@ -7,7 +7,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Badge, Button, Checkbox, Moneda, formatearFecha } from "@rodatech/ui";
-import { ChevronDown, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronDown, ChevronRight, MessageCircle, ShoppingCart } from "lucide-react";
 
 import {
   ETIQUETA_URGENCIA,
@@ -60,10 +60,17 @@ export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
 
   // `producto:cantidad` separado por comas. Lo lee `precargaDeCompra`, que
   // valida cada id contra el maestro: aquí no se envía nada de confianza.
+  const items = (elegidos: ProductoPorComprar[]) =>
+    elegidos.map((f) => `${f.producto_id}:${f.falta}`).join(",");
+
   const enlaceCompra = (elegidos: ProductoPorComprar[]) =>
-    `/compras/nueva?items=${elegidos
-      .map((f) => `${f.producto_id}:${f.falta}`)
-      .join(",")}`;
+    `/compras/nueva?items=${items(elegidos)}`;
+
+  // El paso de ANTES de comprar: preguntar precio. Va al mismo sitio y con
+  // el mismo formato, porque es el mismo gesto —«esto me falta»— resuelto
+  // de dos maneras según se sepa ya a quién comprárselo o no.
+  const enlacePedir = (elegidos: ProductoPorComprar[]) =>
+    `/compras/pedir-precio?items=${items(elegidos)}`;
 
   return (
     <div className="flex flex-col">
@@ -327,6 +334,15 @@ export function TablaPorComprar({ filas }: { filas: ProductoPorComprar[] }) {
             >
               Desmarcar
             </Button>
+            {/* Antes de comprar se pregunta el precio. Va primero que
+                «Registrar la compra» porque es lo que ocurre antes. */}
+            <Link
+              href={enlacePedir(seleccion)}
+              className="inline-flex h-11 items-center gap-2 rounded-sm border border-[var(--border-strong)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              Pedir precio
+            </Link>
             <Link
               href={enlaceCompra(seleccion)}
               className="inline-flex h-11 items-center gap-2 rounded-sm bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
