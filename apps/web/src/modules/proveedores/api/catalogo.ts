@@ -196,18 +196,11 @@ export async function proveedoresDeProducto(
   }
 }
 
-/** Un proveedor al que tiene sentido pedirle precio de una lista de productos. */
-export interface ProveedorParaPedir {
-  id: string;
-  razon_social: string;
-  telefono: string | null;
-  whatsapp: string | null;
-  email: string | null;
-  /** Cuántos de los productos pedidos le constan como que vende. */
-  coincidencias: number;
-  /** Y de esos, el último costo más reciente en dólares, si lo hay. */
-  ultimoCostoUsd: number | null;
-}
+// El tipo vive en `dominio/pedir.ts`: lo importan componentes de cliente y
+// este archivo es `server-only`. Ver la cabecera de allí.
+import type { ProveedorParaPedir } from "../dominio/pedir";
+
+export type { ProveedorParaPedir };
 
 /**
  * A quién pedirle precio de estos productos.

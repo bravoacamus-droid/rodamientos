@@ -142,6 +142,15 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <path d="M17.5 14v7M14 17.5h7" {...T} />
     </>
   ),
+  // Precios: dos etiquetas de precio, que es de lo que va — comparar dos
+  // ofertas de lo mismo. Un símbolo de moneda solo se confundiría con
+  // cobranzas.
+  precios: (
+    <>
+      <path d="M3 11.5V5a2 2 0 0 1 2-2h6.5L20 11.5 12.5 19 3 11.5Z" {...T} />
+      <circle cx="7.5" cy="7.5" r="1.2" {...T} />
+    </>
+  ),
   // Importación: contenedor con el mundo detrás.
   importacion: (
     <>

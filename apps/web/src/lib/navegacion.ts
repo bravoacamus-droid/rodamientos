@@ -12,7 +12,7 @@ export type NombreIcono =
   | "tablero" | "cotizacion" | "guia" | "factura" | "cobranza"
   | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
-  | "compra" | "porcomprar" | "importacion"
+  | "compra" | "porcomprar" | "precios" | "importacion"
   | "reporte" | "alerta" | "bitacora" | "configuracion";
 
 export interface ItemNav {
@@ -80,6 +80,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
       // empieza. Willy no abre el ERP para registrar una compra, la abre
       // para saber qué le falta.
       { etiqueta: "Por comprar", ruta: "/compras/por-comprar", icono: "porcomprar", roles: ["gerencia", "admin", "compras"] },
+      // Entre las dos, que es donde cae en el flujo: se ve qué falta, se
+      // pregunta el precio, y de ahí sale la compra.
+      { etiqueta: "Precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
     ],

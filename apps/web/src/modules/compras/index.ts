@@ -9,6 +9,33 @@ export { default as PaginaNuevaCompra } from "./ui/pagina-nueva";
 export { default as PaginaDetalleCompra } from "./ui/pagina-detalle";
 export { default as PaginaPorComprar } from "./ui/por-comprar/pagina";
 export { default as PaginaPedirPrecio } from "./ui/pedir-precio/pagina";
+export { default as PaginaPrecios } from "./ui/precios/pagina";
+export { default as PaginaComparativa } from "./ui/precios/pagina-detalle";
+
+// El comparador. Se publica la cuenta y no la pantalla: el tablero va a
+// querer «cuántas consultas están esperando respuesta», y la ficha de
+// producto, a cuánto se lo dejaron la última vez.
+export {
+  ETIQUETA_RESPUESTA,
+  aUsdSinIgv,
+  compararTodo,
+  comprasPropuestas,
+  costoParaCompra,
+  eleccionPorDefecto,
+  ganadorDe,
+  resumirComparativa,
+  resumirProveedores,
+  type Celda,
+  type EstadoRespuesta,
+  type FilaComparada,
+  type Ganador,
+  type ItemConsultado,
+  type Moneda,
+  type ProveedorConsultado,
+  type Respuesta,
+  type ResumenComparativa,
+  type ResumenProveedor,
+} from "./dominio/comparador";
 
 // El reparto del stock entre los clientes que esperan lo mismo. Se publica
 // porque el comparador de proveedores —el siguiente paso del plan— parte de

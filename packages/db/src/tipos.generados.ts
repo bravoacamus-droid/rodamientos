@@ -517,6 +517,7 @@ export type Database = {
         Row: {
           actualizado_en: string
           comprador_id: string | null
+          consulta_precio_id: string | null
           courier: string | null
           creado_en: string
           documento_proveedor: string | null
@@ -541,6 +542,7 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           comprador_id?: string | null
+          consulta_precio_id?: string | null
           courier?: string | null
           creado_en?: string
           documento_proveedor?: string | null
@@ -565,6 +567,7 @@ export type Database = {
         Update: {
           actualizado_en?: string
           comprador_id?: string | null
+          consulta_precio_id?: string | null
           courier?: string | null
           creado_en?: string
           documento_proveedor?: string | null
@@ -593,6 +596,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_consulta_precio_id_fkey"
+            columns: ["consulta_precio_id"]
+            isOneToOne: false
+            referencedRelation: "consultas_precio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_consulta_precio_id_fkey"
+            columns: ["consulta_precio_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["consulta_id"]
           },
           {
             foreignKeyName: "compras_proveedor_id_fkey"
@@ -1093,6 +1110,189 @@ export type Database = {
         }
         Relationships: []
       }
+      consulta_precio_items: {
+        Row: {
+          cantidad: number
+          consulta_id: string
+          id: string
+          orden: number
+          producto_id: string
+        }
+        Insert: {
+          cantidad: number
+          consulta_id: string
+          id?: string
+          orden?: number
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          consulta_id?: string
+          id?: string
+          orden?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_precio_items_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas_precio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["consulta_id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consulta_precio_proveedores: {
+        Row: {
+          consulta_id: string
+          dias_entrega: number | null
+          estado: Database["public"]["Enums"]["estado_respuesta_precio"]
+          id: string
+          incluye_igv: boolean
+          moneda: string
+          nota: string | null
+          proveedor_id: string
+          respondido_en: string | null
+          tipo_cambio: number | null
+          validez_hasta: string | null
+        }
+        Insert: {
+          consulta_id: string
+          dias_entrega?: number | null
+          estado?: Database["public"]["Enums"]["estado_respuesta_precio"]
+          id?: string
+          incluye_igv?: boolean
+          moneda?: string
+          nota?: string | null
+          proveedor_id: string
+          respondido_en?: string | null
+          tipo_cambio?: number | null
+          validez_hasta?: string | null
+        }
+        Update: {
+          consulta_id?: string
+          dias_entrega?: number | null
+          estado?: Database["public"]["Enums"]["estado_respuesta_precio"]
+          id?: string
+          incluye_igv?: boolean
+          moneda?: string
+          nota?: string | null
+          proveedor_id?: string
+          respondido_en?: string | null
+          tipo_cambio?: number | null
+          validez_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_precio_proveedores_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultas_precio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_proveedores_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["consulta_id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consulta_precio_respuestas: {
+        Row: {
+          consulta_proveedor_id: string
+          costo_unitario: number | null
+          dias_entrega: number | null
+          disponible: boolean
+          id: string
+          item_id: string
+          nota: string | null
+        }
+        Insert: {
+          consulta_proveedor_id: string
+          costo_unitario?: number | null
+          dias_entrega?: number | null
+          disponible?: boolean
+          id?: string
+          item_id: string
+          nota?: string | null
+        }
+        Update: {
+          consulta_proveedor_id?: string
+          costo_unitario?: number | null
+          dias_entrega?: number | null
+          disponible?: boolean
+          id?: string
+          item_id?: string
+          nota?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_precio_respuestas_consulta_proveedor_id_fkey"
+            columns: ["consulta_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "consulta_precio_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_respuestas_consulta_proveedor_id_fkey"
+            columns: ["consulta_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["consulta_proveedor_id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_respuestas_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "consulta_precio_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_respuestas_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["item_id"]
+          },
+        ]
+      }
       consultas_cache: {
         Row: {
           clave: string
@@ -1191,6 +1391,47 @@ export type Database = {
           status_code?: number | null
         }
         Relationships: []
+      }
+      consultas_precio: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          creado_por: string | null
+          estado: Database["public"]["Enums"]["estado_consulta_precio"]
+          fecha: string
+          id: string
+          nota: string | null
+          numero: string
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          estado?: Database["public"]["Enums"]["estado_consulta_precio"]
+          fecha?: string
+          id?: string
+          nota?: string | null
+          numero: string
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          creado_por?: string | null
+          estado?: Database["public"]["Enums"]["estado_consulta_precio"]
+          fecha?: string
+          id?: string
+          nota?: string | null
+          numero?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultas_precio_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cotizacion_items: {
         Row: {
@@ -3288,6 +3529,66 @@ export type Database = {
           },
         ]
       }
+      v_comparativa_precios: {
+        Row: {
+          cantidad: number | null
+          codigo: string | null
+          consulta: string | null
+          consulta_estado:
+            | Database["public"]["Enums"]["estado_consulta_precio"]
+            | null
+          consulta_id: string | null
+          consulta_proveedor_id: string | null
+          costo_unitario: number | null
+          costo_usd: number | null
+          descripcion: string | null
+          dias_entrega: number | null
+          disponible: boolean | null
+          fecha: string | null
+          incluye_igv: boolean | null
+          item_id: string | null
+          moneda: string | null
+          nota: string | null
+          producto_id: string | null
+          proveedor: string | null
+          proveedor_id: string | null
+          respuesta_estado:
+            | Database["public"]["Enums"]["estado_respuesta_precio"]
+            | null
+          tipo_cambio: number | null
+          validez_hasta: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_comprometido: {
         Row: {
           atendido: number | null
@@ -3845,6 +4146,7 @@ export type Database = {
         }
         Returns: number
       }
+      anotar_respuesta_precio: { Args: { p_datos: Json }; Returns: Json }
       anular_compra: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       anular_comprobante: {
         Args: { p_id: string; p_motivo: string }
@@ -4026,6 +4328,7 @@ export type Database = {
         }[]
       }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
+      crear_consulta_precio: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       crear_familia: { Args: { p_nombre: string }; Returns: Json }
       crear_marca: { Args: { p_nombre: string }; Returns: Json }
@@ -4343,6 +4646,7 @@ export type Database = {
         | "pagado"
         | "vencido"
         | "anulado"
+      estado_consulta_precio: "abierta" | "cerrada" | "anulada"
       estado_cotizacion:
         | "borrador"
         | "enviada"
@@ -4352,6 +4656,11 @@ export type Database = {
         | "atendida"
         | "anulada"
       estado_guia: "borrador" | "emitida" | "anulada"
+      estado_respuesta_precio:
+        | "esperando"
+        | "respondio"
+        | "no_contesto"
+        | "no_tiene"
       estado_sunat:
         | "no_enviado"
         | "pendiente"
@@ -4530,6 +4839,7 @@ export const Constants = {
         "vencido",
         "anulado",
       ],
+      estado_consulta_precio: ["abierta", "cerrada", "anulada"],
       estado_cotizacion: [
         "borrador",
         "enviada",
@@ -4540,6 +4850,12 @@ export const Constants = {
         "anulada",
       ],
       estado_guia: ["borrador", "emitida", "anulada"],
+      estado_respuesta_precio: [
+        "esperando",
+        "respondio",
+        "no_contesto",
+        "no_tiene",
+      ],
       estado_sunat: [
         "no_enviado",
         "pendiente",

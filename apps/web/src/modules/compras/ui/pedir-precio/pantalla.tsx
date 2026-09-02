@@ -6,8 +6,12 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button, SelectNativo } from "@rodatech/ui";
-import { Copy, Mail, MessageCircle } from "lucide-react";
+import { ClipboardList, Copy, Mail, MessageCircle } from "lucide-react";
+
+import { abrirRonda } from "../../acciones/comparar";
+import { AnadirProveedor } from "./anadir";
 
 // Por la ruta profunda: el índice de `mensajes` reexporta su `api/`, que es
 // `server-only`, y esto es un componente de cliente. Es la misma razón por
@@ -20,7 +24,7 @@ import {
   renderizar,
   type Plantilla,
 } from "@/modules/mensajes/dominio/plantillas";
-import type { ProveedorParaPedir } from "@/modules/proveedores";
+import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 
 export interface ItemPedido {
   producto_id: string;
@@ -48,7 +52,7 @@ export interface ItemPedido {
  */
 export function PedirPrecio({
   items,
-  proveedores,
+  proveedores: sugeridos,
   plantillas,
   empresa,
   yo,
@@ -62,13 +66,22 @@ export function PedirPrecio({
   yo: string;
   hoy: string;
 }) {
+  // La lista arranca en lo que el sistema sabe y crece con lo que se busque.
+  // Sin esto la pantalla no arranca el primer día: `proveedor_productos` se
+  // llena sola con cada compra, así que hoy —97 proveedores, cero compras—
+  // no propondría a nadie.
+  const [proveedores, setProveedores] = React.useState(sugeridos);
   const [plantillaId, setPlantillaId] = React.useState(plantillas[0]?.id ?? "");
   const [elegidos, setElegidos] = React.useState<Set<string>>(
     // Se preseleccionan los que venden algo de la lista: es la sugerencia que
     // el sistema aprendió de las compras (046), y casi siempre es la buena.
-    () => new Set(proveedores.filter((p) => p.coincidencias > 0).map((p) => p.id)),
+    () => new Set(sugeridos.filter((p) => p.coincidencias > 0).map((p) => p.id)),
   );
   const [copiado, setCopiado] = React.useState<string | null>(null);
+
+  const router = useRouter();
+  const [abriendo, empezarRonda] = React.useTransition();
+  const [avisoRonda, setAvisoRonda] = React.useState<string | null>(null);
 
   const plantilla = plantillas.find((p) => p.id === plantillaId) ?? plantillas[0];
 
@@ -129,6 +142,32 @@ export function PedirPrecio({
   };
 
   const marcados = proveedores.filter((p) => elegidos.has(p.id));
+
+  /**
+   * Guardar la ronda para poder apuntar lo que contesten.
+   *
+   * Es un botón aparte y no algo que pase solo al abrir WhatsApp, por dos
+   * motivos. Uno: preguntar un precio de paso —«oye, ¿cuánto el 6205?»— no
+   * merece un documento, y llenar la lista de rondas de una línea acabaría
+   * con que nadie la mire. Dos: el envío lo hace el navegador, así que aquí
+   * no hay forma de saber si de verdad lo mandó.
+   */
+  const guardarRonda = () => {
+    setAvisoRonda(null);
+    empezarRonda(async () => {
+      const r = await abrirRonda({
+        nota: `${items.length} ${items.length === 1 ? "producto" : "productos"} de la bandeja`,
+        items: items.map((i) => ({ producto_id: i.producto_id, cantidad: i.cantidad })),
+        proveedores: marcados.map((p) => p.id),
+      });
+      if (!r.ok) {
+        setAvisoRonda(r.error);
+        return;
+      }
+      router.push(`/compras/precios/${r.id}`);
+    });
+  };
+
   const sinContacto = marcados.filter((p) => {
     const c = canalesDisponibles(p);
     return !c.whatsapp && !c.correo;
@@ -203,8 +242,8 @@ export function PedirPrecio({
         {proveedores.length === 0 ? (
           <p className="text-sm text-[var(--fg-muted)]">
             Todavía no consta que nadie venda estos productos. Se aprende solo
-            con cada compra, y se puede adelantar desde la ficha del proveedor,
-            en «Qué vende».
+            con cada compra —y con cada precio que te contesten—, y mientras
+            tanto los buscas aquí abajo.
           </p>
         ) : (
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
@@ -289,6 +328,17 @@ export function PedirPrecio({
             })}
           </ul>
         )}
+
+        <AnadirProveedor
+          yaEstan={new Set(proveedores.map((p) => p.id))}
+          onAnadir={(p) => {
+            setProveedores((previos) => [...previos, p]);
+            // Se marca al añadirlo: buscar a alguien y añadirlo ES decir que
+            // se le quiere preguntar. Obligar a un segundo clic sería pedir
+            // que confirme lo que acaba de hacer.
+            setElegidos((previos) => new Set(previos).add(p.id));
+          }}
+        />
       </section>
 
       {/* --------------------------------------------------- Vista previa */}
@@ -315,6 +365,41 @@ export function PedirPrecio({
           WhatsApp ni correo en su ficha, así que solo se les puede copiar el
           texto. Es lo que más ayuda a arreglar: el maestro llegó sin datos de
           contacto.
+        </p>
+      ) : null}
+
+      {/* Lo que convierte esto en un flujo y no en un generador de textos:
+          apuntar a quién se le preguntó, para tener dónde escribir lo que
+          contesten. Sin esto, la respuesta que llega el miércoles se pierde. */}
+      <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="text-sm">
+          <p className="font-medium">¿Vas a esperar respuesta?</p>
+          <p className="text-xs text-[var(--fg-subtle)]">
+            Guarda la consulta y tendrás dónde apuntar lo que te diga cada uno,
+            ver quién sale más barato y convertirlo en compras.
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={guardarRonda}
+          disabled={abriendo || marcados.length === 0}
+          className="gap-1.5"
+        >
+          <ClipboardList className="size-4" aria-hidden="true" />
+          {abriendo
+            ? "Guardando…"
+            : `Anotar la consulta a ${marcados.length} ${
+                marcados.length === 1 ? "proveedor" : "proveedores"
+              }`}
+        </Button>
+      </section>
+
+      {avisoRonda ? (
+        <p
+          role="alert"
+          className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm"
+        >
+          {avisoRonda}
         </p>
       ) : null}
 

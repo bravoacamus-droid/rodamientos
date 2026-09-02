@@ -17,8 +17,9 @@ export {
   productosDeProveedor,
   type ProductoDeProveedor,
   type ProveedorDeProducto,
-  type ProveedorParaPedir,
 } from "./api/catalogo";
+
+export type { ProveedorParaPedir } from "./dominio/pedir";
 
 // Las reglas del documento son puras y están probadas. Las reutilizará el
 // módulo de compras al dar de alta un proveedor sobre la marcha.

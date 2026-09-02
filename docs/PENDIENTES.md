@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 054, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 056, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -252,9 +252,10 @@ que nadie conteste nada.
 Por orden de lo que más vale:
 
 1. ~~**La bandeja «Por comprar»**~~ · **hecha el 02/09**, ver §I.
-2. **El comparador de proveedores** (§G paso 5). Lo único del plan entero que
-   hay que inventar de cero. Ya tiene de dónde partir: la bandeja sabe qué
-   falta de cada producto y a quién se le prometió.
+2. ~~**El comparador de proveedores** (§G paso 5)~~ · **hecho el 02/09**,
+   §Q. Era lo único del plan entero que había que inventar de cero, y con
+   él **esta lista se queda vacía**: lo que falta del plan de compras
+   depende de las cinco preguntas a Willy.
 3. ~~**Los tres contadores que dan cifras falsas**~~ · **hechos el 02/09**
    (§0.3, migración 048).
 4. ~~**El aviso de cambio de costo** (§G paso 7)~~ · **hecho el 02/09**, §P:
@@ -432,6 +433,7 @@ entrada—. La parte sólida del sistema es justo la del final de la cadena.
 3. Bandeja **Por comprar**: lo comprometido sin stock + lo que bajó del mínimo
    (esto último ya está calculado en `v_reposicion`, solo hay que enseñarlo).
 4. El **comparador** de proveedores. Es lo único que hay que inventar.
+   · **Hecho el 02/09**, §Q.
 5. Botón **Recibir** desde la propia compra, y **aviso cuando el costo cambia**
    respecto de la compra anterior, con el efecto en el margen. Eso es el
    *«que haya historial y mejorar los precios»*.
@@ -483,7 +485,7 @@ fabricación, pero no el de local, que es la más frecuente).
 |---|---|---|
 | **1** | Disponibilidad · confirmar por línea · moneda · botón Recibir | Deja la cadena entera cerrada de punta a punta |
 | **2** | Bandeja Por comprar · reserva · enlace compra↔pedido · aviso de costo | Aquí deja de ser un cuaderno y empieza a avisar |
-| **3** | El comparador y el historial por proveedor | Es lo único que no existe, y necesita la bandeja del 2 |
+| **3** | ~~El comparador y el historial por proveedor~~ · **hecho el 02/09** (§Q) | Es lo único que no existe, y necesita la bandeja del 2 |
 
 #### Lo que NO se construye, y por qué
 
@@ -1207,6 +1209,116 @@ un decimal mal puesto**. Este contesta otra pregunta: **si el costo subió,
 Compra a $10 → recepción → compra a $13 → al abrir la segunda recepción, el
 panel salió en rojo diciendo que traerlo cuesta más que el piso de $11, y con
 el documento y el costo de la vez anterior al lado.
+
+---
+
+### Q · El comparador de proveedores · HECHO el 02/09
+
+El paso 5 del plan de compras, y lo que el propio plan llamaba **«lo único que
+hay que inventar de cero»**. Con esto, el bloque 3 —y el plan entero salvo lo
+que depende de las respuestas de Willy— queda cerrado.
+
+Está en **Abastecimiento → Precios**, entre «Por comprar» y «Compras», que es
+donde cae en el flujo: se ve qué falta, se pregunta el precio, y de ahí sale la
+compra.
+
+#### El ciclo completo, y dónde estaba roto
+
+    Por comprar → Pedir precio → [WhatsApp] → Precios → una compra por proveedor
+
+«Pedir precio» ya existía (§M) pero **no guardaba nada**: generaba los textos y
+ahí se acababa. Una ronda de precios dura días —se pregunta el lunes, uno
+contesta el lunes, otro el miércoles y el tercero no contesta nunca— así que lo
+apuntado el lunes se perdía. Ahora hay un botón, «Anotar la consulta», que abre
+la ronda y lleva a la rejilla.
+
+Es un botón y no algo que pase solo al abrir WhatsApp, por dos motivos:
+preguntar de paso —«oye, ¿cuánto el 6205?»— no merece un documento, y el envío
+lo hace el navegador, así que desde el servidor no hay forma de saber si de
+verdad se mandó.
+
+#### Comparar dos precios que no se pueden comparar
+
+Uno contesta «S/ 37.00 puesto» y otro «$ 9.00 más IGV». El primero parece
+cuatro veces más caro y es el barato. Hay dos conversiones de por medio: la
+moneda y el IGV, que en Perú va dentro o fuera según a quién le preguntes.
+
+Todo se lleva a **dólares sin IGV**, que es la unidad en la que piensa el resto
+del sistema (`compra_items.costo_unitario` es neto y el kardex va en dólares,
+042). Las dos preguntas de la cabecera —moneda y «¿traía el IGV?»— se hacen una
+vez por proveedor y valen para todas sus líneas, que es como contestan.
+
+La conversión sale **en la misma fila, mientras se escribe**. Es lo que hace
+que se note en el momento si falta el tipo de cambio o si el IGV está mal
+marcado, en vez de descubrirlo tres semanas después mirando un margen negativo.
+
+#### Las decisiones
+
+- **Se guardan LAS TRES respuestas, no solo la ganadora.** Es lo que construye
+  el historial que Willy pidió con *«que haya historial y mejorar los
+  precios»*. Si solo se guardara al ganador, dentro de seis meses no habría
+  forma de saber que el segundo llevaba medio año a cincuenta centavos, ni que
+  a un proveedor se le pregunta siempre y nunca contesta. Por eso
+  `consulta_precio_respuestas` no tiene ningún concepto de «elegida».
+- **«No lo tengo» es una respuesta, y no compite.** Es la trampa de cualquier
+  rejilla de precios: si un hueco se leyera como cero, el que no contestó
+  ganaría siempre. Hay un check en la base —disponible y sin precio no entra—,
+  un filtro en el dominio y una prueba de cada cosa.
+- **«No ha contestado» y «me dijo que no lo tiene» son cosas distintas.** La
+  primera versión ponía «no lo tiene» en las dos, que es acusar a alguien de
+  algo que no dijo y dar por cerrada una pregunta abierta. **Solo se vio
+  abriendo la pantalla**: compilaba, pasaba el lint y pasaba los tests.
+- **Es OPCIONAL.** La tercera de las cinco preguntas a Willy es si comparar
+  debe ser obligatorio antes de comprar, y sigue sin contestar. `/compras/nueva`
+  funciona igual que siempre. Es la dirección reversible: si dice que sí,
+  hacerlo obligatorio es una comprobación; al revés habría que desmontar un
+  bloqueo de un flujo que ya usa todos los días.
+- **Propone al más barato y deja mover la elección.** No agrupa por comodidad
+  —«a este ya le compras tres cosas, pídele la cuarta»— porque eso puede mandar
+  a comprarle caro a alguien para ahorrarse una llamada. Lo que sí enseña es
+  **cuánto cuesta esa comodidad**: «comprándoselo todo a X son $ 10 más, en una
+  sola compra». Decide Willy, pero sabiendo el número.
+- **Una compra por proveedor, cada una por su cuenta.** Son documentos
+  independientes con su correlativo; si la segunda falla, la primera sigue
+  siendo buena y se dice cuál salió y cuál no. Meterlas en una transacción
+  sería perder una compra correcta por el problema de otro proveedor.
+- **La ronda se cierra sola** cuando ya produjo todas sus compras. Consecuencia,
+  no botón — igual que el cierre de la cotización en la 047.
+
+#### Y de paso, dos cosas que estaban rotas
+
+**1 · «Pedir precio» no arrancaba en frío.** La lista de a quién preguntarle
+sale de `proveedor_productos`, que se llena SOLA con cada compra (046). Con 97
+proveedores cargados y cero compras hechas, **no proponía a nadie y no había
+forma de preguntarle a nadie**. Ahora se busca en el maestro entero, contra el
+mismo `buscar_proveedores` (033) del constructor de compras: por razón social,
+por RUC y por marca.
+
+**2 · «SIN MARCA» se estaba apuntando como si fuera una marca** (migración
+056). `proveedor_marcas` existe para el filtro «¿quién me trae SKF?», y **384
+de los 790 productos del maestro son «SIN MARCA»**: en unos meses casi todos
+los proveedores habrían tenido esa fila y el filtro habría dejado de servir. No
+habría reventado nunca — se habría degradado, que es peor.
+
+#### Probado contra la base real, de punta a punta
+
+Consulta a dos proveedores por dos productos. El primero contesta en soles con
+IGV a 3.70; el segundo en dólares, y dice que el segundo producto no lo tiene.
+
+- La rejilla convirtió S/ 37.00 a **$ 8.4746** —el mismo número que comprueba
+  el centinela de la 055 contra `v_comparativa_precios`— y le dio la primera
+  línea al de soles por $ 5.25 sobre las 10 unidades.
+- La compra salió **en soles**, con tipo de cambio 3.70 y el costo neto de IGV
+  (S/ 31.3559), subtotal S/ 354.24 + IGV S/ 63.76 = **S/ 418.00**, que es
+  exactamente 10×37 + 4×12: el dinero que ese proveedor va a facturar.
+- Quedó enlazada a la consulta, la ronda se cerró sola, y **los dos proveedores
+  quedaron apuntados como que venden esos productos** — el que vendió con
+  `comprado_veces` 1 y el que solo cotizó con 0. Que es lo que pidió Luis el
+  02/09: *«cuando va a comprar o cotizar esa compra ahí también pueda nutrir el
+  sistema»*.
+
+Todo borrado después: 0 compras, 0 rondas, 0 filas en `proveedor_productos`,
+bitácora vacía y el correlativo CMP devuelto al 7.
 
 ---
 
