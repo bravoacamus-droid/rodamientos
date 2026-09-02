@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useReducer, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -11,6 +12,7 @@ import {
   TBody,
   Textarea,
   THead,
+  formatearFecha,
 } from "@rodatech/ui";
 
 import { costosDelProveedor } from "../../acciones/costos";
@@ -44,6 +46,8 @@ export function ConstructorCompra({
   sugeridos,
   hoy,
   precarga = [],
+  candidatos = [],
+  esperan = [],
 }: {
   /**
    * Los últimos a los que se compró. NO es el maestro: desde la 033 el
@@ -59,17 +63,50 @@ export function ConstructorCompra({
    * «Comprar» hubiera que volver a buscar los mismos códigos a mano.
    */
   precarga?: { producto: ProductoParaComprar; cantidad: number }[];
+  /**
+   * Proveedores que ya venden lo que se está comprando, de más a menos
+   * coincidencias. El sistema lo aprendió de las compras anteriores (046);
+   * elegirlos a mano teniendo el dato era hacerle buscar lo que ya se sabe.
+   */
+  candidatos?: {
+    /** La ficha ENTERA. Media ficha con un `as` tumba el selector: pasó. */
+    proveedor: ProveedorOpcion;
+    coincidencias: number;
+    deCuantos: number;
+  }[];
+  /** Los clientes que esperan esto, para que la compra lleve su porqué. */
+  esperan?: {
+    cliente: string;
+    cotizacion: string;
+    cotizacion_id: string;
+    codigos: string[];
+    prometida: string;
+  }[];
 }) {
   const router = useRouter();
   // El estado inicial se calcula UNA vez, aplicando la precarga sobre el
   // estado vacío con el mismo reducer que usa todo lo demás. Hacerlo con un
   // efecto duplicaría las líneas en cuanto React montara dos veces.
-  const [estado, despachar] = useReducer(reducir, null, () =>
-    precarga.reduce(
+  const [estado, despachar] = useReducer(reducir, null, () => {
+    const conLineas = precarga.reduce(
       (e, i) => reducir(e, { tipo: "agregar", producto: i.producto, cantidad: i.cantidad }),
       estadoInicial(hoy),
-    ),
-  );
+    );
+    // El porqué viaja con la compra, no solo en la pantalla: las
+    // observaciones se ven en la ficha y es lo que lee quien recibe.
+    // Editable, como todo lo que se propone.
+    if (esperan.length === 0) return conLineas;
+    return reducir(conLineas, {
+      tipo: "cabecera",
+      campo: "observaciones",
+      valor: esperan
+        .map(
+          (e) =>
+            `Para ${e.cliente} (${e.cotizacion}), prometido ${formatearFecha(e.prometida)}.`,
+        )
+        .join(" "),
+    });
+  });
 
   // El proveedor elegido, entero. Antes se buscaba en la lista con un `find`;
   // ahora la lista no está —el elegido puede venir de una búsqueda o de un alta
@@ -157,6 +194,39 @@ export function ConstructorCompra({
                   ficha del elegido, así que aquí solo queda el porqué de que
                   sea lo primero que se rellena. */}
               <div className="flex flex-col gap-1">
+                {/* A quién comprárselo, sin buscarlo. ENCIMA del buscador: debajo,
+                    el panel de resultados los tapaba al pulsar el campo, y el
+                    atajo desaparecía justo cuando se iba a usar. Solo cuando no hay
+                    proveedor todavía: una vez elegido, estos botones
+                    invitarían a cambiarlo sin motivo. */}
+                {!proveedor && candidatos.length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2 pb-1">
+                    <span className="text-xs text-[var(--fg-subtle)]">
+                      Ya te han vendido esto:
+                    </span>
+                    {candidatos.map((c) => (
+                      <button
+                        key={c.proveedor.id}
+                        type="button"
+                        onClick={() => {
+                          setProveedor(c.proveedor);
+                          despachar({
+                            tipo: "cabecera",
+                            campo: "proveedorId",
+                            valor: c.proveedor.id,
+                          });
+                        }}
+                        className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-sm hover:bg-[var(--surface-2)]"
+                      >
+                        {c.proveedor.razon_social}
+                        <span className="ml-1.5 text-xs text-[var(--fg-subtle)]">
+                          {c.coincidencias} de {c.deCuantos}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
                 <BuscadorProveedores
                   id="com-proveedor"
                   sugeridos={sugeridos}
@@ -176,6 +246,7 @@ export function ConstructorCompra({
                     Es lo primero: los precios que se enseñan son los suyos.
                   </span>
                 )}
+
               </div>
 
               <label className="flex flex-col gap-1">
@@ -352,6 +423,42 @@ export function ConstructorCompra({
               </TableContenedor>
             )}
           </section>
+
+          {/* Para quién es. Cuando la compra nace de la bandeja tiene un
+              motivo —alguien confirmó y espera— y ese motivo se perdía: la
+              pantalla no lo enseñaba, y quien recibía la mercadería días
+              después no sabía que esas ocho unidades ya tenían dueño.
+
+              Va abajo y no arriba a propósito: no es un dato que haya que
+              rellenar, es el porqué de lo que se está haciendo. */}
+          {esperan.length > 0 ? (
+            <section className="card p-4">
+              <h2 className="text-sm font-semibold">Para quién es</h2>
+              <p className="mb-2 text-xs text-[var(--fg-subtle)]">
+                Ya está confirmado por estos clientes. Se anota en las
+                observaciones para que quien reciba la mercadería lo sepa.
+              </p>
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {esperan.map((e) => (
+                  <li key={e.cotizacion_id} className="flex flex-wrap items-baseline gap-x-2">
+                    <strong>{e.cliente}</strong>
+                    <Link
+                      href={`/cotizaciones/${e.cotizacion_id}`}
+                      className="font-mono text-xs text-brand-600 hover:underline"
+                    >
+                      {e.cotizacion}
+                    </Link>
+                    <span className="text-xs text-[var(--fg-muted)]">
+                      {e.codigos.join(", ")}
+                    </span>
+                    <span className="ml-auto text-xs text-[var(--fg-subtle)]">
+                      prometido {formatearFecha(e.prometida)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <section className="card p-4">
             <label className="flex flex-col gap-1">

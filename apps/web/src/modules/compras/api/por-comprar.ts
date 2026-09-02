@@ -7,6 +7,7 @@ import { fallo } from "@/lib/errores";
 
 import {
   agruparPorComprar,
+  fechaPrometida,
   resumirPorComprar,
   type LineaComprometida,
   type PedidoPendiente,
@@ -275,4 +276,91 @@ export async function precargaDeCompra(
     });
   }
   return salida;
+}
+
+/** Un cliente que está esperando algo de lo que se va a comprar. */
+export interface QuienEspera {
+  cliente: string;
+  cotizacion: string;
+  cotizacion_id: string;
+  /** Los códigos de esta compra que él espera. */
+  codigos: string[];
+  /** La fecha prometida más cercana de sus líneas. */
+  prometida: string;
+}
+
+/**
+ * Para quién es esta compra.
+ *
+ * Cuando se compra desde la bandeja, la compra tiene un motivo —un cliente que
+ * confirmó y espera— y ese motivo se perdía por el camino: la pantalla de
+ * compra no lo enseñaba, y quien recibía la mercadería días después no tenía
+ * forma de saber que esas 8 unidades ya tenían dueño.
+ *
+ * No hace falta pasarlo por la URL: con los productos basta, porque
+ * `v_comprometido` sabe quién espera cada uno.
+ */
+export async function paraQuienEs(
+  productoIds: readonly string[],
+): Promise<QuienEspera[]> {
+  if (productoIds.length === 0) return [];
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("v_comprometido")
+      .select("cliente, cotizacion, cotizacion_id, codigo, fecha, disponibilidad, dias_entrega")
+      .in("producto_id", [...productoIds].slice(0, 150))
+      .limit(300);
+
+    if (error || !data) return [];
+
+    const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
+      new Date(),
+    );
+
+    const porCotizacion = new Map<string, QuienEspera>();
+    for (const f of data as unknown as {
+      cliente: string | null;
+      cotizacion: string;
+      cotizacion_id: string;
+      codigo: string;
+      fecha: string;
+      disponibilidad: string;
+      dias_entrega: number | null;
+    }[]) {
+      const prometida = fechaPrometida(
+        {
+          fecha: String(f.fecha).slice(0, 10),
+          disponibilidad: disponibilidadDe(f.disponibilidad),
+          dias_entrega: f.dias_entrega === null ? null : Number(f.dias_entrega),
+        },
+        hoy,
+        sumarDias,
+      );
+
+      const previo = porCotizacion.get(f.cotizacion_id);
+      if (previo) {
+        if (!previo.codigos.includes(f.codigo)) previo.codigos.push(f.codigo);
+        if (prometida < previo.prometida) previo.prometida = prometida;
+      } else {
+        porCotizacion.set(f.cotizacion_id, {
+          cliente: f.cliente ?? "—",
+          cotizacion: f.cotizacion,
+          cotizacion_id: f.cotizacion_id,
+          codigos: [f.codigo],
+          prometida,
+        });
+      }
+    }
+
+    // El que antes lo espera, primero.
+    return [...porCotizacion.values()].sort((a, b) =>
+      a.prometida.localeCompare(b.prometida),
+    );
+  } catch {
+    // Es un adorno informativo sobre una pantalla que tiene que abrir igual.
+    // Tumbarla porque no se pudo averiguar para quién es sería absurdo.
+    return [];
+  }
 }

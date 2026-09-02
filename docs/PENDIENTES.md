@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **981 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 049, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 050, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -1034,6 +1034,74 @@ está comprando a costo cero»** y el botón de guardar se encendió.
 4. **La compra no lleva el porqué.** Cuando llega la mercadería, quien recibe
    no ve que esas 8 unidades son para MINERA X, prometidas el 12/09. Podría
    viajar en las observaciones desde la bandeja.
+
+---
+
+### Ñ · La compra se propone sola, y lleva su porqué · HECHO el 02/09
+
+Segunda pasada sobre «hacerle la compra fácil cuando el pedido ya está
+dentro». Dos cosas que el sistema ya sabía y no decía.
+
+#### A quién comprárselo
+
+Encima del buscador de proveedor salen ahora los que **ya venden lo que se
+está comprando**, con «2 de 3» al lado. Un clic y queda elegido —y como
+elegirlo dispara el relleno de costos (§N), ese mismo clic deja la compra
+lista.
+
+    de la bandeja a una compra lista:  «Comprar» + un clic
+
+Van **encima** del buscador y no debajo. Debajo estaban primero, y el panel de
+resultados los tapaba en cuanto se pulsaba el campo: el atajo desaparecía
+justo cuando se iba a usar.
+
+#### Para quién es
+
+La compra que nace de la bandeja tiene un motivo —alguien confirmó y espera— y
+ese motivo se perdía. Ahora la pantalla lo enseña (cliente, cotización, qué
+códigos y para cuándo) y **lo escribe en las observaciones**, que es lo que
+lee quien recibe la mercadería días después.
+
+No hace falta pasarlo por la URL: con los productos basta, porque
+`v_comprometido` sabe quién espera cada uno.
+
+#### El fallo del día, que merece quedar escrito
+
+Al pulsar el botón del proveedor, **la pantalla se cayó entera**:
+`Cannot read properties of undefined (reading 'length')`.
+
+Yo le había pasado al selector media ficha —solo id y razón social— con un
+`as ProveedorOpcion`. El selector fue a contar las marcas del elegido y no
+había ninguna lista que contar.
+
+**El `as` no arregla nada: apaga el aviso.** Lo escribí para no tener que
+traer la ficha completa, y el resultado fue una pantalla rota en el primer
+clic. Se arregla con lo que había que hacer desde el principio: traer la ficha
+de verdad (`proveedores_por_id`, migración 050), cuyo centinela comprueba que
+devuelve **exactamente las mismas columnas** que `proveedores_sugeridos` — si
+un día se separan, la migración no aplica y el selector no vuelve a recibir
+media ficha.
+
+Y si por lo que sea no se consigue la ficha, **el botón no se ofrece**. Es
+mejor no proponer que proponer algo que al pulsarlo rompe la pantalla.
+
+#### Cómo está el flujo hoy, de punta a punta
+
+    cotiza → el cliente confirma (todo o parte)
+      → la bandeja dice qué falta, para quién y para cuándo
+      → «Pedir precio» manda el mismo WhatsApp a varios
+      → «Comprar» llega con líneas, cantidades, proveedor propuesto,
+        costos rellenos y el porqué escrito
+      → recibir mueve el kardex, convierte la moneda y actualiza el inventario
+      → se factura entero o en partes
+
+#### Lo que sigue costando trabajo
+
+1. **Las respuestas de precio no se guardan** (el comparador). Depende de la
+   pregunta 3 a Willy.
+2. **Una compra por proveedor.** Si en la bandeja marca diez productos de dos
+   proveedores, hoy hace dos compras separando a mano cuáles van en cada una.
+   Con §K el sistema ya sabría repartirlas.
 
 ---
 

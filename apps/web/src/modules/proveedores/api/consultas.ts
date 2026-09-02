@@ -300,6 +300,29 @@ export async function proveedoresParaSelector(): Promise<
  * quieren la lista, porque filtrar por un proveedor que no se recuerda es
  * distinto de elegir a quién comprarle.
  */
+/**
+ * Las fichas COMPLETAS de unos proveedores concretos.
+ *
+ * Existe porque el selector necesita la ficha entera —marcas, condición de
+ * pago, cuántas compras lleva— y media ficha con un `as` lo tumba: eso pasó
+ * al proponer proveedores en la compra, ver migración 050.
+ */
+export async function proveedoresPorId(
+  ids: readonly string[],
+): Promise<Resultado<ProveedorOpcion[]>> {
+  if (ids.length === 0) return { ok: true, datos: [] };
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("proveedores_por_id", {
+      p_ids: [...ids],
+    });
+    if (error) return fallo(error);
+    return { ok: true, datos: (data ?? []) as unknown as ProveedorOpcion[] };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
 export async function proveedoresSugeridos(): Promise<Resultado<ProveedorOpcion[]>> {
   try {
     const supabase = await clienteServidor();

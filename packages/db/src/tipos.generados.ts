@@ -4050,6 +4050,30 @@ export type Database = {
           unidad: string
         }[]
       }
+      proveedores_por_id: {
+        Args: { p_ids: string[] }
+        Returns: {
+          activo: boolean
+          codigo: string
+          compras: number
+          contacto: string
+          dias_pago: number
+          direccion: string
+          email: string
+          id: string
+          lead_time_dias: number
+          marcas: string[]
+          numero_documento: string
+          pais: string
+          puntaje: number
+          razon_social: string
+          telefono: string
+          tipo: Database["public"]["Enums"]["tipo_compra"]
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
+          ultima_compra: string
+          whatsapp: string
+        }[]
+      }
       proveedores_sugeridos: {
         Args: { p_limit?: number }
         Returns: {

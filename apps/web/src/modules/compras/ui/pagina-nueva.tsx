@@ -3,9 +3,10 @@ import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
+import { proveedoresParaPedir } from "@/modules/proveedores";
+import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
 
-import { precargaDeCompra } from "../api/por-comprar";
+import { paraQuienEs, precargaDeCompra } from "../api/por-comprar";
 import { ConstructorCompra } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -47,6 +48,32 @@ export default async function PaginaNuevaCompra({
   const sp = searchParams ? await searchParams : {};
   const items = Array.isArray(sp.items) ? sp.items[0] : sp.items;
   const precarga = await precargaDeCompra(items);
+
+  // Cuando la compra viene de la bandeja, dos cosas que el sistema ya sabe
+  // y que antes había que averiguar a mano: a QUIÉN comprárselo y para
+  // QUIÉN es. Se piden solo si hay líneas: sin ellas no hay nada que
+  // proponer, y serían dos consultas para nada.
+  const ids = precarga.map((p) => p.producto.id);
+  const [quienesVenden, esperan] = await Promise.all([
+    ids.length > 0 ? proveedoresParaPedir(ids) : Promise.resolve(null),
+    ids.length > 0 ? paraQuienEs(ids) : Promise.resolve([]),
+  ]);
+
+  // Tres como mucho: una fila de botones para elegir, no otra lista que
+  // leer. Y con la FICHA COMPLETA, no con media inventada: el selector
+  // cuenta las marcas del elegido y con media ficha se cae (migración 050).
+  const mejores = quienesVenden?.ok
+    ? quienesVenden.datos.filter((c) => c.coincidencias > 0).slice(0, 3)
+    : [];
+  const fichas = await proveedoresPorId(mejores.map((m) => m.id));
+  const candidatos = mejores.flatMap((m) => {
+    const ficha = fichas.ok ? fichas.datos.find((f) => f.id === m.id) : undefined;
+    // Sin ficha no se ofrece el botón. Es mejor no proponerlo que proponer
+    // algo que al pulsarlo rompe la pantalla.
+    return ficha
+      ? [{ proveedor: ficha, coincidencias: m.coincidencias, deCuantos: ids.length }]
+      : [];
+  });
 
   if (!proveedores.ok) {
     return (
@@ -95,6 +122,8 @@ export default async function PaginaNuevaCompra({
       sugeridos={proveedores.datos}
       hoy={hoy}
       precarga={precarga}
+      candidatos={candidatos}
+      esperan={esperan}
     />
   );
 }
