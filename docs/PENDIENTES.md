@@ -1356,6 +1356,46 @@ Dos decisiones que conviene saber por si él pregunta:
   dice lo que decía cuando se emitió. Si el jefe de compras se va de la
   empresa, la cotización de hace seis meses sigue diciendo a quién se le mandó.
 
+#### Lo que esta migración dejó roto dos días, y nadie vio
+
+Luis, la noche del 02/09: creó una cotización, la guardó y le salió
+
+    column clientes_1.contacto does not exist (42703)
+
+al abrirla, y otra vez al llegar desde la ficha de un cliente.
+
+La 035 **borró `clientes.contacto`** —esas dos líneas están en el propio
+fichero de la migración— y dos consultas de `cotizaciones` se quedaron
+pidiéndosela:
+
+- el embed del detalle, `clientes!inner(… contacto …)`, escrito el 21/08;
+- `COLUMNAS_OPCION`, el cliente preseleccionado que llega con `?cliente=`,
+  escrito el 28/08.
+
+`ClienteOpcion` SÍ se actualizó ese día —su comentario dice literalmente
+*«Desde la 035 sale de `cliente_contactos`»`*— así que el tipo sabía la verdad
+y la consulta no. **Dos `as` se interpusieron**: un
+`as unknown as Omit<ClienteOpcion, …>` en el selector y un `as never` en el
+detalle. Un `as` no comprueba nada: afirma. Es la tercera vez en este proyecto
+que un cast tapa un defecto real —las otras dos, la ficha de proveedor y las
+columnas de `v_valorizacion_inventario`— y las tres veces salió en pantalla, no
+en el typecheck.
+
+Y no se vio antes por una razón boba: **la base tenía cero cotizaciones**. Las
+dos rutas rotas son «abrir una cotización» y «cotizarle a este cliente», y
+hasta esa noche no había ninguna que abrir.
+
+**Arreglado el 02/09.** La regla de a quién se le habla —el principal si lo
+hay, si no el primero activo— vive ahora en
+`clientes/dominio/contactos.ts` (`aQuienSeLeHabla`, con sus cuatro pruebas) y
+la usan los DOS módulos. Tenerla dos veces era el plan y salió exactamente así:
+uno de los dos no se enteró del cambio. El `as` del selector se cambió por un
+mapeo campo a campo, que es lo que habría fallado a la hora de compilar.
+
+Comprobado en la pantalla, que es lo único que lo habría cazado: la cotización
+abre, el cliente preseleccionado carga con su contacto, y una cotización sin
+destinatario propio cae al contacto principal del cliente.
+
 ### 2 · Departamento, provincia y distrito
 
 *«Aquí en el ubigeo, que es el distrito, debería traer, aquí tenemos que

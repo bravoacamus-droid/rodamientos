@@ -104,3 +104,37 @@ export function contactosListosParaGuardar<T extends { nombre: string; principal
 ): T[] {
   return unSoloPrincipal(sinNombresRepetidos(lista));
 }
+
+/* ------------------------------------------------------- A quién se le habla */
+
+/** Lo mínimo para saber a quién va dirigido: lo que se trae embebido. */
+export interface ContactoEmbebido {
+  nombre: string;
+  principal: boolean;
+  activo: boolean;
+}
+
+/**
+ * El contacto al que se le dirige un documento, y cuántos hay.
+ *
+ * Vive aquí y no dentro de cada consulta porque lo necesitan **dos módulos**:
+ * el listado de clientes y la cotización, que lo usa como destinatario cuando
+ * la propia cotización no trae uno escrito a mano.
+ *
+ * Tenerlo dos veces era el plan y salió mal: `cotizaciones` no se enteró de que
+ * la 035 movía `contacto` a su propia tabla, siguió pidiéndole esa columna a
+ * `clientes` —dos `as` de por medio, así que ni el typecheck ni el lint dijeron
+ * nada— y la cotización se rompió al abrirla. Dos días después.
+ *
+ * La regla: el principal si lo hay; si no, el primero activo. Una empresa puede
+ * quedarse sin principal marcado —al dar de baja al que lo era, el hueco queda
+ * libre a propósito— y enseñar a alguien es mejor que enseñar a nadie.
+ */
+export function aQuienSeLeHabla(gente: readonly ContactoEmbebido[] | null | undefined): {
+  contacto: string | null;
+  contactos: number;
+} {
+  const activos = (gente ?? []).filter((g) => g.activo);
+  const principal = activos.find((g) => g.principal) ?? activos[0] ?? null;
+  return { contacto: principal?.nombre ?? null, contactos: activos.length };
+}

@@ -3,6 +3,13 @@ import "server-only";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
+// La regla de a quién se le habla vive en `clientes` y la usan los dos
+// módulos. Por la ruta profunda: es dominio puro, no la superficie del
+// módulo, y así no arrastra nada de su `api/`.
+import {
+  aQuienSeLeHabla,
+  type ContactoEmbebido,
+} from "@/modules/clientes/dominio/contactos";
 
 import type { ClienteOpcion } from "../dominio/cliente";
 import type { Disponibilidad } from "../dominio/disponibilidad";
@@ -184,18 +191,7 @@ export async function clientesParaCotizar(preseleccionado?: string | null): Prom
       ok: true,
       datos: {
         sugeridos: (sugeridos.data ?? []) as unknown as ClienteOpcion[],
-        inicial: inicial.data
-          ? {
-              ...(inicial.data as unknown as Omit<
-                ClienteOpcion,
-                "cotizaciones" | "ultima_cotizacion"
-              >),
-              // El historial no se pide para uno solo: la fila ya viene
-              // elegida y «cotizado hace 3 meses» no cambia esa decisión.
-              cotizaciones: 0,
-              ultima_cotizacion: null,
-            }
-          : null,
+        inicial: inicial.data ? aOpcion(inicial.data) : null,
       },
     };
   } catch (e) {
@@ -205,10 +201,67 @@ export async function clientesParaCotizar(preseleccionado?: string | null): Prom
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Las mismas columnas que devuelven `buscar_clientes` y `clientes_sugeridos`. */
+/**
+ * La fila de `clientes` con la forma que devuelven las dos funciones.
+ *
+ * Se escribe campo a campo y NO con un `as`. El cast que había aquí ocultó
+ * durante dos días que la consulta le pedía a `clientes` una columna que la
+ * 035 había borrado: `contacto`. Ni el typecheck ni el lint dijeron nada —un
+ * `as` no comprueba, afirma— y el fallo salió al abrir una cotización, con un
+ * «column clientes_1.contacto does not exist» en la cara del operador.
+ */
+function aOpcion(fila: {
+  id: string;
+  codigo: string;
+  razon_social: string;
+  nombre_comercial: string | null;
+  numero_documento: string | null;
+  tipo_documento: string;
+  telefono: string | null;
+  condicion_pago: string;
+  dias_credito: number;
+  bloqueado: boolean;
+  motivo_bloqueo: string | null;
+  activo: boolean;
+  cliente_contactos: ContactoEmbebido[];
+}): ClienteOpcion {
+  return {
+    id: fila.id,
+    codigo: fila.codigo,
+    razon_social: fila.razon_social,
+    nombre_comercial: fila.nombre_comercial,
+    numero_documento: fila.numero_documento,
+    tipo_documento: fila.tipo_documento,
+    telefono: fila.telefono,
+    condicion_pago: fila.condicion_pago,
+    dias_credito: fila.dias_credito,
+    bloqueado: fila.bloqueado,
+    motivo_bloqueo: fila.motivo_bloqueo,
+    activo: fila.activo,
+    ...aQuienSeLeHabla(fila.cliente_contactos),
+    // El historial no se pide para uno solo: la fila ya viene elegida y
+    // «cotizado hace 3 meses» no cambia esa decisión.
+    cotizaciones: 0,
+    ultima_cotizacion: null,
+  };
+}
+
+/**
+ * Las mismas columnas que devuelven `buscar_clientes` y `clientes_sugeridos`.
+ *
+ * `contacto` NO es una de ellas. Dejó de ser columna de `clientes` en la 035
+ * —una empresa tiene al de compras, al de logística y al de mantenimiento— y
+ * las dos funciones lo calculan dentro. Aquí hay que traerse la gente
+ * embebida y aplanarla, igual que hace el listado de clientes.
+ *
+ * La cadena va escrita entera y no derivada: supabase-js infiere el tipo de
+ * la fila a partir del LITERAL, y una cadena calculada le deja
+ * `GenericStringError`.
+ */
 const COLUMNAS_OPCION = `id, codigo, razon_social, nombre_comercial, numero_documento,
-   tipo_documento, contacto, telefono, condicion_pago, dias_credito,
-   bloqueado, motivo_bloqueo, activo`;
+   tipo_documento, telefono, condicion_pago, dias_credito,
+   bloqueado, motivo_bloqueo, activo,
+   cliente_contactos(nombre, principal, activo)`;
 
 /**
  * Una cotización completa, con sus líneas y lo que hace falta para imprimirla.
@@ -293,7 +346,8 @@ export async function cotizacionPorId(id: string): Promise<
            mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
            igv, total, costo_total, margen_pct, cliente_id,
            clientes!inner(razon_social, numero_documento, tipo_documento,
-                          direccion, contacto, whatsapp, telefono),
+                          direccion, whatsapp, telefono,
+                          cliente_contactos(nombre, principal, activo)),
            perfiles!cotizaciones_vendedor_id_fkey(nombre),
            cotizacion_items(id, producto_id, orden, codigo, marca, descripcion,
                             cantidad, unidad_codigo, valor_unitario,
@@ -318,7 +372,9 @@ export async function cotizacionPorId(id: string): Promise<
     if (!emisor.data) return { ok: false, error: "Falta configurar los datos de la empresa." };
 
     const c = cabecera.data as unknown as Record<string, unknown>;
-    const cli = c.clientes as Record<string, unknown>;
+    const { cliente_contactos: gente, ...cli } = c.clientes as Record<string, unknown> & {
+      cliente_contactos?: ContactoEmbebido[];
+    };
     const items = (c.cotizacion_items ?? []) as Record<string, unknown>[];
     const vendedor = (c.perfiles as { nombre?: string } | null)?.nombre ?? null;
 
@@ -327,7 +383,13 @@ export async function cotizacionPorId(id: string): Promise<
       datos: {
         // El select con relaciones anidadas devuelve un tipo que TypeScript no
         // puede estrechar solo; la forma real la garantiza la firma de arriba.
-        cabecera: { ...(c as Record<string, unknown>), cliente: cli, vendedor } as never,
+        cabecera: {
+          ...(c as Record<string, unknown>),
+          // `contacto` del cliente es el destinatario por defecto de la
+          // cotización, y sale de `cliente_contactos` desde la 035.
+          cliente: { ...cli, contacto: aQuienSeLeHabla(gente).contacto },
+          vendedor,
+        } as never,
         // El orden lo fija la cotización, no el orden de llegada de la fila.
         lineas: [...items].sort(
           (a, b) => Number(a.orden) - Number(b.orden),

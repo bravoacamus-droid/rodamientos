@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  aQuienSeLeHabla,
   contactosListosParaGuardar,
   mismoNombre,
   nombreLlano,
@@ -119,5 +120,43 @@ describe("contactosListosParaGuardar", () => {
 
   it("una lista vacía no se convierte en nada raro", () => {
     expect(contactosListosParaGuardar([])).toEqual([]);
+  });
+});
+
+describe("aQuienSeLeHabla", () => {
+  it("elige al principal", () => {
+    expect(
+      aQuienSeLeHabla([
+        { nombre: "Rosa", principal: false, activo: true },
+        { nombre: "Julio", principal: true, activo: true },
+      ]),
+    ).toEqual({ contacto: "Julio", contactos: 2 });
+  });
+
+  it("sin principal marcado, el primero activo", () => {
+    // Pasa de verdad: al dar de baja al que era principal, el hueco queda
+    // libre a propósito. Enseñar a alguien es mejor que enseñar a nadie.
+    expect(
+      aQuienSeLeHabla([
+        { nombre: "Rosa", principal: false, activo: true },
+        { nombre: "Julio", principal: false, activo: true },
+      ]).contacto,
+    ).toBe("Rosa");
+  });
+
+  it("ignora a los dados de baja, aunque fueran el principal", () => {
+    expect(
+      aQuienSeLeHabla([
+        { nombre: "Julio", principal: true, activo: false },
+        { nombre: "Rosa", principal: false, activo: true },
+      ]),
+    ).toEqual({ contacto: "Rosa", contactos: 1 });
+  });
+
+  it("un cliente sin gente no rompe nada", () => {
+    // Es el caso de los 97 de Willy hasta que los llene.
+    expect(aQuienSeLeHabla([])).toEqual({ contacto: null, contactos: 0 });
+    expect(aQuienSeLeHabla(null)).toEqual({ contacto: null, contactos: 0 });
+    expect(aQuienSeLeHabla(undefined)).toEqual({ contacto: null, contactos: 0 });
   });
 });
