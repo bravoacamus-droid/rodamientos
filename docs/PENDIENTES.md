@@ -1891,11 +1891,31 @@ envío atascado de verdad, comprueba que vuelve a la cola y lo deja como
 estaba. Sobre los 518 comprobantes reales la corrida sale a cero, que es lo
 correcto — están todos en `aceptado` o `baja_aceptada`.
 
-### 0.7 · Lo que el CI no hace
+### 0.7 · Lo que el CI no hace · dos cosas cerradas el 02/09, la tercera bloqueada
 
 `verificar.yml` corre typecheck, lint, tests y build. **No aplica migraciones,
-no despliega y no corre los e2e.** Y el build depende de dos secrets, así que
-puede salir en rojo por configuración y no por código — ya anotado en §6.
+no despliega y no corre los e2e.**
+
+**Lo cerrado el 02/09:**
+
+- **El build ya no depende de secrets.** Caía en rojo si `NEXT_PUBLIC_SUPABASE_URL`
+  o `NEXT_PUBLIC_SUPABASE_ANON_KEY` no estaban configuradas en GitHub, y eso
+  es un CI que miente: el paso solo mira el código. Ahora usa el secret si
+  existe y valores de relleno si no — ninguna página se prerenderiza contra la
+  base, así que compila igual. Rojo vuelve a significar «hay un fallo».
+- **`pnpm db:revisar`** (`scripts/revisar-migraciones.mjs`), primero de todo
+  porque es lo más barato y porque comprueba lo que ningún otro paso puede
+  ver: **dos migraciones con el mismo número compilan, pasan el lint y pasan
+  los tests**. Se aplican por nombre y una sola vez, así que una de las dos se
+  quedaría fuera en silencio. En este proyecto es un riesgo real: dos hilos de
+  trabajo distintos escriben «la 055» el mismo día.
+
+**Lo que sigue abierto** —aplicar migraciones y correr los e2e en CI— necesita
+un proyecto Supabase de pruebas. No puede apuntar al del cliente: los e2e
+mueven stock, consumen correlativos y emiten documentos (`e2e/README.md`).
+**Bloqueado en Luis.**
+
+Y el despliegue seguirá fuera de CI a propósito: lo hace Vercel desde `main`.
 
 ### 0.8 · ~~`apps/demo` · 130 archivos que nadie usa~~ · borrada el 02/09
 
@@ -2207,12 +2227,14 @@ de Defontana.
   `BarraHerramientas` desestructuraba `children` y no lo pintaba: cualquier
   hijo se habría perdido en silencio. Nadie la usa todavía, así que no rompía
   nada; ahora funciona si alguien la usa.
-- **CI puede estar en rojo por los secrets, no por el código.** El workflow
-  «Verificar» corre typecheck, lint, tests y `pnpm build` en cada push a `main`, y el
-  build necesita `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  configurados como *secrets* del repositorio en GitHub. Si nunca se pusieron,
-  ese paso falla aunque typecheck y tests pasen. Son públicas por definición
-  —viajan al navegador—, pero salen de secrets para no fijarlas en el repo.
+- ~~**CI puede estar en rojo por los secrets, no por el código.**~~ ·
+  **arreglado el 02/09.** El build necesitaba `NEXT_PUBLIC_SUPABASE_URL` y
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` como *secrets* del repositorio, así que si
+  nunca se pusieron ese paso fallaba aunque typecheck y tests pasaran. Ahora
+  el workflow cae a valores de relleno cuando el secret no está: ninguna
+  página se prerenderiza contra la base, así que compila igual. Si el secret
+  existe se usa. Un CI que puede salir en rojo por configuración miente sobre
+  el código, que es lo único que ese paso mira.
 - ~~**`BuscadorProductos` de `@rodatech/ui` no lo usaba nadie.**~~ · **la mitad
   que importaba, HECHA el 28/08.** Su cabecera decía que era «el control más
   usado del ERP» y listaba cinco pantallas; en realidad ninguna lo importaba

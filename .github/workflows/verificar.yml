@@ -22,6 +22,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Lo primero porque es lo más barato —lee nombres de archivo, no abre
+      # ninguna conexión— y porque lo que comprueba no lo puede ver ninguno de
+      # los pasos siguientes: dos migraciones con el mismo número compilan,
+      # pasan el lint y pasan los tests. Se aplican por nombre y una sola vez,
+      # así que una de las dos se quedaría fuera sin dar error.
+      - name: Revisar la numeración de las migraciones
+        run: pnpm db:revisar
+
       - name: Comprobar tipos
         run: pnpm typecheck
 
@@ -34,11 +42,21 @@ jobs:
       - name: Tests unitarios
         run: pnpm test
 
-      # El build necesita las variables públicas de Supabase. Son públicas por
-      # definición (viajan al navegador), pero igual salen de secrets para no
-      # fijarlas en el repo.
+      # El build necesita las variables públicas de Supabase declaradas, no
+      # que apunten a ningún sitio: ninguna página se prerenderiza contra la
+      # base, así que compila igual con valores de relleno. Y eso es lo que
+      # queremos aquí — un CI que puede salir en rojo porque falta un secret
+      # miente sobre el código, que es lo único que este paso mira. Con el
+      # relleno, rojo significa que hay un fallo de verdad.
+      #
+      # Si el secret existe se usa, para que el build de `main` sea el mismo
+      # que se despliega. Un fork o un PR desde fuera no tiene secrets y
+      # compila igual.
+      #
+      # Lo que este paso NO comprueba es que las credenciales de Vercel sean
+      # correctas. Nunca lo comprobó: usaba las suyas.
       - name: Build
         run: pnpm build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://ci-sin-proyecto.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'clave-de-relleno-solo-para-compilar' }}
