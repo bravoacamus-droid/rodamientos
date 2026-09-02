@@ -19,10 +19,10 @@ volver a caer sale caro.
 > 1. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
 >    hay que inventar de cero, y ya tiene las dos piezas que necesita: la
 >    bandeja (§I) y qué vende cada proveedor (§K).
-> 2. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
->    guardado desde la 042.
-> 3. La **bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
->    (§0.6), que llevan esperando desde la auditoría del 31/08.
+> **Y ya no queda nada más que yo pueda hacer solo.** Lo del 31/08 está
+> cerrado —los contadores (§0.3), la bitácora (§0.5) y el barrendero de
+> SUNAT (§0.6)— y del plan de compras solo falta el comparador, que espera
+> la pregunta 3 a Willy.
 >
 > Y lo que se cerró el 02/09 después de subir: **facturar por partes** (§L),
 > que escondía dos fallos en el flujo del dinero; los **tres contadores** de
@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **45 de 45 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **999 en verde** |
+| `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 052, aplicadas** al Supabase del cliente |
@@ -257,9 +257,8 @@ Por orden de lo que más vale:
    falta de cada producto y a quién se le prometió.
 3. ~~**Los tres contadores que dan cifras falsas**~~ · **hechos el 02/09**
    (§0.3, migración 048).
-4. **El aviso de cambio de costo** (§G paso 7). El dato ya se guarda —
-   `v_precios_compra` de la 042 trae el costo anterior al lado— y falta
-   decirlo en el momento de recibir, con el efecto en el margen.
+4. ~~**El aviso de cambio de costo** (§G paso 7)~~ · **hecho el 02/09**, §P:
+   al recibir se dice si el costo se comió el margen, o el piso.
 5. ~~**Una factura parcial saca la cotización entera de la bandeja.**~~ ·
    **arreglado el 02/09** (§L), y resultó ser dos fallos: la factura además
    cobraba lo cotizado en vez de lo que el cliente confirmó.
@@ -1157,6 +1156,54 @@ Lo único que falta del plan es **el comparador** —guardar lo que contesta cad
 proveedor para poder elegir— y sigue esperando la pregunta 3 a Willy: si es
 obligatorio o va al lado. Con los teléfonos de los proveedores (§J) y esa
 respuesta, se cierra.
+
+---
+
+### P · El aviso de cambio de costo al recibir · HECHO el 02/09
+
+El paso 7 del plan de compras, y lo último que quedaba de él salvo el
+comparador. Willy, 01/09: *«sería bueno poner el último precio que compra, así
+con el precio anterior haiga historial y mejorar los precios»*.
+
+Al recibir mercadería, el panel de la derecha dice ahora qué le hace ese costo
+al negocio:
+
+    QUÉ PASA CON EL PRECIO
+    *VS-190*
+    Traerlo cuesta más que el precio mínimo que tienes fijado.
+    Hay que subir el precio antes de volver a venderlo.
+    La vez anterior fue REC-26-00002, a $10.0000
+
+#### No es el aviso que ya había
+
+El constructor tenía uno que salta con un salto del 50 %, y sirve para **cazar
+un decimal mal puesto**. Este contesta otra pregunta: **si el costo subió,
+¿todavía gano lo mismo?** Por eso van en bloques distintos.
+
+#### Las decisiones
+
+- **El margen se mide sobre el COSTO**, igual que en cotizaciones y que
+  `margen_objetivo_pct`. Dos definiciones de margen en el mismo sistema serían
+  dos respuestas a la única pregunta que importa.
+- **Se compara en dólares.** El histórico está en dólares desde la 042; una
+  compra en soles comparada sin convertir daría un «subió un 275 %» que no es
+  verdad. Y si falta el tipo de cambio, **no se dice nada**: callarse es mejor
+  que comparar mal.
+- **El umbral es del 10 %.** Un 5 % es ruido del tipo de cambio y de los
+  redondeos; avisar de eso convierte el panel en algo que se ignora.
+- **También avisa cuando BAJA.** Enterarse de que algo salió más barato sirve
+  para bajar el precio antes que la competencia.
+- **Un precio mínimo en cero NO es un piso de cero**: es que nadie lo fijó.
+  Tratarlo como piso marcaría en rojo medio catálogo — el maestro de Willy
+  llegó sin precios.
+- **NO bloquea.** La factura ya está firmada y el costo es el que es. Lo que se
+  decide después es el precio de venta, no si se recibe.
+
+#### Probado con el ciclo entero
+
+Compra a $10 → recepción → compra a $13 → al abrir la segunda recepción, el
+panel salió en rojo diciendo que traerlo cuesta más que el piso de $11, y con
+el documento y el costo de la vez anterior al lado.
 
 ---
 

@@ -1,6 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import {
+  useActionState,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
@@ -13,7 +21,9 @@ import {
   THead,
 } from "@rodatech/ui";
 
+import { referenciasDeProductos, type Referencia } from "../../acciones/referencias";
 import { registrarRecepcion, type ResultadoRecepcion } from "../../acciones/registrar";
+import { calcularImpacto, explicar } from "../../dominio/impacto";
 import {
   aPayload,
   avisos as calcularAvisos,
@@ -93,12 +103,67 @@ export function ConstructorRecepcion({
     return r;
   }, null);
 
+  // Contra qué se compara el costo que llega: lo que costó la vez anterior
+  // y a cuánto se vende. Se pide al cambiar las líneas —el operador elige
+  // la compra a mitad del registro— y si falla no pasa nada: el panel no
+  // sale y la recepción se registra igual.
+  const [referencias, setReferencias] = useState<Record<string, Referencia>>({});
+  const [, cargarReferencias] = useTransition();
+  const productosPedidos = useRef<string>("");
+
+  useEffect(() => {
+    const ids = [...new Set(estado.lineas.map((l) => l.productoId))].sort();
+    const clave = ids.join(",");
+    // Sin esto, cada tecla en una cantidad relanzaría la consulta.
+    if (clave === productosPedidos.current) return;
+    productosPedidos.current = clave;
+    if (ids.length === 0) {
+      setReferencias({});
+      return;
+    }
+    cargarReferencias(async () => {
+      const r = await referenciasDeProductos(ids);
+      setReferencias(r.ok ? r.datos : {});
+    });
+  }, [estado.lineas]);
+
   const costeo = useMemo(() => costeoDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
   const avisos = useMemo(() => calcularAvisos(estado), [estado]);
 
   const conGastos = costeo.factor !== 1;
   const compraElegida = compras.find((c) => c.id === estado.compraId) ?? null;
+
+  /**
+   * Qué le hace al negocio el costo con el que llega esto.
+   *
+   * El costo se pasa a dólares ANTES de comparar: el histórico está en
+   * dólares (042) y comparar una compra en soles contra él daría un «subió
+   * un 275 %» que no es verdad.
+   */
+  const impactos = useMemo(() => {
+    const tc = compraElegida?.tipo_cambio ?? null;
+    const enSoles = (compraElegida?.moneda ?? "USD") !== "USD";
+    // Sin tipo de cambio no se puede convertir, y comparar sin convertir
+    // sería peor que callarse. La compra no se puede guardar en soles sin
+    // él (042), así que esto solo pasa mientras se está registrando.
+    if (enSoles && !tc) return [];
+
+    return estado.lineas.flatMap((l) => {
+      const ref = referencias[l.productoId];
+      if (!ref) return [];
+      const costoUsd = enSoles && tc ? l.costoUnitario / tc : l.costoUnitario;
+      if (costoUsd <= 0) return [];
+      const i = calcularImpacto({
+        costoUsd,
+        costoAnteriorUsd: ref.costoAnteriorUsd,
+        precioVenta: ref.precioVenta,
+        precioMinimo: ref.precioMinimo,
+      });
+      const texto = explicar(i);
+      return texto ? [{ key: l.key, codigo: l.codigo, ref, impacto: i, texto }] : [];
+    });
+  }, [estado.lineas, referencias, compraElegida]);
 
   return (
     <form action={guardar} className="flex flex-col gap-5 p-6">
@@ -409,6 +474,44 @@ export function ConstructorRecepcion({
                   </li>
                 ))}
               </ul>
+            ) : null}
+
+            {/* Qué le hace este costo al negocio (plan de compras, paso 7).
+
+                Va aparte de los avisos de arriba porque contesta a otra
+                pregunta: aquellos cazan un decimal mal puesto, este dice si
+                el producto sigue siendo rentable. Y NO bloquea: el costo es
+                el que es, la factura ya está firmada. Lo que se decide
+                después es el precio de venta, no si se recibe. */}
+            {impactos.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+                  Qué pasa con el precio
+                </p>
+                {impactos.map((x) => (
+                  <div
+                    key={x.key}
+                    className={`rounded-md border p-2.5 text-xs ${
+                      x.impacto.gravedad === "grave"
+                        ? "border-[var(--danger)] bg-[var(--danger-bg)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)]"
+                    }`}
+                  >
+                    <span className="font-mono text-sm font-medium">{x.codigo}</span>
+                    <span className="mt-0.5 block">{x.texto}</span>
+                    {x.ref.documento ? (
+                      <span className="mt-0.5 block text-[var(--fg-subtle)]">
+                        La vez anterior fue {x.ref.documento}, a ${x.ref.costoAnteriorUsd?.toFixed(4)}
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+                <p className="text-xs text-[var(--fg-subtle)]">
+                  Esto no impide recibir: la factura ya está firmada y el costo
+                  es el que es. Lo que hay que decidir después es el{" "}
+                  <strong>precio de venta</strong>.
+                </p>
+              </div>
             ) : null}
           </div>
         </aside>
