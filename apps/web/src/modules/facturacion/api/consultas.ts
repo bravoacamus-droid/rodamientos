@@ -1,8 +1,11 @@
 import "server-only";
 
+import { redondear2 } from "@rodatech/config";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
+
+import { totalesDe } from "../dominio/emision";
 
 import type {
   ComprobanteDetalle,
@@ -14,6 +17,27 @@ import type {
   LineaComprobante,
   TipoComprobante,
 } from "../dominio/tipos";
+
+/**
+ * Lo que queda por facturar de una línea de cotización.
+ *
+ * El techo es lo que el cliente CONFIRMÓ (`cantidad_aprobada`, migración 041),
+ * no lo que se cotizó. Ese era el fallo que arregla la 047: al cliente que
+ * confirmaba 4 de 6 se le emitía un comprobante por 6.
+ *
+ * `cantidad_aprobada` en null significa «todavía no ha contestado». No puede
+ * caer a cero —una cotización que se factura es que se aprobó— así que se cae
+ * a lo cotizado, que es lo que hacía el sistema entero antes de la 041.
+ */
+const pendienteDe = (l: {
+  cantidad: number;
+  cantidad_aprobada: number | null;
+  cantidad_atendida: number | null;
+}): number =>
+  Math.max(
+    Number(l.cantidad_aprobada ?? l.cantidad ?? 0) - Number(l.cantidad_atendida ?? 0),
+    0,
+  );
 
 export const POR_PAGINA = 30;
 
@@ -271,9 +295,13 @@ export async function detalleComprobante(
 /**
  * Cotizaciones aprobadas que todavía no se han facturado.
  *
- * Es de donde nace un comprobante. Se excluyen las que ya tienen uno: facturar
- * dos veces la misma cotización es el error que más caro sale, porque el
- * segundo documento también descarga stock.
+ * Es de donde nace un comprobante. Salen las que tienen algo PENDIENTE de
+ * facturar, que desde la 047 no es lo mismo que «las que no tienen ninguna
+ * factura»: una cotización se puede entregar en dos veces.
+ *
+ * Facturar dos veces lo mismo lo impide `cantidad_atendida`, y lo vigila
+ * también un check en la base. No hace falta esconder la cotización entera
+ * para eso, y esconderla dejaba la segunda mitad sin forma de emitirse.
  */
 export async function cotizacionesFacturables(): Promise<
   Resultado<{ id: string; numero: string; fecha: string; cliente: string; total: number }[]>
@@ -281,40 +309,59 @@ export async function cotizacionesFacturables(): Promise<
   try {
     const supabase = await clienteServidor();
 
-    const [{ data, error }, { data: yaFacturadas }] = await Promise.all([
-      supabase
-        .from("cotizaciones")
-        .select(`id, numero, fecha, total, clientes(razon_social)`)
-        .eq("estado", "aprobada")
-        .order("numero", { ascending: false })
-        .limit(100),
-      supabase
-        .from("comprobantes")
-        .select("cotizacion_id")
-        .not("cotizacion_id", "is", null)
-        .neq("estado", "anulado"),
-    ]);
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .select(
+        `id, numero, fecha, total, clientes(razon_social),
+         cotizacion_items(cantidad, cantidad_aprobada, cantidad_atendida,
+                          valor_unitario, descuento_pct)`,
+      )
+      .eq("estado", "aprobada")
+      .order("numero", { ascending: false })
+      .limit(100);
 
     if (error) return fallo(error);
 
-    const facturadas = new Set(
-      (yaFacturadas ?? []).map((f) => String(f.cotizacion_id)),
-    );
-
     const filas = (data ?? []) as unknown as Array<
-      Record<string, unknown> & { clientes: { razon_social: string } | null }
+      Record<string, unknown> & {
+        clientes: { razon_social: string } | null;
+        cotizacion_items: Array<{
+          cantidad: number;
+          cantidad_aprobada: number | null;
+          cantidad_atendida: number | null;
+          valor_unitario: number;
+          descuento_pct: number;
+        }> | null;
+      }
     >;
 
     return {
       ok: true,
       datos: filas
-        .filter((c) => !facturadas.has(String(c.id)))
-        .map((c) => ({
+        .map((c) => {
+          const pendientes = (c.cotizacion_items ?? [])
+            .map((l) => ({ ...l, cantidad: pendienteDe(l) }))
+            .filter((l) => l.cantidad > 0);
+          return { c, pendientes };
+        })
+        // Se queda lo que TIENE algo pendiente, en vez de descartar lo que ya
+        // tiene un comprobante.
+        //
+        // El filtro viejo excluía toda cotización con una factura encima, para
+        // no facturar dos veces. Pero desde la 047 se puede facturar en partes,
+        // y aquel filtro escondía la segunda mitad para siempre: la cotización
+        // se quedaba con 2 unidades vivas que ya no había forma de emitir. Lo
+        // que impide facturar de más ahora es `cantidad_atendida`, que es
+        // exacto y lo vigila también la base.
+        .filter(({ pendientes }) => pendientes.length > 0)
+        .map(({ c, pendientes }) => ({
           id: String(c.id),
           numero: String(c.numero),
           fecha: String(c.fecha),
           cliente: c.clientes?.razon_social ?? "—",
-          total: Number(c.total ?? 0),
+          // Lo que queda por facturar, no el total de la cotización: es el
+          // número con el que se elige en el desplegable.
+          total: totalesDe(pendientes).total,
         })),
     };
   } catch (e) {
@@ -336,7 +383,8 @@ export async function cotizacionParaFacturar(
          clientes(razon_social, numero_documento, tipo_documento, condicion_pago, dias_credito),
          cotizacion_items(
            producto_id, orden, codigo, descripcion, unidad_codigo,
-           cantidad, valor_unitario, descuento_pct, importe
+           cantidad, cantidad_aprobada, cantidad_atendida,
+           valor_unitario, descuento_pct, importe
          )`,
       )
       .eq("id", id)
@@ -360,11 +408,17 @@ export async function cotizacionParaFacturar(
         descripcion: string | null;
         unidad_codigo: string | null;
         cantidad: number;
+        cantidad_aprobada: number | null;
+        cantidad_atendida: number | null;
         valor_unitario: number;
         descuento_pct: number;
         importe: number | null;
       }> | null;
     };
+
+    const lineasCrudas = (c.cotizacion_items ?? [])
+      .slice()
+      .sort((a, b) => a.orden - b.orden);
 
     return {
       ok: true,
@@ -380,19 +434,33 @@ export async function cotizacionParaFacturar(
         condicion_pago: c.clientes?.condicion_pago ?? "contado",
         dias_credito: Number(c.clientes?.dias_credito ?? 0),
         total: Number(c.total ?? 0),
-        lineas: (c.cotizacion_items ?? [])
-          .slice()
-          .sort((a, b) => a.orden - b.orden)
-          .map((i) => ({
-            producto_id: i.producto_id,
-            codigo: i.codigo ?? "—",
-            descripcion: i.descripcion ?? "—",
-            unidad: i.unidad_codigo ?? "NIU",
-            cantidad: Number(i.cantidad ?? 0),
-            valor_unitario: Number(i.valor_unitario ?? 0),
-            descuento_pct: Number(i.descuento_pct ?? 0),
-            importe: Number(i.importe ?? 0),
-          })),
+        lineas_ya_facturadas: lineasCrudas.filter((l) => pendienteDe(l) <= 0).length,
+        lineas: lineasCrudas
+          // Solo lo que queda por facturar. Una línea ya entregada entera
+          // no puede volver a salir en otro comprobante.
+          .filter((i) => pendienteDe(i) > 0)
+          .map((i) => {
+            const cantidad = pendienteDe(i);
+            return {
+              producto_id: i.producto_id,
+              codigo: i.codigo ?? "—",
+              descripcion: i.descripcion ?? "—",
+              unidad: i.unidad_codigo ?? "NIU",
+              cantidad,
+              cantidad_cotizada: Number(i.cantidad ?? 0),
+              cantidad_atendida: Number(i.cantidad_atendida ?? 0),
+              valor_unitario: Number(i.valor_unitario ?? 0),
+              descuento_pct: Number(i.descuento_pct ?? 0),
+              // El importe se recalcula sobre lo PENDIENTE. El de la tabla
+              // es el de la línea entera, y con una factura parcial daría
+              // un total que no cuadra con las cantidades que se emiten.
+              importe: redondear2(
+                cantidad *
+                  Number(i.valor_unitario ?? 0) *
+                  (1 - Number(i.descuento_pct ?? 0) / 100),
+              ),
+            };
+          }),
       },
     };
   } catch (e) {

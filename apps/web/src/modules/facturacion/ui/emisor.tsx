@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { importeConDescuento } from "@rodatech/config";
 import { Badge, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import { cargarCotizacion } from "../acciones/cargar";
@@ -18,10 +19,15 @@ import type { CotizacionFacturable, TipoComprobante } from "../dominio/tipos";
 /**
  * Emisión de un comprobante a partir de una cotización aprobada.
  *
- * La pantalla NO deja tocar importes. Se elige la cotización, el tipo y la
- * forma de pago; lo demás viene de lo que ya se aprobó. Poder editar los
- * precios aquí sería tener dos verdades sobre la misma venta, y la que acabaría
- * en el comprobante no sería la que el cliente aceptó.
+ * La pantalla NO deja tocar PRECIOS. Se elige la cotización, el tipo y la
+ * forma de pago; los importes vienen de lo que ya se aprobó. Poder editarlos
+ * aquí sería tener dos verdades sobre la misma venta, y la que acabaría en el
+ * comprobante no sería la que el cliente aceptó.
+ *
+ * Las CANTIDADES sí se pueden bajar (047), nunca subir: el cliente confirmó 6,
+ * hay 4 en almacén, se le entregan 4 ahora y 2 cuando llegue la compra. Lo que
+ * no se factura sigue vivo en la cotización y en la bandeja «Por comprar». El
+ * techo lo vuelve a aplicar el servidor: desde aquí solo se puede pedir menos.
  *
  * Los totales que se ven son la misma cuenta que hace Postgres al emitir. Si
  * en pantalla saliera otro número, el operador vería uno y se grabaría otro.
@@ -56,6 +62,14 @@ export function EmisorComprobante({
   // documento que acompaña el movimiento físico. Se marca solo en la venta
   // de mostrador, cuando el cliente se lleva la pieza y se le factura ahí.
   const [descargarStock, setDescargarStock] = useState(false);
+  /**
+   * Cuánto se factura de cada línea, en el orden en que vienen.
+   *
+   * Arranca en lo pendiente —lo normal es facturarlo todo— y se puede
+   * bajar. Es el caso de Willy: el cliente confirmó 6, hay 4, se le
+   * entregan 4 ahora y 2 cuando llegue la compra.
+   */
+  const [cantidades, setCantidades] = useState<number[]>([]);
 
   const [resultado, emitir, emitiendo] = useActionState<ResultadoEmision | null, FormData>(
     async (previo, formData) => {
@@ -71,6 +85,7 @@ export function EmisorComprobante({
   useEffect(() => {
     if (!cotizacionId) {
       setCot(null);
+      setCantidades([]);
       return;
     }
     setErrorCarga(null);
@@ -87,6 +102,7 @@ export function EmisorComprobante({
         return;
       }
       setCot(r.datos);
+      setCantidades(r.datos.lineas.map((l) => l.cantidad));
       // El tipo y la condición se proponen desde el cliente, que es quien los
       // determina. Se pueden cambiar, pero por defecto aciertan.
       setTipo(tipoSugerido(r.datos.cliente_tipo_documento));
@@ -95,14 +111,34 @@ export function EmisorComprobante({
     });
   }, [cotizacionId]);
 
+  // Lo que se va a emitir de verdad. El servidor lo vuelve a recortar
+  // contra lo pendiente: esto es para que los totales de la pantalla
+  // coincidan con los del comprobante antes de pulsar.
+  const aEmitir = useMemo(
+    () =>
+      (cot?.lineas ?? [])
+        .map((l, i) => ({ ...l, cantidad: cantidades[i] ?? l.cantidad }))
+        .filter((l) => l.cantidad > 0),
+    [cot, cantidades],
+  );
+
   const totales = useMemo(
-    () => (cot ? totalesDe(cot.lineas) : { gravada: 0, igv: 0, total: 0, descuento: 0 }),
-    [cot],
+    () => totalesDe(aEmitir),
+    [aEmitir],
   );
 
   const bloqueos = useMemo(
-    () => (cot ? bloqueosEmision(cot, tipo) : []),
-    [cot, tipo],
+    () =>
+      cot
+        ? bloqueosEmision(
+            // Con las líneas y el total de lo que se emite, no los de la
+            // cotización: si se bajan todas a cero hay que bloquear, y el
+            // umbral de la boleta se mira contra lo que se cobra.
+            { ...cot, lineas: aEmitir, total: totales.total },
+            tipo,
+          )
+        : [],
+    [cot, aEmitir, totales.total, tipo],
   );
 
   const serie = tipo === "factura" ? serieFactura : serieBoleta;
@@ -119,6 +155,7 @@ export function EmisorComprobante({
     dias_credito: alCredito ? dias : 0,
     observaciones: observaciones.trim() || null,
     descargar_stock: descargarStock,
+    cantidades,
   });
 
   const listo = Boolean(cot) && bloqueos.length === 0 && !emitiendo;
@@ -298,9 +335,43 @@ export function EmisorComprobante({
                           </span>
                         </td>
                         <td className="py-2 pr-3 text-right tabular">
-                          {l.cantidad}{" "}
-                          <span className="text-xs text-[var(--fg-subtle)]">
+                          {/* Editable, con techo en lo pendiente (047). Es el
+                              caso de Willy: el cliente confirmó 6, hay 4, se
+                              le entregan 4 ahora y 2 cuando llegue la compra.
+                              El servidor lo vuelve a recortar; esto es para
+                              poder hacerlo, no para que sea seguro. */}
+                          <Input
+                            type="number"
+                            min={0}
+                            max={l.cantidad}
+                            step="0.01"
+                            numerico
+                            className="h-9 w-24 text-right"
+                            value={cantidades[i] ?? l.cantidad}
+                            onChange={(e) => {
+                              const n = Number(e.target.value);
+                              setCantidades((previas) =>
+                                previas.map((c, j) =>
+                                  j === i
+                                    ? Math.min(Math.max(Number.isFinite(n) ? n : 0, 0), l.cantidad)
+                                    : c,
+                                ),
+                              );
+                            }}
+                            aria-label={`Cantidad a facturar de ${l.codigo}`}
+                          />
+                          <span className="ml-1 text-xs text-[var(--fg-subtle)]">
                             {l.unidad}
+                          </span>
+                          <span className="block text-xs text-[var(--fg-subtle)]">
+                            {(cantidades[i] ?? l.cantidad) < l.cantidad
+                              ? `quedarían ${l.cantidad - (cantidades[i] ?? l.cantidad)} sin facturar`
+                              : l.cantidad !== l.cantidad_cotizada
+                                ? `de ${l.cantidad_cotizada} cotizadas` +
+                                  (l.cantidad_atendida > 0
+                                    ? ` · ${l.cantidad_atendida} ya facturadas`
+                                    : "")
+                                : `${l.cantidad} pendientes`}
                           </span>
                         </td>
                         <td className="py-2 pr-3 text-right tabular">
@@ -310,7 +381,14 @@ export function EmisorComprobante({
                           {l.descuento_pct > 0 ? `${l.descuento_pct}%` : "—"}
                         </td>
                         <td className="py-2 text-right tabular font-medium">
-                          {l.importe.toFixed(2)}
+                          {/* Sobre la cantidad que se está emitiendo, no sobre
+                              `l.importe`: si no, la suma de la columna no
+                              cuadraría con el total de abajo. */}
+                          {importeConDescuento(
+                            cantidades[i] ?? l.cantidad,
+                            l.valor_unitario,
+                            l.descuento_pct,
+                          ).toFixed(2)}
                         </td>
                       </tr>
                     ))}

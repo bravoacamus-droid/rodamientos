@@ -192,12 +192,30 @@ export interface CotizacionFacturable {
   condicion_pago: string;
   dias_credito: number;
   total: number;
+  /**
+   * Cuántas líneas de la cotización ya se facturaron ENTERAS y por eso no
+   * salen abajo. Sirve para distinguir «esta cotización no tiene líneas»
+   * de «ya está toda facturada», que llevan a acciones opuestas.
+   */
+  lineas_ya_facturadas: number;
+  /** Solo lo que queda por facturar. Lo entregado ya no está aquí. */
   lineas: {
     producto_id: string;
     codigo: string;
     descripcion: string;
     unidad: string;
+    /**
+     * Lo PENDIENTE de facturar: lo que el cliente confirmó menos lo que ya
+     * se le emitió. No es lo que se cotizó.
+     *
+     * Era `cantidad` a secas —lo cotizado— y ese era el fallo de la 047: al
+     * cliente que confirmaba 4 de 6 se le facturaban 6.
+     */
     cantidad: number;
+    /** Lo que se le cotizó en su día, para poder enseñarlo al lado. */
+    cantidad_cotizada: number;
+    /** Y lo que ya se le facturó de esta línea. */
+    cantidad_atendida: number;
     valor_unitario: number;
     descuento_pct: number;
     importe: number;

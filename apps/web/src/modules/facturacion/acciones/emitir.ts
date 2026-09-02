@@ -6,7 +6,7 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import type { Json } from "@rodatech/db/tipos";
 
 import { cotizacionParaFacturar } from "../api/consultas";
-import { bloqueosEmision, cuotasDe, vencimientoDe } from "../dominio/emision";
+import { bloqueosEmision, cuotasDe, totalesDe, vencimientoDe } from "../dominio/emision";
 
 /**
  * Emisión de un comprobante desde una cotización aprobada.
@@ -49,6 +49,18 @@ const esquema = z.object({
    * se le factura ahí mismo, sin guía previa.
    */
   descargar_stock: z.boolean(),
+  /**
+   * Cuánto se factura de cada línea pendiente, en el mismo orden.
+   *
+   * Es para el caso de Willy: el cliente confirmó 6, hay 4 en almacén, se
+   * le entregan 4 ahora y 2 cuando llegue la compra. Sin esto solo se
+   * puede facturar todo de una vez.
+   *
+   * El navegador solo puede pedir MENOS. Lo que manda se recorta contra lo
+   * que el servidor calcula como pendiente, así que una llamada fabricada
+   * no puede emitir de más — y los PRECIOS siguen sin venir de aquí.
+   */
+  cantidades: z.array(z.number().min(0)).max(200).optional(),
 });
 
 export type ResultadoEmision =
@@ -106,6 +118,24 @@ export async function emitirComprobante(
     };
   }
 
+  // Lo que de verdad se va a emitir: lo pedido, recortado contra lo
+  // pendiente que acaba de releerse del servidor. `l.cantidad` YA es el
+  // pendiente (api/consultas.ts), así que este `min` es el techo.
+  const aEmitir = cot.lineas
+    .map((l, i) => {
+      const pedido = datos.cantidades?.[i];
+      const cantidad =
+        pedido === undefined || !Number.isFinite(pedido)
+          ? l.cantidad
+          : Math.min(Math.max(pedido, 0), l.cantidad);
+      return { ...l, cantidad };
+    })
+    .filter((l) => l.cantidad > 0);
+
+  if (aEmitir.length === 0) {
+    return { ok: false, error: "No hay nada que facturar: todas las cantidades están en cero." };
+  }
+
   const alCredito = datos.condicion_pago === "credito" && datos.dias_credito > 0;
   const vencimiento = alCredito
     ? vencimientoDe(datos.fecha_emision, datos.dias_credito)
@@ -126,7 +156,7 @@ export async function emitirComprobante(
       fecha_vencimiento: vencimiento,
       observaciones: datos.observaciones,
       descargar_stock: datos.descargar_stock,
-      items: cot.lineas.map((l) => ({
+      items: aEmitir.map((l) => ({
         producto_id: l.producto_id,
         codigo: l.codigo,
         descripcion: l.descripcion,
@@ -139,11 +169,13 @@ export async function emitirComprobante(
       // él, un comprobante al crédito se rechaza con el error 3251. La función
       // comprueba que sumen el total antes de guardar.
       //
-      // Ojo: el total se recalcula en Postgres, así que aquí se manda el de la
-      // cotización, que es el mismo. Si alguna vez dejaran de coincidir, la
-      // propia función lo caza y falla en vez de emitir algo inconsistente.
+      // El total se calcula sobre lo que SE EMITE, no sobre el de la
+      // cotización. Antes se usaba `cot.total` con la nota de que «es el
+      // mismo»; desde la 047 puede no serlo —se factura lo confirmado, y en
+      // partes— y un cronograma que no cuadra hace fallar la emisión entera
+      // con un error que no le dice nada a nadie.
       cuotas: alCredito
-        ? cuotasDe(cot.total, datos.dias_credito, datos.fecha_emision).map((c) => ({
+        ? cuotasDe(totalesDe(aEmitir).total, datos.dias_credito, datos.fecha_emision).map((c) => ({
             numero: c.numero,
             monto: c.monto,
             fecha_vencimiento: c.vencimiento,

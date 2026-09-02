@@ -24,6 +24,9 @@ volver a caer sale caro.
 > 3. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
 >    guardado desde la 042.
 >
+> Y lo que se cerró el 02/09 después de subir: **facturar por partes** (§L),
+> que escondía dos fallos en el flujo del dinero.
+>
 > **Y antes de construir nada más, enseñarle el plan a Willy**:
 > https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
 > Son cinco preguntas y una de ellas —si confirmar un pedido aparta la
@@ -37,10 +40,10 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **43 de 43 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **937 en verde** |
+| `pnpm test` | **939 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 046, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 047, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -256,9 +259,9 @@ Por orden de lo que más vale:
 4. **El aviso de cambio de costo** (§G paso 7). El dato ya se guarda —
    `v_precios_compra` de la 042 trae el costo anterior al lado— y falta
    decirlo en el momento de recibir, con el efecto en el margen.
-5. **Una factura parcial saca la cotización entera de la bandeja.** El
-   agujero está explicado en §I; hay que decidir cómo se arregla y cuesta
-   una columna nueva.
+5. ~~**Una factura parcial saca la cotización entera de la bandeja.**~~ ·
+   **arreglado el 02/09** (§L), y resultó ser dos fallos: la factura además
+   cobraba lo cotizado en vez de lo que el cliente confirmó.
 6. **La bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
    (§0.6), que llevan esperando desde la auditoría del 31/08.
 
@@ -829,6 +832,79 @@ El **comparador de proveedores** (§G paso 5). Ya tiene a quién preguntar: con
 esta tabla, la bandeja «Por comprar» puede decir «para este código tienes tres
 proveedores, y el más barato la última vez fue este». Es el último paso del
 plan de compras que queda por construir.
+
+---
+
+### L · Una cotización se puede facturar por partes · HECHO el 02/09
+
+El agujero que se documentó en §I, y que resultó ser **dos**, y el primero
+peor que el que iba a buscar.
+
+#### 1 · La factura cobraba lo COTIZADO, no lo confirmado
+
+Desde la 041 el cliente puede confirmar parte: «de las 6 me quedo con 4». La
+bandeja de compras ya lo respetaba. **La emisión no**: facturaba `cantidad`,
+así que al cliente que confirmó 4 se le emitía un comprobante por 6, se le
+descargaban 6 del almacén y se le cobraban 6. Con un número de serie fiscal
+encima, y sin que saltara nada.
+
+#### 2 · Y la cotización se cerraba entera
+
+`emitir_comprobante` la ponía en `atendida` con cualquier comprobante, sin
+mirar cuánto se había entregado. Como la bandeja solo mira las `aprobada`, **lo
+no entregado desaparecía** de «Por comprar» y de cualquier sitio donde se
+pudiera ver que a ese cliente se le debe algo.
+
+#### Cómo quedó
+
+Una columna `cotizacion_items.cantidad_atendida` cuenta lo ya facturado, y el
+cierre de la cotización pasa a ser una consecuencia —«no queda nada
+pendiente»— en vez de un efecto secundario de emitir.
+
+El techo es un **check en la base**: `cantidad_atendida <= coalesce(cantidad_
+aprobada, cantidad)`. No se le puede facturar a nadie más de lo que confirmó,
+aunque alguien llame al RPC por su cuenta.
+
+Y ahora se puede facturar **una parte de lo confirmado**, que es el caso real
+de Willy: el cliente confirma 6, hay 4 en almacén, se le entregan 4 ahora y 2
+cuando llegue la compra. La cantidad de cada línea es editable en el emisor,
+con techo en lo pendiente; **los precios siguen sin poder tocarse**, y el
+servidor vuelve a recortar la cantidad contra lo que él calcula, así que desde
+el navegador solo se puede pedir MENOS.
+
+#### Probado en la pantalla, no solo en SQL
+
+    cotiza 6 · el cliente confirma 4
+    factura 1 →  2 uds · $118 · la cotización sigue «aprobada» · la bandeja ve 2
+    factura 2 →  2 uds · $118 · pasa a «atendida» · sale de la bandeja
+    total facturado $236 = 4 × 50 × 1.18   (antes habría sido $354, por 6)
+
+#### Tres cosas que aparecieron por el camino
+
+- **El cronograma de cuotas usaba el total de la COTIZACIÓN.** Con una factura
+  parcial no cuadra con el comprobante, y `emitir_comprobante` aborta la
+  emisión entera con un error que no le dice nada a nadie. Ahora se calcula
+  sobre lo que se emite.
+- **El desplegable de «qué facturar» escondía la segunda mitad.** Excluía toda
+  cotización que ya tuviera un comprobante —para no facturar dos veces— así
+  que las 2 unidades que quedaban vivas no había forma de emitirlas. Lo que
+  impide facturar de más ahora es `cantidad_atendida`, que es exacto; el
+  desplegable enseña lo PENDIENTE, y en su importe.
+- **El centinela de la migración gastaba dos correlativos de F001**, que es
+  una serie fiscal. Un salto ahí no es un número feo, es un hueco que SUNAT
+  pregunta — y esta migración se puede reaplicar. Ahora los devuelve.
+
+#### La técnica del parche, por si hace falta otra vez
+
+`emitir_comprobante` tiene 195 líneas y solo cambiaban cuatro. Se reescribe
+**sobre la definición que haya en la base** (`pg_get_functiondef` +
+`regexp_replace`), como ya hacía la 018, en vez de copiar la función entera en
+una migración nueva: copiarla la duplicaría, y a la siguiente vez que alguien
+tocara la 004 las dos versiones se separarían sin que nadie lo notara.
+
+El patrón va con `s+` y no con texto literal: el cuerpo guardado en la base
+lleva los saltos de línea con los que se aplicó la 004 —CRLF— y un
+`position()` con saltos simples no encuentra nada.
 
 ---
 

@@ -105,7 +105,15 @@ export function bloqueosEmision(
   }
 
   if (cotizacion.lineas.length === 0) {
-    lista.push({ campo: "lineas", mensaje: "La cotización no tiene líneas." });
+    // Los dos casos acaban sin líneas y llevan a sitios distintos: uno se
+    // arregla editando la cotización y el otro no se arregla, ya está hecho.
+    lista.push({
+      campo: "lineas",
+      mensaje:
+        cotizacion.lineas_ya_facturadas > 0
+          ? "Ya se facturó todo lo que el cliente confirmó de esta cotización."
+          : "La cotización no tiene líneas.",
+    });
   }
 
   // Una línea a valor cero no es ilegal, pero un comprobante ENTERO a cero sí

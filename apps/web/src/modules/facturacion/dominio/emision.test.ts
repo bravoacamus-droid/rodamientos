@@ -26,6 +26,7 @@ const COT: CotizacionFacturable = {
   condicion_pago: "credito",
   dias_credito: 30,
   total: 1000,
+  lineas_ya_facturadas: 0,
   lineas: [
     {
       producto_id: "33333333-3333-3333-3333-333333333333",
@@ -33,6 +34,8 @@ const COT: CotizacionFacturable = {
       descripcion: "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
       unidad: "NIU",
       cantidad: 10,
+      cantidad_cotizada: 10,
+      cantidad_atendida: 0,
       valor_unitario: 3.92,
       descuento_pct: 0,
       importe: 39.2,
@@ -74,6 +77,24 @@ describe("tipoSugerido", () => {
 describe("bloqueosEmision", () => {
   it("una factura a un cliente con RUC válido no bloquea", () => {
     expect(bloqueosEmision(COT, "factura")).toEqual([]);
+  });
+
+  /**
+   * Los dos casos acaban sin líneas y llevan a sitios opuestos: uno se
+   * arregla editando la cotización, el otro no se arregla porque ya está
+   * hecho. Antes de la 047 el segundo no podía ni ocurrir — la cotización
+   * se cerraba entera con la primera factura.
+   */
+  it("sin líneas y sin nada facturado, dice que la cotización está vacía", () => {
+    const r = bloqueosEmision({ ...COT, lineas: [], lineas_ya_facturadas: 0 }, "factura");
+    expect(r.map((b) => b.mensaje)).toContain("La cotización no tiene líneas.");
+  });
+
+  it("sin líneas porque ya se facturó todo, lo dice así", () => {
+    const r = bloqueosEmision({ ...COT, lineas: [], lineas_ya_facturadas: 2 }, "factura");
+    expect(r.map((b) => b.mensaje)).toContain(
+      "Ya se facturó todo lo que el cliente confirmó de esta cotización.",
+    );
   });
 
   /**
