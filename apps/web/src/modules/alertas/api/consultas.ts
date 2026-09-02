@@ -4,7 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
-import { familiaDe, ordenarBandeja, resumir } from "../dominio/alerta";
+import { familiaDe, ordenarBandeja } from "../dominio/alerta";
 import {
   TIPOS_QUE_SE_GENERAN,
   type Alerta,
@@ -115,23 +115,40 @@ export async function bandeja(
 export async function resumenBandeja(): Promise<Resultado<ResumenBandeja>> {
   try {
     const supabase = await clienteServidor();
+
+    // Se cuenta en Postgres (vista `v_resumen_alertas`, migración 048).
+    //
+    // Antes se traían las 2.000 primeras alertas sin archivar y se sumaban
+    // aquí. Mientras hubiera menos de 2.000 acertaba; a partir de ahí seguía
+    // dando un número, solo que otro — y con el cron diario de la 032
+    // generando alertas eso era cuestión de meses. Ver PENDIENTES §0.3.
     const { data, error } = await supabase
-      .from("alertas")
-      .select("severidad, leida, generada_en")
-      .eq("archivada", false)
-      .limit(2000);
+      .from("v_resumen_alertas")
+      .select("total, sin_leer, criticas, altas, medias, bajas, infos, ultima")
+      .maybeSingle();
 
     if (error) return fallo(error);
 
+    const n = (v: unknown): number => {
+      const x = Number(v ?? 0);
+      return Number.isFinite(x) ? x : 0;
+    };
+
     return {
       ok: true,
-      datos: resumir(
-        (data ?? []).map((d) => ({
-          severidad: String(d.severidad) as Severidad,
-          leida: Boolean(d.leida),
-          generada_en: String(d.generada_en),
-        })),
-      ),
+      datos: {
+        total: n(data?.total),
+        sinLeer: n(data?.sin_leer),
+        criticas: n(data?.criticas),
+        porSeveridad: {
+          critica: n(data?.criticas),
+          alta: n(data?.altas),
+          media: n(data?.medias),
+          baja: n(data?.bajas),
+          info: n(data?.infos),
+        },
+        ultima: data?.ultima ? String(data.ultima) : null,
+      },
     };
   } catch (e) {
     return fallo(e);

@@ -14,7 +14,6 @@ export {
   familiaDe,
   haceCuanto,
   ordenarBandeja,
-  resumir,
   tonoSeveridad,
 } from "./dominio/alerta";
 

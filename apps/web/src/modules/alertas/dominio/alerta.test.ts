@@ -5,7 +5,6 @@ import {
   familiaDe,
   haceCuanto,
   ordenarBandeja,
-  resumir,
   tonoSeveridad,
 } from "./alerta";
 import type { Alerta, Severidad, TipoAlerta } from "./tipos";
@@ -106,38 +105,6 @@ describe("agruparPorFamilia", () => {
     const [grupo] = agruparPorFamilia([primera, segunda]);
 
     expect(grupo?.alertas.map((a) => a.id)).toEqual([primera.id, segunda.id]);
-  });
-});
-
-describe("resumir", () => {
-  it("cuenta el total, lo no leído y lo crítico", () => {
-    const r = resumir([
-      alerta({ severidad: "critica", leida: false }),
-      alerta({ severidad: "critica", leida: true }),
-      alerta({ severidad: "baja", leida: false }),
-    ]);
-
-    expect(r.total).toBe(3);
-    expect(r.sinLeer).toBe(2);
-    expect(r.criticas).toBe(2);
-    expect(r.porSeveridad.baja).toBe(1);
-  });
-
-  it("de una bandeja vacía devuelve ceros y sin última", () => {
-    const r = resumir([]);
-
-    expect(r.total).toBe(0);
-    expect(r.ultima).toBeNull();
-  });
-
-  it("la última es la más reciente, no la primera de la lista", () => {
-    const r = resumir([
-      alerta({ generada_en: "2026-08-20T10:00:00.000Z" }),
-      alerta({ generada_en: "2026-08-26T10:00:00.000Z" }),
-      alerta({ generada_en: "2026-08-22T10:00:00.000Z" }),
-    ]);
-
-    expect(r.ultima).toBe("2026-08-26T10:00:00.000Z");
   });
 });
 

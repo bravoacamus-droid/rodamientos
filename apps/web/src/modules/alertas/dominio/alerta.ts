@@ -7,13 +7,7 @@
  * sin congelar el tiempo.
  */
 
-import type {
-  Alerta,
-  Familia,
-  ResumenBandeja,
-  Severidad,
-  TipoAlerta,
-} from "./tipos";
+import type { Alerta, Familia, Severidad, TipoAlerta } from "./tipos";
 
 /**
  * Peso de cada severidad, de mayor a menor urgencia.
@@ -89,41 +83,11 @@ export function ordenarBandeja(alertas: readonly Alerta[]): Alerta[] {
   });
 }
 
-/**
- * Cuenta lo que hay, para las tarjetas de arriba.
- *
- * Pide solo los tres campos que mira, no una `Alerta` entera: la consulta del
- * resumen trae esas tres columnas de hasta dos mil filas y no tiene por qué
- * inventarse el resto para satisfacer un tipo.
- */
-export function resumir(
-  alertas: readonly Pick<Alerta, "severidad" | "leida" | "generada_en">[],
-): ResumenBandeja {
-  const porSeveridad: Record<Severidad, number> = {
-    critica: 0,
-    alta: 0,
-    media: 0,
-    baja: 0,
-    info: 0,
-  };
-
-  let sinLeer = 0;
-  let ultima: string | null = null;
-
-  for (const a of alertas) {
-    porSeveridad[a.severidad] += 1;
-    if (!a.leida) sinLeer += 1;
-    if (ultima === null || a.generada_en > ultima) ultima = a.generada_en;
-  }
-
-  return {
-    total: alertas.length,
-    sinLeer,
-    criticas: porSeveridad.critica,
-    porSeveridad,
-    ultima,
-  };
-}
+// Aquí vivía `resumir()`, que contaba las tarjetas de arriba a partir de una
+// lista de alertas. Se quitó con la 048: la cuenta la hace ahora Postgres
+// (`v_resumen_alertas`), porque en JavaScript solo podía contar la PÁGINA que
+// se hubiera traído —2.000 filas— y a partir de ahí daba un número
+// equivocado sin decirlo. Ver PENDIENTES §0.3.
 
 /**
  * «hace 3 h», «hace 2 días».

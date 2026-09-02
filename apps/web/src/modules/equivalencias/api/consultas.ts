@@ -165,20 +165,26 @@ export async function totalDeclaradas(): Promise<
 > {
   try {
     const supabase = await clienteServidor();
-    const { data, error, count } = await supabase
-      .from("producto_equivalencias")
-      .select("producto_id, equivalente_id", { count: "exact" })
-      .limit(2000);
+
+    // Los dos números salen de Postgres (vista `v_resumen_equivalencias`,
+    // migración 048). `pares` ya era exacto —se pedía con `count: exact`—
+    // pero los PRODUCTOS distintos se contaban sobre las 2.000 primeras
+    // filas, y ese es justo el número que dice si el módulo se usa. Ver
+    // PENDIENTES §0.3.
+    const { data, error } = await supabase
+      .from("v_resumen_equivalencias")
+      .select("pares, productos")
+      .maybeSingle();
 
     if (error) return fallo(error);
 
-    const productos = new Set<string>();
-    for (const f of data ?? []) {
-      productos.add(String(f.producto_id));
-      productos.add(String(f.equivalente_id));
-    }
-
-    return { ok: true, datos: { pares: count ?? 0, productos: productos.size } };
+    return {
+      ok: true,
+      datos: {
+        pares: Number(data?.pares ?? 0),
+        productos: Number(data?.productos ?? 0),
+      },
+    };
   } catch (e) {
     return fallo(e);
   }

@@ -1196,6 +1196,7 @@ export type Database = {
         Row: {
           cantidad: number
           cantidad_aprobada: number | null
+          cantidad_atendida: number
           codigo: string
           costo_unitario: number
           cotizacion_id: string
@@ -1216,6 +1217,7 @@ export type Database = {
         Insert: {
           cantidad?: number
           cantidad_aprobada?: number | null
+          cantidad_atendida?: number
           codigo: string
           costo_unitario?: number
           cotizacion_id: string
@@ -1236,6 +1238,7 @@ export type Database = {
         Update: {
           cantidad?: number
           cantidad_aprobada?: number | null
+          cantidad_atendida?: number
           codigo?: string
           costo_unitario?: number
           cotizacion_id?: string
@@ -3139,8 +3142,43 @@ export type Database = {
           },
         ]
       }
+      v_cartera_por_cliente: {
+        Row: {
+          cliente: string | null
+          cliente_id: string | null
+          dias_mas_antiguo: number | null
+          documento: string | null
+          documentos: number | null
+          saldo: number | null
+          vencido: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       v_comprometido: {
         Row: {
+          atendido: number | null
           cliente: string | null
           cliente_id: string | null
           codigo: string | null
@@ -3507,6 +3545,19 @@ export type Database = {
         }
         Relationships: []
       }
+      v_resumen_alertas: {
+        Row: {
+          altas: number | null
+          bajas: number | null
+          criticas: number | null
+          infos: number | null
+          medias: number | null
+          sin_leer: number | null
+          total: number | null
+          ultima: string | null
+        }
+        Relationships: []
+      }
       v_resumen_clientes: {
         Row: {
           bloqueado: boolean | null
@@ -3523,6 +3574,13 @@ export type Database = {
           vencido: number | null
           vendedor: string | null
           ventas_12m: number | null
+        }
+        Relationships: []
+      }
+      v_resumen_equivalencias: {
+        Row: {
+          pares: number | null
+          productos: number | null
         }
         Relationships: []
       }
@@ -3974,6 +4032,10 @@ export type Database = {
       recepcionar_mercaderia: { Args: { p_datos: Json }; Returns: Json }
       refrescar_alertas: { Args: never; Returns: Json }
       registrar_ajuste_inventario: { Args: { p_datos: Json }; Returns: Json }
+      registrar_atencion_de_cotizacion: {
+        Args: { p_comprobante: string; p_cotizacion: string }
+        Returns: undefined
+      }
       registrar_movimiento: {
         Args: {
           p_cantidad: number

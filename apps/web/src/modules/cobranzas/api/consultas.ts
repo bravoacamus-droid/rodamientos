@@ -115,40 +115,30 @@ export async function cartera(
 export async function carteraPorCliente(): Promise<Resultado<ClienteEnCartera[]>> {
   try {
     const supabase = await clienteServidor();
+
+    // Se agrupa en Postgres (vista `v_cartera_por_cliente`, migración 048).
+    //
+    // Antes se traían los 1.000 primeros documentos abiertos y se agrupaban
+    // aquí, así que a partir de ahí la deuda salía DE MENOS — y el orden de
+    // llamada, que es de lo que va esta pantalla, salía mal. Ver PENDIENTES
+    // §0.3. Después de agrupar hay una fila por cliente, y eso está acotado
+    // por el maestro: ya no hay nada que truncar.
     const { data, error } = await supabase
-      .from("v_cartera")
-      .select("cliente_id, cliente, documento, saldo, dias_vencido")
+      .from("v_cartera_por_cliente")
+      .select("cliente_id, cliente, documento, documentos, saldo, vencido, dias_mas_antiguo")
       .limit(1000);
 
     if (error) return fallo(error);
 
-    const porCliente = new Map<string, ClienteEnCartera>();
-    for (const d of data ?? []) {
-      const id = String(d.cliente_id);
-      const actual =
-        porCliente.get(id) ??
-        {
-          cliente_id: id,
-          cliente: String(d.cliente ?? "—"),
-          documento: d.documento ?? null,
-          documentos: 0,
-          saldo: 0,
-          vencido: 0,
-          diasMasAntiguo: 0,
-        };
-
-      const saldo = Number(d.saldo ?? 0);
-      const dias = Number(d.dias_vencido ?? 0);
-
-      actual.documentos += 1;
-      actual.saldo = dos(actual.saldo + saldo);
-      if (dias > 0) actual.vencido = dos(actual.vencido + saldo);
-      actual.diasMasAntiguo = Math.max(actual.diasMasAntiguo, dias);
-
-      porCliente.set(id, actual);
-    }
-
-    const lista = [...porCliente.values()];
+    const lista: ClienteEnCartera[] = (data ?? []).map((d) => ({
+      cliente_id: String(d.cliente_id),
+      cliente: String(d.cliente ?? "—"),
+      documento: d.documento ?? null,
+      documentos: Number(d.documentos ?? 0),
+      saldo: dos(Number(d.saldo ?? 0)),
+      vencido: dos(Number(d.vencido ?? 0)),
+      diasMasAntiguo: Number(d.dias_mas_antiguo ?? 0),
+    }));
     const mayor = lista.reduce((a, c) => Math.max(a, c.saldo), 0);
 
     return {

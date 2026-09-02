@@ -19,13 +19,14 @@ volver a caer sale caro.
 > 1. El **comparador de proveedores** (§G, paso 5). Es lo único del plan que
 >    hay que inventar de cero, y ya tiene las dos piezas que necesita: la
 >    bandeja (§I) y qué vende cada proveedor (§K).
-> 2. Los **tres contadores que dan cifras falsas** (§0.3). Llevan desde el
->    31/08 esperando y siguen siendo la deuda técnica más barata de pagar.
-> 3. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
+> 2. El **aviso de cambio de costo** al recibir (§G, paso 7). El dato ya está
 >    guardado desde la 042.
+> 3. La **bitácora `actividad`** (§0.5) y el **reintento de envíos a SUNAT**
+>    (§0.6), que llevan esperando desde la auditoría del 31/08.
 >
 > Y lo que se cerró el 02/09 después de subir: **facturar por partes** (§L),
-> que escondía dos fallos en el flujo del dinero.
+> que escondía dos fallos en el flujo del dinero, y los **tres contadores**
+> de §0.3, que llevaban desde el 31/08.
 >
 > **Y antes de construir nada más, enseñarle el plan a Willy**:
 > https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
@@ -40,10 +41,10 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **43 de 43 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **939 en verde** |
+| `pnpm test` | **936 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 047, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 048, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -253,9 +254,8 @@ Por orden de lo que más vale:
 2. **El comparador de proveedores** (§G paso 5). Lo único del plan entero que
    hay que inventar de cero. Ya tiene de dónde partir: la bandeja sabe qué
    falta de cada producto y a quién se le prometió.
-3. **Los tres contadores que dan cifras falsas** (§0.3). Medio día, y evitan
-   dar números equivocados en la campana de alertas y en la deuda por cliente
-   en cuanto los datos crezcan.
+3. ~~**Los tres contadores que dan cifras falsas**~~ · **hechos el 02/09**
+   (§0.3, migración 048).
 4. **El aviso de cambio de costo** (§G paso 7). El dato ya se guarda —
    `v_precios_compra` de la 042 trae el costo anterior al lado— y falta
    decirlo en el momento de recibir, con el efecto en el margen.
@@ -1401,7 +1401,7 @@ arregló el síntoma; la causa —que no hay forma de enterarse— sigue.
 En una pantalla de listado es molesto. En `facturacion/acciones/emitir.ts` es
 una factura que no salió y nadie sabe por qué.
 
-### 0.3 · Tres contadores que dan un número EQUIVOCADO en silencio
+### 0.3 · ~~Tres contadores que dan un número EQUIVOCADO en silencio~~ · arreglado el 02/09
 
 La peor clase de fallo: no revientan, mienten.
 
@@ -1411,12 +1411,33 @@ La peor clase de fallo: no revientan, mienten.
 | `cobranzas/api/consultas.ts` · `carteraPorCliente` | 1.000 | La deuda por cliente. El comentario de arriba dice «llamar en el orden equivocado cuesta dinero» — y a partir de 1.000 documentos abiertos la suma es falsa. |
 | `equivalencias/api/consultas.ts` · `totalDeclaradas` | 2.000 | El recuento de equivalencias. |
 
-Los tres agregan **sobre la página**, no sobre la tabla. Se arreglan contando
-en Postgres (`count` exacto o una función) en vez de en JavaScript sobre un
-`.limit()`.
+Los tres agregaban **sobre la página**, no sobre la tabla. Mientras hubiera
+menos filas que el tope acertaban, así que los tres daban bien el día que se
+escribió esto — y el día que se pasara el tope seguirían dando un número,
+solo que otro.
 
 Es exactamente la misma clase de fallo que el truncado mudo de los
 desplegables de proveedor (§6), que ya mordió una vez.
+
+**Arreglado el 02/09, migración 048.** Tres vistas que cuentan en Postgres:
+`v_resumen_alertas`, `v_cartera_por_cliente` y `v_resumen_equivalencias`. El
+centinela de la migración no comprueba que devuelvan un número, sino que
+devuelven **el mismo** que la cuenta a mano sobre la tabla entera: si alguna
+se separa, la migración no aplica.
+
+Dos detalles que conviene recordar:
+
+- **La agregación baja a la base; lo que decide algo se queda arriba.** En
+  cobranzas la vista suma por cliente, pero la PRIORIDAD —a quién llamar
+  primero— se sigue calculando en TypeScript, donde está probada.
+- **`resumir()` de alertas se borró.** Se quedó sin llamador, y código muerto
+  CON PRUEBAS parece mantenido: el día que alguien lo reutilizara volvería a
+  contar sobre una página. Por eso `pnpm test` baja de 939 a 936.
+
+Comprobado además que las tres vistas responden por PostgREST con los
+nombres de columna exactos que pide la aplicación. Es lo único que la
+pantalla no puede enseñar cuando la tabla está vacía: un nombre mal escrito
+daría cero sin error, que es el mismo fallo otra vez.
 
 ### 0.4 · Consultas sin techo
 
