@@ -54,6 +54,18 @@ export interface LineaCompraEditable {
   unidad: string;
   cantidad: number;
   costoUnitario: number;
+  /**
+   * El costo lo puso el sistema, no una persona.
+   *
+   * Nace en `true` —se propone el promedio del maestro al añadir la línea— y
+   * pasa a `false` en cuanto alguien lo escribe. Sirve para dos cosas: para
+   * decirlo en pantalla, y para que al elegir proveedor se puedan pisar las
+   * propuestas con lo que ESE proveedor cobró, sin tocar lo tecleado.
+   *
+   * Un número propuesto es una ayuda; uno escrito es una decisión, y una
+   * decisión no se pisa sola.
+   */
+  costoPropuesto: boolean;
   /** Costo promedio del maestro, para comparar contra lo que se está pagando. */
   costoAnterior: number;
   /** Saldo en almacén ahora mismo. */
@@ -125,6 +137,9 @@ export type Accion =
   | { tipo: "quitar"; key: string }
   | { tipo: "cantidad"; key: string; valor: number }
   | { tipo: "costo"; key: string; valor: number }
+  // Lo que este proveedor cobró la última vez, por producto. Llega al
+  // elegirlo, y solo pisa lo que el sistema había propuesto.
+  | { tipo: "costosDelProveedor"; costos: Readonly<Record<string, number>> }
   | { tipo: "cargar"; estado: EstadoCompra };
 
 export function estadoInicial(fecha: string): EstadoCompra {
@@ -252,6 +267,7 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
             // el costo casi nunca cambia, y arrancar en cero convierte un
             // despiste en una compra registrada a coste nulo.
             costoUnitario: costo,
+            costoPropuesto: true,
             costoAnterior: costo,
             stockActual: accion.producto.stock ?? 0,
             stockMinimo: accion.producto.stock_minimo ?? 0,
@@ -274,7 +290,29 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
       return mapear(estado, accion.key, (l) => ({
         ...l,
         costoUnitario: costoValido(accion.valor),
+        // Lo escribió una persona: deja de ser una propuesta y ya no se pisa.
+        costoPropuesto: false,
       }));
+
+    case "costosDelProveedor": {
+      // El sistema ya sabe lo que este proveedor cobró la última vez —lo
+      // enseñaba debajo del campo— y aun así había que teclearlo. Con cinco
+      // líneas eso son cinco números copiados a mano de un sitio a otro de
+      // la misma pantalla.
+      //
+      // Se rellenan SOLO las propuestas. Lo que alguien escribió se queda,
+      // aunque se cambie de proveedor: puede haber tecleado el precio que
+      // acaba de darle por teléfono, y ese manda sobre cualquier histórico.
+      return {
+        ...estado,
+        lineas: estado.lineas.map((l) => {
+          if (!l.costoPropuesto) return l;
+          const costo = accion.costos[l.productoId];
+          if (costo === undefined || !(costo > 0)) return l;
+          return { ...l, costoUnitario: costoValido(costo) };
+        }),
+      };
+    }
 
     default:
       return estado;

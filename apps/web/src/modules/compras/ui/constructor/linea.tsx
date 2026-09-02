@@ -71,14 +71,18 @@ export function FilaCompra({
           aria-label={`Costo unitario de ${linea.codigo}`}
         />
         {/* La referencia útil no es el promedio del maestro, sino lo que ESTE
-            proveedor cobró la última vez: es contra lo que se negocia. */}
+            proveedor cobró la última vez: es contra lo que se negocia. Desde
+            que se rellena solo, lo que hay que decir es DE DÓNDE salió el
+            número que está arriba — un costo propuesto no es un costo
+            pactado, y quien registra tiene que poder distinguirlos. */}
         {ultimoCosto ? (
           <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)] tabular">
+            {linea.costoPropuesto ? "de " : ""}
             {ultimoCosto.numero}: {ultimoCosto.costo.toFixed(4)}
           </span>
         ) : linea.costoAnterior > 0 ? (
           <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)] tabular">
-            promedio {linea.costoAnterior.toFixed(4)}
+            {linea.costoPropuesto ? "del " : ""}promedio {linea.costoAnterior.toFixed(4)}
           </span>
         ) : null}
       </td>

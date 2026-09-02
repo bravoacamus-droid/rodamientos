@@ -294,3 +294,71 @@ describe("aPayload", () => {
     expect(aPayload(estado).fecha_estimada).toBeNull();
   });
 });
+
+/**
+ * El sistema ya sabe lo que cada proveedor cobró la última vez y lo enseñaba
+ * debajo del campo. Que hubiera que teclearlo igual era copiar un número de un
+ * sitio a otro de la misma pantalla, cinco veces por compra.
+ */
+describe("proponer los costos del proveedor", () => {
+  const COSTOS = { [P6205.id]: 3.1, [P7210.id]: 33 };
+
+  it("rellena lo que el sistema había propuesto", () => {
+    const e = construir(
+      { tipo: "agregar", producto: P6205 },
+      { tipo: "costosDelProveedor", costos: COSTOS },
+    );
+    expect(e.lineas[0]?.costoUnitario).toBe(3.1);
+  });
+
+  it("NO pisa lo que alguien escribió, aunque se cambie de proveedor", () => {
+    // Puede haber tecleado el precio que le acaban de dar por teléfono, y ese
+    // manda sobre cualquier histórico.
+    const e = construir(
+      { tipo: "agregar", producto: P6205 },
+      { tipo: "costo", key: "k1", valor: 2.5 },
+      { tipo: "costosDelProveedor", costos: COSTOS },
+    );
+    expect(e.lineas[0]?.costoUnitario).toBe(2.5);
+  });
+
+  it("cambiar de proveedor vuelve a proponer sobre lo ya propuesto", () => {
+    const e = construir(
+      { tipo: "agregar", producto: P6205 },
+      { tipo: "costosDelProveedor", costos: COSTOS },
+      { tipo: "costosDelProveedor", costos: { [P6205.id]: 4 } },
+    );
+    expect(e.lineas[0]?.costoUnitario).toBe(4);
+  });
+
+  it("un producto que ese proveedor nunca vendió se queda como estaba", () => {
+    const e = construir(
+      { tipo: "agregar", producto: P7210 },
+      { tipo: "costosDelProveedor", costos: { [P6205.id]: 3.1 } },
+    );
+    // El promedio del maestro, que es lo que se propuso al añadirlo.
+    expect(e.lineas[0]?.costoUnitario).toBe(34.43);
+  });
+
+  it("un costo de cero no se propone: no es un dato, es un hueco", () => {
+    const e = construir(
+      { tipo: "agregar", producto: P7210 },
+      { tipo: "costosDelProveedor", costos: { [P7210.id]: 0 } },
+    );
+    expect(e.lineas[0]?.costoUnitario).toBe(34.43);
+  });
+
+  it("escribir un cero SÍ es una decisión y se respeta", () => {
+    const e = construir(
+      { tipo: "agregar", producto: P7210 },
+      { tipo: "costo", key: "k1", valor: 0 },
+      { tipo: "costosDelProveedor", costos: { [P7210.id]: 33 } },
+    );
+    expect(e.lineas[0]?.costoUnitario).toBe(0);
+    expect(e.lineas[0]?.costoPropuesto).toBe(false);
+  });
+
+  it("sin líneas no revienta", () => {
+    expect(construir({ tipo: "costosDelProveedor", costos: COSTOS }).lineas).toEqual([]);
+  });
+});

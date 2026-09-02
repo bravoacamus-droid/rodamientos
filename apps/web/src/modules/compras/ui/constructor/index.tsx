@@ -106,6 +106,15 @@ export function ConstructorCompra({
     cargarCostos(async () => {
       const r = await costosDelProveedor(id);
       setUltimosCostos(r.ok ? r.datos : {});
+      // Y se rellenan, no solo se enseñan. Antes el número estaba debajo
+      // del campo y había que copiarlo a mano al campo de arriba, una vez
+      // por línea. El reducer solo pisa lo que el sistema había propuesto:
+      // lo tecleado se queda.
+      if (r.ok) {
+        const costos: Record<string, number> = {};
+        for (const [producto, u] of Object.entries(r.datos)) costos[producto] = u.costo;
+        despachar({ tipo: "costosDelProveedor", costos });
+      }
     });
   }, [estado.proveedorId]);
 

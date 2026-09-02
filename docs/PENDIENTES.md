@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **44 de 44 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **974 en verde** |
+| `pnpm test` | **981 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 049, aplicadas** al Supabase del cliente |
@@ -984,6 +984,56 @@ reexporta su `api/`, que es `server-only`. Next falla al construir con
 profunda —`@/modules/mensajes/dominio/enlaces`— que es lo que ya hacía el
 constructor de compras con el buscador de proveedores. Y el TIPO tampoco puede
 venir del índice: se movió `Plantilla` al dominio, que además es su sitio.
+
+---
+
+### N · Los costos se rellenan solos al elegir proveedor · HECHO el 02/09
+
+Mirando el flujo entero con el pedido ya dentro, el trozo que más trabajo
+manual tenía era el más tonto: **el sistema ya sabía lo que ese proveedor había
+cobrado la última vez y lo enseñaba debajo del campo, pero había que teclearlo
+igual.** Con cinco líneas eso son cinco números copiados de un sitio a otro de
+la misma pantalla.
+
+Ahora al elegir proveedor se rellenan.
+
+    antes   elegir proveedor · teclear 5 costos · moneda · guardar
+    ahora   elegir proveedor · moneda · guardar
+
+#### La regla, que es lo único delicado
+
+Cada línea sabe si su costo lo puso **el sistema** o **una persona**
+(`costoPropuesto`). Al elegir proveedor se pisan solo las propuestas.
+
+**Lo tecleado no se toca, ni aunque se cambie de proveedor.** Puede haber
+escrito el precio que le acaban de dar por teléfono, y ese manda sobre
+cualquier histórico. Un número propuesto es una ayuda; uno escrito es una
+decisión, y una decisión no se pisa sola.
+
+Y se dice de dónde salió: debajo del campo pone «**de** CMP-26-00008: 7.2500»
+cuando lo puso el sistema, y solo «CMP-26-00008: 7.2500» cuando el número de
+arriba lo escribió alguien. Un costo propuesto no es un costo pactado.
+
+#### Comprobado en pantalla
+
+Con una compra previa a BEARING COMPANY: al elegirlo, las dos líneas pasaron
+de 0 a 7.25 y 19.90, el total se calculó solo, **desapareció el aviso de «se
+está comprando a costo cero»** y el botón de guardar se encendió.
+
+#### Lo que sigue costando trabajo, por orden
+
+1. **Las respuestas de precio no se guardan.** Se le pide a cuatro (§M) y las
+   contestaciones se comparan de memoria o en un papel. Es el comparador, y
+   depende de la pregunta 3 a Willy.
+2. **El proveedor todavía se elige a mano.** El sistema ya sabe quién vende
+   cada cosa y a cuánto la dejó (§K): podría proponerlo, sobre todo cuando
+   todas las líneas las vende el mismo.
+3. **Una compra por proveedor.** Si en la bandeja marca diez productos y son de
+   dos proveedores, hoy tiene que hacer dos compras eligiendo a mano cuáles van
+   en cada una.
+4. **La compra no lleva el porqué.** Cuando llega la mercadería, quien recibe
+   no ve que esas 8 unidades son para MINERA X, prometidas el 12/09. Podría
+   viajar en las observaciones desde la bandeja.
 
 ---
 
