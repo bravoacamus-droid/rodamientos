@@ -11,6 +11,7 @@ import {
   compararTodo,
   comprasPropuestas,
   eleccionFinal,
+  estadoDeFila,
   resumirComparativa,
   resumirProveedores,
   type ProveedorConsultado,
@@ -49,9 +50,16 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
   const [enCurso, empezar] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
 
+  // Qué se le preguntó a quién. Sin esto, los cruces que nunca se
+  // preguntaron —al de retenes, las chapas— salían como respuestas que faltan.
+  const preguntadas = React.useMemo(
+    () => new Set(ronda.preguntadas),
+    [ronda.preguntadas],
+  );
+
   const filas = React.useMemo(
-    () => compararTodo(ronda.items, proveedores, respuestas),
-    [ronda.items, proveedores, respuestas],
+    () => compararTodo(ronda.items, proveedores, respuestas, preguntadas),
+    [ronda.items, proveedores, respuestas, preguntadas],
   );
   const resumenes = React.useMemo(
     () => resumirProveedores(filas, proveedores),
@@ -268,11 +276,16 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
                           className="px-3 py-2.5 text-right"
                         >
                           {celda.costoUsd === null ? (
-                            // «No ha contestado» y «me dijo que no lo tiene»
-                            // son cosas distintas, y la segunda cierra una
-                            // pregunta que la primera deja abierta.
+                            // Tres estados, no dos. «No se le preguntó» —no
+                            // vende eso— no es una respuesta que falte, y
+                            // marcarlo como tal llena la rejilla de deudas
+                            // que no existen.
                             <span className="text-[var(--fg-subtle)]">
-                              {!celda.respondida ? "—" : "no tiene"}
+                              {!celda.preguntada
+                                ? ""
+                                : !celda.respondida
+                                  ? "—"
+                                  : "no tiene"}
                             </span>
                           ) : (
                             <button
@@ -308,10 +321,11 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
 
                     <td className="px-4 py-2.5">
                       {fila.ganador === null ? (
-                        <span className="inline-flex items-center gap-1 text-[var(--warn)]">
-                          <TriangleAlert className="size-3.5" />
-                          Nadie lo tiene
-                        </span>
+                        // «Nadie lo tiene» solo cuando TODOS los preguntados
+                        // contestaron que no. Decirlo mientras se espera es
+                        // dar por cerrada una pregunta abierta, y manda a
+                        // buscar fuera algo que quizá llegue mañana.
+                        <EsperaOFalta estado={estadoDeFila(fila)} />
                       ) : elegido ? (
                         <span>
                           {
@@ -428,12 +442,43 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
       {abierto ? (
         <PanelRespuesta
           proveedor={proveedores.find((p) => p.consulta_proveedor_id === abierto)!}
-          items={ronda.items}
+          // Solo lo que se le preguntó A ÉL. Pedirle precio de un producto que
+          // no vende es lo que este cambio vino a quitar; dejarlo en el panel
+          // sería quitarlo del mensaje y devolverlo por la puerta de atrás.
+          items={ronda.items.filter((i) =>
+            preguntadas.has(`${i.item_id}|${abierto}`),
+          )}
           respuestas={respuestas.filter((r) => r.consulta_proveedor_id === abierto)}
           onCerrar={() => setAbierto(null)}
           onGuardado={guardado}
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Por qué esta fila no tiene a quién comprarle.
+ *
+ * Son tres motivos distintos y solo uno de ellos manda a buscar fuera. Antes
+ * se decía «nadie lo tiene» para los tres.
+ */
+function EsperaOFalta({ estado }: { estado: ReturnType<typeof estadoDeFila> }) {
+  if (estado === "esperando") {
+    return <span className="text-[var(--fg-subtle)]">Esperando respuesta</span>;
+  }
+  if (estado === "sin_preguntar") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[var(--warn)]">
+        <TriangleAlert className="size-3.5" />
+        No se le preguntó a nadie
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[var(--warn)]">
+      <TriangleAlert className="size-3.5" />
+      Nadie lo tiene
+    </span>
   );
 }

@@ -157,6 +157,14 @@ export interface Celda {
   consulta_proveedor_id: string;
   proveedor: string;
   /**
+   * Si a este proveedor se le preguntó por este producto (058).
+   *
+   * Con productos de proveedores distintos, la mitad de la rejilla son
+   * cruces que nunca se preguntaron: al de retenes no se le pidió precio de
+   * las chapas. Sin esto, esos huecos se leían como respuestas que faltan.
+   */
+  preguntada: boolean;
+  /**
    * Si de esta celda hay respuesta. No es lo mismo que `disponible`, y
    * confundirlas es lo que hacía que la rejilla le pusiera «no lo tiene» a
    * quien todavía no había contestado — que es acusarle de algo que no dijo,
@@ -236,6 +244,12 @@ export function compararTodo(
   items: readonly ItemConsultado[],
   proveedores: readonly ProveedorConsultado[],
   respuestas: readonly Respuesta[],
+  /**
+   * Qué se le preguntó a quién, como `item_id|consulta_proveedor_id`. Vacío
+   * significa «a todos, todo», que es lo que valía antes de la 058 y sigue
+   * valiendo cuando la ronda se hizo así.
+   */
+  preguntadas?: ReadonlySet<string>,
 ): FilaComparada[] {
   const porClave = new Map<string, Respuesta>();
   for (const r of respuestas) {
@@ -244,12 +258,14 @@ export function compararTodo(
 
   return items.map((item) => {
     const celdas: Celda[] = proveedores.map((p) => {
-      const r = porClave.get(`${item.item_id}|${p.consulta_proveedor_id}`);
+      const clave = `${item.item_id}|${p.consulta_proveedor_id}`;
+      const r = porClave.get(clave);
       const costo = r?.costo_unitario ?? null;
       return {
         item_id: item.item_id,
         consulta_proveedor_id: p.consulta_proveedor_id,
         proveedor: p.proveedor,
+        preguntada: preguntadas === undefined || preguntadas.has(clave),
         respondida: r !== undefined,
         costo,
         costoUsd: aUsdSinIgv(costo, p.moneda, p.tipo_cambio, p.incluye_igv),
@@ -506,4 +522,31 @@ export function eleccionFinal(
     else r[item] = elegido;
   }
   return r;
+}
+
+/**
+ * En qué punto está un producto de la rejilla.
+ *
+ * Existe porque «nadie lo tiene» se estaba diciendo antes de que nadie hubiera
+ * contestado. Es el mismo error que la rejilla tenía en las celdas —dar por
+ * cerrada una pregunta abierta— pero en la columna que resume la fila, que es
+ * la que se lee para decidir.
+ *
+ *  · `esperando` — se le preguntó a alguien y todavía no ha contestado. No se
+ *    sabe nada; perseguir.
+ *  · `nadie` — todos los que podían contestar dijeron que no lo tienen. Ahí sí
+ *    hay que buscar fuera.
+ *  · `sin_preguntar` — no se le preguntó a nadie. Es un descuido al armar la
+ *    consulta, no una respuesta del mercado.
+ *  · `resuelto` — hay al menos una oferta y por tanto un ganador.
+ */
+export type EstadoFila = "resuelto" | "esperando" | "nadie" | "sin_preguntar";
+
+export function estadoDeFila(fila: FilaComparada): EstadoFila {
+  if (fila.ganador) return "resuelto";
+
+  const preguntadas = fila.celdas.filter((c) => c.preguntada);
+  if (preguntadas.length === 0) return "sin_preguntar";
+  if (preguntadas.some((c) => !c.respondida)) return "esperando";
+  return "nadie";
 }

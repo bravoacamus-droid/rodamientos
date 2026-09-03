@@ -116,6 +116,12 @@ export interface RondaDetalle {
   items: ItemConsultado[];
   proveedores: ProveedorConsultado[];
   respuestas: Respuesta[];
+  /**
+   * Qué se le preguntó a quién, como `item_id|consulta_proveedor_id` (058).
+   * Con productos de proveedores distintos, media rejilla son cruces que
+   * nunca se preguntaron.
+   */
+  preguntadas: string[];
   /** Las compras que ya salieron de aquí, para no proponerlas dos veces. */
   compras: { id: string; numero: string; proveedor_id: string }[];
 }
@@ -162,6 +168,19 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
     if (compras.error) return fallo(compras.error, "compras/rondaDetalle");
 
     const idsProv = (provs.data ?? []).map((p) => String(p.id));
+
+    let preguntadas: string[] = [];
+    if (idsProv.length > 0) {
+      const { data, error: e } = await supabase
+        .from("consulta_precio_asignaciones")
+        .select("item_id, consulta_proveedor_id")
+        .in("consulta_proveedor_id", idsProv);
+      if (e) return fallo(e, "compras/rondaDetalle");
+      preguntadas = (data ?? []).map(
+        (a) => `${String(a.item_id)}|${String(a.consulta_proveedor_id)}`,
+      );
+    }
+
     let respuestas: Respuesta[] = [];
     if (idsProv.length > 0) {
       const { data, error: e } = await supabase
@@ -233,6 +252,7 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
         }),
         proveedores,
         respuestas,
+        preguntadas,
         compras: (compras.data ?? []).map((c) => ({
           id: String(c.id),
           numero: String(c.numero),

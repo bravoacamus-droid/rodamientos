@@ -282,3 +282,80 @@ export async function proveedoresParaPedir(
     return fallo(e);
   }
 }
+
+/**
+ * Los proveedores de CADA producto, por separado.
+ *
+ * `proveedoresParaPedir` agrupa al revés —por proveedor, con cuántos de la
+ * lista vende— y sirve para «¿a quién le pido todo esto?». Esta contesta la
+ * otra pregunta: «¿quién vende ESTE?», que es la que hace falta cuando los
+ * productos no comparten proveedor.
+ *
+ * Luis, 03/09: *«cada producto puede tener hasta 5 proveedores»*. Sin esto no
+ * hay forma de mandarle a cada uno solo lo suyo.
+ */
+export async function proveedoresPorProducto(
+  productoIds: readonly string[],
+): Promise<Resultado<Record<string, ProveedorParaPedir[]>>> {
+  if (productoIds.length === 0) return { ok: true, datos: {} };
+
+  try {
+    const supabase = await clienteServidor();
+
+    const { data, error } = await supabase
+      .from("proveedor_productos")
+      .select(
+        `producto_id, ultimo_costo_usd, comprado_veces,
+         proveedores!inner(id, razon_social, telefono, whatsapp, email, activo)`,
+      )
+      .in("producto_id", [...productoIds].slice(0, 150))
+      .eq("proveedores.activo", true);
+
+    if (error) return fallo(error, "proveedores/proveedoresPorProducto");
+
+    const filas = (data ?? []) as unknown as {
+      producto_id: string;
+      ultimo_costo_usd: number | string | null;
+      comprado_veces: number | null;
+      proveedores: {
+        id: string;
+        razon_social: string;
+        telefono: string | null;
+        whatsapp: string | null;
+        email: string | null;
+      } | null;
+    }[];
+
+    const salida: Record<string, ProveedorParaPedir[]> = {};
+    for (const f of filas) {
+      const p = f.proveedores;
+      if (!p) continue;
+      (salida[f.producto_id] ??= []).push({
+        id: p.id,
+        razon_social: p.razon_social,
+        telefono: p.telefono,
+        whatsapp: p.whatsapp,
+        email: p.email,
+        // Aquí «coincidencias» es cuántas veces se le compró ESE producto: es
+        // lo que ordena la lista de un solo producto. Al que ya se le ha
+        // comprado cinco veces se le pregunta antes que al que nunca.
+        coincidencias: Number(f.comprado_veces ?? 0),
+        ultimoCostoUsd: opcional(f.ultimo_costo_usd),
+      });
+    }
+
+    // El que más veces ha vendido primero, y el resto por nombre para que el
+    // orden no cambie entre dos cargas.
+    for (const lista of Object.values(salida)) {
+      lista.sort(
+        (a, b) =>
+          b.coincidencias - a.coincidencias ||
+          a.razon_social.localeCompare(b.razon_social),
+      );
+    }
+
+    return { ok: true, datos: salida };
+  } catch (e) {
+    return fallo(e, "proveedores/proveedoresPorProducto");
+  }
+}

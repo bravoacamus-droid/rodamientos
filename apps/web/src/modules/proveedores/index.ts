@@ -14,6 +14,7 @@ export { default as PaginaDetalleProveedor } from "./ui/pagina-detalle";
 export {
   proveedoresDeProducto,
   proveedoresParaPedir,
+  proveedoresPorProducto,
   productosDeProveedor,
   type ProductoDeProveedor,
   type ProveedorDeProducto,

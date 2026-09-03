@@ -48,8 +48,23 @@ const esquemaCrear = z.object({
     )
     .min(1, "No hay ningún producto que preguntar.")
     .max(200),
+  /**
+   * A quién se le pregunta, y QUÉ.
+   *
+   * Cada producto puede tener sus propios proveedores —unas chapas SKF y un
+   * retén no los vende la misma gente— así que la ronda lleva el reparto
+   * dentro (058). La forma antigua, un array de uuid, sigue valiendo en la
+   * base para cuando de verdad se pregunta lo mismo a todos.
+   */
   proveedores: z
-    .array(z.string().uuid())
+    .array(
+      z.object({
+        proveedor_id: z.string().uuid(),
+        productos: z
+          .array(z.string().uuid())
+          .min(1, "Un proveedor sin productos no tiene a qué contestar."),
+      }),
+    )
     .min(1, "Hay que elegir a quién preguntarle.")
     .max(20),
 });
@@ -75,8 +90,19 @@ export async function abrirRonda(datosCrudos: unknown): Promise<ResultadoRonda> 
   if (new Set(datos.items.map((i) => i.producto_id)).size !== datos.items.length) {
     return { ok: false, error: "Hay un producto repetido en la lista." };
   }
-  if (new Set(datos.proveedores).size !== datos.proveedores.length) {
+  const ids = datos.proveedores.map((p) => p.proveedor_id);
+  if (new Set(ids).size !== ids.length) {
     return { ok: false, error: "Hay un proveedor repetido." };
+  }
+
+  // Asignarle a alguien un producto que no está en la lista dejaría una
+  // asignación sin ítem, y la base la descartaría en silencio.
+  const productos = new Set(datos.items.map((i) => i.producto_id));
+  if (datos.proveedores.some((p) => p.productos.some((x) => !productos.has(x)))) {
+    return {
+      ok: false,
+      error: "A un proveedor se le asignó un producto que no está en la consulta.",
+    };
   }
 
   try {

@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 057, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 058, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -1653,6 +1653,97 @@ migración y no arregla nada que se vea.
     Cotización → Confirmar pedido → CONFIRMADA
                                        ├── ¿falta algo? → Pedir precio → Comparar → Compra → Recepción
                                        └── Generar guía → Facturar → Cobrar
+
+---
+
+### V · A cada proveedor lo suyo · 03/09
+
+Luis, viendo el bloque de «falta comprar» con dos productos: *«cada producto es
+de diferente proveedor, no el mismo. Cada producto puede tener hasta 5
+proveedores; se les va a enviar a los 5 un mensaje preguntando el precio y se
+va a registrar para tener historial. Ver la manera de un modal que salga
+cotizar junto o separado»*.
+
+Tenía razón, y el fallo estaba en el modelo, no en la pantalla.
+
+#### Lo que la 055 daba por supuesto
+
+Que a todos los proveedores de una ronda se les pregunta por **todos** los
+productos. `consulta_precio_proveedores` no tenía ninguna relación con los
+ítems.
+
+Con el pedido de la captura —unas chapas SKF y un retén— eso significaba
+mandarle al proveedor de retenes un mensaje pidiéndole chapas que no vende. Y
+su columna en la rejilla salía con un hueco que se leía como «no contestó».
+
+#### Junto o separado, y el sistema propone
+
+Las dos formas son legítimas:
+
+- **Junto** — un mensaje con todo a cada proveedor. Es lo del distribuidor
+  general, al que se le pide de todo aunque no lo tenga todo: menos mensajes y
+  una sola conversación.
+- **Separado** — a cada proveedor solo lo que vende. Es lo de los
+  especialistas.
+
+No lo decide el sistema, pero sí lo **propone**, porque el dato ya está: si
+ningún proveedor cubre todos los productos, mandar la lista entera es mandar
+ruido garantizado. Con las chapas y el retén propone separado, y lo dice.
+
+En modo separado la pantalla se agrupa **por producto**, cada uno con sus
+proveedores y su propio buscador para añadir más.
+
+#### Una ronda, no varias
+
+La alternativa era abrir una consulta por producto: más simple de programar y
+parte el historial en pedazos. «¿A quién le pregunté por lo del pedido de
+ACEROS CHILCA?» dejaría de tener una respuesta.
+
+Así que la ronda sigue siendo una y la migración **058** añade
+`consulta_precio_asignaciones`: qué producto le tocó a cada proveedor. El
+mensaje de cada uno lleva solo lo suyo, que es exactamente lo que pidió Luis.
+
+#### La tercera categoría que faltaba
+
+Con el reparto, media rejilla son cruces que **nunca se preguntaron**. Eso son
+tres estados, y hasta ahora se distinguían dos:
+
+| | Qué significa | Qué se hace |
+|---|---|---|
+| **No se le preguntó** | No vende eso | Nada. No debe nada |
+| **Preguntado, sin contestar** | Se le mandó el mensaje | Perseguirle |
+| **Contestó que no lo tiene** | Cerrado | No volver a preguntarle |
+
+La vista gana una columna `preguntado` y la rejilla deja la celda **en blanco**
+donde no se preguntó, `—` donde se espera y «no tiene» donde contestó que no.
+
+#### Y el mismo error, otra vez, en la columna de al lado
+
+La columna «Se le compra a» decía **«Nadie lo tiene»** en cuanto no había
+ganador — o sea, **antes de que nadie hubiera contestado**. Es el mismo error
+que se acababa de arreglar en las celdas: dar por cerrada una pregunta abierta,
+y mandar a buscar fuera algo que quizá llegue mañana.
+
+Ahora dice «Esperando respuesta» mientras se espera, «Nadie lo tiene» solo
+cuando todos los preguntados contestaron que no, y «No se le preguntó a nadie»
+cuando el descuido está al armar la consulta.
+
+#### Dos detalles que solo se vieron usándolo
+
+- **El panel de respuesta traía todos los productos.** Quitar del mensaje lo que
+  el proveedor no vende y luego pedírselo en el panel es devolverlo por la
+  puerta de atrás. Ahora cada panel muestra solo lo que se le preguntó.
+- **La etiqueta decía «se le compró 1 vez»** de alguien a quien no se le ha
+  comprado nunca: en modo separado se estaba usando el contador de la lista
+  global, que cuenta otra cosa —de cuántos productos de la lista es
+  proveedor—.
+
+#### Probado con el caso exacto
+
+Las chapas asignadas a un proveedor y el retén a otro: la pantalla propuso
+separado, generó **dos mensajes con un producto cada uno**, la ronda guardó el
+reparto, y la rejilla salió con la diagonal correcta —vacío donde no se
+preguntó, `—` donde se espera—.
 
 ---
 

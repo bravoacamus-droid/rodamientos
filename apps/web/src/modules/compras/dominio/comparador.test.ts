@@ -7,6 +7,7 @@ import {
   costoParaCompra,
   eleccionFinal,
   eleccionPorDefecto,
+  estadoDeFila,
   ganadorDe,
   resumirComparativa,
   resumirProveedores,
@@ -51,6 +52,7 @@ function celda(over: Partial<Celda> = {}): Celda {
     item_id: "i1",
     consulta_proveedor_id: "cp1",
     proveedor: "Alfa",
+    preguntada: true,
     respondida: true,
     costo: 10,
     costoUsd: 10,
@@ -471,5 +473,95 @@ describe("eleccionFinal", () => {
   it("un producto que no tiene nadie no entra en la elección", () => {
     const filas = compararTodo(items, proveedores, []);
     expect(eleccionFinal(filas, {})).toEqual({});
+  });
+});
+
+describe("celdas que nunca se preguntaron", () => {
+  const items = [
+    item({ item_id: "i1", producto_id: "p1", codigo: "TMAS100-005" }),
+    item({ item_id: "i2", producto_id: "p2", codigo: "50X68X8TC" }),
+  ];
+  const proveedores = [
+    proveedor({ consulta_proveedor_id: "skf", proveedor_id: "a", proveedor: "SKF PERU" }),
+    proveedor({ consulta_proveedor_id: "ret", proveedor_id: "b", proveedor: "RETENES SUR" }),
+  ];
+
+  it("distingue «no se le preguntó» de «no ha contestado»", () => {
+    // El caso de Luis: a cada proveedor solo lo suyo. Sin esto, media rejilla
+    // eran huecos que se leían como respuestas pendientes.
+    const filas = compararTodo(items, proveedores, [], new Set(["i1|skf", "i2|ret"]));
+
+    expect(filas[0]?.celdas[0]?.preguntada).toBe(true); // chapas al de SKF
+    expect(filas[0]?.celdas[1]?.preguntada).toBe(false); // chapas al de retenes
+    expect(filas[1]?.celdas[0]?.preguntada).toBe(false);
+    expect(filas[1]?.celdas[1]?.preguntada).toBe(true);
+  });
+
+  it("sin el dato, todo cuenta como preguntado", () => {
+    // Es lo que significaban las rondas anteriores a la 058, y las que se
+    // hacen preguntando lo mismo a todos.
+    const filas = compararTodo(items, proveedores, []);
+    expect(filas[0]?.celdas.every((c) => c.preguntada)).toBe(true);
+  });
+
+  it("una celda no preguntada tampoco compite por ganar", () => {
+    // Se apoya en lo de siempre: sin precio no hay ganador. Pero conviene
+    // dejarlo escrito, porque es lo que impide que un producto se le compre a
+    // quien nunca dijo que lo tuviera.
+    const filas = compararTodo(
+      items,
+      proveedores,
+      [
+        { item_id: "i1", consulta_proveedor_id: "skf", costo_unitario: 30, dias_entrega: null, disponible: true, nota: null },
+      ],
+      new Set(["i1|skf", "i2|ret"]),
+    );
+    expect(filas[0]?.ganador?.proveedor).toBe("SKF PERU");
+    expect(filas[1]?.ganador).toBeNull();
+  });
+});
+
+describe("estadoDeFila", () => {
+  const items = [item({ item_id: "i1", producto_id: "p1" })];
+  const proveedores = [
+    proveedor({ consulta_proveedor_id: "a", proveedor: "Alfa" }),
+    proveedor({ consulta_proveedor_id: "b", proveedor: "Beta" }),
+  ];
+  const todas = new Set(["i1|a", "i1|b"]);
+
+  it("mientras alguien no contesta, es ESPERANDO y no «nadie lo tiene»", () => {
+    // Decir «nadie lo tiene» antes de que nadie haya contestado es dar por
+    // cerrada una pregunta abierta, y manda a buscar fuera algo que quizá
+    // llegue mañana.
+    const filas = compararTodo(items, proveedores, [], todas);
+    expect(estadoDeFila(filas[0]!)).toBe("esperando");
+  });
+
+  it("solo cuando TODOS contestaron que no, es «nadie»", () => {
+    const filas = compararTodo(
+      items,
+      proveedores,
+      [
+        { item_id: "i1", consulta_proveedor_id: "a", costo_unitario: null, dias_entrega: null, disponible: false, nota: null },
+        { item_id: "i1", consulta_proveedor_id: "b", costo_unitario: null, dias_entrega: null, disponible: false, nota: null },
+      ],
+      todas,
+    );
+    expect(estadoDeFila(filas[0]!)).toBe("nadie");
+  });
+
+  it("con una oferta, resuelto", () => {
+    const filas = compararTodo(
+      items,
+      proveedores,
+      [{ item_id: "i1", consulta_proveedor_id: "a", costo_unitario: 5, dias_entrega: null, disponible: true, nota: null }],
+      todas,
+    );
+    expect(estadoDeFila(filas[0]!)).toBe("resuelto");
+  });
+
+  it("si no se le preguntó a nadie, lo dice: es un descuido, no una respuesta", () => {
+    const filas = compararTodo(items, proveedores, [], new Set<string>());
+    expect(estadoDeFila(filas[0]!)).toBe("sin_preguntar");
   });
 });

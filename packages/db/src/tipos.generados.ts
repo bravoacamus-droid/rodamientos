@@ -1110,6 +1110,50 @@ export type Database = {
         }
         Relationships: []
       }
+      consulta_precio_asignaciones: {
+        Row: {
+          consulta_proveedor_id: string
+          item_id: string
+        }
+        Insert: {
+          consulta_proveedor_id: string
+          item_id: string
+        }
+        Update: {
+          consulta_proveedor_id?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consulta_precio_asignaciones_consulta_proveedor_id_fkey"
+            columns: ["consulta_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "consulta_precio_proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_asignaciones_consulta_proveedor_id_fkey"
+            columns: ["consulta_proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["consulta_proveedor_id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_asignaciones_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "consulta_precio_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consulta_precio_asignaciones_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "v_comparativa_precios"
+            referencedColumns: ["item_id"]
+          },
+        ]
+      }
       consulta_precio_items: {
         Row: {
           cantidad: number
@@ -3549,6 +3593,7 @@ export type Database = {
           item_id: string | null
           moneda: string | null
           nota: string | null
+          preguntado: boolean | null
           producto_id: string | null
           proveedor: string | null
           proveedor_id: string | null

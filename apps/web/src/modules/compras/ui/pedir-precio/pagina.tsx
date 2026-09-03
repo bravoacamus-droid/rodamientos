@@ -4,7 +4,7 @@ import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { plantillasParaMandar } from "@/modules/mensajes";
-import { proveedoresParaPedir } from "@/modules/proveedores";
+import { proveedoresParaPedir, proveedoresPorProducto } from "@/modules/proveedores";
 
 import { precargaDeCompra } from "../../api/por-comprar";
 import { PedirPrecio } from "./pantalla";
@@ -61,8 +61,12 @@ export default async function PaginaPedirPrecio({
   }
 
   const supabase = await clienteServidor();
-  const [proveedores, plantillas, { data: emp }] = await Promise.all([
+  const [proveedores, porProducto, plantillas, { data: emp }] = await Promise.all([
     proveedoresParaPedir(items.map((i) => i.producto.id)),
+    // Quién vende CADA uno. Es lo que permite mandarle a cada proveedor solo
+    // lo suyo cuando los productos no comparten proveedor, que en este
+    // catálogo es lo normal.
+    proveedoresPorProducto(items.map((i) => i.producto.id)),
     plantillasParaMandar("pedido_precio"),
     supabase.from("empresa").select("razon_social").eq("id", 1).maybeSingle(),
   ]);
@@ -98,6 +102,7 @@ export default async function PaginaPedirPrecio({
           cantidad: i.cantidad,
         }))}
         proveedores={proveedores.ok ? proveedores.datos : []}
+        porProducto={porProducto.ok ? porProducto.datos : {}}
         plantillas={plantillas.ok ? plantillas.datos : []}
         empresa={emp?.razon_social ?? "Rodatech"}
         yo={perfil.nombre ?? ""}
