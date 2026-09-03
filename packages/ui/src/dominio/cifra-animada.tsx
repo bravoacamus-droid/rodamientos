@@ -20,6 +20,28 @@ import { cn } from "../lib/utils";
  *    cuando el usuario llega, ya terminó.
  *  · **Cuenta con `requestAnimationFrame`**, no con `setInterval`. El navegador
  *    decide cuándo hay hueco; con intervalos, una pestaña ocupada da saltos.
+ *
+ * ---------------------------------------------------------------------------
+ * Y una regla que está por encima de las tres: NUNCA MIENTE
+ * ---------------------------------------------------------------------------
+ * `requestAnimationFrame` **no dispara con la pestaña en segundo plano**. Como
+ * la animación arranca poniendo el número en cero, eso dejaba la cifra
+ * congelada a media cuenta —o directamente en `$ 0.00`— hasta que alguien
+ * volviera a mirar la pestaña.
+ *
+ * En un adorno daría igual. Aquí las cifras son **dinero por cobrar y alertas
+ * críticas**: un tablero que dice `$ 0.00` porque la pestaña estuvo de fondo
+ * es peor que uno sin animación ninguna. Pasó de verdad dos veces —el 02/09
+ * con las alertas y el 03/09 con cobranzas— y las dos veces se descartó como
+ * «será la animación», que es justo lo que hace peligroso a un número que
+ * miente: se explica solo.
+ *
+ * Así que hay dos redes:
+ *
+ *  · si la pestaña está oculta al montar, no se anima nada;
+ *  · y pase lo que pase, un temporizador deja el valor final en cuanto la
+ *    animación debería haber terminado. `setTimeout` sí corre en segundo
+ *    plano (más lento, pero corre).
  */
 export function CifraAnimada({
   valor,
@@ -49,7 +71,10 @@ export function CifraAnimada({
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-    if (reducido || valor === 0) {
+    // Sin movimiento, sin valor que contar, o con la pestaña de fondo: el
+    // número se pinta y ya. Animar lo que nadie está viendo no es que sea
+    // trabajo tirado — es que se queda a medias.
+    if (reducido || valor === 0 || document.hidden) {
       setMostrado(valor);
       return;
     }
@@ -59,6 +84,12 @@ export function CifraAnimada({
     setMostrado(0);
 
     let cancelar: number | null = null;
+
+    // La red de seguridad. Si `requestAnimationFrame` no llega a terminar
+    // —pestaña oculta a media cuenta, el caso normal cuando alguien abre esto
+    // y se va a otra— el número se queda congelado en un valor intermedio.
+    // Este temporizador se asegura de que acabe siendo el de verdad.
+    const red = setTimeout(() => setMostrado(valor), duracion + 400);
 
     const animar = () => {
       const inicio = performance.now();
@@ -91,6 +122,7 @@ export function CifraAnimada({
 
     return () => {
       observador.disconnect();
+      clearTimeout(red);
       if (cancelar !== null) cancelAnimationFrame(cancelar);
     };
   }, [valor, duracion]);

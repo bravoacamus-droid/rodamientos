@@ -359,3 +359,54 @@ describe("payload", () => {
     expect(aPayload(e).factura_proveedor).toBeNull();
   });
 });
+
+describe("datosDeAlmacen", () => {
+  const compra: CompraPendiente = {
+    id: "55555555-5555-4555-8555-555555555555",
+    numero: "CMP-26-00008",
+    proveedor_id: "66666666-6666-4666-8666-666666666666",
+    proveedor: "Rodamientos Huánuco E.I.R.L.",
+    fecha: "2026-09-03",
+    moneda: "USD",
+    tipo_cambio: null,
+    gastos_importacion: 0,
+    lineas: [
+      {
+        producto_id: RODAMIENTO.id,
+        codigo: RODAMIENTO.codigo,
+        marca: "SKF",
+        descripcion: RODAMIENTO.descripcion,
+        unidad: "NIU",
+        cantidad: 5,
+        cantidad_recibida: 0,
+        costo_unitario: 6.78,
+      },
+    ],
+  };
+
+  it("la línea que viene de una compra entra SIN saldo ni costo anterior", () => {
+    // Antes se ponía el costo de la propia compra como «anterior», así que la
+    // etiqueta decía «antes 6.78» del costo 6.78 y la comprobación del decimal
+    // comparaba el número consigo mismo.
+    const e = reducir(estadoInicial("2026-09-03"), { tipo: "cargarCompra", compra });
+    expect(e.lineas[0]?.stockAnterior).toBe(0);
+    expect(e.lineas[0]?.costoAnterior).toBe(0);
+  });
+
+  it("y los rellena cuando el almacén contesta", () => {
+    let e = reducir(estadoInicial("2026-09-03"), { tipo: "cargarCompra", compra });
+    e = reducir(e, {
+      tipo: "datosDeAlmacen",
+      datos: { [RODAMIENTO.id]: { stock: 20, costoPromedio: 3.26 } },
+    });
+    // La pantalla decía «0 → 5» de un producto con veinte unidades.
+    expect(e.lineas[0]?.stockAnterior).toBe(20);
+    expect(e.lineas[0]?.costoAnterior).toBe(3.26);
+  });
+
+  it("un producto del que no llega nada se queda como estaba", () => {
+    let e = reducir(estadoInicial("2026-09-03"), { tipo: "cargarCompra", compra });
+    e = reducir(e, { tipo: "datosDeAlmacen", datos: {} });
+    expect(e.lineas[0]?.stockAnterior).toBe(0);
+  });
+});

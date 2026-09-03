@@ -85,6 +85,15 @@ export function DialogoConfirmar({
   };
 
   const confirmadas = lineas.filter((l) => (cantidades[l.id] ?? 0) > 0);
+  // Cuántas van RECORTADAS: están, pero por menos de lo cotizado.
+  //
+  // Sin esto el resumen decía «confirma la cotización entera» con una línea
+  // bajada de 30 a 25 —contaba líneas, no cantidades— y esa frase es lo último
+  // que se lee antes de pulsar. El número ya salía bien; la frase no.
+  const recortadas = confirmadas.filter(
+    (l) => (cantidades[l.id] ?? 0) < l.cantidad,
+  ).length;
+  const entera = confirmadas.length === lineas.length && recortadas === 0;
   const total = confirmadas.reduce(
     (a, l) =>
       a +
@@ -207,13 +216,19 @@ export function DialogoConfirmar({
         ) : null}
 
         <p className="rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm">
-          {confirmadas.length === lineas.length ? (
+          {entera ? (
             <>Confirma la cotización entera: <strong>{dolar(total)}</strong> sin IGV.</>
           ) : (
             <>
               Confirma <strong>{confirmadas.length}</strong> de {lineas.length}{" "}
-              {lineas.length === 1 ? "línea" : "líneas"} ·{" "}
-              <strong>{dolar(total)}</strong> sin IGV.
+              {lineas.length === 1 ? "línea" : "líneas"}
+              {recortadas > 0 ? (
+                <>
+                  {" "}
+                  ({recortadas} por menos de lo cotizado)
+                </>
+              ) : null}{" "}
+              · <strong>{dolar(total)}</strong> sin IGV.
             </>
           )}
         </p>

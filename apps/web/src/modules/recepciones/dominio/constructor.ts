@@ -77,7 +77,19 @@ export type Accion =
   | { tipo: "costo"; key: string; valor: number }
   | { tipo: "cargarCompra"; compra: CompraPendiente }
   | { tipo: "soltarCompra" }
-  | { tipo: "cargar"; estado: EstadoRecepcion };
+  | { tipo: "cargar"; estado: EstadoRecepcion }
+  /**
+   * Lo que el almacén sabe de estos productos, cuando llega del servidor.
+   *
+   * Existe porque el reducer es PURO y la línea que viene de una compra no
+   * trae ni el saldo ni el costo promedio: hay que consultarlos, y eso pasa
+   * después. Sin esto la pantalla decía «0 → 5» de un producto con veinte
+   * unidades, y ponía como costo «anterior» el de la propia compra.
+   */
+  | {
+      tipo: "datosDeAlmacen";
+      datos: Readonly<Record<string, { stock: number; costoPromedio: number }>>;
+    };
 
 export function estadoInicial(fecha: string): EstadoRecepcion {
   return {
@@ -196,13 +208,35 @@ export function reducir(estado: EstadoRecepcion, accion: Accion): EstadoRecepcio
           // El costo lo manda la compra, que es lo que se pactó con el
           // proveedor. El promedio del maestro aquí no pinta nada.
           costoUnitario: l.costo_unitario,
-          costoAnterior: l.costo_unitario,
+          // Los dos entran en cero y los rellena `datosDeAlmacen` cuando
+          // llegan del servidor. Poner aquí el costo de la propia compra
+          // como «anterior» era peor que no poner nada: la etiqueta decía
+          // «antes» un número que no era el anterior, y la comprobación del
+          // decimal mal puesto comparaba el costo consigo mismo.
+          costoAnterior: 0,
           stockAnterior: 0,
           pendiente: l.falta,
         })),
         proximaKey: estado.proximaKey + pendientes.length,
       };
     }
+
+    case "datosDeAlmacen":
+      return {
+        ...estado,
+        lineas: estado.lineas.map((l) => {
+          const d = accion.datos[l.productoId];
+          if (!d) return l;
+          return {
+            ...l,
+            stockAnterior: d.stock,
+            // El costo del maestro manda sobre el marcador que puso
+            // `cargarCompra`; pero si el producto nunca se compró, su
+            // promedio es cero y entonces no hay «antes» que enseñar.
+            costoAnterior: d.costoPromedio,
+          };
+        }),
+      };
 
     case "soltarCompra":
       // Se sueltan la compra y sus gastos, pero NO las líneas: el operador ya

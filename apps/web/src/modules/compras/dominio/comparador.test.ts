@@ -5,6 +5,7 @@ import {
   compararTodo,
   comprasPropuestas,
   costoParaCompra,
+  eleccionFinal,
   eleccionPorDefecto,
   ganadorDe,
   resumirComparativa,
@@ -27,6 +28,7 @@ function proveedor(over: Partial<ProveedorConsultado> = {}): ProveedorConsultado
     validez_hasta: null,
     dias_entrega: null,
     nota: null,
+    tipoProveedor: "local",
     ...over,
   };
 }
@@ -419,5 +421,55 @@ describe("eleccionPorDefecto", () => {
       { item_id: "i1", consulta_proveedor_id: "a", costo_unitario: 5, dias_entrega: null, disponible: true, nota: null },
     ]);
     expect(eleccionPorDefecto(filas)).toEqual({ i1: "a" });
+  });
+});
+
+describe("eleccionFinal", () => {
+  const items = [
+    item({ item_id: "i1", producto_id: "p1", cantidad: 5 }),
+    item({ item_id: "i2", producto_id: "p2", cantidad: 2 }),
+  ];
+  const proveedores = [
+    proveedor({ consulta_proveedor_id: "a", proveedor_id: "pa", proveedor: "Alfa" }),
+    proveedor({ consulta_proveedor_id: "b", proveedor_id: "pb", proveedor: "Beta" }),
+  ];
+
+  /** Solo ha contestado Beta, y caro. */
+  const soloBeta: Respuesta[] = [
+    { item_id: "i1", consulta_proveedor_id: "b", costo_unitario: 2.1, dias_entrega: null, disponible: true, nota: null },
+    { item_id: "i2", consulta_proveedor_id: "b", costo_unitario: 180, dias_entrega: null, disponible: true, nota: null },
+  ];
+  /** Y después contesta Alfa, más barato en el primero. */
+  const conAlfa: Respuesta[] = [
+    ...soloBeta,
+    { item_id: "i1", consulta_proveedor_id: "a", costo_unitario: 1.81, dias_entrega: null, disponible: true, nota: null },
+  ];
+
+  it("la respuesta que llega después SÍ puede ganar", () => {
+    // El fallo que tenía la pantalla: mezclaba dando prioridad a lo ya
+    // elegido, así que el primero en contestar se quedaba con todo. Las
+    // respuestas nunca llegan a la vez — se anota la del lunes y la del
+    // miércoles— así que pasaba siempre.
+    const antes = compararTodo(items, proveedores, soloBeta);
+    expect(eleccionFinal(antes, {})).toEqual({ i1: "b", i2: "b" });
+
+    const despues = compararTodo(items, proveedores, conAlfa);
+    expect(eleccionFinal(despues, {})).toEqual({ i1: "a", i2: "b" });
+  });
+
+  it("pero lo que se movió a mano se queda quieto", () => {
+    const despues = compararTodo(items, proveedores, conAlfa);
+    // Aunque Alfa sea más barato, si alguien puso Beta a mano, manda.
+    expect(eleccionFinal(despues, { i1: "b" })).toEqual({ i1: "b", i2: "b" });
+  });
+
+  it("y lo que se quitó a mano no vuelve porque llegue otra oferta", () => {
+    const despues = compararTodo(items, proveedores, conAlfa);
+    expect(eleccionFinal(despues, { i2: null })).toEqual({ i1: "a" });
+  });
+
+  it("un producto que no tiene nadie no entra en la elección", () => {
+    const filas = compararTodo(items, proveedores, []);
+    expect(eleccionFinal(filas, {})).toEqual({});
   });
 });

@@ -25,6 +25,21 @@ const ESTADOS = ["borrador", "emitida", "anulada"] as const;
 const dos = (n: number) => Math.round(n * 100) / 100;
 
 /**
+ * Lo que el cliente CONFIRMÓ de una línea, que es el techo de lo que se le
+ * puede despachar.
+ *
+ * Desde la 041 el cliente puede quedarse con parte —«de las 30 me llevo 25»—
+ * y eso vive en `cantidad_aprobada`. La bandeja de compras lo respetaba y la
+ * facturación desde la 047; las guías no, así que proponían despachar las 30
+ * con 25 en el almacén. Encontrado el 03/09 recorriendo la cadena entera.
+ *
+ * `null` significa que se confirmó tal cual se cotizó: es lo que guarda la
+ * aprobación completa, y por eso el respaldo es `cantidad` y no cero.
+ */
+const confirmado = (i: { cantidad: number; cantidad_aprobada: number | null }) =>
+  Number(i.cantidad_aprobada ?? i.cantidad ?? 0);
+
+/**
  * Listado de guías.
  *
  * Keyset sobre `numero` descendente: el número es `T001-00000001`, con ceros a
@@ -260,7 +275,10 @@ export async function cotizacionesDespachables(): Promise<
     const [{ data, error }, { data: yaDespachado }] = await Promise.all([
       supabase
         .from("cotizaciones")
-        .select(`id, numero, fecha, clientes(razon_social), cotizacion_items(id, cantidad)`)
+        .select(
+          `id, numero, fecha, clientes(razon_social),
+           cotizacion_items(id, cantidad, cantidad_aprobada)`,
+        )
         .in("estado", ["aprobada", "atendida"])
         .order("numero", { ascending: false })
         .limit(100),
@@ -289,7 +307,9 @@ export async function cotizacionesDespachables(): Promise<
     const filas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
         clientes: { razon_social: string } | null;
-        cotizacion_items: { id: string; cantidad: number }[] | null;
+        cotizacion_items:
+          | { id: string; cantidad: number; cantidad_aprobada: number | null }[]
+          | null;
       }
     >;
 
@@ -298,7 +318,7 @@ export async function cotizacionesDespachables(): Promise<
       datos: filas
         .filter((c) =>
           (c.cotizacion_items ?? []).some(
-            (i) => Number(i.cantidad ?? 0) - (despachadoPorItem.get(i.id) ?? 0) > 0,
+            (i) => confirmado(i) - (despachadoPorItem.get(i.id) ?? 0) > 0,
           ),
         )
         .map((c) => ({
@@ -327,7 +347,8 @@ export async function cotizacionParaDespachar(
           `id, numero, fecha, cliente_id, orden_compra_cliente,
            clientes(razon_social, numero_documento, direccion, ubigeo_codigo),
            cotizacion_items(
-             id, producto_id, orden, codigo, descripcion, unidad_codigo, cantidad,
+             id, producto_id, orden, codigo, descripcion, unidad_codigo,
+             cantidad, cantidad_aprobada,
              productos(peso_kg)
            )`,
         )
@@ -371,6 +392,7 @@ export async function cotizacionParaDespachar(
         descripcion: string | null;
         unidad_codigo: string | null;
         cantidad: number;
+        cantidad_aprobada: number | null;
         productos: { peso_kg: number | null } | null;
       }> | null;
     };
@@ -396,7 +418,7 @@ export async function cotizacionParaDespachar(
             codigo: i.codigo ?? "—",
             descripcion: i.descripcion ?? "—",
             unidad: i.unidad_codigo ?? "NIU",
-            cantidad: Number(i.cantidad ?? 0),
+            cantidad: confirmado(i),
             despachado: despachado.get(String(i.id)) ?? 0,
             peso_kg: Number(i.productos?.peso_kg ?? 0),
           })),

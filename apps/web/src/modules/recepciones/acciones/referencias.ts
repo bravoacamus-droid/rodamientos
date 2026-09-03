@@ -23,6 +23,22 @@ export interface Referencia {
   precioVenta: number;
   /** El piso que Willy fijó producto a producto. 0 = no lo puso. */
   precioMinimo: number;
+  /**
+   * Lo que hay en almacén ahora mismo.
+   *
+   * Hace falta porque la línea que viene de una COMPRA no lo trae: el
+   * reducer es puro y no puede consultar, así que ponía cero y la pantalla
+   * decía «0 → 5» de un producto con veinte unidades. Quien recibe lee esa
+   * columna para saber en qué queda el almacén.
+   */
+  stock: number;
+  /**
+   * El costo promedio del maestro. Es el «antes» de verdad de la etiqueta
+   * bajo el costo, y lo que hace saltar el aviso de un decimal mal puesto.
+   * La línea que venía de una compra se ponía a sí misma como «anterior»,
+   * así que la variación daba siempre cero y ese aviso no saltaba nunca.
+   */
+  costoPromedio: number;
 }
 
 export type ResultadoReferencias =
@@ -52,7 +68,10 @@ export async function referenciasDeProductos(
     // dólares. Compararlos en su moneda original daría comparaciones falsas
     // entre una compra en soles y otra en dólares.
     const [maestro, historial] = await Promise.all([
-      supabase.from("productos").select("id, precio_venta, precio_minimo").in("id", ids),
+      supabase
+        .from("productos")
+        .select("id, precio_venta, precio_minimo, costo_promedio, stock(cantidad)")
+        .in("id", ids),
       supabase
         .from("v_precios_compra")
         .select("producto_id, documento, fecha, costo_usd")
@@ -72,6 +91,13 @@ export async function referenciasDeProductos(
         documento: null,
         precioVenta: num(p.precio_venta),
         precioMinimo: num(p.precio_minimo),
+        costoPromedio: num(p.costo_promedio),
+        // `stock` es uno-a-uno, pero PostgREST devuelve el embed como
+        // lista. Un producto que nunca se movió no tiene fila: eso es
+        // cero, no un fallo.
+        stock: num(
+          (Array.isArray(p.stock) ? p.stock[0] : p.stock)?.cantidad,
+        ),
       };
     }
 

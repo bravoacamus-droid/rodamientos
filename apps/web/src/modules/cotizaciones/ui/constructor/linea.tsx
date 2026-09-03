@@ -58,7 +58,11 @@ export function FilaLinea({
     valorUnitario: linea.valorUnitario,
     descuentoPct: linea.descuentoPct,
   });
-  const sinStock = linea.productoId !== null && linea.stock < linea.cantidad;
+  const noAlcanza = linea.productoId !== null && linea.stock < linea.cantidad;
+  // «Sin stock» y «no alcanza» no son lo mismo, y decirlo mal cambia la
+  // decisión: con 20 de 30 se vende lo que hay y se compra el resto; con 0 hay
+  // que salir a buscarlo entero. La pantalla ponía «sin stock» en los dos.
+  const sinNada = noAlcanza && linea.stock <= 0;
 
   const abrirSustitutos = () => {
     if (panel === "sustitutos") return setPanel("ninguno");
@@ -87,13 +91,15 @@ export function FilaLinea({
 
         <td>
           <div className="font-medium">{linea.codigo}</div>
-          {sinStock ? (
+          {noAlcanza ? (
             <button
               type="button"
               onClick={abrirSustitutos}
               className="mt-0.5 text-xs text-[var(--warn)] underline"
             >
-              sin stock · ver alternativas
+              {sinNada
+                ? "sin stock · ver alternativas"
+                : `solo ${linea.stock} · ver alternativas`}
             </button>
           ) : (
             <span className="text-xs text-[var(--fg-muted)]">
@@ -183,7 +189,9 @@ export function FilaLinea({
               en esa columna es una promesa impresa. */}
           {prometeDeMas(linea.disponibilidad, linea.cantidad, linea.stock) ? (
             <span className="mt-1 block text-xs text-[var(--warn)]">
-              sin stock para prometer entrega inmediata
+              {sinNada
+                ? "sin stock para prometer entrega inmediata"
+                : `solo hay ${linea.stock} para prometer entrega inmediata`}
             </span>
           ) : null}
         </td>

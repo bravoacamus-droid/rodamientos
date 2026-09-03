@@ -10,7 +10,7 @@ import {
   ETIQUETA_RESPUESTA,
   compararTodo,
   comprasPropuestas,
-  eleccionPorDefecto,
+  eleccionFinal,
   resumirComparativa,
   resumirProveedores,
   type ProveedorConsultado,
@@ -69,9 +69,22 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
     () => new Set(ronda.compras.map((c) => c.proveedor_id)),
     [ronda.compras],
   );
-  const [eleccion, setEleccion] = React.useState<Record<string, string>>(() =>
-    eleccionPorDefecto(compararTodo(ronda.items, ronda.proveedores, ronda.respuestas)),
-  );
+  /**
+   * Lo que la persona movió A MANO, y nada más.
+   *
+   * La elección entera NO es estado: se recalcula con cada respuesta que
+   * entra. Guardar la elección completa fue el fallo que tuvo esta pantalla
+   * —al llegar una respuesta nueva se mezclaba dando prioridad a lo ya
+   * elegido, así que el primero que contestaba se quedaba con todo y el
+   * segundo no podía ganarle aunque llegara más barato—. Y como las
+   * respuestas nunca llegan a la vez, pasaba siempre.
+   *
+   * `null` significa «lo quitó a mano»: lo que se decidió no comprar no
+   * vuelve porque aparezca otra oferta.
+   */
+  const [aMano, setAMano] = React.useState<Record<string, string | null>>({});
+
+  const eleccion = React.useMemo(() => eleccionFinal(filas, aMano), [filas, aMano]);
 
   const propuestas = React.useMemo(
     () =>
@@ -82,12 +95,11 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
   );
 
   function alternar(itemId: string, cpId: string) {
-    setEleccion((prev) => {
-      const copia = { ...prev };
-      if (copia[itemId] === cpId) delete copia[itemId];
-      else copia[itemId] = cpId;
-      return copia;
-    });
+    setAMano((prev) => ({
+      ...prev,
+      // Volver a pulsar el que ya estaba elegido lo quita.
+      [itemId]: eleccion[itemId] === cpId ? null : cpId,
+    }));
   }
 
   function guardado(
@@ -105,20 +117,8 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
       ...lineas,
     ]);
     setAbierto(null);
-    // Y se vuelven a elegir los ganadores con el dato nuevo. Lo que se movió a
-    // mano se respeta: solo se rellena lo que no estaba decidido.
-    setEleccion((prev) => {
-      const nuevos = eleccionPorDefecto(
-        compararTodo(
-          ronda.items,
-          proveedores.map((p) =>
-            p.consulta_proveedor_id === cpId ? { ...p, ...proveedor } : p,
-          ),
-          [...respuestas.filter((r) => r.consulta_proveedor_id !== cpId), ...lineas],
-        ),
-      );
-      return { ...nuevos, ...prev };
-    });
+    // La elección no se toca: se recalcula sola con las respuestas nuevas,
+    // salvo lo que esté movido a mano.
   }
 
   function comprar() {
@@ -130,7 +130,7 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
           proveedor_id: c.proveedor_id,
           moneda: c.moneda,
           tipo_cambio: c.tipo_cambio,
-          tipo: "local" as const,
+          tipo: c.tipo,
           fecha_estimada: null,
           lineas: c.lineas.map((l) => ({
             producto_id: l.producto_id,

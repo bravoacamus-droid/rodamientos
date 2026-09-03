@@ -148,7 +148,7 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
         .select(
           `id, proveedor_id, estado, moneda, tipo_cambio, incluye_igv,
            validez_hasta, dias_entrega, nota,
-           proveedor:proveedores!consulta_precio_proveedores_proveedor_id_fkey(razon_social)`,
+           proveedor:proveedores!consulta_precio_proveedores_proveedor_id_fkey(razon_social, tipo)`,
         )
         .eq("consulta_id", id),
       supabase
@@ -181,11 +181,18 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
 
     const proveedores: ProveedorConsultado[] = (provs.data ?? [])
       .map((p) => {
-        const prov = p.proveedor as { razon_social?: string } | null;
+        const prov = p.proveedor as { razon_social?: string; tipo?: string } | null;
         return {
           consulta_proveedor_id: String(p.id),
           proveedor_id: String(p.proveedor_id),
           proveedor: String(prov?.razon_social ?? "—"),
+          // Decide si la compra que salga de aquí es local o de importación,
+          // y con ella si lleva IGV. Antes se deducía de la moneda —USD igual
+          // a exterior— y eso es falso: a un proveedor de Lima se le puede
+          // comprar en dólares, y esa factura lleva IGV.
+          tipoProveedor: (prov?.tipo === "importacion"
+            ? "importacion"
+            : "local") as "local" | "importacion",
           estado: String(p.estado) as EstadoRespuesta,
           moneda: String(p.moneda) as Moneda,
           tipo_cambio: p.tipo_cambio === null ? null : Number(p.tipo_cambio),

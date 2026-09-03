@@ -270,7 +270,10 @@ export async function comprarDeLaRonda(datosCrudos: unknown): Promise<ResultadoC
           moneda: c.moneda,
           tipo_cambio: c.tipo_cambio,
           fecha_estimada: c.fecha_estimada,
-          afecto_igv: c.moneda === "PEN",
+          // El IGV lo decide de dónde viene la mercadería, NO la moneda.
+          // Una compra local en dólares lleva IGV; una importación en soles,
+          // no. Deducirlo de la moneda dejaba sin IGV toda compra en USD.
+          afecto_igv: c.tipo === "local",
           observaciones: `De la consulta de precios`,
           items: c.lineas,
         } as unknown as Json,

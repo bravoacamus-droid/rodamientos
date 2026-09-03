@@ -124,6 +124,18 @@ export function ConstructorRecepcion({
     cargarReferencias(async () => {
       const r = await referenciasDeProductos(ids);
       setReferencias(r.ok ? r.datos : {});
+      // El saldo y el costo promedio van también AL ESTADO, no solo al
+      // panel: la columna «stock» y la etiqueta «antes» los leen de la
+      // línea. Una línea que viene de una compra entra sin ellos porque el
+      // reducer es puro y no puede consultar.
+      if (!r.ok) return;
+      const datos = Object.fromEntries(
+        Object.values(r.datos).map((x) => [
+          x.producto_id,
+          { stock: x.stock, costoPromedio: x.costoPromedio },
+        ]),
+      );
+      despachar({ tipo: "datosDeAlmacen", datos });
     });
   }, [estado.lineas]);
 

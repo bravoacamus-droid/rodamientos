@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 056, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 057, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -1319,6 +1319,114 @@ IGV a 3.70; el segundo en dólares, y dice que el segundo producto no lo tiene.
 
 Todo borrado después: 0 compras, 0 rondas, 0 filas en `proveedor_productos`,
 bitácora vacía y el correlativo CMP devuelto al 7.
+
+---
+
+### R · La cadena entera, recorrida de un tirón · 03/09
+
+Luis, el 03/09: *«¿todo el flujo funciona bien? ¿desde cotización, pedido, las
+compras, las guías?»*.
+
+No se sabía. Se habían probado los tramos por separado, nunca la cadena
+completa seguida — y **cada trozo funcionaba; las costuras no**.
+
+El recorrido, contra la base real y con los datos reales de Willy: cotizar a
+ACEROS CHILCA 30 de un producto con 20 en almacén y 2 de otro sin stock →
+confirmar 25 y 2 → bandeja → pedir precio a dos proveedores → comparar →
+comprar → recibir → guía → facturar → cobranzas.
+
+#### Lo que ya funcionaba
+
+- La confirmación parcial llega **intacta** hasta compras: la bandeja pidió
+  25, no 30, y restó las 20 del almacén para pedir 5.
+- El comparador normalizó S/ 8.00 con IGV a 3.75 en $ 1.81 y le ganó a los
+  $ 2.10 del otro.
+- La compra salió en la moneda de cada proveedor con el costo neto, la
+  recepción movió el stock de 20 a 25 y el kardex guardó el costo convertido
+  a dólares ($ 1.8079).
+- La facturación respetó las 25 confirmadas (§L, migración 047), dejó la
+  cotización **aprobada** —no atendida— porque quedaba una línea, y el
+  documento apareció en cobranzas con su vencimiento a 30 días.
+- La factura **no** descarga stock: sale con la guía, y la casilla para la
+  venta de mostrador está explicada y arranca desmarcada.
+- La pantalla de emisión avisa de que no hay credenciales SUNAT y de que el
+  documento quedará pendiente de envío. La guía avisa de que la GRE no está
+  disponible. Las dos cosas, dichas donde se leen.
+
+#### Seis fallos, y cinco solo se veían usándolo
+
+**1 · La guía despachaba lo COTIZADO, no lo confirmado** (migración 057). El
+gemelo exacto del fallo que arregló la 047 en la factura: se arregló uno y el
+otro se quedó donde estaba. Proponía sacar 30 de una línea con 25 confirmadas
+y 25 en el almacén, y **ni la pantalla ni la base lo impedían**. En una guía
+duele distinto que en una factura: la mercadería ya salió en un camión, y
+deshacerlo no es una nota de crédito, es ir a buscarla. El tope va en la
+función, cuenta lo ya despachado en otras guías y va antes del correlativo.
+
+**2 · El comparador se lo daba todo al primero que contestaba.** La pantalla
+guardaba la elección entera y, al llegar una respuesta nueva, la mezclaba
+dando prioridad a lo ya elegido. La intención era «lo movido a mano se
+respeta»; el efecto fue que **el segundo proveedor no podía ganar aunque
+llegara más barato**. Y pasa siempre, porque las respuestas no llegan a la
+vez: se anota la del lunes y la del miércoles. Ahora solo se guarda lo que se
+tocó a mano (`eleccionFinal`, con sus pruebas) y el resto se recalcula.
+
+Es lo contrario de para lo que existe un comparador. No se vio el 02/09 porque
+se anotó primero al que ganaba.
+
+**3 · Las cifras grandes podían quedarse en `$ 0.00`.** `CifraAnimada` arranca
+el número en cero y sube con `requestAnimationFrame`, que **no corre con la
+pestaña en segundo plano**. Cobranzas decía `$ 45.81` con `$ 105.91` por
+cobrar. Es el componente de todas las cifras del tablero, cobranzas y alertas.
+
+Lo importante no es el fallo, es que **se descartó dos veces como «será la
+animación»** —el 02/09 con las alertas y el 03/09 con cobranzas— y las dos
+tenía razón el que dudaba. Un número que miente y se explica solo es peor que
+uno que revienta. Ahora: si la pestaña está oculta no se anima, y un
+temporizador deja el valor de verdad pase lo que pase.
+
+**4 · La recepción decía «0 → 5» de un producto con veinte unidades.** La línea
+que viene de una compra entraba con `stockAnterior: 0` fijo, porque el reducer
+es puro y no puede consultar. Y se ponía como costo «anterior» el de la propia
+compra, así que la etiqueta decía «antes 6.7797» del costo 6.7797 y la
+comprobación del decimal mal puesto comparaba el número consigo mismo. Ahora
+los dos llegan del almacén (`datosDeAlmacen`).
+
+**5 · «Sin stock» cuando había stock.** Con 20 de 30 pedidas, la línea de la
+cotización decía «sin stock · ver alternativas». No es lo mismo: con 20 se
+vende lo que hay y se compra el resto; con 0 hay que salir a buscarlo entero.
+Ahora dice «solo 20».
+
+**6 · «Confirma la cotización entera» confirmando 25 de 30.** El resumen
+contaba LÍNEAS, no cantidades, así que bajar una de 30 a 25 seguía siendo «2
+de 2 líneas». El importe salía bien; la frase, no — y esa frase es lo último
+que se lee antes de pulsar.
+
+Y uno de datos: la compra que sale del comparador decidía si llevaba IGV **por
+la moneda** (USD igual a exterior). Es falso: a un proveedor de Lima se le
+compra en dólares y su factura lleva IGV. Ahora lo decide `proveedores.tipo`.
+
+#### Lo que sigue sin poder probarse
+
+- **Enviar a SUNAT.** No hay certificado ni clave SOL en el `.env.local`; la
+  factura se emite y queda en `pendiente`. Es lo esperado y está avisado en
+  pantalla.
+- **La GRE.** SUNAT la cambió a un servicio REST con OAuth2 que hay que
+  escribir aparte (§3). La guía vale como documento interno y mueve el stock.
+
+#### Y una razón más para borrar `AJU-26-00001`
+
+El recorrido lo dejó a la vista: las 20 unidades de ese ajuste entraron a costo
+cero, así que al recibir 5 a $ 1.81 el costo promedio del producto quedó en
+**$ 0.36**. Ese número es el que se usa para valorizar el inventario y para
+proponer el costo de la siguiente recepción.
+
+#### La base quedó como estaba
+
+0 compras, 0 recepciones, 0 guías, 0 rondas, 0 comprobantes nuevos, stock del
+`0-230` de vuelta en 20, kardex con solo el ajuste original, bitácora y fallos
+vacíos y todos los correlativos devueltos —CMP a 7, REC a 1, F001 a 0, T001 a
+0, COT1 a 4—. Las dos cotizaciones de prueba de Luis, intactas.
 
 ---
 

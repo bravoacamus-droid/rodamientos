@@ -76,6 +76,12 @@ export interface ProveedorConsultado {
   /** El plazo que dio para todo, cuando no dijo uno por línea. */
   dias_entrega: number | null;
   nota: string | null;
+  /**
+   * Si es de Lima o del exterior. Decide el tipo de la compra que salga de
+   * aquí y, con él, si lleva IGV — que no se puede deducir de la moneda: a un
+   * proveedor local se le compra en dólares y su factura lleva IGV igual.
+   */
+  tipoProveedor: "local" | "importacion";
 }
 
 /** Un producto de la ronda. */
@@ -383,6 +389,7 @@ export interface CompraPropuesta {
   proveedor: string;
   moneda: Moneda;
   tipo_cambio: number | null;
+  tipo: "local" | "importacion";
   lineas: {
     producto_id: string;
     codigo: string;
@@ -433,6 +440,7 @@ export function comprasPropuestas(
         proveedor: proveedor.proveedor,
         moneda: proveedor.moneda,
         tipo_cambio: proveedor.tipo_cambio,
+        tipo: proveedor.tipoProveedor,
         lineas: [],
         subtotal: 0,
       };
@@ -461,6 +469,41 @@ export function eleccionPorDefecto(
   const r: Record<string, string> = {};
   for (const fila of filas) {
     if (fila.ganador) r[fila.item.item_id] = fila.ganador.consulta_proveedor_id;
+  }
+  return r;
+}
+
+/**
+ * La elección final: el ganador de cada producto, salvo lo que se movió a mano.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué hace falta separar las dos cosas
+ * ---------------------------------------------------------------------------
+ * La primera versión guardaba una sola tabla de item → proveedor y, al llegar
+ * una respuesta nueva, la mezclaba dando prioridad a lo que ya había. La
+ * intención era «lo que movió la persona se respeta»; el efecto real fue otro:
+ * como lo que ya había incluía los ganadores calculados, **el primer proveedor
+ * que contestaba se quedaba con todo**, y el segundo no podía ganarle aunque
+ * llegara más barato.
+ *
+ * Que es justo lo contrario de para lo que existe un comparador. Y pasa
+ * siempre, porque las respuestas nunca llegan a la vez: se anota la del lunes
+ * y la del miércoles.
+ *
+ * Así que solo se guarda lo que la persona TOCÓ. Todo lo demás se recalcula
+ * con cada respuesta que entra.
+ *
+ * `null` en `aMano` significa «lo quitó a mano»: un producto que se decidió no
+ * comprar no debe volver a aparecer porque llegue otra oferta.
+ */
+export function eleccionFinal(
+  filas: readonly FilaComparada[],
+  aMano: Readonly<Record<string, string | null>>,
+): Record<string, string> {
+  const r = eleccionPorDefecto(filas);
+  for (const [item, elegido] of Object.entries(aMano)) {
+    if (elegido === null) delete r[item];
+    else r[item] = elegido;
   }
   return r;
 }
