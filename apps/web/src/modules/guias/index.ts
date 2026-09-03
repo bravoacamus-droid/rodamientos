@@ -7,6 +7,7 @@
 export { default as PaginaGuias } from "./ui/pagina";
 export { default as PaginaNuevaGuia } from "./ui/pagina-nueva";
 export { default as PaginaDetalleGuia } from "./ui/pagina-detalle";
+export { default as PaginaImprimirGuia } from "./ui/pagina-imprimir";
 
 // El reducer es puro y se prueba sin React. Se publica porque cobranzas va a
 // necesitar saber qué salió y qué no para cuadrar entregas contra facturas.

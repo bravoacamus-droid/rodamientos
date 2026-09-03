@@ -180,7 +180,7 @@ export function BarraLateral({ grupos }: { grupos: GrupoNav[] }) {
   return (
     <nav
       aria-label="Módulos"
-      className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] md:flex"
+      className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] md:flex print:!hidden"
     >
       {/* El logo se queda quieto mientras el menú se desplaza. */}
       <div className="sticky top-0 z-10 bg-[var(--surface)] px-4 pb-3 pt-4">

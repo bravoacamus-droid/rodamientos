@@ -7,6 +7,7 @@
 export { default as PaginaFacturacion } from "./ui/pagina";
 export { default as PaginaNuevoComprobante } from "./ui/pagina-nueva";
 export { default as PaginaDetalleComprobante } from "./ui/pagina-detalle";
+export { default as PaginaImprimirComprobante } from "./ui/pagina-imprimir";
 export { default as PaginaConfiguracionSunat } from "./ui/pagina-configuracion";
 
 // Reglas de emisión puras. Se publican porque guías y cobranzas necesitan las

@@ -705,12 +705,62 @@
    7. Impresión — cotizaciones, guías y facturas salen en papel a diario
    -------------------------------------------------------------------------- */
 
+/* El margen del papel. Lo pone `@page` y no el padding de la pantalla:
+   así el documento ocupa el ancho completo del área imprimible y no hereda
+   los 24 px de escritorio, que en A4 se comen media columna. */
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 @media print {
   .no-print {
     display: none !important;
   }
+
   body {
     background: #fff;
     color: #000;
+    /* Nada de altura mínima de pantalla: en papel, una hoja en blanco de más
+       al final de cada documento. */
+    min-height: 0;
+  }
+
+  /* Los fondos de color SE IMPRIMEN.
+     Por defecto el navegador los quita —salvo que el usuario se acuerde de
+     marcar «Gráficos de fondo» en el diálogo—, y sin ellos la cabecera azul
+     de la tabla sale en blanco sobre blanco: las columnas se quedan sin
+     título legible. En un documento que se le manda a un cliente eso no
+     puede depender de una casilla. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Una tabla larga —una factura de treinta líneas— parte por varias hojas.
+     Sin esto, la segunda hoja empieza con números y sin encabezado. */
+  thead {
+    display: table-header-group;
+  }
+  tfoot {
+    display: table-footer-group;
+  }
+  tr,
+  img {
+    break-inside: avoid;
+  }
+
+  /* Las sombras y bordes redondeados de la aplicación no significan nada en
+     papel, y en impresoras de tinta ensucian. */
+  .elev-1,
+  .elev-2,
+  .elev-3 {
+    box-shadow: none !important;
+  }
+
+  /* Un enlace impreso es texto: subrayarlo en azul confunde. */
+  a {
+    color: inherit;
+    text-decoration: none;
   }
 }

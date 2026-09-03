@@ -1430,6 +1430,90 @@ vacíos y todos los correlativos devueltos —CMP a 7, REC a 1, F001 a 0, T001 a
 
 ---
 
+### S · Un solo formato para todo lo que se imprime · 03/09
+
+Willy vio la cotización en papel y le gustó. Luis: *«podemos replicar para todo
+— pedidos, cotización, boletas, facturas… pero tiene que ser para imprimir, que
+no se rompa»*. Y con una captura del diálogo de impresión señalando arriba.
+
+Tenía razón en las dos cosas, y había un tercer problema debajo.
+
+#### 1 · La aplicación salía impresa
+
+En el papel salía la barra de arriba: el botón de menú, el selector de tema y
+**«Willy Rodríguez · Gerencia»**. En una cotización que se le manda a un
+cliente.
+
+El documento ya se preparaba para imprimir —lleva `print:` desde que se
+hizo— pero **el layout del ERP no**. Y es donde tenía que estar: puesto ahí,
+vale para la cotización, la factura, la boleta, la guía y lo que venga. Puesto
+documento a documento, el siguiente nace roto.
+
+#### 2 · Imprimir una factura o una guía daba 404
+
+Los botones «Imprimir» de comprobantes y de guías enlazaban a
+`/facturacion/[id]/imprimir` y `/guias/[id]/imprimir`. **Esas rutas no
+existían.** El botón estaba, el enlace estaba, y detrás no había nada.
+
+Lo peor es cuál de los dos: **la guía es el que más se imprime**, porque viaja
+físicamente con la mercadería. Un camión parado en un control sin guía impresa
+es una multa.
+
+#### 3 · Y las reglas de impresión eran cuatro líneas
+
+Ocultar `.no-print` y poner el fondo blanco. Faltaba lo que hace que un
+documento largo salga bien:
+
+- **`@page` con margen de 12 mm.** Antes el margen lo ponía el `padding` de la
+  pantalla, que en A4 se come media columna.
+- **Los fondos de color se imprimen** (`print-color-adjust: exact`). Chrome los
+  quita por defecto salvo que la persona marque «Gráficos de fondo» en el
+  diálogo. Sin ellos la cabecera azul de la tabla sale blanca sobre blanco y
+  las columnas se quedan **sin título legible**. En un documento que se manda a
+  un cliente eso no puede depender de una casilla que nadie marca.
+- **La cabecera de la tabla se repite en cada hoja** (`table-header-group`).
+  Una factura de treinta líneas empezaba la segunda hoja con números sueltos.
+- Y las filas no se parten por la mitad entre dos páginas.
+
+#### El formato, ahora en un solo sitio
+
+`componentes/hoja-documento.tsx`: cabecera del emisor, recuadro del número,
+bloque de datos a dos columnas, tabla de líneas, totales, importe en letras y
+pie. Cada documento pone lo suyo:
+
+| | Lo propio |
+|---|---|
+| **Cotización** | Las seis correcciones de columnas (C1-C6), la columna «Entrega» solo si hay algo no inmediato, y la advertencia de moneda |
+| **Factura / boleta / notas** | Dice qué documento es —una boleta no es una factura—, a qué documento corrige una nota, detracción, retención y la leyenda de representación impresa |
+| **Guía** | **Sin dinero**: ni precios ni totales. Lleva de dónde sale, a dónde va, qué pesa, placa, conductor, y las dos firmas |
+
+La cotización se pasó al componente compartido y quedó **idéntica** —comprobado
+contra la captura de Willy—. Se hizo así y no dejando la suya aparte porque
+cuatro copias se separan: este proyecto lleva dos días arreglando fallos que
+son exactamente eso (la regla del contacto duplicada, y el tope de lo
+confirmado arreglado en la factura y no en la guía).
+
+#### Comprobado en papel, no en pantalla
+
+Copiando las reglas de `@media print` a la pantalla se ve lo que saldría
+impreso: queda solo el documento. Se imprimieron una factura histórica real
+(F002-00000515, MATRITECH S.A.C.) y una guía de prueba, y las dos salen con el
+mismo formato que la cotización.
+
+#### Un dato de Willy que hay que corregir
+
+En la cabecera de todos los documentos sale, bajo el RUC, **«Hola {provedor},
+soy {yo}»**. No es un fallo del código: es el campo **dirección de la empresa**,
+que alguien pisó probando las plantillas de mensaje. Sale impreso en cada
+cotización, boleta y factura — y en una factura electrónica la dirección del
+emisor viaja al XML de SUNAT.
+
+Se corrige en Configuración → Empresa. **Pendiente de que Luis confirme la
+dirección buena**: no se toca por nuestra cuenta un dato que va a un documento
+fiscal.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
