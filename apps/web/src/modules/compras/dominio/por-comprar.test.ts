@@ -5,6 +5,7 @@ import { sumarDias } from "@/modules/cotizaciones";
 import {
   ETIQUETA_URGENCIA,
   agruparPorComprar,
+  loQueFaltaDe,
   diasEntre,
   fechaPrometida,
   repartirPorProveedor,
@@ -536,5 +537,55 @@ describe("repartir la compra entre proveedores", () => {
 
   it("sin nada marcado no hay grupos", () => {
     expect(repartirPorProveedor([], {})).toEqual([]);
+  });
+});
+
+describe("loQueFaltaDe", () => {
+  it("devuelve solo lo descubierto DE ESE pedido, no lo de todos", () => {
+    // Dos clientes esperan el mismo producto; hay 10 en almacén y el primero
+    // que confirmó se los lleva. Al segundo le faltan 8, y eso es lo que su
+    // pedido tiene que salir a comprar — no los 8 del total ni los 0 del
+    // primero.
+    const filas = agrupar([
+      linea({ cotizacion_id: "cot-1", fecha: "2026-09-01", comprometido: 10, stock: 10 }),
+      linea({ cotizacion_id: "cot-2", fecha: "2026-09-02", comprometido: 8, stock: 10 }),
+    ]);
+
+    expect(loQueFaltaDe("cot-1", filas)).toEqual([]);
+    expect(loQueFaltaDe("cot-2", filas)).toEqual([
+      {
+        producto_id: "prod-1",
+        codigo: "6205",
+        descripcion: "RODAMIENTO RIGIDO DE BOLAS",
+        falta: 8,
+        enCamino: false,
+      },
+    ]);
+  });
+
+  it("suma las líneas del mismo producto dentro del pedido", () => {
+    const filas = agrupar([
+      linea({ cotizacion_id: "cot-1", comprometido: 4, stock: 0 }),
+      linea({ cotizacion_id: "cot-1", comprometido: 6, stock: 0 }),
+    ]);
+    expect(loQueFaltaDe("cot-1", filas)[0]?.falta).toBe(10);
+  });
+
+  it("un pedido que el almacén cubre entero no tiene nada que comprar", () => {
+    const filas = agrupar([linea({ comprometido: 5, stock: 20 })]);
+    expect(loQueFaltaDe("cot-1", filas)).toEqual([]);
+  });
+
+  it("marca lo que ya viene en camino, para no comprarlo dos veces", () => {
+    const filas = agrupar(
+      [linea({ comprometido: 10, stock: 0 })],
+      [{ producto_id: "prod-1", pendiente: 10, compras: 1, proxima_llegada: "2026-09-10", primera_compra: "CMP-26-00001" }],
+    );
+    expect(loQueFaltaDe("cot-1", filas)[0]?.enCamino).toBe(true);
+  });
+
+  it("una cotización que no está en la bandeja no devuelve nada", () => {
+    const filas = agrupar([linea({ comprometido: 10, stock: 0 })]);
+    expect(loQueFaltaDe("otra", filas)).toEqual([]);
   });
 });

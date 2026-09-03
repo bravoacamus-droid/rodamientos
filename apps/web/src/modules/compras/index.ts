@@ -40,12 +40,20 @@ export {
 // El reparto del stock entre los clientes que esperan lo mismo. Se publica
 // porque el comparador de proveedores —el siguiente paso del plan— parte de
 // estas mismas filas, y porque el tablero va a querer el resumen.
+// La bandeja se publica porque la ficha de la cotización pregunta «¿qué le
+// falta a ESTE pedido?», y esa cuenta tiene que ser la misma que la de la
+// bandeja: el stock se reparte entre todos los que esperan, y dos pantallas
+// con cifras distintas para la misma pregunta no se las cree nadie.
+export { bandejaPorComprar } from "./api/por-comprar";
+
 export {
   ETIQUETA_URGENCIA,
   agruparPorComprar,
+  loQueFaltaDe,
   resumirPorComprar,
   type LineaComprometida,
   type PedidoPendiente,
+  type FaltaDelPedido,
   type ProductoPorComprar,
   type ResumenPorComprar,
   type Urgencia,

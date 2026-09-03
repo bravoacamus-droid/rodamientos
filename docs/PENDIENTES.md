@@ -1589,6 +1589,73 @@ se comía justo el dato que distingue un producto de otro.
 
 ---
 
+### U · Del pedido a compras, que era el paso que faltaba · 03/09
+
+Luis, 03/09: *«después de aceptar la cotización se pasa a pedido, y después
+debería ver un botón para cotizar en compra los productos seleccionados, ¿no?»*.
+
+Sí. Y no estaba.
+
+#### Dónde se cortaba
+
+Al confirmar el pedido, lo único que ofrecía la pantalla era **«Generar guía»**
+— o sea, despachar. Y despachar supone que la mercadería está: si el cliente
+confirmó 25 y en el almacén hay 20, lo primero es conseguir 5.
+
+El camino existía —la bandeja «Por comprar»— pero es **general**: junta lo de
+todos los clientes. Había que acordarse de ir, buscar los productos de ESE
+pedido entre los de todos, y marcarlos a mano. Con el pedido recién cerrado
+delante, eso es pedirle a la persona que haga de índice.
+
+#### Lo que sale ahora
+
+Debajo de la cabecera, en cuanto el pedido está confirmado:
+
+    Falta comprar 2 productos de este pedido
+    TMAS100-005   CHAPAS CALIBRADAS SKF DE 0.05mm…      5
+    50X68X8TC     RETEN 50 X 68 X 8 TC                 10
+
+                              [ Pedir precio de lo que falta ]
+                              [ Registrar la compra          ]
+
+Los dos botones llevan las cantidades ya puestas. **El primario es pedir
+precio y no comprar**: el precio lo pone el proveedor y Willy pregunta antes de
+comprar. Registrar la compra directa queda de segunda, para cuando ya se sabe a
+cuánto.
+
+Si no falta nada, el bloque no aparece — y en un borrador tampoco: todavía no
+se sabe qué va a confirmar el cliente, y avisar de que falta stock de algo que
+quizá no compre es ruido.
+
+#### La cuenta sale de la bandeja, no de una propia
+
+Restar el stock línea a línea aquí habría sido más corto y habría dado **otro
+número**: el stock se reparte entre todos los que esperan el mismo producto,
+por orden de confirmación. Si esta pantalla dijera «faltan 5» y la bandeja
+«faltan 10», la persona deja de fiarse de las dos.
+
+Así que `loQueFaltaDe()` filtra el reparto ya hecho en vez de rehacerlo, y
+tiene sus pruebas: dos clientes esperando lo mismo, líneas repetidas del mismo
+producto dentro del pedido, y lo que ya viene en camino —que se enseña pero
+**no entra en el botón**, porque volver a pedirlo es comprarlo dos veces.
+
+#### Y el vocabulario, que era un tercer nombre para lo mismo
+
+Se pulsa «Confirmar pedido», el diálogo pregunta «¿qué te confirmó el
+cliente?» y el documento quedaba en **«Aprobada»**. Tres palabras para un solo
+acto. Ahora se lee **«Confirmada»** en los tres sitios.
+
+El valor del enum en la base sigue siendo `aprobada`: cambiarlo es una
+migración y no arregla nada que se vea.
+
+#### El flujo completo, tal como queda
+
+    Cotización → Confirmar pedido → CONFIRMADA
+                                       ├── ¿falta algo? → Pedir precio → Comparar → Compra → Recepción
+                                       └── Generar guía → Facturar → Cobrar
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

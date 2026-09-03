@@ -417,3 +417,67 @@ export function repartirPorProveedor(
       (a.proveedor ?? "").localeCompare(b.proveedor ?? ""),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Lo que le falta a UN pedido
+// ---------------------------------------------------------------------------
+
+/** Una línea que este pedido necesita y el almacén no cubre. */
+export interface FaltaDelPedido {
+  producto_id: string;
+  codigo: string;
+  descripcion: string;
+  /** Lo que falta PARA ESTE PEDIDO, no para todos los clientes. */
+  falta: number;
+  /** Si ya hay una compra en camino que lo cubre. */
+  enCamino: boolean;
+}
+
+/**
+ * Qué le falta a una cotización concreta para poder despacharse.
+ *
+ * Existe porque el flujo se cortaba aquí. Al confirmar el pedido, lo único
+ * que ofrecía la pantalla era «Generar guía» — o sea, despachar—, y eso
+ * supone que la mercadería está. Si el cliente confirmó 25 y hay 20, primero
+ * hay que conseguir 5, y no había ningún camino desde el pedido hasta
+ * compras: había que acordarse de ir a la bandeja general.
+ *
+ * ---------------------------------------------------------------------------
+ * Se calcula sobre la bandeja, y es a propósito
+ * ---------------------------------------------------------------------------
+ * Podría restarse el stock línea a línea aquí mismo, y sería más corto. Pero
+ * daría OTRO número que el de la bandeja, porque el stock se reparte entre
+ * todos los clientes que esperan el mismo producto por orden de confirmación.
+ *
+ * Dos pantallas que contestan la misma pregunta con cifras distintas es peor
+ * que una pantalla de menos: la persona deja de fiarse de las dos. Así que
+ * esto filtra el reparto ya hecho en vez de rehacerlo.
+ */
+export function loQueFaltaDe(
+  cotizacionId: string,
+  filas: readonly ProductoPorComprar[],
+): FaltaDelPedido[] {
+  const salida: FaltaDelPedido[] = [];
+
+  for (const fila of filas) {
+    const suyas = fila.lineas.filter((l) => l.cotizacion_id === cotizacionId);
+    if (suyas.length === 0) continue;
+
+    const falta = dos(suyas.reduce((s, l) => s + l.descubierto, 0));
+    if (falta <= 0) continue;
+
+    salida.push({
+      producto_id: fila.producto_id,
+      codigo: fila.codigo,
+      descripcion: fila.descripcion,
+      falta,
+      // Lo del producto entero, no lo de este pedido: si ya viene mercadería
+      // en camino, volver a pedirla es comprar dos veces. Que alcance o no
+      // para todos los que esperan lo decide la bandeja, que es donde se ve
+      // el reparto completo.
+      enCamino: fila.estado === "en_camino",
+    });
+  }
+
+  return salida;
+}

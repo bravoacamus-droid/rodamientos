@@ -111,7 +111,13 @@ export interface FiltrosCotizaciones {
 export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
   borrador: "Borrador",
   enviada: "Enviada",
-  aprobada: "Aprobada",
+  // «Confirmada», no «Aprobada». El botón dice «Confirmar pedido» y el
+  // diálogo pregunta «¿qué te confirmó el cliente?»; que el documento quedara
+  // luego en «Aprobada» era un tercer nombre para lo mismo. El valor del enum
+  // en la base sigue siendo `aprobada` —cambiarlo es una migración y no
+  // arregla nada— pero lo que se lee en pantalla ahora es la misma palabra en
+  // los tres sitios.
+  aprobada: "Confirmada",
   rechazada: "Rechazada",
   vencida: "Vencida",
   atendida: "Atendida",

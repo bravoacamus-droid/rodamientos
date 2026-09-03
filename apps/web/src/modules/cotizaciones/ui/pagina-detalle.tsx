@@ -7,6 +7,7 @@ import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { enlaceWhatsapp } from "../dominio/whatsapp";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
+import { LoQueFalta } from "./detalle/lo-que-falta";
 
 /**
  * Ficha de una cotización.
@@ -136,6 +137,18 @@ export default async function PaginaDetalleCotizacion({
           }))}
         />
       </header>
+
+      {/*
+        Qué falta comprar de este pedido.
+
+        Solo cuando ya es un pedido: en un borrador todavía no se sabe qué va
+        a confirmar el cliente, y avisar de que falta stock de algo que quizá
+        no compre es ruido. Va ARRIBA del documento porque, recién confirmado,
+        conseguir la mercadería es lo siguiente que hay que hacer.
+      */}
+      {cabecera.estado === "aprobada" ? (
+        <LoQueFalta cotizacionId={cabecera.id} />
+      ) : null}
 
       {/*
         El margen es información INTERNA.
