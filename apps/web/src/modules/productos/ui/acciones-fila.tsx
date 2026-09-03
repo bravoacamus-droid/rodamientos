@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +56,9 @@ export function AccionesFila({
   puedeAjustarStock,
 }: AccionesFilaProps) {
   const router = useRouter();
-  const [dialogo, setDialogo] = React.useState<"ninguno" | "stock" | "archivar">("ninguno");
+  const [dialogo, setDialogo] = React.useState<
+    "ninguno" | "stock" | "archivar"
+  >("ninguno");
 
   return (
     <>
@@ -76,7 +80,9 @@ export function AccionesFila({
           </DropdownMenuItem>
 
           {puedeEditar ? (
-            <DropdownMenuItem onSelect={() => router.push(`/productos/${id}/editar`)}>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/productos/${id}/editar`)}
+            >
               Editar producto
             </DropdownMenuItem>
           ) : null}
@@ -97,7 +103,9 @@ export function AccionesFila({
           >
             Cotizar este producto
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => router.push(`/inventario/kardex?producto=${id}`)}>
+          <DropdownMenuItem
+            onSelect={() => router.push(`/inventario/kardex?producto=${id}`)}
+          >
             Ver kardex
           </DropdownMenuItem>
 
@@ -161,17 +169,17 @@ function DialogoStock({
   const router = useRouter();
   const [contado, setContado] = React.useState(String(stock));
   const [motivo, setMotivo] = React.useState("");
-  const [resultado, enviar, enviando] = React.useActionState<ResultadoStock | null, FormData>(
-    async (previo, formData) => {
-      const r = await ajustarStock(previo, formData);
-      if (r.ok) {
-        router.refresh();
-        cerrar();
-      }
-      return r;
-    },
-    null,
-  );
+  const [resultado, enviar, enviando] = React.useActionState<
+    ResultadoStock | null,
+    FormData
+  >(async (previo, formData) => {
+    const r = await ajustarStock(previo, formData);
+    if (r.ok) {
+      router.refresh();
+      cerrar();
+    }
+    return r;
+  }, null);
 
   // Al reabrirlo para otro producto, los campos tienen que empezar limpios.
   React.useEffect(() => {
@@ -182,85 +190,91 @@ function DialogoStock({
   }, [abierto, stock]);
 
   const real = Number(contado.replace(",", "."));
-  const diferencia = Number.isFinite(real) ? Number((real - stock).toFixed(2)) : 0;
+  const diferencia = Number.isFinite(real)
+    ? Number((real - stock).toFixed(2))
+    : 0;
 
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && cerrar()}>
       <DialogContent className="max-w-md">
-        <DialogTitle>Actualizar stock</DialogTitle>
-        <DialogDescription>
-          {codigo} · {descripcion}
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Actualizar stock</DialogTitle>
+          <DialogDescription>
+            {codigo} · {descripcion}
+          </DialogDescription>
+        </DialogHeader>
 
-        <form
-          action={enviar}
-          className="mt-4 flex flex-col gap-3"
-        >
-          <input
-            type="hidden"
-            name="ajuste"
-            value={JSON.stringify({
-              producto_id: id,
-              cantidad_real: Number.isFinite(real) ? real : 0,
-              motivo: motivo.trim(),
-            })}
-          />
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm text-[var(--fg-muted)]">Sistema dice</span>
-              <span className="tabular text-2xl font-semibold">{stock}</span>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Contaste</span>
-              <Input
-                type="number"
-                step="any"
-                min={0}
-                value={contado}
-                onChange={(e) => setContado(e.target.value)}
-                className="text-right tabular"
-                autoFocus
-              />
-            </label>
-          </div>
-
-          {diferencia !== 0 ? (
-            <p className="rounded-sm bg-[var(--surface-2)] p-2.5 text-sm">
-              Se registrará un ajuste de{" "}
-              <strong
-                className={
-                  diferencia > 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"
-                }
-              >
-                {diferencia > 0 ? "+" : ""}
-                {diferencia}
-              </strong>{" "}
-              unidades. Queda constancia en el kardex a tu nombre.
-            </p>
-          ) : (
-            <p className="text-sm text-[var(--fg-muted)]">
-              El conteo coincide con el saldo: no hay nada que ajustar.
-            </p>
-          )}
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Motivo</span>
-            <Textarea
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              rows={2}
-              placeholder="Conteo físico del 21/08, se encontraron 3 unidades más en el anaquel B."
+        {/* El pie va dentro del formulario: su botón es el que envía. */}
+        <form action={enviar}>
+          <DialogBody className="flex flex-col gap-3">
+            <input
+              type="hidden"
+              name="ajuste"
+              value={JSON.stringify({
+                producto_id: id,
+                cantidad_real: Number.isFinite(real) ? real : 0,
+                motivo: motivo.trim(),
+              })}
             />
-            <span className="text-xs text-[var(--fg-muted)]">
-              Obligatorio. Un ajuste sin explicación es un descuadre que nadie va
-              a poder auditar en tres meses.
-            </span>
-          </label>
 
-          {resultado && !resultado.ok ? (
-            <p className="text-sm text-[var(--danger)]">{resultado.error}</p>
-          ) : null}
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-[var(--fg-muted)]">
+                  Sistema dice
+                </span>
+                <span className="tabular text-2xl font-semibold">{stock}</span>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">Contaste</span>
+                <Input
+                  type="number"
+                  step="any"
+                  min={0}
+                  value={contado}
+                  onChange={(e) => setContado(e.target.value)}
+                  className="text-right tabular"
+                  autoFocus
+                />
+              </label>
+            </div>
+
+            {diferencia !== 0 ? (
+              <p className="rounded-sm bg-[var(--surface-2)] p-2.5 text-sm">
+                Se registrará un ajuste de{" "}
+                <strong
+                  className={
+                    diferencia > 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"
+                  }
+                >
+                  {diferencia > 0 ? "+" : ""}
+                  {diferencia}
+                </strong>{" "}
+                unidades. Queda constancia en el kardex a tu nombre.
+              </p>
+            ) : (
+              <p className="text-sm text-[var(--fg-muted)]">
+                El conteo coincide con el saldo: no hay nada que ajustar.
+              </p>
+            )}
+
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Motivo</span>
+              <Textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                rows={2}
+                placeholder="Conteo físico del 21/08, se encontraron 3 unidades más en el anaquel B."
+              />
+              <span className="text-xs text-[var(--fg-muted)]">
+                Obligatorio. Un ajuste sin explicación es un descuadre que nadie
+                va a poder auditar en tres meses.
+              </span>
+            </label>
+
+            {resultado && !resultado.ok ? (
+              <p className="text-sm text-[var(--danger)]">{resultado.error}</p>
+            ) : null}
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={cerrar}>
@@ -268,7 +282,9 @@ function DialogoStock({
             </Button>
             <Button
               type="submit"
-              disabled={enviando || diferencia === 0 || motivo.trim().length < 4}
+              disabled={
+                enviando || diferencia === 0 || motivo.trim().length < 4
+              }
             >
               {enviando ? "Registrando…" : "Registrar ajuste"}
             </Button>
@@ -328,37 +344,39 @@ function DialogoArchivar({
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && cerrar()}>
       <DialogContent className="max-w-md">
-        <DialogTitle>
-          {archivado ? "Reactivar producto" : "Dar de baja"}
-        </DialogTitle>
-        <DialogDescription>
-          {archivado ? (
-            <>
-              {codigo} vuelve al catálogo y se podrá cotizar otra vez.
-            </>
-          ) : (
-            <>
-              {codigo} sale de las cotizaciones y del buscador, pero{" "}
-              <strong>no se borra</strong>: conserva su historial y lo puedes
-              reactivar cuando quieras.
-            </>
-          )}
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>
+            {archivado ? "Reactivar producto" : "Dar de baja"}
+          </DialogTitle>
+          <DialogDescription>
+            {archivado ? (
+              <>{codigo} vuelve al catálogo y se podrá cotizar otra vez.</>
+            ) : (
+              <>
+                {codigo} sale de las cotizaciones y del buscador, pero{" "}
+                <strong>no se borra</strong>: conserva su historial y lo puedes
+                reactivar cuando quieras.
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
 
-        {!archivado ? (
-          <label className="mt-3 flex flex-col gap-1">
-            <span className="text-sm font-medium">Motivo (opcional)</span>
-            <Input
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Descontinuado por el fabricante"
-            />
-          </label>
-        ) : null}
+        <DialogBody className="flex flex-col gap-3">
+          {!archivado ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Motivo (opcional)</span>
+              <Input
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Descontinuado por el fabricante"
+              />
+            </label>
+          ) : null}
 
-        {error ? (
-          <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>
-        ) : null}
+          {error ? (
+            <p className="text-sm text-[var(--danger)]">{error}</p>
+          ) : null}
+        </DialogBody>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={cerrar}>

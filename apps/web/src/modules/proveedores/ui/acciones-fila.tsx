@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +65,9 @@ export function AccionesFila({
           </DropdownMenuItem>
 
           {puedeEditar ? (
-            <DropdownMenuItem onSelect={() => router.push(`/proveedores/${id}/editar`)}>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/proveedores/${id}/editar`)}
+            >
               Editar proveedor
             </DropdownMenuItem>
           ) : null}
@@ -167,25 +171,31 @@ function DialogoBaja({
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && cerrar()}>
       <DialogContent className="max-w-md">
-        <DialogTitle>{activo ? "Dar de baja" : "Reactivar proveedor"}</DialogTitle>
-        <DialogDescription>
-          {activo ? (
-            <>
-              <strong>{razonSocial}</strong> deja de aparecer al registrar
-              compras y recepciones, pero <strong>no se borra</strong>: sus
-              recepciones antiguas siguen enseñando su nombre y lo puedes
-              reactivar cuando quieras.
-            </>
-          ) : (
-            <>
-              <strong>{razonSocial}</strong> vuelve a estar disponible para
-              comprarle y recibir su mercadería.
-            </>
-          )}
-        </DialogDescription>
-
-        {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
-
+        <DialogHeader>
+          <DialogTitle>
+            {activo ? "Dar de baja" : "Reactivar proveedor"}
+          </DialogTitle>
+          <DialogDescription>
+            {activo ? (
+              <>
+                <strong>{razonSocial}</strong> deja de aparecer al registrar
+                compras y recepciones, pero <strong>no se borra</strong>: sus
+                recepciones antiguas siguen enseñando su nombre y lo puedes
+                reactivar cuando quieras.
+              </>
+            ) : (
+              <>
+                <strong>{razonSocial}</strong> vuelve a estar disponible para
+                comprarle y recibir su mercadería.
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {error ? (
+            <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>
+          ) : null}
+        </DialogBody>
         <DialogFooter>
           <Button
             type="button"

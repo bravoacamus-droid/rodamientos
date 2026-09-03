@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
@@ -72,7 +74,9 @@ export function AccionesFila({
           </DropdownMenuItem>
 
           {puedeEditar ? (
-            <DropdownMenuItem onSelect={() => router.push(`/clientes/${id}/editar`)}>
+            <DropdownMenuItem
+              onSelect={() => router.push(`/clientes/${id}/editar`)}
+            >
               Editar cliente
             </DropdownMenuItem>
           ) : null}
@@ -174,40 +178,46 @@ function DialogoBloqueo({
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && cerrar()}>
       <DialogContent className="max-w-md">
-        <DialogTitle>{bloqueado ? "Desbloquear cliente" : "Bloquear cliente"}</DialogTitle>
-        <DialogDescription>
-          {bloqueado ? (
-            <>
-              {codigo} · {razonSocial} vuelve a la cartera y se le podrá cotizar
-              y facturar otra vez.
-            </>
-          ) : (
-            <>
-              {codigo} · {razonSocial} deja de aparecer en el cotizador, pero{" "}
-              <strong>no se borra</strong>: conserva sus documentos y su deuda, y
-              lo puedes desbloquear cuando quieras.
-            </>
-          )}
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>
+            {bloqueado ? "Desbloquear cliente" : "Bloquear cliente"}
+          </DialogTitle>
+          <DialogDescription>
+            {bloqueado ? (
+              <>
+                {codigo} · {razonSocial} vuelve a la cartera y se le podrá
+                cotizar y facturar otra vez.
+              </>
+            ) : (
+              <>
+                {codigo} · {razonSocial} deja de aparecer en el cotizador, pero{" "}
+                <strong>no se borra</strong>: conserva sus documentos y su
+                deuda, y lo puedes desbloquear cuando quieras.
+              </>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {!bloqueado ? (
+            <label className="mt-3 flex flex-col gap-1">
+              <span className="text-sm font-medium">Motivo</span>
+              <Textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                rows={2}
+                placeholder="Tiene tres facturas vencidas desde julio."
+              />
+              <span className="text-xs text-[var(--fg-muted)]">
+                Obligatorio. Queda en la ficha para que el siguiente que lo mire
+                sepa por qué está así.
+              </span>
+            </label>
+          ) : null}
 
-        {!bloqueado ? (
-          <label className="mt-3 flex flex-col gap-1">
-            <span className="text-sm font-medium">Motivo</span>
-            <Textarea
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              rows={2}
-              placeholder="Tiene tres facturas vencidas desde julio."
-            />
-            <span className="text-xs text-[var(--fg-muted)]">
-              Obligatorio. Queda en la ficha para que el siguiente que lo mire
-              sepa por qué está así.
-            </span>
-          </label>
-        ) : null}
-
-        {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
-
+          {error ? (
+            <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>
+          ) : null}
+        </DialogBody>
         <DialogFooter>
           <Button
             type="button"

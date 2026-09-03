@@ -1514,6 +1514,81 @@ fiscal.
 
 ---
 
+### T · Los modales estaban fuera del molde · 03/09
+
+Luis, con una captura del diálogo de confirmar: *«he visto varios modales así,
+todos rotos, sin diseño, todo apretado. Mira esa X, no tiene color ni nada»*.
+
+#### La primera hipótesis era falsa
+
+Que las clases de color del sistema —`text-fg`, `text-muted`, `text-subtle`—
+no existieran, porque no están declaradas como colores de tema. Se comprobó en
+el navegador y **sí funcionan**: están definidas aparte con `@utility`, y la X
+tenía su gris correcto, `#8894a2`.
+
+Vale la pena dejarlo escrito: la hipótesis encajaba con los síntomas y era
+falsa. Lo que la descartó fue mirar el estilo computado en la pantalla, no
+leer el CSS.
+
+#### Lo que pasaba de verdad
+
+`DialogHeader`, `DialogBody` y `DialogFooter` ponen el aire, la línea de
+separación y el fondo del pie. **Eran opcionales**, y `DialogContent` es una
+caja sin padding.
+
+De los quince diálogos del ERP, **trece no los usaban**. Ponían el título, la
+descripción y el contenido sueltos dentro del contenedor, así que salían
+pegados a los bordes. Eso es lo que se veía como «apretado y sin diseño», y por
+eso pasaba en varios a la vez: no era un modal roto, era el molde sin usar.
+
+#### Y el molde tenía sus propias medidas cortas
+
+- **La X: 24 px de lado.** Un icono de 16 con 4 de aire. Diminuta para el ratón
+  y casi invisible para quien no ve de cerca, que es el caso de Willy. Ahora
+  son 36 px, con fondo al pasar por encima y anillo de foco para el teclado.
+- **El título en `text-sm`**, el mismo tamaño que una celda de tabla. Es la
+  pregunta que hay que leer antes de decidir: `text-base`.
+- **La descripción en `text-xs`.** A `text-sm`, con ancho de lectura limitado.
+- Cabecera, cuerpo y pie, con más aire y con más margen lateral en pantallas
+  medianas.
+
+#### Un intento que parecía funcionar y no funcionaba
+
+La primera idea fue que el molde se aplicara solo: una regla `:has()` que
+pusiera el aire si dentro no había ninguna sección. Se escribió primero como
+variante de Tailwind —`[&:not(:has([data-x]))]`— y **no se genera**: los
+corchetes anidados le rompen el parseo y queda una clase que no existe.
+
+Se pasó a CSS de verdad y entonces sí se generaba, pero **seguía sin aplicar**:
+las tres secciones llevaban el mismo marcador, y doce de los trece diálogos
+tienen `DialogFooter`, así que el pie desactivaba el aire del resto.
+
+Se descartó del todo. Un arreglo que parece que funciona y no funciona es peor
+que no tenerlo: los trece se envolvieron de verdad, uno a uno.
+
+#### Cómo se hicieron los trece
+
+Doce con un script mecánico, porque el patrón es idéntico. **Cuatro se
+rompieron**: los que tienen un `<form>` envolviendo el contenido —cobrar,
+anotar gestión, emitir nota y ajustar stock— porque insertar el cierre de la
+cabecera partía el formulario. Se restauraron y se hicieron a mano, con el pie
+DENTRO del formulario, que es donde tiene que estar: su botón es el que envía.
+
+También se limpió el ruido: `prettier` reformateó 68 archivos y solo 14 tenían
+cambio real. Los otros 54 se devolvieron a su sitio — un commit de diseño con
+2.600 líneas de reformateo no se puede revisar.
+
+#### El diálogo de la captura, aparte
+
+El de «¿Qué te confirmó el cliente?» se rehízo entero: las filas se apilan en
+móvil y se alinean desde `sm`; la cantidad y su tope van pegados —«5 de 5 NIU»
+se lee de un vistazo, y esa es la única comprobación que hay que hacer ahí—; el
+botón «No la quiso» pasó de fantasma a con borde, porque no parecía pulsable; y
+la descripción del producto ya no se corta en una línea, que en este catálogo
+se comía justo el dato que distingue un producto de otro.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

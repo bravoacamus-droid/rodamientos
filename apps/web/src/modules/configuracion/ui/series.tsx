@@ -11,9 +11,11 @@ import {
   Button,
   Campo,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
   Input,
@@ -22,7 +24,11 @@ import {
 } from "@rodatech/ui";
 import { Plus } from "lucide-react";
 
-import { crearSerie, guardarSerie, type ResultadoConfig } from "../acciones/guardar";
+import {
+  crearSerie,
+  guardarSerie,
+  type ResultadoConfig,
+} from "../acciones/guardar";
 import { avisosDelInicial, proximoNumero, serieValida } from "../dominio/serie";
 import {
   ETIQUETA_TIPO_DOCUMENTO,
@@ -77,8 +83,8 @@ export function TablaSeries({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-[var(--fg-subtle)]">
           «Desde» es el número en el que se quedó el sistema anterior. «Va por»
-          es el último que se emitió aquí. El próximo documento se lleva el mayor
-          de los dos, más uno — los correlativos nunca retroceden.
+          es el último que se emitió aquí. El próximo documento se lleva el
+          mayor de los dos, más uno — los correlativos nunca retroceden.
         </p>
         {puedeEditar ? <DialogNuevaSerie /> : null}
       </div>
@@ -114,10 +120,13 @@ function FilaSerie({
   puedeEditar: boolean;
 }) {
   const { ocupado, correr } = useAccion();
-  const [inicial, setInicial] = React.useState(String(serie.correlativo_inicial));
+  const [inicial, setInicial] = React.useState(
+    String(serie.correlativo_inicial),
+  );
 
   const propuesto = Number(inicial);
-  const cambiado = propuesto !== serie.correlativo_inicial && inicial.trim() !== "";
+  const cambiado =
+    propuesto !== serie.correlativo_inicial && inicial.trim() !== "";
   const avisos = cambiado ? avisosDelInicial(serie, propuesto) : [];
   const bloqueado = avisos.some((a) => a.tono === "danger");
 
@@ -153,7 +162,9 @@ function FilaSerie({
           {puedeEditar ? (
             <Input
               value={inicial}
-              onChange={(e) => setInicial(e.target.value.replace(/[^0-9]/g, ""))}
+              onChange={(e) =>
+                setInicial(e.target.value.replace(/[^0-9]/g, ""))
+              }
               inputMode="numeric"
               aria-label={`Correlativo inicial de ${serie.serie}`}
               className="h-8 w-28 text-right tabular"
@@ -167,7 +178,9 @@ function FilaSerie({
           {serie.correlativo_actual}
         </td>
 
-        <td className="px-3 py-2 font-mono text-[0.8rem]">{proximoNumero(serie)}</td>
+        <td className="px-3 py-2 font-mono text-[0.8rem]">
+          {proximoNumero(serie)}
+        </td>
 
         <td className="whitespace-nowrap px-3 py-2 text-right">
           {puedeEditar ? (
@@ -179,7 +192,9 @@ function FilaSerie({
                     disabled={ocupado || bloqueado}
                     onClick={async () => {
                       const bien = await correr(() =>
-                        guardarSerie(serie.id, { correlativo_inicial: propuesto }),
+                        guardarSerie(serie.id, {
+                          correlativo_inicial: propuesto,
+                        }),
                       );
                       if (!bien) setInicial(String(serie.correlativo_inicial));
                     }}
@@ -189,7 +204,9 @@ function FilaSerie({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setInicial(String(serie.correlativo_inicial))}
+                    onClick={() =>
+                      setInicial(String(serie.correlativo_inicial))
+                    }
                   >
                     Deshacer
                   </Button>
@@ -201,7 +218,11 @@ function FilaSerie({
                       variant="ghost"
                       size="sm"
                       disabled={ocupado}
-                      onClick={() => correr(() => guardarSerie(serie.id, { predeterminada: true }))}
+                      onClick={() =>
+                        correr(() =>
+                          guardarSerie(serie.id, { predeterminada: true }),
+                        )
+                      }
                     >
                       Usar por defecto
                     </Button>
@@ -215,7 +236,11 @@ function FilaSerie({
                         ? "La serie por defecto no se puede desactivar: elige otra antes."
                         : undefined
                     }
-                    onClick={() => correr(() => guardarSerie(serie.id, { activo: !serie.activo }))}
+                    onClick={() =>
+                      correr(() =>
+                        guardarSerie(serie.id, { activo: !serie.activo }),
+                      )
+                    }
                   >
                     {serie.activo ? "Desactivar" : "Activar"}
                   </Button>
@@ -285,83 +310,93 @@ function DialogNuevaSerie() {
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
-        <DialogTitle>Nueva serie</DialogTitle>
-        <DialogDescription>
-          Se crea activa, pero NO como predeterminada: cambiar por dónde numera
-          un tipo de documento es una decisión aparte, y se toma con «usar por
-          defecto».
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Nueva serie</DialogTitle>
+          <DialogDescription>
+            Se crea activa, pero NO como predeterminada: cambiar por dónde
+            numera un tipo de documento es una decisión aparte, y se toma con
+            «usar por defecto».
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="flex flex-col gap-3 py-2">
+            <Campo id="nueva-tipo" label="Tipo de documento">
+              <SelectNativo
+                id="nueva-tipo"
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as TipoDocumento)}
+              >
+                {TIPOS.map((t) => (
+                  <option key={t} value={t}>
+                    {ETIQUETA_TIPO_DOCUMENTO[t]}
+                  </option>
+                ))}
+              </SelectNativo>
+            </Campo>
 
-        <div className="flex flex-col gap-3 py-2">
-          <Campo id="nueva-tipo" label="Tipo de documento">
-            <SelectNativo
-              id="nueva-tipo"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoDocumento)}
-            >
-              {TIPOS.map((t) => (
-                <option key={t} value={t}>
-                  {ETIQUETA_TIPO_DOCUMENTO[t]}
-                </option>
-              ))}
-            </SelectNativo>
-          </Campo>
-
-          <Campo
-            id="nueva-serie"
-            label="Serie"
-            ayuda="De 2 a 6 caracteres, mayúsculas o dígitos. F001, B001, T001…"
-            error={serie && !formatoOk ? "Ese formato no lo acepta la base." : undefined}
-          >
-            <Input
+            <Campo
               id="nueva-serie"
-              value={serie}
-              onChange={(e) => setSerie(e.target.value.toUpperCase())}
-              maxLength={6}
-              className="font-mono"
-            />
-          </Campo>
+              label="Serie"
+              ayuda="De 2 a 6 caracteres, mayúsculas o dígitos. F001, B001, T001…"
+              error={
+                serie && !formatoOk
+                  ? "Ese formato no lo acepta la base."
+                  : undefined
+              }
+            >
+              <Input
+                id="nueva-serie"
+                value={serie}
+                onChange={(e) => setSerie(e.target.value.toUpperCase())}
+                maxLength={6}
+                className="font-mono"
+              />
+            </Campo>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Campo id="nueva-inicial" label="Empieza en">
+            <div className="grid grid-cols-2 gap-3">
+              <Campo id="nueva-inicial" label="Empieza en">
+                <Input
+                  id="nueva-inicial"
+                  value={inicial}
+                  onChange={(e) =>
+                    setInicial(e.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  inputMode="numeric"
+                  className="tabular"
+                />
+              </Campo>
+              <Campo id="nueva-longitud" label="Dígitos" ayuda="Entre 4 y 10.">
+                <Input
+                  id="nueva-longitud"
+                  value={longitud}
+                  onChange={(e) =>
+                    setLongitud(e.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  inputMode="numeric"
+                  className="tabular"
+                />
+              </Campo>
+            </div>
+
+            <Campo id="nueva-desc" label="Descripción">
               <Input
-                id="nueva-inicial"
-                value={inicial}
-                onChange={(e) => setInicial(e.target.value.replace(/[^0-9]/g, ""))}
-                inputMode="numeric"
-                className="tabular"
+                id="nueva-desc"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
               />
             </Campo>
-            <Campo id="nueva-longitud" label="Dígitos" ayuda="Entre 4 y 10.">
-              <Input
-                id="nueva-longitud"
-                value={longitud}
-                onChange={(e) => setLongitud(e.target.value.replace(/[^0-9]/g, ""))}
-                inputMode="numeric"
-                className="tabular"
-              />
-            </Campo>
+
+            {formatoOk && Number(inicial) > 0 && Number(longitud) >= 4 ? (
+              <p className="text-xs text-[var(--fg-muted)]">
+                El primer documento será{" "}
+                <span className="font-mono">
+                  {`${serie}-${String(Number(inicial)).padStart(Number(longitud), "0")}`}
+                </span>
+                .
+              </p>
+            ) : null}
           </div>
-
-          <Campo id="nueva-desc" label="Descripción">
-            <Input
-              id="nueva-desc"
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-            />
-          </Campo>
-
-          {formatoOk && Number(inicial) > 0 && Number(longitud) >= 4 ? (
-            <p className="text-xs text-[var(--fg-muted)]">
-              El primer documento será{" "}
-              <span className="font-mono">
-                {`${serie}-${String(Number(inicial)).padStart(Number(longitud), "0")}`}
-              </span>
-              .
-            </p>
-          ) : null}
-        </div>
-
+        </DialogBody>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => setAbierto(false)}>
             Cancelar

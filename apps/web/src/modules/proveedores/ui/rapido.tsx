@@ -6,9 +6,11 @@ import * as React from "react";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
   Input,
@@ -161,64 +163,74 @@ export function ProveedorRapido({
       </DialogTrigger>
 
       <DialogContent>
-        <DialogTitle>Nuevo proveedor</DialogTitle>
-        <DialogDescription>
-          Lo mínimo para saber a quién se le compra. El resto de la ficha
-          —contacto, plazo de entrega, marcas que representa— se completa después
-          desde el maestro de proveedores.
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Nuevo proveedor</DialogTitle>
+          <DialogDescription>
+            Lo mínimo para saber a quién se le compra. El resto de la ficha
+            —contacto, plazo de entrega, marcas que representa— se completa
+            después desde el maestro de proveedores.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="mt-4 flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">RUC</span>
+              <Input
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                placeholder="20123456789"
+                inputMode="numeric"
+                autoComplete="off"
+              />
+            </label>
 
-        <div className="mt-4 flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">RUC</span>
-            <Input
-              value={numero}
-              onChange={(e) => setNumero(e.target.value)}
-              placeholder="20123456789"
-              inputMode="numeric"
-              autoComplete="off"
-            />
-          </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Razón social</span>
+              <Input
+                value={razonSocial}
+                onChange={(e) => setRazonSocial(e.target.value)}
+                placeholder="Tal como figura en la factura"
+                autoComplete="off"
+              />
+            </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Razón social</span>
-            <Input
-              value={razonSocial}
-              onChange={(e) => setRazonSocial(e.target.value)}
-              placeholder="Tal como figura en la factura"
-              autoComplete="off"
-            />
-          </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Tipo de compra</span>
+              <SelectNativo
+                value={tipo}
+                onChange={(e) =>
+                  setTipo(e.target.value as "local" | "importacion")
+                }
+              >
+                <option value="local">Local</option>
+                <option value="importacion">Importación</option>
+              </SelectNativo>
+              <span className="text-xs text-[var(--fg-subtle)]">
+                «Importación» habilita el prorrateo de gastos en la compra.
+              </span>
+            </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Tipo de compra</span>
-            <SelectNativo
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as "local" | "importacion")}
-            >
-              <option value="local">Local</option>
-              <option value="importacion">Importación</option>
-            </SelectNativo>
-            <span className="text-xs text-[var(--fg-subtle)]">
-              «Importación» habilita el prorrateo de gastos en la compra.
-            </span>
-          </label>
-
-          {error ? (
-            <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2 text-xs text-[var(--danger)]">
-              {error}
-            </p>
-          ) : null}
-        </div>
-
+            {error ? (
+              <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2 text-xs text-[var(--danger)]">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </DialogBody>
         <DialogFooter className="mt-4">
-          <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAbierto(false)}
+          >
             Cancelar
           </Button>
           <Button
             type="button"
             onClick={enviar}
-            disabled={guardando || numero.trim() === "" || razonSocial.trim() === ""}
+            disabled={
+              guardando || numero.trim() === "" || razonSocial.trim() === ""
+            }
           >
             {guardando ? "Guardando…" : "Crear proveedor"}
           </Button>

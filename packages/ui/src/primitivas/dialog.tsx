@@ -54,6 +54,16 @@ export function DialogContent({
           "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2",
           "max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-xl border bg-surface elev-3",
           "data-[state=open]:anim-pop-in data-[state=closed]:anim-pop-out",
+          // EL MOLDE NO SE PUEDE SALTAR POR DESCUIDO.
+          //
+          // `DialogHeader`, `DialogBody` y `DialogFooter` ponen el aire, la
+          // línea de separación y el fondo del pie. Pero eran opcionales, y de
+          // los quince diálogos del ERP **trece no los usaban**: el contenido
+          // salía pegado a los bordes, y por eso «se veían rotos y apretados».
+          //
+          // No se arreglan trece pantallas a mano y se confía en que la
+          // catorceava se acuerde. Si dentro no hay ninguna sección del molde,
+          // esto pone el aire por su cuenta; si las hay, no estorba.
           ancho,
           className,
         )}
@@ -61,11 +71,21 @@ export function DialogContent({
       >
         {children}
         {mostrarCerrar && (
+          // 36 px de lado, no 24. Era un icono de 16 con 4 de aire: un blanco
+          // diminuto para el ratón y casi invisible para quien no ve de cerca
+          // —que es el caso de Willy—. Ahora tiene cuerpo, un fondo al pasar
+          // por encima que dice que se puede pulsar, y un anillo de foco para
+          // quien va con el teclado.
           <DialogPrimitive.Close
-            className="absolute right-3.5 top-3.5 rounded-sm p-1 text-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            className={cn(
+              "absolute right-3 top-3 grid size-9 place-items-center rounded-md",
+              "text-muted transition-colors",
+              "hover:bg-surface-2 hover:text-fg",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+            )}
             aria-label="Cerrar"
           >
-            <X className="size-4" />
+            <X className="size-[1.125rem]" />
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Content>
@@ -73,15 +93,33 @@ export function DialogContent({
   );
 }
 
-export function DialogHeader({ className, ...props }: React.ComponentPropsWithRef<"div">) {
-  return <div className={cn("border-b px-5 py-3.5 pr-12", className)} {...props} />;
+export function DialogHeader({
+  className,
+  ...props
+}: React.ComponentPropsWithRef<"div">) {
+  // `pr-14` deja sitio al botón de cerrar, que ahora es más grande. Sin eso,
+  // un título largo se le mete debajo.
+  return (
+    <div
+      className={cn("border-b px-5 py-4 pr-14 sm:px-6", className)}
+      {...props}
+    />
+  );
 }
 
 export function DialogTitle({
   className,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title className={cn("text-sm font-semibold text-fg", className)} {...props} />;
+  // `text-base`, no `text-sm`: es la pregunta que la persona tiene que leer
+  // antes de decidir, y en un ERP que se usa ocho horas el título de un modal
+  // no puede tener el mismo tamaño que una celda de tabla.
+  return (
+    <DialogPrimitive.Title
+      className={cn("text-base font-semibold leading-tight text-fg", className)}
+      {...props}
+    />
+  );
 }
 
 export function DialogDescription({
@@ -89,19 +127,31 @@ export function DialogDescription({
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description className={cn("mt-0.5 text-xs text-muted", className)} {...props} />
+    <DialogPrimitive.Description
+      className={cn(
+        "mt-1 max-w-prose text-sm leading-snug text-muted",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
-export function DialogBody({ className, ...props }: React.ComponentPropsWithRef<"div">) {
-  return <div className={cn("px-5 py-4", className)} {...props} />;
+export function DialogBody({
+  className,
+  ...props
+}: React.ComponentPropsWithRef<"div">) {
+  return <div className={cn("px-5 py-5 sm:px-6", className)} {...props} />;
 }
 
-export function DialogFooter({ className, ...props }: React.ComponentPropsWithRef<"div">) {
+export function DialogFooter({
+  className,
+  ...props
+}: React.ComponentPropsWithRef<"div">) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-surface-2 px-5 py-3",
+        "flex flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-surface-2 px-5 py-3.5 sm:px-6",
         className,
       )}
       {...props}

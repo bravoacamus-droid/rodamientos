@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
   Textarea,
@@ -79,44 +81,51 @@ export function AnularGuia({
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
-        <DialogTitle>Anular la guía {numero}</DialogTitle>
-        <DialogDescription>
-          {estado === "emitida"
-            ? "La mercadería vuelve al almacén y el kardex registra el ingreso. Queda todo trazado: la guía no se borra."
-            : "El borrador queda anulado. No había salido stock, así que no hay nada que devolver."}
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Anular la guía {numero}</DialogTitle>
+          <DialogDescription>
+            {estado === "emitida"
+              ? "La mercadería vuelve al almacén y el kardex registra el ingreso. Queda todo trazado: la guía no se borra."
+              : "El borrador queda anulado. No había salido stock, así que no hay nada que devolver."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          {comprobante ? (
+            <p className="mt-3 rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm">
+              Hay un comprobante vigente contra esta guía (
+              <strong>{comprobante.numero}</strong>). No se puede anular sin
+              anular antes ese comprobante: la factura quedaría apuntando a un
+              documento que dice que nunca existió.
+            </p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-3">
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">
+                  Motivo <span className="text-[var(--danger)]">*</span>
+                </span>
+                <Textarea
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  rows={3}
+                  placeholder="Por ejemplo: el cliente rechazó la entrega y volvió todo."
+                  autoFocus
+                />
+              </label>
 
-        {comprobante ? (
-          <p className="mt-3 rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm">
-            Hay un comprobante vigente contra esta guía (<strong>{comprobante.numero}</strong>).
-            No se puede anular sin anular antes ese comprobante: la factura quedaría
-            apuntando a un documento que dice que nunca existió.
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                Motivo <span className="text-[var(--danger)]">*</span>
-              </span>
-              <Textarea
-                value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
-                rows={3}
-                placeholder="Por ejemplo: el cliente rechazó la entrega y volvió todo."
-                autoFocus
-              />
-            </label>
-
-            {error ? (
-              <p className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
-                {error}
-              </p>
-            ) : null}
-          </div>
-        )}
-
+              {error ? (
+                <p className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAbierto(false)}
+          >
             Cancelar
           </Button>
           {!comprobante ? (

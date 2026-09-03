@@ -9,9 +9,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
   RadioCampo,
@@ -26,7 +28,12 @@ import {
   quitarEquivalencia,
   type ResultadoEquivalencia,
 } from "../acciones/declarar";
-import { AYUDA_CLASE, CLASES, ETIQUETA_CLASE, type ClaseEquivalencia } from "../dominio/tipos";
+import {
+  AYUDA_CLASE,
+  CLASES,
+  ETIQUETA_CLASE,
+  type ClaseEquivalencia,
+} from "../dominio/tipos";
 
 function useAccion() {
   const router = useRouter();
@@ -92,44 +99,46 @@ export function BotonDeclarar({
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
-        <DialogTitle>Declarar equivalencia</DialogTitle>
-        <DialogDescription>
-          Con <span className="font-mono">{codigoEquivalente}</span>. Queda
-          guardada en los dos sentidos y sube al primer peldaño de la cascada:
-          desde ahora sale antes que cualquier coincidencia deducida.
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Declarar equivalencia</DialogTitle>
+          <DialogDescription>
+            Con <span className="font-mono">{codigoEquivalente}</span>. Queda
+            guardada en los dos sentidos y sube al primer peldaño de la cascada:
+            desde ahora sale antes que cualquier coincidencia deducida.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="flex flex-col gap-3 py-2">
+            <RadioGroup
+              value={clase}
+              onValueChange={(v) => setClase(v as ClaseEquivalencia)}
+              className="flex flex-col gap-2"
+            >
+              {CLASES.map((c) => (
+                <RadioCampo
+                  key={c}
+                  id={`${idBase}-${c}`}
+                  value={c}
+                  label={ETIQUETA_CLASE[c]}
+                  ayuda={AYUDA_CLASE[c]}
+                />
+              ))}
+            </RadioGroup>
 
-        <div className="flex flex-col gap-3 py-2">
-          <RadioGroup
-            value={clase}
-            onValueChange={(v) => setClase(v as ClaseEquivalencia)}
-            className="flex flex-col gap-2"
-          >
-            {CLASES.map((c) => (
-              <RadioCampo
-                key={c}
-                id={`${idBase}-${c}`}
-                value={c}
-                label={ETIQUETA_CLASE[c]}
-                ayuda={AYUDA_CLASE[c]}
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-[var(--fg-muted)]">
+                Nota (opcional)
+              </span>
+              <Textarea
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+                rows={2}
+                maxLength={500}
+                placeholder="«El de FAG viene con jaula de poliamida», por ejemplo."
               />
-            ))}
-          </RadioGroup>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-[var(--fg-muted)]">
-              Nota (opcional)
-            </span>
-            <Textarea
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              rows={2}
-              maxLength={500}
-              placeholder="«El de FAG viene con jaula de poliamida», por ejemplo."
-            />
-          </label>
-        </div>
-
+            </label>
+          </div>
+        </DialogBody>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => setAbierto(false)}>
             Cancelar
@@ -139,7 +148,12 @@ export function BotonDeclarar({
             disabled={ocupado}
             onClick={async () => {
               const bien = await correr(() =>
-                declararEquivalencia(productoId, equivalenteId, clase, nota || null),
+                declararEquivalencia(
+                  productoId,
+                  equivalenteId,
+                  clase,
+                  nota || null,
+                ),
               );
               if (bien) {
                 setAbierto(false);
@@ -171,7 +185,9 @@ export function BotonQuitar({
       size="sm"
       disabled={ocupado}
       title="Quitar la equivalencia"
-      onClick={() => correr(() => quitarEquivalencia(productoId, equivalenteId))}
+      onClick={() =>
+        correr(() => quitarEquivalencia(productoId, equivalenteId))
+      }
     >
       <Link2Off />
       Quitar

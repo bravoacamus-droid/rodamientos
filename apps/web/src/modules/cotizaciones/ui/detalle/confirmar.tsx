@@ -8,9 +8,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   Input,
 } from "@rodatech/ui";
@@ -50,7 +52,9 @@ export interface LineaParaConfirmar {
 }
 
 const dolar = (n: number) =>
-  new Intl.NumberFormat("es-PE", { style: "currency", currency: "USD" }).format(n);
+  new Intl.NumberFormat("es-PE", { style: "currency", currency: "USD" }).format(
+    n,
+  );
 
 export function DialogoConfirmar({
   cotizacionId,
@@ -68,7 +72,9 @@ export function DialogoConfirmar({
   const [error, setError] = React.useState<string | null>(null);
 
   /** Lo confirmado por línea. Arranca en lo cotizado, que es el caso normal. */
-  const [cantidades, setCantidades] = React.useState<Record<string, number>>({});
+  const [cantidades, setCantidades] = React.useState<Record<string, number>>(
+    {},
+  );
 
   // Se reinicia cada vez que se abre: si alguien cerró tras tocar cantidades y
   // vuelve a abrir, tiene que encontrar la cotización como está, no su borrador
@@ -126,7 +132,10 @@ export function DialogoConfirmar({
         // casualmente coincidió.
         completa
           ? undefined
-          : lineas.map((l) => ({ item_id: l.id, cantidad: cantidades[l.id] ?? 0 })),
+          : lineas.map((l) => ({
+              item_id: l.id,
+              cantidad: cantidades[l.id] ?? 0,
+            })),
       );
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
@@ -140,98 +149,127 @@ export function DialogoConfirmar({
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
       <DialogContent className="max-w-2xl">
-        <DialogTitle>¿Qué te confirmó el cliente?</DialogTitle>
-        <DialogDescription>
-          Viene todo marcado. Baja o pon en cero lo que no te pidió — de eso
-          sale después lo que hay que comprar.
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>¿Qué te confirmó el cliente?</DialogTitle>
+          <DialogDescription>
+            Viene todo marcado. Baja o pon en cero lo que no te pidió — de eso
+            sale después lo que hay que comprar.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="max-h-[50vh] overflow-y-auto">
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
-            {lineas.map((l) => {
-              const conf = cantidades[l.id] ?? 0;
-              const fuera = conf === 0;
-              return (
-                <li key={l.id} className="flex items-center gap-3 py-3">
-                  <div className={`min-w-0 flex-1 ${fuera ? "opacity-45" : ""}`}>
-                    <p className="text-sm font-medium">
-                      <span className={fuera ? "line-through" : ""}>{l.codigo}</span>
-                    </p>
-                    <p className="mt-0.5 truncate text-sm text-[var(--fg-muted)]">
-                      {l.descripcion}
-                    </p>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={l.cantidad}
-                      step="any"
-                      numerico
-                      value={conf}
-                      onChange={(e) => poner(l.id, Number(e.target.value), l.cantidad)}
-                      className="h-11 w-24 md:h-control-md"
-                      aria-label={`Cantidad confirmada de ${l.codigo}`}
-                    />
-                    <span className="w-24 text-sm text-[var(--fg-muted)]">
-                      de {l.cantidad} {l.unidad}
-                    </span>
-                    {/* Un atajo para el caso frecuente: «esta no la quiso».
-                        Teclear el cero a mano en seis líneas es el trabajo
-                        que este botón ahorra. */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-10 w-28"
-                      onClick={() => poner(l.id, fuera ? l.cantidad : 0, l.cantidad)}
+        <DialogBody className="flex flex-col gap-4">
+          <div className="-mx-1 max-h-[50vh] overflow-y-auto px-1">
+            <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+              {lineas.map((l) => {
+                const conf = cantidades[l.id] ?? 0;
+                const fuera = conf === 0;
+                return (
+                  // Se apila en móvil y se pone en fila desde `sm`. Todo en
+                  // una línea, el código y la descripción se pisaban con la
+                  // cantidad en cuanto la descripción era larga — que en este
+                  // catálogo es siempre.
+                  <li
+                    key={l.id}
+                    className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:gap-4"
+                  >
+                    <div
+                      className={`min-w-0 flex-1 ${fuera ? "opacity-50" : ""}`}
                     >
-                      {fuera ? (
-                        <>
-                          <RotateCcw aria-hidden="true" />
-                          Devolver
-                        </>
-                      ) : (
-                        <>
-                          <X aria-hidden="true" />
-                          No la quiso
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                      <p
+                        className={`text-sm font-semibold ${fuera ? "line-through" : ""}`}
+                      >
+                        {l.codigo}
+                      </p>
+                      {/* Dos líneas, no una cortada. En este catálogo lo que
+                          distingue un producto de otro va al final de la
+                          descripción —el espesor, la medida— y `truncate` se
+                          comía justo eso. */}
+                      <p className="mt-0.5 line-clamp-2 text-sm text-[var(--fg-muted)]">
+                        {l.descripcion}
+                      </p>
+                    </div>
 
-        {error ? (
-          <p
-            role="alert"
-            className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]"
-          >
-            {error}
+                    <div className="flex shrink-0 items-center gap-3">
+                      {/* La cantidad y su tope pegados: «5 de 5 NIU» se lee de
+                          un vistazo, y esa es la única comprobación que hay
+                          que hacer en esta pantalla. */}
+                      <div className="flex items-baseline gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={l.cantidad}
+                          step="any"
+                          numerico
+                          value={conf}
+                          onChange={(e) =>
+                            poner(l.id, Number(e.target.value), l.cantidad)
+                          }
+                          className="h-11 w-24 text-base font-semibold md:h-control-md"
+                          aria-label={`Cantidad confirmada de ${l.codigo}`}
+                        />
+                        <span className="whitespace-nowrap text-sm text-[var(--fg-muted)]">
+                          de {l.cantidad} {l.unidad}
+                        </span>
+                      </div>
+
+                      {/* Un atajo para el caso frecuente: «esta no la quiso».
+                          Teclear el cero a mano en seis líneas es el trabajo
+                          que este botón ahorra. Con borde y no fantasma: sin
+                          él no parecía pulsable. */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="ml-auto h-11 w-32 shrink-0 md:h-control-md"
+                        onClick={() =>
+                          poner(l.id, fuera ? l.cantidad : 0, l.cantidad)
+                        }
+                      >
+                        {fuera ? (
+                          <>
+                            <RotateCcw aria-hidden="true" />
+                            Devolver
+                          </>
+                        ) : (
+                          <>
+                            <X aria-hidden="true" />
+                            No la quiso
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+
+          {error ? (
+            <p
+              role="alert"
+              className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]"
+            >
+              {error}
+            </p>
+          ) : null}
+
+          <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm">
+            {entera ? (
+              <>
+                Confirma la cotización entera: <strong>{dolar(total)}</strong>{" "}
+                sin IGV.
+              </>
+            ) : (
+              <>
+                Confirma <strong>{confirmadas.length}</strong> de{" "}
+                {lineas.length} {lineas.length === 1 ? "línea" : "líneas"}
+                {recortadas > 0 ? (
+                  <> ({recortadas} por menos de lo cotizado)</>
+                ) : null}{" "}
+                · <strong>{dolar(total)}</strong> sin IGV.
+              </>
+            )}
           </p>
-        ) : null}
-
-        <p className="rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm">
-          {entera ? (
-            <>Confirma la cotización entera: <strong>{dolar(total)}</strong> sin IGV.</>
-          ) : (
-            <>
-              Confirma <strong>{confirmadas.length}</strong> de {lineas.length}{" "}
-              {lineas.length === 1 ? "línea" : "líneas"}
-              {recortadas > 0 ? (
-                <>
-                  {" "}
-                  ({recortadas} por menos de lo cotizado)
-                </>
-              ) : null}{" "}
-              · <strong>{dolar(total)}</strong> sin IGV.
-            </>
-          )}
-        </p>
+        </DialogBody>
 
         <DialogFooter>
           <Button

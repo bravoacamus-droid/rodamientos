@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
   Textarea,
@@ -81,35 +83,41 @@ export function AnularCompra({
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
-        <DialogTitle>Anular la compra {numero}</DialogTitle>
-        <DialogDescription>
-          La compra queda registrada como anulada, con su motivo. No se borra:
-          el número ya está usado y el histórico tiene que poder explicarlo.
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>Anular la compra {numero}</DialogTitle>
+          <DialogDescription>
+            La compra queda registrada como anulada, con su motivo. No se borra:
+            el número ya está usado y el histórico tiene que poder explicarlo.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="mt-4 flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">
+                Motivo <span className="text-[var(--danger)]">*</span>
+              </span>
+              <Textarea
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+                rows={3}
+                placeholder="Por ejemplo: el proveedor no tenía stock y se compró a otro."
+                autoFocus
+              />
+            </label>
 
-        <div className="mt-4 flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">
-              Motivo <span className="text-[var(--danger)]">*</span>
-            </span>
-            <Textarea
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-              rows={3}
-              placeholder="Por ejemplo: el proveedor no tenía stock y se compró a otro."
-              autoFocus
-            />
-          </label>
-
-          {error ? (
-            <p className="rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
-              {error}
-            </p>
-          ) : null}
-        </div>
-
+            {error ? (
+              <p className="rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </DialogBody>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setAbierto(false)}
+          >
             Cancelar
           </Button>
           <Button
