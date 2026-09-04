@@ -2319,6 +2319,49 @@ Por orden de lo que desbloquea:
       `10465742185`, no valida. Entró sin documento; así no se le puede
       emitir ni recibir un comprobante.
 
+#### El mensaje del 04/09 · las cinco que se le pidieron
+
+El texto tal cual, para copiar y pegar, vive en [PREGUNTAS-WILLY.md](PREGUNTAS-WILLY.md).
+
+De los quince pendientes de arriba se le mandaron **cinco**. Un WhatsApp con
+quince preguntas se contesta con cero; van ordenadas de la que le cuesta tres
+segundos a la que le cuesta trabajo, y cada una con el porqué en una línea.
+
+| | Qué se le pidió | Qué destraba |
+|---|---|---|
+| 1 | **El RUC** de Inversiones Rodatech · + dirección y dominio de correo | Los cuatro documentos impresos (§S). Hoy llevan `20601234567`, que es de relleno **y encima con el dígito verificador mal** |
+| 2 | **Plazo de crédito estándar** | 97 clientes con la factura vencida el día que se emite |
+| 3 | **Compra local: plazo y moneda** | El plazo sale impreso en cada cotización; la moneda tapa el agujero de §G.1 — hoy un `S/ 15.20` se guarda como `$ 15.20`, el costo se infla 3.7× y el margen sale negativo **sin que salte ningún error** |
+| 4 | **¿Confirmar un pedido aparta la mercadería?** | Cambia el comportamiento de la bandeja «Por comprar», que ya está construida (§G.2) |
+| 5 | **Los celulares de sus proveedores** | Media función de «Pedir precio» (§M, §X): los 97 están cargados y ninguno tiene número |
+
+La 4 se le planteó con un caso concreto —tiene 10, le confirman 6, ¿quedan 4
+libres o se apartan los 6?— y no con la palabra «reserva», que no significa
+nada fuera de aquí.
+
+**Lo que se dejó fuera a propósito:** P.M., canal de alertas, las 3 notas de
+crédito, la deuda viva, correlativos de partida / banco / agencias, la
+taxonomía de 9 familias, el código de doble marca (§D) y el maestro con
+precios. Los tres últimos no son de WhatsApp: hay que enseñárselos en
+pantalla, y el maestro con precios merece su propia reunión —sin costos el
+tablero le sigue diciendo que gana el 100 % (§W)— no una línea perdida en un
+chat.
+
+#### Tres cosas que se buscaron antes de preguntar
+
+Para no hacerle perder el tiempo con lo que ya estuviera en sus archivos:
+
+- **El RUC del emisor no está en ninguna parte.** `historial de ventas.xlsx`
+  trae serie, correlativo y el RUC del *cliente*, nunca el suyo. Hay que
+  pedirlo sí o sí.
+- **Los teléfonos tampoco.** El archivo tiene columnas `Email` y `Teléfono`:
+  de 37 clientes, **2 tienen correo y ninguno tiene teléfono**. Confirmado que
+  no hay de dónde sacarlos ni para clientes ni para proveedores.
+- **Su dominio real es `rodatechperu.com`**, no el `rodatech.pe` que usan las
+  cuentas de desarrollo. Salió de un `wfernandez@rodatechperu.com` que se
+  coló en una fila de cliente. Va a confirmarlo él, porque ese correo se
+  imprime en todos los documentos.
+
 ### Lo que espera a LUIS
 
 1. **El proyecto Supabase de pruebas.** Sigue siendo lo más grande que falta y
