@@ -7,6 +7,9 @@ import { crearConector, type ConectorSunat } from "@rodatech/sunat";
 
 import { descifrar, descifrarBinario, hayLlaveMaestra } from "@/lib/cifrado";
 import { fallo } from "@/lib/errores";
+// La validación del RUC es dominio puro y ya está probada en proveedores. El
+// emisor tiene el mismo requisito que cualquier otro contribuyente.
+import { revisarDocumento } from "@/modules/proveedores/dominio/documento";
 
 import type { ConfigFiscal, EstadoConfiguracion } from "../dominio/tipos";
 
@@ -94,6 +97,39 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
 
   try {
     const admin = clienteAdmin();
+
+    // QUIÉN EMITE, antes que con qué se firma.
+    //
+    // El certificado y la clave SOL se comprobaban desde el principio, pero no
+    // los datos del emisor — y esos son los que viajan dentro del XML. La base
+    // arrancó con un RUC de relleno, `20601234567`, cuyo dígito verificador ni
+    // siquiera cuadra: SUNAT lo habría rechazado DESPUÉS de quemar el
+    // correlativo, que es un número fiscal que no vuelve.
+    //
+    // Y la dirección estuvo pisada tres días con el texto de una plantilla de
+    // WhatsApp sin que nada lo dijera (§S).
+    const { data: emisor } = await admin
+      .from("empresa")
+      .select("razon_social, ruc, direccion")
+      .eq("id", 1)
+      .maybeSingle();
+
+    if (!emisor?.razon_social?.trim()) {
+      faltan.push("Falta la razón social de la empresa.");
+    }
+    const ruc = revisarDocumento("RUC", emisor?.ruc);
+    if (!ruc.ok) {
+      faltan.push(`El RUC de la empresa no es válido: ${emisor?.ruc ?? "(vacío)"}. Es el que va dentro de cada comprobante.`);
+    }
+    if (!emisor?.direccion?.trim()) {
+      faltan.push("Falta la dirección fiscal de la empresa.");
+    } else if (/{[a-zA-Z]+}/.test(emisor.direccion)) {
+      // Una llave sin sustituir en la dirección solo puede venir de haber
+      // pegado ahí una plantilla de mensaje. Pasó, y salió impreso en todo.
+      faltan.push(
+        `La dirección de la empresa tiene texto de una plantilla dentro: «${emisor.direccion}».`,
+      );
+    }
 
     const [{ data: visible }, { data: secretos }] = await Promise.all([
       admin
