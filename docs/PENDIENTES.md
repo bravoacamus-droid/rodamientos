@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **45 de 45 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **1.091 en verde** |
+| `pnpm test` | **1.118 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
@@ -1876,6 +1876,103 @@ Ves un producto o estás armando una compra → **pides precio** → sale la
 comparativa con un proveedor por columna → apuntas lo que te diga cada uno →
 el sistema marca el más barato → eso se convierte en compra. El historial se
 llena solo por el camino.
+
+---
+
+### Y · Apuntar un precio a ciegas · 04/09
+
+Luis, mirando la pantalla de apuntar precios: *«ni yo entendí el flujo de
+compras... al registrar el precio me traiga el historial del precio, a cuánto
+se compra, a cuánto se está vendiendo y el precio mínimo»*.
+
+Tenía razón, y el problema no era de explicación: la pantalla **pedía un
+número y no ponía ni uno enfrente**. Se escribía «15.20» sin nada con qué
+compararlo.
+
+#### La comparativa contestaba otra pregunta
+
+La rejilla de la §Q responde *«¿quién de estos tres es el más barato?»*. La que
+se hace quien está tecleando es otra:
+
+    ¿esto es mejor o peor de lo que ya conseguía?
+    ¿me queda margen si lo vendo a mi precio?
+
+Y son distintas de verdad: **el más barato de tres puede ser el más caro de tu
+historia**, y la rejilla lo coronaba ganador sin decir nada.
+
+#### Lo que se ve ahora, debajo de cada producto
+
+    vendes a $30.85
+    mejor: $0.20 · IMPORTADORA INDUSTRIAL CORPUS SRL · comprado 04/09/2026
+
+Y en cuanto se teclea, al lado del importe convertido:
+
+| Se escribe | Sale |
+|---|---|
+| 35.00 | `+$34.80` · **más caro que tu venta** |
+| 0.15 | `−$0.05 · 25% más barato` · margen alto |
+
+Tres referencias y no una: lo que ya se **pagó** (una factura), lo que
+**cotizaron** antes (una promesa, más floja pero más fresca) y el **P.V. y el
+P.M.** del maestro, que son los que convierten «me lo dejan a 12» en «entonces
+pierdo plata». La regla vive en `dominio/referencia.ts` con 27 pruebas.
+
+Empate entre una compra y una cotización: gana la compra.
+
+#### Y `historialDePrecios` llevaba dos días escrita sin que la llamara nadie
+
+Estaba en `api/comparador.ts` desde el 02/09, con su comentario explicando para
+qué servía. `grep` sobre `apps/web/src`: cero llamadas. La mitad del trabajo ya
+estaba hecha y no se veía desde ninguna pantalla.
+
+#### «¿Me faltó preguntarle a alguien?»
+
+La otra mitad de lo que pidió: *«los otros proveedores que están ligados a ese
+producto, así no les haya preguntado, igual puedo ver a cuánto me lo
+vendieron... así los dueños se acuerdan a quién le falta cotizar»*.
+
+Debajo de cada fila salen ahora los que constan como que lo venden y no
+entraron en la ronda, con lo último que cobraron, y un clic los mete dentro:
+
+    Falta preguntarle a  [+ IMPORTADORA INDUST…  $0.20]
+
+Se enseñan tres como mucho. La lista completa está en la ficha del producto;
+aquí hace falta acordarse, no elegir entre nueve. Los de baja no salen: no se
+les puede comprar.
+
+`anadirALaRonda` **busca antes de crear**, a propósito. El mismo proveedor
+suele faltar en varias filas —vende cuatro de los seis productos— y se le añade
+pulsando en una y luego en otra; si solo supiera insertar, la segunda vez daría
+«ya se le preguntó» y ese producto se quedaría sin preguntar.
+
+#### El fallo que solo se veía en vivo
+
+Al pulsar el botón la primera vez **no pasó nada en pantalla**. En la base sí:
+la fila estaba escrita. El proveedor se había añadido y la rejilla seguía
+pintando los de antes.
+
+`useState` **no se vuelve a inicializar cuando cambian las props**. La pantalla
+hacía `useState(ronda.proveedores)`, así que el `router.refresh()` traía la
+ronda con un proveedor más y el estado se quedaba con la copia del primer
+render. Lo mismo valía para las respuestas.
+
+Está arreglado con el patrón que **esta misma pantalla ya usaba** unas líneas
+más abajo para `aMano`: lo del servidor manda, y lo local son parches encima.
+El comentario que lo explicaba estaba escrito y no se había aplicado a los dos
+estados de al lado.
+
+Ni el typecheck ni el lint ni las 1.118 pruebas lo veían. Se vio pulsando el
+botón.
+
+#### Dos cifras que daban risa
+
+Probando con datos reales salieron `17400% más caro` y `margen 20466.7%`. Son
+correctas —el catálogo tiene precios de venta cargados contra costos de casi
+cero— y las dos son ruido: el 17400 no añade nada que no dijeran ya los $34.80
+al lado, y encima distrae de ellos.
+
+`porcentajeQueDiceAlgo` se calla por encima del mil por ciento y deja solo el
+dinero, que es lo que se paga. El margen, en ese caso, dice «margen alto».
 
 ---
 

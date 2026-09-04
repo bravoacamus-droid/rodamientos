@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, formatearMoneda } from "@rodatech/ui";
-import { Check, ShoppingCart, TriangleAlert } from "lucide-react";
+import { Check, Plus, ShoppingCart, TriangleAlert } from "lucide-react";
 
 import {
   ETIQUETA_RESPUESTA,
@@ -17,7 +17,13 @@ import {
   type ProveedorConsultado,
   type Respuesta,
 } from "../../dominio/comparador";
-import { comprarDeLaRonda } from "../../acciones/comparar";
+import {
+  faltaPreguntarle,
+  referenciaVacia,
+  type ProveedorConocido,
+  type Referencia,
+} from "../../dominio/referencia";
+import { anadirALaRonda, comprarDeLaRonda } from "../../acciones/comparar";
 import { PanelRespuesta } from "./panel-respuesta";
 
 // Por la ruta profunda y no por el índice del módulo: `api/comparador.ts` es
@@ -40,12 +46,55 @@ import type { RondaDetalle } from "../../api/comparador";
  * formulario. La misma cuenta vive en `v_comparativa_precios` para cuando la
  * pregunta la hace otra pantalla.
  */
-export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
+export function Comparativa({
+  ronda,
+  referencias,
+}: {
+  ronda: RondaDetalle;
+  /** Por `producto_id`. Puede venir vacío: la rejilla funciona igual. */
+  referencias: Record<string, Referencia>;
+}) {
   const router = useRouter();
-  const [respuestas, setRespuestas] = React.useState<Respuesta[]>(ronda.respuestas);
-  const [proveedores, setProveedores] = React.useState<ProveedorConsultado[]>(
-    ronda.proveedores,
+
+  /*
+    Lo apuntado desde esta pantalla, ENCIMA de lo que manda el servidor.
+
+    Esto era estado a secas —`useState(ronda.proveedores)`— y ahí había un
+    fallo callado: `useState` no se vuelve a inicializar cuando cambian las
+    props, así que un `router.refresh()` traía la ronda con un proveedor más y
+    la rejilla seguía pintando los de antes. Se veía al añadir a alguien que
+    faltaba: la fila se guardaba en la base y en pantalla no pasaba nada.
+
+    Es el mismo razonamiento que el de `aMano` unas líneas más abajo, y por eso
+    la forma es la misma: lo del servidor manda, y lo local son parches. Lo que
+    se guarda desde aquí ya está también en la base, así que el parche y el
+    servidor dicen lo mismo — el parche solo evita esperar a la recarga.
+  */
+  const [parches, setParches] = React.useState<
+    Record<string, Partial<ProveedorConsultado>>
+  >({});
+  const [apuntadas, setApuntadas] = React.useState<Record<string, Respuesta[]>>({});
+
+  const proveedores = React.useMemo(
+    () =>
+      ronda.proveedores.map((p) =>
+        parches[p.consulta_proveedor_id]
+          ? { ...p, ...parches[p.consulta_proveedor_id] }
+          : p,
+      ),
+    [ronda.proveedores, parches],
   );
+
+  const respuestas = React.useMemo(
+    () => [
+      // Las del servidor, salvo las de los proveedores que se acaban de
+      // apuntar aquí: de esos manda lo local, que es más nuevo.
+      ...ronda.respuestas.filter((r) => !(r.consulta_proveedor_id in apuntadas)),
+      ...Object.values(apuntadas).flat(),
+    ],
+    [ronda.respuestas, apuntadas],
+  );
+
   const [abierto, setAbierto] = React.useState<string | null>(null);
   const [enCurso, empezar] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
@@ -115,15 +164,8 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
     proveedor: Partial<ProveedorConsultado>,
     lineas: Respuesta[],
   ) {
-    setProveedores((prev) =>
-      prev.map((p) =>
-        p.consulta_proveedor_id === cpId ? { ...p, ...proveedor } : p,
-      ),
-    );
-    setRespuestas((prev) => [
-      ...prev.filter((r) => r.consulta_proveedor_id !== cpId),
-      ...lineas,
-    ]);
+    setParches((prev) => ({ ...prev, [cpId]: { ...prev[cpId], ...proveedor } }));
+    setApuntadas((prev) => ({ ...prev, [cpId]: lineas }));
     setAbierto(null);
     // La elección no se toca: se recalcula sola con las respuestas nuevas,
     // salvo lo que esté movido a mano.
@@ -164,6 +206,41 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
   }
 
   const sinContestar = proveedores.filter((p) => p.estado === "esperando").length;
+
+  /*
+    A quién se le podría preguntar y no se le preguntó.
+
+    Es la pregunta que uno se hace MIRANDO la rejilla —«¿me faltó alguien?»— y
+    hasta ahora había que contestarla de memoria. Sale de los que constan como
+    que venden ese producto, que es justo lo que el sistema aprende solo de
+    cada compra desde la 046.
+  */
+  const enLaRonda = React.useMemo(
+    () => new Set(proveedores.map((p) => p.proveedor_id)),
+    [proveedores],
+  );
+
+  const [anadiendo, setAnadiendo] = React.useState<string | null>(null);
+
+  function anadir(itemId: string, proveedorId: string) {
+    setAviso(null);
+    setAnadiendo(`${itemId}|${proveedorId}`);
+    empezar(async () => {
+      const r = await anadirALaRonda({
+        consulta_id: ronda.id,
+        proveedor_id: proveedorId,
+        items: [itemId],
+      });
+      setAnadiendo(null);
+      if (!r.ok) {
+        setAviso(r.error);
+        return;
+      }
+      // Recarga entera: la ronda gana una columna y unas asignaciones, y las
+      // dos vienen del servidor.
+      router.refresh();
+    });
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -251,6 +328,10 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
             <tbody>
               {filas.map((fila) => {
                 const elegido = eleccion[fila.item.item_id];
+                const ref =
+                  referencias[fila.item.producto_id] ??
+                  referenciaVacia(fila.item.producto_id);
+                const faltan = faltaPreguntarle(ref, enLaRonda);
                 return (
                   <tr
                     key={fila.item.item_id}
@@ -261,6 +342,13 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
                       <span className="block max-w-[18rem] truncate text-xs text-[var(--fg-muted)]">
                         {fila.item.descripcion}
                       </span>
+                      <AQuienFalta
+                        faltan={faltan}
+                        anadiendo={anadiendo}
+                        itemId={fila.item.item_id}
+                        bloqueado={enCurso || ronda.estado !== "abierta"}
+                        onAnadir={(provId) => anadir(fila.item.item_id, provId)}
+                      />
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">
                       {fila.item.cantidad}
@@ -449,6 +537,7 @@ export function Comparativa({ ronda }: { ronda: RondaDetalle }) {
             preguntadas.has(`${i.item_id}|${abierto}`),
           )}
           respuestas={respuestas.filter((r) => r.consulta_proveedor_id === abierto)}
+          referencias={referencias}
           onCerrar={() => setAbierto(null)}
           onGuardado={guardado}
         />
@@ -479,6 +568,74 @@ function EsperaOFalta({ estado }: { estado: ReturnType<typeof estadoDeFila> }) {
     <span className="inline-flex items-center gap-1 text-[var(--warn)]">
       <TriangleAlert className="size-3.5" />
       Nadie lo tiene
+    </span>
+  );
+}
+
+/**
+ * «Me faltó preguntarle a este».
+ *
+ * Debajo de cada producto, quién más consta que lo vende y no entró en la
+ * ronda — con lo último que cobró, que es lo que decide si vale la pena
+ * llamarle. Un clic lo mete en la consulta y ya se le puede apuntar.
+ *
+ * Es la mitad del historial que no se veía: el sistema aprende de cada compra
+ * quién vende qué (046), y hasta ahora eso solo se consultaba entrando a la
+ * ficha del producto, o sea nunca, porque cuando estás comparando no te vas a
+ * otra pantalla.
+ *
+ * Se enseñan tres como mucho. La lista completa está en la ficha; aquí lo que
+ * hace falta es acordarse, no elegir entre nueve.
+ */
+function AQuienFalta({
+  faltan,
+  itemId,
+  anadiendo,
+  bloqueado,
+  onAnadir,
+}: {
+  faltan: ProveedorConocido[];
+  itemId: string;
+  anadiendo: string | null;
+  bloqueado: boolean;
+  onAnadir: (proveedorId: string) => void;
+}) {
+  if (faltan.length === 0) return null;
+  const primeros = faltan.slice(0, 3);
+
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
+      <span className="text-[var(--fg-subtle)]">Falta preguntarle a</span>
+      {primeros.map((p) => {
+        const esperando = anadiendo === `${itemId}|${p.proveedor_id}`;
+        return (
+          <button
+            key={p.proveedor_id}
+            type="button"
+            disabled={bloqueado}
+            onClick={() => onAnadir(p.proveedor_id)}
+            title={
+              p.ultimoCostoUsd === null
+                ? `Añadir ${p.proveedor} a esta consulta`
+                : `Su última factura fue de $${p.ultimoCostoUsd.toFixed(2)}. Añadirlo a esta consulta.`
+            }
+            className="inline-flex max-w-[12rem] items-center gap-1 rounded-sm border border-[var(--border)] px-1.5 py-0.5 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+          >
+            <Plus className="size-3 shrink-0" aria-hidden="true" />
+            <span className="truncate">{esperando ? "Añadiendo…" : p.proveedor}</span>
+            {p.ultimoCostoUsd !== null ? (
+              <span className="shrink-0 tabular-nums text-[var(--fg-subtle)]">
+                ${p.ultimoCostoUsd.toFixed(2)}
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
+      {faltan.length > primeros.length ? (
+        <span className="text-[var(--fg-subtle)]">
+          y {faltan.length - primeros.length} más
+        </span>
+      ) : null}
     </span>
   );
 }

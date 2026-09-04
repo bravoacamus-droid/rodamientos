@@ -15,6 +15,7 @@ import {
   DialogTitle,
   Input,
   SelectNativo,
+  formatearFecha,
   formatearMoneda,
 } from "@rodatech/ui";
 
@@ -29,6 +30,16 @@ import {
   type ProveedorConsultado,
   type Respuesta,
 } from "../../dominio/comparador";
+import {
+  alertaDePrecio,
+  contraReferencia,
+  margenSi,
+  mejorConocido,
+  porcentajeQueDiceAlgo,
+  referenciaVacia,
+  tieneAlgoQueDecir,
+  type Referencia,
+} from "../../dominio/referencia";
 
 /**
  * Apuntar lo que contestó UN proveedor.
@@ -47,17 +58,33 @@ import {
  *
  * Se pregunta una vez por proveedor y vale para todas sus líneas, que es como
  * contestan de verdad.
+ *
+ * ---------------------------------------------------------------------------
+ * Y por qué cada línea lleva su referencia al lado
+ * ---------------------------------------------------------------------------
+ * Porque antes no la llevaba, y escribir «15.20» sin nada enfrente no es
+ * decidir: es transcribir. La comparativa contesta «¿quién de estos tres es el
+ * más barato?», pero el más barato de tres puede ser el más caro de tu
+ * historia y la rejilla lo coronaría igual.
+ *
+ * Así que debajo de cada producto va lo que ya se pagó, a cuánto se vende y
+ * cuál es el piso; y en cuanto se teclea un número, al lado sale si es mejor o
+ * peor que lo mejor que se ha conseguido y qué margen deja. La regla está en
+ * `dominio/referencia.ts` con sus pruebas.
  */
 export function PanelRespuesta({
   proveedor,
   items,
   respuestas,
+  referencias,
   onCerrar,
   onGuardado,
 }: {
   proveedor: ProveedorConsultado;
   items: ItemConsultado[];
   respuestas: Respuesta[];
+  /** Por `producto_id`. Puede venir incompleto: la pantalla funciona sin él. */
+  referencias: Record<string, Referencia>;
   onCerrar: () => void;
   onGuardado: (
     cpId: string,
@@ -306,6 +333,8 @@ export function PanelRespuesta({
                     tcNum,
                     incluyeIgv,
                   );
+                  const ref =
+                    referencias[item.producto_id] ?? referenciaVacia(item.producto_id);
                   return (
                     <tr
                       key={item.item_id}
@@ -316,6 +345,7 @@ export function PanelRespuesta({
                         <span className="block max-w-[16rem] truncate text-xs text-[var(--fg-muted)]">
                           {item.descripcion}
                         </span>
+                        <LoQueYaSabes referencia={ref} />
                       </td>
                       <td className="px-3 py-1.5 text-right tabular-nums">
                         {item.cantidad}
@@ -339,11 +369,14 @@ export function PanelRespuesta({
                           onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
                         />
                       </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums text-[var(--fg-muted)]">
+                      <td className="px-3 py-1.5 text-right tabular-nums">
                         {/* La conversión, delante. Es lo que hace que se note
                             en el momento que el tipo de cambio falta o que el
                             IGV estaba mal marcado. */}
-                        {usd === null ? "—" : formatearMoneda(usd, "USD")}
+                        <span className="text-[var(--fg-muted)]">
+                          {usd === null ? "—" : formatearMoneda(usd, "USD")}
+                        </span>
+                        <Veredicto usd={usd} referencia={ref} />
                       </td>
                       <td className="px-3 py-1.5">
                         <Checkbox
@@ -389,4 +422,117 @@ export function PanelRespuesta({
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Lo que ya se sabe de este producto, debajo de su nombre.
+ *
+ * Son los tres números que Willy tiene en la cabeza cuando pregunta un precio
+ * —a cuánto lo compraba, a cuánto lo vende y cuál es su piso— más el mejor
+ * que consta. Escritos delante para no tener que acordarse de ellos.
+ *
+ * Si no hay nada, lo dice. «Primera vez» es información: explica por qué la
+ * columna de al lado no va a opinar, y evita leer el silencio como un visto
+ * bueno.
+ */
+function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
+  if (!tieneAlgoQueDecir(ref)) {
+    return (
+      <span className="mt-0.5 block text-[11px] text-[var(--fg-subtle)]">
+        Primera vez: no hay con qué compararlo.
+      </span>
+    );
+  }
+
+  const mejor = mejorConocido(ref);
+  const partes: string[] = [];
+  if (ref.ultimoCosto !== null) partes.push(`compras a ${moneda2(ref.ultimoCosto)}`);
+  if (ref.precioVenta !== null) partes.push(`vendes a ${moneda2(ref.precioVenta)}`);
+  if (ref.precioMinimo !== null) partes.push(`piso ${moneda2(ref.precioMinimo)}`);
+
+  return (
+    <span className="mt-0.5 block text-[11px] leading-tight text-[var(--fg-subtle)]">
+      {partes.length > 0 ? <span className="block">{partes.join(" · ")}</span> : null}
+      {mejor ? (
+        <span className="block">
+          mejor: {moneda2(mejor.costoUsd)} · {mejor.proveedor} ·{" "}
+          {mejor.origen === "comprado" ? "comprado" : "cotizado"}
+          {mejor.fecha ? ` ${formatearFecha(mejor.fecha)}` : ""}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Qué dice el precio que se acaba de teclear.
+ *
+ * Dos líneas como mucho: cuánto mejor o peor es que lo mejor que se ha tenido,
+ * y —lo que decide si conviene— el margen que deja o el aviso de que no deja
+ * ninguno.
+ *
+ * El aviso SUSTITUYE al margen y no se suma: si te lo dejan a más de lo que lo
+ * vendes, «margen −8 %» es la misma frase dicha peor.
+ */
+function Veredicto({ usd, referencia: ref }: { usd: number | null; referencia: Referencia }) {
+  const contra = contraReferencia(usd, ref);
+  const alerta = alertaDePrecio(usd, ref);
+  const margen = margenSi(usd, ref.precioVenta);
+
+  if (contra === null && alerta === null && margen === null) return null;
+
+  // Con la alerta puesta, «más caro» sobra: la línea de abajo ya dice que es
+  // más caro que la venta, y repetir la palabra hace que ninguna de las dos
+  // se lea. Se queda la cifra a secas.
+  const pct = porcentajeQueDiceAlgo(contra?.porcentaje ?? 0);
+
+  return (
+    <span className="mt-0.5 block whitespace-nowrap text-[11px] leading-snug">
+      {contra ? (
+        <span
+          className={`block ${
+            contra.veredicto === "mejor"
+              ? "text-[var(--ok)]"
+              : contra.veredicto === "peor"
+                ? "text-[var(--warn)]"
+                : "text-[var(--fg-subtle)]"
+          }`}
+        >
+          {contra.veredicto === "igual"
+            ? "igual que antes"
+            : `${contra.diferencia > 0 ? "+" : "−"}${moneda2(
+                Math.abs(contra.diferencia),
+              )}${pct === null ? "" : ` · ${Math.abs(pct)}%`}${
+                alerta === null
+                  ? contra.veredicto === "peor"
+                    ? " más caro"
+                    : " más barato"
+                  : ""
+              }`}
+        </span>
+      ) : null}
+
+      {alerta === "sobre_venta" ? (
+        <span className="block font-medium text-[var(--danger)]">
+          más caro que tu venta
+        </span>
+      ) : alerta === "sobre_piso" ? (
+        <span className="block text-[var(--warn)]">por encima de tu piso</span>
+      ) : margen !== null ? (
+        <span className="block text-[var(--fg-subtle)]">
+          {/* Un «margen 20466.7%» es el mismo ruido que el porcentaje de
+              arriba, y sale por lo mismo: un precio de lista cargado contra
+              un costo que es casi cero. Se dice que es alto y se deja ahí. */}
+          {porcentajeQueDiceAlgo(margen) === null
+            ? "margen alto"
+            : `margen ${margen}%`}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/** Compacto a propósito: son cuatro cifras seguidas en once píxeles. */
+function moneda2(n: number): string {
+  return `$${n.toFixed(2)}`;
 }

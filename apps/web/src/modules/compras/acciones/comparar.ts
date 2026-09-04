@@ -398,3 +398,148 @@ export async function cerrarRonda(
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Meter a alguien en una ronda ya abierta
+// ---------------------------------------------------------------------------
+
+const esquemaAnadir = z.object({
+  consulta_id: z.string().uuid(),
+  proveedor_id: z.string().uuid(),
+  /** Los ítems de la consulta que se le van a preguntar A ÉL. */
+  items: z.array(z.string().uuid()).min(1).max(200),
+});
+
+export type ResultadoAnadir =
+  | { ok: true; consulta_proveedor_id: string }
+  | { ok: false; error: string };
+
+/**
+ * «Me faltó preguntarle a este».
+ *
+ * Pasa siempre: se abre la ronda con los tres de siempre y al ver la rejilla
+ * uno se acuerda de un cuarto que también lo trae. Hasta ahora la única salida
+ * era abrir otra ronda entera, y entonces los precios quedaban repartidos en
+ * dos sitios y ninguna de las dos comparaba de verdad.
+ *
+ * No va por RPC porque no hay nada que calcular: son dos `insert` bajo las
+ * políticas de la 055 y la 058, que ya exigen `puede_escribir('compras')`. Lo
+ * que sí se comprueba aquí es que los ítems sean de ESA consulta — sin eso se
+ * podrían asignar los de otra, y la base los aceptaría: la asignación apunta
+ * al ítem y al proveedor, no a la consulta.
+ */
+export async function anadirALaRonda(datosCrudos: unknown): Promise<ResultadoAnadir> {
+  const quien = await quienEs();
+  if (quien.error) return { ok: false, error: quien.error };
+
+  let datos: z.infer<typeof esquemaAnadir>;
+  try {
+    datos = esquemaAnadir.parse(datosCrudos);
+  } catch (e) {
+    const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
+    return { ok: false, error: `Los datos no son válidos: ${detalle}` };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+
+    // Una ronda cerrada ya produjo sus compras: añadirle a alguien sería
+    // pedirle precio de algo que ya se compró.
+    const { data: cab, error: eCab } = await supabase
+      .from("consultas_precio")
+      .select("estado")
+      .eq("id", datos.consulta_id)
+      .maybeSingle();
+    if (eCab) {
+      anotarFallo("compras/anadirALaRonda", eCab, "/compras/precios");
+      return { ok: false, error: eCab.message };
+    }
+    if (!cab) return { ok: false, error: "Esa consulta de precios no existe." };
+    if (cab.estado !== "abierta") {
+      return {
+        ok: false,
+        error: "Esta consulta ya está cerrada. Abre una nueva para seguir preguntando.",
+      };
+    }
+
+    // Que los ítems sean de esta consulta y de ninguna otra.
+    const { data: suyos, error: eItems } = await supabase
+      .from("consulta_precio_items")
+      .select("id")
+      .eq("consulta_id", datos.consulta_id)
+      .in("id", datos.items);
+    if (eItems) {
+      anotarFallo("compras/anadirALaRonda", eItems, "/compras/precios");
+      return { ok: false, error: eItems.message };
+    }
+    const validos = (suyos ?? []).map((i) => String(i.id));
+    if (validos.length !== datos.items.length) {
+      return { ok: false, error: "Hay un producto que no es de esta consulta." };
+    }
+
+    /*
+      Buscar antes de crear, y no al revés.
+
+      El mismo proveedor suele faltar en VARIAS filas de la rejilla —vende
+      cuatro de los seis productos— y se le añade pulsando en una fila y luego
+      en otra. Si esto solo supiera insertar, la segunda vez daría «ya se le
+      preguntó» y el producto se quedaría sin preguntar: un error donde lo
+      correcto era ampliarle la lista.
+    */
+    const { data: yaEsta, error: eBuscar } = await supabase
+      .from("consulta_precio_proveedores")
+      .select("id")
+      .eq("consulta_id", datos.consulta_id)
+      .eq("proveedor_id", datos.proveedor_id)
+      .maybeSingle();
+    if (eBuscar) {
+      anotarFallo("compras/anadirALaRonda", eBuscar, "/compras/precios");
+      return { ok: false, error: eBuscar.message };
+    }
+
+    let cpId: string;
+    if (yaEsta) {
+      cpId = String(yaEsta.id);
+    } else {
+      const { data: cp, error: eProv } = await supabase
+        .from("consulta_precio_proveedores")
+        .insert({ consulta_id: datos.consulta_id, proveedor_id: datos.proveedor_id })
+        .select("id")
+        .single();
+      if (eProv) {
+        anotarFallo("compras/anadirALaRonda", eProv, "/compras/precios");
+        return { ok: false, error: eProv.message };
+      }
+      cpId = String(cp.id);
+    }
+
+    // `ignoreDuplicates` sobre la clave primaria de la 058: volver a asignarle
+    // un producto que ya tenía no es un error, es no hacer nada.
+    const { error: eAsig } = await supabase
+      .from("consulta_precio_asignaciones")
+      .upsert(
+        validos.map((item_id) => ({ consulta_proveedor_id: cpId, item_id })),
+        { onConflict: "consulta_proveedor_id,item_id", ignoreDuplicates: true },
+      );
+    if (eAsig) {
+      // Sin asignaciones el proveedor quedaría en la ronda sin nada que
+      // contestar, y la rejilla enseñaría una columna vacía para siempre. Se
+      // deshace solo si lo acabábamos de crear: si ya estaba, borrarlo se
+      // llevaría por delante las respuestas que hubiera dado.
+      if (!yaEsta) {
+        await supabase.from("consulta_precio_proveedores").delete().eq("id", cpId);
+      }
+      anotarFallo("compras/anadirALaRonda", eAsig, "/compras/precios");
+      return { ok: false, error: eAsig.message };
+    }
+
+    revalidatePath("/compras/precios");
+    return { ok: true, consulta_proveedor_id: cpId };
+  } catch (e) {
+    anotarFallo("compras/anadirALaRonda", e, "/compras/precios");
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo añadir el proveedor.",
+    };
+  }
+}

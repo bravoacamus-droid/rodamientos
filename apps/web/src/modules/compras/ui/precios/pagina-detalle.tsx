@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { EstadoError, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { rondaDetalle } from "../../api/comparador";
+import { referenciasDeRonda, rondaDetalle } from "../../api/comparador";
 import { Comparativa } from "./comparativa";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -48,6 +48,15 @@ export default async function PaginaComparativa({
 
   const ronda = r.datos;
 
+  // Contra qué se compara cada precio. Va aquí y no dentro de la rejilla
+  // porque hace tres consultas y la rejilla es un componente de cliente: si
+  // falla, la pantalla sigue sirviendo —se apunta igual, sin referencia— así
+  // que un error aquí no puede tumbar la ronda entera.
+  const ref = await referenciasDeRonda(
+    ronda.items.map((i) => i.producto_id),
+    ronda.id,
+  );
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -67,7 +76,7 @@ export default async function PaginaComparativa({
         </div>
       </div>
 
-      <Comparativa ronda={ronda} />
+      <Comparativa ronda={ronda} referencias={ref.ok ? ref.datos : {}} />
     </div>
   );
 }

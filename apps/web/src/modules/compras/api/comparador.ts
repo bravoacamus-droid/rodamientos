@@ -11,6 +11,7 @@ import type {
   ProveedorConsultado,
   Respuesta,
 } from "../dominio/comparador";
+import { referenciaVacia, type Referencia } from "../dominio/referencia";
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -310,4 +311,112 @@ export async function historialDePrecios(
   } catch (e) {
     return fallo(e, "compras/historialDePrecios");
   }
+}
+
+/**
+ * Contra qué se compara cada producto de una ronda.
+ *
+ * Es lo que faltaba para que apuntar un precio dejara de ser teclear a ciegas:
+ * al lado del número van lo que ya se pagó, lo que costó en rondas anteriores,
+ * a cuánto se vende y cuál es el piso. La regla de qué significa cada
+ * combinación vive en `dominio/referencia.ts`, probada aparte.
+ *
+ * Tres consultas para todos los productos de la ronda, no tres por producto:
+ * una ronda de veinte ítems son tres viajes, no sesenta.
+ *
+ * **La ronda actual se excluye del historial** —se pasa `excluirConsultaId`—
+ * porque comparar un precio contra sí mismo siempre da «igual», y eso es peor
+ * que no decir nada: parece una confirmación.
+ */
+export async function referenciasDeRonda(
+  productoIds: readonly string[],
+  excluirConsultaId?: string,
+): Promise<Resultado<Record<string, Referencia>>> {
+  if (productoIds.length === 0) return { ok: true, datos: {} };
+
+  const ids = [...new Set(productoIds)];
+
+  try {
+    const supabase = await clienteServidor();
+
+    const [maestro, vendedores, previos] = await Promise.all([
+      supabase
+        .from("productos")
+        .select("id, ultimo_costo, costo_promedio, precio_venta, precio_minimo")
+        .in("id", ids),
+      supabase
+        .from("v_proveedores_de_producto")
+        .select(
+          `producto_id, proveedor_id, proveedor, ultimo_costo_usd,
+           ultima_compra, proveedor_activo, es_habitual`,
+        )
+        .in("producto_id", ids),
+      supabase
+        .from("v_comparativa_precios")
+        .select("producto_id, consulta_id, fecha, proveedor, costo_usd, consulta_estado")
+        .in("producto_id", ids)
+        .not("costo_usd", "is", null)
+        // Una ronda anulada es una que se decidió que no valía. Su precio no
+        // puede seguir siendo el número a batir.
+        .neq("consulta_estado", "anulada")
+        .order("fecha", { ascending: false })
+        .limit(400),
+    ]);
+
+    if (maestro.error) return fallo(maestro.error, "compras/referenciasDeRonda");
+    if (vendedores.error) return fallo(vendedores.error, "compras/referenciasDeRonda");
+    if (previos.error) return fallo(previos.error, "compras/referenciasDeRonda");
+
+    const ref: Record<string, Referencia> = {};
+    for (const id of ids) ref[id] = referenciaVacia(id);
+
+    for (const p of maestro.data ?? []) {
+      const r = ref[String(p.id)];
+      if (!r) continue;
+      // Un 0 en el maestro significa «sin cargar», no «cero dólares»: son 790
+      // productos que entraron sin precios. Se normaliza aquí, una vez, para
+      // que el dominio no tenga que distinguirlo en cada función.
+      r.ultimoCosto = positivo(p.ultimo_costo);
+      r.costoPromedio = positivo(p.costo_promedio);
+      r.precioVenta = positivo(p.precio_venta);
+      r.precioMinimo = positivo(p.precio_minimo);
+    }
+
+    for (const v of vendedores.data ?? []) {
+      const r = ref[String(v.producto_id)];
+      if (!r) continue;
+      r.proveedores.push({
+        proveedor_id: String(v.proveedor_id),
+        proveedor: String(v.proveedor ?? "—"),
+        ultimoCostoUsd: positivo(v.ultimo_costo_usd),
+        ultimaCompra: v.ultima_compra ? String(v.ultima_compra).slice(0, 10) : null,
+        activo: Boolean(v.proveedor_activo),
+        esHabitual: Boolean(v.es_habitual),
+      });
+    }
+
+    for (const h of previos.data ?? []) {
+      if (excluirConsultaId && String(h.consulta_id) === excluirConsultaId) continue;
+      const r = ref[String(h.producto_id)];
+      if (!r) continue;
+      const costo = positivo(h.costo_usd);
+      if (costo === null) continue;
+      r.historial.push({
+        fecha: String(h.fecha).slice(0, 10),
+        proveedor: String(h.proveedor ?? "—"),
+        costoUsd: costo,
+      });
+    }
+
+    return { ok: true, datos: ref };
+  } catch (e) {
+    return fallo(e, "compras/referenciasDeRonda");
+  }
+}
+
+/** `0` en el maestro es «sin cargar». Devolverlo como número diría otra cosa. */
+function positivo(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
