@@ -3,6 +3,7 @@ import { EstadoError, EstadoVacio, KpiCard } from "@rodatech/ui";
 import { describirRango, type Rango } from "@/modules/reportes";
 
 import { kpisDeRango } from "../api/consultas";
+import { estadoDelMargen } from "../dominio/margen";
 // Recharts entra por carga diferida a través de este envoltorio: son ~90 kB
 // que no tienen por qué viajar en el bundle inicial de un ERP que se abre
 // decenas de veces al día. En la demo se importaba estáticamente.
@@ -42,6 +43,10 @@ export async function SeccionVentas({
 
   const k = r.datos;
   const comparacion = `vs. ${describirRango(rango, hoy) === "hoy" ? "ayer" : "el periodo anterior"}`;
+  // La regla vive en `dominio/margen.ts`, donde está probada: qué se puede
+  // decir del margen depende de cuánto costo se conozca, y decirlo mal es lo
+  // que hacía que el tablero diera la venta entera como ganancia.
+  const margen = estadoDelMargen(k.ventaNeta, k.ventaConCosto, k.costo);
 
   return (
     <div className="flex flex-col gap-4">
@@ -55,14 +60,38 @@ export async function SeccionVentas({
           serie={k.serie.map((p) => p.venta)}
           detalle="neto, sin IGV"
         />
-        <KpiCard
-          etiqueta="Margen"
-          valor={dolares(k.margen)}
-          actual={k.margen}
-          previo={k.margenPrevio}
-          etiquetaComparacion={comparacion}
-          detalle={`${k.margenPct.toFixed(1)}% sobre el costo`}
-        />
+        {/*
+          El margen solo significa algo sobre la venta cuyo costo se conoce.
+
+          Los 479 comprobantes del histórico se cargaron SIN costo, así que
+          esta tarjeta enseñaba «USD 201,797 · 0.0% sobre el costo»: la venta
+          entera como ganancia, con su propia explicación desmintiéndola en la
+          línea de abajo. Y no se arregla solo con el tiempo — esos documentos
+          nunca van a tener costo, así que todo rango que mire hacia atrás
+          mezcla los dos casos para siempre.
+        */}
+        {margen.tipo === "sin_costo" ? (
+          <KpiCard
+            etiqueta="Margen"
+            valor="—"
+            detalle="Sin costo registrado en estas ventas"
+          />
+        ) : (
+          <KpiCard
+            etiqueta="Margen"
+            valor={dolares(margen.margen)}
+            actual={margen.margen}
+            previo={k.margenPrevio}
+            etiquetaComparacion={comparacion}
+            detalle={
+              margen.tipo === "parcial"
+                ? // Sobre qué parte se calcula, o el número se lee como si
+                  // cubriera toda la venta.
+                  `${margen.pct.toFixed(1)}% sobre el costo · solo de ${margen.cubrePct}% de la venta`
+                : `${margen.pct.toFixed(1)}% sobre el costo`
+            }
+          />
+        )}
         <KpiCard
           etiqueta="Comprobantes"
           valor={k.documentos.toLocaleString("es-PE")}

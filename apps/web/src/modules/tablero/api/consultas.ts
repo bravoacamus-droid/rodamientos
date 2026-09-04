@@ -150,6 +150,15 @@ export interface KpisPeriodo {
   margen: number;
   /** Sobre el COSTO, como todo el sistema desde la 023. */
   margenPct: number;
+  /**
+   * De la venta del periodo, cuánta tiene el costo registrado.
+   *
+   * Sin esto el margen miente y no hay forma de saberlo. Los 479 comprobantes
+   * del histórico se cargaron sin costo y nunca lo van a tener, así que
+   * cualquier rango que mire hacia atrás mezcla ventas con costo y sin él
+   * **para siempre**: no es un caso transitorio.
+   */
+  ventaConCosto: number;
   documentos: number;
   unidades: number;
   ventaNetaPrevia: number;
@@ -168,14 +177,27 @@ export interface PuntoSerie {
 }
 
 /** Suma una serie de `serie_ventas` en un solo indicador. */
-function sumar(filas: readonly { venta: number; costo: number; documentos: number; unidades: number }[]) {
+function sumar(
+  filas: readonly {
+    venta: number;
+    costo: number;
+    ventaConCosto: number;
+    documentos: number;
+    unidades: number;
+  }[],
+) {
   const dos = (n: number) => Math.round(n * 100) / 100;
   const venta = dos(filas.reduce((a, f) => a + f.venta, 0));
   const costo = dos(filas.reduce((a, f) => a + f.costo, 0));
+  const ventaConCosto = dos(filas.reduce((a, f) => a + f.ventaConCosto, 0));
   return {
     venta,
     costo,
-    margen: dos(venta - costo),
+    ventaConCosto,
+    // SOLO sobre lo que tiene costo. Restar `venta - costo` daba la venta
+    // entera como ganancia cuando el costo era cero, que es el caso de los
+    // 479 comprobantes del histórico.
+    margen: dos(ventaConCosto - costo),
     documentos: filas.reduce((a, f) => a + f.documentos, 0),
     unidades: dos(filas.reduce((a, f) => a + f.unidades, 0)),
   };
@@ -197,6 +219,7 @@ async function serieCruda(
     periodo: String(f.periodo),
     venta: Number(f.venta ?? 0),
     costo: Number(f.costo ?? 0),
+    ventaConCosto: Number(f.venta_con_costo ?? 0),
     margen: Number(f.margen ?? 0),
     documentos: Number(f.documentos ?? 0),
     unidades: Number(f.unidades ?? 0),
@@ -230,7 +253,11 @@ export async function kpisDeRango(
         ventaNeta: a.venta,
         costo: a.costo,
         margen: a.margen,
-        margenPct: a.costo > 0 ? Math.round(((a.venta - a.costo) / a.costo) * 10000) / 100 : 0,
+        margenPct:
+          a.costo > 0
+            ? Math.round(((a.ventaConCosto - a.costo) / a.costo) * 10000) / 100
+            : 0,
+        ventaConCosto: a.ventaConCosto,
         documentos: a.documentos,
         unidades: a.unidades,
         ventaNetaPrevia: b.venta,

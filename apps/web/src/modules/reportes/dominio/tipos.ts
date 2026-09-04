@@ -73,6 +73,8 @@ export interface ResumenReportes {
   ventaMes: number;
   ventaMesAnterior: number;
   margenPct: number;
+  /** El costo del mes. En cero significa que NO SE SABE el margen (059). */
+  costoMes: number;
   porCobrar: number;
   vencido: number;
   inventarioCosto: number;

@@ -45,7 +45,7 @@ volver a caer sale caro.
 | `pnpm test` | **1.012 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
-| Migraciones | **hasta la 058, aplicadas** al Supabase del cliente |
+| Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
 | Feedback del 26/08 | **cerrado**, ver [FEEDBACK-26-08.md](FEEDBACK-26-08.md) |
 
 `main` está en la punta de lo último. Las migraciones son idempotentes y de la
@@ -1744,6 +1744,78 @@ Las chapas asignadas a un proveedor y el retén a otro: la pantalla propuso
 separado, generó **dos mensajes con un producto cada uno**, la ronda guardó el
 reparto, y la rejilla salió con la diagonal correcta —vacío donde no se
 preguntó, `—` donde se espera—.
+
+---
+
+### W · Un margen sin costo no es un margen · 04/09
+
+Abriendo el tablero con el histórico entero:
+
+    VENDIDO   USD 201,797
+    MARGEN    USD 201,797   ·   0.0% sobre el costo
+
+El margen era **la venta entera** —ganancia del 100 %— y su propia explicación
+lo desmentía en la línea de abajo. Las dos cifras salían de la misma cuenta y
+las dos eran falsas.
+
+#### Por qué
+
+Los **479** comprobantes del histórico se cargaron sin costo: `costo_total = 0`
+en todos. Así que `margen = venta − 0 = venta`, y el porcentaje, que divide
+entre el costo, caía al `else 0`.
+
+Aritméticamente las dos son correctas. Y las dos le decían a Willy que gana el
+100 % de lo que vende.
+
+#### Y no se arregla solo
+
+Es lo primero que se piensa —«cuando empiece a facturar de verdad se
+arregla»— y es falso. Esos 479 documentos vinieron de su sistema anterior sin
+costo y **nunca lo van a tener**. Cualquier rango que mire hacia atrás
+mezclará ventas con costo y sin él mientras el ERP exista.
+
+**El caso mixto no es transitorio: es el permanente.** Por eso no bastaba con
+«si no hay costo, no digas nada»: hay que decir sobre qué parte de la venta se
+calcula.
+
+#### Estaba en tres sitios, y en un cuarto ya estaba bien
+
+Buscando `margen` por el esquema:
+
+| | |
+|---|---|
+| `serie_ventas` (tablero) | mal · margen = venta entera |
+| `v_ventas_mensuales` (informes) | mal · ídem |
+| `v_top_productos` (ranking) | mal · ídem, por producto |
+| `v_productos_stock` | **bien** · devuelve `null` sin costo |
+| `cotizaciones.margen` | otra cosa: el de la propia cotización |
+
+Que `v_productos_stock` ya lo hiciera bien es lo que más dice: la forma
+correcta estaba escrita en el proyecto desde el principio y no se aplicó en
+los otros tres.
+
+#### Lo que se ve ahora
+
+- **Nada tiene costo** → «—· Sin costo registrado en estas ventas».
+- **Todo lo tiene** → el margen, a secas.
+- **Una parte** → el margen de esa parte, diciendo de cuál: «22.4 % sobre el
+  costo · solo de 38 % de la venta».
+
+La regla vive en `tablero/dominio/margen.ts` con sus siete pruebas, incluida
+la que resume el fallo: *el margen nunca es la venta entera cuando falta
+costo*. El caso mixto se cubre ahí y no en la pantalla porque probarlo en vivo
+habría exigido alterar una factura histórica del cliente.
+
+#### Un centinela que no comprobaba nada
+
+Escribiendo la migración, el primer intento dejaba el margen en `NULL` —un
+`sum(...) filter` sin filas devuelve null y se propaga a la resta—. El
+centinela decía `if v_margen <> 0 then raise`, y **`null <> 0` no es
+verdadero**: no falló, se calló.
+
+Está arreglado con `coalesce` en los dos sitios, y anotado dentro de la
+migración: un centinela que no puede fallar es peor que no tenerlo, porque da
+la impresión contraria.
 
 ---
 

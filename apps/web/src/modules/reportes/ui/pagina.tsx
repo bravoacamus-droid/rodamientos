@@ -219,14 +219,20 @@ async function Indicadores({ hoy }: { hoy: string }) {
         }
         tono={variacion === null ? undefined : variacion >= 0 ? "ok" : "malo"}
       />
-      <Kpi
-        etiqueta="Margen del mes"
-        valor={d.margenPct}
-        sufijo=" %"
-        decimales={1}
-        pie="sobre el costo"
-        tono={d.margenPct >= 15 ? "ok" : d.margenPct > 0 ? "aviso" : undefined}
-      />
+      {/* Con el costo en cero, «0.0 %» no es un margen del cero por ciento:
+          es que no se sabe. El histórico se cargó sin costo (059). */}
+      {d.costoMes > 0 ? (
+        <Kpi
+          etiqueta="Margen del mes"
+          valor={d.margenPct}
+          sufijo=" %"
+          decimales={1}
+          pie="sobre el costo"
+          tono={d.margenPct >= 15 ? "ok" : d.margenPct > 0 ? "aviso" : undefined}
+        />
+      ) : (
+        <Kpi etiqueta="Margen del mes" texto="—" pie="sin costo registrado" />
+      )}
       <Kpi
         etiqueta="Por cobrar"
         valor={d.porCobrar}
@@ -259,14 +265,23 @@ function Kpi({
   decimales = 0,
   pie,
   tono,
+  texto,
 }: {
   etiqueta: string;
-  valor: number;
+  valor?: number;
   prefijo?: string;
   sufijo?: string;
   decimales?: number;
   pie?: string;
   tono?: "ok" | "aviso" | "malo";
+  /**
+   * Para cuando la respuesta NO es un número: «—», «sin datos».
+   *
+   * Un indicador que no se puede calcular tiene que decirlo con una palabra.
+   * Pintar un cero en su lugar es dar por sabido lo que no se sabe, que es
+   * justo lo que hacía el margen con el costo en cero (059).
+   */
+  texto?: string;
 }) {
   const color =
     tono === "malo"
@@ -280,12 +295,16 @@ function Kpi({
     <div className="card anim-entrada p-3">
       <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
       <p className="mt-0.5 text-xl font-semibold">
-        <CifraAnimada
-          valor={valor}
-          decimales={decimales}
-          prefijo={prefijo}
-          sufijo={sufijo}
-        />
+        {texto !== undefined ? (
+          <span className="text-[var(--fg-subtle)]">{texto}</span>
+        ) : (
+          <CifraAnimada
+            valor={valor ?? 0}
+            decimales={decimales}
+            prefijo={prefijo}
+            sufijo={sufijo}
+          />
+        )}
       </p>
       {pie ? <p className={`mt-0.5 text-xs ${color || "text-[var(--fg-subtle)]"}`}>{pie}</p> : null}
     </div>
@@ -317,8 +336,13 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
       <GraficoSerieVentas datos={r.datos} />
       <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--fg-muted)]">
         <span className="font-medium text-[var(--fg)]">$ {venta.toFixed(2)}</span> en{" "}
-        {documentos} {documentos === 1 ? "documento" : "documentos"} · costo ${" "}
-        {costo.toFixed(2)} · margen {margenPct.toFixed(1)} % sobre el costo
+        {documentos} {documentos === 1 ? "documento" : "documentos"} ·{" "}
+        {/* «margen 0.0 %» con el costo en cero no es un margen del cero por
+            ciento: es que no se sabe. El histórico se cargó sin costo, así que
+            este es el caso normal mirando hacia atrás. */}
+        {costo > 0
+          ? `costo $ ${costo.toFixed(2)} · margen ${margenPct.toFixed(1)} % sobre el costo`
+          : "sin costo registrado, así que no hay margen que calcular"}
       </p>
     </>
   );

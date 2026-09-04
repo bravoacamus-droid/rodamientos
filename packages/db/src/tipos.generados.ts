@@ -4584,6 +4584,7 @@ export type Database = {
           periodo: string
           unidades: number
           venta: number
+          venta_con_costo: number
         }[]
       }
       siguiente_correlativo: {

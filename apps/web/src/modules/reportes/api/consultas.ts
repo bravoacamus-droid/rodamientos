@@ -279,7 +279,7 @@ export async function resumen(hoy: string): Promise<Resultado<ResumenReportes>> 
     const [ventas, cartera, inventario, reposicion] = await Promise.all([
       supabase
         .from("v_ventas_mensuales")
-        .select("mes, venta_neta, margen_pct")
+        .select("mes, venta_neta, costo, margen_pct")
         .gte("mes", mesAnterior),
       // Por tramos y no documento a documento: la suma es la misma y no
       // depende de cuántos documentos abiertos haya (053).
@@ -312,6 +312,7 @@ export async function resumen(hoy: string): Promise<Resultado<ResumenReportes>> 
         ventaMes: Number(actual?.venta_neta ?? 0),
         ventaMesAnterior: Number(anterior?.venta_neta ?? 0),
         margenPct: Number(actual?.margen_pct ?? 0),
+        costoMes: Number(actual?.costo ?? 0),
         porCobrar: dos(
           (cartera.data ?? []).reduce((a, c) => a + Number(c.saldo ?? 0), 0),
         ),
