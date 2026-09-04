@@ -40,9 +40,9 @@ volver a caer sale caro.
 
 | | |
 |---|---|
-| Rutas | **45 de 45 reales** · no queda ningún cartel |
+| Rutas | **46 de 46 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **1.118 en verde** |
+| `pnpm test` | **1.132 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
@@ -1973,6 +1973,92 @@ al lado, y encima distrae de ellos.
 
 `porcentajeQueDiceAlgo` se calla por encima del mil por ciento y deja solo el
 dinero, que es lo que se paga. El margen, en ese caso, dice «margen alto».
+
+---
+
+### Z · El camino de vuelta al cliente · 04/09
+
+Repasando el flujo entero contra el código —no de memoria— quedaba **un solo
+eslabón abierto**, y era el último.
+
+    cotización → pedido → bandeja → precios → compra → recepción → stock
+                                                                     ↑
+                                                        y ahí se paraba
+
+El ERP sabía que ahora hay veinte 6205 en el estante. No decía que esos veinte
+eran para el pedido de ACEROS CHILCA, que lleva desde el día 2 esperándolos y
+que ya se le puede facturar. **Eso vivía en la cabeza de Willy**, que es justo
+lo que este ERP viene a sacarle de ahí.
+
+De paso, dos agujeros que estaban anotados como abiertos y ya estaban
+cerrados: la compra en soles tiene moneda y tipo de cambio desde la 042, y el
+botón «Recibir» desde la propia compra existe.
+
+#### Cero migraciones: el dato ya estaba
+
+`v_comprometido` (041/047) ya trae producto, cliente, cotización, comprometido
+y stock. Lo que faltaba no era información: era enseñarla donde se decide.
+
+#### Una sola regla de reparto, y por eso se extrajo
+
+El reparto del stock entre los pedidos que lo esperan estaba dentro de
+`agruparPorComprar`. Ahora vive suelto en `repartirStock` y lo usan las tres
+pantallas.
+
+No es limpieza: la bandeja pregunta «¿qué falta comprar?» y las nuevas
+preguntan «¿a quién puedo entregarle?». Son la misma cuenta por sus dos caras,
+y si cada una repartiera por su lado podrían **contradecirse —una diciendo que
+sobra y la otra que falta— con la misma base delante y sin que nada fallara**.
+
+#### Lo que se ve ahora
+
+| Dónde | Qué dice |
+|---|---|
+| Ficha de la compra | «TMAS100-005 · traes 1 · esperan 5 · ⚠ **no alcanza para todos**» y quién es |
+| Recepción guardada | «A quién se le puede entregar ya» — el momento de avisar |
+| `/cotizaciones/listos` | Todo lo entregable, del que lleva más esperando al que menos |
+
+El aviso de que **no alcanza** salió solo en la primera prueba real: CMP-26-00009
+traía 1 unidad y ACEROS CHILCA esperaba 5, con la fecha vencida ese mismo día.
+Eso antes no lo veía nadie.
+
+#### Dice «lo esperan», nunca «es suyo»
+
+A propósito, y escrito en tres sitios. Mientras `stock.reservado` no lo escriba
+nadie —la pregunta 4 a Willy— el reparto por antigüedad es un cálculo, no una
+decisión que él haya tomado. «Lo esperan» es un hecho; «es suyo» sería
+prometer en su nombre.
+
+#### El corte por líneas enteras dejaba pedidos en tierra de nadie
+
+Primer intento: un pedido salía como listo si tenía al menos una línea
+completa. Con eso, un pedido de 10 unidades con 4 en almacén **no aparecía en
+ninguna pantalla**: aquí no, porque no tenía ninguna línea entera; y resuelto
+en la bandeja tampoco, porque seguía faltando.
+
+Y esas 4 se pueden entregar y facturar hoy — por partes, desde la 047. El
+corte es ahora «hay algo que sacar del almacén».
+
+#### Y `paraQuienEs` contaba de más desde el 02/09
+
+Existía y se usaba en `/compras/nueva`, pero **no miraba el almacén**: contaba
+a todo el que tuviera el producto confirmado. Con stock de sobra decía que
+media cartera estaba esperando esa compra — y quien la lee la está haciendo
+justamente para decidir cuánto comprar. Ahora pasa por el mismo reparto.
+
+#### Probado de punta a punta, en vivo
+
+Compra → «esperan 5, traes 1, no alcanza» → recibir → el pedido aparece solo en
+Listos como parcial → la otra compra pasa a decir «esperan 4», no 5, porque el
+reparto ya descontó lo que entró.
+
+Dos cosas se arreglaron por verlas en pantalla y no en una prueba:
+
+- El resumen empezaba por **«0 pedidos se pueden cerrar»**: leer primero lo que
+  NO hay. Ahora, sin completos, arranca por lo que sí se puede hacer.
+- La columna decía «Líneas 0 de 2» al lado de «listo para entregar», que a la
+  vista se contradicen. Va en unidades —«1 de 15»—, que es lo que se saca del
+  almacén.
 
 ---
 

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EstadoError, Moneda } from "@rodatech/ui";
 
+import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
+
 import { detalleRecepcion } from "../api/consultas";
 
 /**
@@ -151,6 +153,10 @@ export default async function PaginaDetalleRecepcion({
           </p>
         </section>
       ) : null}
+
+      {/* El momento de acordarse: la caja acaba de entrar y el cliente que
+          lleva semanas esperando es justo el que se olvida. */}
+      <AvisarAQuien />
     </div>
   );
 }

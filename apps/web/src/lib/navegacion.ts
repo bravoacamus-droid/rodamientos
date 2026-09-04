@@ -9,7 +9,7 @@ import type { Rol } from "@rodatech/config";
  * la barra lateral, que ya es cliente.
  */
 export type NombreIcono =
-  | "tablero" | "cotizacion" | "guia" | "factura" | "cobranza"
+  | "tablero" | "cotizacion" | "listos" | "guia" | "factura" | "cobranza"
   | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
   | "compra" | "porcomprar" | "precios" | "importacion"
@@ -43,6 +43,11 @@ export const NAVEGACION: readonly GrupoNav[] = [
     items: [
       { etiqueta: "Tablero", ruta: "/dashboard", icono: "tablero" },
       { etiqueta: "Cotizaciones", ruta: "/cotizaciones", icono: "cotizacion" },
+      // Justo después, porque es el paso siguiente del mismo hilo: se
+      // cotiza, el cliente confirma, y cuando llega la mercadería alguien
+      // tiene que acordarse de avisarle. Ese «alguien» era la memoria de
+      // Willy hasta el 04/09.
+      { etiqueta: "Listos para entregar", ruta: "/cotizaciones/listos", icono: "listos" },
       { etiqueta: "Guías de remisión", ruta: "/guias", icono: "guia" },
       { etiqueta: "Facturación", ruta: "/facturacion", icono: "factura" },
       { etiqueta: "Cobranzas", ruta: "/cobranzas", icono: "cobranza", roles: ["gerencia", "admin", "cobranzas"] },

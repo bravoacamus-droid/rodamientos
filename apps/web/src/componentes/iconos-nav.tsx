@@ -39,6 +39,13 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
     </>
   ),
   // Guía: camión.
+  // Listos para entregar: una caja con el visto puesto.
+  listos: (
+    <>
+      <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" {...T} />
+      <path d="m8.5 12 2.5 2.5 4.5-4.5" {...T} />
+    </>
+  ),
   guia: (
     <>
       <path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z" {...T} />

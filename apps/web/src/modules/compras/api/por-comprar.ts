@@ -7,7 +7,6 @@ import { fallo } from "@/lib/errores";
 
 import {
   agruparPorComprar,
-  fechaPrometida,
   resumirPorComprar,
   type LineaComprometida,
   type OfertaProveedor,
@@ -15,6 +14,12 @@ import {
   type ProductoPorComprar,
   type ResumenPorComprar,
 } from "../dominio/por-comprar";
+import {
+  pedidosListos,
+  quienEspera,
+  type PedidoListo,
+  type QuienEsperaProducto,
+} from "../dominio/listos";
 import type { ProductoParaComprar } from "../dominio/constructor";
 import type { Resultado } from "./consultas";
 
@@ -307,51 +312,40 @@ export async function paraQuienEs(
   if (productoIds.length === 0) return [];
 
   try {
-    const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("v_comprometido")
-      .select("cliente, cotizacion, cotizacion_id, codigo, fecha, disponibilidad, dias_entrega")
-      .in("producto_id", [...productoIds].slice(0, 150))
-      .limit(300);
+    /*
+      Descuenta el stock, y ese es el arreglo.
 
-    if (error || !data) return [];
+      Esta función contaba a TODO el que tuviera el producto confirmado, sin
+      mirar el almacén. Con stock de sobra decía que media cartera estaba
+      esperando esta compra — y quien la lee la está haciendo justamente para
+      decidir cuánto comprar.
 
-    const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
-      new Date(),
-    );
+      Ahora pasa por el mismo reparto que la bandeja y la pantalla de listos,
+      así que solo salen los que de verdad siguen descubiertos.
+    */
+    const lineas = await lineasComprometidas();
+    if (!lineas.ok) return [];
+
+    const porProducto = quienEspera(productoIds, lineas.datos, hoyEnLima(), sumarDias);
+    const codigo = new Map(lineas.datos.map((l) => [l.producto_id, l.codigo]));
 
     const porCotizacion = new Map<string, QuienEspera>();
-    for (const f of data as unknown as {
-      cliente: string | null;
-      cotizacion: string;
-      cotizacion_id: string;
-      codigo: string;
-      fecha: string;
-      disponibilidad: string;
-      dias_entrega: number | null;
-    }[]) {
-      const prometida = fechaPrometida(
-        {
-          fecha: String(f.fecha).slice(0, 10),
-          disponibilidad: disponibilidadDe(f.disponibilidad),
-          dias_entrega: f.dias_entrega === null ? null : Number(f.dias_entrega),
-        },
-        hoy,
-        sumarDias,
-      );
-
-      const previo = porCotizacion.get(f.cotizacion_id);
-      if (previo) {
-        if (!previo.codigos.includes(f.codigo)) previo.codigos.push(f.codigo);
-        if (prometida < previo.prometida) previo.prometida = prometida;
-      } else {
-        porCotizacion.set(f.cotizacion_id, {
-          cliente: f.cliente ?? "—",
-          cotizacion: f.cotizacion,
-          cotizacion_id: f.cotizacion_id,
-          codigos: [f.codigo],
-          prometida,
-        });
+    for (const [producto_id, grupo] of porProducto) {
+      for (const p of grupo.pedidos) {
+        const previo = porCotizacion.get(p.cotizacion_id);
+        const cod = codigo.get(producto_id) ?? "";
+        if (previo) {
+          if (cod && !previo.codigos.includes(cod)) previo.codigos.push(cod);
+          if (p.prometida < previo.prometida) previo.prometida = p.prometida;
+        } else {
+          porCotizacion.set(p.cotizacion_id, {
+            cliente: p.cliente,
+            cotizacion: p.cotizacion,
+            cotizacion_id: p.cotizacion_id,
+            codigos: cod ? [cod] : [],
+            prometida: p.prometida,
+          });
+        }
       }
     }
 
@@ -416,6 +410,103 @@ export async function ofertasDeLosProductos(
 
     return salida;
   } catch {
+    return {};
+  }
+}
+
+/**
+ * Todas las líneas confirmadas y pendientes, tal cual, para repartir el stock.
+ *
+ * Es la misma lectura que hace `bandejaPorComprar` y por eso vive aparte: la
+ * bandeja pregunta qué falta comprar y las otras dos pantallas —a quién puedo
+ * entregarle, para quién es esta compra— preguntan lo contrario, pero **el
+ * reparto tiene que ser el mismo**. Dos lecturas distintas darían dos repartos
+ * distintos de las mismas unidades.
+ */
+async function lineasComprometidas(): Promise<Resultado<LineaComprometida[]>> {
+  const supabase = await clienteServidor();
+
+  const { data, error } = await supabase
+    .from("v_comprometido")
+    .select(
+      `item_id, cotizacion_id, cotizacion, fecha, cliente_id, cliente,
+       producto_id, codigo, descripcion, marca, disponibilidad, dias_entrega,
+       comprometido, stock, costo_referencia`,
+    )
+    .order("producto_id", { ascending: true })
+    .order("fecha", { ascending: true })
+    .limit(TOPE_LINEAS + 1);
+
+  if (error) return fallo(error, "compras/lineasComprometidas");
+
+  const crudas = ((data ?? []) as unknown as FilaComprometido[]).slice(0, TOPE_LINEAS);
+
+  return {
+    ok: true,
+    datos: crudas.map((f) => ({
+      item_id: f.item_id,
+      cotizacion_id: f.cotizacion_id,
+      cotizacion: f.cotizacion,
+      fecha: String(f.fecha).slice(0, 10),
+      cliente_id: f.cliente_id,
+      cliente: f.cliente ?? "—",
+      producto_id: f.producto_id,
+      codigo: f.codigo,
+      descripcion: f.descripcion,
+      marca: f.marca,
+      disponibilidad: disponibilidadDe(f.disponibilidad),
+      dias_entrega: f.dias_entrega === null ? null : Number(f.dias_entrega),
+      comprometido: num(f.comprometido),
+      stock: num(f.stock),
+      costo_referencia: num(f.costo_referencia),
+    })),
+  };
+}
+
+/** La fecha de hoy en Lima, que es la que manda para todo lo prometido. */
+function hoyEnLima(): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
+}
+
+/**
+ * A quién se le puede entregar ya.
+ *
+ * Cierra la cadena: hasta ahora terminaba en el almacén y nadie volvía a mirar
+ * al cliente que había empezado todo.
+ */
+export async function listosParaEntregar(): Promise<Resultado<PedidoListo[]>> {
+  try {
+    const lineas = await lineasComprometidas();
+    if (!lineas.ok) return lineas;
+    return { ok: true, datos: pedidosListos(lineas.datos, hoyEnLima(), sumarDias) };
+  } catch (e) {
+    return fallo(e, "compras/listosParaEntregar");
+  }
+}
+
+/**
+ * Quién espera estos productos, y cuánto le falta a cada uno.
+ *
+ * Sustituye a `paraQuienEs`, que contaba a TODO el que tuviera el producto
+ * confirmado —incluidos aquellos a los que ya se les puede servir del
+ * almacén—. Con stock de sobra, aquella lista decía que media cartera estaba
+ * esperando esta compra.
+ *
+ * Devuelve un objeto y no un `Map` porque cruza a un componente de cliente.
+ */
+export async function quienEsperaEstos(
+  productoIds: readonly string[],
+): Promise<Record<string, QuienEsperaProducto>> {
+  if (productoIds.length === 0) return {};
+  try {
+    const lineas = await lineasComprometidas();
+    if (!lineas.ok) return {};
+    return Object.fromEntries(
+      quienEspera(productoIds, lineas.datos, hoyEnLima(), sumarDias),
+    );
+  } catch {
+    // Es un dato de apoyo sobre una pantalla que tiene que abrir igual: si no
+    // se puede averiguar para quién es la compra, la compra se sigue viendo.
     return {};
   }
 }

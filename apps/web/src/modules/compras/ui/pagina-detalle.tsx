@@ -4,8 +4,10 @@ import { Badge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleCompra } from "../api/consultas";
+import { quienEsperaEstos } from "../api/por-comprar";
 import { ETIQUETA_ESTADO, TONO_ESTADO } from "../dominio/tipos";
 import { AnularCompra } from "./anular";
+import { ParaQuienEs } from "./para-quien";
 
 /**
  * Ficha de una compra.
@@ -37,6 +39,13 @@ export default async function PaginaDetalleCompra({
   const c = resultado.datos;
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeAnular = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
+
+  // Para quién es. Una compra anulada no espera nadie: enseñar clientes
+  // encima de un documento muerto mandaría a repartir mercadería que no viene.
+  const espera =
+    c.estado === "anulada"
+      ? {}
+      : await quienEsperaEstos(c.lineas.map((l) => l.producto_id));
 
   const recibido = c.lineas.reduce((a, l) => a + l.cantidad_recibida, 0);
   const pedido = c.lineas.reduce((a, l) => a + l.cantidad, 0);
@@ -171,6 +180,19 @@ export default async function PaginaDetalleCompra({
 
         {/* ------------------------------------------------------- Datos */}
         <div className="flex flex-col gap-4">
+          {c.estado !== "anulada" ? (
+            <ParaQuienEs
+              lineas={c.lineas.map((l) => ({
+                producto_id: l.producto_id,
+                codigo: l.codigo,
+                // Lo que FALTA por recibir, no lo que se pidió: si ya llegaron
+                // 20 de 50, lo que queda por repartir son 30.
+                cantidad: Math.max(l.cantidad - l.cantidad_recibida, 0),
+              }))}
+              espera={espera}
+            />
+          ) : null}
+
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Datos</h2>
             <dl className="flex flex-col gap-2 text-sm">

@@ -196,6 +196,63 @@ const ORDEN_URGENCIA: Record<Urgencia, number> = {
 };
 
 /**
+ * A quién le toca el stock que hay, producto por producto.
+ *
+ * **Esta es la única regla de reparto del ERP y vive aquí sola** a propósito.
+ * La bandeja pregunta «¿qué falta comprar?» y la pantalla de pedidos listos
+ * pregunta «¿a quién puedo entregarle ya?»: son la misma cuenta mirada por sus
+ * dos caras, y si cada una repartiera por su lado acabarían contradiciéndose
+ * —la bandeja diciendo que sobra y la otra que falta— sin que nada fallara.
+ *
+ * Se reparte por orden de confirmación, el más antiguo primero. Mientras
+ * `stock.reservado` no lo escriba nadie (§G.2), este orden es lo único que
+ * decide quién se queda con las unidades que hay.
+ */
+export function repartirStock(
+  lineas: readonly LineaComprometida[],
+  hoy: string,
+  sumar: (fecha: string, dias: number) => string,
+): Map<string, LineaRepartida[]> {
+  const grupos = new Map<string, LineaComprometida[]>();
+  for (const l of lineas) {
+    const previas = grupos.get(l.producto_id);
+    if (previas) previas.push(l);
+    else grupos.set(l.producto_id, [l]);
+  }
+
+  const repartido = new Map<string, LineaRepartida[]>();
+
+  for (const [producto_id, delProducto] of grupos) {
+    const cabecera = delProducto[0];
+    if (!cabecera) continue;
+
+    // Por orden de confirmación. El número de cotización desempata porque dos
+    // del mismo día tienen que repartirse siempre igual: si el orden bailara
+    // entre dos cargas de la pantalla, el reparto cambiaría solo.
+    const ordenadas = [...delProducto].sort(
+      (a, b) => a.fecha.localeCompare(b.fecha) || a.cotizacion.localeCompare(b.cotizacion),
+    );
+
+    let resto = Math.max(cabecera.stock, 0);
+    repartido.set(
+      producto_id,
+      ordenadas.map((l) => {
+        const cubierto = dos(Math.min(resto, l.comprometido));
+        resto = dos(resto - cubierto);
+        return {
+          ...l,
+          cubierto,
+          descubierto: dos(l.comprometido - cubierto),
+          prometida: fechaPrometida(l, hoy, sumar),
+        };
+      }),
+    );
+  }
+
+  return repartido;
+}
+
+/**
  * De las líneas confirmadas a la lista de lo que hay que comprar.
  *
  * Solo salen los productos que el almacén NO cubre: lo que está en stock no es
@@ -210,37 +267,13 @@ export function agruparPorComprar(
 ): ProductoPorComprar[] {
   const enCamino = new Map(pedidos.map((p) => [p.producto_id, p]));
 
-  const grupos = new Map<string, LineaComprometida[]>();
-  for (const l of lineas) {
-    const previas = grupos.get(l.producto_id);
-    if (previas) previas.push(l);
-    else grupos.set(l.producto_id, [l]);
-  }
+  const grupos = repartirStock(lineas, hoy, sumar);
 
   const filas: ProductoPorComprar[] = [];
 
-  for (const [producto_id, delProducto] of grupos) {
-    const cabecera = delProducto[0];
+  for (const [producto_id, repartidas] of grupos) {
+    const cabecera = repartidas[0];
     if (!cabecera) continue;
-
-    // Por orden de confirmación. El número de cotización desempata porque dos
-    // del mismo día tienen que repartirse siempre igual: si el orden bailara
-    // entre dos cargas de la pantalla, el reparto cambiaría solo.
-    const ordenadas = [...delProducto].sort(
-      (a, b) => a.fecha.localeCompare(b.fecha) || a.cotizacion.localeCompare(b.cotizacion),
-    );
-
-    let resto = Math.max(cabecera.stock, 0);
-    const repartidas: LineaRepartida[] = ordenadas.map((l) => {
-      const cubierto = dos(Math.min(resto, l.comprometido));
-      resto = dos(resto - cubierto);
-      return {
-        ...l,
-        cubierto,
-        descubierto: dos(l.comprometido - cubierto),
-        prometida: fechaPrometida(l, hoy, sumar),
-      };
-    });
 
     const comprometido = dos(repartidas.reduce((a, l) => a + l.comprometido, 0));
     const sinCubrir = dos(repartidas.reduce((a, l) => a + l.descubierto, 0));
