@@ -7,7 +7,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, SelectNativo } from "@rodatech/ui";
+import { Button, Input, SelectNativo } from "@rodatech/ui";
 import { ClipboardList, Copy, Mail, MessageCircle } from "lucide-react";
 
 // Por la ruta profunda: el índice de `mensajes` reexporta su `api/`, que es
@@ -113,11 +113,37 @@ export function PedirPrecio({
   const [abriendo, empezarRonda] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
 
+  /**
+   * Las cantidades, editables.
+   *
+   * Llegan de la bandeja o del pedido con lo que falta, y casi siempre están
+   * bien. Pero se pide precio POR VOLUMEN —«¿y si te llevo 50?»— y viniendo
+   * de la ficha de un producto no hay ninguna cantidad natural: la pone quien
+   * pregunta.
+   */
+  const [cantidades, setCantidades] = React.useState<Record<string, number>>(() =>
+    Object.fromEntries(items.map((i) => [i.producto_id, i.cantidad])),
+  );
+
+  /** Los items con la cantidad que hay ahora en pantalla. */
+  const conCantidad = React.useMemo(
+    () =>
+      items.map((i) => ({ ...i, cantidad: cantidades[i.producto_id] ?? i.cantidad })),
+    [items, cantidades],
+  );
+
+  const ponerCantidad = (productoId: string, valor: number) => {
+    setCantidades((prev) => ({
+      ...prev,
+      [productoId]: Number.isFinite(valor) && valor > 0 ? valor : 1,
+    }));
+  };
+
   const plantilla = plantillas.find((p) => p.id === plantillaId) ?? plantillas[0];
 
   const grupos = React.useMemo(
-    () => gruposDeEnvio(items, seleccion, proveedores),
-    [items, seleccion, proveedores],
+    () => gruposDeEnvio(conCantidad, seleccion, proveedores),
+    [conCantidad, seleccion, proveedores],
   );
   const huerfanos = React.useMemo(() => sinNadie(items, seleccion), [items, seleccion]);
   const cuantos = cuantosProveedores(seleccion);
@@ -183,7 +209,7 @@ export function PedirPrecio({
     empezarRonda(async () => {
       const r = await abrirRonda(
         aPayloadDeConsulta(
-          items,
+          conCantidad,
           seleccion,
           proveedores,
           `${items.length} ${items.length === 1 ? "producto" : "productos"} de la bandeja`,
@@ -286,15 +312,17 @@ export function PedirPrecio({
       {modo === "separado" ? (
         items.map((item) => (
           <section key={item.producto_id} className="card p-4">
-            <div className="mb-3 flex flex-wrap items-baseline gap-2 border-b border-[var(--border-soft)] pb-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[var(--border-soft)] pb-2">
               <span className="font-mono text-sm font-semibold">{item.codigo}</span>
               <span className="min-w-0 flex-1 truncate text-sm text-[var(--fg-muted)]">
                 {item.marca ? `${item.marca} · ` : ""}
                 {item.descripcion}
               </span>
-              <span className="tabular text-sm">
-                {item.cantidad} {item.unidad}
-              </span>
+              <CampoCantidad
+                item={item}
+                valor={cantidades[item.producto_id] ?? item.cantidad}
+                onCambiar={(v) => ponerCantidad(item.producto_id, v)}
+              />
             </div>
 
             <ListaProveedores
@@ -326,9 +354,35 @@ export function PedirPrecio({
         ))
       ) : (
         <section className="card p-4">
+          {/* Qué se pide, con las cantidades a mano. En «separado» esto va en
+              la cabecera de cada bloque; aquí, que la lista es una sola, iba
+              sin verse — y se pide precio por volumen, así que la cantidad es
+              parte de la pregunta. */}
+          <h2 className="mb-2 text-sm font-semibold">Qué se pide</h2>
+          <ul className="mb-4 flex flex-col divide-y divide-[var(--border-soft)]">
+            {items.map((item) => (
+              <li
+                key={item.producto_id}
+                className="flex flex-wrap items-center gap-2 py-2"
+              >
+                <span className="font-mono text-sm font-medium">{item.codigo}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-[var(--fg-muted)]">
+                  {item.marca ? `${item.marca} · ` : ""}
+                  {item.descripcion}
+                </span>
+                <CampoCantidad
+                  item={item}
+                  valor={cantidades[item.producto_id] ?? item.cantidad}
+                  onCambiar={(v) => ponerCantidad(item.producto_id, v)}
+                />
+              </li>
+            ))}
+          </ul>
+
           <h2 className="mb-1 text-sm font-semibold">A quién se le pide</h2>
           <p className="mb-3 text-xs text-[var(--fg-subtle)]">
-            A cada uno le llega la lista completa, con los {items.length} productos.
+            A cada uno le llega la lista completa, con los {items.length}{" "}
+            {items.length === 1 ? "producto" : "productos"}.
           </p>
 
           <ListaProveedores
@@ -566,5 +620,38 @@ function ListaProveedores({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * La cantidad por la que se pregunta.
+ *
+ * Es parte de la pregunta, no un dato de paso: el precio de 5 y el de 50 no
+ * son el mismo, y en este oficio se negocia por volumen. Viniendo de la ficha
+ * de un producto no hay ninguna cantidad natural, así que la pone quien
+ * pregunta.
+ */
+function CampoCantidad({
+  item,
+  valor,
+  onCambiar,
+}: {
+  item: ItemPedido;
+  valor: number;
+  onCambiar: (v: number) => void;
+}) {
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      <Input
+        type="number"
+        min={1}
+        step="any"
+        value={valor}
+        onChange={(e) => onCambiar(Number(e.target.value))}
+        className="h-9 w-20 text-right tabular"
+        aria-label={`Cantidad de ${item.codigo}`}
+      />
+      <span className="text-sm text-[var(--fg-muted)]">{item.unidad}</span>
+    </span>
   );
 }

@@ -206,7 +206,10 @@ export default async function PaginaDetalleProducto({
         {/* Quién lo vende. Al lado de los equivalentes a propósito: las dos
             son salidas del mismo callejón —«no tengo esto»—, una por otra
             marca y la otra por otro proveedor. */}
-        <QuienLoVende proveedores={quienVende.ok ? quienVende.datos : []} />
+        <QuienLoVende
+          productoId={p.id}
+          proveedores={quienVende.ok ? quienVende.datos : []}
+        />
       </div>
     </div>
   );

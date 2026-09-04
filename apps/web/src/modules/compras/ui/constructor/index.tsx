@@ -178,7 +178,34 @@ export function ConstructorCompra({
             recepcione.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/*
+            Preguntar antes de comprar.
+
+            Aquí se escribe el costo a mano, y quien lo escribe se lo cree.
+            Este botón lleva las líneas ya puestas a la consulta de precios,
+            que es donde se ve a cuánto lo deja cada proveedor — y de ahí sale
+            la compra sola, con el ganador.
+
+            No bloquea nada: registrar una compra ya pactada, sin preguntar a
+            nadie, es lo normal y sigue estando a un botón de distancia.
+          */}
+          {estado.lineas.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  `/compras/pedir-precio?items=${estado.lineas
+                    .filter((l) => l.productoId)
+                    .map((l) => `${l.productoId}:${l.cantidad}`)
+                    .join(",")}`,
+                )
+              }
+            >
+              Comparar precios antes
+            </Button>
+          ) : null}
           <Button type="button" variant="outline" onClick={() => router.push("/compras")}>
             Cancelar
           </Button>

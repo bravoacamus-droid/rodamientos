@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **45 de 45 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **1.012 en verde** |
+| `pnpm test` | **1.091 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
@@ -1816,6 +1816,66 @@ verdadero**: no falló, se calló.
 Está arreglado con `coalesce` en los dos sitios, y anotado dentro de la
 migración: un centinela que no puede fallar es peor que no tenerlo, porque da
 la impresión contraria.
+
+---
+
+### X · Los precios se piden desde donde estés · 04/09
+
+Luis preguntó cómo debería ser la pantalla para registrar los precios cuando
+un producto tiene varios proveedores: *«sería el nombre del producto y a la
+derecha cada proveedor para registrar sus precios ps no»*.
+
+**Esa pantalla ya existe** y es exactamente esa: la comparativa de la §Q.
+Producto por fila, proveedor por columna, el precio de cada uno en su celda.
+Lo que faltaba no era el diseño: era **poder llegar a ella**.
+
+#### Un precio suelto no sirve para nada
+
+La tentación era poner una casilla de precio en la ficha del producto, junto a
+cada proveedor. Es lo más corto de construir y lo que peor envejece:
+
+- Un precio **sin fecha** no se puede comparar con otro. En rodamientos el
+  mismo ítem se mueve con el dólar y con el stock del importador.
+- Un precio **sin cantidad** miente: 1 unidad y 50 no se cotizan igual.
+- Un precio **sin quién preguntó ni cuándo** no es historial, es un número
+  pegado en una ficha.
+
+Y el historial es literalmente lo que pidió: *«va a registrar para tener ahí
+historial»*. Por eso la regla es **todo precio nace dentro de una ronda**
+(`consultas_precio`) y de ahí sale con fecha, cantidad, moneda, IGV y
+proveedor. Nada de precios sueltos.
+
+#### Entonces el arreglo es abaratar la ronda, no evitarla
+
+Si abrir una ronda cuesta ir a la bandeja y buscar el producto entre los de
+todos los clientes, nadie la abre. Se cerraron las dos entradas que faltaban:
+
+| Desde dónde | Antes | Ahora |
+|---|---|---|
+| Ficha del producto · «Quién lo vende» | solo de lectura, decía a cuánto te lo dejaron | botón **Pedir precio de este producto** |
+| Constructor de compra · `/compras/nueva` | no había ningún camino | botón **Comparar precios antes**, con las líneas ya escritas |
+| Bandeja «Por comprar» | ya estaba (§M) | igual |
+
+Las dos llevan a la misma pantalla con `?items=id:cantidad,...`, así que la
+ronda ya llega escrita.
+
+#### Y por eso la cantidad se volvió editable
+
+Entrando desde la ficha de un producto no hay ninguna cantidad natural —va con
+1—, y preguntar por 1 unidad cuando vas a comprar 50 devuelve el precio
+equivocado. La lista «Qué se pide» ahora lleva su campo de cantidad, y ese
+número viaja hasta el texto del WhatsApp: *«— 12 NIU»*.
+
+De paso volvió esa lista al modo **junto**, que se había perdido en la
+reescritura del 03/09: se elegía a quién preguntarle sin ver qué se le estaba
+preguntando.
+
+#### El resumen para Willy, en una línea
+
+Ves un producto o estás armando una compra → **pides precio** → sale la
+comparativa con un proveedor por columna → apuntas lo que te diga cada uno →
+el sistema marca el más barato → eso se convierte en compra. El historial se
+llena solo por el camino.
 
 ---
 

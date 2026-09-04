@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, Moneda, formatearFecha } from "@rodatech/ui";
+import { MessageCircleQuestion } from "lucide-react";
 
 import type { ProveedorDeProducto } from "@/modules/proveedores";
 
@@ -17,8 +18,10 @@ import type { ProveedorDeProducto } from "@/modules/proveedores";
  * Server Component: son datos, no hay nada que tocar.
  */
 export function QuienLoVende({
+  productoId,
   proveedores,
 }: {
+  productoId: string;
   proveedores: ProveedorDeProducto[];
 }) {
   return (
@@ -88,6 +91,26 @@ export function QuienLoVende({
           </ul>
         </>
       )}
+
+      {/*
+        De mirar precios a pedirlos.
+
+        Esta lista contesta «¿a cuánto me lo dejaron?», y lo siguiente que uno
+        quiere es «¿a cuánto me lo dejan HOY?». Sin este botón había que
+        acordarse de ir a la bandeja, buscar el producto entre los de todos los
+        clientes y marcarlo — con la ficha delante.
+
+        Lleva cantidad 1 porque desde aquí no hay ninguna cantidad natural: se
+        ajusta en la pantalla siguiente, que es donde además se decide a quién
+        se le pregunta.
+      */}
+      <Link
+        href={`/compras/pedir-precio?items=${productoId}:1`}
+        className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+      >
+        <MessageCircleQuestion className="size-4" aria-hidden="true" />
+        Pedir precio de este producto
+      </Link>
     </section>
   );
 }
