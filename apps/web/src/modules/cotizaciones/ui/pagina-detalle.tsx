@@ -1,13 +1,14 @@
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
-import { cotizacionPorId } from "../api/consultas";
+import { comprobantesDelPedido, cotizacionPorId } from "../api/consultas";
 import { armarCotizacionImpresa } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { enlaceWhatsapp } from "../dominio/whatsapp";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
+import { YaFacturado } from "./detalle/ya-facturado";
 
 /**
  * Ficha de una cotización.
@@ -37,6 +38,11 @@ export default async function PaginaDetalleCotizacion({
   }
 
   const { cabecera, lineas, emisor } = resultado.datos;
+
+  // Lo que ya salió facturado de este pedido. Después de `cotizacionPorId` y
+  // no en paralelo porque solo hace falta si el documento existe: pedirlo
+  // antes sería una consulta de más en cada 404.
+  const facturas = await comprobantesDelPedido(cabecera.id);
 
   const impresa = armarCotizacionImpresa({
     emisor: {
@@ -121,6 +127,12 @@ export default async function PaginaDetalleCotizacion({
           id={cabecera.id}
           estado={cabecera.estado}
           enlaceWhatsapp={whatsapp}
+          // Sobre lo CONFIRMADO, no sobre lo cotizado: lo que el cliente no
+          // aceptó no se factura nunca, así que no puede mantener vivo un
+          // botón de facturar que ya no lleva a ninguna parte.
+          facturable={lineas.some(
+            (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
+          )}
           // Las líneas viajan para poder preguntar QUÉ confirmó el
           // cliente. Se mandan crudas, sin el `id` de la cotización
           // repetido dentro: el diálogo solo necesita qué, cuánto y a
@@ -149,6 +161,15 @@ export default async function PaginaDetalleCotizacion({
       {cabecera.estado === "aprobada" ? (
         <LoQueFalta cotizacionId={cabecera.id} />
       ) : null}
+
+      {/*
+        Y lo que ya salió facturado, debajo de lo que falta comprar.
+
+        El enlace pedido↔comprobante solo iba en un sentido: la factura sabía
+        de qué pedido nacía y el pedido no sabía nada de sus facturas. Con el
+        facturado por partes eso deja la ficha contando media historia.
+      */}
+      <YaFacturado comprobantes={facturas} />
 
       {/*
         El margen es información INTERNA.

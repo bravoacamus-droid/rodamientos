@@ -373,6 +373,19 @@ export function EmisorComprobante({
                                     : "")
                                 : `${l.cantidad} pendientes`}
                           </span>
+                          {/* Cuánto hay de verdad en el estante.
+
+                              Solo cuando la mercadería sale con esta factura y
+                              no alcanza: el resto del tiempo es ruido. El
+                              saldo negativo está permitido a propósito (002),
+                              pero eso vale mientras se decida a sabiendas — y
+                              esta pantalla precargaba 5 unidades con 1 sola en
+                              almacén sin decir nada. */}
+                          {descargarStock && (cantidades[i] ?? l.cantidad) > l.stock ? (
+                            <span className="block text-xs font-medium text-[var(--warn)]">
+                              en almacén hay {l.stock}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-2 pr-3 text-right tabular">
                           {l.valor_unitario.toFixed(4)}

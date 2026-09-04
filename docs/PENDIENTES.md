@@ -2062,6 +2062,90 @@ Dos cosas se arreglaron por verlas en pantalla y no en una prueba:
 
 ---
 
+### AA · La cadena entera, de la cotización al cobro · 04/09
+
+Recorrida a mano de punta a punta, con datos reales:
+
+    COT1-000004 (ACEROS CHILCA)
+      → confirmar por línea
+      → bandeja «Por comprar»
+      → pedir precio → comparativa
+      → CMP-26-00009 · «traes 1 · esperan 5 · no alcanza para todos»
+      → REC-26-00002 · «a quién se le puede entregar ya»
+      → Listos para entregar · 1 de 15
+      → F001-00000001 · $36.40
+      → Cobranzas · cobrado
+
+**Funciona entera.** Y salieron tres huecos, los tres del mismo tipo: la pieza
+existía y no había cómo llegar a ella.
+
+#### 1 · Un pedido confirmado no se podía facturar desde el pedido
+
+El menú de la cotización tenía «Enviar por WhatsApp», «Clonar» y «Anular». El
+botón principal, «Generar guía». **Facturar no estaba en ninguna parte** —
+había que ir a Facturación y buscar el pedido entre los de todos los clientes.
+
+Y `/facturacion/nueva?cotizacion=<id>` ya estaba soportado desde el 02/09.
+
+Ahora en un pedido confirmado el botón principal es **Facturar** y la guía
+queda al lado. La guía es el traslado; **la factura es la que cobra y la que
+cierra el pedido** — `cantidad_atendida` sale de ahí. Un pedido despachado sin
+facturar deja al cliente servido y la cobranza sin empezar.
+
+Solo aparece si queda algo confirmado sin facturar.
+
+#### 2 · Se facturaban 5 unidades con 1 en el estante, sin decirlo
+
+La pantalla de emisión precarga lo confirmado. Con la casilla «la mercadería
+sale del almacén con esta factura» marcada, eso descuenta stock — y el saldo
+**puede quedar negativo a propósito**: la 002 lo dice con todas las letras,
+*«preferimos un descuadre visible a bloquear el despacho»*.
+
+Esa decisión es buena mientras alguien la tome **a sabiendas**. Y no había
+cómo: la pantalla no decía cuánto hay. Ahora, y solo cuando se pide más de lo
+que hay con la casilla marcada:
+
+    5 pendientes
+    en almacén hay 1
+
+No bloquea nada. Solo deja de callarse.
+
+#### 3 · El pedido no sabía nada de sus facturas
+
+El enlace `comprobantes.cotizacion_id` existe desde siempre y solo iba en un
+sentido: la factura decía de qué pedido nacía, el pedido no sabía de sus
+facturas. Con el facturado por partes (047) eso deja la ficha contando media
+historia — se emitió 1 de 5 unidades y seguía enseñando las 5 como si nada.
+
+Ahora, debajo de «falta comprar»:
+
+    Lo que ya se le facturó
+    Un comprobante salió de este pedido · todo cobrado.
+    F001-00000001  04/09/2026  sin enviar        $ 36.40   cobrado
+
+El **saldo va al lado del total** a propósito: un pedido puede estar facturado
+entero y sin cobrar un centavo, y son dos situaciones muy distintas.
+
+#### Una falsa alarma, anotada para no repetirla
+
+Al cobrar, la pantalla siguió enseñando el saldo viejo y «todavía no se ha
+registrado ningún pago». Parecía el mismo fallo de refresco de la §Y.
+
+**No lo era.** El pago estaba en la base y el código llama a `router.refresh()`
+con su `revalidatePath`. La captura se tomó antes de que el servidor de
+desarrollo contestara. Queda escrito porque el error de diagnóstico es fácil de
+repetir: en modo desarrollo este proyecto compila rutas de treinta segundos, y
+una pantalla «que no reacciona» puede ser eso.
+
+#### Lo que sigue sin probarse
+
+La **guía de remisión** se genera, pero el envío a SUNAT no tiene ambiente de
+pruebas y encima necesita el certificado (§3). Y el **flujo del dinero
+automatizado** sigue esperando el proyecto Supabase de pruebas: lo de arriba se
+recorrió a mano, que no es lo mismo que tenerlo en verde en cada commit.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

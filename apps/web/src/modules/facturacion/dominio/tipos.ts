@@ -216,6 +216,17 @@ export interface CotizacionFacturable {
     cantidad_cotizada: number;
     /** Y lo que ya se le facturó de esta línea. */
     cantidad_atendida: number;
+    /**
+     * Lo que hay en el almacén de este producto, hoy.
+     *
+     * Va aquí porque la casilla «la mercadería sale con esta factura»
+     * descuenta stock, y `stock.cantidad` PUEDE quedar negativo a propósito
+     * (002: «preferimos un descuadre visible a bloquear el despacho»). Esa
+     * decisión es buena mientras alguien la tome a sabiendas — y sin este
+     * número no había cómo saberlo: la pantalla precargaba las 5 unidades
+     * confirmadas con 1 sola en el estante y no decía nada.
+     */
+    stock: number;
     valor_unitario: number;
     descuento_pct: number;
     importe: number;

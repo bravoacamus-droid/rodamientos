@@ -35,12 +35,22 @@ export function AccionesCotizacion({
   estado,
   enlaceWhatsapp,
   lineas,
+  facturable,
 }: {
   id: string;
   estado: EstadoCotizacion;
   enlaceWhatsapp: string | null;
   /** Para poder preguntar qué confirmó el cliente antes de aprobar. */
   lineas: LineaParaConfirmar[];
+  /**
+   * Queda algo confirmado y sin facturar.
+   *
+   * Hasta hoy no había forma de facturar un pedido desde el pedido: había que
+   * ir a Facturación y buscarlo entre los de todos los clientes. La pantalla
+   * de destino ya aceptaba `?cotizacion=`, o sea que la pieza estaba y lo que
+   * faltaba era el camino.
+   */
+  facturable: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -79,9 +89,25 @@ export function AccionesCotizacion({
             Confirmar pedido
           </Button>
         ) : estado === "aprobada" ? (
-          <Button onClick={() => router.push(`/guias/nueva?cotizacion=${id}`)}>
-            Generar guía
-          </Button>
+          <>
+            {/* Facturar delante de la guía, y no al revés.
+
+                La guía es el traslado; la factura es la que cobra y la que
+                cierra el pedido —`cantidad_atendida` sale de ahí—. Un pedido
+                que se despacha sin facturar deja al cliente servido y la
+                cobranza sin empezar. */}
+            {facturable ? (
+              <Button onClick={() => router.push(`/facturacion/nueva?cotizacion=${id}`)}>
+                Facturar
+              </Button>
+            ) : null}
+            <Button
+              variant={facturable ? "outline" : "primary"}
+              onClick={() => router.push(`/guias/nueva?cotizacion=${id}`)}
+            >
+              Generar guía
+            </Button>
+          </>
         ) : null}
 
         <Button variant="outline" onClick={() => window.print()}>

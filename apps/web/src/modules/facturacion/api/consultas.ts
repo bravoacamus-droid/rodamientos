@@ -420,6 +420,26 @@ export async function cotizacionParaFacturar(
       .slice()
       .sort((a, b) => a.orden - b.orden);
 
+    /*
+      Cuánto hay en el estante de cada uno.
+
+      Aparte y no en el `select` de arriba porque `stock` no cuelga de
+      `cotizaciones`: PostgREST no sabe llegar de una a la otra. Y si falla, la
+      pantalla tiene que abrir igual —se factura sin saber el stock, que es
+      exactamente lo que se hacía hasta hoy— así que el error no se propaga.
+    */
+    const stockPorProducto = new Map<string, number>();
+    const idsProducto = [...new Set(lineasCrudas.map((l) => l.producto_id))];
+    if (idsProducto.length > 0) {
+      const { data: saldos } = await supabase
+        .from("stock")
+        .select("producto_id, cantidad")
+        .in("producto_id", idsProducto);
+      for (const s of saldos ?? []) {
+        stockPorProducto.set(String(s.producto_id), Number(s.cantidad ?? 0));
+      }
+    }
+
     return {
       ok: true,
       datos: {
@@ -449,6 +469,7 @@ export async function cotizacionParaFacturar(
               cantidad,
               cantidad_cotizada: Number(i.cantidad ?? 0),
               cantidad_atendida: Number(i.cantidad_atendida ?? 0),
+              stock: stockPorProducto.get(i.producto_id) ?? 0,
               valor_unitario: Number(i.valor_unitario ?? 0),
               descuento_pct: Number(i.descuento_pct ?? 0),
               // El importe se recalcula sobre lo PENDIENTE. El de la tabla

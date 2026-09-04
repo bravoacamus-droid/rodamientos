@@ -319,6 +319,8 @@ export async function cotizacionPorId(id: string): Promise<
       disponibilidad: Disponibilidad;
       dias_entrega: number | null;
       cantidad_aprobada: number | null;
+      /** Lo ya facturado de esta línea (047). Decide si queda algo por cobrar. */
+      cantidad_atendida: number;
       importe: number;
     }[];
     emisor: {
@@ -353,7 +355,7 @@ export async function cotizacionPorId(id: string): Promise<
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,
-                            cantidad_aprobada)`,
+                            cantidad_aprobada, cantidad_atendida)`,
         )
         .eq("id", id)
         .maybeSingle(),
@@ -399,5 +401,59 @@ export async function cotizacionPorId(id: string): Promise<
     };
   } catch (e) {
     return fallo(e, "cotizaciones/cotizacionPorId");
+  }
+}
+
+/** Un comprobante que salió de esta cotización. */
+export interface ComprobanteDelPedido {
+  id: string;
+  numero: string;
+  tipo: string;
+  fecha: string;
+  total: number;
+  saldo: number;
+  estado_sunat: string;
+}
+
+/**
+ * Qué se le ha facturado ya de este pedido.
+ *
+ * El enlace existía y solo iba en un sentido: la factura decía de qué
+ * cotización nacía, y la cotización no sabía nada de sus facturas. Con el
+ * facturado por partes (047) eso deja al pedido sin contar la mitad de su
+ * historia — se le emitieron 1 de 5 unidades y la pantalla seguía enseñando
+ * las 5 como si no hubiera pasado nada.
+ *
+ * Si falla, la ficha del pedido tiene que abrir igual: es información de
+ * apoyo, no el documento.
+ */
+export async function comprobantesDelPedido(
+  cotizacionId: string,
+): Promise<ComprobanteDelPedido[]> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("comprobantes")
+      .select("id, numero, tipo, fecha_emision, total, saldo, estado_sunat, estado")
+      .eq("cotizacion_id", cotizacionId)
+      // Una anulada no facturó nada: enseñarla como emitida haría cuadrar mal
+      // lo que queda por cobrar.
+      .neq("estado", "anulado")
+      .order("fecha_emision", { ascending: false })
+      .limit(50);
+
+    if (error || !data) return [];
+
+    return data.map((c) => ({
+      id: String(c.id),
+      numero: String(c.numero),
+      tipo: String(c.tipo),
+      fecha: String(c.fecha_emision).slice(0, 10),
+      total: Number(c.total ?? 0),
+      saldo: Number(c.saldo ?? 0),
+      estado_sunat: String(c.estado_sunat ?? "pendiente"),
+    }));
+  } catch {
+    return [];
   }
 }

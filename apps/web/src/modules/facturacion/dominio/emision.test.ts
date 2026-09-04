@@ -36,6 +36,7 @@ const COT: CotizacionFacturable = {
       cantidad: 10,
       cantidad_cotizada: 10,
       cantidad_atendida: 0,
+      stock: 10,
       valor_unitario: 3.92,
       descuento_pct: 0,
       importe: 39.2,
