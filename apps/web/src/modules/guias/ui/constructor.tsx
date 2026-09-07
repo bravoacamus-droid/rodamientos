@@ -217,7 +217,6 @@ export function ConstructorGuia({
                       <th className="py-2 pr-3 text-right font-medium">Pedido</th>
                       <th className="py-2 pr-3 text-right font-medium">Ya salió</th>
                       <th className="py-2 pr-3 text-right font-medium">Sale ahora</th>
-                      <th className="py-2 text-right font-medium">Peso</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,11 +253,6 @@ export function ConstructorGuia({
                             className="w-24 text-right tabular"
                             aria-label={`Cantidad a despachar de ${l.codigo}`}
                           />
-                        </td>
-                        <td className="py-2 text-right tabular text-xs text-[var(--fg-muted)]">
-                          {l.pesoUnitario > 0
-                            ? `${(l.pesoUnitario * l.cantidad).toFixed(3)} kg`
-                            : "sin peso"}
                         </td>
                       </tr>
                     ))}

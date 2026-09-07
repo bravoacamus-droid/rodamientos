@@ -119,7 +119,6 @@ export default async function PaginaDetalleGuia({
                   <th className="py-2 pr-3 font-medium">Código</th>
                   <th className="py-2 pr-3 font-medium">Descripción</th>
                   <th className="py-2 pr-3 text-right font-medium">Cantidad</th>
-                  <th className="py-2 text-right font-medium">Peso</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,9 +146,6 @@ export default async function PaginaDetalleGuia({
                       <span className="text-xs text-[var(--fg-subtle)]">
                         {l.unidad}
                       </span>
-                    </td>
-                    <td className="py-2 text-right tabular text-[var(--fg-muted)]">
-                      {l.peso_kg > 0 ? `${l.peso_kg.toFixed(3)} kg` : "—"}
                     </td>
                   </tr>
                 ))}
@@ -179,16 +175,38 @@ export default async function PaginaDetalleGuia({
                 etiqueta="Modalidad"
                 valor={ETIQUETA_MODALIDAD[g.modalidad_traslado] ?? g.modalidad_traslado}
               />
+              {/*
+                Cada modalidad enseña LO SUYO, y nada más.
+
+                Aquí seguían saliendo «Conductor: —» y «Licencia: —» en las
+                guías públicas, que es justo lo que Luis pidió quitar (07/09):
+                cuando despacha una agencia, quién conduce lo declara ella en
+                su guía de transportista. Se arregló en el formulario y en el
+                impreso y esta ficha se quedó atrás — dos rayas diciendo que
+                falta un dato que nunca se va a saber.
+              */}
               {g.modalidad_traslado === "01" ? (
                 <>
                   <Dato etiqueta="Transportista" valor={g.transportista_razon_social ?? "—"} />
                   <Dato etiqueta="RUC" valor={g.transportista_documento ?? "—"} />
                 </>
+              ) : g.a_pie ? (
+                <>
+                  <Dato etiqueta="Traslado" valor="A pie, sin vehículo" />
+                  <Dato etiqueta="Lo lleva" valor={g.conductor_nombre ?? "—"} />
+                  <Dato etiqueta="DNI" valor={g.conductor_documento ?? "—"} />
+                  {g.conductor_telefono ? (
+                    <Dato etiqueta="Celular" valor={g.conductor_telefono} />
+                  ) : null}
+                </>
               ) : (
-                <Dato etiqueta="Placa" valor={g.transportista_placa ?? "—"} />
+                <>
+                  <Dato etiqueta="Placa" valor={g.transportista_placa ?? "—"} />
+                  <Dato etiqueta="Conductor" valor={g.conductor_nombre ?? "—"} />
+                  <Dato etiqueta="DNI" valor={g.conductor_documento ?? "—"} />
+                  <Dato etiqueta="Licencia" valor={g.conductor_licencia ?? "—"} />
+                </>
               )}
-              <Dato etiqueta="Conductor" valor={g.conductor_nombre ?? "—"} />
-              <Dato etiqueta="Licencia" valor={g.conductor_licencia ?? "—"} />
             </dl>
 
             {g.observaciones ? (
