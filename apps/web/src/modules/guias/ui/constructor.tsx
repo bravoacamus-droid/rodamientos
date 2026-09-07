@@ -18,6 +18,7 @@ import {
   reducir,
 } from "../dominio/constructor";
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado, type MotivoTraslado } from "../dominio/tipos";
+import { DialogoAgencia } from "./dialogo-agencia";
 
 /**
  * Preparación de una guía de remisión.
@@ -65,6 +66,22 @@ export function ConstructorGuia({
   // Qué agencia se eligió. Solo controla el desplegable: lo que viaja a la
   // guía son el RUC y la razón social ya copiados, no el id.
   const [agenciaId, setAgenciaId] = useState("");
+
+  /*
+    Las que se han dado de alta desde aquí, aparte de las que trajo el servidor.
+
+    Se guardan sumadas y no en una copia de `agencias` porque una copia se
+    queda congelada: `useState(agencias)` no vuelve a leer la prop, así que un
+    `router.refresh()` posterior no se vería. Sumando, la lista del servidor
+    manda y esto solo rellena el hueco hasta que llegue.
+  */
+  const [agenciasNuevas, setAgenciasNuevas] = useState<AgenciaOpcion[]>([]);
+  const [altaAgencia, setAltaAgencia] = useState(false);
+
+  const listaAgencias = useMemo(() => {
+    const vistas = new Set(agencias.map((a) => a.id));
+    return [...agencias, ...agenciasNuevas.filter((a) => !vistas.has(a.id))];
+  }, [agencias, agenciasNuevas]);
   const [cargando, cargar] = useTransition();
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
@@ -399,39 +416,67 @@ export function ConstructorGuia({
                         editables: la guía guarda LO QUE DIGA ella el día que
                         se emite, no una referencia que pueda cambiar después.
 
-                        Solo aparece si hay agencias cargadas. Sin ellas, esto
-                        se comporta exactamente como antes. */}
-                    {agencias.length > 0 ? (
-                      <label className="flex flex-col gap-1">
-                        <span className="text-sm font-medium">Agencia</span>
-                        <SelectNativo
-                          value={agenciaId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            setAgenciaId(id);
-                            const a = agencias.find((x) => x.id === id);
-                            if (!a) return;
-                            despachar({
-                              tipo: "campo",
-                              campo: "transportistaDocumento",
-                              valor: a.numero_documento ?? "",
-                            });
-                            despachar({
-                              tipo: "campo",
-                              campo: "transportistaRazonSocial",
-                              valor: a.razon_social,
-                            });
-                          }}
+                        El bloque va SIEMPRE, aunque la lista llegue vacía.
+                        Antes desaparecía sin agencias cargadas, y con él se
+                        iba el botón de dar de alta la primera — justo cuando
+                        más falta hace. */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <label htmlFor="guia-agencia" className="text-sm font-medium">
+                          Agencia
+                        </label>
+                        {/*
+                          Botón de verdad y no un enlace. Luis, sobre otra
+                          pantalla: *«una persona que no sabe que tiene que
+                          darle click ahí»*. El texto en azul lo ve quien ya
+                          sabe que está.
+
+                          `size="sm"` para que quepa junto a la etiqueta, pero
+                          con el texto a 14px: nada por debajo de eso, que es
+                          lo que subimos para que Willy leyera la pantalla.
+                        */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-sm"
+                          onClick={() => setAltaAgencia(true)}
                         >
-                          <option value="">Otra / a mano…</option>
-                          {agencias.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.nombre_corto ?? a.razon_social}
-                            </option>
-                          ))}
-                        </SelectNativo>
-                      </label>
-                    ) : null}
+                          Nueva agencia
+                        </Button>
+                      </div>
+                      <SelectNativo
+                        id="guia-agencia"
+                        value={agenciaId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          setAgenciaId(id);
+                          const a = listaAgencias.find((x) => x.id === id);
+                          if (!a) return;
+                          despachar({
+                            tipo: "campo",
+                            campo: "transportistaDocumento",
+                            valor: a.numero_documento ?? "",
+                          });
+                          despachar({
+                            tipo: "campo",
+                            campo: "transportistaRazonSocial",
+                            valor: a.razon_social,
+                          });
+                        }}
+                      >
+                        <option value="">
+                          {listaAgencias.length > 0
+                            ? "Otra / a mano…"
+                            : "Todavía no hay ninguna guardada"}
+                        </option>
+                        {listaAgencias.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nombre_corto ?? a.razon_social}
+                          </option>
+                        ))}
+                      </SelectNativo>
+                    </div>
 
                     <label className="flex flex-col gap-1">
                       <span className="text-sm font-medium">RUC del transportista</span>
@@ -609,6 +654,33 @@ export function ConstructorGuia({
           </div>
         </aside>
       </div>
+
+      {/*
+        Fuera del bloque del transporte público a propósito: si viviera dentro,
+        cambiar la modalidad mientras está abierto lo desmontaría de golpe y se
+        perdería lo tecleado.
+      */}
+      <DialogoAgencia
+        abierto={altaAgencia}
+        onCerrar={() => setAltaAgencia(false)}
+        onGuardada={(a) => {
+          setAgenciasNuevas((previas) => [...previas, a]);
+          setAgenciaId(a.id);
+          // Lo mismo que hace elegirla en el desplegable: la guía guarda el
+          // RUC y la razón social copiados, no el id.
+          despachar({
+            tipo: "campo",
+            campo: "transportistaDocumento",
+            valor: a.numero_documento ?? "",
+          });
+          despachar({
+            tipo: "campo",
+            campo: "transportistaRazonSocial",
+            valor: a.razon_social,
+          });
+          setAltaAgencia(false);
+        }}
+      />
     </form>
   );
 }
