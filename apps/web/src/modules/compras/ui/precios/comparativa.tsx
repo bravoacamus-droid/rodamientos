@@ -26,6 +26,7 @@ import {
 } from "../../dominio/referencia";
 import { anadirALaRonda, comprarDeLaRonda } from "../../acciones/comparar";
 import { PanelRespuesta } from "./panel-respuesta";
+import { AjustarVenta } from "./ajustar-venta";
 
 // Por la ruta profunda y no por el índice del módulo: `api/comparador.ts` es
 // `server-only` y esto es un componente de cliente. Misma razón que en
@@ -393,6 +394,24 @@ export function Comparativa({
                       const gana =
                         fila.ganador?.consulta_proveedor_id === celda.consulta_proveedor_id;
                       const esElegido = elegido === celda.consulta_proveedor_id;
+                      /*
+                        Y cuál es el más CARO.
+
+                        Luis: *«así diferencia cuál es más barato o más caro»*.
+                        El verde del ganador ya estaba; faltaba la otra punta,
+                        que es la que hace que se vea de un golpe cuánto va de
+                        uno a otro.
+
+                        Solo con dos o más precios: con uno solo no hay nada
+                        que comparar, y pintarlo diría que es caro cuando es
+                        simplemente el único.
+                      */
+                      const conPrecio = fila.celdas.filter((c) => c.costoUsd !== null);
+                      const masCaro =
+                        conPrecio.length > 1 &&
+                        celda.costoUsd !== null &&
+                        celda.costoUsd ===
+                          Math.max(...conPrecio.map((c) => c.costoUsd!));
                       return (
                         <td
                           key={celda.consulta_proveedor_id}
@@ -420,8 +439,10 @@ export function Comparativa({
                                 esElegido
                                   ? "bg-brand-600 text-white"
                                   : gana
-                                    ? "text-[var(--ok)] hover:bg-[var(--surface-2)]"
-                                    : "hover:bg-[var(--surface-2)]"
+                                    ? "font-semibold text-[var(--ok)] hover:bg-[var(--surface-2)]"
+                                    : masCaro
+                                      ? "text-[var(--danger)] hover:bg-[var(--surface-2)]"
+                                      : "hover:bg-[var(--surface-2)]"
                               }`}
                               title={
                                 celda.costo !== null && celda.costo !== celda.costoUsd
@@ -478,6 +499,53 @@ export function Comparativa({
         </div>
       </div>
 
+      {/* ------------------------------------------- A cuánto lo vendes */}
+      {/*
+        Con el costo delante, decidir el precio de venta.
+
+        Luis: «que me traiga el precio de compra más barato y poder editar el
+        precio de venta y el precio mínimo si es que quiere cambiar». Es el
+        momento exacto: se acaba de saber lo que cuesta de verdad, y salir a
+        la ficha del producto para ajustar la venta es garantizar que no se
+        haga.
+
+        Solo para los productos que ya tienen alguna respuesta: sin costo no
+        hay nada nuevo que decidir.
+      */}
+      {filas.some((f) => f.celdas.some((c) => c.costoUsd !== null)) ? (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-base font-semibold">A cuánto lo vendes</h2>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Ya sabes lo que te cuesta. Ajusta tu precio si hace falta, o
+              déjalo como está.
+            </p>
+          </div>
+          {filas
+            .filter((f) => f.celdas.some((c) => c.costoUsd !== null))
+            .map((f) => (
+              <AjustarVenta
+                key={f.item.item_id}
+                productoId={f.item.producto_id}
+                codigo={f.item.codigo}
+                descripcion={f.item.descripcion}
+                referencia={
+                  referencias[f.item.producto_id] ??
+                  referenciaVacia(f.item.producto_id)
+                }
+                ofertas={f.celdas
+                  .filter((c) => c.costoUsd !== null)
+                  .map((c) => ({
+                    proveedor:
+                      proveedores.find(
+                        (p) => p.consulta_proveedor_id === c.consulta_proveedor_id,
+                      )?.proveedor ?? "—",
+                    costoUsd: c.costoUsd!,
+                  }))}
+              />
+            ))}
+        </section>
+      ) : null}
       {/* -------------------------------------------------------- El cierre */}
       <section className="card flex flex-wrap items-end justify-between gap-4 p-4">
         <div className="text-sm">

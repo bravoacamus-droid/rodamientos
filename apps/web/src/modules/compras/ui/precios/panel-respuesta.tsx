@@ -513,7 +513,17 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
       quien: p.proveedor,
       costo: p.ultimoCostoUsd!,
       cuando: p.ultimaCompra,
-      comprado: true,
+      /*
+        «Comprado» solo si hay una compra de verdad detrás.
+
+        Cotizar deja constancia de que el proveedor vende ese producto —lo hace
+        `anotar_respuesta_precio` a propósito, y el centinela de la 055 lo
+        comprueba— así que aparece en esta lista sin que se le haya comprado
+        nunca. Etiquetarlo «comprado» decía que hubo una factura donde solo
+        hubo un WhatsApp, y esa diferencia es justo la que hace que un precio
+        pese más que otro al negociar.
+      */
+      comprado: p.ultimaCompra !== null,
     }));
 
   const cotizados = ref.historial.map((h) => ({
@@ -587,7 +597,7 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
                 {a.quien}
               </span>
               <span className="text-[var(--fg-subtle)]">
-                {a.comprado ? "comprado" : "cotizado"}
+                {a.comprado ? "comprado" : a.cuando ? "cotizado" : "lo vende"}
                 {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
               </span>
             </p>
