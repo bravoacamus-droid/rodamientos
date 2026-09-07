@@ -1,8 +1,20 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
+import {
+  Badge,
+  Button,
+  EstadoError,
+  EstadoVacio,
+  Moneda,
+  PaginacionKeyset,
+} from "@rodatech/ui";
 
 import { listarCompras } from "../api/consultas";
-import { ETIQUETA_ESTADO, TONO_ESTADO, type FiltrosCompras } from "../dominio/tipos";
+import {
+  ETIQUETA_ESTADO,
+  TONO_ESTADO,
+  type EstadoCompra,
+  type FiltrosCompras,
+} from "../dominio/tipos";
 
 /**
  * Listado de compras.
@@ -58,13 +70,22 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
               <th className="px-4 py-2.5 font-medium">Recibido</th>
               <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
+              {/*
+                Pegada a la derecha, igual que la columna del producto en el
+                comparador: la tabla necesita 1313 px y en un portátil de 1366
+                el botón cae justo fuera de la vista. Uno al que hay que
+                desplazarse está tan escondido como el que no estaba.
+              */}
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5">
+                <span className="sr-only">Acciones</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {filas.map((c) => (
               <tr
                 key={c.id}
-                className={`border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`group/fila border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
                   c.estado === "anulada" ? "opacity-60" : ""
                 }`}
               >
@@ -112,6 +133,15 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     {ETIQUETA_ESTADO[c.estado]}
                   </Badge>
                 </td>
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
+                  {faltaRecibir(c.estado) ? (
+                    <Button asChild variant="outline">
+                      <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                        Recibir mercadería
+                      </Link>
+                    </Button>
+                  ) : null}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -152,6 +182,14 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <BarraAvance valor={c.avance} anulada={false} />
               </div>
             ) : null}
+
+            {faltaRecibir(c.estado) ? (
+              <Button asChild variant="outline" className="mt-2 w-full">
+                <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                  Recibir mercadería
+                </Link>
+              </Button>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -165,6 +203,23 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
       </div>
     </>
   );
+}
+
+/**
+ * ¿Todavía queda mercadería por llegar de esta compra?
+ *
+ * Luis, mirando el listado: *«acá en compras falta el botón de recibir
+ * mercadería, no darle clic al número»*. El botón existía, pero solo dentro de
+ * la compra: había que entrar por el número —que ni parece un enlace a quien no
+ * sabe— para encontrarlo. Recibir es lo que se hace desde esta pantalla el 90 %
+ * de las veces, así que va en la fila.
+ *
+ * Se decide por ESTADO y no por `avance`, que viene redondeado: con 999 de 1000
+ * unidades recibidas el avance sale «100 %» y el botón desaparecería quedando
+ * una unidad por llegar.
+ */
+function faltaRecibir(estado: EstadoCompra): boolean {
+  return estado === "registrada" || estado === "recibida_parcial";
 }
 
 /**

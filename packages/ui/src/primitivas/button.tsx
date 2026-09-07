@@ -12,7 +12,7 @@
  * ya están cableadas en 30 pantallas y describen mejor la intención.
  */
 import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
+import { Slot, Slottable } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "../lib/utils";
@@ -90,7 +90,20 @@ export function Button({
           aria-hidden="true"
         />
       )}
-      {children}
+      {/*
+        `Slottable` y no `{children}` a secas.
+
+        Con `asChild`, Slot exige UN solo hijo, y aquí siempre van dos: el
+        hueco del spinner —que vale `false` cuando no hay `loading`, pero
+        ocupa su sitio en el array— y el contenido. Sin esto, cualquier
+        `<Button asChild><Link …/></Button>` revienta en el servidor con
+        «Slot failed to slot onto its children», que es exactamente lo que
+        pasó la primera vez que se usó.
+
+        `Slottable` le dice a Slot cuál de los dos es el hijo real; el spinner
+        se queda de hermano. Sin `asChild` no cambia nada.
+      */}
+      <Slottable>{children}</Slottable>
     </Comp>
   );
 }
