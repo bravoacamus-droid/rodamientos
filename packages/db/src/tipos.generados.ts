@@ -3960,7 +3960,9 @@ export type Database = {
           costo_usd: number | null
           descripcion: string | null
           documento: string | null
+          factura_proveedor: string | null
           fecha: string | null
+          guia_proveedor: string | null
           moneda: string | null
           producto_id: string | null
           proveedor: string | null

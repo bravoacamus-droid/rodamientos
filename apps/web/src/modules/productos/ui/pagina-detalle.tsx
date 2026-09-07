@@ -7,6 +7,8 @@ import { proveedoresDeProducto } from "@/modules/proveedores";
 
 import { productoConDetalle } from "../api/consultas";
 import { AccionesFila } from "./acciones-fila";
+import { comprasDelProducto } from "../api/compras";
+import { ComprasAnteriores } from "./compras-anteriores";
 import { QuienLoVende } from "./quien-lo-vende";
 
 /**
@@ -23,10 +25,11 @@ export default async function PaginaDetalleProducto({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, quienVende] = await Promise.all([
+  const [resultado, perfil, quienVende, compras] = await Promise.all([
     productoConDetalle(id),
     perfilActual(),
     proveedoresDeProducto(id),
+    comprasDelProducto(id),
   ]);
 
   if (!resultado.ok) {
@@ -210,6 +213,11 @@ export default async function PaginaDetalleProducto({
           productoId={p.id}
           proveedores={quienVende.ok ? quienVende.datos : []}
         />
+
+        {/* Debajo de «quién lo vende», que es su continuación: uno dice a
+            quién se le PUEDE comprar y el otro a quién se le compró de
+            verdad, cuándo y a cuánto. */}
+        <ComprasAnteriores compras={compras.ok ? compras.datos : []} />
       </div>
     </div>
   );
