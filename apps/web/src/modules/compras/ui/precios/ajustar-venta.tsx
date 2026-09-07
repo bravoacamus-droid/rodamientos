@@ -153,8 +153,8 @@ export function AjustarVenta({
         </Campo>
         <Campo
           id={`piso-${productoId}`}
-          label="Piso ($)"
-          ayuda="Por debajo no se vende. 0 = sin piso."
+          label="Precio mínimo de venta ($)"
+          ayuda="Lo más barato que aceptas venderlo. 0 = sin mínimo."
         >
           <Input
             id={`piso-${productoId}`}

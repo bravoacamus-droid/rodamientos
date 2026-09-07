@@ -2436,6 +2436,30 @@ lado.
 La lección se repite y conviene dejarla escrita: **en este proyecto, el tamaño
 del texto no es estética.** Es si el dato existe o no para quien lo usa.
 
+#### «¿Qué es piso, rey?»
+
+La pregunta la hizo Luis, que lleva el proyecto. Si él no sabe qué es, Willy
+menos.
+
+«Piso» es jerga interna —de la 002, donde el P.M. del maestro se documentó
+así— y se había colado en las etiquetas de las pantallas nuevas. El cotizador
+ya decía bien «queda bajo el mínimo» y «Dejar en el mínimo»; las de compras no.
+
+| Antes | Ahora |
+|---|---|
+|  |  |
+| «Por debajo no se vende. 0 = sin piso.» | «Lo más barato que aceptas venderlo. 0 = sin mínimo.» |
+|  |  |
+| «sin piso definido» | «sin mínimo definido» |
+| «por encima de tu piso» | «más caro que tu mínimo de venta» |
+| «El piso: por debajo el cotizador no deja vender.» | «Lo más barato que aceptas venderlo: por debajo el cotizador no deja.» |
+
+Los nombres internos —, — se quedan: son código y ahí
+la palabra corta ayuda. Lo que no puede llevar jerga es lo que se lee.
+
+Es la tercera del día en la misma dirección: **una etiqueta que no se entiende
+es un campo que no existe**, igual que un texto de 11 px.
+
 #### Lo que NO se hizo de lo que pidió
 
 Los días de la línea siguen **sin venir precargados** desde la disponibilidad

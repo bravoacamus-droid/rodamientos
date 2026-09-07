@@ -523,7 +523,7 @@ export function FormularioProducto({
             id="precio_minimo"
             label="P.M. — mínimo"
             error={pisoAlto ? "El mínimo no puede superar al de venta." : errorDe("precio_minimo")}
-            ayuda="El piso: por debajo el cotizador no deja vender."
+            ayuda="Lo más barato que aceptas venderlo: por debajo el cotizador no deja."
           >
             <Input
               id="precio_minimo"
@@ -580,7 +580,7 @@ export function FormularioProducto({
             </span>
             {pm > 0 && costo > 0 ? (
               <>
-                {" "}· en el piso baja a{" "}
+                {" "}· en el mínimo baja a{" "}
                 <span className="tabular">{(((pm - costo) / costo) * 100).toFixed(1)}%</span>
               </>
             ) : null}

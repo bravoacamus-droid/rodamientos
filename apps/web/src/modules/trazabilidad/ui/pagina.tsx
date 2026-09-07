@@ -99,7 +99,7 @@ async function Cabecera({ id }: { id: string }) {
       <p className="mt-1 text-xs text-[var(--fg-subtle)]">
         {p.stock > 0 ? `${p.stock} en stock` : "sin stock"} · costo promedio{" "}
         {dinero(p.costo_promedio)} · lista {dinero(p.precio_venta)}
-        {p.precio_minimo > 0 ? ` · piso ${dinero(p.precio_minimo)}` : ""}
+        {p.precio_minimo > 0 ? ` · mínimo ${dinero(p.precio_minimo)}` : ""}
       </p>
     </div>
   );

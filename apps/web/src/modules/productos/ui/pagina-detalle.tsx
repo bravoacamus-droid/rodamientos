@@ -119,7 +119,7 @@ export default async function PaginaDetalleProducto({
           valor={<Moneda valor={p.precio_venta} />}
           pie={
             [
-              p.precio_minimo > 0 ? `piso ${p.precio_minimo.toFixed(2)}` : "sin piso",
+              p.precio_minimo > 0 ? `mínimo ${p.precio_minimo.toFixed(2)}` : "sin mínimo",
               p.precio_mercado > 0 ? `mercado ${p.precio_mercado.toFixed(2)}` : null,
             ]
               .filter(Boolean)

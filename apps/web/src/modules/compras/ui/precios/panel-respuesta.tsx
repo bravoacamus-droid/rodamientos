@@ -581,9 +581,9 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
           }
         />
         <Dato
-          etiqueta="Tu piso"
+          etiqueta="Mínimo de venta"
           valor={ref.precioMinimo === null ? null : moneda2(ref.precioMinimo)}
-          pie={ref.precioMinimo === null ? "sin piso definido" : "no bajar de aquí"}
+          pie={ref.precioMinimo === null ? "sin mínimo definido" : "no vender por debajo"}
         />
       </div>
 
@@ -694,7 +694,7 @@ function Veredicto({ usd, referencia: ref }: { usd: number | null; referencia: R
           más caro que tu venta
         </span>
       ) : alerta === "sobre_piso" ? (
-        <span className="text-[var(--warn)]">por encima de tu piso</span>
+        <span className="text-[var(--warn)]">más caro que tu mínimo de venta</span>
       ) : margen !== null ? (
         <span className="text-[var(--fg-subtle)]">
           {/* Un «margen 20466.7%» es el mismo ruido que el porcentaje de
