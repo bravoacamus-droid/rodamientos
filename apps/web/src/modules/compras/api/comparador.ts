@@ -339,7 +339,7 @@ export async function referenciasDeRonda(
   try {
     const supabase = await clienteServidor();
 
-    const [maestro, vendedores, previos] = await Promise.all([
+    const [maestro, vendedores, previos, prometido] = await Promise.all([
       supabase
         .from("productos")
         .select("id, ultimo_costo, costo_promedio, precio_venta, precio_minimo")
@@ -361,11 +361,28 @@ export async function referenciasDeRonda(
         .neq("consulta_estado", "anulada")
         .order("fecha", { ascending: false })
         .limit(400),
+      /*
+        Cómo se le prometió al CLIENTE.
+
+        Luis: *«lo que no se ve acá es si el producto viene de exterior, de
+        inmediata o de fábrica»*. Y es lo que decide la conversación: al que le
+        prometiste quince días de importación le puedes pedir que espere; al que
+        le dijiste «lo tengo» no.
+
+        Sale de los pedidos confirmados, no del proveedor: la disponibilidad es
+        una promesa que se le hizo a alguien, no una propiedad del producto.
+      */
+      supabase
+        .from("v_comprometido")
+        .select("producto_id, disponibilidad, dias_entrega")
+        .in("producto_id", ids)
+        .limit(400),
     ]);
 
     if (maestro.error) return fallo(maestro.error, "compras/referenciasDeRonda");
     if (vendedores.error) return fallo(vendedores.error, "compras/referenciasDeRonda");
     if (previos.error) return fallo(previos.error, "compras/referenciasDeRonda");
+    if (prometido.error) return fallo(prometido.error, "compras/referenciasDeRonda");
 
     const ref: Record<string, Referencia> = {};
     for (const id of ids) ref[id] = referenciaVacia(id);
@@ -408,6 +425,29 @@ export async function referenciasDeRonda(
       });
     }
 
+    /*
+      La MÁS LENTA de las promesas manda.
+
+      Si a un cliente se le dijo «inmediata» y a otro «quince días», lo que
+      hace falta saber al negociar es que hay alguien esperando ya. Quedarse
+      con la primera fila que devuelva Postgres sería quedarse con una
+      cualquiera.
+    */
+    const orden = { inmediata: 0, fabricacion: 1, exterior: 2 } as const;
+    for (const f of prometido.data ?? []) {
+      const r = ref[String(f.producto_id)];
+      if (!r) continue;
+      const d = String(f.disponibilidad);
+      if (d !== "inmediata" && d !== "exterior" && d !== "fabricacion") continue;
+      const dias = f.dias_entrega === null ? null : Number(f.dias_entrega);
+      if (r.disponibilidad === null || orden[d] > orden[r.disponibilidad]) {
+        r.disponibilidad = d;
+        r.diasPrometidos = dias;
+      } else if (d === r.disponibilidad && dias !== null) {
+        // Misma disponibilidad: gana el plazo más largo, por lo mismo.
+        r.diasPrometidos = Math.max(r.diasPrometidos ?? 0, dias);
+      }
+    }
     return { ok: true, datos: ref };
   } catch (e) {
     return fallo(e, "compras/referenciasDeRonda");

@@ -1,3 +1,5 @@
+import type { Disponibilidad } from "@/modules/cotizaciones/dominio/disponibilidad";
+
 /**
  * Contra qué se compara el precio que te acaban de dar.
  *
@@ -63,6 +65,20 @@ export interface Referencia {
   precioMinimo: number | null;
   proveedores: ProveedorConocido[];
   historial: PrecioPrevio[];
+  /**
+   * Cómo se le prometió al CLIENTE: inmediata, exterior o fabricación.
+   *
+   * Sale de los pedidos confirmados que esperan este producto
+   * (`v_comprometido`), no del proveedor. Es lo que hace falta para negociar
+   * bien: al que le prometiste quince días de importación le puedes decir que
+   * espere; al que le dijiste «lo tengo» no.
+   *
+   * Luis: *«lo que no se ve acá es si el producto viene de exterior, de
+   * inmediata o de fábrica»*.
+   */
+  disponibilidad: Disponibilidad | null;
+  /** Los días que se prometieron con esa disponibilidad. */
+  diasPrometidos: number | null;
 }
 
 /** De dónde salió el número a batir. Cambia lo que se puede afirmar de él. */
@@ -241,6 +257,8 @@ export function referenciaVacia(productoId: string): Referencia {
     precioMinimo: null,
     proveedores: [],
     historial: [],
+    disponibilidad: null,
+    diasPrometidos: null,
   };
 }
 

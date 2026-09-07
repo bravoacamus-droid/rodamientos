@@ -18,6 +18,8 @@ import {
   formatearMoneda,
 } from "@rodatech/ui";
 
+import { textoEntrega } from "@/modules/cotizaciones/dominio/disponibilidad";
+
 import { tipoCambioDelDia } from "../../acciones/tipo-cambio";
 import { anotarRespuesta } from "../../acciones/comparar";
 import { olvidarQueVende } from "@/modules/proveedores/acciones/catalogo";
@@ -362,9 +364,26 @@ export function PanelRespuesta({
                     <span className="font-mono text-base font-semibold">
                       {item.codigo}
                     </span>
-                    <span className="text-sm text-[var(--fg-muted)]">
-                      {item.cantidad} {item.unidad}
-                      {item.marca ? ` · ${item.marca}` : ""}
+                    <span className="flex flex-wrap items-baseline gap-x-2 text-sm text-[var(--fg-muted)]">
+                      <span>
+                        {item.cantidad} {item.unidad}
+                        {item.marca ? ` · ${item.marca}` : ""}
+                      </span>
+                      {/* De dónde viene, según lo que se le prometió al
+                          cliente. Cambia la conversación: al que espera quince
+                          días de importación se le puede pedir que aguante; al
+                          que se le dijo «lo tengo», no. */}
+                      {ref.disponibilidad ? (
+                        <span
+                          className={
+                            ref.disponibilidad === "inmediata"
+                              ? "text-[var(--ok)]"
+                              : "text-[var(--warn)]"
+                          }
+                        >
+                          {textoEntrega(ref.disponibilidad, ref.diasPrometidos)}
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                   <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
@@ -398,7 +417,22 @@ export function PanelRespuesta({
                         className="text-right tabular-nums"
                         value={linea.dias}
                         disabled={!linea.disponible}
-                        placeholder="—"
+                        /*
+                          El plazo prometido al cliente, propuesto.
+
+                          Luis: «si en cotización puse exterior ya sabe cuántos
+                          días va a demorar, pero en compras sí puede editar los
+                          días: seguro le dijo que va a demorar menos o más».
+
+                          Va de PLACEHOLDER y no de valor: es lo que prometimos
+                          nosotros, no lo que dijo el proveedor. Como valor se
+                          guardaría sin que nadie lo confirmara, y la promesa
+                          acabaría citándose a sí misma como si fuera un plazo
+                          pactado.
+                        */
+                        placeholder={
+                          ref.diasPrometidos ? String(ref.diasPrometidos) : "—"
+                        }
                         onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
                       />
                     </Campo>

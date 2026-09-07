@@ -40,6 +40,8 @@ const REF: Referencia = {
     { fecha: "2026-07-30", proveedor: "IDIVSA", costoUsd: 7.95 },
     { fecha: "2026-06-02", proveedor: "CORPUS", costoUsd: 8.4 },
   ],
+  disponibilidad: "exterior",
+  diasPrometidos: 15,
 };
 
 describe("mejorConocido", () => {
