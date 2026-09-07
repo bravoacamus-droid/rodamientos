@@ -325,105 +325,124 @@ export function PanelRespuesta({
             ayuda="Si te lo dijo «más IGV», déjalo sin marcar."
           />
 
-          <div className="overflow-x-auto rounded-md border border-[var(--border)]">
-            <table className="w-full text-sm">
-              <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
-                <tr>
-                  <th className="px-3 py-2 font-medium">Producto</th>
-                  <th className="px-3 py-2 text-right font-medium">Cant.</th>
-                  <th className="px-3 py-2 text-right font-medium">
-                    Precio {moneda === "PEN" ? "(S/)" : "($)"}
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium">Días</th>
-                  <th className="px-3 py-2 text-right font-medium">En USD</th>
-                  <th className="px-3 py-2 font-medium">Lo tiene</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const linea = lineas.find((l) => l.item_id === item.item_id);
-                  if (!linea) return null;
-                  const usd = aUsdSinIgv(
-                    linea.costo.trim() === "" ? null : Number(linea.costo),
-                    moneda,
-                    tcNum,
-                    incluyeIgv,
-                  );
-                  const ref =
-                    referencias[item.producto_id] ?? referenciaVacia(item.producto_id);
-                  return (
-                    <tr
-                      key={item.item_id}
-                      className="border-b border-[var(--border)] last:border-0"
+          {/*
+            Una tarjeta por producto, no una fila de tabla.
+
+            Era una tabla de seis columnas con la referencia en 11 píxeles y
+            gris claro. Luis: *«los datos del producto, ¿no puedes poner una
+            card pequeña bien detallada? te dije que lo usan personas mayores,
+            tiene que verse bien; le sumamos el tamaño al texto porque Willy no
+            veía»*.
+
+            Y era verdad: ese «vendes a $3.48» que el sistema calcula para que
+            se decida bien estaba escrito al tamaño de un pie de página. Nada
+            aquí baja de 14 px, y lo que hay que leer para negociar va en su
+            propia línea, no apretado en una celda.
+          */}
+          <div className="flex flex-col gap-3">
+            {items.map((item) => {
+              const linea = lineas.find((l) => l.item_id === item.item_id);
+              if (!linea) return null;
+              const usd = aUsdSinIgv(
+                linea.costo.trim() === "" ? null : Number(linea.costo),
+                moneda,
+                tcNum,
+                incluyeIgv,
+              );
+              const ref =
+                referencias[item.producto_id] ?? referenciaVacia(item.producto_id);
+
+              return (
+                <section
+                  key={item.item_id}
+                  className="rounded-md border border-[var(--border)] p-3"
+                >
+                  {/* Qué es. El código grande: es lo que se lee en voz alta
+                      por teléfono, y lo que se busca con la vista. */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="font-mono text-base font-semibold">
+                      {item.codigo}
+                    </span>
+                    <span className="text-sm text-[var(--fg-muted)]">
+                      {item.cantidad} {item.unidad}
+                      {item.marca ? ` · ${item.marca}` : ""}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+                    {item.descripcion}
+                  </p>
+
+                  <LoQueYaSabes referencia={ref} />
+
+                  {/* Lo que se rellena. Tres campos anchos y etiquetados, en
+                      vez de seis columnas de tabla en las que hay que contar
+                      cuál es cuál. */}
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                    <Campo
+                      id={`precio-${item.item_id}`}
+                      label={`Precio ${moneda === "PEN" ? "(S/)" : "($)"}`}
                     >
-                      <td className="px-3 py-1.5">
-                        <span className="font-medium tabular-nums">{item.codigo}</span>
-                        <span className="block max-w-[16rem] truncate text-xs text-[var(--fg-muted)]">
-                          {item.descripcion}
-                        </span>
-                        <LoQueYaSabes referencia={ref} />
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">
-                        {item.cantidad}
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          inputMode="decimal"
-                          className="h-8 text-right tabular-nums"
-                          value={linea.costo}
-                          disabled={!linea.disponible}
-                          onChange={(e) => cambiar(item.item_id, "costo", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5">
-                        <Input
-                          inputMode="numeric"
-                          className="h-8 w-16 text-right tabular-nums"
-                          value={linea.dias}
-                          disabled={!linea.disponible}
-                          placeholder="días"
-                          onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">
-                        {/* La conversión, delante. Es lo que hace que se note
-                            en el momento que el tipo de cambio falta o que el
-                            IGV estaba mal marcado. */}
-                        <span className="text-[var(--fg-muted)]">
-                          {usd === null ? "—" : formatearMoneda(usd, "USD")}
-                        </span>
-                        <Veredicto usd={usd} referencia={ref} />
-                      </td>
-                      {/*
-                        Tres respuestas, no dos.
+                      <Input
+                        id={`precio-${item.item_id}`}
+                        inputMode="decimal"
+                        className="text-right tabular-nums"
+                        value={linea.costo}
+                        disabled={!linea.disponible}
+                        onChange={(e) => cambiar(item.item_id, "costo", e.target.value)}
+                      />
+                    </Campo>
 
-                        La casilla solo distinguía «lo tiene» de «no lo tiene»,
-                        y eso mete en el mismo saco dos cosas muy distintas:
-                        «hoy no me queda, vuelve el mes que viene» y «eso ya no
-                        lo trabajo». La primera es temporal; la segunda hay que
-                        recordarla, porque si no se le vuelve a preguntar en
-                        cada ronda.
+                    <Campo id={`dias-${item.item_id}`} label="Días">
+                      <Input
+                        id={`dias-${item.item_id}`}
+                        inputMode="numeric"
+                        className="text-right tabular-nums"
+                        value={linea.dias}
+                        disabled={!linea.disponible}
+                        placeholder="—"
+                        onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
+                      />
+                    </Campo>
 
-                        Al elegir «ya no lo vende» se le quita de los que venden
-                        ese producto (046), así que deja de proponerse solo.
-                      */}
-                      <td className="px-3 py-1.5">
-                        <SelectNativo
-                          value={linea.disponible ? "si" : linea.yaNoVende ? "nunca" : "no"}
-                          onChange={(e) => ponerTenencia(item.item_id, e.target.value)}
-                          aria-label={`${item.codigo}: lo tiene`}
-                          className="h-8 text-xs"
-                        >
-                          <option value="si">Lo tiene</option>
-                          <option value="no">No ahora</option>
-                          <option value="nunca">Ya no lo vende</option>
-                        </SelectNativo>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    {/*
+                      Tres respuestas, no dos.
+
+                      La casilla solo distinguía «lo tiene» de «no lo tiene», y
+                      ahí caben dos cosas muy distintas: «hoy no me queda» y
+                      «eso ya no lo trabajo». La primera es de esta semana; la
+                      segunda hay que recordarla, o se le vuelve a preguntar en
+                      cada ronda.
+                    */}
+                    <Campo id={`tiene-${item.item_id}`} label="¿Lo tiene?">
+                      <SelectNativo
+                        id={`tiene-${item.item_id}`}
+                        value={linea.disponible ? "si" : linea.yaNoVende ? "nunca" : "no"}
+                        onChange={(e) => ponerTenencia(item.item_id, e.target.value)}
+                      >
+                        <option value="si">Lo tiene</option>
+                        <option value="no">No ahora</option>
+                        <option value="nunca">Ya no lo vende</option>
+                      </SelectNativo>
+                    </Campo>
+                  </div>
+
+                  {/* Lo que sale de lo tecleado. En grande, porque es la cifra
+                      que se compara contra los otros proveedores. */}
+                  {usd !== null || linea.costo.trim() !== "" ? (
+                    <p className="mt-2 flex flex-wrap items-baseline gap-x-3 border-t border-[var(--border-soft)] pt-2 text-sm">
+                      <span className="text-[var(--fg-muted)]">Sale a</span>
+                      <strong className="tabular-nums text-base">
+                        {usd === null ? "—" : formatearMoneda(usd, "USD")}
+                      </strong>
+                      <span className="text-[var(--fg-subtle)]">
+                        por unidad, sin IGV
+                      </span>
+                      <Veredicto usd={usd} referencia={ref} />
+                    </p>
+                  ) : null}
+                </section>
+              );
+            })}
           </div>
 
           <Campo id="nota-respuesta" label="Nota">
@@ -472,9 +491,9 @@ export function PanelRespuesta({
 function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
   if (!tieneAlgoQueDecir(ref)) {
     return (
-      <span className="mt-0.5 block text-[11px] text-[var(--fg-subtle)]">
+      <p className="mt-2 text-sm text-[var(--fg-muted)]">
         Primera vez: no hay con qué compararlo.
-      </span>
+      </p>
     );
   }
 
@@ -519,17 +538,31 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
     .sort((a, b) => Number(b.comprado) - Number(a.comprado) || a.costo - b.costo)
     .slice(0, 3);
 
+  /*
+    Todo en 14 px como mínimo.
+
+    Esto estaba en 11 px y gris claro — el tamaño de un pie de página para lo
+    único que hace falta leer al negociar. Willy es mayor y corto de vista: si
+    no se lee, es como si no estuviera, y entonces sobra el cálculo entero.
+  */
   return (
-    <span className="mt-0.5 block text-[11px] leading-tight text-[var(--fg-subtle)]">
-      {partes.length > 0 ? <span className="block">{partes.join(" · ")}</span> : null}
+    <div className="mt-2 flex flex-col gap-1 rounded-md bg-[var(--surface-2)] p-2.5 text-sm">
+      {partes.length > 0 ? (
+        <p className="text-[var(--fg)]">{partes.join(" · ")}</p>
+      ) : null}
       {antes.map((a, i) => (
-        <span key={`${a.quien}-${i}`} className="block">
-          <strong className="font-medium">{moneda2(a.costo)}</strong> · {a.quien} ·{" "}
-          {a.comprado ? "comprado" : "cotizado"}
-          {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
-        </span>
+        <p key={`${a.quien}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
+          <strong className="tabular-nums">{moneda2(a.costo)}</strong>
+          <span className="min-w-0 flex-1 truncate text-[var(--fg-muted)]">
+            {a.quien}
+          </span>
+          <span className="text-[var(--fg-subtle)]">
+            {a.comprado ? "comprado" : "cotizado"}
+            {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
+          </span>
+        </p>
       ))}
-    </span>
+    </div>
   );
 }
 
@@ -556,10 +589,10 @@ function Veredicto({ usd, referencia: ref }: { usd: number | null; referencia: R
   const pct = porcentajeQueDiceAlgo(contra?.porcentaje ?? 0);
 
   return (
-    <span className="mt-0.5 block whitespace-nowrap text-[11px] leading-snug">
+    <span className="flex flex-wrap items-baseline gap-x-2 whitespace-nowrap text-sm">
       {contra ? (
         <span
-          className={`block ${
+          className={`${
             contra.veredicto === "mejor"
               ? "text-[var(--ok)]"
               : contra.veredicto === "peor"
@@ -582,13 +615,13 @@ function Veredicto({ usd, referencia: ref }: { usd: number | null; referencia: R
       ) : null}
 
       {alerta === "sobre_venta" ? (
-        <span className="block font-medium text-[var(--danger)]">
+        <span className="font-medium text-[var(--danger)]">
           más caro que tu venta
         </span>
       ) : alerta === "sobre_piso" ? (
-        <span className="block text-[var(--warn)]">por encima de tu piso</span>
+        <span className="text-[var(--warn)]">por encima de tu piso</span>
       ) : margen !== null ? (
-        <span className="block text-[var(--fg-subtle)]">
+        <span className="text-[var(--fg-subtle)]">
           {/* Un «margen 20466.7%» es el mismo ruido que el porcentaje de
               arriba, y sale por lo mismo: un precio de lista cargado contra
               un costo que es casi cero. Se dice que es alto y se deja ahí. */}

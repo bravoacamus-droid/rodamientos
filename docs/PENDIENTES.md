@@ -2402,6 +2402,40 @@ hay que **recordarla**, porque si no se le vuelve a preguntar en cada ronda.
 Ahora son tres: **Lo tiene · No ahora · Ya no lo vende**. Y la tercera le quita
 el producto de lo que consta que vende (046), así que deja de proponerse solo.
 
+#### Y el mismo día, otra vez lo mismo: 11 píxeles
+
+Luis, sobre el diálogo ya arreglado:
+
+> *«los datos del producto, ¿no puedes poner una card pequeña bien detallada?
+> te dije que lo usan personas mayores, tiene que verse bien; le sumamos el
+> tamaño al texto porque mi cliente Willy no veía»*
+
+Y tenía razón: la referencia que se había construido justo para que se decida
+bien —«vendes a $3.48», los precios de los otros proveedores— estaba escrita
+en **11 px y gris claro**, dentro de una tabla de seis columnas.
+
+El cálculo puede ser perfecto: si no se lee, sobra entero.
+
+Ahora cada producto es una tarjeta:
+
+    OV-63X3                              5 NIU · SIN MARCA
+    OV-63X3 ORING DE VITON
+    ┌──────────────────────────────────────────────────┐
+    │ vendes a $3.48 · piso $2.90                      │
+    │ $0.20 · IMPORTADORA CORPUS · comprado 04/09/2026 │
+    └──────────────────────────────────────────────────┘
+    PRECIO ($)        DÍAS        ¿LO TIENE?
+    [    4.20   ]     [    ]      [ Lo tiene ▾ ]
+    Sale a  $ 4.20  por unidad, sin IGV   más caro que tu venta
+
+**Nada baja de 14 px.** Los tres campos van etiquetados y anchos en vez de
+apretados en columnas donde hay que contar cuál es cuál, y la cifra que se
+compara con los otros proveedores sale en grande, debajo, con su veredicto al
+lado.
+
+La lección se repite y conviene dejarla escrita: **en este proyecto, el tamaño
+del texto no es estética.** Es si el dato existe o no para quien lo usa.
+
 #### Lo que NO se hizo de lo que pidió
 
 Los días de la línea siguen **sin venir precargados** desde la disponibilidad
