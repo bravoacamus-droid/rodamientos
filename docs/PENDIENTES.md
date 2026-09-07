@@ -2471,6 +2471,125 @@ pendiente.
 
 ---
 
+### AF · La pantalla de precios, repasada con Luis delante · 07/09
+
+Una tanda larga de correcciones seguidas, todas suyas y todas mirando la misma
+pantalla. Van juntas porque cuentan una sola historia: **el comparador calculaba
+bien y comunicaba mal**.
+
+#### 1 · Las dos cifras con las que se decide cuánto cotizar
+
+> *«quería información a cuánto fue comprado último, por eso de eso tengo que
+> cotizar; y el precio que se vende, si no cómo sé a cuánto se vende»*. Y
+> después: *«el precio que estamos registrando en compras es saber cuál es el
+> precio de compra, claro también el de venta si podemos bajarle precio, pero
+> todo manda desde compras»*.
+
+Estaban en un texto corrido y **solo si existían**. Con un producto sin costo
+—que en este catálogo son casi todos— no aparecía nada: ni el dato ni el motivo.
+
+Ahora las tres van siempre, con etiqueta y un «—» cuando no hay:
+
+    Te costó          Lo vendes a          Mínimo de venta
+    —                 $3.48                —
+    nunca se ha       el margen sale       sin mínimo
+    comprado          al saber el costo    definido
+
+**Un hueco que se ve es un dato que se puede ir a buscar; uno que no se ve, no.**
+
+Y lo mismo, resumido, en la propia rejilla: *«acá tampoco sé a cuánto se compró
+últimamente, qué proveedor me dio el mejor precio»*. Abrir un diálogo para
+recordar cuánto costó es perder el hilo de la comparación que se está haciendo.
+
+#### 2 · De dónde viene el producto
+
+> *«lo que no se ve acá es si el producto viene de exterior, de inmediata o de
+> fábrica»*
+
+Sale de los pedidos confirmados (`v_comprometido`), **no del proveedor**: la
+disponibilidad es una promesa que se le hizo a alguien, no una propiedad del
+producto. Y cambia la conversación — al que espera quince días de importación se
+le puede pedir que aguante; al que se le dijo «lo tengo», no.
+
+Manda la más lenta de las promesas. Con eso quedó resuelto de paso lo que había
+pedido por la mañana: **el campo de días viene con el plazo prometido**, de
+sugerencia y no de valor. Como valor se guardaría sin que nadie lo confirmara y
+la promesa acabaría citándose a sí misma como si fuera un plazo pactado.
+
+#### 3 · Y a cuánto lo vendes
+
+> *«que me traiga el precio de compra más barato que registré automáticamente, y
+> poder editar el precio de venta y el precio mínimo si es que quiere cambiar o
+> se queda igual; ahí ese card de dos con colores»*
+
+    El más barato          El más caro
+    $ 2.10                 $ 3.90
+    APLICATIVOS SAC        AUTOLAND S.A.
+    (verde)                (rojo)
+
+    PRECIO DE VENTA ($)    PRECIO MÍNIMO DE VENTA ($)    [Guardar]
+    Con estos números te queda un 65.7% de margen sobre el costo.
+
+Va aquí y no en la ficha del producto porque **el momento en que se sabe lo que
+cuesta de verdad es el momento de decidir a cuánto se vende**. Hacer salir a
+otra pantalla y volver garantiza que no se haga: el precio se queda con el del
+año pasado y la inflación se come el margen en silencio.
+
+Los dos colores solo con DOS o más precios: con uno no hay nada que comparar.
+
+#### 4 · Deshacer, porque el número anterior desaparecía
+
+> *«si cambio el precio pero ya no quiero y no me acuerdo el precio, ¿cómo
+> sería?»*
+
+    PRECIO DE VENTA ($)
+    [        2.90 ]
+    Ahora está en $3.48.  Volver a ese
+
+Lo guardado se lleva en su propio estado y no se relee de las props: después de
+guardar, la prop sigue trayendo el valor viejo hasta que el servidor devuelva la
+página, y el «volver a» ofrecería deshacer justo lo que se acaba de hacer.
+
+`Campo.ayuda` pasa de `string` a `ReactNode` para que la explicación pueda
+llevar la acción dentro en vez de quedar separada del campo que explica.
+
+#### 5 · Que aguante diez proveedores
+
+> *«pon que tenga 10 proveedores o 6 de uno y 4 de otro: tiene que agruparse
+> bien sin romperse, y si no se ve el nombre completo que salga al pasar por
+> encima»*
+
+- La **columna del producto se queda fija** al desplazar. Con diez son trece
+  columnas, y sin eso al llegar al décimo ya no se ve de qué producto es el
+  precio que se mira — lo que la tabla venía a resolver.
+- Ancho mínimo por columna.
+- El nombre entero al pasar por encima. «CAFAMER LOGISTICA INDUSTRIAL S.A.C. -
+  CAFAMER S.A.C.» no cabe en ningún sitio, y con dos parecidos el corte los deja
+  idénticos.
+
+Con diez **no se ha probado en vivo**: no existe una ronda así.
+
+#### 6 · Un dato que mentía sin fallar
+
+La lista de proveedores decía «comprado» de un precio que solo se **cotizó**.
+Cotizar deja constancia de que el proveedor vende ese producto —lo hace
+`anotar_respuesta_precio` a propósito, y el centinela de la 055 lo comprueba— así
+que aparecía sin que se le hubiera comprado nunca.
+
+Ahora «comprado» exige una compra detrás. La diferencia importa justo al
+negociar: un precio que ya se pagó pesa más que uno que solo se prometió.
+
+#### Lo que deja esta tanda
+
+Seis correcciones y ni una era de cálculo. Todas eran de **comunicación**: un
+dato callado, una palabra que no se entiende, un tamaño que no se lee, un botón
+que no parece botón, una etiqueta que dice más de lo que sabe.
+
+Escrito para no olvidarlo: en este proyecto **una cifra que no se lee y una
+cifra que no existe valen lo mismo**.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo
