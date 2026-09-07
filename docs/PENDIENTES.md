@@ -2350,6 +2350,69 @@ veces lo que pasa las pruebas falla al pulsarlo.
 
 ---
 
+### AE · Un botón que parece un botón · 07/09
+
+> *«te digo porque acá dice esperando, y una persona que no sabe que tiene que
+> darle click ahí en el cuadrado... debes poner un botón de registrar precio
+> por cada card»*
+
+Y añadió el porqué, que es el que manda en todo este proyecto: **la aplicación
+la va a usar Willy**, que es mayor y corto de vista.
+
+#### La tarjeta entera era el botón
+
+Un `<button>` con pinta de tarjeta y, dentro, el texto «Pulsa para apuntar lo
+que te diga». O sea: **había que leerlo para descubrir que se podía pulsar**.
+Quien no lo lee —o no ve la letra— se queda mirando un cuadro.
+
+Ahora cada tarjeta lleva su botón azul, ancho, con icono. Y el texto cambia
+solo: **«Registrar precio»** la primera vez, **«Ver o corregir»** después.
+
+#### Y en el diálogo, tres cosas que sobraban o faltaban
+
+**Fuera «Contestó».** Era un desplegable de cuatro opciones en la primera
+casilla, justo donde cae la vista, para preguntar algo **que el formulario ya
+sabe**: hay precios → contestó; está todo marcado como que no lo tiene → no lo
+tiene. Ahora se deduce al guardar.
+
+**Fuera «Plazo para todo (días)».** Luis: *«ese plazo de todo... si el producto
+es de exterior debe poner los días que va a demorar»*. El plazo es de cada
+línea, no del proveedor: el retén puede estar en almacén y el rodamiento venir
+de fuera. La columna de días por línea ya existía; sobraba la de arriba.
+
+**Y el historial completo, que era lo que más pedía.** Antes salía solo el
+mejor: «mejor: $0.20 · CORPUS · comprado». Ahora salen los tres primeros con su
+precio, quién y cuándo, lo comprado antes que lo cotizado:
+
+    vendes a $3.48 · piso $2.90
+    $0.20 · IMPORTADORA CORPUS · comprado 04/09/2026
+    $0.24 · GALLEGOS · cotizado 30/08/2026
+
+Con el WhatsApp abierto no se negocia «bátele al mejor»: se negocia *«CORPUS me
+lo dejó a 0.20 y GALLEGOS a 0.24, tú dime»*. Para eso hace falta la lista.
+
+#### «No lo tiene» y «ya no lo vende» no son lo mismo
+
+> *«falta ahí poner si no lo tiene o ya no vende para registrar eso»*
+
+La casilla solo distinguía sí/no, y ahí caben dos cosas muy distintas: «hoy no
+me queda» y «eso ya no lo trabajo». La primera es de esta semana; la segunda
+hay que **recordarla**, porque si no se le vuelve a preguntar en cada ronda.
+
+Ahora son tres: **Lo tiene · No ahora · Ya no lo vende**. Y la tercera le quita
+el producto de lo que consta que vende (046), así que deja de proponerse solo.
+
+#### Lo que NO se hizo de lo que pidió
+
+Los días de la línea siguen **sin venir precargados** desde la disponibilidad
+de la cotización. Él lo pidió —*«si en cotización puse exterior ya sabe cuántos
+días va a demorar»*— y tiene sentido: la ronda no arrastra hoy esa
+disponibilidad, así que hay que llevarla desde `consulta_precio_items`. Se
+editan a mano, que era la otra mitad de lo que pedía, pero la precarga queda
+pendiente.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

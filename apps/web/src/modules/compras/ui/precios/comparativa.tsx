@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, formatearMoneda } from "@rodatech/ui";
-import { Check, Plus, ShoppingCart, TriangleAlert } from "lucide-react";
+import { Check, ClipboardPen, Plus, ShoppingCart, TriangleAlert } from "lucide-react";
 
 import {
   ETIQUETA_RESPUESTA,
@@ -253,12 +253,19 @@ export function Comparativa({
           if (!p) return null;
           const comprado = yaComprados.has(p.proveedor_id);
           return (
-            <button
-              key={r.consulta_proveedor_id}
-              type="button"
-              onClick={() => setAbierto(r.consulta_proveedor_id)}
-              className="card p-3 text-left transition-colors hover:bg-[var(--surface-2)]"
-            >
+            /*
+              Un BOTÓN de verdad, no la tarjeta entera haciendo de botón.
+
+              Era una tarjeta pulsable con el texto «Pulsa para apuntar lo que
+              te diga» — y eso obliga a leerlo para descubrir que se puede
+              pulsar. Luis: *«una persona que no sabe, tiene que darle clic ahí
+              en el cuadrado; debes poner un botón de registrar precio en cada
+              card»*.
+
+              La aplicación la usa gente mayor. Un botón que parece un botón no
+              hay que explicarlo.
+            */
+            <div key={r.consulta_proveedor_id} className="card flex flex-col gap-2 p-3">
               <div className="flex items-start justify-between gap-2">
                 <span className="truncate text-sm font-medium">{r.proveedor}</span>
                 <span
@@ -273,26 +280,40 @@ export function Comparativa({
                   {ETIQUETA_RESPUESTA[r.estado]}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-[var(--fg-muted)]">
-                {/* «Tiene 0 de 2» al que no ha contestado es el mismo error
-                    que la celda: dice que no lo tiene cuando lo que pasa es
-                    que no ha dicho nada. */}
-                {r.estado === "esperando"
-                  ? "Pulsa para apuntar lo que te diga"
-                  : `Tiene ${r.cubre} de ${ronda.items.length}`}
-                {r.gana > 0 ? ` · gana ${r.gana}` : ""}
-                {p.moneda === "PEN" ? ` · en soles a ${p.tipo_cambio ?? "?"}` : ""}
-                {p.incluye_igv ? " · IGV incluido" : ""}
-              </p>
+
+              {/* «Tiene 0 de 2» al que no ha contestado es el mismo error
+                  que la celda: dice que no lo tiene cuando lo que pasa es
+                  que no ha dicho nada. */}
+              {r.estado !== "esperando" ? (
+                <p className="text-xs text-[var(--fg-muted)]">
+                  {`Tiene ${r.cubre} de ${ronda.items.length}`}
+                  {r.gana > 0 ? ` · gana ${r.gana}` : ""}
+                  {p.moneda === "PEN" ? ` · en soles a ${p.tipo_cambio ?? "?"}` : ""}
+                  {p.incluye_igv ? " · IGV incluido" : ""}
+                </p>
+              ) : null}
+
               {r.totalSiTodo !== null ? (
-                <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+                <p className="text-xs text-[var(--fg-subtle)]">
                   Todo con él: {formatearMoneda(r.totalSiTodo, "USD")}
                 </p>
               ) : null}
               {comprado ? (
-                <p className="mt-1 text-xs text-[var(--ok)]">Ya se le compró</p>
+                <p className="text-xs text-[var(--ok)]">Ya se le compró</p>
               ) : null}
-            </button>
+
+              {/* El texto cambia con el estado: la primera vez es «registrar»,
+                  después es «corregir». No hay que pensar cuál toca. */}
+              <Button
+                type="button"
+                variant={r.estado === "esperando" ? "primary" : "outline"}
+                onClick={() => setAbierto(r.consulta_proveedor_id)}
+                className="mt-auto w-full gap-1.5"
+              >
+                <ClipboardPen className="size-4" aria-hidden="true" />
+                {r.estado === "esperando" ? "Registrar precio" : "Ver o corregir"}
+              </Button>
+            </div>
           );
         })}
       </section>

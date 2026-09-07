@@ -4,7 +4,6 @@ import * as React from "react";
 import {
   Button,
   Campo,
-  Checkbox,
   CheckboxCampo,
   Dialog,
   DialogBody,
@@ -21,8 +20,8 @@ import {
 
 import { tipoCambioDelDia } from "../../acciones/tipo-cambio";
 import { anotarRespuesta } from "../../acciones/comparar";
+import { olvidarQueVende } from "@/modules/proveedores/acciones/catalogo";
 import {
-  ETIQUETA_RESPUESTA,
   aUsdSinIgv,
   type EstadoRespuesta,
   type ItemConsultado,
@@ -34,7 +33,6 @@ import {
   alertaDePrecio,
   contraReferencia,
   margenSi,
-  mejorConocido,
   porcentajeQueDiceAlgo,
   referenciaVacia,
   tieneAlgoQueDecir,
@@ -97,18 +95,12 @@ export function PanelRespuesta({
     [respuestas],
   );
 
-  const [estado, setEstado] = React.useState<EstadoRespuesta>(
-    proveedor.estado === "esperando" ? "respondio" : proveedor.estado,
-  );
   const [moneda, setMoneda] = React.useState<Moneda>(proveedor.moneda);
   const [tc, setTc] = React.useState<string>(
     proveedor.tipo_cambio === null ? "" : String(proveedor.tipo_cambio),
   );
   const [incluyeIgv, setIncluyeIgv] = React.useState(proveedor.incluye_igv);
   const [validez, setValidez] = React.useState(proveedor.validez_hasta ?? "");
-  const [dias, setDias] = React.useState(
-    proveedor.dias_entrega === null ? "" : String(proveedor.dias_entrega),
-  );
   const [nota, setNota] = React.useState(proveedor.nota ?? "");
 
   const [lineas, setLineas] = React.useState(() =>
@@ -120,6 +112,9 @@ export function PanelRespuesta({
         dias: r?.dias_entrega === null || r === undefined ? "" : String(r.dias_entrega),
         // Lo normal es que sí lo tenga: se destilda el que no.
         disponible: r?.disponible ?? true,
+        // Solo vive en esta pantalla: la base guarda «no disponible» y la
+        // relación proveedor-producto se borra aparte, al guardar.
+        yaNoVende: false,
         nota: r?.nota ?? "",
       };
     }),
@@ -138,9 +133,14 @@ export function PanelRespuesta({
     );
   }
 
-  function alternarDisponible(itemId: string) {
+  /** «Lo tiene» · «No ahora» · «Ya no lo vende». */
+  function ponerTenencia(itemId: string, valor: string) {
     setLineas((prev) =>
-      prev.map((l) => (l.item_id === itemId ? { ...l, disponible: !l.disponible } : l)),
+      prev.map((l) =>
+        l.item_id === itemId
+          ? { ...l, disponible: valor === "si", yaNoVende: valor === "nunca" }
+          : l,
+      ),
     );
   }
 
@@ -184,16 +184,44 @@ export function PanelRespuesta({
     }
 
     empezar(async () => {
+      /*
+        El estado sale de lo escrito, no de un desplegable.
+
+        Hay algún precio → contestó. Todo marcado como que no lo tiene → no lo
+        tiene. Es la misma información leída del formulario en vez de pedida
+        dos veces, y quita la casilla que Luis señaló como la que más estorba.
+      */
+      const deducido: EstadoRespuesta =
+        utiles.some((l) => l.costo_unitario !== null)
+          ? "respondio"
+          : utiles.length > 0
+            ? "no_tiene"
+            : "esperando";
+
       const cabecera = {
-        estado,
+        estado: deducido,
         moneda,
         tipo_cambio: moneda === "USD" ? null : tcNum,
         incluye_igv: incluyeIgv,
         validez_hasta: validez.trim() === "" ? null : validez,
-        dias_entrega: dias.trim() === "" ? null : Number(dias),
+        // Ya no hay plazo de cabecera: el de cada línea es el que manda, y el
+        // servidor cae a este solo si una línea no trae el suyo.
+        dias_entrega: null,
         nota: nota.trim() === "" ? null : nota.trim(),
       };
 
+      /*
+        «Ya no lo vende» se registra donde sirve: en lo que el sistema cree
+        que vende cada proveedor (046). Si solo se guardara como «hoy no lo
+        tiene», la próxima ronda volvería a proponérselo.
+
+        Va sin esperar ni avisar si falla: es una limpieza del
+        catálogo, y perderla no invalida el precio que se acaba de apuntar.
+      */
+      for (const l of lineas.filter((x) => x.yaNoVende)) {
+        const item = items.find((i) => i.item_id === l.item_id);
+        if (item) void olvidarQueVende(proveedor.proveedor_id, item.producto_id);
+      }
       const r = await anotarRespuesta({
         consulta_proveedor_id: proveedor.consulta_proveedor_id,
         ...cabecera,
@@ -228,21 +256,19 @@ export function PanelRespuesta({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Campo id="estado-respuesta" label="Contestó">
-              <SelectNativo
-                id="estado-respuesta"
-                value={estado}
-                onChange={(e) => setEstado(e.target.value as EstadoRespuesta)}
-              >
-                {(Object.keys(ETIQUETA_RESPUESTA) as EstadoRespuesta[]).map((k) => (
-                  <option key={k} value={k}>
-                    {ETIQUETA_RESPUESTA[k]}
-                  </option>
-                ))}
-              </SelectNativo>
-            </Campo>
+          {/*
+            Ni «Contestó» ni «Plazo para todo».
 
+            El estado se DEDUCE de lo que se escribe: hay precios, luego
+            contestó; está todo marcado como que no lo tiene, luego no lo tiene.
+            Preguntarlo aparte era pedir que se rellenara a mano algo que el
+            formulario ya sabe — y con un desplegable de cuatro opciones en la
+            primera casilla, además, que es donde cae la vista.
+
+            Y el plazo va POR LÍNEA, que es donde tiene sentido: el retén puede
+            estar en almacén y el rodamiento venir de fuera.
+          */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Campo id="moneda-respuesta" label="Moneda">
               <SelectNativo
                 id="moneda-respuesta"
@@ -280,16 +306,6 @@ export function PanelRespuesta({
                 </div>
               </Campo>
             ) : null}
-
-            <Campo id="dias-respuesta" label="Plazo para todo (días)">
-              <Input
-                id="dias-respuesta"
-                inputMode="numeric"
-                value={dias}
-                onChange={(e) => setDias(e.target.value)}
-                placeholder="15"
-              />
-            </Campo>
 
             <Campo id="validez-respuesta" label="Precio válido hasta">
               <Input
@@ -365,7 +381,7 @@ export function PanelRespuesta({
                           className="h-8 w-16 text-right tabular-nums"
                           value={linea.dias}
                           disabled={!linea.disponible}
-                          placeholder={dias || "—"}
+                          placeholder="días"
                           onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
                         />
                       </td>
@@ -378,12 +394,30 @@ export function PanelRespuesta({
                         </span>
                         <Veredicto usd={usd} referencia={ref} />
                       </td>
+                      {/*
+                        Tres respuestas, no dos.
+
+                        La casilla solo distinguía «lo tiene» de «no lo tiene»,
+                        y eso mete en el mismo saco dos cosas muy distintas:
+                        «hoy no me queda, vuelve el mes que viene» y «eso ya no
+                        lo trabajo». La primera es temporal; la segunda hay que
+                        recordarla, porque si no se le vuelve a preguntar en
+                        cada ronda.
+
+                        Al elegir «ya no lo vende» se le quita de los que venden
+                        ese producto (046), así que deja de proponerse solo.
+                      */}
                       <td className="px-3 py-1.5">
-                        <Checkbox
-                          checked={linea.disponible}
-                          onCheckedChange={() => alternarDisponible(item.item_id)}
+                        <SelectNativo
+                          value={linea.disponible ? "si" : linea.yaNoVende ? "nunca" : "no"}
+                          onChange={(e) => ponerTenencia(item.item_id, e.target.value)}
                           aria-label={`${item.codigo}: lo tiene`}
-                        />
+                          className="h-8 text-xs"
+                        >
+                          <option value="si">Lo tiene</option>
+                          <option value="no">No ahora</option>
+                          <option value="nunca">Ya no lo vende</option>
+                        </SelectNativo>
                       </td>
                     </tr>
                   );
@@ -444,22 +478,57 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
     );
   }
 
-  const mejor = mejorConocido(ref);
   const partes: string[] = [];
   if (ref.ultimoCosto !== null) partes.push(`compras a ${moneda2(ref.ultimoCosto)}`);
   if (ref.precioVenta !== null) partes.push(`vendes a ${moneda2(ref.precioVenta)}`);
   if (ref.precioMinimo !== null) partes.push(`piso ${moneda2(ref.precioMinimo)}`);
 
+  /*
+    Los OTROS proveedores, con lo que cobraron.
+
+    Antes solo salía el mejor: «mejor: $0.20 · CORPUS · comprado 04/09». Luis:
+    *«abajo en producto tiene que mostrar historial de los proveedores
+    anteriores con los precios, o también los precios actuales, completo, a
+    cuánto lo compró»*.
+
+    Y tiene razón: con el WhatsApp abierto lo que se negocia no es «bátele al
+    mejor», es «CORPUS me lo dejó a 0.20 y GALLEGOS a 0.24, tú dime». Para eso
+    hace falta la lista, no el ganador.
+
+    Tres como mucho: es una referencia mientras se teclea, no un informe. Lo
+    comprado va antes que lo cotizado porque una factura pesa más que una
+    promesa, y dentro, del más barato al más caro.
+  */
+  const conPrecio = ref.proveedores
+    .filter((p) => p.ultimoCostoUsd !== null)
+    .map((p) => ({
+      quien: p.proveedor,
+      costo: p.ultimoCostoUsd!,
+      cuando: p.ultimaCompra,
+      comprado: true,
+    }));
+
+  const cotizados = ref.historial.map((h) => ({
+    quien: h.proveedor,
+    costo: h.costoUsd,
+    cuando: h.fecha,
+    comprado: false,
+  }));
+
+  const antes = [...conPrecio, ...cotizados]
+    .sort((a, b) => Number(b.comprado) - Number(a.comprado) || a.costo - b.costo)
+    .slice(0, 3);
+
   return (
     <span className="mt-0.5 block text-[11px] leading-tight text-[var(--fg-subtle)]">
       {partes.length > 0 ? <span className="block">{partes.join(" · ")}</span> : null}
-      {mejor ? (
-        <span className="block">
-          mejor: {moneda2(mejor.costoUsd)} · {mejor.proveedor} ·{" "}
-          {mejor.origen === "comprado" ? "comprado" : "cotizado"}
-          {mejor.fecha ? ` ${formatearFecha(mejor.fecha)}` : ""}
+      {antes.map((a, i) => (
+        <span key={`${a.quien}-${i}`} className="block">
+          <strong className="font-medium">{moneda2(a.costo)}</strong> · {a.quien} ·{" "}
+          {a.comprado ? "comprado" : "cotizado"}
+          {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
         </span>
-      ) : null}
+      ))}
     </span>
   );
 }
