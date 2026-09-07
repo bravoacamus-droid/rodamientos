@@ -14,6 +14,10 @@ import {
   reducir,
   totalesDe,
 } from "../../dominio/constructor";
+import {
+  entregaDelDocumento,
+  entregaSeContradice,
+} from "../../dominio/disponibilidad";
 import { BuscadorLineas } from "./buscador";
 import { BuscadorClientes } from "./buscador-clientes";
 import { SelectorContacto } from "./selector-contacto";
@@ -52,6 +56,30 @@ export function Constructor({
   // razón social, el documento y la condición de pago, y ya no existe una
   // lista completa en memoria donde buscarlos: la cartera vive en la base.
   const [cliente, setCliente] = useState<ClienteOpcion | null>(clienteInicial);
+
+  /*
+    El tiempo de entrega sale de las líneas, no de una caja que nadie mira.
+
+    Nació antes que la disponibilidad por línea (040) y se quedó como un
+    desplegable con «Stock inmediato» de arranque. Desde entonces el mismo papel
+    podía decir dos cosas a la vez —cabecera «Stock inmediato», línea «15 días ·
+    exterior»— y las dos salían impresas. Pasó en la COT1-000004.
+
+    Lo sincroniza el REDUCER, no un efecto de aquí. El primer intento fue un
+    `useEffect` que despachaba al ver el desajuste y colgó el navegador: se
+    dispara con el estado que acaba de cambiar y vuelve a cambiarlo. Esto solo
+    lee y pinta.
+  */
+  const entregaPropuesta = useMemo(
+    () => entregaDelDocumento(estado.lineas),
+    [estado.lineas],
+  );
+
+  const entregaMiente = useMemo(
+    () => entregaSeContradice(estado.tiempoEntrega, estado.lineas),
+    [estado.tiempoEntrega, estado.lineas],
+  );
+
   const [resultado, guardar, guardando] = useActionState<ResultadoCreacion | null, FormData>(
     async (previo, formData) => {
       const r = await crearCotizacion(previo, formData);
@@ -188,20 +216,49 @@ export function Constructor({
                   <span className="text-sm font-medium">Tiempo de entrega</span>
                   <SelectNativo
                     value={estado.tiempoEntrega}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      // El reducer marca «a mano» solo al ver este campo.
                       despachar({
                         tipo: "cabecera",
                         campo: "tiempoEntrega",
                         valor: e.target.value,
-                      })
-                    }
+                      });
+                    }}
                   >
+                    {/* La propuesta primero, y solo si no está ya en la lista
+                        fija: «Hasta 45 días» sale de una línea con plazo
+                        escrito a mano y no puede estar prevista. */}
+                    {ENTREGAS.includes(entregaPropuesta as (typeof ENTREGAS)[number]) ? null : (
+                      <option value={entregaPropuesta}>{entregaPropuesta}</option>
+                    )}
                     {ENTREGAS.map((x) => (
                       <option key={x} value={x}>
                         {x}
                       </option>
                     ))}
                   </SelectNativo>
+                  {entregaMiente ? (
+                    <span className="text-xs font-medium text-[var(--warn)]">
+                      Dice inmediato y hay líneas que tardan. Lo que cuadra:{" "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => {
+                          despachar({
+                            tipo: "cabecera",
+                            campo: "tiempoEntrega",
+                            valor: entregaPropuesta,
+                          });
+                        }}
+                      >
+                        {entregaPropuesta}
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[var(--fg-subtle)]">
+                      La promesa general del documento. Sale de las líneas.
+                    </span>
+                  )}
                 </label>
 
                 <label className="flex flex-col gap-1">

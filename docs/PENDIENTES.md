@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **46 de 46 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **1.137 en verde** |
+| `pnpm test` | **1.153 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
@@ -2267,6 +2267,86 @@ con el JSON dentro — el mismo sobre que usan las otras tres pantallas.
 El mensaje suena a problema de red y era un formato mal armado. Typecheck y
 lint lo daban por bueno: los dos ven un `FormData`, y ninguno sabe qué claves
 lleva dentro.
+
+---
+
+### AD · La cotización que se contradecía a sí misma · 07/09
+
+Luis, mirando «Más datos del documento»:
+
+> *«el tiempo de entrega, si ya en cada producto tenemos que poner el tiempo de
+> entrega... orden de compra de cliente, ¿qué condiciones? ¿qué se pone ahí? eso
+> no tiene que jalar de los datos de la empresa o cómo?»*
+
+La primera pregunta destapó un fallo que salía impreso al cliente.
+
+#### El mismo papel decía dos cosas
+
+En la **COT1-000004**, emitida y enseñada:
+
+    Entrega:   Stock inmediato            ← cabecera
+    50X68X8TC  ...  15 días · exterior    ← su propia línea
+
+El «tiempo de entrega» de la cabecera nació antes que la disponibilidad por
+línea (040) y se quedó como un desplegable con «Stock inmediato» de arranque.
+Nadie lo vuelve a mirar: está dentro de un bloque plegado. Así que el valor por
+defecto se imprimía tal cual mientras las líneas decían otra cosa.
+
+Y el cliente lee las dos.
+
+#### Ahora sale de las líneas
+
+`entregaDelDocumento` calcula la promesa general, y **manda la línea más
+lenta**: decir «inmediato» porque cinco de seis lo son deja al cliente
+esperando en la puerta por la sexta.
+
+| Líneas | Cabecera |
+|---|---|
+| todas inmediatas | `Stock inmediato` |
+| todas con plazo | `Hasta 15 días` |
+| mezcla | `Parte inmediato, el resto hasta 15 días` |
+
+Lo tercero no es adorno: si el cliente sabe que la mitad sale hoy puede pedir
+que se le mande ya y esperar el resto.
+
+Sigue siendo editable —hay acuerdos que no caben en una fórmula— pero elegirla
+a mano **apaga la propuesta**, y un borrador que se recupera no se recalcula:
+lo guardado es una decisión ya tomada.
+
+Y si aun así queda diciendo «inmediato» con líneas que tardan,
+`entregaSeContradice` lo dice en la pantalla con un botón para cuadrarlo.
+
+#### El bucle: por qué esto vive en el reducer
+
+Primer intento: un `useEffect` en la pantalla que despachaba al ver el
+desajuste. **Colgó el navegador.** El efecto se dispara con el estado que acaba
+de cambiar y vuelve a cambiarlo.
+
+Está en `reducir`, envolviendo al reducer de siempre: se calcula una vez, con
+el estado ya resuelto, y se devuelve. En un reducer no hay ciclo posible. Y así
+ningún caso nuevo se puede olvidar de recalcularlo.
+
+#### Las otras dos preguntas
+
+**Orden de compra del cliente** — es el número de OC que da el cliente cuando
+confirma. No sale de ningún sitio nuestro: lo da él, y la mitad de las veces
+todavía no existe cuando se cotiza. Por eso el campo dice «Si ya la tienen».
+Está bien como está.
+
+**Condiciones** — forma de pago y garantía, texto libre que sale impreso al
+pie. Y aquí Luis tiene razón: **`empresa` no tiene ninguna columna de
+condiciones por defecto**, así que no hay de dónde «jalar» y hoy se escribe a
+mano cada vez o se queda vacío. Queda propuesto: una `condiciones_venta` en
+`empresa`, editable en Configuración, que se proponga al abrir la cotización
+—igual que el tiempo de entrega— y siga siendo editable por documento.
+
+#### Lo que NO se pudo verificar
+
+El servidor de desarrollo se murió dos veces por falta de memoria durante la
+prueba, así que **el comportamiento en pantalla quedó sin comprobar en vivo**.
+La regla está cubierta por 16 pruebas nuevas —6 sobre el reducer, 10 sobre el
+dominio— pero eso no es lo mismo, y esta semana ya ha dejado claro cuántas
+veces lo que pasa las pruebas falla al pulsarlo.
 
 ---
 

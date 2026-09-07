@@ -6,6 +6,8 @@ import {
   DISPONIBILIDADES,
   ETIQUETA_DISPONIBILIDAD,
   diasDe,
+  entregaDelDocumento,
+  entregaSeContradice,
   faltaComprar,
   prometeDeMas,
   textoEntrega,
@@ -139,5 +141,76 @@ describe("el tipo cubre el enum de Postgres", () => {
       fabricacion: true,
     };
     expect(Object.keys(todas).sort()).toEqual([...DISPONIBILIDADES].sort());
+  });
+});
+
+describe("entregaDelDocumento", () => {
+  const l = (d: Disponibilidad, dias: number | null = null) => ({
+    disponibilidad: d,
+    diasEntrega: dias,
+  });
+
+  it("todo en almacén: stock inmediato", () => {
+    expect(entregaDelDocumento([l("inmediata"), l("inmediata")])).toBe("Stock inmediato");
+  });
+
+  it("manda la línea MÁS LENTA, no la mayoría", () => {
+    // Cinco de seis inmediatas y una de exterior. Decir «inmediato» deja al
+    // cliente esperando en la puerta por la sexta.
+    expect(
+      entregaDelDocumento([
+        l("inmediata"),
+        l("inmediata"),
+        l("inmediata"),
+        l("inmediata"),
+        l("inmediata"),
+        l("exterior"),
+      ]),
+    ).toBe("Parte inmediato, el resto hasta 15 días");
+  });
+
+  it("sin nada inmediato no promete entregas parciales", () => {
+    expect(entregaDelDocumento([l("exterior"), l("fabricacion")])).toBe("Hasta 15 días");
+  });
+
+  it("respeta los días escritos a mano para una línea", () => {
+    expect(entregaDelDocumento([l("exterior", 45)])).toBe("Hasta 45 días");
+  });
+
+  it("una cotización vacía no promete plazos raros", () => {
+    expect(entregaDelDocumento([])).toBe("Stock inmediato");
+  });
+});
+
+describe("entregaSeContradice", () => {
+  const l = (d: Disponibilidad) => ({ disponibilidad: d, diasEntrega: null });
+
+  it("caza el caso real: cabecera «Stock inmediato» con una línea de 15 días", () => {
+    // Es lo que salió impreso en la COT1-000004.
+    expect(entregaSeContradice("Stock inmediato", [l("inmediata"), l("exterior")])).toBe(
+      true,
+    );
+  });
+
+  it("no se queja cuando todo es inmediato de verdad", () => {
+    expect(entregaSeContradice("Stock inmediato", [l("inmediata")])).toBe(false);
+  });
+
+  it("«Parte inmediato, el resto…» no es una contradicción", () => {
+    expect(
+      entregaSeContradice("Parte inmediato, el resto hasta 15 días", [l("exterior")]),
+    ).toBe(false);
+  });
+
+  it("aguanta tildes y mayúsculas", () => {
+    expect(entregaSeContradice("ENTREGA INMEDIATA", [l("fabricacion")])).toBe(true);
+  });
+
+  it("prometer más despacio de lo que se puede no es un fallo", () => {
+    expect(entregaSeContradice("Hasta 30 días", [l("inmediata")])).toBe(false);
+  });
+
+  it("sin texto no hay nada que contradecir", () => {
+    expect(entregaSeContradice(null, [l("exterior")])).toBe(false);
   });
 });

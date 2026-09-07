@@ -359,3 +359,71 @@ describe("aPayload", () => {
     expect(aPayload(e).mostrar_descuento).toBe(true);
   });
 });
+
+describe("el tiempo de entrega se sincroniza con las líneas", () => {
+  /**
+   * Nació antes que la disponibilidad por línea (040) y se quedaba en «Stock
+   * inmediato» aunque hubiera ítems de importación. El mismo papel decía dos
+   * cosas —cabecera «Stock inmediato», línea «15 días · exterior»— y las dos
+   * salían impresas. Pasó en la COT1-000004.
+   */
+  const conLinea = () =>
+    reducir(estadoInicial(), { tipo: "agregar", producto: P7210, cantidad: 1 });
+
+  it("con todo inmediato se queda en stock inmediato", () => {
+    expect(conLinea().tiempoEntrega).toBe("Stock inmediato");
+  });
+
+  it("al marcar una línea como exterior, la cabecera se corrige sola", () => {
+    const e = conLinea();
+    const clave = e.lineas[0]!.key;
+    const r = reducir(e, { tipo: "disponibilidad", key: clave, valor: "exterior" });
+    expect(r.tiempoEntrega).toBe("Hasta 15 días");
+  });
+
+  it("elegirla a mano apaga la propuesta para siempre", () => {
+    const e = conLinea();
+    const clave = e.lineas[0]!.key;
+    const aMano = reducir(e, {
+      tipo: "cabecera",
+      campo: "tiempoEntrega",
+      valor: "24 a 48 horas",
+    });
+    expect(aMano.entregaAMano).toBe(true);
+
+    // Y ya no se pisa aunque cambien las líneas: hay acuerdos que no caben en
+    // una fórmula.
+    const despues = reducir(aMano, {
+      tipo: "disponibilidad",
+      key: clave,
+      valor: "exterior",
+    });
+    expect(despues.tiempoEntrega).toBe("24 a 48 horas");
+  });
+
+  it("quitar la línea lenta devuelve la cabecera a inmediato", () => {
+    const e = conLinea();
+    const clave = e.lineas[0]!.key;
+    const conExterior = reducir(e, {
+      tipo: "disponibilidad",
+      key: clave,
+      valor: "exterior",
+    });
+    expect(conExterior.tiempoEntrega).toBe("Hasta 15 días");
+
+    const sinLinea = reducir(conExterior, { tipo: "quitar", key: clave });
+    expect(sinLinea.tiempoEntrega).toBe("Stock inmediato");
+  });
+
+  it("un borrador que se recupera NO se recalcula", () => {
+    // Lo guardado es una decisión ya tomada; pisarla sería perder lo que
+    // alguien escribió hace tres días.
+    const guardado: EstadoConstructor = {
+      ...estadoInicial(),
+      tiempoEntrega: "7 días útiles",
+    };
+    const r = reducir(estadoInicial(), { tipo: "cargar", estado: guardado });
+    expect(r.tiempoEntrega).toBe("7 días útiles");
+    expect(r.entregaAMano).toBe(true);
+  });
+});

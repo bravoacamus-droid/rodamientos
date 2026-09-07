@@ -113,3 +113,80 @@ export function faltaComprar(cantidad: number, stock: number): number {
   const falta = cantidad - stock;
   return falta > 0 ? falta : 0;
 }
+
+/** Lo mínimo de una línea para saber qué promete el documento entero. */
+export interface LineaConEntrega {
+  disponibilidad: Disponibilidad;
+  diasEntrega: number | null;
+}
+
+/**
+ * Qué promete la cotización ENTERA, sacado de sus líneas.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué esto tiene que salir de las líneas y no de una caja de texto
+ * ---------------------------------------------------------------------------
+ * El «tiempo de entrega» de la cabecera nació antes que la disponibilidad por
+ * línea (040) y se quedó como texto libre con «Stock inmediato» de arranque.
+ * Desde entonces el mismo papel podía decir dos cosas y decirlas a la vez:
+ *
+ *     Entrega: Stock inmediato          ← cabecera, sin tocar
+ *     50X68X8TC ... 15 días · exterior  ← su propia línea
+ *
+ * Pasó de verdad, en la COT1-000004. Y el cliente lee las dos.
+ *
+ * La cabecera es una PROMESA GENERAL, así que manda la línea más lenta: decir
+ * «inmediato» porque cinco de seis lo son deja al cliente esperando en la
+ * puerta por la sexta.
+ *
+ * Sigue siendo editable —hay acuerdos que no caben en una fórmula, «entregas
+ * parciales según llegue»— pero se PROPONE bien.
+ */
+export function entregaDelDocumento(lineas: readonly LineaConEntrega[]): string {
+  if (lineas.length === 0) return "Stock inmediato";
+
+  const conPlazo = lineas
+    .map((l) => ({ d: l.disponibilidad, dias: diasDe(l.disponibilidad, l.diasEntrega) }))
+    .filter((x) => x.d !== "inmediata");
+
+  if (conPlazo.length === 0) return "Stock inmediato";
+
+  const mayor = conPlazo.reduce(
+    (max, x) => (x.dias !== null && x.dias > max ? x.dias : max),
+    0,
+  );
+  if (mayor <= 0) return "Stock inmediato";
+
+  // «Parte inmediato» no es un adorno: cambia lo que el cliente hace. Si sabe
+  // que la mitad sale hoy puede pedir que se le mande ya y esperar el resto.
+  const hayInmediatas = lineas.some((l) => l.disponibilidad === "inmediata");
+  return hayInmediatas
+    ? `Parte inmediato, el resto hasta ${mayor} días`
+    : `Hasta ${mayor} días`;
+}
+
+/**
+ * ¿Lo escrito a mano promete algo que las líneas desmienten?
+ *
+ * No se intenta entender el texto libre —no se puede— sino el único caso que
+ * de verdad se da y que de verdad hace daño: la cabecera dice «inmediato» y
+ * hay líneas que tardan. Es lo que pasaba por defecto, sin que nadie tocara
+ * nada, y es la promesa que el cliente reclama por teléfono.
+ *
+ * Al revés no se avisa: prometer más despacio de lo que se puede entregar no
+ * rompe nada.
+ */
+export function entregaSeContradice(
+  texto: string | null,
+  lineas: readonly LineaConEntrega[],
+): boolean {
+  if (texto === null) return false;
+  const dice = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!dice.includes("inmediat")) return false;
+  // «Parte inmediato, el resto…» ya dice que hay algo que tarda.
+  if (dice.includes("resto") || dice.includes("parte")) return false;
+  return lineas.some((l) => l.disponibilidad !== "inmediata");
+}

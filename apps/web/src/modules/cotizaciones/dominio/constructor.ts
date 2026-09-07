@@ -28,7 +28,7 @@ export interface ProductoParaCotizar {
   costo_promedio?: number;
 }
 
-import type { Disponibilidad } from "./disponibilidad";
+import { entregaDelDocumento, type Disponibilidad } from "./disponibilidad";
 
 export interface LineaConstructor {
   /** Clave estable para React. Determinista: sale de un contador. */
@@ -65,7 +65,17 @@ export interface LineaConstructor {
 export interface EstadoConstructor {
   clienteId: string | null;
   validezDias: number;
+  /**
+   * La promesa general del documento.
+   *
+   * Se recalcula sola desde las líneas mientras nadie la toque. Nació antes
+   * que la disponibilidad por línea (040) y se quedaba en «Stock inmediato»
+   * aunque hubiera ítems de importación: el mismo papel decía dos cosas y las
+   * dos salían impresas.
+   */
   tiempoEntrega: string;
+  /** Alguien la eligió a mano: el sistema deja de proponer. */
+  entregaAMano: boolean;
   ordenCompraCliente: string;
   /**
    * A quién va dirigida, por NOMBRE. Es lo que se imprime.
@@ -135,6 +145,7 @@ export function estadoInicial(clienteId: string | null = null): EstadoConstructo
     clienteId,
     validezDias: 15,
     tiempoEntrega: ENTREGAS[0],
+    entregaAMano: false,
     ordenCompraCliente: "",
     contacto: "",
     contactoId: null,
@@ -199,7 +210,38 @@ function desdeProducto(
   };
 }
 
+/**
+ * El reducer, y encima de él la sincronización del tiempo de entrega.
+ *
+ * Va en UN solo sitio a propósito. Estaba hecho con un `useEffect` en la
+ * pantalla que despachaba al ver un desajuste, y eso colgó el navegador: el
+ * efecto se dispara con el estado que acaba de cambiar y vuelve a cambiarlo.
+ * En un reducer no hay ciclo posible — se calcula una vez, con el estado ya
+ * resuelto, y se devuelve.
+ *
+ * Y así ningún caso nuevo se puede olvidar de recalcularlo.
+ */
 export function reducir(estado: EstadoConstructor, accion: Accion): EstadoConstructor {
+  const siguiente = reducirCrudo(estado, accion);
+
+  // Elegirla a mano apaga la propuesta. A partir de ahí manda la persona.
+  if (accion.tipo === "cabecera" && accion.campo === "tiempoEntrega") {
+    return { ...siguiente, entregaAMano: true };
+  }
+
+  // Un borrador que se recupera ya trae una decisión tomada: recalcularla
+  // sería pisar lo que alguien escribió hace tres días.
+  if (accion.tipo === "cargar") return { ...siguiente, entregaAMano: true };
+
+  if (siguiente.entregaAMano) return siguiente;
+
+  const propuesta = entregaDelDocumento(siguiente.lineas);
+  return siguiente.tiempoEntrega === propuesta
+    ? siguiente
+    : { ...siguiente, tiempoEntrega: propuesta };
+}
+
+function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstructor {
   switch (accion.tipo) {
     case "cargar":
       return accion.estado;
