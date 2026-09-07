@@ -14,7 +14,7 @@ import { EmitirGuia } from "./emitir-guia";
  * Es el documento que viaja con la mercadería, así que la ficha está pensada
  * para imprimirse: los bloques que solo sirven en pantalla llevan `no-print`.
  *
- * En borrador se puede emitir; emitida, solo anular. No hay edición: una guía
+ * En borrador se puede corregir y emitir; emitida, solo anular. Una guía
  * emitida ya movió stock, y cambiarle las cantidades dejaría el kardex
  * contando una cosa y el papel diciendo otra.
  */
@@ -71,6 +71,23 @@ export default async function PaginaDetalleGuia({
           >
             Imprimir
           </Link>
+          {/*
+            Corregir, solo en borrador.
+
+            Willy, 40:43, al ver que el inicio de traslado se había quedado en
+            hoy: *«tengo que poner aquí un botón también de editar la guía,
+            para que pueda actualizar los datos»*. Hasta hoy lo único que se
+            podía hacer con un borrador equivocado era anularlo y volver a
+            empezar, quemando un correlativo por una fecha mal puesta.
+          */}
+          {puedeEmitir && g.estado === "borrador" ? (
+            <Link
+              href={`/guias/${g.id}/editar`}
+              className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              Corregir
+            </Link>
+          ) : null}
           {puedeEmitir ? <EmitirGuia guia={g} /> : null}
           {esGerencia ? (
             <AnularGuia
