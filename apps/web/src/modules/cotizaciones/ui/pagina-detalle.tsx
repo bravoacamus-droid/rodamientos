@@ -1,3 +1,4 @@
+import { cuentasParaCobrar } from "@/lib/emisor";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
@@ -42,7 +43,12 @@ export default async function PaginaDetalleCotizacion({
   // Lo que ya salió facturado de este pedido. Después de `cotizacionPorId` y
   // no en paralelo porque solo hace falta si el documento existe: pedirlo
   // antes sería una consulta de más en cada 404.
-  const facturas = await comprobantesDelPedido(cabecera.id);
+  // Las dos juntas: ninguna depende de la otra, y la cotización se imprime
+  // con las cuentas al pie (064).
+  const [facturas, cuentas] = await Promise.all([
+    comprobantesDelPedido(cabecera.id),
+    cuentasParaCobrar(),
+  ]);
 
   const impresa = armarCotizacionImpresa({
     emisor: {
@@ -204,7 +210,7 @@ export default async function PaginaDetalleCotizacion({
 
       {/* La hoja. La sombra solo existe en pantalla. */}
       <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">
-        <Documento c={impresa} />
+        <Documento c={impresa} cuentas={cuentas} />
       </div>
     </div>
   );

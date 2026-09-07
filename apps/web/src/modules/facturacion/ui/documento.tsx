@@ -1,3 +1,4 @@
+import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
@@ -26,9 +27,20 @@ const fecha = (f: string) => {
 export function DocumentoComprobante({
   c,
   emisor,
+  cuentas = [],
 }: {
   c: ComprobanteDetalle;
   emisor: EmisorHoja;
+  /**
+   * Las cuentas a las que se le paga (064).
+   *
+   * Aquí SÍ hay interruptor, y la cotización no lo tiene. Willy, 13:21:
+   * *«al momento de elaborar la factura tiene un botón que se puede activar
+   * o no, según tú desees, para que figure en la factura los números de
+   * cuenta»* — *«a veces ocupa mucho espacio, a veces no es necesario»*.
+   * Lo guarda `comprobantes.mostrar_cuenta` desde la 029.
+   */
+  cuentas?: readonly CuentaParaPagar[];
 }) {
   const esNota = c.tipo === "nota_credito" || c.tipo === "nota_debito";
   const alCredito = c.condicion_pago === "credito";
@@ -136,6 +148,10 @@ export function DocumentoComprobante({
             Representación impresa del comprobante electrónico. Consulte su validez
             en el portal de SUNAT.
           </p>
+          {c.mostrar_cuenta ? (
+            <CuentasParaPagar cuentas={cuentas} moneda={c.moneda} />
+          ) : null}
+
           <div className="mt-3 flex items-end justify-between">
             <span>{c.vendedor ? `Atendido por ${c.vendedor}` : ""}</span>
             {emisor.email ? <span>{emisor.email}</span> : null}

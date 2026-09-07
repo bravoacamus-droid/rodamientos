@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { emisorParaImprimir } from "@/lib/emisor";
+import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleComprobante } from "../api/consultas";
 import { DocumentoComprobante } from "./documento";
@@ -25,9 +25,10 @@ export default async function PaginaImprimirComprobante({
   if (!perfil || !perfil.activo) redirect("/login");
 
   const { id } = await params;
-  const [resultado, emisor] = await Promise.all([
+  const [resultado, emisor, cuentas] = await Promise.all([
     detalleComprobante(id),
     emisorParaImprimir(),
+    cuentasParaCobrar(),
   ]);
 
   if (!resultado.ok) {
@@ -61,7 +62,7 @@ export default async function PaginaImprimirComprobante({
       </div>
 
       <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">
-        <DocumentoComprobante c={c} emisor={emisor} />
+        <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
       </div>
     </div>
   );

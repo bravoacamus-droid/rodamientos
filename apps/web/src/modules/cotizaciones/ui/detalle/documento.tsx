@@ -1,3 +1,4 @@
+import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import {
   HojaDocumento,
   type ColumnaHoja,
@@ -21,7 +22,21 @@ import { formatoFecha } from "../../dominio/whatsapp";
 const dinero = (n: number) =>
   n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function Documento({ c }: { c: CotizacionImpresa }) {
+export function Documento({
+  c,
+  cuentas = [],
+}: {
+  c: CotizacionImpresa;
+  /**
+   * Las cuentas a las que se le paga (064).
+   *
+   * Willy, 07/09: *«abajo de la cotización debe aparecer el número de cuentas
+   * siempre»*. En la cotización van SIEMPRE y sin interruptor —a diferencia
+   * de la factura, donde se puede quitar—: la cotización es justo el papel
+   * con el que el cliente decide, y es cuando pregunta a dónde paga.
+   */
+  cuentas?: readonly CuentaParaPagar[];
+}) {
   // C4: este orden exacto. C1: NO hay columna de precio con IGV — es la que
   // le costó ventas, porque el cliente comparaba ese número contra el valor
   // de la competencia y lo veía caro. C5: el descuento solo si se activó.
@@ -114,6 +129,8 @@ export function Documento({ c }: { c: CotizacionImpresa }) {
             Los precios están expresados en <strong>dólares americanos</strong> y no
             incluyen IGV en la columna de valor unitario.
           </p>
+          <CuentasParaPagar cuentas={cuentas} moneda="USD" />
+
           <div className="mt-3 flex items-end justify-between">
             <span>{c.vendedor ? `Atendido por ${c.vendedor}` : ""}</span>
             {c.emisor.email ? <span>{c.emisor.email}</span> : null}

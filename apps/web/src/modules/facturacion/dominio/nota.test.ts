@@ -22,6 +22,8 @@ const FACTURA: ComprobanteDetalle = {
   serie: "F001",
   correlativo: 1,
   numero: "F001-00000001",
+  moneda: "USD",
+  mostrar_cuenta: true,
   cliente_id: "22222222-2222-2222-2222-222222222222",
   cliente: "MINERA LOS ANDES S.A.C.",
   cliente_documento: "20100047218",

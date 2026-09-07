@@ -161,6 +161,7 @@ export async function detalleComprobante(
         `id, tipo, serie, correlativo, numero, cliente_id, cotizacion_id,
          orden_compra_cliente, referencia_id, motivo_nota_codigo,
          fecha_emision, fecha_vencimiento, condicion_pago, dias_credito,
+         moneda, mostrar_cuenta,
          op_gravada, op_exonerada, op_inafecta, descuento_global, igv, total,
          total_letras, pagado, saldo, estado, estado_sunat,
          sunat_codigo_respuesta, sunat_mensaje, sunat_enviado_en, sunat_hash_cdr,
@@ -258,6 +259,10 @@ export async function detalleComprobante(
         fecha_emision: String(c.fecha_emision),
         fecha_vencimiento: (c.fecha_vencimiento as string | null) ?? null,
         condicion_pago: String(c.condicion_pago ?? "contado"),
+        moneda: String(c.moneda ?? "USD"),
+        // Por defecto SÍ, como decidió la 029: Willy dijo que es «una
+        // práctica recomendable que ya lleve pre-impresa la cuenta».
+        mostrar_cuenta: c.mostrar_cuenta !== false,
         dias_credito: Number(c.dias_credito ?? 0),
         op_gravada: Number(c.op_gravada ?? 0),
         op_exonerada: Number(c.op_exonerada ?? 0),

@@ -2,6 +2,7 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
 
 import { fallo } from "./errores";
@@ -62,5 +63,43 @@ export async function emisorParaImprimir(): Promise<EmisorHoja> {
   } catch (e) {
     fallo(e, "lib/emisorParaImprimir");
     return vacio;
+  }
+}
+
+/**
+ * Las cuentas a las que cobra, para el pie del documento (064).
+ *
+ * Vive junto al emisor y no dentro de un módulo por lo mismo: las imprimen la
+ * cotización y la factura, y con una copia en cada uno el día que se añada un
+ * banco se acordaría solo la mitad.
+ *
+ * Un fallo aquí tampoco tumba el documento: se devuelve la lista vacía y el
+ * bloque no se pinta. Una factura sin el pie de cuentas se puede mandar; una
+ * que no se imprime, no.
+ */
+export async function cuentasParaCobrar(): Promise<CuentaParaPagar[]> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("cuentas_bancarias")
+      .select("banco, moneda, numero, cci")
+      .eq("activo", true)
+      .order("orden")
+      .limit(10);
+
+    if (error) {
+      fallo(error, "lib/cuentasParaCobrar");
+      return [];
+    }
+
+    return (data ?? []).map((c) => ({
+      banco: String(c.banco ?? ""),
+      moneda: String(c.moneda ?? ""),
+      numero: String(c.numero ?? ""),
+      cci: (c.cci as string | null) ?? null,
+    }));
+  } catch (e) {
+    fallo(e, "lib/cuentasParaCobrar");
+    return [];
   }
 }

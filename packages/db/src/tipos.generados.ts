@@ -1764,6 +1764,42 @@ export type Database = {
           },
         ]
       }
+      cuentas_bancarias: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          banco: string
+          cci: string | null
+          creado_en: string
+          id: string
+          moneda: string
+          numero: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          banco: string
+          cci?: string | null
+          creado_en?: string
+          id?: string
+          moneda: string
+          numero: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          banco?: string
+          cci?: string | null
+          creado_en?: string
+          id?: string
+          moneda?: string
+          numero?: string
+          orden?: number
+        }
+        Relationships: []
+      }
       empresa: {
         Row: {
           actualizado_en: string

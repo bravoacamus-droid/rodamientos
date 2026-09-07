@@ -114,6 +114,10 @@ export interface ComprobanteDetalle {
   fecha_vencimiento: string | null;
   condicion_pago: string;
   dias_credito: number;
+  /** `PEN` o `USD`: decide qué cuenta bancaria sale primero al pie. */
+  moneda: string;
+  /** Si la factura imprime las cuentas para pagar (029). */
+  mostrar_cuenta: boolean;
   op_gravada: number;
   op_exonerada: number;
   op_inafecta: number;
