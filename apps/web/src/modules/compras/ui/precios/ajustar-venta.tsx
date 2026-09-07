@@ -52,6 +52,24 @@ export function AjustarVenta({
   const [piso, setPiso] = React.useState(
     referencia.precioMinimo === null ? "" : String(referencia.precioMinimo),
   );
+
+  /*
+    Lo que hay guardado ahora mismo, para poder volver.
+
+    Luis: *«si cambio el precio pero ya no quiero, y no me acuerdo el precio de
+    compra, ¿cómo sería?»*. Y es verdad: se teclea encima del precio de venta,
+    el número anterior desaparece de la pantalla y no queda ni rastro. La única
+    salida era recargar y perder el resto.
+
+    Se guarda aparte y no se lee de `referencia` en cada render porque después
+    de guardar `referencia` sigue trayendo el valor viejo hasta que el servidor
+    devuelva la página: el «vuelve a» ofrecería deshacer lo que se acaba de
+    hacer a propósito.
+  */
+  const [original, setOriginal] = React.useState({
+    venta: referencia.precioVenta === null ? "" : String(referencia.precioVenta),
+    piso: referencia.precioMinimo === null ? "" : String(referencia.precioMinimo),
+  });
   const [guardado, setGuardado] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [enCurso, empezar] = React.useTransition();
@@ -66,9 +84,7 @@ export function AjustarVenta({
   const ventaNum = venta.trim() === "" ? 0 : Number(venta);
   const margen = margenSi(costo, Number.isFinite(ventaNum) ? ventaNum : 0);
 
-  const cambiado =
-    venta !== (referencia.precioVenta === null ? "" : String(referencia.precioVenta)) ||
-    piso !== (referencia.precioMinimo === null ? "" : String(referencia.precioMinimo));
+  const cambiado = venta !== original.venta || piso !== original.piso;
 
   function guardar() {
     setError(null);
@@ -89,6 +105,7 @@ export function AjustarVenta({
         setError(r.error);
         return;
       }
+      setOriginal({ venta, piso });
       setGuardado(true);
     });
   }
@@ -139,7 +156,39 @@ export function AjustarVenta({
 
       {/* Y a cuánto lo vendes. Editable aquí mismo. */}
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-        <Campo id={`venta-${productoId}`} label="Precio de venta ($)">
+        <Campo
+          id={`venta-${productoId}`}
+          label="Precio de venta ($)"
+          /*
+            Lo que hay guardado, y cómo volver.
+
+            Luis: *«si cambio el precio pero ya no quiero, y no me acuerdo el
+            precio, ¿cómo sería?»*. Se teclea encima y el número anterior
+            desaparece sin dejar rastro; la única salida era recargar la página
+            y perder todo lo demás.
+
+            Solo sale cuando de verdad hay algo que deshacer: enseñar «ahora
+            está en 3.48» debajo de un campo que pone 3.48 es ruido.
+          */
+          ayuda={
+            venta !== original.venta ? (
+              <>
+                Ahora está en{" "}
+                <strong>{original.venta === "" ? "—" : `$${original.venta}`}</strong>.{" "}
+                <button
+                  type="button"
+                  className="text-brand-600 underline"
+                  onClick={() => {
+                    setVenta(original.venta);
+                    setGuardado(false);
+                  }}
+                >
+                  Volver a ese
+                </button>
+              </>
+            ) : undefined
+          }
+        >
           <Input
             id={`venta-${productoId}`}
             inputMode="decimal"

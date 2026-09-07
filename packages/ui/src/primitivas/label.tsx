@@ -68,7 +68,14 @@ export function Campo({
   /** Debe coincidir con el `id` del control que va dentro. */
   id: string;
   label?: string;
-  ayuda?: string;
+  /**
+   * La explicación de debajo.
+   *
+   * `ReactNode` y no `string` porque a veces lleva dentro una acción
+   * —«ahora está en $3.48 · Volver a ese»— y partirla en dos elementos la
+   * separaría del campo al que explica, además de duplicar el estilo.
+   */
+  ayuda?: React.ReactNode;
   error?: string;
   requerido?: boolean;
   children: React.ReactNode;
@@ -84,8 +91,8 @@ export function Campo({
         </Label>
       )}
       {children}
-      {ayuda && !error && (
-        <p id={idAyuda} className="mt-1 text-xs text-subtle">
+      {ayuda !== undefined && ayuda !== null && ayuda !== false && !error && (
+        <p id={idAyuda} className="mt-1 text-sm text-subtle">
           {ayuda}
         </p>
       )}

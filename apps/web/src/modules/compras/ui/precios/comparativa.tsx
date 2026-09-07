@@ -269,7 +269,12 @@ export function Comparativa({
             */
             <div key={r.consulta_proveedor_id} className="card flex flex-col gap-2 p-3">
               <div className="flex items-start justify-between gap-2">
-                <span className="truncate text-sm font-medium">{r.proveedor}</span>
+                {/* El nombre entero al pasar por encima: «CAFAMER LOGISTICA
+                    INDUSTRIAL S.A.C. - CAFAMER S.A.C.» no cabe en una tarjeta,
+                    y con dos parecidos el corte los deja idénticos. */}
+                <span className="truncate text-sm font-medium" title={r.proveedor}>
+                  {r.proveedor}
+                </span>
                 <span
                   className={`shrink-0 text-xs ${
                     r.estado === "esperando"
@@ -334,12 +339,23 @@ export function Comparativa({
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
               <tr>
-                <th className="px-4 py-2.5 font-medium">Producto</th>
+                {/*
+                  La columna del producto se queda quieta al desplazar.
+
+                  Luis: «pon que tenga 10 proveedores; tiene que agruparse bien
+                  sin romperse». Con diez son trece columnas y la tabla se
+                  desplaza — sin fijar esta, al llegar al décimo proveedor ya no
+                  se ve de qué producto es el precio que se está mirando, que es
+                  justo lo que la tabla venía a resolver.
+                */}
+                <th className="sticky left-0 z-20 bg-[var(--surface)] px-4 py-2.5 font-medium">
+                  Producto
+                </th>
                 <th className="px-3 py-2.5 text-right font-medium">Cant.</th>
                 {proveedores.map((p) => (
                   <th
                     key={p.consulta_proveedor_id}
-                    className="max-w-[11rem] truncate px-3 py-2.5 text-right font-medium"
+                    className="min-w-[7rem] max-w-[11rem] truncate px-3 py-2.5 text-right font-medium"
                     title={p.proveedor}
                   >
                     {p.proveedor}
@@ -360,7 +376,8 @@ export function Comparativa({
                     key={fila.item.item_id}
                     className="border-b border-[var(--border)] last:border-0"
                   >
-                    <td className="px-4 py-2.5">
+                    {/* Fija, como su cabecera: es la referencia de la fila. */}
+                    <td className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-2.5">
                       <span className="font-medium tabular-nums">{fila.item.codigo}</span>
                       <span className="block max-w-[18rem] truncate text-sm text-[var(--fg-muted)]">
                         {fila.item.descripcion}
@@ -471,7 +488,7 @@ export function Comparativa({
                         // buscar fuera algo que quizá llegue mañana.
                         <EsperaOFalta estado={estadoDeFila(fila)} />
                       ) : elegido ? (
-                        <span>
+                        <span title={proveedores.find((p) => p.consulta_proveedor_id === elegido)?.proveedor}>
                           {
                             proveedores.find((p) => p.consulta_proveedor_id === elegido)
                               ?.proveedor
