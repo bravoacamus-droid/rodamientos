@@ -83,12 +83,22 @@ export interface LineaComprobante {
   id: string;
   producto_id: string | null;
   codigo: string;
+  /** En columna propia, no pegada a la descripción (Willy, 11:07). */
+  marca: string | null;
   descripcion: string;
   unidad: string;
   cantidad: number;
   valor_unitario: number;
   descuento_pct: number;
   importe: number;
+}
+
+/** Una cuota del crédito, tal como sale impresa al pie. */
+export interface CuotaComprobante {
+  numero: number;
+  fecha_vencimiento: string;
+  monto: number;
+  pagado: number;
 }
 
 /** La ficha completa. */
@@ -118,6 +128,10 @@ export interface ComprobanteDetalle {
   moneda: string;
   /** Si la factura imprime las cuentas para pagar (029). */
   mostrar_cuenta: boolean;
+  /** La guía con la que salió la mercadería. Su formato la imprime. */
+  guia_numero: string | null;
+  /** Cuándo vence cada parte de lo que debe. Vacío si es al contado. */
+  cuotas: CuotaComprobante[];
   op_gravada: number;
   op_exonerada: number;
   op_inafecta: number;

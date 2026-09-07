@@ -161,7 +161,7 @@ export async function detalleComprobante(
         `id, tipo, serie, correlativo, numero, cliente_id, cotizacion_id,
          orden_compra_cliente, referencia_id, motivo_nota_codigo,
          fecha_emision, fecha_vencimiento, condicion_pago, dias_credito,
-         moneda, mostrar_cuenta,
+         mostrar_cuenta,
          op_gravada, op_exonerada, op_inafecta, descuento_global, igv, total,
          total_letras, pagado, saldo, estado, estado_sunat,
          sunat_codigo_respuesta, sunat_mensaje, sunat_enviado_en, sunat_hash_cdr,
@@ -170,9 +170,11 @@ export async function detalleComprobante(
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento, tipo_documento, direccion, email),
          cotizaciones(numero),
+         guias_remision(numero),
+         comprobante_cuotas(numero, fecha_vencimiento, monto, pagado),
          perfiles!comprobantes_vendedor_id_fkey(nombre),
          comprobante_items(
-           id, producto_id, orden, codigo, descripcion, unidad_codigo,
+           id, producto_id, orden, codigo, marca, descripcion, unidad_codigo,
            cantidad, valor_unitario, descuento_pct, importe
          )`,
       )
@@ -197,6 +199,7 @@ export async function detalleComprobante(
         producto_id: string | null;
         orden: number;
         codigo: string | null;
+        marca: string | null;
         descripcion: string | null;
         unidad_codigo: string | null;
         cantidad: number;
@@ -231,6 +234,7 @@ export async function detalleComprobante(
         unidad: i.unidad_codigo ?? "NIU",
         cantidad: Number(i.cantidad ?? 0),
         valor_unitario: Number(i.valor_unitario ?? 0),
+        marca: (i.marca as string | null) ?? null,
         descuento_pct: Number(i.descuento_pct ?? 0),
         // `importe` es columna generada: se usa la de la base, no se recalcula.
         importe: Number(i.importe ?? 0),
@@ -259,10 +263,25 @@ export async function detalleComprobante(
         fecha_emision: String(c.fecha_emision),
         fecha_vencimiento: (c.fecha_vencimiento as string | null) ?? null,
         condicion_pago: String(c.condicion_pago ?? "contado"),
-        moneda: String(c.moneda ?? "USD"),
+        // Siempre dólares: `comprobantes` NO tiene columna de moneda -este
+        // ERP factura solo en USD- y pedirla al select rompía la consulta
+        // ENTERA, no solo ese campo. El campo se queda para que el pie sepa
+        // qué cuenta enseñar primero; el día que haya soles saldrá de una
+        // columna de verdad.
+        moneda: "USD",
         // Por defecto SÍ, como decidió la 029: Willy dijo que es «una
         // práctica recomendable que ya lleve pre-impresa la cuenta».
         mostrar_cuenta: c.mostrar_cuenta !== false,
+        guia_numero: (c.guias_remision as { numero?: string } | null)?.numero ?? null,
+        // Ordenadas por número, que es como se leen: la 1 vence antes que la 2.
+        cuotas: ((c.comprobante_cuotas ?? []) as Record<string, unknown>[])
+          .map((q) => ({
+            numero: Number(q.numero ?? 0),
+            fecha_vencimiento: String(q.fecha_vencimiento),
+            monto: Number(q.monto ?? 0),
+            pagado: Number(q.pagado ?? 0),
+          }))
+          .sort((a, b) => a.numero - b.numero),
         dias_credito: Number(c.dias_credito ?? 0),
         op_gravada: Number(c.op_gravada ?? 0),
         op_exonerada: Number(c.op_exonerada ?? 0),

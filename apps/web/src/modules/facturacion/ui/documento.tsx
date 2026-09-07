@@ -83,10 +83,21 @@ export function DocumentoComprobante({
         c.cotizacion_numero
           ? { etiqueta: "Cotización", valor: c.cotizacion_numero }
           : null,
+        // Con qué guía salió la mercadería. Su formato la imprime, y es la
+        // que ata el papel que firmó el almacén del cliente con la factura
+        // que tiene que pagar: la guía sellada es lo que autoriza a facturar.
+        c.guia_numero
+          ? { etiqueta: "Guía de remisión", valor: c.guia_numero }
+          : null,
       ]}
       columnas={[
         { clave: "n", titulo: "#", alinear: "centro" },
         { clave: "codigo", titulo: "Código" },
+        // La marca aparte, como en la cotización. Willy, 11:07: *«junta la
+        // descripción con la marca, y no debe estar así: una columna para la
+        // descripción y una columna para la marca»*. Su factura las lleva
+        // pegadas —«RODAMIENTO CONICO MM__SKF»— y por eso no se copia.
+        { clave: "marca", titulo: "Marca" },
         { clave: "descripcion", titulo: "Descripción" },
         { clave: "cantidad", titulo: "Cant.", alinear: "derecha" },
         { clave: "unidad", titulo: "U.M.", alinear: "centro" },
@@ -96,6 +107,7 @@ export function DocumentoComprobante({
       filas={c.lineas.map((l, i) => ({
         n: i + 1,
         codigo: <span className="font-medium">{l.codigo}</span>,
+        marca: l.marca ?? "—",
         descripcion: l.descripcion,
         cantidad: <span className="tabular">{l.cantidad}</span>,
         unidad: l.unidad,
@@ -148,6 +160,44 @@ export function DocumentoComprobante({
             Representación impresa del comprobante electrónico. Consulte su validez
             en el portal de SUNAT.
           </p>
+          {/*
+            Cuándo vence cada parte de lo que debe.
+
+            El formato de Willy la lleva —«DETALLE CUOTAS PAGO PENDIENTE»— y
+            nosotros guardábamos las cuotas en `comprobante_cuotas` desde el
+            principio sin imprimirlas nunca. El cliente veía «Crédito a 30
+            días» y ninguna fecha.
+
+            Solo si hay MÁS DE UNA. Con una sola cuota, la tabla repite el
+            vencimiento y el total que ya están arriba, y en un documento
+            fiscal cada línea de más es una pregunta de más de quien lo revisa.
+          */}
+          {c.cuotas.length > 1 ? (
+            <div className="mb-2 break-inside-avoid">
+              <p className="mb-1 font-semibold">Cuotas</p>
+              <table className="w-full max-w-xs">
+                <thead>
+                  <tr className="border-b border-[#ccc] text-left">
+                    <th className="py-0.5 font-medium">Cuota</th>
+                    <th className="py-0.5 font-medium">Vence</th>
+                    <th className="py-0.5 text-right font-medium">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {c.cuotas.map((q) => (
+                    <tr key={q.numero}>
+                      <td className="py-0.5 tabular">{q.numero}</td>
+                      <td className="py-0.5 tabular">{fecha(q.fecha_vencimiento)}</td>
+                      <td className="py-0.5 text-right tabular">
+                        $ {dinero(q.monto)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
           {c.mostrar_cuenta ? (
             <CuentasParaPagar cuentas={cuentas} moneda={c.moneda} />
           ) : null}
