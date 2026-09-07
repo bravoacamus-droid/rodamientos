@@ -3217,6 +3217,64 @@ export type Database = {
           },
         ]
       }
+      recepcion_adjuntos: {
+        Row: {
+          creado_en: string
+          id: string
+          mime: string | null
+          nombre: string
+          recepcion_id: string
+          ruta: string
+          subido_por: string | null
+          tamano_bytes: number | null
+          tipo: Database["public"]["Enums"]["tipo_papel_proveedor"]
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          mime?: string | null
+          nombre: string
+          recepcion_id: string
+          ruta: string
+          subido_por?: string | null
+          tamano_bytes?: number | null
+          tipo?: Database["public"]["Enums"]["tipo_papel_proveedor"]
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          mime?: string | null
+          nombre?: string
+          recepcion_id?: string
+          ruta?: string
+          subido_por?: string | null
+          tamano_bytes?: number | null
+          tipo?: Database["public"]["Enums"]["tipo_papel_proveedor"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepcion_adjuntos_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "recepciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepcion_adjuntos_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "v_precios_compra"
+            referencedColumns: ["recepcion_id"]
+          },
+          {
+            foreignKeyName: "recepcion_adjuntos_subido_por_fkey"
+            columns: ["subido_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recepcion_items: {
         Row: {
           cantidad: number
@@ -4879,6 +4937,7 @@ export type Database = {
         | "salida"
         | "ajuste_positivo"
         | "ajuste_negativo"
+      tipo_papel_proveedor: "guia" | "factura" | "otro"
       uso_plantilla: "pedido_precio" | "cotizacion" | "cobranza" | "general"
     }
     CompositeTypes: {
@@ -5079,6 +5138,7 @@ export const Constants = {
         "ajuste_positivo",
         "ajuste_negativo",
       ],
+      tipo_papel_proveedor: ["guia", "factura", "otro"],
       uso_plantilla: ["pedido_precio", "cotizacion", "cobranza", "general"],
     },
   },

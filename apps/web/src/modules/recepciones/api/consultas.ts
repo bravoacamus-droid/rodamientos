@@ -285,3 +285,53 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
     return fallo(e, "recepciones/comprasPendientes");
   }
 }
+
+/**
+ * Los papeles que se le adjuntaron a una recepción (068).
+ *
+ * Aparte del detalle y no dentro de él: es lo que más va a cambiar de una
+ * recepción cerrada —se sube una foto, se quita la que salió movida— y
+ * mezclarlo con la consulta grande obligaría a rehacerla entera por cada
+ * archivo.
+ */
+export async function papelesDeRecepcion(
+  recepcionId: string,
+): Promise<Resultado<PapelDeProveedor[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("recepcion_adjuntos")
+      .select("id, tipo, ruta, nombre, tamano_bytes, creado_en")
+      .eq("recepcion_id", recepcionId)
+      // La factura primero: es la que se busca. Y dentro de cada tipo, la más
+      // antigua arriba, que es el orden en que se subieron.
+      .order("tipo")
+      .order("creado_en")
+      .limit(50);
+
+    if (error) return fallo(error, "recepciones/papelesDeRecepcion");
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((a) => ({
+        id: String(a.id),
+        tipo: a.tipo as PapelDeProveedor["tipo"],
+        ruta: String(a.ruta),
+        nombre: String(a.nombre ?? ""),
+        tamanoBytes: a.tamano_bytes === null ? null : Number(a.tamano_bytes),
+        creadoEn: String(a.creado_en),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "recepciones/papelesDeRecepcion");
+  }
+}
+
+export interface PapelDeProveedor {
+  id: string;
+  tipo: "guia" | "factura" | "otro";
+  ruta: string;
+  nombre: string;
+  tamanoBytes: number | null;
+  creadoEn: string;
+}

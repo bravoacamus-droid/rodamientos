@@ -4,7 +4,10 @@ import { EstadoError, Moneda } from "@rodatech/ui";
 
 import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
 
-import { detalleRecepcion } from "../api/consultas";
+import { perfilActual } from "@rodatech/db/servidor";
+
+import { detalleRecepcion, papelesDeRecepcion } from "../api/consultas";
+import { PapelesDelProveedor } from "./papeles-proveedor";
 
 /**
  * Ficha de una recepción.
@@ -26,7 +29,11 @@ export default async function PaginaDetalleRecepcion({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const resultado = await detalleRecepcion(id);
+  const [resultado, perfil, papeles] = await Promise.all([
+    detalleRecepcion(id),
+    perfilActual(),
+    papelesDeRecepcion(id),
+  ]);
 
   if (!resultado.ok) {
     return (
@@ -40,6 +47,10 @@ export default async function PaginaDetalleRecepcion({
   if (!resultado.datos) notFound();
 
   const r = resultado.datos;
+  // Los mismos roles que `permisos_rol` tiene para `recepcion_adjuntos`.
+  const rol = perfil?.activo ? perfil.rol : null;
+  const puedeAdjuntar =
+    rol !== null && ["gerencia", "admin", "almacen", "compras"].includes(rol);
   const total = r.lineas.reduce((a, l) => a + l.importe, 0);
   const unidades = r.lineas.reduce((a, l) => a + l.cantidad, 0);
 
@@ -156,6 +167,19 @@ export default async function PaginaDetalleRecepcion({
 
       {/* El momento de acordarse: la caja acaba de entrar y el cliente que
           lleva semanas esperando es justo el que se olvida. */}
+      {/* Los papeles del proveedor (068).
+
+          La recepción sigue siendo un documento cerrado: esto no la edita,
+          le cuelga el papel con el que llegó. Willy: *«siempre nos atienden
+          con guía y factura»*. */}
+      {r.anulada ? null : (
+        <PapelesDelProveedor
+          recepcionId={r.id}
+          papeles={papeles.ok ? papeles.datos : []}
+          puedeEditar={puedeAdjuntar}
+        />
+      )}
+
       <AvisarAQuien />
     </div>
   );
