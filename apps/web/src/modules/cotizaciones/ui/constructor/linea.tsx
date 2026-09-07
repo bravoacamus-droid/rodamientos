@@ -418,20 +418,44 @@ function PanelSustitutos({
             key={s.id}
             type="button"
             onClick={() => onElegir(s)}
-            className="flex items-center gap-3 rounded-sm p-1.5 text-left text-sm hover:bg-[var(--surface)]"
+            className={`flex items-center gap-3 rounded-sm p-1.5 text-left text-sm hover:bg-[var(--surface)] ${
+              s.mejor_oferta ? "bg-[var(--ok-bg)]" : ""
+            }`}
           >
             <span className="w-36 shrink-0 font-medium">{s.codigo}</span>
-            <span className="w-12 shrink-0 text-xs">{s.marca}</span>
-            <Badge tone="neutral" size="xs">
-              {ETIQUETA_ORIGEN[s.origen]}
-            </Badge>
-            {s.mejor_oferta ? (
-              <Badge tone="success" size="xs">
-                mejor oferta
+            <span className="w-12 shrink-0 text-sm">{s.marca}</span>
+            {/*
+              La descripción, que es por lo que se elige.
+
+              Willy, 08:04, leyendo la lista del 6309: *«el primero es un
+              rodamiento sin sellos; el siguiente también sin sellos, pero con
+              juego radial C4; el tercero con sellos de metal y juego C3; el
+              cuarto con sellos de goma y juego C3. En función a eso yo ya
+              veo»*. La pantalla enseñaba código, marca y precio — todo menos
+              lo que él mira.
+            */}
+            <span className="min-w-0 flex-1 truncate text-sm" title={s.descripcion}>
+              {s.descripcion}
+            </span>
+            {/*
+              El origen, solo cuando dice algo que el código no.
+
+              «Misma medida» es lo normal y se deduce del propio código —los
+              cuatro empiezan por 6309—, así que repetirlo en cada fila es
+              ruido. Que alguien de la casa la haya DECLARADO sí es
+              información: sabe algo que el catálogo no.
+            */}
+            {s.origen === "equivalencia" ? (
+              <Badge tone="neutral" size="xs">
+                {ETIQUETA_ORIGEN[s.origen]}
               </Badge>
             ) : null}
-            <span className="flex-1" />
-            <span className="text-xs text-[var(--fg-muted)]">
+            {s.mejor_oferta ? (
+              <Badge tone="success" size="xs">
+                la que conviene
+              </Badge>
+            ) : null}
+            <span className="text-sm text-[var(--fg-muted)]">
               stock {s.stock ?? 0}
             </span>
             <span className="w-20 text-right tabular">
