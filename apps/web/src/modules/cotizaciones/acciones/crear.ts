@@ -50,6 +50,59 @@ const esquema = z.object({
   items: z.array(esquemaItem).min(1).max(200),
 });
 
+const esquemaEdicion = esquema.extend({ id: z.string().uuid() });
+
+/**
+ * Ninguna línea por debajo del precio mínimo.
+ *
+ * El piso ya se valida en pantalla, y la base lo hace cumplir con un check. Se
+ * vuelve a mirar aquí porque una acción también se puede llamar sin pasar por
+ * la pantalla, y porque el error del check no es legible para nadie.
+ *
+ * Los pisos se leen del MAESTRO y no del payload: aceptarlos de quien llama
+ * sería regalar la regla.
+ *
+ * Está aparte porque lo usan el alta Y la edición. Si solo se comprobara al
+ * crear, bastaría con guardar y editar para saltárselo.
+ *
+ * Devuelve el mensaje del problema, o `null` si todo está por encima.
+ */
+async function revisarPiso(
+  items: z.infer<typeof esquemaItem>[],
+): Promise<string | null> {
+  const conProducto = items.filter((i) => i.producto_id !== null);
+  if (conProducto.length === 0) return null;
+
+  const supabase = await clienteServidor();
+  const { data: pisos, error } = await supabase
+    .from("productos")
+    .select("id, codigo, precio_minimo")
+    .in(
+      "id",
+      conProducto.map((i) => i.producto_id as string),
+    );
+
+  if (error) return error.message;
+
+  const porId = new Map((pisos ?? []).map((p) => [p.id, p]));
+  const bajas = lineasBajoPiso(
+    conProducto.map((i) => ({
+      cantidad: i.cantidad,
+      valorUnitario: i.valor_unitario,
+      descuentoPct: i.descuento_pct,
+      precioMinimo: porId.get(i.producto_id as string)?.precio_minimo ?? 0,
+    })),
+  );
+
+  if (bajas.length === 0) return null;
+
+  const codigos = bajas
+    .map((b) => conProducto[b.indice]?.codigo)
+    .filter(Boolean)
+    .join(", ");
+  return `Por debajo del precio mínimo: ${codigos}. Sube el precio o quita el descuento.`;
+}
+
 export type ResultadoCreacion =
   | { ok: true; id: string; numero: string }
   | { ok: false; error: string };
@@ -82,43 +135,8 @@ export async function crearCotizacion(
     return { ok: false, error: `Los datos no son válidos: ${detalle}.` };
   }
 
-  // El piso ya se validó en pantalla, y la base lo hace cumplir con un check.
-  // Se vuelve a mirar aquí porque una acción también se puede llamar sin pasar
-  // por la pantalla, y porque el error del check no es legible para nadie.
-  //
-  // Los pisos se leen del MAESTRO, no del payload: aceptarlos de quien llama
-  // sería regalar la regla.
-  const conProducto = datos.items.filter((i) => i.producto_id !== null);
-  if (conProducto.length > 0) {
-    const supabase = await clienteServidor();
-    const { data: pisos, error } = await supabase
-      .from("productos")
-      .select("id, codigo, precio_minimo")
-      .in("id", conProducto.map((i) => i.producto_id as string));
-
-    if (error) return { ok: false, error: error.message };
-
-    const porId = new Map((pisos ?? []).map((p) => [p.id, p]));
-    const bajas = lineasBajoPiso(
-      conProducto.map((i) => ({
-        cantidad: i.cantidad,
-        valorUnitario: i.valor_unitario,
-        descuentoPct: i.descuento_pct,
-        precioMinimo: porId.get(i.producto_id as string)?.precio_minimo ?? 0,
-      })),
-    );
-
-    if (bajas.length > 0) {
-      const codigos = bajas
-        .map((b) => conProducto[b.indice]?.codigo)
-        .filter(Boolean)
-        .join(", ");
-      return {
-        ok: false,
-        error: `Por debajo del precio mínimo: ${codigos}. Sube el precio o quita el descuento.`,
-      };
-    }
-  }
+  const problemaPiso = await revisarPiso(datos.items);
+  if (problemaPiso) return { ok: false, error: problemaPiso };
 
   try {
     const supabase = await clienteServidor();
@@ -131,6 +149,66 @@ export async function crearCotizacion(
     revalidatePath("/cotizaciones");
     revalidatePath("/dashboard");
     return { ok: true, id: r.id, numero: r.numero };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo guardar la cotización.",
+    };
+  }
+}
+
+
+/**
+ * Editar una cotización que el cliente todavía no ha aceptado.
+ *
+ * Willy, 07/09 (15:49): *«ya sería editar la cotización, esa es otra
+ * opción»*. Es lo de ANTES de confirmar: cambiarle un precio, quitar una
+ * línea, añadir otra. Lo de después —mover cantidades de un pedido ya
+ * confirmado— es `corregirConfirmado`, y tiene otros límites.
+ *
+ * Comparte esquema y validación de piso con el alta, y no por ahorrar: si el
+ * precio mínimo se comprobara al crear y no al editar, bastaría con guardar y
+ * editar para saltárselo.
+ */
+export type ResultadoEdicion = { ok: true; id: string } | { ok: false; error: string };
+
+export async function actualizarCotizacion(
+  _previo: ResultadoEdicion | null,
+  formData: FormData,
+): Promise<ResultadoEdicion> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
+    return { ok: false, error: "Tu rol no puede editar cotizaciones." };
+  }
+
+  const crudo = formData.get("cotizacion");
+  if (typeof crudo !== "string") {
+    return { ok: false, error: "No llegaron los datos de la cotización." };
+  }
+
+  let datos: z.infer<typeof esquemaEdicion>;
+  try {
+    datos = esquemaEdicion.parse(JSON.parse(crudo));
+  } catch (e) {
+    const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
+    return { ok: false, error: `Los datos no son válidos: ${detalle}.` };
+  }
+
+  const problema = await revisarPiso(datos.items);
+  if (problema) return { ok: false, error: problema };
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("actualizar_cotizacion", {
+      p_datos: datos as unknown as Json,
+    });
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath("/cotizaciones");
+    revalidatePath(`/cotizaciones/${datos.id}`);
+    revalidatePath("/dashboard");
+    return { ok: true, id: datos.id };
   } catch (e) {
     return {
       ok: false,

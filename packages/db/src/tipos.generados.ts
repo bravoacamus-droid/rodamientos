@@ -4372,6 +4372,7 @@ export type Database = {
         Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
         Returns: number
       }
+      actualizar_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       anotar_productos_de_proveedor: {
         Args: {
           p_comprado?: boolean

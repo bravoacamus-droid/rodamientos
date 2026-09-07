@@ -4,7 +4,12 @@ import { useActionState, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
 
-import { crearCotizacion, type ResultadoCreacion } from "../../acciones/crear";
+import {
+  actualizarCotizacion,
+  crearCotizacion,
+  type ResultadoCreacion,
+  type ResultadoEdicion,
+} from "../../acciones/crear";
 import type { ClienteOpcion } from "../../dominio/cliente";
 import {
   aPayload,
@@ -13,6 +18,7 @@ import {
   estadoInicial,
   reducir,
   totalesDe,
+  type EstadoConstructor,
 } from "../../dominio/constructor";
 import {
   entregaDelDocumento,
@@ -38,6 +44,7 @@ export function Constructor({
   sugeridos,
   clienteInicial = null,
   hoy,
+  editando = null,
 }: {
   /** Los últimos cotizados, para que el buscador ofrezca algo sin teclear. */
   sugeridos: ClienteOpcion[];
@@ -45,11 +52,21 @@ export function Constructor({
   clienteInicial?: ClienteOpcion | null;
   /** `aaaa-mm-dd` del servidor: el dominio nunca lee el reloj. */
   hoy: string;
+  /**
+   * La cotización que se está EDITANDO, ya cargada.
+   *
+   * Es el mismo constructor porque es la misma pantalla: buscar productos,
+   * poner precios, mirar el piso. Hacer una copia para editar garantizaría
+   * que el día que se arregle algo aquí, allí no.
+   *
+   * `null` = alta.
+   */
+  editando?: { id: string; numero: string; estado: EstadoConstructor } | null;
 }) {
   const router = useRouter();
   const [estado, despachar] = useReducer(
     reducir,
-    estadoInicial(clienteInicial?.id ?? null),
+    editando?.estado ?? estadoInicial(clienteInicial?.id ?? null),
   );
   // El cliente elegido se guarda ENTERO y no solo su id. El reducer sigue
   // llevando el id —es lo que se envía— pero la ficha que se pinta necesita la
@@ -80,14 +97,18 @@ export function Constructor({
     [estado.tiempoEntrega, estado.lineas],
   );
 
-  const [resultado, guardar, guardando] = useActionState<ResultadoCreacion | null, FormData>(
-    async (previo, formData) => {
-      const r = await crearCotizacion(previo, formData);
-      if (r.ok) router.push(`/cotizaciones/${r.id}`);
-      return r;
-    },
-    null,
-  );
+  // Editar y crear van a acciones distintas: crear inserta y devuelve un
+  // número nuevo; editar reescribe la que ya existe y NO toca el número.
+  const [resultado, guardar, guardando] = useActionState<
+    ResultadoCreacion | ResultadoEdicion | null,
+    FormData
+  >(async (previo, formData) => {
+    const r = editando
+      ? await actualizarCotizacion(previo as ResultadoEdicion | null, formData)
+      : await crearCotizacion(previo as ResultadoCreacion | null, formData);
+    if (r.ok) router.push(`/cotizaciones/${r.id}`);
+    return r;
+  }, null);
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
@@ -97,21 +118,32 @@ export function Constructor({
       <input
         type="hidden"
         name="cotizacion"
-        value={JSON.stringify(aPayload(estado))}
+        // Al editar viaja además el id: la acción reescribe ESA cotización.
+        value={JSON.stringify(
+          editando ? { id: editando.id, ...aPayload(estado) } : aPayload(estado),
+        )}
       />
 
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Nueva cotización</h1>
+        <h1 className="text-xl font-semibold">
+          {editando ? `Editar ${editando.numero}` : "Nueva cotización"}
+        </h1>
         <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/cotizaciones")}
+            onClick={() =>
+              router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones")
+            }
           >
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Guardando…" : "Guardar cotización"}
+            {guardando
+              ? "Guardando…"
+              : editando
+                ? "Guardar cambios"
+                : "Guardar cotización"}
           </Button>
         </div>
       </header>

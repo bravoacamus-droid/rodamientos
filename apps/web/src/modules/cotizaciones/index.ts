@@ -6,6 +6,7 @@
 
 export { default as PaginaCotizaciones } from "./ui/pagina";
 export { default as PaginaNuevaCotizacion } from "./ui/pagina-nueva";
+export { default as PaginaEditarCotizacion } from "./ui/pagina-editar";
 export { default as PaginaDetalleCotizacion } from "./ui/pagina-detalle";
 
 // El papel: las seis correcciones de Willy (C1-C6) viven aquí y están probadas.

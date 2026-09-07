@@ -158,6 +158,26 @@ export function AccionesCotizacion({
           sería peor: lo que esto ahorra es escribir el mensaje, que es lo que
           de verdad cuesta.
         */}
+        {/*
+          Editar, mientras el cliente no la haya aceptado.
+
+          Willy, 15:49: *«ya sería editar la cotización, esa es otra opción»*.
+          Hasta hoy solo se podía CLONAR, que deja la vieja viva y le da un
+          número nuevo al cliente por corregir una coma.
+
+          Desaparece al confirmarse: una aprobada es lo que el cliente aceptó,
+          y cambiarle un precio después es reescribir un acuerdo. A partir de
+          ahí lo que hay es «Corregir cantidades», que solo mueve cantidades.
+        */}
+        {enCurso ? (
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/cotizaciones/${id}/editar`)}
+          >
+            Editar
+          </Button>
+        ) : null}
+
         {enlaceWhatsapp ? (
           <Button asChild variant="outline">
             <a href={enlaceWhatsapp} target="_blank" rel="noopener noreferrer">
