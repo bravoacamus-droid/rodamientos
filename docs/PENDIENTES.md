@@ -2590,6 +2590,245 @@ cifra que no existe valen lo mismo**.
 
 ---
 
+## Reunión del 07/09 con Willy · qué pidió y qué se hizo
+
+Cincuenta y dos minutos repasando el flujo entero, de la cotización a la
+factura, con la pantalla compartida. Salió mucho, y casi nada era «añade un
+campo»: la mitad eran **funciones que ya existían y que no se veían**.
+
+Grabación en el grupo. Al final del día mandó además sus tres formatos reales
+—cotización, guía y factura— y eso desbloqueó varias cosas de golpe.
+
+---
+
+### AG.1 · Las alternativas eran peligrosas
+
+> *«Los que tienen ese número básico, porque el 6308 tiene otra medida, el 6207
+> tiene otra medida. Claro que pertenecen todos a una misma subfamilia porque
+> todos son de la serie 60… pero no puedo reemplazar un 6309 por un 6307 o un
+> 08, porque ya tienen diferentes medidas. El número básico ya te define las
+> tres medidas principales del rodamiento: el interior, el exterior y la
+> altura.»*
+
+La cascada de la 011 sugería por **tipo constructivo** y por **subfamilia**, con
+una banda de precio de ±25 % haciendo de red. La 011 ya sospechaba del tercer
+escalón —lo dice en su propio comentario— y lo dejó igual.
+
+La red no aguanta: un 6307 y un 6309 son de la serie 60 y cuestan parecido, así
+que pasaban. Y el daño no es una sugerencia fea; es **un rodamiento que no entra
+en el eje**, ofrecido a un cliente que confió en que se lo ofrecíamos como
+recambio.
+
+Quedan dos orígenes, y los dos afirman lo mismo con fundamento: equivalencia
+capturada a mano, y mismo código básico. Un test fija la regla.
+
+**Aquí no se adivina un texto: se afirma que dos piezas son intercambiables. Eso
+o se sabe, o no se dice.**
+
+El precio, dicho en voz alta: de 790 productos, **394 tienen código básico y 396
+no** —o-rings, pines, fajas—. Para esos solo salen las equivalencias declaradas.
+Que no salga nada es la respuesta honesta.
+
+### AG.2 · Y la recomendación no se veía nunca
+
+`mejor_oferta` exigía `stock > 0`. Las alternativas salen **justo cuando no hay
+stock**, y en este catálogo el que no lo tiene tampoco lo tiene en sus variantes:
+el 6309 y sus tres hermanas están las cuatro en cero. Era `false` siempre, desde
+que se programó.
+
+Ahora se marca la más barata de las que tienen stock, o la más barata a secas si
+ninguna lo tiene. Se llama **«la que conviene»** y no «mejor oferta»: cuando
+todas cuestan más que el original, llamarla oferta sería mentir.
+
+Y le faltaba **la descripción**, que es por lo que Willy elige — *«el primero es
+sin sellos; el siguiente con juego radial C4; el tercero con sellos de metal y
+juego C3»*. La lista enseñaba código, marca, precio y un badge que ponía «misma
+medida» en las tres filas. Todo menos lo que él mira.
+
+---
+
+### AG.3 · El historial de ventas, donde se pregunta
+
+> *«¿No te muestra una referencia de a quién se ha vendido, a cuánto se ha
+> vendido?»*
+
+Estaba —y priorizando a su cliente, que es lo que había pedido— detrás de un
+**«hist.» de 12 px, en gris, apretado entre las flechas de subir y bajar**. No lo
+vio, y con razón.
+
+Ahora es un botón con palabras junto al precio. Cinco de entrada y «ver más»
+hasta 25, como pidió.
+
+### AG.4 · El botón de recibir, en la fila
+
+Estaba solo dentro de la compra: había que entrar por el número —que ni parece un
+enlace a quien no sabe— para encontrarlo. Va pegado a la derecha, porque la tabla
+mide 1313 px y en un portátil de 1366 caía fuera de la vista.
+
+De paso salió que **`Button asChild` estaba roto** y nadie lo sabía porque no lo
+usaba nadie: el hueco del spinner le llegaba a `Slot` como segundo hijo.
+
+---
+
+### AG.5 · El transporte, que solo tenía media casa
+
+La guía distingue dos modalidades y solo una tenía maestro. La camioneta y su
+chofer se tecleaban enteros en cada despacho: los mismos dos o tres todas las
+semanas, y **es la vía por la que un número de licencia entra mal y sale impreso
+en un documento que fiscaliza SUNAT**.
+
+`/transporte` mantiene los tres: agencias, vehículos y conductores. Alta, edición
+y baja — y no hay borrado, igual que en la 029: una guía de hace ocho meses tiene
+que poder seguir citando lo que llevaba.
+
+**Peatonal** (Luis: *«¿no hay la opción peatonal? la que vaya a pie, pues»*) no es
+una tercera modalidad: el catálogo 18 de SUNAT tiene dos, y un `03` inventado
+haría que rechazaran la guía. Va como marca dentro de privado. La restricción
+exigía placa para emitir; con alguien que cruza la calle con una caja no la hay,
+y obligar a inventarse una acaba en guías emitidas con «AAA111».
+
+### AG.6 · El chofer no es asunto del transporte público
+
+> *«En transporte público, ya sea de las agencias, no es necesario poner
+> conductor, DNI del conductor, licencia, si esos datos no se pueden saber.»*
+
+Y era peor de lo que parecía: si alguien los escribía y luego cambiaba a público,
+**se guardaban igual**. Ahora no aparecen, se sueltan al cambiar y no viajan al
+documento.
+
+Salió a medias: arreglado en el formulario y en el impreso, **la ficha se quedó
+atrás** enseñando «Conductor: —» y «Licencia: —». Dos rayas diciendo que falta un
+dato que nunca se va a saber.
+
+### AG.7 · Corregir sin quemar un correlativo
+
+Un borrador de guía con la fecha mal solo se podía **anular y rehacer**. Ahora se
+corrige la cabecera. Solo borradores, comprobado en tres sitios —la página, la
+acción y el `update` filtrando por estado—: entre que se abre la pantalla y se
+pulsa Guardar pueden pasar minutos, y en ese hueco otro puede haber emitido.
+
+Las líneas no se tocan, y se dice en pantalla en vez de dejar campos que no
+funcionan.
+
+Lo mismo para el **pedido confirmado** (*«mientras que no se facture se puede
+manejar»*), con tres topes que comprueba la base. El importante: **nunca por
+debajo de lo que ya salió con guía**. Si salieron 6 y alguien confirma 4, el
+pedido diría que se vendieron 4 y el almacén que salieron 6 — y la bandeja «por
+comprar» se calcula de esa resta.
+
+---
+
+### AG.8 · Sus formatos, que respondieron cuatro preguntas
+
+Mandó la cotización, la guía y la factura reales. Traían más de lo que pedía:
+
+- **El RUC de verdad: `20562681206`.** Teníamos `20601234567` de relleno, y con
+  el dígito verificador mal. Con él, la dirección real, el teléfono y la web.
+- **Las cuentas bancarias**, que bloqueaban el pie de los documentos.
+- **El vehículo y el conductor**: placa AUE169, y Willy con su DNI y licencia.
+- Que **el RUC del transportista no hay que quitarlo**: su guía es privada y por
+  eso ese campo no sale. Cuando dijo «está de más» miraba ese papel.
+
+Los números reales **no van en la migración** —eso se versiona—: se cargaron por
+SQL directo. La 064 solo trae la estructura.
+
+**Son DOS cuentas, no una.** `empresa` guardaba un banco y una cuenta; su formato
+imprime dólares y soles. Con una sola, el cliente que paga en soles transfiere a
+la de dólares, y eso no es un problema de maquetación: es ir a rescatar una
+transferencia al banco.
+
+`comprobantes.mostrar_cuenta` existía desde la 029 y **nada lo imprimía**. El
+interruptor estaba puesto y no encendía ninguna luz.
+
+### AG.9 · Lo que sus formatos enseñaron del nuestro
+
+A la cotización solo le faltaba **la forma de pago** —el suyo lo dice en dos
+sitios— y el dato viajaba en la consulta desde siempre.
+
+A la factura le faltaban la **marca en columna** (la corrección que él pidió el
+18/08 y que la cotización ya tenía; la suya las lleva pegadas: `RODAMIENTO CONICO
+MM__SKF`), el **enlace a la guía** y el **detalle de cuotas** — que guardábamos
+en `comprobante_cuotas` desde el principio sin imprimirlas: el cliente leía
+«Crédito a 30 días» y ninguna fecha.
+
+Dos cosas del suyo que **no se copian**, porque él mismo dijo que están mal: la
+doble columna valor/precio unitario, y la marca pegada a la descripción.
+
+Del impreso de la guía se fueron los **pesos parciales** (*«debería ser el peso
+total nomás»*) y el **«entregado por / recibido por»** (*«mi formato no tiene
+eso; ellos le ponen una firma y un sello»*), sustituidos por un solo espacio de
+sello. Encaja con por qué la guía va antes que la factura: **la guía sellada es
+lo que autoriza a facturar**.
+
+---
+
+### AG.10 · Los papeles del proveedor
+
+> *«¿Le entregan su guía? ¿Su factura?»* — *«Siempre nos atienden con guía y
+> factura»* — *«¿Quiere subir su guía y su factura también?»* — *«Claro»*.
+
+Hubo que montar el almacenamiento de archivos, que no existía. **Bucket privado**:
+una factura de compra lleva el RUC del proveedor y los precios a los que compra
+Rodatech — restando, su margen. Un bucket público es una URL que adivina
+cualquiera y no caduca nunca. Se abre con enlace firmado de diez minutos.
+
+Una tabla y no dos columnas: una entrega puede traer dos facturas, o la guía en
+tres fotos.
+
+### AG.11 · A quién se le compró
+
+> *«Yo digito el código y me debe aparecer el historial de compras. Le compré a
+> A, anteriormente lo compré a B, luego lo compré a C.»*
+
+`v_precios_compra` daba desde la 042 producto, fecha, proveedor, cantidad, costo
+y hasta el costo anterior. **Nadie la leía.** Le faltaban los dos números que él
+nombró: la factura y la guía del proveedor, que estaban en `recepciones` desde el
+principio.
+
+Sale de **recepciones** y no de las cotizaciones de proveedores. Un precio pagado
+es una factura; uno cotizado es una promesa, y el proveedor lo sabe.
+
+### AG.12 · Mandar la cotización
+
+Lo de WhatsApp existía, **dentro del menú de tres puntos**. Mandar la cotización
+es lo que se hace justo después de guardarla.
+
+Y no aparecía nunca: de los **97 clientes activos, cero tienen teléfono y uno
+tiene correo**. Como con «mejor oferta», la función estaba y no la iba a ver
+nadie. Ahora sale «¿A dónde se la mando?», que lo apunta en el sitio.
+
+El PDF se sigue arrastrando a mano: ni `wa.me` ni `mailto:` pueden adjuntar un
+archivo, y fingir que sí sería peor.
+
+**Se cae de la lista la orden de compra formal.** Luis lo aclaró: el proceso es
+informal —a veces por llamada— y lo único que quiere es registrar el precio.
+
+---
+
+### Lo que deja el día
+
+Doce cambios, y el patrón se repitió tantas veces que ya no es casualidad:
+
+| Función | Existía desde | Por qué no se veía |
+|---|---|---|
+| Historial de ventas | 011 | «hist.», 12 px, entre dos flechas |
+| `mejor_oferta` | 011 | exigía stock justo cuando no hay |
+| `mostrar_cuenta` | 029 | nada lo imprimía |
+| `v_precios_compra` | 042 | ninguna pantalla la leía |
+| Mandar por WhatsApp | — | dentro del menú, y sin teléfonos |
+| Forma de pago | siempre | viajaba y no llegaba al papel |
+
+**Construir la función y abrirle la puerta son dos trabajos, y solo el segundo se
+nota.** La mitad de esta reunión fue Willy señalando cosas que ya estaban hechas.
+
+Y un fallo mío que conviene no olvidar: pedí `comprobantes.moneda` al select y
+esa columna no existe. PostgREST no ignora una columna que falta —tumba la
+consulta entera— y la ficha y la impresión de **cualquier** comprobante llevaron
+dos commits rotas. No lo vi porque verifiqué el pie en la cotización y **di por
+hecho** que la factura iría igual.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

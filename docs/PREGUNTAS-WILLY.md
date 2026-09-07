@@ -13,6 +13,66 @@ el tiempo.
 
 ---
 
+## 07/09 · lo que respondieron SUS FORMATOS
+
+Mandó la cotización, la guía y la factura reales. Antes de volver a
+preguntarle nada, se miraron — y contestaron cuatro de las que estaban en
+esta lista. **Buscar primero en lo que ya mandó**: es la regla de arriba y
+esta vez ahorró cuatro preguntas de cinco.
+
+| Pregunta | Respuesta, sacada de sus papeles |
+|---|---|
+| **1 · El RUC** | `20562681206`. Teníamos `20601234567` de relleno, y con el dígito verificador mal. **Cargado.** |
+| Dirección | `JR. LOS HUERTOS 2232, URB. SAN HILARION 1RA ETAPA, SAN JUAN DE LURIGANCHO, LIMA - LIMA`. Tel. 366-9012. **Cargada.** |
+| Correo y web | `wfernandez@rodatechperu.com` · `www.rodatechperu.com`. **Cargados.** |
+| **5 · Cuentas bancarias** | BCP dólares y BCP soles, con sus CCI. **Cargadas**, y ya salen al pie de cotizaciones y facturas. |
+| Vehículo y conductor | Placa `AUE169`; Willy con su DNI y su licencia. **Cargados** en el maestro de transporte. |
+| RUC del transportista | No hay que quitarlo del impreso: su guía es PRIVADA y por eso ese campo no sale. Cuando dijo «está de más» miraba ese papel. |
+
+Los números de cuenta **no están en git**: se cargaron por SQL directo, y la
+migración 064 solo lleva la estructura.
+
+---
+
+## Lo que le sigue faltando · para el miércoles
+
+```
+Buenos días Willy. Con sus formatos ya quedó casi todo 🙌
+Me faltan 4 cositas, las 3 primeras de una palabra:
+
+1️⃣ SUS SERIES Y DESDE QUÉ NÚMERO SIGUEN
+Usted usa CT02 para cotizaciones, T002 para guías y F002
+para facturas. El sistema tiene otras de prueba.
+Dígame la serie y el ÚLTIMO número que emitió de cada una,
+para que siga contando desde ahí y no se le repita ninguno.
+
+2️⃣ ¿A CUÁNTOS DÍAS VENDE AL CRÉDITO, NORMALMENTE?
+¿30, 45, 60?
+Sus 97 clientes están hoy en "crédito a 0 días", o sea que
+la factura le aparece vencida el mismo día que la emite.
+
+3️⃣ CUANDO LE COMPRA A UN PROVEEDOR DE LIMA,
+¿EN CUÁNTOS DÍAS SE LO ENTREGAN?
+Usted me dio 15 días para el exterior y 2 a 4 para
+fabricación, pero no el de local, que es el más frecuente
+y sale impreso en la cotización.
+
+4️⃣ LOS TELÉFONOS DE SUS CLIENTES
+De sus 97 clientes, ninguno tiene WhatsApp cargado y solo
+uno tiene correo. Sin eso no le sale el botón de mandarles
+la cotización.
+Si los tiene en un Excel, mándemelo y los subo todos de una.
+Si no, se van apuntando solos: ahora cada cotización tiene
+un botón para apuntarlo en el momento.
+```
+
+**Y una que NO se le pregunta**: el ubigeo de la empresa. Su dirección es San
+Juan de Lurigancho, y el código lo sacamos del padrón nosotros — preguntárselo
+sería pedirle que busque un número que no usa nunca. Va en cada guía, así que
+hay que ponerlo antes de emitir en producción.
+
+---
+
 ## 04/09 · las cinco del plan de compras · DOS CONTESTADAS (por Luis, 07/09)
 
 > **2 · Plazo de crédito** — el campo ya ofrece 15 / 30 / 45 / 60 y «a mano»,
