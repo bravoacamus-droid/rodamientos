@@ -302,6 +302,8 @@ export async function cotizacionPorId(id: string): Promise<
         /** Para imprimir la forma de pago en la cotización. */
         condicion_pago: string;
         dias_credito: number;
+        /** Para mandarle la cotización por correo (Willy 13:21). */
+        email: string | null;
       };
       vendedor: string | null;
     };
@@ -352,7 +354,7 @@ export async function cotizacionPorId(id: string): Promise<
            igv, total, costo_total, margen_pct, cliente_id,
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, whatsapp, telefono,
-                          condicion_pago, dias_credito,
+                          condicion_pago, dias_credito, email,
                           cliente_contactos(nombre, principal, activo)),
            perfiles!cotizaciones_vendedor_id_fkey(nombre),
            cotizacion_items(id, producto_id, orden, codigo, marca, descripcion,

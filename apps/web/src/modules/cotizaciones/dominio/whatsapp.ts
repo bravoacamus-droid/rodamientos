@@ -103,3 +103,40 @@ export function enlaceWhatsapp(
   if (!numero) return null;
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensajeCotizacion(datos))}`;
 }
+
+/**
+ * El asunto del correo.
+ *
+ * Lleva el número delante porque es por lo que se busca meses después, cuando
+ * el cliente escribe «lo de la cotización que me mandaste» y hay que
+ * encontrarla entre trescientos correos.
+ */
+export function asuntoCotizacion(d: DatosMensaje): string {
+  return `Cotización ${d.numero} · ${d.emisor}`;
+}
+
+/**
+ * El enlace de correo, o `null` si el cliente no tiene una dirección usable.
+ *
+ * Willy, 07/09 (13:21): *«correo y WhatsApp»*. Es el mismo texto por los dos
+ * sitios a propósito: si el cliente recibe uno por chat y otro por correo, lo
+ * último que hace falta es que digan cosas distintas.
+ *
+ * `mailto:` NO puede adjuntar el PDF —ningún navegador lo permite, por una
+ * razón evidente— así que abre el correo escrito y el PDF se arrastra, igual
+ * que en WhatsApp. Es lo que Willy ya hace a mano; esto le ahorra escribir.
+ */
+export function enlaceCorreoCotizacion(
+  email: string | null | undefined,
+  datos: DatosMensaje,
+): string | null {
+  const limpio = (email ?? "").trim();
+  // Comprobación deliberadamente floja: aquí no se valida un correo, se decide
+  // si merece la pena abrir el cliente de correo. Rechazar por una tilde rara
+  // en un dominio válido sería peor que abrirlo y que el usuario lo vea.
+  if (!limpio.includes("@") || limpio.length < 5 || /\s/.test(limpio)) return null;
+
+  const cuerpo = encodeURIComponent(mensajeCotizacion(datos));
+  const asunto = encodeURIComponent(asuntoCotizacion(datos));
+  return `mailto:${encodeURIComponent(limpio)}?subject=${asunto}&body=${cuerpo}`;
+}

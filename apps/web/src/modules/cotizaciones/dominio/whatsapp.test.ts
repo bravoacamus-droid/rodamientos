@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  asuntoCotizacion,
+  enlaceCorreoCotizacion,
   enlaceWhatsapp,
   formatoFecha,
   mensajeCotizacion,
@@ -111,5 +113,51 @@ describe("enlaceWhatsapp", () => {
   it("sin teléfono usable devuelve null, para no ofrecer el botón", () => {
     expect(enlaceWhatsapp(null, DATOS)).toBeNull();
     expect(enlaceWhatsapp("no tiene", DATOS)).toBeNull();
+  });
+});
+
+describe("enlaceCorreoCotizacion", () => {
+  const DATOS = {
+    numero: "COT1-000005",
+    cliente: "ACRICORP S.A.C.",
+    total: 88.88,
+    validaHasta: "2026-09-22",
+    emisor: "RODATECH",
+  };
+
+  it("arma el mailto con asunto y cuerpo", () => {
+    const url = enlaceCorreoCotizacion("compras@acricorp.pe", DATOS)!;
+    expect(url.startsWith("mailto:compras%40acricorp.pe?")).toBe(true);
+    expect(decodeURIComponent(url)).toContain("Cotización COT1-000005");
+    expect(decodeURIComponent(url)).toContain("ACRICORP S.A.C.");
+  });
+
+  it("sin correo no hay enlace, en vez de uno que no abre nada", () => {
+    expect(enlaceCorreoCotizacion(null, DATOS)).toBeNull();
+    expect(enlaceCorreoCotizacion("", DATOS)).toBeNull();
+    expect(enlaceCorreoCotizacion("sin-arroba", DATOS)).toBeNull();
+    expect(enlaceCorreoCotizacion("con espacio@x.pe", DATOS)).toBeNull();
+  });
+
+  it("dice lo mismo que el de WhatsApp", () => {
+    // Si el cliente recibe uno por chat y otro por correo, lo último que hace
+    // falta es que digan cosas distintas.
+    const url = enlaceCorreoCotizacion("compras@acricorp.pe", DATOS)!;
+    const cuerpo = decodeURIComponent(url.split("&body=")[1] ?? "");
+    expect(cuerpo).toBe(mensajeCotizacion(DATOS));
+  });
+});
+
+describe("asuntoCotizacion", () => {
+  it("lleva el número delante, que es por lo que se busca", () => {
+    expect(
+      asuntoCotizacion({
+        numero: "COT1-000005",
+        cliente: "X",
+        total: 1,
+        validaHasta: "2026-09-22",
+        emisor: "RODATECH",
+      }),
+    ).toBe("Cotización COT1-000005 · RODATECH");
   });
 });

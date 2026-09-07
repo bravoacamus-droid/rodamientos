@@ -5,7 +5,7 @@ import { EstadoBadge } from "@rodatech/ui";
 import { comprobantesDelPedido, cotizacionPorId } from "../api/consultas";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
-import { enlaceWhatsapp } from "../dominio/whatsapp";
+import { enlaceCorreoCotizacion, enlaceWhatsapp } from "../dominio/whatsapp";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
@@ -93,15 +93,21 @@ export default async function PaginaDetalleCotizacion({
     })),
   });
 
+  const datosMensaje = {
+    numero: impresa.numero,
+    cliente: impresa.cliente.razonSocial,
+    total: impresa.total,
+    validaHasta: impresa.validaHasta,
+    emisor: emisor.nombre_comercial,
+  };
+
+  // El correo del cliente, para mandarla también por ahí (Willy 13:21:
+  // «correo y WhatsApp»). Es el mismo texto por los dos sitios.
+  const correo = enlaceCorreoCotizacion(cabecera.cliente.email, datosMensaje);
+
   const whatsapp = enlaceWhatsapp(
     cabecera.cliente.whatsapp ?? cabecera.cliente.telefono,
-    {
-      numero: impresa.numero,
-      cliente: impresa.cliente.razonSocial,
-      total: impresa.total,
-      validaHasta: impresa.validaHasta,
-      emisor: emisor.nombre_comercial,
-    },
+    datosMensaje,
   );
 
   return (
@@ -135,6 +141,14 @@ export default async function PaginaDetalleCotizacion({
           id={cabecera.id}
           estado={cabecera.estado}
           enlaceWhatsapp={whatsapp}
+          enlaceCorreo={correo}
+          cliente={{
+            id: cabecera.cliente_id,
+            nombre: impresa.cliente.razonSocial,
+            telefono: cabecera.cliente.telefono ?? "",
+            whatsapp: cabecera.cliente.whatsapp ?? "",
+            email: cabecera.cliente.email ?? "",
+          }}
           // Sobre lo CONFIRMADO, no sobre lo cotizado: lo que el cliente no
           // aceptó no se factura nunca, así que no puede mantener vivo un
           // botón de facturar que ya no lleva a ninguna parte.

@@ -17,6 +17,7 @@ import {
 
 import { cambiarEstado, clonar } from "../../acciones/gestionar";
 import type { EstadoCotizacion } from "../../dominio/tipos";
+import { DialogoComoMandarla } from "./dialogo-como-mandarla";
 import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
 
 /**
@@ -34,12 +35,18 @@ export function AccionesCotizacion({
   id,
   estado,
   enlaceWhatsapp,
+  enlaceCorreo,
+  cliente,
   lineas,
   facturable,
 }: {
   id: string;
   estado: EstadoCotizacion;
   enlaceWhatsapp: string | null;
+  /** `mailto:` con el mismo texto. `null` si el cliente no tiene correo. */
+  enlaceCorreo: string | null;
+  /** Para poder apuntarle el número si no lo tiene, sin salir de aquí. */
+  cliente: { id: string; nombre: string; telefono: string; whatsapp: string; email: string };
   /** Para poder preguntar qué confirmó el cliente antes de aprobar. */
   lineas: LineaParaConfirmar[];
   /**
@@ -56,6 +63,7 @@ export function AccionesCotizacion({
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
+  const [pidiendoContacto, setPidiendoContacto] = useState(false);
 
   const correr = (f: () => Promise<{ ok: boolean; error?: string; id?: string }>) => {
     setError(null);
@@ -72,6 +80,16 @@ export function AccionesCotizacion({
 
   return (
     <div className="flex flex-col items-stretch gap-2 sm:items-end print:hidden">
+      <DialogoComoMandarla
+        abierto={pidiendoContacto}
+        clienteId={cliente.id}
+        cliente={cliente.nombre}
+        telefono={cliente.telefono}
+        whatsapp={cliente.whatsapp}
+        email={cliente.email}
+        onCerrar={() => setPidiendoContacto(false)}
+      />
+
       <DialogoConfirmar
         cotizacionId={id}
         lineas={lineas}
@@ -126,6 +144,47 @@ export function AccionesCotizacion({
           </>
         ) : null}
 
+        {/*
+          Mandarla, como BOTÓN y no escondido en los tres puntos.
+
+          Willy, 13:00: *«le doy acá un botón que dice enviar a WhatsApp»*. Y
+          el 07/09 (13:21) añadió el correo: *«correo y WhatsApp»*. Estaba lo
+          de WhatsApp, dentro del menú, donde no lo iba a encontrar: mandar la
+          cotización es lo que se hace justo después de guardarla, no una
+          rareza que se busca en un desplegable.
+
+          El PDF se arrastra al chat a mano. Ni `wa.me` ni `mailto:` pueden
+          adjuntar un archivo -ningún navegador lo permite- y fingir que sí
+          sería peor: lo que esto ahorra es escribir el mensaje, que es lo que
+          de verdad cuesta.
+        */}
+        {enlaceWhatsapp ? (
+          <Button asChild variant="outline">
+            <a href={enlaceWhatsapp} target="_blank" rel="noopener noreferrer">
+              WhatsApp
+            </a>
+          </Button>
+        ) : null}
+        {enlaceCorreo ? (
+          <Button asChild variant="outline">
+            <a href={enlaceCorreo}>Correo</a>
+          </Button>
+        ) : null}
+
+        {/*
+          Sin WhatsApp ni correo no se puede mandar, y con los datos de hoy es
+          el caso NORMAL: de los 97 clientes activos, ninguno tiene teléfono y
+          solo uno tiene correo. Entraron del Excel sin esa columna.
+
+          Un botón deshabilitado diría «no puedes» sin decir qué hacer. Este
+          lo arregla en el sitio, y al cerrarlo ya están los de mandar.
+        */}
+        {!enlaceWhatsapp && !enlaceCorreo ? (
+          <Button variant="outline" onClick={() => setPidiendoContacto(true)}>
+            ¿A dónde se la mando?
+          </Button>
+        ) : null}
+
         <Button variant="outline" onClick={() => window.print()}>
           Imprimir
         </Button>
@@ -143,21 +202,6 @@ export function AccionesCotizacion({
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-56">
-            {enlaceWhatsapp ? (
-              <DropdownMenuItem asChild>
-                <a href={enlaceWhatsapp} target="_blank" rel="noopener noreferrer">
-                  Enviar por WhatsApp
-                </a>
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                disabled
-                title="El cliente no tiene un teléfono válido registrado"
-              >
-                Enviar por WhatsApp
-              </DropdownMenuItem>
-            )}
-
             <DropdownMenuItem
               disabled={pendiente}
               onSelect={() => correr(() => clonar(id))}
