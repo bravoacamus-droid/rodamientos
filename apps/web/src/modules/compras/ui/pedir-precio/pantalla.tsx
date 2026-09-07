@@ -32,6 +32,7 @@ import {
   type Modo,
   type Seleccion,
 } from "../../dominio/reparto-consulta";
+import { DialogoContactoProveedor } from "@/modules/proveedores/ui/dialogo-contacto";
 import { AnadirProveedor } from "./anadir";
 
 export type ItemPedido = ItemConsulta;
@@ -112,6 +113,8 @@ export function PedirPrecio({
   const [copiado, setCopiado] = React.useState<string | null>(null);
   const [abriendo, empezarRonda] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
+  /** Qué proveedor está en el diálogo de «ponerle el número». */
+  const [poniendoNumero, setPoniendoNumero] = React.useState<string | null>(null);
 
   /**
    * Las cantidades, editables.
@@ -456,12 +459,25 @@ export function PedirPrecio({
                   </div>
 
                   {!canales.whatsapp && !canales.correo ? (
+                    /*
+                      Un botón, no un enlace a su ficha.
+
+                      El enlace te sacaba de aquí y al volver habías perdido
+                      todo: los proveedores marcados, las cantidades, el
+                      reparto. Y no era un caso raro — los 97 proveedores
+                      entraron del Excel sin un solo teléfono, así que este
+                      aviso sale SIEMPRE.
+                    */
                     <span className="text-xs text-[var(--warn)]">
                       No tiene WhatsApp ni correo en su ficha. Puedes copiar el
                       texto, o{" "}
-                      <Link href={`/proveedores/${g.proveedor.id}/editar`} className="underline">
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => setPoniendoNumero(g.proveedor.id)}
+                      >
                         ponerle el número
-                      </Link>
+                      </button>
                       .
                     </span>
                   ) : null}
@@ -542,6 +558,45 @@ export function PedirPrecio({
       <p className="text-xs text-[var(--fg-subtle)]">
         <strong>Nada sale solo</strong>: no hay envío automático, ni falta.
       </p>
+
+      {/* Se apunta el número aquí mismo. El enlace a la ficha te sacaba de la
+          pantalla y al volver habías perdido los proveedores marcados, las
+          cantidades y el reparto. */}
+      {poniendoNumero
+        ? (() => {
+            const p = proveedores.find((x) => x.id === poniendoNumero);
+            if (!p) return null;
+            return (
+              <DialogoContactoProveedor
+                abierto
+                proveedorId={p.id}
+                proveedor={p.razon_social}
+                telefono={p.telefono ?? ""}
+                whatsapp={p.whatsapp ?? ""}
+                email={p.email ?? ""}
+                onCerrar={() => setPoniendoNumero(null)}
+                onGuardado={(v) => {
+                  // Se repinta con lo guardado, sin recargar: el botón de
+                  // mandar aparece al instante y no se pierde nada de lo que
+                  // hay puesto en la pantalla.
+                  setProveedores((prev) =>
+                    prev.map((x) =>
+                      x.id === p.id
+                        ? {
+                            ...x,
+                            telefono: v.telefono || null,
+                            whatsapp: v.whatsapp || null,
+                            email: v.email || null,
+                          }
+                        : x,
+                    ),
+                  );
+                  setPoniendoNumero(null);
+                }}
+              />
+            );
+          })()
+        : null}
     </div>
   );
 }
