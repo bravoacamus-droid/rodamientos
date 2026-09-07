@@ -2805,6 +2805,55 @@ informal —a veces por llamada— y lo único que quiere es registrar el precio
 
 ---
 
+### AG.13 · Editar la cotización · después de la reunión
+
+Se le preguntó a Luis si «ya se puede editar cotización, guía, todo eso» y la
+respuesta honesta era **que no**: la guía sí (AG.7), el pedido confirmado sí
+(066), pero **la cotización no existía**. Solo se podía CLONAR — que deja la
+vieja viva y le manda al cliente un número nuevo por corregir una coma.
+
+Era justo lo que Willy pidió (15:49) y lo que en la propia reunión se dijo que
+faltaba: *«en este caso no le puedo hacer porque falta editar la cotización»*.
+
+**Solo `borrador` y `enviada`** (069). Una `aprobada` es lo que el cliente
+aceptó: cambiarle un precio después es reescribir un acuerdo del que salen la
+factura y el margen, y nadie se enteraría de que el número cambió. `enviada` sí
+—la vio pero no ha dicho que sí, y corregir y reenviar es lo que se hace—.
+
+La RPC además mira que **no cuelgue nada**: ni guías con líneas de esta
+cotización, ni líneas ya facturadas. Es el cinturón además del tirante —el
+estado debería bastar— porque borrar las líneas con una guía apuntando a un
+ítem la dejaría señalando a algo que ya no existe.
+
+**Las líneas se reemplazan enteras.** Al editar se puede quitar la segunda,
+añadir dos y reordenar el resto; adivinar cuál era cuál es la clase de lógica
+que falla en silencio y deja una línea vieja pegada al documento.
+
+Es el **mismo constructor** con una prop más. Una copia para editar garantiza
+que el día que se arregle algo en una, en la otra no. Y el piso se saca a
+`revisarPiso`, compartido: si solo se comprobara al crear, bastaría con guardar
+y editar para saltárselo.
+
+---
+
+### Dónde está la línea, en las cuatro pantallas
+
+Lo que se puede tocar y hasta cuándo. La regla es la misma en las cuatro:
+**hasta donde el documento todavía no es un compromiso de nadie.**
+
+| Documento | Se edita | Hasta cuándo |
+|---|---|---|
+| Cotización | todo | borrador o enviada |
+| Pedido confirmado | solo cantidades, con tres topes | mientras no se facture |
+| Guía | la cabecera | mientras sea borrador |
+| Recepción | nada; se le cuelgan papeles | siempre |
+
+Una recepción no se edita nunca **y no es un olvido**: el ingreso ya está en el
+kardex, y corregirla es un ajuste de inventario de gerencia, con su documento y
+su responsable.
+
+---
+
 ### Lo que deja el día
 
 Doce cambios, y el patrón se repitió tantas veces que ya no es casualidad:
