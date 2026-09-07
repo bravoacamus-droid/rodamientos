@@ -18,7 +18,7 @@ import {
 } from "@rodatech/ui";
 import { Check, RotateCcw, X } from "lucide-react";
 
-import { aprobar } from "../../acciones/gestionar";
+import { aprobar, corregirConfirmado } from "../../acciones/gestionar";
 import { importeLinea } from "../../dominio/totales";
 
 /**
@@ -46,6 +46,8 @@ export interface LineaParaConfirmar {
   codigo: string;
   descripcion: string;
   cantidad: number;
+  /** Lo que ya está confirmado. `null` mientras el pedido no se ha aprobado. */
+  cantidadConfirmada?: number | null;
   unidad: string;
   valorUnitario: number;
   descuentoPct: number;
@@ -61,11 +63,26 @@ export function DialogoConfirmar({
   lineas,
   abierto,
   onCerrar,
+  corrigiendo = false,
 }: {
   cotizacionId: string;
   lineas: LineaParaConfirmar[];
   abierto: boolean;
   onCerrar: () => void;
+  /**
+   * El pedido YA está confirmado y se están corrigiendo las cantidades.
+   *
+   * Es el mismo diálogo porque es la misma pregunta -¿cuánto de cada línea?-
+   * y hacer una copia con otro título garantizaría que el día que se arregle
+   * algo aquí, allí no.
+   *
+   * Lo que cambia es a dónde va —`corregirConfirmado` en vez de `aprobar`,
+   * porque aprobar ocurre una vez y esto es lo de después— y de qué cantidad
+   * ARRANCA cada línea: al corregir, de lo que ya está confirmado. Arrancar de
+   * lo cotizado enseñaría 10 donde el cliente confirmó 8, y guardarlo sin
+   * tocar nada lo subiría de vuelta a 10 sin que nadie lo pidiera.
+   */
+  corrigiendo?: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
@@ -81,9 +98,18 @@ export function DialogoConfirmar({
   // de hace un minuto.
   React.useEffect(() => {
     if (!abierto) return;
-    setCantidades(Object.fromEntries(lineas.map((l) => [l.id, l.cantidad])));
+    setCantidades(
+      Object.fromEntries(
+        lineas.map((l) => [
+          l.id,
+          // Al corregir se parte de lo confirmado; al confirmar, de lo
+          // cotizado, que es lo que el cliente tiene delante.
+          corrigiendo ? (l.cantidadConfirmada ?? l.cantidad) : l.cantidad,
+        ]),
+      ),
+    );
     setError(null);
-  }, [abierto, lineas]);
+  }, [abierto, lineas, corrigiendo]);
 
   const poner = (id: string, valor: number, tope: number) => {
     const n = Number.isFinite(valor) ? Math.max(0, Math.min(tope, valor)) : 0;
@@ -120,23 +146,30 @@ export function DialogoConfirmar({
       // La base lo rechaza igual, pero decirlo aquí evita el viaje y da un
       // mensaje que explica qué hacer en vez de un error de restricción.
       setError(
-        "No confirmaste ninguna línea. Si el cliente dijo que no, ciérrala como rechazada desde el menú.",
+        corrigiendo
+          ? "No queda ninguna línea. Si el cliente se echó atrás del todo, anula el pedido desde el menú."
+          : "No confirmaste ninguna línea. Si el cliente dijo que no, ciérrala como rechazada desde el menú.",
       );
       return;
     }
+    const detalle = lineas.map((l) => ({
+      item_id: l.id,
+      cantidad: cantidades[l.id] ?? 0,
+    }));
+
     iniciar(async () => {
-      const r = await aprobar(
-        cotizacionId,
-        // Sin detalle cuando confirmó todo: es el camino corto de la RPC y deja
-        // registrado que fue una confirmación completa, no una parcial que
-        // casualmente coincidió.
-        completa
-          ? undefined
-          : lineas.map((l) => ({
-              item_id: l.id,
-              cantidad: cantidades[l.id] ?? 0,
-            })),
-      );
+      const r = corrigiendo
+        ? // Corrigiendo va SIEMPRE con detalle: lo que se está diciendo es
+          // exactamente cuánto queda en cada línea, y el atajo de «todo» aquí
+          // no significaría nada.
+          await corregirConfirmado(cotizacionId, detalle)
+        : await aprobar(
+            cotizacionId,
+            // Sin detalle cuando confirmó todo: es el camino corto de la RPC y
+            // deja registrado que fue una confirmación completa, no una parcial
+            // que casualmente coincidió.
+            completa ? undefined : detalle,
+          );
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
         return;
@@ -150,10 +183,21 @@ export function DialogoConfirmar({
     <Dialog open={abierto} onOpenChange={(v) => !v && onCerrar()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>¿Qué te confirmó el cliente?</DialogTitle>
+          <DialogTitle>
+            {corrigiendo ? "Corregir las cantidades" : "¿Qué te confirmó el cliente?"}
+          </DialogTitle>
           <DialogDescription>
-            Viene todo marcado. Baja o pon en cero lo que no te pidió — de eso
-            sale después lo que hay que comprar.
+            {corrigiendo ? (
+              <>
+                Mientras no se facture. No se puede bajar por debajo de lo que
+                ya salió con guía, ni subir por encima de lo cotizado.
+              </>
+            ) : (
+              <>
+                Viene todo marcado. Baja o pon en cero lo que no te pidió — de
+                eso sale después lo que hay que comprar.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -289,11 +333,15 @@ export function DialogoConfirmar({
             loading={pendiente}
           >
             {pendiente ? (
-              "Confirmando…"
+              corrigiendo ? "Guardando…" : "Confirmando…"
             ) : (
               <>
                 <Check aria-hidden="true" />
-                {completa ? "Confirmó todo" : `Confirmar ${confirmadas.length}`}
+                {corrigiendo
+                  ? "Guardar cantidades"
+                  : completa
+                    ? "Confirmó todo"
+                    : `Confirmar ${confirmadas.length}`}
               </>
             )}
           </Button>

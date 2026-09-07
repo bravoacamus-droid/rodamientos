@@ -77,6 +77,7 @@ export function AccionesCotizacion({
         lineas={lineas}
         abierto={confirmando}
         onCerrar={() => setConfirmando(false)}
+        corrigiendo={estado === "aprobada"}
       />
 
       <div className="flex items-center justify-end gap-2">
@@ -90,6 +91,21 @@ export function AccionesCotizacion({
           </Button>
         ) : estado === "aprobada" ? (
           <>
+            {/*
+              Corregir lo confirmado, mientras no se facture.
+
+              Willy, 15:58: *«una vez que ya fue aceptada la cotización, ¿ya no
+              se puede modificar?»* — *«mientras que no se facture se puede
+              manejar»*. Y por qué le importa: *«en sí la mayoría que va a
+              cambiar es la cantidad»*.
+
+              Desaparece en cuanto se factura algo: a partir de ahí el pedido
+              ya no se corrige bajando cantidades, se arregla con una nota de
+              crédito.
+            */}
+            <Button variant="outline" onClick={() => setConfirmando(true)}>
+              Corregir cantidades
+            </Button>
             {/* Facturar delante de la guía, y no al revés.
 
                 La guía es el traslado; la factura es la que cobra y la que

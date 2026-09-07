@@ -66,6 +66,22 @@ export function DocumentoGuia({
           etiqueta: "Bultos",
           valor: String(g.numero_bultos),
         },
+        /*
+          Los tres documentos que atan esta guía a la venta, como en el
+          formato de Willy: «COMPROBANTE DE PAGO · N° DE COTIZACIÓN · ORDEN DE
+          COMPRA».
+
+          El comprobante suele ir vacío cuando la guía se imprime, y es
+          correcto: la guía va ANTES que la factura (33:00). *«Los productos
+          están sujetos a revisión: yo lo llevo con guía, y si todo está
+          conforme me ponen un sello y firma de almacén, y con la guía sellada
+          recién puedo facturar»*. Sale cuando se reimprime después de
+          facturar, que es cuando alguien quiere saber qué factura salió de
+          esta entrega.
+        */
+        g.comprobante
+          ? { etiqueta: "Comprobante", valor: g.comprobante.numero }
+          : null,
         g.cotizacion_numero
           ? { etiqueta: "Cotización", valor: g.cotizacion_numero }
           : null,

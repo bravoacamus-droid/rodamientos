@@ -4503,6 +4503,10 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      corregir_confirmado: {
+        Args: { p_id: string; p_lineas: Json }
+        Returns: Json
+      }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_consulta_precio: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }

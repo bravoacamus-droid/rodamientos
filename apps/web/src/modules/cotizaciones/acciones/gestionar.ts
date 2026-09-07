@@ -219,3 +219,47 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo clonar." };
   }
 }
+
+/**
+ * Corregir las cantidades de un pedido YA confirmado.
+ *
+ * Willy, 07/09 (15:58): *«una vez que ya fue aceptada la cotización, ¿ya no se
+ * puede modificar?»* — *«mientras que no se facture se puede manejar»*. Y por
+ * qué le importa: *«en sí la mayoría que va a cambiar es la cantidad»*.
+ *
+ * No es `aprobar` otra vez. Aprobar es pasar de «lo ofrecí» a «me lo
+ * compraron», y eso ocurre una vez; la RPC lo exige y hace bien. Esto es lo de
+ * después, con sus propios límites: nunca más de lo cotizado —eso sería una
+ * venta nueva, con un precio que puede no ser el mismo— ni menos de lo que ya
+ * salió con guía o ya se facturó. Los tres los comprueba `corregir_confirmado`
+ * en la base, que es donde no se pueden saltar.
+ */
+export async function corregirConfirmado(
+  id: string,
+  lineas: { item_id: string; cantidad: number }[],
+): Promise<ResultadoGestion> {
+  const problema = await exigirPermiso();
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+
+  const revision = z.array(esquemaLinea).min(1).max(200).safeParse(lineas);
+  if (!revision.success) {
+    return { ok: false, error: "Las cantidades no son válidas." };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("corregir_confirmado", {
+      p_id: id,
+      p_lineas: revision.data,
+    });
+    if (error) return { ok: false, error: error.message };
+    refrescar(id);
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo corregir el pedido.",
+    };
+  }
+}

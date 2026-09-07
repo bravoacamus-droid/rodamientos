@@ -151,6 +151,9 @@ export default async function PaginaDetalleCotizacion({
             codigo: l.codigo,
             descripcion: l.descripcion,
             cantidad: l.cantidad,
+            // Lo ya confirmado, para que al CORREGIR el diálogo arranque de
+            // ahí y no de lo cotizado.
+            cantidadConfirmada: l.cantidad_aprobada ?? null,
             unidad: l.unidad_codigo,
             valorUnitario: l.valor_unitario,
             descuentoPct: l.descuento_pct,
