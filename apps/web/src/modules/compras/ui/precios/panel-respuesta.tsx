@@ -35,7 +35,6 @@ import {
   margenSi,
   porcentajeQueDiceAlgo,
   referenciaVacia,
-  tieneAlgoQueDecir,
   type Referencia,
 } from "../../dominio/referencia";
 
@@ -478,45 +477,35 @@ export function PanelRespuesta({
 }
 
 /**
- * Lo que ya se sabe de este producto, debajo de su nombre.
+ * Lo que ya sabes de este producto, con etiquetas y siempre a la vista.
  *
- * Son los tres números que Willy tiene en la cabeza cuando pregunta un precio
- * —a cuánto lo compraba, a cuánto lo vende y cuál es su piso— más el mejor
- * que consta. Escritos delante para no tener que acordarse de ellos.
+ * ---------------------------------------------------------------------------
+ * Las dos cifras con las que se decide cuánto cotizar
+ * ---------------------------------------------------------------------------
+ * Luis: *«quería información a cuánto fue comprado último, por eso de eso
+ * tengo que cotizar; y el precio que se vende, si no cómo sé a cuánto se vende,
+ * para referencia nomás»*.
  *
- * Si no hay nada, lo dice. «Primera vez» es información: explica por qué la
- * columna de al lado no va a opinar, y evita leer el silencio como un visto
- * bueno.
+ * Antes salían en un texto corrido —«compras a $8.20 · vendes a $12.40»— y
+ * **solo si existían**. Con un producto sin costo cargado, que en este catálogo
+ * son casi todos, simplemente no aparecía nada: ni el dato ni la explicación de
+ * por qué falta. Quien mira no sabe si es que no se ha comprado nunca o si la
+ * pantalla se lo comió.
+ *
+ * Ahora las tres van SIEMPRE, con su etiqueta encima y un «—» cuando no hay.
+ * Un hueco que se ve es un dato que se puede ir a buscar; uno que no se ve, no.
  */
 function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
-  if (!tieneAlgoQueDecir(ref)) {
-    return (
-      <p className="mt-2 text-sm text-[var(--fg-muted)]">
-        Primera vez: no hay con qué compararlo.
-      </p>
-    );
-  }
-
-  const partes: string[] = [];
-  if (ref.ultimoCosto !== null) partes.push(`compras a ${moneda2(ref.ultimoCosto)}`);
-  if (ref.precioVenta !== null) partes.push(`vendes a ${moneda2(ref.precioVenta)}`);
-  if (ref.precioMinimo !== null) partes.push(`piso ${moneda2(ref.precioMinimo)}`);
-
   /*
     Los OTROS proveedores, con lo que cobraron.
 
-    Antes solo salía el mejor: «mejor: $0.20 · CORPUS · comprado 04/09». Luis:
-    *«abajo en producto tiene que mostrar historial de los proveedores
-    anteriores con los precios, o también los precios actuales, completo, a
-    cuánto lo compró»*.
-
-    Y tiene razón: con el WhatsApp abierto lo que se negocia no es «bátele al
-    mejor», es «CORPUS me lo dejó a 0.20 y GALLEGOS a 0.24, tú dime». Para eso
-    hace falta la lista, no el ganador.
+    Con el WhatsApp abierto no se negocia «bátele al mejor», se negocia «CORPUS
+    me lo dejó a 0.20 y GALLEGOS a 0.24, tú dime». Para eso hace falta la
+    lista, no el ganador.
 
     Tres como mucho: es una referencia mientras se teclea, no un informe. Lo
-    comprado va antes que lo cotizado porque una factura pesa más que una
-    promesa, y dentro, del más barato al más caro.
+    comprado va antes que lo cotizado —una factura pesa más que una promesa— y
+    dentro, del más barato al más caro.
   */
   const conPrecio = ref.proveedores
     .filter((p) => p.ultimoCostoUsd !== null)
@@ -538,30 +527,106 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
     .sort((a, b) => Number(b.comprado) - Number(a.comprado) || a.costo - b.costo)
     .slice(0, 3);
 
-  /*
-    Todo en 14 px como mínimo.
+  // El último que se pagó de verdad, con quién y cuándo. `productos.ultimo_costo`
+  // sabe cuánto pero no a quién, así que el nombre sale de la compra más
+  // reciente que consta.
+  const ultimaCompra = conPrecio
+    .filter((c) => c.cuando !== null)
+    .sort((a, b) => (b.cuando! < a.cuando! ? -1 : 1))[0];
 
-    Esto estaba en 11 px y gris claro — el tamaño de un pie de página para lo
-    único que hace falta leer al negociar. Willy es mayor y corto de vista: si
-    no se lee, es como si no estuviera, y entonces sobra el cálculo entero.
-  */
+  const margen = margenSi(ref.ultimoCosto, ref.precioVenta);
+
   return (
-    <div className="mt-2 flex flex-col gap-1 rounded-md bg-[var(--surface-2)] p-2.5 text-sm">
-      {partes.length > 0 ? (
-        <p className="text-[var(--fg)]">{partes.join(" · ")}</p>
+    <div className="mt-2 rounded-md bg-[var(--surface-2)] p-3 text-sm">
+      <div className="grid grid-cols-3 gap-3">
+        <Dato
+          etiqueta="Te costó"
+          valor={ref.ultimoCosto === null ? null : moneda2(ref.ultimoCosto)}
+          pie={
+            ultimaCompra
+              ? `${ultimaCompra.quien}${
+                  ultimaCompra.cuando ? ` · ${formatearFecha(ultimaCompra.cuando)}` : ""
+                }`
+              : "nunca se ha comprado"
+          }
+        />
+        <Dato
+          etiqueta="Lo vendes a"
+          valor={ref.precioVenta === null ? null : moneda2(ref.precioVenta)}
+          /*
+            El margen aquí y no en su propia casilla: es lo que sale de las dos
+            de al lado, y con las tres separadas habría que hacer la resta.
+
+            El pie tiene que decir por qué NO hay margen, y son dos motivos
+            distintos. La primera versión ponía «sin precio cargado» debajo de
+            un precio de venta perfectamente cargado — el margen faltaba por el
+            costo, no por la venta.
+          */
+          pie={
+            margen !== null
+              ? `${margen}% de margen`
+              : ref.precioVenta === null
+                ? "sin precio cargado"
+                : "el margen sale al saber el costo"
+          }
+        />
+        <Dato
+          etiqueta="Tu piso"
+          valor={ref.precioMinimo === null ? null : moneda2(ref.precioMinimo)}
+          pie={ref.precioMinimo === null ? "sin piso definido" : "no bajar de aquí"}
+        />
+      </div>
+
+      {antes.length > 0 ? (
+        <div className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-2">
+          <span className="text-[var(--fg-subtle)]">También lo venden</span>
+          {antes.map((a, i) => (
+            <p key={`${a.quien}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
+              <strong className="tabular-nums">{moneda2(a.costo)}</strong>
+              <span className="min-w-0 flex-1 truncate text-[var(--fg-muted)]">
+                {a.quien}
+              </span>
+              <span className="text-[var(--fg-subtle)]">
+                {a.comprado ? "comprado" : "cotizado"}
+                {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
+              </span>
+            </p>
+          ))}
+        </div>
       ) : null}
-      {antes.map((a, i) => (
-        <p key={`${a.quien}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
-          <strong className="tabular-nums">{moneda2(a.costo)}</strong>
-          <span className="min-w-0 flex-1 truncate text-[var(--fg-muted)]">
-            {a.quien}
-          </span>
-          <span className="text-[var(--fg-subtle)]">
-            {a.comprado ? "comprado" : "cotizado"}
-            {a.cuando ? ` ${formatearFecha(a.cuando)}` : ""}
-          </span>
-        </p>
-      ))}
+    </div>
+  );
+}
+
+/**
+ * Una cifra con su etiqueta y su pie.
+ *
+ * El «—» no es un adorno: un hueco que se VE es un dato que se puede ir a
+ * buscar, y el pie dice por qué falta. Callarse el campo entero deja a quien
+ * mira sin saber si nunca se compró o si la pantalla se lo comió.
+ */
+function Dato({
+  etiqueta,
+  valor,
+  pie,
+}: {
+  etiqueta: string;
+  valor: string | null;
+  pie: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <span className="block text-sm text-[var(--fg-subtle)]">{etiqueta}</span>
+      <strong
+        className={`block text-lg tabular-nums ${
+          valor === null ? "text-[var(--fg-subtle)]" : ""
+        }`}
+      >
+        {valor ?? "—"}
+      </strong>
+      <span className="block truncate text-sm text-[var(--fg-muted)]" title={pie}>
+        {pie}
+      </span>
     </div>
   );
 }

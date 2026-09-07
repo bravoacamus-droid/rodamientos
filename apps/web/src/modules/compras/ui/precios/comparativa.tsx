@@ -19,6 +19,7 @@ import {
 } from "../../dominio/comparador";
 import {
   faltaPreguntarle,
+  mejorConocido,
   referenciaVacia,
   type ProveedorConocido,
   type Referencia,
@@ -360,9 +361,22 @@ export function Comparativa({
                   >
                     <td className="px-4 py-2.5">
                       <span className="font-medium tabular-nums">{fila.item.codigo}</span>
-                      <span className="block max-w-[18rem] truncate text-xs text-[var(--fg-muted)]">
+                      <span className="block max-w-[18rem] truncate text-sm text-[var(--fg-muted)]">
                         {fila.item.descripcion}
                       </span>
+
+                      {/*
+                        Lo que ya se sabe, aquí también.
+
+                        Estaba solo dentro del diálogo de apuntar, y Luis lo
+                        pidió en la rejilla: *«acá tampoco sé a cuánto se
+                        compró últimamente, qué proveedor me dio el mejor
+                        precio»*. Y es donde se mira para decidir a quién
+                        comprarle — abrir un diálogo para recordar cuánto te
+                        costó es perder el hilo de la comparación.
+                      */}
+                      <ReferenciaDeFila referencia={ref} />
+
                       <AQuienFalta
                         faltan={faltan}
                         anadiendo={anadiendo}
@@ -655,6 +669,47 @@ function AQuienFalta({
       {faltan.length > primeros.length ? (
         <span className="text-[var(--fg-subtle)]">
           y {faltan.length - primeros.length} más
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * A cuánto te costó y a cuánto lo vendes, en la propia fila.
+ *
+ * Luis: *«acá tampoco sé a cuánto se compró últimamente, qué proveedor me dio
+ * el mejor precio»*. Y la rejilla es justo donde se decide a quién comprarle:
+ * tener que abrir el diálogo de apuntar para recordar cuánto costó la última
+ * vez es perder el hilo de la comparación que se está haciendo.
+ *
+ * Va en una línea y no en una tarjeta: aquí hay una fila por producto y el
+ * espacio es de la comparación. Lo detallado —el margen, el piso, los tres
+ * proveedores— vive en el diálogo.
+ */
+function ReferenciaDeFila({ referencia: ref }: { referencia: Referencia }) {
+  const mejor = mejorConocido(ref);
+  if (ref.ultimoCosto === null && ref.precioVenta === null && mejor === null) return null;
+
+  return (
+    <span className="mt-1 flex flex-wrap items-baseline gap-x-3 text-sm">
+      {ref.ultimoCosto !== null ? (
+        <span>
+          <span className="text-[var(--fg-subtle)]">te costó </span>
+          <strong className="tabular-nums">{formatearMoneda(ref.ultimoCosto, "USD")}</strong>
+        </span>
+      ) : null}
+      {ref.precioVenta !== null ? (
+        <span>
+          <span className="text-[var(--fg-subtle)]">vendes a </span>
+          <strong className="tabular-nums">{formatearMoneda(ref.precioVenta, "USD")}</strong>
+        </span>
+      ) : null}
+      {/* Quién lo dio más barato, que es la otra mitad de la pregunta: el
+          número solo no dice a quién volver a llamar. */}
+      {mejor ? (
+        <span className="min-w-0 truncate text-[var(--fg-muted)]">
+          mejor {formatearMoneda(mejor.costoUsd, "USD")} · {mejor.proveedor}
         </span>
       ) : null}
     </span>
