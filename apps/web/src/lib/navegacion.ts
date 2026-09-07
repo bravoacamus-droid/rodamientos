@@ -13,7 +13,7 @@ export type NombreIcono =
   | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
   | "compra" | "porcomprar" | "precios" | "importacion"
-  | "reporte" | "alerta" | "bitacora" | "configuracion";
+  | "reporte" | "alerta" | "bitacora" | "configuracion" | "transporte";
 
 export interface ItemNav {
   etiqueta: string;
@@ -66,6 +66,14 @@ export const NAVEGACION: readonly GrupoNav[] = [
       { etiqueta: "Equivalencias", ruta: "/equivalencias", icono: "equivalencia" },
       { etiqueta: "Clientes", ruta: "/clientes", icono: "cliente" },
       { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", roles: ["gerencia", "admin", "compras"] },
+      // Con quién y con qué se despacha: las agencias, los vehículos propios y
+      // los conductores. Va en Catálogo y no en Configuración porque se
+      // mantiene mientras se trabaja —a la agencia nueva se le da de alta el
+      // día que el cliente la pide—, no el día de la puesta en marcha.
+      {
+        etiqueta: "Transporte", ruta: "/transporte", icono: "transporte",
+        roles: ["gerencia", "admin", "ventas", "almacen"],
+      },
     ],
   },
   {

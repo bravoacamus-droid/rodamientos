@@ -186,6 +186,16 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <path d="M10.5 19a1.8 1.8 0 0 0 3 0" {...T} />
     </>
   ),
+  // Transporte: camioneta de reparto. Hermana del icono de guía —que es el
+  // documento— pero de frente al camión: aquí se mantiene el camión, no el
+  // papel.
+  transporte: (
+    <>
+      <path d="M3 6h9v11H3zM12 9.5h4.5L21 13v4h-9z" {...T} />
+      <circle cx="7" cy="18.5" r="1.7" {...T} />
+      <circle cx="17" cy="18.5" r="1.7" {...T} />
+    </>
+  ),
   // Configuración: engranaje simplificado.
   configuracion: (
     <>

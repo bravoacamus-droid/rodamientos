@@ -143,8 +143,22 @@ export function reducir(
       // Al cambiar de modalidad se sueltan los datos de la otra. Guardar la
       // placa de su camioneta en una guía de transporte público ensucia el
       // documento y confunde a quien lo lea después.
+      //
+      // Con el conductor pasa lo mismo, y lo dijo Luis (07/09): *«en
+      // transporte público, ya sea de las agencias, no es necesario poner
+      // conductor, DNI del conductor, licencia, si esos datos no se pueden
+      // saber»*. Cuando despacha una agencia, quién conduce lo declara ella
+      // en su propia guía de transportista; el remitente no lo sabe ni tiene
+      // por qué inventárselo.
       if (accion.valor === "01") {
-        return { ...estado, modalidad: "01", transportistaPlaca: "" };
+        return {
+          ...estado,
+          modalidad: "01",
+          transportistaPlaca: "",
+          conductorDocumento: "",
+          conductorNombre: "",
+          conductorLicencia: "",
+        };
       }
       return {
         ...estado,
@@ -395,9 +409,12 @@ export function aPayload(estado: EstadoGuiaEnCurso) {
       ? estado.transportistaRazonSocial.trim() || null
       : null,
     transportista_placa: esPublico ? null : estado.transportistaPlaca.trim() || null,
-    conductor_documento: estado.conductorDocumento.trim() || null,
-    conductor_nombre: estado.conductorNombre.trim() || null,
-    conductor_licencia: estado.conductorLicencia.trim() || null,
+    // El conductor es cosa del transporte privado. En público lo declara la
+    // agencia en su guía de transportista, y el remitente no lo sabe: mandarlo
+    // aquí sería poner en un documento fiscal un dato que nadie ha comprobado.
+    conductor_documento: esPublico ? null : estado.conductorDocumento.trim() || null,
+    conductor_nombre: esPublico ? null : estado.conductorNombre.trim() || null,
+    conductor_licencia: esPublico ? null : estado.conductorLicencia.trim() || null,
     entregado_por: estado.entregadoPor.trim() || null,
     observaciones: estado.observaciones.trim() || null,
     // Nace en borrador SIEMPRE. Emitir es un segundo paso, y es el que mueve

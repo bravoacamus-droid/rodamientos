@@ -1030,6 +1030,42 @@ export type Database = {
           },
         ]
       }
+      conductores: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          creado_en: string
+          id: string
+          licencia: string | null
+          nombre: string
+          notas: string | null
+          numero_documento: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          creado_en?: string
+          id?: string
+          licencia?: string | null
+          nombre: string
+          notas?: string | null
+          numero_documento?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          creado_en?: string
+          id?: string
+          licencia?: string | null
+          nombre?: string
+          notas?: string | null
+          numero_documento?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
       config_sunat: {
         Row: {
           actualizado_en: string
@@ -2131,6 +2167,7 @@ export type Database = {
           anulada_por: string | null
           cliente_id: string
           conductor_documento: string | null
+          conductor_id: string | null
           conductor_licencia: string | null
           conductor_nombre: string | null
           correlativo: number
@@ -2169,6 +2206,7 @@ export type Database = {
           ubigeo_llegada: string
           ubigeo_partida: string
           unidad_peso: string
+          vehiculo_id: string | null
         }
         Insert: {
           actualizado_en?: string
@@ -2177,6 +2215,7 @@ export type Database = {
           anulada_por?: string | null
           cliente_id: string
           conductor_documento?: string | null
+          conductor_id?: string | null
           conductor_licencia?: string | null
           conductor_nombre?: string | null
           correlativo: number
@@ -2215,6 +2254,7 @@ export type Database = {
           ubigeo_llegada: string
           ubigeo_partida: string
           unidad_peso?: string
+          vehiculo_id?: string | null
         }
         Update: {
           actualizado_en?: string
@@ -2223,6 +2263,7 @@ export type Database = {
           anulada_por?: string | null
           cliente_id?: string
           conductor_documento?: string | null
+          conductor_id?: string | null
           conductor_licencia?: string | null
           conductor_nombre?: string | null
           correlativo?: number
@@ -2261,6 +2302,7 @@ export type Database = {
           ubigeo_llegada?: string
           ubigeo_partida?: string
           unidad_peso?: string
+          vehiculo_id?: string | null
         }
         Relationships: [
           {
@@ -2297,6 +2339,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "guias_remision_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "conductores"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "guias_remision_cotizacion_id_fkey"
@@ -2339,6 +2388,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ubigeo"
             referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "guias_remision_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3480,6 +3536,39 @@ export type Database = {
         }
         Relationships: []
       }
+      vehiculos: {
+        Row: {
+          activo: boolean
+          actualizado_en: string
+          creado_en: string
+          descripcion: string | null
+          id: string
+          marca: string | null
+          notas: string | null
+          placa: string
+        }
+        Insert: {
+          activo?: boolean
+          actualizado_en?: string
+          creado_en?: string
+          descripcion?: string | null
+          id?: string
+          marca?: string | null
+          notas?: string | null
+          placa: string
+        }
+        Update: {
+          activo?: boolean
+          actualizado_en?: string
+          creado_en?: string
+          descripcion?: string | null
+          id?: string
+          marca?: string | null
+          notas?: string | null
+          placa?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       v_aging_cartera: {
@@ -4069,6 +4158,7 @@ export type Database = {
           ultima_venta: string | null
           unidades: number | null
           venta: number | null
+          venta_con_costo: number | null
         }
         Relationships: [
           {
@@ -4168,6 +4258,7 @@ export type Database = {
           margen_pct: number | null
           mes: string | null
           total: number | null
+          venta_con_costo: number | null
           venta_neta: number | null
         }
         Relationships: []
@@ -4198,10 +4289,9 @@ export type Database = {
         Returns: Json
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
-      aprobar_cotizacion: {
-        Args: { p_id: string; p_lineas?: Json }
-        Returns: Json
-      }
+      aprobar_cotizacion:
+        | { Args: { p_id: string }; Returns: Json }
+        | { Args: { p_id: string; p_lineas?: Json }; Returns: Json }
       asegurar_ubigeo: {
         Args: {
           p_codigo: string
@@ -4247,7 +4337,6 @@ export type Database = {
           familia: string
           id: string
           marca: string
-          precio_minimo: number
           precio_promedio: number
           precio_venta: number
           relevancia: number
@@ -4612,7 +4701,6 @@ export type Database = {
           marca: string
           mejor_oferta: boolean
           origen: string
-          precio_minimo: number
           precio_venta: number
           prioridad: number
           stock: number

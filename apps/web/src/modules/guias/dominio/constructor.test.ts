@@ -173,6 +173,53 @@ describe("modalidad", () => {
     );
     expect(estado.transportistaDocumento).toBe("");
   });
+
+  it("pasar a público suelta también al conductor", () => {
+    // Luis, 07/09: *«en transporte público, ya sea de las agencias, no es
+    // necesario poner conductor, DNI del conductor, licencia, si esos datos no
+    // se pueden saber»*. Cuando despacha una agencia, quién conduce lo declara
+    // ella en su guía de transportista.
+    const estado = conCotizacion(
+      { tipo: "campo", campo: "conductorNombre", valor: "JUAN PEREZ" },
+      { tipo: "campo", campo: "conductorDocumento", valor: "45678912" },
+      { tipo: "campo", campo: "conductorLicencia", valor: "Q45678912" },
+      { tipo: "modalidad", valor: "01" },
+    );
+    expect(estado.conductorNombre).toBe("");
+    expect(estado.conductorDocumento).toBe("");
+    expect(estado.conductorLicencia).toBe("");
+  });
+
+  it("en público el conductor no viaja al payload aunque esté escrito", () => {
+    // El cinturón además del tirante: si algún día una pantalla deja escribirlo
+    // sin pasar por el reducer, un dato que nadie ha comprobado no puede
+    // acabar impreso en un documento fiscal.
+    const estado = conCotizacion({ tipo: "peso", valor: 2 });
+    const payload = aPayload({
+      ...estado,
+      modalidad: "01",
+      conductorNombre: "JUAN PEREZ",
+      conductorDocumento: "45678912",
+      conductorLicencia: "Q45678912",
+    });
+    expect(payload.conductor_nombre).toBeNull();
+    expect(payload.conductor_documento).toBeNull();
+    expect(payload.conductor_licencia).toBeNull();
+  });
+
+  it("en privado sí viaja", () => {
+    const estado = conCotizacion({ tipo: "peso", valor: 2 });
+    const payload = aPayload({
+      ...estado,
+      modalidad: "02",
+      conductorNombre: "JUAN PEREZ",
+      conductorDocumento: "45678912",
+      conductorLicencia: "Q45678912",
+    });
+    expect(payload.conductor_nombre).toBe("JUAN PEREZ");
+    expect(payload.conductor_documento).toBe("45678912");
+    expect(payload.conductor_licencia).toBe("Q45678912");
+  });
 });
 
 describe("bloqueos", () => {

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { transportePropioActivo } from "@/modules/transporte";
+
 import { agenciasActivas, cotizacionesDespachables, motivosTraslado } from "../api/consultas";
 import { ConstructorGuia } from "./constructor";
 
@@ -35,10 +37,11 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
     );
   }
 
-  const [cotizaciones, motivos, agencias] = await Promise.all([
+  const [cotizaciones, motivos, agencias, propio] = await Promise.all([
     cotizacionesDespachables(),
     motivosTraslado(),
     agenciasActivas(),
+    transportePropioActivo(),
   ]);
 
   if (!cotizaciones.ok) {
@@ -81,6 +84,8 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
       // Si el maestro fallara, el transporte se teclea como siempre: es un
       // atajo, no un requisito para emitir.
       agencias={agencias.ok ? agencias.datos : []}
+      vehiculos={propio.ok ? propio.datos.vehiculos : []}
+      conductores={propio.ok ? propio.datos.conductores : []}
       hoy={hoy}
       cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
     />
