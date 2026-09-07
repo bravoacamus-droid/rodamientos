@@ -2210,6 +2210,66 @@ vez. Mientras tanto todas las pantallas siguen diciendo «lo esperan» y nunca
 
 ---
 
+### AC · El contacto que se escribía y se perdía · 07/09
+
+Luis, mirando el cotizador:
+
+> *«si no tiene contacto le sale un input de a quién va dirigido; aquí debería
+> tener un botón de agregar un contacto, porque si quiere guardar ese contacto
+> a la empresa no tiene»*
+
+Y el propio ERP lo confesaba. El texto que salía debajo del campo era:
+
+    Este cliente no tiene contactos guardados.
+    Lo que escribas se imprime igual.
+
+Verdad a medias: **se imprimía y se perdía**. La siguiente cotización a la
+misma empresa volvía a pedirlo, y la ficha del cliente seguía sin nadie. Para
+guardarlo había que abandonar la cotización a medio escribir, ir a la ficha,
+añadirlo y volver — nadie hace eso: se escribe a mano otra vez, y otra.
+
+#### La pieza estaba; faltaba la puerta
+
+Como casi todo lo de esta semana: `guardarContacto` existe desde la 035 y
+`CamposContacto` desde el mismo día, usados ya en tres pantallas. Lo único que
+no había era el botón.
+
+    A quién va dirigida
+    [PRUEBA BORRAR                    ]
+    Este cliente no tiene contactos guardados.
+    👤 Guardar «PRUEBA BORRAR» en el cliente
+
+El texto del botón **cambia con lo escrito**: con un nombre puesto dice qué se
+va a guardar, y eso es lo que quita el miedo a pulsarlo. Sin nada escrito dice
+«Añadir contacto» a secas, y también sale cuando el cliente YA tiene otros —dar
+de alta al segundo era el mismo viaje a la ficha.
+
+Al guardar, el campo pasa de caja de texto a desplegable con el contacto nuevo
+**ya elegido**. Guardarlo y obligar a buscarlo en la lista sería dejar el
+trabajo a medias.
+
+#### Dos detalles que no son adorno
+
+- **Sin `<form>` dentro.** Vive dentro del formulario de la cotización y un
+  `<form>` anidado no existe en HTML; un botón sin `type="button"` la enviaría
+  a medio escribir. El guardado va por `onClick`. Misma lección que §T.
+- **El principal se destrona también en pantalla.** Si el nuevo se marca como
+  principal, los demás dejan de serlo en la lista local, no solo en la base:
+  `ux_cliente_contactos_principal` deja uno como mucho, y enseñar dos sería
+  enseñar un estado que la base no admite.
+
+#### El fallo, que solo se vio pulsando
+
+Primer intento: **«No llegó el contacto»**. El diálogo mandaba los campos
+sueltos en el `FormData` y `guardarContacto` espera **uno solo**, `contacto`,
+con el JSON dentro — el mismo sobre que usan las otras tres pantallas.
+
+El mensaje suena a problema de red y era un formato mal armado. Typecheck y
+lint lo daban por bueno: los dos ven un `FormData`, y ninguno sabe qué claves
+lleva dentro.
+
+---
+
 ## Reunión del 31/08 · lo que pidió Willy, y qué se hizo
 
 Fue corta —le llegaron los técnicos de Claro a media reunión— pero salió lo

@@ -5,8 +5,10 @@
 
 import * as React from "react";
 import { Input, SelectNativo } from "@rodatech/ui";
+import { UserPlus } from "lucide-react";
 
 import { contactosDeCliente } from "@/modules/clientes/acciones/contactos";
+import { DialogoContacto } from "@/modules/clientes/ui/dialogo-contacto";
 import type { ContactoCliente } from "@/modules/clientes/dominio/tipos";
 
 /**
@@ -33,12 +35,15 @@ import type { ContactoCliente } from "@/modules/clientes/dominio/tipos";
  */
 export function SelectorContacto({
   clienteId,
+  cliente,
   contactoId,
   contacto,
   onElegir,
   onEscribir,
 }: {
   clienteId: string | null;
+  /** Solo para el título del diálogo: «se guarda en la ficha de X». */
+  cliente?: string | null;
   contactoId: string | null;
   contacto: string;
   /** Uno de la lista: llegan id y nombre, porque se guardan los dos. */
@@ -50,6 +55,7 @@ export function SelectorContacto({
   const [cargando, setCargando] = React.useState(false);
   // «Otro»: la caja de texto en vez del desplegable.
   const [aMano, setAMano] = React.useState(false);
+  const [dandoDeAlta, setDandoDeAlta] = React.useState(false);
 
   // Al cambiar de cliente se recarga y se limpia lo elegido: dejar puesto al
   // comprador de la empresa anterior imprimiría un nombre ajeno en el PDF.
@@ -131,7 +137,7 @@ export function SelectorContacto({
         </SelectNativo>
       )}
 
-      <span className="text-xs text-[var(--fg-subtle)]">
+      <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-subtle)]">
         {cargando
           ? "Cargando sus contactos…"
           : sinCliente
@@ -148,11 +154,61 @@ export function SelectorContacto({
                   Volver a la lista de contactos
                 </button>
               ) : lista.length === 0 ? (
-                "Este cliente no tiene contactos guardados. Lo que escribas se imprime igual."
+                "Este cliente no tiene contactos guardados."
               ) : (
                 "Sale impreso en la cotización."
               )}
+
+        {/*
+          Guardarlo en el cliente, sin salir de la cotización.
+
+          Antes esto decía «lo que escribas se imprime igual» — y era verdad: se
+          imprimía y se perdía. La siguiente cotización a la misma empresa
+          volvía a pedirlo y la ficha seguía sin nadie. Guardarlo obligaba a
+          abandonar la cotización a medio escribir, ir a la ficha del cliente y
+          volver; nadie hace eso, se vuelve a escribir a mano.
+
+          El texto del botón cambia según haya algo escrito: con un nombre puesto
+          dice qué se va a guardar, que es lo que quita el miedo a pulsarlo.
+        */}
+        {!sinCliente && !cargando ? (
+          <button
+            type="button"
+            onClick={() => setDandoDeAlta(true)}
+            className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+          >
+            <UserPlus className="size-3.5" aria-hidden="true" />
+            {contacto.trim() && contactoId === null
+              ? `Guardar «${contacto.trim()}» en el cliente`
+              : "Añadir contacto"}
+          </button>
+        ) : null}
       </span>
+
+      {clienteId ? (
+        <DialogoContacto
+          abierto={dandoDeAlta}
+          clienteId={clienteId}
+          cliente={cliente}
+          nombreInicial={contactoId === null ? contacto : ""}
+          hayOtros={lista.length > 0}
+          onCerrar={() => setDandoDeAlta(false)}
+          onGuardado={(nuevo) => {
+            setDandoDeAlta(false);
+            // Entra en la lista y queda ELEGIDO. Guardarlo y tener que buscarlo
+            // en el desplegable sería dejar el trabajo a medias.
+            setLista((prev) =>
+              // El principal es uno como mucho: si el nuevo lo es, los demás
+              // dejan de serlo aquí también, no solo en la base.
+              (nuevo.principal ? prev.map((c) => ({ ...c, principal: false })) : prev).concat(
+                nuevo,
+              ),
+            );
+            setAMano(false);
+            onElegir(nuevo.id, nuevo.nombre);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

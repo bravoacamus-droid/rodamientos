@@ -136,6 +136,7 @@ export function Constructor({
                   escondido no lo rellenaba nadie. */}
               <SelectorContacto
                 clienteId={estado.clienteId}
+                cliente={cliente?.razon_social ?? null}
                 contactoId={estado.contactoId}
                 contacto={estado.contacto}
                 onElegir={(id, nombre) => {
