@@ -42,7 +42,7 @@ volver a caer sale caro.
 |---|---|
 | Rutas | **46 de 46 reales** · no queda ningún cartel |
 | `pnpm typecheck` | 7/7 paquetes |
-| `pnpm test` | **1.132 en verde** |
+| `pnpm test` | **1.137 en verde** |
 | `pnpm e2e` | **42 en verde** (navegación); falta el flujo del dinero (§2) |
 | `pnpm lint` | **limpio**, 0 avisos |
 | Migraciones | **hasta la 059, aplicadas** al Supabase del cliente |
@@ -2143,6 +2143,70 @@ La **guía de remisión** se genera, pero el envío a SUNAT no tiene ambiente de
 pruebas y encima necesita el certificado (§3). Y el **flujo del dinero
 automatizado** sigue esperando el proyecto Supabase de pruebas: lo de arriba se
 recorrió a mano, que no es lo mismo que tenerlo en verde en cada commit.
+
+---
+
+### AB · «Necesitas comprar más: otros dos clientes esperan esto» · 07/09
+
+Luis, describiendo el caso real:
+
+> *«a veces compra de más para tener guardado en su almacén para próximos
+> clientes, o también puede ser que otro cliente con pedido tenga ya que
+> venderlo... puede ser que 3 clientes diferentes lleven el mismo producto, así
+> que cuando haga la compra le avise: hey, necesitas comprar más unidades
+> porque tienes otros 2 clientes que necesitan ese producto»*
+
+#### Lo que ya estaba, y no hacía falta preguntarle a Willy
+
+De las tres cosas que salieron, **dos ya estaban hechas**:
+
+| | |
+|---|---|
+| Plazo de crédito con opciones | Ya son chips: **15 / 30 / 45 / 60** más «a mano» |
+| Compra en dólares con botón de soles y TC de SUNAT | `constructor/moneda.tsx`, desde la 042 |
+| El aviso al comprar | **Faltaba.** Es lo de abajo |
+
+Y de paso quedan contestadas dos de las cinco preguntas: la compra local **es
+en dólares**, y el plazo de crédito se elige de una lista.
+
+#### El aviso llegaba, pero tarde
+
+La ficha de la compra ya decía «traes 1 · esperan 5 · no alcanza» (§Z). El
+problema es **cuándo**: ahí ya está comprada, y lo único que queda es hacer
+otra compra — otro pedido, otro flete, otra factura del proveedor.
+
+La cantidad se decide **mientras se teclea**. Ahí tenía que estar:
+
+    Te va a faltar para los pedidos que ya tienes
+    50X68X8TC   llevas 1 y un cliente espera 10          faltan 9
+    Ya descontado lo que hay en almacén. Puedes comprar de más para
+    stock; esto solo avisa de lo que falta.
+
+Cuenta **clientes distintos, no pedidos**: el mismo cliente con dos
+cotizaciones es una sola llamada.
+
+#### Solo se avisa de lo que falta, nunca de lo que sobra
+
+Es la mitad de la regla, y la puso Luis: *«a veces compra de más para tener
+guardado en su almacén»*. Reponer es deliberado y decirle «llevas 50 y solo
+esperan 12» sería regañarle por hacer su trabajo — **a la tercera vez deja de
+leer los avisos, incluidos los que sí importan**.
+
+Probado en vivo: con 1 unidad avisa, con 25 se calla.
+
+#### Y ahora también para el que compra a ojo
+
+Esto antes solo llegaba precargado desde la bandeja «Por comprar», o sea que
+quien añadía un producto a mano —el caso en el que más falta hace— no veía
+nada. Ahora se pregunta al servidor cada vez que cambia la **lista** de
+productos; las cantidades se comparan en el navegador sin viajar.
+
+#### Lo que sigue esperando a Willy, ya más pequeño
+
+Luis contestó por el flujo, pero la decisión de la **reserva** sigue siendo de
+Willy: lo que describe es *avisar*, no *apartar*. Las dos se pueden querer a la
+vez. Mientras tanto todas las pantallas siguen diciendo «lo esperan» y nunca
+«es suyo».
 
 ---
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { sumarDias } from "@/modules/cotizaciones";
 
-import { alcanzaPara, pedidosListos, quienEspera } from "./listos";
+import { alcanzaPara, avisosDeCantidad, pedidosListos, quienEspera } from "./listos";
 import type { LineaComprometida } from "./por-comprar";
 
 /**
@@ -199,5 +199,62 @@ describe("alcanzaPara", () => {
 
   it("justo lo que hace falta sí alcanza", () => {
     expect(alcanzaPara(35, espera(35))).toBe("alcanza");
+  });
+});
+
+describe("avisosDeCantidad", () => {
+  const espera = (total: number, clientes: string[] = ["c1"]) => ({
+    producto_id: "p1",
+    total,
+    pedidos: clientes.map((cliente_id) => ({
+      cotizacion_id: `cot-${cliente_id}`,
+      cotizacion: `COT-${cliente_id}`,
+      cliente_id,
+      cliente: cliente_id,
+      fecha: "2026-08-20",
+      esperando: total / clientes.length,
+      prometida: "2026-09-04",
+      dias: 0,
+      urgencia: "hoy" as const,
+    })),
+  });
+
+  it("avisa de lo que falta, con cuántos clientes lo esperan", () => {
+    // El caso de Luis: tres clientes con el mismo producto y una compra
+    // hecha pensando solo en uno.
+    const r = avisosDeCantidad(
+      [{ producto_id: "p1", cantidad: 5 }],
+      { p1: espera(15, ["c1", "c2", "c3"]) },
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0]!.faltan).toBe(10);
+    expect(r[0]!.esperan).toBe(15);
+    expect(r[0]!.clientes).toBe(3);
+  });
+
+  it("NO dice nada cuando se compra de más", () => {
+    // Reponer almacén es deliberado. Regañar por eso hace que se dejen de
+    // leer los avisos, incluidos los que sí importan.
+    expect(avisosDeCantidad([{ producto_id: "p1", cantidad: 50 }], { p1: espera(12) }))
+      .toEqual([]);
+  });
+
+  it("justo lo que hace falta no es un aviso", () => {
+    expect(avisosDeCantidad([{ producto_id: "p1", cantidad: 12 }], { p1: espera(12) }))
+      .toEqual([]);
+  });
+
+  it("un producto que no espera nadie no genera aviso", () => {
+    expect(avisosDeCantidad([{ producto_id: "otro", cantidad: 1 }], { p1: espera(12) }))
+      .toEqual([]);
+  });
+
+  it("cuenta clientes distintos, no pedidos", () => {
+    // El mismo cliente con dos pedidos es UN cliente al que llamar.
+    const r = avisosDeCantidad(
+      [{ producto_id: "p1", cantidad: 0 }],
+      { p1: espera(10, ["c1", "c1"]) },
+    );
+    expect(r[0]!.clientes).toBe(1);
   });
 });

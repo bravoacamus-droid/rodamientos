@@ -245,3 +245,63 @@ export function alcanzaPara(traes: number, espera: QuienEsperaProducto | undefin
 
 /** Dos decimales, los mismos que guardan las columnas `numeric(14,2)`. */
 const dos = (n: number): number => Math.round(n * 100) / 100;
+
+/** Lo que hay que decirle a quien está decidiendo CUÁNTO comprar. */
+export interface AvisoDeCantidad {
+  producto_id: string;
+  /** Lo que se está poniendo en la compra. */
+  llevas: number;
+  /** Lo que esperan los pedidos confirmados, ya descontado el almacén. */
+  esperan: number;
+  /** Cuántos clientes distintos. Tres pidiendo lo mismo no es lo mismo que uno. */
+  clientes: number;
+  /** Lo que falta para cubrirlos a todos. Cero o menos = alcanza. */
+  faltan: number;
+}
+
+/**
+ * «Necesitas comprar más: otros dos clientes esperan esto.»
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué al COMPRAR y no al mirar la compra hecha
+ * ---------------------------------------------------------------------------
+ * La ficha de la compra ya avisa de que no alcanza, pero ahí ya está comprada:
+ * el aviso llega tarde y lo único que queda es hacer otra compra —otro pedido,
+ * otro flete, otra factura del proveedor—. La cantidad se decide **mientras se
+ * teclea**, y es ahí donde tiene que aparecer.
+ *
+ * Es literalmente el caso que describió Luis: tres clientes distintos llevando
+ * el mismo producto, y Willy comprando para uno sin acordarse de los otros dos.
+ *
+ * ---------------------------------------------------------------------------
+ * Solo se avisa de lo que FALTA, nunca de lo que sobra
+ * ---------------------------------------------------------------------------
+ * Comprar de más es normal y deliberado: se repone almacén para los clientes
+ * que vendrán. Decirle «llevas 50 y solo esperan 12» sería regañarle por
+ * hacer su trabajo, y a la tercera vez deja de leer los avisos —incluidos los
+ * que sí importan.
+ */
+export function avisosDeCantidad(
+  lineas: readonly { producto_id: string; cantidad: number }[],
+  espera: Readonly<Record<string, QuienEsperaProducto>>,
+): AvisoDeCantidad[] {
+  const salida: AvisoDeCantidad[] = [];
+
+  for (const l of lineas) {
+    const e = espera[l.producto_id];
+    if (e === undefined || e.total <= 0) continue;
+
+    const faltan = dos(e.total - l.cantidad);
+    if (faltan <= 0) continue;
+
+    salida.push({
+      producto_id: l.producto_id,
+      llevas: l.cantidad,
+      esperan: e.total,
+      clientes: new Set(e.pedidos.map((p) => p.cliente_id)).size,
+      faltan,
+    });
+  }
+
+  return salida;
+}

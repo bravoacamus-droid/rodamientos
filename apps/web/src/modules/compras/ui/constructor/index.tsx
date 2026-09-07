@@ -16,6 +16,8 @@ import {
 } from "@rodatech/ui";
 
 import { costosDelProveedor } from "../../acciones/costos";
+import { quienEsperaAhora } from "../../acciones/esperando";
+import { avisosDeCantidad, type QuienEsperaProducto } from "../../dominio/listos";
 import { registrarCompra, type ResultadoCompra } from "../../acciones/registrar";
 import {
   aPayload,
@@ -163,6 +165,57 @@ export function ConstructorCompra({
       }
     });
   }, [estado.proveedorId]);
+
+  /*
+    «Necesitas comprar más: otros dos clientes esperan esto.»
+
+    Se pregunta al servidor cada vez que cambia la LISTA de productos —no las
+    cantidades, que se comparan aquí sin viajar—. Antes esto solo llegaba
+    precargado desde la bandeja, así que el que compraba a ojo, que es el que
+    más lo necesita, no veía ningún aviso.
+
+    Si la consulta falla no pasa nada: es un aviso sobre una pantalla que tiene
+    que dejar comprar igual.
+  */
+  const productosEnLaCompra = useMemo(
+    () =>
+      estado.lineas
+        .map((l) => l.productoId)
+        .filter((id): id is string => Boolean(id))
+        .sort()
+        .join(","),
+    [estado.lineas],
+  );
+
+  const [esperandoPorProducto, setEsperandoPorProducto] = useState<
+    Record<string, QuienEsperaProducto>
+  >({});
+
+  useEffect(() => {
+    const ids = productosEnLaCompra ? productosEnLaCompra.split(",") : [];
+    if (ids.length === 0) {
+      setEsperandoPorProducto({});
+      return;
+    }
+    let vigente = true;
+    void quienEsperaAhora(ids).then((r) => {
+      if (vigente) setEsperandoPorProducto(r.ok ? r.datos : {});
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [productosEnLaCompra]);
+
+  const faltantes = useMemo(
+    () =>
+      avisosDeCantidad(
+        estado.lineas
+          .filter((l) => l.productoId)
+          .map((l) => ({ producto_id: l.productoId, cantidad: l.cantidad })),
+        esperandoPorProducto,
+      ),
+    [estado.lineas, esperandoPorProducto],
+  );
 
   const esImportacion = estado.tipo === "importacion";
 
@@ -459,6 +512,47 @@ export function ConstructorCompra({
               </TableContenedor>
             )}
           </section>
+
+          {/* «Te falta comprar.»
+
+              Pegado a la tabla de líneas y no abajo del todo: es lo único de
+              esta pantalla que pide CAMBIAR un número que ya está escrito, y
+              un aviso que hay que ir a buscar no se lee.
+
+              Aparece cuando tres clientes distintos llevan el mismo producto y
+              la compra se hizo pensando en uno. Nunca cuando sobra: reponer
+              almacén es deliberado, y regañar por eso hace que se dejen de
+              leer los avisos —incluidos los que sí importan. */}
+          {faltantes.length > 0 ? (
+            <section className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4">
+              <h2 className="text-sm font-semibold">
+                Te va a faltar para los pedidos que ya tienes
+              </h2>
+              <ul className="mt-2 flex flex-col gap-1.5 text-sm">
+                {faltantes.map((f) => {
+                  const linea = estado.lineas.find((l) => l.productoId === f.producto_id);
+                  return (
+                    <li key={f.producto_id} className="flex flex-wrap items-baseline gap-x-2">
+                      <strong className="font-mono text-[0.8rem]">
+                        {linea?.codigo ?? "—"}
+                      </strong>
+                      <span>
+                        llevas {f.llevas} y {f.clientes === 1 ? "un cliente espera" : `${f.clientes} clientes esperan`}{" "}
+                        {f.esperan}
+                      </span>
+                      <span className="ml-auto font-medium">
+                        faltan {f.faltan}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-2 text-xs text-[var(--fg-muted)]">
+                Ya descontado lo que hay en almacén. Puedes comprar de más para
+                stock; esto solo avisa de lo que falta.
+              </p>
+            </section>
+          ) : null}
 
           {/* Para quién es. Cuando la compra nace de la bandeja tiene un
               motivo —alguien confirmó y espera— y ese motivo se perdía: la

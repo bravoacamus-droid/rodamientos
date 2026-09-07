@@ -13,7 +13,17 @@ el tiempo.
 
 ---
 
-## 04/09 · las cinco del plan de compras · SIN RESPUESTA
+## 04/09 · las cinco del plan de compras · DOS CONTESTADAS (por Luis, 07/09)
+
+> **2 · Plazo de crédito** — el campo ya ofrece 15 / 30 / 45 / 60 y «a mano»,
+> así que a Willy solo hay que pedirle que ELIJA, no que invente un número.
+>
+> **3 · Compra local** — es **en dólares**. Sigue faltando el PLAZO. El botón
+> de soles con el tipo de cambio de SUNAT ya existe desde la 042, por si un
+> proveedor factura en moneda nacional.
+>
+> **4 · Reserva** — Luis describe *avisar*, no *apartar*, y eso ya está hecho
+> (§AB). La decisión de si además se aparta sigue siendo de Willy.
 
 ```
 Buenos días Willy, le paso 5 cositas para avanzar esta semana.
