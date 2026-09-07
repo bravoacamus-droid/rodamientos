@@ -361,3 +361,54 @@ describe("aPayload", () => {
     );
   });
 });
+
+describe("va a pie", () => {
+  /*
+    Willy, 38:16: *«no, nosotros por lo general voy en mi carro nomás… ¿y no
+    hay la opción peatonal?»* — *«la que vaya a pie, pues»*. Y qué apuntar
+    (38:41): *«nombre, celular y DNI»*.
+
+    No es una tercera modalidad: el catálogo 18 de SUNAT tiene dos, `01`
+    público y `02` privado. Inventarse un `03` haría que rechazaran la guía.
+  */
+  it("sigue siendo transporte privado de cara a SUNAT", () => {
+    const estado = conCotizacion({ tipo: "peso", valor: 2 }, { tipo: "aPie", valor: true });
+    expect(aPayload(estado).modalidad_traslado).toBe("02");
+    expect(aPayload(estado).a_pie).toBe(true);
+  });
+
+  it("suelta la placa y la licencia: quien va andando no conduce", () => {
+    const estado = conCotizacion(
+      { tipo: "campo", campo: "transportistaPlaca", valor: "ABC123" },
+      { tipo: "campo", campo: "conductorLicencia", valor: "Q45678912" },
+      { tipo: "aPie", valor: true },
+    );
+    expect(estado.transportistaPlaca).toBe("");
+    expect(estado.conductorLicencia).toBe("");
+  });
+
+  it("para emitir pide el DNI de quien la lleva, no una placa", () => {
+    const estado = conCotizacion({ tipo: "peso", valor: 2 }, { tipo: "aPie", valor: true });
+    const faltan = bloqueosEmision(estado);
+    expect(faltan.some((b) => /DNI de quien la lleva/.test(b.mensaje))).toBe(true);
+    expect(faltan.some((b) => /placa/.test(b.mensaje))).toBe(false);
+  });
+
+  it("con el DNI puesto ya se puede emitir sin vehículo", () => {
+    const estado = conCotizacion(
+      { tipo: "peso", valor: 2 },
+      { tipo: "aPie", valor: true },
+      { tipo: "campo", campo: "conductorNombre", valor: "JUAN PEREZ" },
+      { tipo: "campo", campo: "conductorDocumento", valor: "45678912" },
+    );
+    expect(bloqueosEmision(estado).some((b) => b.campo === "transporte")).toBe(false);
+  });
+
+  it("pasar a público lo desmarca: no lo lleva una agencia y alguien andando a la vez", () => {
+    const estado = conCotizacion(
+      { tipo: "aPie", valor: true },
+      { tipo: "modalidad", valor: "01" },
+    );
+    expect(estado.aPie).toBe(false);
+  });
+});

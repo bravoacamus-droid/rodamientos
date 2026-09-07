@@ -39,7 +39,12 @@ export function DocumentoGuia({
         { etiqueta: "Destinatario", valor: g.cliente ?? "—" },
         { etiqueta: "Fecha de emisión", valor: fecha(g.fecha_emision) },
         { etiqueta: "RUC / DNI", valor: g.cliente_documento ?? "—" },
-        { etiqueta: "Fecha de traslado", valor: fecha(g.fecha_traslado) },
+        // «Inicio de traslado» y no «fecha de traslado». Willy, 40:34:
+        // *«inicio de traslado, porque puede que lo prepare ahora, pero lo
+        // llegue mañana»*. Es el día que sale la mercadería, no el día que se
+        // escribió el papel — y son dos fechas distintas que estaban con el
+        // mismo nombre.
+        { etiqueta: "Inicio de traslado", valor: fecha(g.fecha_traslado) },
         {
           etiqueta: "Motivo",
           valor: g.motivo_descripcion ?? `Código ${g.motivo_codigo}`,
@@ -68,13 +73,24 @@ export function DocumentoGuia({
           ? { etiqueta: "O/C del cliente", valor: g.orden_compra_cliente }
           : null,
       ]}
+      /*
+        Sin columna de peso por línea. Willy, 41:44, repasando el impreso:
+        *«los pesos parciales, ahí sí está un problema: debería ser el peso
+        total nomás. La columna peso en kilogramos que sale, no, eso está de
+        más»*.
+
+        Y tiene razón por dos motivos. El peso que importa en un control de
+        carretera es el bruto, que ya va arriba; y el parcial casi nunca se
+        sabe —de 790 productos, la mayoría no tiene peso en el catálogo—, así
+        que la columna salía llena de rayas. Una columna que casi siempre dice
+        «—» no informa, ocupa.
+      */
       columnas={[
         { clave: "n", titulo: "#", alinear: "centro" },
         { clave: "codigo", titulo: "Código" },
         { clave: "descripcion", titulo: "Descripción" },
         { clave: "cantidad", titulo: "Cant.", alinear: "derecha" },
         { clave: "unidad", titulo: "U.M.", alinear: "centro" },
-        { clave: "peso", titulo: "Peso (kg)", alinear: "derecha" },
       ]}
       filas={g.lineas.map((l, i) => ({
         n: i + 1,
@@ -82,7 +98,6 @@ export function DocumentoGuia({
         descripcion: l.descripcion,
         cantidad: <span className="tabular">{l.cantidad}</span>,
         unidad: l.unidad,
-        peso: <span className="tabular">{l.peso_kg > 0 ? l.peso_kg : "—"}</span>,
       }))}
       pie={
         <>
@@ -101,32 +116,62 @@ export function DocumentoGuia({
                 </p>
               </>
             ) : null}
+            {/*
+              A pie no se imprime placa ni licencia (062). Poner «Placa: —» en
+              un traslado peatonal no informa de nada y deja al que lee el
+              papel buscando un vehículo que no existe; decir que va a pie sí
+              explica por qué no lo hay.
+            */}
+            {g.a_pie ? (
+              <p>
+                <strong>Traslado:</strong> a pie, sin vehículo
+              </p>
+            ) : (
+              <p>
+                <strong>Placa:</strong> {g.transportista_placa ?? "—"}
+              </p>
+            )}
             <p>
-              <strong>Placa:</strong> {g.transportista_placa ?? "—"}
-            </p>
-            <p>
-              <strong>Conductor:</strong> {g.conductor_nombre ?? "—"}
+              <strong>{g.a_pie ? "Lo lleva" : "Conductor"}:</strong>{" "}
+              {g.conductor_nombre ?? "—"}
             </p>
             <p>
               <strong>DNI:</strong> {g.conductor_documento ?? "—"}
             </p>
-            <p>
-              <strong>Licencia:</strong> {g.conductor_licencia ?? "—"}
-            </p>
+            {g.a_pie ? (
+              g.conductor_telefono ? (
+                <p>
+                  <strong>Celular:</strong> {g.conductor_telefono}
+                </p>
+              ) : null
+            ) : (
+              <p>
+                <strong>Licencia:</strong> {g.conductor_licencia ?? "—"}
+              </p>
+            )}
           </div>
 
           {g.observaciones ? (
             <p className="mb-1 whitespace-pre-line">{g.observaciones}</p>
           ) : null}
 
-          {/* Las dos firmas. Van impresas con su línea porque se firman a
-              mano, en el momento de la entrega, sobre este papel. */}
-          <div className="mt-8 grid grid-cols-2 gap-8 break-inside-avoid">
-            <div className="border-t border-[#666] pt-1 text-center">
-              Entregado por{g.entregado_por ? `: ${g.entregado_por}` : ""}
-            </div>
-            <div className="border-t border-[#666] pt-1 text-center">
-              Recibido por{g.recibido_por ? `: ${g.recibido_por}` : ""}
+          {/*
+            Un solo espacio para el sello, sin «entregado por» ni «recibido
+            por».
+
+            Willy, 42:50: *«esto aquí, entregado y recibido… mi formato no
+            tiene eso; ellos le ponen una firma y un sello donde quieran»*.
+
+            Y encaja con por qué la guía va ANTES que la factura (33:00):
+            *«los productos están sujetos a revisión. Yo lo llevo con guía, y
+            si todo está conforme me ponen un sello y firma de almacén, y con
+            la guía sellada recién puedo facturar»*. Lo que hace falta es sitio
+            en blanco para ese sello, no dos rótulos diciéndole al almacén del
+            cliente dónde firmar.
+          */}
+          <div className="mt-10 break-inside-avoid">
+            <div className="ml-auto w-1/2 border-t border-[#666] pt-1 text-center">
+              Sello y firma de recepción
             </div>
           </div>
         </>

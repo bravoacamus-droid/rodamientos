@@ -52,6 +52,16 @@ export interface EstadoGuiaEnCurso {
   conductorDocumento: string;
   conductorNombre: string;
   conductorLicencia: string;
+  /** El celular de quien lleva la caja. Willy 38:41: «nombre, celular y DNI». */
+  conductorTelefono: string;
+  /**
+   * Va a pie: privado SIN vehículo (062).
+   *
+   * Willy: *«¿no hay la opción peatonal? la que vaya a pie, pues»*. No es una
+   * modalidad nueva —el catálogo 18 de SUNAT solo tiene pública y privada—:
+   * es que no hay placa que declarar, y quien responde es una persona.
+   */
+  aPie: boolean;
   numeroBultos: number;
   /**
    * Peso bruto declarado a mano, en kilos. `null` significa «calcúlalo del
@@ -81,12 +91,14 @@ export type CampoTexto =
   | "conductorDocumento"
   | "conductorNombre"
   | "conductorLicencia"
+  | "conductorTelefono"
   | "entregadoPor"
   | "observaciones";
 
 export type Accion =
   | { tipo: "campo"; campo: CampoTexto; valor: string }
   | { tipo: "modalidad"; valor: ModalidadTraslado }
+  | { tipo: "aPie"; valor: boolean }
   | { tipo: "bultos"; valor: number }
   | { tipo: "peso"; valor: number | null }
   | { tipo: "cantidad"; key: string; valor: number }
@@ -112,6 +124,8 @@ export function estadoInicial(hoy: string): EstadoGuiaEnCurso {
     conductorDocumento: "",
     conductorNombre: "",
     conductorLicencia: "",
+    conductorTelefono: "",
+    aPie: false,
     numeroBultos: 1,
     pesoDeclarado: null,
     entregadoPor: "",
@@ -158,6 +172,11 @@ export function reducir(
           conductorDocumento: "",
           conductorNombre: "",
           conductorLicencia: "",
+          conductorTelefono: "",
+          // Ir a pie es privado (062). Una guía pública marcada «a pie» diría
+          // dos cosas a la vez: que la lleva una agencia y que la lleva
+          // alguien andando.
+          aPie: false,
         };
       }
       return {
@@ -167,6 +186,14 @@ export function reducir(
         transportistaRazonSocial: "",
       };
     }
+
+    case "aPie":
+      // Al pasar a pie se suelta la placa, y la licencia con ella: quien cruza
+      // la calle con una caja no conduce nada. Dejarlas puestas imprimiría en
+      // la guía un vehículo que no salió.
+      return accion.valor
+        ? { ...estado, aPie: true, transportistaPlaca: "", conductorLicencia: "" }
+        : { ...estado, aPie: false };
 
     case "bultos":
       return {
@@ -338,6 +365,15 @@ export function bloqueosEmision(estado: EstadoGuiaEnCurso): Bloqueo[] {
         mensaje: "En transporte público hace falta el RUC del transportista.",
       });
     }
+  } else if (estado.aPie) {
+    // A pie no hay placa que pedir; lo que identifica a quien responde de la
+    // mercadería es su DNI. Es el mismo cambio que hizo la 062 en la base.
+    if (!estado.conductorDocumento.trim()) {
+      lista.push({
+        campo: "transporte",
+        mensaje: "Si va a pie, hace falta el DNI de quien la lleva.",
+      });
+    }
   } else if (!estado.transportistaPlaca.trim()) {
     lista.push({
       campo: "transporte",
@@ -408,13 +444,20 @@ export function aPayload(estado: EstadoGuiaEnCurso) {
     transportista_razon_social: esPublico
       ? estado.transportistaRazonSocial.trim() || null
       : null,
-    transportista_placa: esPublico ? null : estado.transportistaPlaca.trim() || null,
+    // A pie no hay placa: mandar una vacía es lo mismo que no mandarla, pero
+    // mandar la de ayer imprimiría un vehículo que no salió.
+    transportista_placa:
+      esPublico || estado.aPie ? null : estado.transportistaPlaca.trim() || null,
+    a_pie: !esPublico && estado.aPie,
     // El conductor es cosa del transporte privado. En público lo declara la
     // agencia en su guía de transportista, y el remitente no lo sabe: mandarlo
     // aquí sería poner en un documento fiscal un dato que nadie ha comprobado.
     conductor_documento: esPublico ? null : estado.conductorDocumento.trim() || null,
     conductor_nombre: esPublico ? null : estado.conductorNombre.trim() || null,
-    conductor_licencia: esPublico ? null : estado.conductorLicencia.trim() || null,
+    // Sin licencia si va a pie: no conduce nada.
+    conductor_licencia:
+      esPublico || estado.aPie ? null : estado.conductorLicencia.trim() || null,
+    conductor_telefono: esPublico ? null : estado.conductorTelefono.trim() || null,
     entregado_por: estado.entregadoPor.trim() || null,
     observaciones: estado.observaciones.trim() || null,
     // Nace en borrador SIEMPRE. Emitir es un segundo paso, y es el que mueve

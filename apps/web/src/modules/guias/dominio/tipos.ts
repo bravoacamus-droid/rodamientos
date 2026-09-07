@@ -106,6 +106,9 @@ export interface GuiaDetalle {
   conductor_documento: string | null;
   conductor_nombre: string | null;
   conductor_licencia: string | null;
+  conductor_telefono: string | null;
+  /** Privado SIN vehículo: alguien lo lleva a pie (062). */
+  a_pie: boolean;
   entregado_por: string | null;
   recibido_por: string | null;
   estado: EstadoGuia;

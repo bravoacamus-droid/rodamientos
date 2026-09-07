@@ -2161,6 +2161,7 @@ export type Database = {
       }
       guias_remision: {
         Row: {
+          a_pie: boolean
           actualizado_en: string
           agencia_id: string | null
           anulada_en: string | null
@@ -2170,6 +2171,7 @@ export type Database = {
           conductor_id: string | null
           conductor_licencia: string | null
           conductor_nombre: string | null
+          conductor_telefono: string | null
           correlativo: number
           cotizacion_id: string | null
           creado_en: string
@@ -2209,6 +2211,7 @@ export type Database = {
           vehiculo_id: string | null
         }
         Insert: {
+          a_pie?: boolean
           actualizado_en?: string
           agencia_id?: string | null
           anulada_en?: string | null
@@ -2218,6 +2221,7 @@ export type Database = {
           conductor_id?: string | null
           conductor_licencia?: string | null
           conductor_nombre?: string | null
+          conductor_telefono?: string | null
           correlativo: number
           cotizacion_id?: string | null
           creado_en?: string
@@ -2257,6 +2261,7 @@ export type Database = {
           vehiculo_id?: string | null
         }
         Update: {
+          a_pie?: boolean
           actualizado_en?: string
           agencia_id?: string | null
           anulada_en?: string | null
@@ -2266,6 +2271,7 @@ export type Database = {
           conductor_id?: string | null
           conductor_licencia?: string | null
           conductor_nombre?: string | null
+          conductor_telefono?: string | null
           correlativo?: number
           cotizacion_id?: string | null
           creado_en?: string
@@ -4688,11 +4694,7 @@ export type Database = {
         Returns: string
       }
       sustitutos_de: {
-        Args: {
-          p_limit?: number
-          p_producto: string
-          p_tolerancia_pct?: number
-        }
+        Args: { p_limit?: number; p_producto: string }
         Returns: {
           codigo: string
           descripcion: string
@@ -4701,6 +4703,7 @@ export type Database = {
           marca: string
           mejor_oferta: boolean
           origen: string
+          precio_minimo: number
           precio_venta: number
           prioridad: number
           stock: number

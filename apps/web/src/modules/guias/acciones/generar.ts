@@ -45,6 +45,9 @@ const esquema = z.object({
   conductor_documento: z.string().max(15).nullable(),
   conductor_nombre: z.string().max(200).nullable(),
   conductor_licencia: z.string().max(20).nullable(),
+  conductor_telefono: z.string().max(40).nullable(),
+  /** Privado sin vehículo: alguien lo lleva a pie (062). */
+  a_pie: z.boolean().default(false),
   entregado_por: z.string().max(200).nullable(),
   observaciones: z.string().max(2000).nullable(),
   estado: z.literal("borrador"),

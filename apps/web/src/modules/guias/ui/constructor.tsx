@@ -525,10 +525,37 @@ export function ConstructorGuia({
                   </>
                 ) : (
                   <>
+                    {/*
+                      ¿Va a pie? (062)
+
+                      Willy: *«no, nosotros por lo general voy en mi carro
+                      nomás… ¿y no hay la opción peatonal?»* — *«la que vaya a
+                      pie, pues»*.
+
+                      Va aquí, dentro de privado, y no como una tercera opción
+                      del desplegable de modalidad: el catálogo 18 de SUNAT
+                      tiene dos y solo dos, y un `03` inventado haría que
+                      rechazaran la guía. A pie ES privado; lo que cambia es
+                      que no hay vehículo.
+                    */}
+                    <label className="flex items-center gap-2 self-end pb-2">
+                      <input
+                        type="checkbox"
+                        checked={estado.aPie}
+                        onChange={(e) =>
+                          despachar({ tipo: "aPie", valor: e.target.checked })
+                        }
+                        className="size-4"
+                      />
+                      <span className="text-sm font-medium">
+                        Va a pie, sin vehículo
+                      </span>
+                    </label>
+
                     {/* El maestro de vehículos propios (060). Rellena la placa,
                         que sigue siendo editable: la guía guarda lo que diga
                         ella el día que se emite, no una referencia. */}
-                    {vehiculos.length > 0 ? (
+                    {!estado.aPie && vehiculos.length > 0 ? (
                       <label className="flex flex-col gap-1">
                         <span className="text-sm font-medium">Vehículo</span>
                         <SelectNativo
@@ -556,21 +583,23 @@ export function ConstructorGuia({
                       </label>
                     ) : null}
 
-                    <label className="flex flex-col gap-1">
-                      <span className="text-sm font-medium">Placa del vehículo</span>
-                      <Input
-                        value={estado.transportistaPlaca}
-                        onChange={(e) =>
-                          despachar({
-                            tipo: "campo",
-                            campo: "transportistaPlaca",
-                            valor: e.target.value.toUpperCase(),
-                          })
-                        }
-                        placeholder="ABC-123"
-                        className="font-mono"
-                      />
-                    </label>
+                    {estado.aPie ? null : (
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">Placa del vehículo</span>
+                        <Input
+                          value={estado.transportistaPlaca}
+                          onChange={(e) =>
+                            despachar({
+                              tipo: "campo",
+                              campo: "transportistaPlaca",
+                              valor: e.target.value.toUpperCase(),
+                            })
+                          }
+                          placeholder="ABC-123"
+                          className="font-mono"
+                        />
+                      </label>
+                    )}
                   </>
                 )}
               </div>
@@ -626,7 +655,9 @@ export function ConstructorGuia({
                 ) : null}
 
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Conductor</span>
+                  <span className="text-sm font-medium">
+                    {estado.aPie ? "Quién la lleva" : "Conductor"}
+                  </span>
                   <Input
                     value={estado.conductorNombre}
                     onChange={(e) =>
@@ -639,7 +670,9 @@ export function ConstructorGuia({
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">DNI del conductor</span>
+                  <span className="text-sm font-medium">
+                    {estado.aPie ? "Su DNI" : "DNI del conductor"}
+                  </span>
                   <Input
                     value={estado.conductorDocumento}
                     onChange={(e) =>
@@ -653,20 +686,41 @@ export function ConstructorGuia({
                     inputMode="numeric"
                   />
                 </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Licencia</span>
-                  <Input
-                    value={estado.conductorLicencia}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "campo",
-                        campo: "conductorLicencia",
-                        valor: e.target.value.toUpperCase(),
-                      })
-                    }
-                    className="font-mono"
-                  />
-                </label>
+                {estado.aPie ? (
+                  /* A pie no hay licencia que pedir: no conduce nada. En su
+                     sitio va el celular, que es lo que Willy pidió apuntar
+                     (38:41): «nombre, celular y DNI». */
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Su celular</span>
+                    <Input
+                      value={estado.conductorTelefono}
+                      onChange={(e) =>
+                        despachar({
+                          tipo: "campo",
+                          campo: "conductorTelefono",
+                          valor: e.target.value,
+                        })
+                      }
+                      inputMode="tel"
+                      placeholder="9XX XXX XXX"
+                    />
+                  </label>
+                ) : (
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Licencia</span>
+                    <Input
+                      value={estado.conductorLicencia}
+                      onChange={(e) =>
+                        despachar({
+                          tipo: "campo",
+                          campo: "conductorLicencia",
+                          valor: e.target.value.toUpperCase(),
+                        })
+                      }
+                      className="font-mono"
+                    />
+                  </label>
+                )}
               </div>
               )}
 
