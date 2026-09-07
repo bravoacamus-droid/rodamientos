@@ -68,6 +68,8 @@ export interface DatosImpresion {
   };
   vendedor: string | null;
   tiempoEntrega: string | null;
+  /** Ya compuesta: «Crédito a 30 días». La arma `formaDePago`. */
+  formaPago?: string | null;
   condiciones: string | null;
   observaciones: string | null;
   ordenCompraCliente: string | null;
@@ -100,6 +102,8 @@ export interface CotizacionImpresa {
   cliente: DatosImpresion["cliente"];
   vendedor: string | null;
   tiempoEntrega: string | null;
+  /** Ya compuesta: «Crédito a 30 días». La arma `formaDePago`. */
+  formaPago: string | null;
   condiciones: string | null;
   observaciones: string | null;
   ordenCompraCliente: string | null;
@@ -231,6 +235,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     cliente: d.cliente,
     vendedor: d.vendedor,
     tiempoEntrega: d.tiempoEntrega,
+    formaPago: d.formaPago ?? null,
     condiciones: d.condiciones,
     observaciones: d.observaciones,
     ordenCompraCliente: d.ordenCompraCliente,
@@ -263,4 +268,30 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     // peruano la leyenda va con el nombre de la moneda.
     enLetras: montoEnLetras(total, "DÓLARES AMERICANOS"),
   };
+}
+
+/**
+ * La forma de pago, dicha como la diría Willy.
+ *
+ * Su formato lo imprime en dos sitios —«Forma de pago: CREDITO» en las notas y
+ * «FACTURA 30 DIAS» en las condiciones—, y el nuestro no lo imprimía en
+ * ninguno. El dato estaba: `clientes.condicion_pago` y `dias_credito` viajan
+ * en la cabecera de la cotización desde siempre, y se quedaban ahí.
+ *
+ * Importa porque es la mitad de lo que el cliente compara. Una cotización a 30
+ * días y la misma al contado no son la misma oferta, y si el papel no lo dice
+ * la discusión llega al cobrar.
+ *
+ * Cero días de crédito es CONTADO, no «crédito a cero días»: los 97 clientes
+ * que entraron del Excel están todos en cero, y llamarlo crédito prometería un
+ * plazo que nadie ha acordado.
+ */
+export function formaDePago(
+  condicion: string | null | undefined,
+  dias: number | null | undefined,
+): string {
+  const d = typeof dias === "number" && Number.isFinite(dias) ? Math.trunc(dias) : 0;
+  if ((condicion ?? "").toLowerCase() !== "credito") return "Contado";
+  if (d <= 0) return "Crédito";
+  return `Crédito a ${d} ${d === 1 ? "día" : "días"}`;
 }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
 import { comprobantesDelPedido, cotizacionPorId } from "../api/consultas";
-import { armarCotizacionImpresa } from "../dominio/impresion";
+import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { enlaceWhatsapp } from "../dominio/whatsapp";
 import { AccionesCotizacion } from "./detalle/acciones";
@@ -73,6 +73,8 @@ export default async function PaginaDetalleCotizacion({
     },
     vendedor: cabecera.vendedor,
     tiempoEntrega: cabecera.tiempo_entrega,
+    // El dato viajaba en la cabecera desde siempre y no llegaba al papel.
+    formaPago: formaDePago(cabecera.cliente.condicion_pago, cabecera.cliente.dias_credito),
     condiciones: cabecera.condiciones,
     observaciones: cabecera.observaciones,
     ordenCompraCliente: cabecera.orden_compra_cliente,

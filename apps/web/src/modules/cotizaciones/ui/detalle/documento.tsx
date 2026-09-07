@@ -79,6 +79,16 @@ export function Documento({
           ? { etiqueta: "Dirección", valor: c.cliente.direccion }
           : null,
         { etiqueta: "Entrega", valor: c.tiempoEntrega ?? "Por confirmar" },
+        /*
+          Junto a la entrega, que es su pareja: las dos son la condición
+          comercial, y el cliente las compara juntas.
+
+          El formato de Willy lo imprime en dos sitios —«Forma de pago:
+          CREDITO» y «FACTURA 30 DIAS»— y el nuestro no lo imprimía en
+          ninguno, teniendo el dato en la cabecera desde siempre. Una
+          cotización a 30 días y la misma al contado no son la misma oferta.
+        */
+        c.formaPago ? { etiqueta: "Forma de pago", valor: c.formaPago } : null,
         { etiqueta: "Atención", valor: c.cliente.contacto ?? "—" },
         c.ordenCompraCliente
           ? { etiqueta: "O/C del cliente", valor: c.ordenCompraCliente }

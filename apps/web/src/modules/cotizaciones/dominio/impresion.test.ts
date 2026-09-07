@@ -5,6 +5,7 @@ import {
   limpiarDescripcion,
   sumarDias,
   type DatosImpresion,
+  formaDePago,
 } from "./impresion";
 
 const EMISOR = {
@@ -260,5 +261,35 @@ describe("unidades", () => {
       base({ lineas: [{ ...base().lineas[0]!, unidad: "KGM" }] }),
     );
     expect(c.lineas[0]?.unidad).toBe("KGM");
+  });
+});
+
+describe("formaDePago", () => {
+  /*
+    Su formato lo imprime y el nuestro no lo hacía, teniendo el dato. Es la
+    mitad de lo que el cliente compara: a 30 días y al contado no son la misma
+    oferta, y si el papel no lo dice, la discusión llega al cobrar.
+  */
+  it("dice los días cuando los hay", () => {
+    expect(formaDePago("credito", 30)).toBe("Crédito a 30 días");
+  });
+
+  it("un solo día no se dice en plural", () => {
+    expect(formaDePago("credito", 1)).toBe("Crédito a 1 día");
+  });
+
+  it("crédito a cero días es CONTADO, no crédito", () => {
+    // Los 97 clientes del Excel entraron todos en cero. Llamarlo crédito
+    // prometería un plazo que nadie ha acordado.
+    expect(formaDePago("contado", 0)).toBe("Contado");
+  });
+
+  it("sin condición cargada no inventa un plazo", () => {
+    expect(formaDePago(null, null)).toBe("Contado");
+    expect(formaDePago(undefined, 30)).toBe("Contado");
+  });
+
+  it("crédito sin días dice crédito, a secas", () => {
+    expect(formaDePago("credito", 0)).toBe("Crédito");
   });
 });
