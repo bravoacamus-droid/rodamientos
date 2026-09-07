@@ -40,17 +40,22 @@ export function mismoPar(
   return a1 === b1 && a2 === b2;
 }
 
-/** Tono de la insignia según cuánto se está suponiendo. */
+/**
+ * Tono de la insignia según cuánto se está suponiendo.
+ *
+ * Ya no hay tonos de aviso: desde la 061 los dos orígenes afirman que la pieza
+ * entra, uno porque lo dijo una persona y otro porque lo dice la medida. Los
+ * que había que mirar con recelo —`tipo` y `subfamilia`— se quitaron en vez de
+ * pintarlos de amarillo, que es lo que había que haber hecho desde el principio.
+ */
 export function tonoOrigen(
   origen: OrigenSustituto,
 ): "success" | "brand" | "warning" | "neutral" {
   switch (origen) {
     case "equivalencia":
       return "success";
-    case "misma_medida":
+    case "mismo_basico":
       return "brand";
-    case "tipo":
-      return "warning";
     default:
       return "neutral";
   }

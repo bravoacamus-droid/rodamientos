@@ -5,26 +5,32 @@
  * rodamientos: el cliente pide un 6205-2RS de SKF, no hay, y hay que saber en
  * treinta segundos que el de FAG es el mismo rodamiento.
  *
- * La cascada la resuelve `sustitutos_de()` en la base, y tiene cuatro peldaños
- * de menos a más suposición:
+ * Lo resuelve `sustitutos_de()` en la base, y desde la 061 son solo DOS, los
+ * dos afirmando lo mismo: que la pieza entra.
  *
  *   1. `equivalencia`  — alguien la declaró a mano. Es la única que sabe algo
  *                        que no está en el código: que un 6205 de una marca
  *                        rara sirve para lo mismo.
- *   2. `misma_medida`  — mismo `designacion_base`, o sea el mismo núcleo ISO.
- *                        No necesita banda de precio: la medida ya garantiza
- *                        que es el mismo rodamiento en otra marca.
- *   3. `tipo`          — mismo tipo constructivo y precio parecido. Aquí ya se
- *                        supone: un 6205 y un 6320 comparten tipo y NO son
- *                        intercambiables; lo que los separa es el precio.
- *   4. `subfamilia`    — el último recurso.
+ *   2. `mismo_basico`  — mismo `designacion_base`, el núcleo ISO. Fija el
+ *                        diámetro interior, el exterior y la altura, así que
+ *                        6309-2ZC3 y 6309-2RS entran en el mismo eje: cambian
+ *                        el sellado y el juego, que es lo que se elige a ojo.
+ *
+ * Había dos peldaños más —`tipo` y `subfamilia`— y se quitaron. Willy, 07/09:
+ * *«no puedo reemplazar un 6309 por un 6307 o un 08, porque ya tienen
+ * diferentes medidas»*. Los dos son de la serie 60 y cuestan parecido, así que
+ * la banda de precio que hacía de red los dejaba pasar. **Una alternativa
+ * equivocada es peor que ninguna**: aquí no se adivina un texto, se afirma que
+ * dos piezas son intercambiables.
  *
  * Esta pantalla existe para alimentar el peldaño 1, que es el único que la
- * base no puede deducir sola.
+ * base no puede deducir sola — y ahora pesa más, porque es el único camino
+ * para todo lo que no es rodamiento (o-rings, pines, fajas: la mitad del
+ * catálogo no tiene código básico que extraer).
  */
 
 /** De dónde salió el sustituto. Es el `origen` que devuelve `sustitutos_de()`. */
-export type OrigenSustituto = "equivalencia" | "misma_medida" | "tipo" | "subfamilia";
+export type OrigenSustituto = "equivalencia" | "mismo_basico";
 
 /** Qué tan intercambiable es. Son los tres valores de `equiv_clase`. */
 export type ClaseEquivalencia = "exacta" | "similar" | "sustituto";
@@ -46,9 +52,7 @@ export const AYUDA_CLASE: Record<ClaseEquivalencia, string> = {
 
 export const ETIQUETA_ORIGEN: Record<OrigenSustituto, string> = {
   equivalencia: "Declarada",
-  misma_medida: "Misma medida",
-  tipo: "Mismo tipo",
-  subfamilia: "Misma subfamilia",
+  mismo_basico: "Misma medida",
 };
 
 /**
@@ -58,9 +62,8 @@ export const ETIQUETA_ORIGEN: Record<OrigenSustituto, string> = {
  */
 export const EXPLICACION_ORIGEN: Record<OrigenSustituto, string> = {
   equivalencia: "Alguien de la casa declaró que sirve.",
-  misma_medida: "Mismo núcleo ISO en el código: es el mismo rodamiento en otra marca.",
-  tipo: "Mismo tipo constructivo y precio parecido. Hay que comprobarlo.",
-  subfamilia: "Solo comparten familia y rango de precio. Es una pista, no una respuesta.",
+  mismo_basico:
+    "Mismo código básico: el núcleo ISO fija el diámetro interior, el exterior y la altura, así que entra en el mismo eje. Cambia el sellado o el juego.",
 };
 
 /** Una fila de `sustitutos_de()`. */

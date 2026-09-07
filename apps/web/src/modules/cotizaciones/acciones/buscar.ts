@@ -104,7 +104,7 @@ export async function buscarClientesParaCotizar(
 
 export interface Sustituto extends ProductoParaCotizar {
   diferencia_pct: number;
-  origen: "equivalencia" | "misma_medida" | "tipo" | "subfamilia";
+  origen: "equivalencia" | "mismo_basico";
   prioridad: number;
   mejor_oferta: boolean;
 }
@@ -112,8 +112,14 @@ export interface Sustituto extends ProductoParaCotizar {
 /**
  * Alternativas para una línea sin stock (49:56).
  *
- * La cascada la resuelve `sustitutos_de()`: equivalencia capturada a mano →
- * misma medida en otra marca → mismo tipo → misma subfamilia.
+ * Las resuelve `sustitutos_de()`, y desde la 061 son solo dos: equivalencia
+ * capturada a mano, o **mismo código básico**.
+ *
+ * Willy, 07/09: *«no puedo reemplazar un 6309 por un 6307 o un 08, porque ya
+ * tienen diferentes medidas; el número básico ya te define las tres medidas
+ * principales del rodamiento: el interior, el exterior y la altura»*. Los
+ * escalones por tipo y por subfamilia se quitaron: la serie 60 agrupa
+ * rodamientos que no entran en el mismo eje.
  */
 export async function sustitutosPara(
   productoId: string,
@@ -150,10 +156,19 @@ export interface VentaAnterior {
  *
  * Sin esto el vendedor le cotiza más caro que la vez pasada sin darse cuenta,
  * y el cliente sí se da cuenta.
+ *
+ * Willy, 50:25, sobre por qué el orden importa tanto: *«si lo haces de una
+ * paginación de cinco, los últimos cinco salen clientes que no son los que
+ * estoy cotizando, y en el sexto recién está el cliente que estoy cotizando.
+ * Ese es el precio que me interesa a mí»*. Por eso el suyo va primero y el
+ * resto detrás, y no al revés.
+ *
+ * Cinco por defecto —los que pidió— y hasta 50 si abre el «ver más».
  */
 export async function historialDe(
   productoId: string,
   clienteId: string | null,
+  limite = 5,
 ): Promise<Resultado<VentaAnterior[]>> {
   if (!(await haySesion())) return { ok: false, error: "Sesión expirada." };
   if (!uuid.safeParse(productoId).success) {
@@ -169,7 +184,7 @@ export async function historialDe(
       // del cuerpo lo que llega como undefined, para que Postgres aplique su
       // DEFAULT. Un null explícito es un valor, no una ausencia.
       p_cliente: cliente ?? undefined,
-      p_limit: 8,
+      p_limit: Math.min(Math.max(limite, 1), 50),
     });
     if (error) return { ok: false, error: error.message };
     return { ok: true, datos: (data ?? []) as unknown as VentaAnterior[] };

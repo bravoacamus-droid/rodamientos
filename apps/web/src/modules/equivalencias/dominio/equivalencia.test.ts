@@ -8,7 +8,7 @@ import {
   resumenSustituto,
   tonoOrigen,
 } from "./equivalencia";
-import type { OrigenSustituto, Sustituto } from "./tipos";
+import { ETIQUETA_ORIGEN, type OrigenSustituto, type Sustituto } from "./tipos";
 
 const A = "aaaaaaaa-1111-1111-1111-111111111111";
 const B = "bbbbbbbb-2222-2222-2222-222222222222";
@@ -26,7 +26,7 @@ function sustituto(campos: Partial<Sustituto> = {}): Sustituto {
     precio_venta: 8.4,
     precio_minimo: 7.1,
     diferencia_pct: 0,
-    origen: "misma_medida",
+    origen: "mismo_basico",
     prioridad: 2,
     mejor_oferta: false,
     ...campos,
@@ -68,18 +68,17 @@ describe("mismoPar", () => {
 describe("agruparPorOrigen", () => {
   it("respeta el orden de la cascada, no el de llegada", () => {
     const grupos = agruparPorOrigen([
-      sustituto({ origen: "subfamilia", prioridad: 4 }),
+      sustituto({ origen: "mismo_basico", prioridad: 2 }),
       sustituto({ origen: "equivalencia", prioridad: 1 }),
-      sustituto({ origen: "tipo", prioridad: 3 }),
     ]);
 
-    expect(grupos.map((g) => g.origen)).toEqual(["equivalencia", "tipo", "subfamilia"]);
+    expect(grupos.map((g) => g.origen)).toEqual(["equivalencia", "mismo_basico"]);
   });
 
   it("junta los del mismo origen", () => {
     const grupos = agruparPorOrigen([
-      sustituto({ origen: "misma_medida", prioridad: 2 }),
-      sustituto({ origen: "misma_medida", prioridad: 2 }),
+      sustituto({ origen: "mismo_basico", prioridad: 2 }),
+      sustituto({ origen: "mismo_basico", prioridad: 2 }),
     ]);
 
     expect(grupos).toHaveLength(1);
@@ -113,8 +112,8 @@ describe("contarPorOrigen", () => {
   it("resume en una línea", () => {
     const texto = contarPorOrigen([
       sustituto({ origen: "equivalencia", prioridad: 1 }),
-      sustituto({ origen: "misma_medida", prioridad: 2 }),
-      sustituto({ origen: "misma_medida", prioridad: 2 }),
+      sustituto({ origen: "mismo_basico", prioridad: 2 }),
+      sustituto({ origen: "mismo_basico", prioridad: 2 }),
     ]);
 
     expect(texto).toBe("1 declarada · 2 misma medida");
@@ -128,12 +127,38 @@ describe("contarPorOrigen", () => {
 describe("tonoOrigen", () => {
   const casos: Array<[OrigenSustituto, string]> = [
     ["equivalencia", "success"],
-    ["misma_medida", "brand"],
-    ["tipo", "warning"],
-    ["subfamilia", "neutral"],
+    ["mismo_basico", "brand"],
   ];
 
   it.each(casos)("%s → %s", (origen, tono) => {
     expect(tonoOrigen(origen)).toBe(tono);
+  });
+});
+
+describe("los orígenes posibles", () => {
+  /*
+    Este no prueba código: prueba una DECISIÓN, y está aquí para que se rompa
+    el día que alguien intente aflojarla sin querer.
+
+    Willy, 07/09: *«no puedo reemplazar un 6309 por un 6307 o un 08, porque ya
+    tienen diferentes medidas; el número básico ya te define las tres medidas
+    principales del rodamiento: el interior, el exterior y la altura»*.
+
+    La 011 sugería alternativas por tipo constructivo y por subfamilia, con una
+    banda de precio de ±25 % haciendo de red. La red no aguantaba: un 6307 y un
+    6309 son de la serie 60 y cuestan parecido. El daño no era una sugerencia
+    fea, era un rodamiento que no entra en el eje.
+
+    Una alternativa equivocada es peor que ninguna.
+  */
+  it("son dos, y ninguno supone nada", () => {
+    const permitidos: OrigenSustituto[] = ["equivalencia", "mismo_basico"];
+    expect(Object.keys(ETIQUETA_ORIGEN).sort()).toEqual([...permitidos].sort());
+  });
+
+  it("ni por tipo ni por subfamilia: la serie 60 no es una medida", () => {
+    for (const prohibido of ["tipo", "subfamilia", "misma_familia"]) {
+      expect(Object.keys(ETIQUETA_ORIGEN)).not.toContain(prohibido);
+    }
   });
 });

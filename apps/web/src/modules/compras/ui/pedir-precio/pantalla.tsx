@@ -418,15 +418,36 @@ export function PedirPrecio({
         </p>
       ) : null}
 
-      {/* ------------------------------------------- Lo que le llega a cada uno */}
+      {/* ------------------------------------------- Lo que le llega a cada uno
+          Plegado y cerrado, por petición de Willy (18:47).
+
+          Le enseñé la pantalla escribiendo un mensaje por proveedor y dijo:
+          *«no, creo no, ya mucho ya. Yo eso lo manejo para pedir precios, yo lo
+          hago el WhatsApp así de forma rápida: corto la imagen de mi
+          requerimiento, o me hago un cuadrito en Excel al toque, le pongo las
+          especificaciones y pum, lo mando»*. Y a veces ni eso: *«puede que sea
+          una llamada por teléfono; como ya nos conocemos con los proveedores,
+          hay esa facilidad»*.
+
+          No se borra: el mismo texto lo quiere para mandarle la COTIZACIÓN al
+          cliente (13:00), y ahí sí lo pidió. Lo que sobra es ponérselo delante
+          cuando lo que viene a hacer aquí es apuntar a quién le va a preguntar.
+
+          Cerrado por defecto, y quien lo quiera lo abre. */}
       {grupos.length > 0 ? (
-        <section className="card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Lo que le llega a cada uno</h2>
-          <p className="mb-3 text-xs text-[var(--fg-subtle)]">
-            {grupos.length === 1
-              ? "Un mensaje."
-              : `${grupos.length} mensajes, uno por proveedor.`}{" "}
-            Se abre WhatsApp con el texto escrito y lo mandas tú.
+        <details className="card p-4">
+          <summary className="cursor-pointer text-sm font-semibold">
+            ¿Quieres que te escriba el mensaje?
+            <span className="ml-2 font-normal text-[var(--fg-muted)]">
+              {grupos.length === 1
+                ? "uno, para el proveedor"
+                : `${grupos.length}, uno por proveedor`}
+            </span>
+          </summary>
+          <p className="mb-3 mt-1 text-xs text-[var(--fg-subtle)]">
+            Se abre WhatsApp con el texto escrito y lo mandas tú. Si prefieres
+            mandarlo a tu manera, no hace falta abrir esto: la consulta se anota
+            igual con el botón de abajo.
           </p>
 
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
@@ -521,7 +542,7 @@ export function PedirPrecio({
               );
             })}
           </ul>
-        </section>
+        </details>
       ) : null}
 
       {/* ----------------------------------------------------------- Guardar */}

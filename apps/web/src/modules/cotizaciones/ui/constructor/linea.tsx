@@ -74,14 +74,29 @@ export function FilaLinea({
     });
   };
 
+  /*
+    Cuántas ventas se han pedido. Willy quiso cinco y un «ver más» (50:01).
+
+    Se guarda el NÚMERO y no un booleano de «ya pedí más» porque el panel se
+    cierra y se vuelve a abrir mientras se cotiza, y quien ya desplegó las 25
+    no quiere que se le vuelvan a esconder.
+  */
+  const [cuantasVentas, setCuantasVentas] = useState(5);
+
+  const traerHistorial = (limite: number) => {
+    if (!linea.productoId) return;
+    setCuantasVentas(limite);
+    iniciar(async () => {
+      const r = await historialDe(linea.productoId as string, clienteId, limite);
+      if (r.ok) setHistorial(r.datos);
+    });
+  };
+
   const abrirHistorial = () => {
     if (panel === "historial") return setPanel("ninguno");
     setPanel("historial");
     if (historial.length > 0 || !linea.productoId) return;
-    iniciar(async () => {
-      const r = await historialDe(linea.productoId as string, clienteId);
-      if (r.ok) setHistorial(r.datos);
-    });
+    traerHistorial(cuantasVentas);
   };
 
   return (
@@ -215,12 +230,28 @@ export function FilaLinea({
             <button
               type="button"
               onClick={() => despachar({ tipo: "volverALista", key: linea.key })}
-              className="mt-0.5 text-xs text-[var(--fg-muted)] underline"
+              className="mt-0.5 block text-sm text-[var(--fg-muted)] underline"
               title={`Lista: ${dolar(linea.precioLista)}`}
             >
               volver a {dolar(linea.precioLista)}
             </button>
           ) : null}
+
+          {/*
+            Junto al precio, que es donde se pregunta.
+
+            Willy, 47:00, tecleando un precio: *«¿no te muestra una referencia
+            de a quién se ha vendido, a cuánto se ha vendido?»*. Estaba — pero
+            detrás de un «hist.» de 12 px, en gris, apretado entre las flechas
+            de subir y bajar. No lo vio, y con razón.
+          */}
+          <button
+            type="button"
+            onClick={abrirHistorial}
+            className="mt-1 block text-sm text-brand-600 underline"
+          >
+            {panel === "historial" ? "Ocultar ventas" : "Ventas anteriores"}
+          </button>
         </td>
 
         {mostrarDescuento ? (
@@ -249,14 +280,6 @@ export function FilaLinea({
 
         <td>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={abrirHistorial}
-              className="rounded-sm px-1.5 py-1 text-xs text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"
-              title="A cuánto se vendió antes"
-            >
-              hist.
-            </button>
             <button
               type="button"
               onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
@@ -339,7 +362,12 @@ export function FilaLinea({
         <tr>
           <td />
           <td colSpan={mostrarDescuento ? 8 : 7} className="pb-3">
-            <PanelHistorial cargando={cargando} ventas={historial} />
+            <PanelHistorial
+              cargando={cargando}
+              ventas={historial}
+              pedidas={cuantasVentas}
+              onVerMas={() => traerHistorial(25)}
+            />
           </td>
         </tr>
       ) : null}
@@ -347,11 +375,16 @@ export function FilaLinea({
   );
 }
 
+/*
+  Solo quedan dos, y los dos afirman que la pieza ENTRA (061).
+
+  «Mismo tipo» y «misma subfamilia» se fueron: la serie 60 junta al 6307 con
+  el 6309 y no son intercambiables. Willy, 07/09: *«el número básico ya te
+  define las tres medidas principales del rodamiento»*.
+*/
 const ETIQUETA_ORIGEN: Record<Sustituto["origen"], string> = {
   equivalencia: "equivalente registrado",
-  misma_medida: "misma medida",
-  tipo: "mismo tipo",
-  subfamilia: "misma subfamilia",
+  mismo_basico: "misma medida",
 };
 
 function PanelSustitutos({
@@ -422,9 +455,14 @@ function PanelSustitutos({
 function PanelHistorial({
   cargando,
   ventas,
+  pedidas,
+  onVerMas,
 }: {
   cargando: boolean;
   ventas: VentaAnterior[];
+  /** Cuántas se pidieron. Si llegaron menos, ya no hay más que ver. */
+  pedidas: number;
+  onVerMas: () => void;
 }) {
   if (cargando) {
     return <p className="text-sm text-[var(--fg-muted)]">Cargando histórico…</p>;
@@ -439,7 +477,7 @@ function PanelHistorial({
 
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2">
-      <p className="mb-1.5 text-xs font-medium text-[var(--fg-muted)]">
+      <p className="mb-1.5 text-sm font-medium text-[var(--fg-muted)]">
         Ventas anteriores
       </p>
       <div className="flex flex-col gap-0.5 text-sm">
@@ -450,23 +488,39 @@ function PanelHistorial({
               v.mismo_cliente ? "bg-[var(--info-bg)]" : ""
             }`}
           >
-            <span className="w-24 shrink-0 tabular text-xs text-[var(--fg-muted)]">
+            <span className="w-24 shrink-0 tabular text-sm text-[var(--fg-muted)]">
               {v.fecha}
             </span>
-            <span className="w-28 shrink-0 text-xs">{v.documento}</span>
-            <span className="flex-1 truncate text-xs">{v.cliente}</span>
+            <span className="w-28 shrink-0 text-sm">{v.documento}</span>
+            <span className="flex-1 truncate text-sm">{v.cliente}</span>
             {v.mismo_cliente ? (
               <Badge tone="info" size="xs">
                 este cliente
               </Badge>
             ) : null}
-            <span className="w-16 text-right tabular text-xs">×{v.cantidad}</span>
+            <span className="w-16 text-right tabular text-sm">×{v.cantidad}</span>
             <span className="w-20 text-right tabular font-medium">
               {dolar(v.valor_unitario)}
             </span>
           </div>
         ))}
       </div>
+
+      {/*
+        «Ver más», solo cuando de verdad puede haber más.
+
+        Si se pidieron cinco y llegaron cuatro, no hay una sexta venta
+        escondida: el botón prometería algo que no existe.
+      */}
+      {ventas.length >= pedidas && pedidas < 25 ? (
+        <button
+          type="button"
+          onClick={onVerMas}
+          className="mt-1.5 text-sm text-brand-600 underline"
+        >
+          Ver más ventas
+        </button>
+      ) : null}
     </div>
   );
 }

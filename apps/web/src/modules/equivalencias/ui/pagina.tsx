@@ -327,10 +327,10 @@ function Fila({
             productoId={productoId}
             equivalenteId={sustituto.id}
             codigoEquivalente={sustituto.codigo}
-            // La misma medida ISO es intercambiable por definición; lo que
-            // llega por tipo o subfamilia, no. La sugerencia se puede cambiar
+            // El mismo código básico es intercambiable por definición: el
+            // núcleo ISO fija las tres medidas. La sugerencia se puede cambiar
             // en el diálogo.
-            claseSugerida={sustituto.origen === "misma_medida" ? "exacta" : "sustituto"}
+            claseSugerida={sustituto.origen === "mismo_basico" ? "exacta" : "sustituto"}
           />
         ) : null}
       </div>
