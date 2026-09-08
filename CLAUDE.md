@@ -31,7 +31,7 @@ restricción de diseño principal, y ya obligó a rehacer pantallas enteras:
 ### Verifica en la pantalla, no en el typecheck
 
 **Casi todos los defectos encontrados en este proyecto eran invisibles a
-`tsc`, a `eslint` y a los 1170 tests.** Botones que no se ven, funciones sin
+`tsc`, a `eslint` y a los 1174 tests.** Botones que no se ven, funciones sin
 puerta, columnas que no existen. Si has tocado una pantalla, ábrela.
 
 Hay servidor de desarrollo en `http://localhost:4005` y herramientas de
@@ -39,16 +39,27 @@ navegador. Úsalas.
 
 ### El patrón que más se repite: la pieza existe, el camino no
 
-Ocurrió **seis veces solo el 07/09**:
+Ocurrió **seis veces el 07/09** y otras tantas el 08/09:
 
 | Función | Estaba desde | Por qué no se veía |
 |---|---|---|
 | Historial de ventas | 011 | «hist.», 12 px, entre dos flechas |
 | `mejor_oferta` | 011 | exigía stock justo cuando no hay |
-| `mostrar_cuenta` | 029 | nada lo imprimía |
+| `mostrar_cuenta` | 029 | **nadie lo escribía**: el interruptor no existía |
 | `v_precios_compra` | 042 | ninguna pantalla la leía |
 | Mandar por WhatsApp | — | dentro del menú, y sin teléfonos |
 | Forma de pago | siempre | viajaba y no llegaba al papel |
+| Alternativas de un producto | 011 | enlace ámbar de 12 px, y **solo sin stock** |
+| Ventas anteriores | 011 | enlace azul partido en dos líneas |
+| Editar cotización | 069 | el séptimo botón, en gris, tras WhatsApp |
+| Un pedido sin stock | — | se descartaba: no salía en ninguna pantalla |
+| `DatosMensaje.enlace` | siempre | nadie se lo pasaba |
+
+**Y siete veces más el 08/09.** Un caso vale por todos: Willy pidió el botón
+de las cuentas el 07/09 (13:21), su frase se copió literal en el comentario de
+la 029 **y en el del componente que lo imprime**, y el botón no se construyó.
+Se documentó la intención y no se conectó el cable. Hasta la 071, las cuentas
+salían siempre.
 
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.
@@ -91,7 +102,7 @@ contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
 
 ```bash
 pnpm dev                     # servidor en :4005
-pnpm test                    # 1170 tests
+pnpm test                    # 1174 tests
 pnpm lint
 npx tsc -p apps/web/tsconfig.json --noEmit
 
@@ -99,7 +110,7 @@ node scripts/aplicar-migraciones.mjs 070_lo_que_sea.sql   # UNA migración
 pnpm db:tipos                # regenerar tipos tras migrar
 ```
 
-**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 69 desde
+**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 72 desde
 cero y la 005 falla por vistas dependientes.
 
 ---
@@ -144,7 +155,7 @@ que se puede facturar sin arriesgar una anulación.
 
 | Documento | Se edita | Hasta cuándo |
 |---|---|---|
-| Cotización | todo | borrador o enviada |
+| Cotización | todo | borrador, enviada **o aprobada sin guía ni factura** (070) |
 | Pedido confirmado | solo cantidades, con tres topes | mientras no se facture |
 | Guía | la cabecera | mientras sea borrador |
 | Recepción | nada; se le cuelgan papeles | siempre |
@@ -171,7 +182,8 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 **Documentación:**
 
 - `docs/PENDIENTES.md` — el diario del proyecto. Cada decisión, con su porqué y
-  la cita del cliente. **Empieza por §AG** (reunión del 07/09).
+  la cita del cliente. **Empieza por §AH** (rediseño del 08/09) y **§AG**
+  (reunión del 07/09).
 - `docs/PREGUNTAS-WILLY.md` — lo que se le manda, listo para copiar. Máximo
   cinco preguntas; **búscalas antes en sus archivos**, que ya ahorró cuatro de
   cinco.
@@ -179,7 +191,7 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 
 ---
 
-## 8 · Estado al 07/09
+## 8 · Estado al 08/09
 
 **Funciona de punta a punta**, probado en vivo: cotizar → confirmar → pedir
 precios → comparar → comprar → recibir → avisar al cliente → guía → facturar →
@@ -196,7 +208,10 @@ cobrar.
 
 ### Pendiente técnico
 
-- **Ubigeo de la empresa** (San Juan de Lurigancho). Va en cada guía.
+- **Ubigeo de la empresa** — CORREGIDO el 08/09. Era `150101` (Lima Cercado)
+  y ahora es `150132` (San Juan de Lurigancho). Ojo: `150118` es
+  Lurigancho/Chosica, otro distrito. La guía T001-00000001, ya emitida, lleva
+  el origen viejo y se deja como está.
 - **Datos de prueba en la base del cliente** — sin decidir. Hay rondas de
   precios, compras, recepciones, una factura y su cobro.
 - **Envío de guías a SUNAT (GRE)** — cambió a REST con OAuth2 y hay que
@@ -208,3 +223,17 @@ cobrar.
 - Detalle de cuotas en la factura (no hay ninguna con más de una cuota).
 - La rejilla de precios con diez proveedores (no existe una ronda así).
 - Dar de alta una agencia nueva (se probó el caso «ya existe»).
+- El **responsive de los módulos**, salvo la página pública. El prototipo de
+  Luis (readdy.cc) no se puede leer con el navegador: carga pero nunca llega a
+  `document_idle`. Con capturas sí.
+
+### El enlace público al cliente (072)
+
+`/ver/<token>` es **la única ruta sin sesión** del ERP. Antes de tocarla, lee
+§AH.7: lo que la protege es el token de 32 hex y que
+`cotizacion_por_token` sea `security definer` y no devuelva costos ni margen.
+La migración lleva un centinela que revienta si eso cambia.
+
+**No sirve de verdad hasta desplegar**: el enlace se arma con la cabecera de
+la petición, así que hoy apunta a `localhost`. En cuanto esté en internet
+funciona solo.

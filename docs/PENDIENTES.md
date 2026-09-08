@@ -1,8 +1,34 @@
 # Pendientes
 
-Estado al **02/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
+Estado al **08/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
 al final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
+
+> **Si retomas hoy, empieza por §AH (08/09) y §AG (07/09).**
+>
+> El 08/09 fue un día de rediseño con Luis mandando capturas: nueve commits y
+> tres migraciones (070 editar la aprobada, 071 el botón de las cuentas, 072
+> el enlace público). Está todo en **§AH**, con lo que quedó abierto en
+> **§AH.9**.
+>
+> **Lo siguiente, por orden:**
+>
+> 1. **Las series de Willy y desde qué correlativo siguen.** Usa `CT02`,
+>    `T002`, `F002`; el sistema tiene otras de prueba. Es lo más urgente de
+>    todo: si emite con las nuestras, los correlativos no cuadran con lo
+>    declarado. Lleva bloqueado desde el 07/09.
+> 2. **Correr `limpiar-pruebas.sql`.** Lo tiene que hacer Luis.
+> 3. **El tablero**, que es lo que queda del rediseño.
+>
+> Y una lección de método del 08/09 que vale para cualquiera que siga: **las
+> tres correcciones más útiles del día salieron de que Luis mirara una
+> captura**, no de los tests. Los 1174 estaban en verde en todos esos
+> momentos.
+
+---
+
+<details>
+<summary>El resumen anterior, del 02/09 (histórico)</summary>
 
 > **Si retomas y solo lees una cosa, que sea esta.**
 >
@@ -33,6 +59,11 @@ volver a caer sale caro.
 > https://claude.ai/code/artifact/0ce92bb6-49bc-4dbd-927f-b3ca9e4df6da
 > Son cinco preguntas y una de ellas —si confirmar un pedido aparta la
 > mercadería— cambia cómo se comporta la bandeja que ya está construida.
+>
+> *(Ese enlace ya no abre: se perdió al cambiar de cuenta de Claude el 08/09.
+> Las preguntas están en `docs/PREGUNTAS-WILLY.md`, que es donde viven.)*
+
+</details>
 
 ---
 
@@ -2875,6 +2906,265 @@ esa columna no existe. PostgREST no ignora una columna que falta —tumba la
 consulta entera— y la ficha y la impresión de **cualquier** comprobante llevaron
 dos commits rotas. No lo vi porque verifiqué el pie en la cotización y **di por
 hecho** que la factura iría igual.
+
+---
+
+## Rediseño con Luis · 08/09 · lo que pidió y qué se hizo
+
+Un día entero de correcciones sobre pantalla, con Luis mandando capturas de su
+prototipo y yo arreglando contra ellas. Nueve commits, tres migraciones.
+
+Lo que más se repitió, otra vez: **la función existía y no se veía**. De las
+siete cosas de abajo, cinco eran piezas construidas hace semanas que nadie
+podía encontrar. Ya van trece casos documentados del mismo patrón.
+
+Y una lección de método que conviene dejar escrita: **las tres correcciones
+más útiles del día salieron de que Luis mirara una captura**, no de los tests.
+Los 1174 estaban en verde en todos y cada uno de esos momentos.
+
+---
+
+### AH.1 · El sidebar, y por qué se rehízo dos veces
+
+Luis mandó su prototipo (readdy.cc) y pidió empezar por el menú, la interfaz
+general y el tablero.
+
+La primera versión plegaba los grupos para que cupieran. Se la enseñé y la
+rechazó:
+
+> *«No respetaste mi sidebar de mi prototipo, rey. Así lo quiero: más
+> dinámico, más visible, más bonito al cliente, entendible qué hace cada
+> cosa.»*
+
+Tenía razón y el error es mío: había optimizado por que cupiera todo, cuando
+lo que hace falta es que **se vea todo**. Willy no busca en un menú, reconoce.
+
+Quedó: todos los grupos abiertos por defecto (se guarda lo *plegado*, no lo
+abierto), icono en cada ítem **y** en cada cabecera de grupo, ítems de 48 px,
+`text-sm`, TABLERO suelto arriba y CONFIGURACIÓN anclada abajo.
+
+La tipografía pasó de Inter a **Manrope**, que es la del prototipo.
+
+**Los contadores del menú son solo dos** —cotizaciones enviadas y alertas sin
+leer— y eso es deliberado: cuando todo lleva número, ninguno destaca. «Listos»
+y «Por comprar» se quedaron fuera porque no salen de una vista, se calculan
+repartiendo stock, y el menú se pinta en cada navegación.
+
+---
+
+### AH.2 · El pedido desaparecía entre aprobar y despachar
+
+> *«Yo creo que después de aprobar la cotización pase a listos para entregar,
+> porque acá podríamos ver qué productos faltan comprar; uno gestiona antes de
+> hacer la guía.»*
+
+`pedidosListos` descartaba a propósito el pedido que el almacén no cubría en
+nada, con este comentario: *«eso sigue siendo trabajo de compras y ya tiene su
+sitio en la bandeja»*.
+
+Suena razonable y deja un agujero: **la bandeja «Por comprar» ordena por
+PRODUCTO**, así que el pedido entero de un cliente no aparecía como pedido en
+ninguna pantalla. Entre que se aprobaba la cotización y llegaba la mercadería,
+el cliente no existía para el ERP.
+
+En la base ese día eran **2 de los 3 pedidos abiertos**: $203.02 y $415.04 de
+ACEROS CHILCA, los dos prometidos para ese mismo día, invisibles.
+
+Ahora salen en tres montones —**Cubierto**, **Parcial**, **Por cubrir**— con
+pastilla de filtro, importe y el paso siguiente: preparar la guía si hay algo
+que sacar, ir a la bandeja si no hay nada.
+
+**Trampa que casi se cuela:** el comparador del orden era
+`a.estado === "completo" ? -1 : 1`. Con dos estados funcionaba; con tres
+devuelve 1 en los dos sentidos al comparar un parcial con un «por cubrir», y
+un comparador que se contradice deja el orden a merced de la implementación
+del sort. No lanza nada. Ahora es un rango numérico.
+
+---
+
+### AH.3 · Editar la cotización aprobada · migración 070
+
+> *«Si la cotización fue aprobada puede seguir editando siempre y cuando
+> todavía no se haga las compras de los productos o se hizo la guía.»*
+
+La 069 lo cerraba por ESTADO, con un argumento bueno pero incompleto: *«una
+aprobada es lo que el cliente aceptó»*. El corte de verdad no es el estado
+sino el **compromiso**: entre el sí del cliente y la salida de la mercadería
+pueden pasar semanas, y en ese hueco el cliente llama para añadir dos
+rodamientos. La única salida era clonar — un número nuevo por una línea.
+
+Ahora se abre a `aprobada` y se cierra con los dos hechos que la base sí sabe:
+**guía emitida** o **algo facturado**. Las dos comprobaciones ya estaban en la
+069 como cinturón; ahora son la puerta.
+
+**Lo de las compras se AVISA, no se bloquea, y conviene saber por qué:** no
+existe vínculo entre una compra y la cotización que la motivó. `compra_items`
+guarda `producto_id`, y la bandeja agrupa por producto precisamente porque una
+compra junta lo que esperan varios clientes. «Hay una compra con este código»
+no prueba que sea para este pedido, y con 790 productos bloquear por eso
+cerraría la edición casi siempre, por un motivo que Willy no podría ver ni
+deshacer. El aviso sale con el número de compra y el proveedor delante.
+
+**Lo que había que no romper:** `v_comprometido` filtra por
+`coalesce(cantidad_aprobada,0) - atendida > 0`, y la 069 no insertaba esa
+columna. Editando una aprobada la habría dejado en cero y **el pedido
+desaparecería de «Por comprar» y de «Listos para entregar» sin que nada
+fallara**. Ahora la línea nueva nace con `cantidad_aprobada = cantidad`.
+
+Probado contra la base: COT1-000005 editada de 5 a 6 unidades sigue en
+`v_comprometido` con comprometido 6.
+
+---
+
+### AH.4 · Ver la factura antes de gastar el correlativo · migración 071
+
+> *«Lo que falta antes de facturar: un botón o algo por si quiere mandar a
+> SUNAT, como lo que va a imprimir, si quieres que salga las cuentas o no,
+> aparte de la vista previa.»*
+
+«Emitir F001» hacía tres cosas de golpe sin enseñar ninguna: escribía el
+documento, decidía por su cuenta que las cuentas bancarias iban impresas, y lo
+dejaba sin mandar. Lo único visible antes de pulsar era una columna de
+totales. Y un comprobante no es un borrador: **el correlativo se gasta aunque
+salga mal**, y corregirlo después es una nota de crédito.
+
+Ahora, pegado al botón de emitir: vista previa con el **mismo** componente que
+imprime, casilla de las cuentas y casilla de mandar a SUNAT.
+
+**El botón de las cuentas lo había pedido Willy el 07/09 (13:21)** —*«un botón
+que se puede activar o no, según tú desees… a veces ocupa mucho espacio»*— y
+**nunca se construyó**. La columna existe desde la 029, el documento la
+imprime, y su frase estaba copiada literal en dos comentarios del código: se
+documentó la intención y no se conectó el cable. Hasta la 071, las cuentas
+salían **siempre**.
+
+Si el envío a SUNAT falla, **no** se deshace la emisión ni se devuelve error:
+el documento existe y el correlativo se gastó. Decir que no se emitió mandaría
+a emitirlo otra vez y gastaría un segundo número.
+
+---
+
+### AH.5 · Alternativas y ventas anteriores · botones y modal
+
+> *«Está más ordenado, más entendible para Willy, con botones modales, así no
+> rompemos nada.»*
+
+Otra vez piezas que existían. Cómo estaban:
+
+- **Alternativas**: enlace subrayado en ámbar de 12 px bajo el código. Y solo
+  salía **sin stock**, así que con stock no había forma de mirar una
+  equivalencia por precio o por marca aunque se quisiera.
+- **Ventas anteriores**: otro enlace, azul, partido en dos líneas bajo el
+  precio. Antes fue un «hist.» apretado entre dos flechas.
+- Las acciones de la fila eran `↑ ↓ ✕` de 12 px.
+
+La prueba de que no se veían: **Willy preguntó en el minuto 47:00 por algo que
+el ERP ya hacía** — *«¿no te muestra una referencia de a quién se ha vendido, a
+cuánto se ha vendido?»*.
+
+Ahora la columna se llama Acciones y lleva **Alternativas**, **Ventas** y
+**Quitar**. Los paneles pasan a diálogo, y no es estética: una fila que se
+despliega empuja todo lo de abajo, así que al cerrarla el precio que se estaba
+tecleando ha cambiado de sitio.
+
+**Y me lo tuvo que corregir dos veces:**
+
+1. El modal de alternativas no tenía botón. Cada fila era un `<button>` entero,
+   sin nada que dijera que se podía pulsar — literalmente lo que CLAUDE.md
+   prohíbe en su primera página. Ahora es tabla con encabezados y **«Usar
+   esta»** por fila.
+2. *«El resumen se pasó abajo para que ocupe más espacio producto»*. Era una
+   columna de 320 px al lado de una tabla de nueve columnas: lo que se
+   comprimía era la descripción, que es justo lo que Willy lee. Ahora va
+   abajo, a todo ancho, con los totales a la derecha.
+
+---
+
+### AH.6 · Un solo botón de Enviar
+
+> *«Ese modal nada que ver, sería un modal de enviar, donde me traiga el número
+> del contacto para enviar, con PDF o al correo, también con enviar o digitar
+> si trae.»*
+
+Había **tres** botones sueltos —WhatsApp, Correo y «¿A dónde se la mando?»— y
+nunca se veían a la vez: los dos primeros solo si el cliente tenía el dato, el
+tercero solo si no tenía ninguno. Mandar una cotización se veía distinto según
+el cliente. Y el diálogo era de **apuntar un teléfono**, no de enviar: se
+rellenaba, se guardaba, se cerraba, y había que ir a buscar el botón.
+
+El arreglo de fondo estaba en dónde se armaban los enlaces: **en el servidor**,
+con el contacto guardado. Eso obligaba a guardar y recargar antes de poder
+mandar a un número recién escrito — y con 97 clientes sin un solo teléfono, ese
+era el camino **normal**. Ahora los arma el diálogo con lo que se teclea.
+
+---
+
+### AH.7 · El enlace al cliente · migración 072
+
+> *«¿O se le manda un link que descargue automáticamente el PDF?»* —
+> *«…siempre y cuando ese PDF tenga un botón de descargar la cotización.»*
+
+Idea de Luis, y es la única salida: ni `wa.me` ni `mailto:` pueden adjuntar un
+archivo, ningún navegador lo permite. Hasta ahora el PDF se arrastraba al chat
+a mano.
+
+`/ver/<token>` es **la única pantalla del ERP que abre sin sesión**, y tiene
+que serlo: el cliente de Willy no tiene usuario y nunca lo va a tener.
+
+Tres decisiones que sostienen eso:
+
+- **Token aparte del `id`**, 32 hex. El id también sería imposible de adivinar,
+  pero es el mismo identificador de las pantallas internas y los logs; un id
+  que circula por WhatsApp deja de ser interno.
+- **`cotizacion_por_token` es `security definer` y decide qué se ve.** La
+  alternativa era leer las tablas con la clave de servicio —que salta RLS
+  entera— y dejar la seguridad en un `where`. La función **no** devuelve
+  `costo_total`, `margen_pct`, `costo_unitario`, ni el teléfono o correo del
+  cliente. El centinela de la migración lo comprueba, porque un `select *`
+  metido de buena fe dentro de seis meses mandaría el margen al cliente.
+- **`/ver/` con barra final** en `PUBLICAS`. Sin ella, `startsWith("/ver")`
+  abriría también `/verificar`, `/ventas` o cualquier ruta futura.
+
+Verificado con `curl`, sin cookies: sin sesión → 200; token inventado → 404;
+token mal formado → 404; `/cotizaciones` sin sesión → sigue yendo a `/login`;
+y **cero apariciones** de margen, costo o teléfono en el HTML servido.
+
+**Sin caducidad**, decisión de Luis: una cotización se mira semanas después
+—hay que comprar, importar, esperar— y un enlace muerto obligaría a remandarla
+justo cuando el cliente por fin la abre.
+
+**No sirve de verdad hasta desplegar.** Hoy el enlace apunta a `localhost`. La
+base se saca de la cabecera de la petición, así que en cuanto el ERP esté en
+internet funciona solo, sin tocar nada.
+
+---
+
+### AH.8 · Vocabulario: «Confirmada» pasó a «Aprobada»
+
+Había tres palabras para el mismo estado: el botón decía «Confirmar pedido»,
+la pastilla «Confirmada», y el enum de la base `aprobada`. Luis lo pedía por
+«aprobar» y no lo encontraba.
+
+Se alinean las tres en **aprobar**, que es como está en la base. El título del
+diálogo sigue diciendo *«¿qué te confirmó el cliente?»* porque ahí el sujeto
+**es** el cliente; el botón que ejecuta dice Aprobar, que es su efecto.
+
+---
+
+### AH.9 · Lo que queda del rediseño
+
+- **El tablero.** Era lo siguiente de la lista de Luis y no se llegó.
+- **El responsive de los demás módulos.** No se pudo revisar: readdy.cc carga
+  pero nunca llega a `document_idle`, y ni las capturas ni la lectura de texto
+  llegan a ejecutarse sobre él. Con capturas sí se puede.
+- **La tabla del documento en móvil** pide 646 px y desborda. Se desliza dentro
+  de su contenedor y la página no se mueve, que es el comportamiento correcto.
+  Se dejó así a propósito: partirla en tarjetas rompería que sea el mismo papel
+  que se imprime. Decisión revisable.
+- **`limpiar-pruebas.sql` sigue sin correrse.** Está en el scratchpad de la
+  sesión; el clasificador de permisos no me deja ejecutarlo. Y ahora hay más
+  datos de prueba que ayer: COT1-000005 quedó editada a 6 unidades al probar
+  la 070.
 
 ---
 
