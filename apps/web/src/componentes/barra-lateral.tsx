@@ -17,6 +17,7 @@ import {
 import { Logo } from "@/componentes/logo";
 import { IconoNav } from "@/componentes/iconos-nav";
 import { rutaActiva, type GrupoNav } from "@/lib/navegacion";
+import type { PendientesDelMenu } from "@/lib/pendientes-del-menu";
 
 /**
  * Navegación de módulos.
@@ -27,11 +28,13 @@ import { rutaActiva, type GrupoNav } from "@/lib/navegacion";
  *    Con icono se llega por forma, que es más rápido y es lo que la gente
  *    espera de una herramienta que usa ocho horas al día.
  *
- * 2. **Grupos plegables.** Un vendedor no abre Abastecimiento nunca. Ahora
- *    puede cerrarlo y dejar a la vista lo suyo.
+ * 2. **Grupos plegables, y CERRADOS de entrada.** Un vendedor no abre
+ *    Abastecimiento nunca. Plegar existía desde el principio, pero los cinco
+ *    grupos nacían abiertos: veintidós entradas que no caben en pantalla, con
+ *    «Configuración» fuera de la vista. Nadie lo descubría porque nada
+ *    invitaba a hacerlo.
  *
- * 3. **Se acuerda.** El estado de cada grupo va a `localStorage`: plegarlos en
- *    cada carga sería peor que no poder plegarlos. El grupo que contiene la
+ * 3. **Se acuerda.** Lo abierto va a `localStorage`. El grupo que contiene la
  *    ruta activa se abre siempre, aunque estuviera cerrado — si no, el enlace
  *    marcado quedaría escondido.
  *
@@ -40,30 +43,50 @@ import { rutaActiva, type GrupoNav } from "@/lib/navegacion";
  * uno y no en el otro.
  */
 
-const CLAVE = "rodatech.nav.plegados";
+/*
+  Se guardan los ABIERTOS, no los plegados.
 
-/** Grupos plegados, leídos del navegador. Nunca revienta si el valor está roto. */
-function leerPlegados(): Set<string> {
-  if (typeof window === "undefined") return new Set();
+  Antes era al revés, y el efecto era que los cinco grupos nacían abiertos:
+  veintidós entradas que no caben en pantalla, con «Configuración» fuera de la
+  vista y hay que desplazarse para llegar. Plegar existía desde el principio y
+  no lo descubría nadie, porque nada invitaba a hacerlo.
+
+  Con esto nace abierto SOLO el grupo donde estás. Willy vive en Operación —
+  cotizar, guía, facturar— y lo demás lo abre el día que lo necesita. Y como
+  se recuerda, quien abra Abastecimiento lo encuentra abierto mañana.
+
+  La clave cambia de nombre a propósito: la vieja guarda lo contrario, y
+  leerla con la lógica nueva dejaría cerrado justo lo que alguien había
+  decidido tener abierto.
+*/
+const CLAVE = "rodatech.nav.abiertos";
+
+/** Grupos abiertos, leídos del navegador. Nunca revienta si el valor está roto. */
+function leerAbiertos(): Set<string> | null {
+  if (typeof window === "undefined") return null;
   try {
     const crudo = window.localStorage.getItem(CLAVE);
-    const lista: unknown = crudo ? JSON.parse(crudo) : [];
+    // `null` y lista vacía NO son lo mismo: sin valor guardado manda el
+    // criterio de por defecto —abrir el de la ruta activa—, y una lista vacía
+    // es alguien que los cerró todos a propósito.
+    if (crudo === null) return null;
+    const lista: unknown = JSON.parse(crudo);
     return new Set(Array.isArray(lista) ? lista.filter((x) => typeof x === "string") : []);
   } catch {
-    return new Set();
+    return null;
   }
 }
 
-function usePlegados() {
-  // Arranca vacío y se rellena al montar: en el servidor no hay
+function useAbiertos() {
+  // Arranca en `null` y se rellena al montar: en el servidor no hay
   // `localStorage`, y leerlo en el primer render rompería la hidratación.
-  const [plegados, setPlegados] = React.useState<Set<string>>(new Set());
+  const [abiertos, setAbiertos] = React.useState<Set<string> | null>(null);
 
-  React.useEffect(() => setPlegados(leerPlegados()), []);
+  React.useEffect(() => setAbiertos(leerAbiertos()), []);
 
   const alternar = React.useCallback((titulo: string) => {
-    setPlegados((previos) => {
-      const siguiente = new Set(previos);
+    setAbiertos((previos) => {
+      const siguiente = new Set(previos ?? []);
       if (siguiente.has(titulo)) siguiente.delete(titulo);
       else siguiente.add(titulo);
       try {
@@ -76,7 +99,7 @@ function usePlegados() {
     });
   }, []);
 
-  return { plegados, alternar };
+  return { abiertos, alternar };
 }
 
 // Un solo ítem encendido, el más específico. La regla vive en
@@ -86,23 +109,28 @@ const activoEn = (ruta: string, item: string) => rutaActiva(ruta) === item;
 function Grupos({
   grupos,
   ruta,
-  plegados,
+  abiertos,
   alternar,
+  pendientes,
   onNavegar,
 }: {
   grupos: GrupoNav[];
   ruta: string;
-  plegados: Set<string>;
+  /** Los que el usuario dejó abiertos. `null` = todavía no ha decidido. */
+  abiertos: Set<string> | null;
   alternar: (titulo: string) => void;
+  /** Cuántas cosas esperan en cada ruta. Solo dos la tienen. */
+  pendientes?: PendientesDelMenu;
   onNavegar?: () => void;
 }) {
   return (
     <>
       {grupos.map((grupo) => {
-        // El grupo que contiene la ruta activa se abre aunque esté plegado:
-        // esconder el enlace marcado desorienta más de lo que ahorra.
         const contieneActivo = grupo.items.some((i) => activoEn(ruta, i.ruta));
-        const abierto = contieneActivo || !plegados.has(grupo.titulo);
+        // El grupo de la ruta activa se abre SIEMPRE, aunque lo hayan cerrado:
+        // esconder el enlace marcado desorienta más de lo que ahorra. Y sin
+        // nada guardado, ese es el único que se abre.
+        const abierto = contieneActivo || (abiertos?.has(grupo.titulo) ?? false);
 
         return (
           <div key={grupo.titulo} className="flex flex-col">
@@ -136,6 +164,8 @@ function Grupos({
               <div className="flex flex-col gap-0.5 pb-1">
                 {grupo.items.map((item) => {
                   const activo = activoEn(ruta, item.ruta);
+                  const espera =
+                    pendientes?.[item.ruta as keyof PendientesDelMenu] ?? 0;
                   return (
                     <Link
                       key={item.ruta}
@@ -160,6 +190,25 @@ function Grupos({
                         )}
                       />
                       <span className="truncate">{item.etiqueta}</span>
+
+                      {/*
+                        Cuántas esperan. Solo si hay: un «0» ocupa el mismo
+                        sitio que un número y no dice nada, y la gracia de la
+                        pastilla es que solo la lleve lo que reclama algo.
+                      */}
+                      {espera > 0 ? (
+                        <span
+                          className={cn(
+                            "ml-auto min-w-5 shrink-0 rounded-full px-1.5 py-0.5 text-center text-xs font-semibold tabular",
+                            activo
+                              ? "bg-white/25 text-white"
+                              : "bg-[var(--warn-bg)] text-[var(--warn)]",
+                          )}
+                          aria-label={`${espera} esperando`}
+                        >
+                          {espera > 99 ? "99+" : espera}
+                        </span>
+                      ) : null}
                     </Link>
                   );
                 })}
@@ -173,9 +222,15 @@ function Grupos({
 }
 
 /** Columna fija. Desde `md` hacia arriba. */
-export function BarraLateral({ grupos }: { grupos: GrupoNav[] }) {
+export function BarraLateral({
+  grupos,
+  pendientes,
+}: {
+  grupos: GrupoNav[];
+  pendientes?: PendientesDelMenu;
+}) {
   const ruta = usePathname();
-  const { plegados, alternar } = usePlegados();
+  const { abiertos, alternar } = useAbiertos();
 
   return (
     <nav
@@ -190,17 +245,29 @@ export function BarraLateral({ grupos }: { grupos: GrupoNav[] }) {
       </div>
 
       <div className="flex flex-col gap-1 px-3 pb-4">
-        <Grupos grupos={grupos} ruta={ruta} plegados={plegados} alternar={alternar} />
+        <Grupos
+          grupos={grupos}
+          ruta={ruta}
+          abiertos={abiertos}
+          alternar={alternar}
+          pendientes={pendientes}
+        />
       </div>
     </nav>
   );
 }
 
 /** Cajón de móvil. Se cierra solo al navegar. */
-export function MenuMovil({ grupos }: { grupos: GrupoNav[] }) {
+export function MenuMovil({
+  grupos,
+  pendientes,
+}: {
+  grupos: GrupoNav[];
+  pendientes?: PendientesDelMenu;
+}) {
   const ruta = usePathname();
   const [abierto, setAbierto] = React.useState(false);
-  const { plegados, alternar } = usePlegados();
+  const { abiertos, alternar } = useAbiertos();
 
   return (
     <Sheet open={abierto} onOpenChange={setAbierto}>
@@ -230,8 +297,9 @@ export function MenuMovil({ grupos }: { grupos: GrupoNav[] }) {
           <Grupos
             grupos={grupos}
             ruta={ruta}
-            plegados={plegados}
+            abiertos={abiertos}
             alternar={alternar}
+            pendientes={pendientes}
             onNavegar={() => setAbierto(false)}
           />
         </SheetBody>

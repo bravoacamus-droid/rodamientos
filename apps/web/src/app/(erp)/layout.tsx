@@ -4,6 +4,7 @@ import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
 import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
 import { menuPara } from "@/lib/navegacion";
+import { pendientesDelMenu } from "@/lib/pendientes-del-menu";
 
 export default async function LayoutErp({
   children,
@@ -16,6 +17,10 @@ export default async function LayoutErp({
   const perfil = await perfilActual().catch(() => null);
   const grupos = menuPara(perfil?.rol ?? null);
 
+  // Cuántas cosas esperan, para la pastilla del menú. Nunca lanza: si falla,
+  // vuelve a ceros y el menú se pinta sin números.
+  const pendientes = await pendientesDelMenu();
+
   return (
     // AL IMPRIMIR NO QUEDA NADA DE ESTO.
     //
@@ -25,13 +30,13 @@ export default async function LayoutErp({
     // no documento por documento: así vale para la cotización, la factura, la
     // boleta, la guía y lo que venga después.
     <div className="flex min-h-dvh print:block print:min-h-0">
-      <BarraLateral grupos={grupos} />
+      <BarraLateral grupos={grupos} pendientes={pendientes} />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-3 sm:px-4 md:px-6 print:hidden">
           {/* En móvil el logo cede su sitio al botón del menú: sin él no hay
               forma de llegar a ningún módulo desde un teléfono. */}
-          <MenuMovil grupos={grupos} />
+          <MenuMovil grupos={grupos} pendientes={pendientes} />
           <Logo className="h-7 w-auto md:hidden" priority={false} />
           <div className="ml-auto flex items-center gap-1">
             <SelectorTema />
