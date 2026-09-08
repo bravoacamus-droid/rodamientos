@@ -7,6 +7,7 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { cotizacionParaFacturar } from "../api/consultas";
 import { bloqueosEmision, cuotasDe, totalesDe, vencimientoDe } from "../dominio/emision";
+import { enviarASunat } from "./enviar";
 
 /**
  * Emisión de un comprobante desde una cotización aprobada.
@@ -22,9 +23,16 @@ import { bloqueosEmision, cuotasDe, totalesDe, vencimientoDe } from "../dominio/
  * después es caro, porque el correlativo se gasta igual aunque el documento
  * acabe rechazado.
  *
- * NO envía a SUNAT. El comprobante nace en `pendiente` y el envío es un paso
- * aparte, a propósito: mientras no haya certificado se puede seguir emitiendo
- * y cobrando, que es lo que el negocio necesita hoy.
+ * El envío a SUNAT sigue siendo un paso APARTE en la base: el comprobante nace
+ * en `pendiente` y se manda después, a propósito — mientras no haya
+ * certificado se puede seguir emitiendo y cobrando, que es lo que el negocio
+ * necesita hoy.
+ *
+ * Lo que cambia el 08/09 es que se pueden encadenar los dos desde el mismo
+ * botón (`enviar_sunat`). Luis: *«un botón o algo por si quiere mandar a
+ * SUNAT»*. Son un solo gesto para quien factura y eran dos pantallas: emitir
+ * aquí, y luego buscar el documento en la ficha para mandarlo. Quien no
+ * quiera mandarlo todavía sigue pudiendo no marcarlo.
  */
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
@@ -61,10 +69,48 @@ const esquema = z.object({
    * no puede emitir de más — y los PRECIOS siguen sin venir de aquí.
    */
   cantidades: z.array(z.number().min(0)).max(200).optional(),
+  /**
+   * ¿El documento impreso lleva al pie las cuentas para pagar?
+   *
+   * Willy, 07/09 (13:21): *«al momento de elaborar la factura tiene un botón
+   * que se puede activar o no, según tú desees, para que figure en la factura
+   * los números de cuenta»* — *«a veces ocupa mucho espacio, a veces no es
+   * necesario»*.
+   *
+   * La columna existe desde la 029 y el documento la imprime desde entonces;
+   * lo que no había era el botón. `emitir_comprobante` no la leía hasta la
+   * 071, así que salían siempre.
+   */
+  mostrar_cuenta: z.boolean(),
+  /**
+   * Mandarlo a SUNAT en cuanto se emita, sin tener que ir a la ficha.
+   *
+   * El envío sigue siendo un paso APARTE en la base de datos y eso no cambia:
+   * el comprobante nace `pendiente` y se manda después. Lo que esto hace es
+   * encadenar los dos desde el mismo botón, porque son un solo gesto para
+   * quien factura y dos pantallas distintas hasta hoy.
+   *
+   * Si el envío falla, la emisión NO se deshace: el correlativo ya se gastó y
+   * el documento existe. Se dice lo que pasó y se reintenta desde la ficha.
+   */
+  enviar_sunat: z.boolean(),
 });
 
 export type ResultadoEmision =
-  | { ok: true; id: string; numero: string; total: number }
+  | {
+      ok: true;
+      id: string;
+      numero: string;
+      total: number;
+      /**
+       * Qué pasó con el envío, si se pidió.
+       *
+       * `null` = no se pidió mandarlo. Se distingue de «se pidió y falló»
+       * a propósito: son dos situaciones distintas y la pantalla las tiene
+       * que contar distinto.
+       */
+      envio: { ok: boolean; mensaje: string } | null;
+    }
   | { ok: false; error: string; bloqueos?: string[] };
 
 export async function emitirComprobante(
@@ -155,6 +201,9 @@ export async function emitirComprobante(
       dias_credito: alCredito ? datos.dias_credito : 0,
       fecha_vencimiento: vencimiento,
       observaciones: datos.observaciones,
+      // Lo lee `emitir_comprobante` desde la 071. Antes se quedaba en el
+      // `default true` del esquema y las cuentas salían siempre.
+      mostrar_cuenta: datos.mostrar_cuenta,
       descargar_stock: datos.descargar_stock,
       items: aEmitir.map((l) => ({
         producto_id: l.producto_id,
@@ -203,11 +252,41 @@ export async function emitirComprobante(
       revalidatePath("/inventario");
     }
 
+    /*
+      Y si se pidió, mandarlo, sin salir de aquí.
+
+      Va DESPUÉS de `revalidatePath` y fuera de cualquier vuelta atrás: el
+      comprobante ya existe y el correlativo ya se gastó. Si el envío falla,
+      lo que hay es un documento emitido y pendiente —que es un estado
+      previsto y normal, se emite sin certificado desde el primer día—, no
+      una emisión que haya que deshacer.
+
+      Por eso el fallo del envío no convierte esto en `ok: false`: decir que
+      no se emitió cuando sí se emitió mandaría a emitirlo otra vez, y eso sí
+      gastaría un segundo correlativo por nada.
+    */
+    let envio: { ok: boolean; mensaje: string } | null = null;
+    if (datos.enviar_sunat) {
+      const datosEnvio = new FormData();
+      datosEnvio.set("id", r.id);
+      const e = await enviarASunat(null, datosEnvio);
+
+      envio = e.ok
+        ? {
+            ok: e.aceptado,
+            mensaje: e.mensaje,
+          }
+        : { ok: false, mensaje: e.error };
+
+      revalidatePath(`/facturacion/${r.id}`);
+    }
+
     return {
       ok: true,
       id: r.id,
       numero: r.numero,
       total: Number(r.total ?? 0),
+      envio,
     };
   } catch (e) {
     return {

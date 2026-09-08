@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
+
 import { configFiscal, estadoConfiguracion } from "../api/configuracion";
 import { cotizacionesFacturables } from "../api/consultas";
 import { EmisorComprobante } from "./emisor";
@@ -39,10 +41,14 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
     );
   }
 
-  const [cotizaciones, config, estado] = await Promise.all([
+  // El emisor y las cuentas van para la VISTA PREVIA: se pinta con el mismo
+  // componente que imprime, así que necesita los mismos datos que el papel.
+  const [cotizaciones, config, estado, emisor, cuentas] = await Promise.all([
     cotizacionesFacturables(),
     configFiscal(),
     estadoConfiguracion(),
+    emisorParaImprimir(),
+    cuentasParaCobrar(),
   ]);
 
   if (!cotizaciones.ok) {
@@ -98,6 +104,12 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         serieFactura={config.ok ? config.datos.serie_factura : "F001"}
         serieBoleta={config.ok ? config.datos.serie_boleta : "B001"}
         cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
+        emisor={emisor}
+        cuentas={cuentas}
+        // Sin certificado ni credenciales SOL no se puede mandar nada. Se
+        // sigue pudiendo emitir: el documento queda pendiente, que es el caso
+        // normal hoy y está avisado arriba.
+        puedeEnviar={estado.listo}
       />
     </div>
   );

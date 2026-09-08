@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { importeConDescuento } from "@rodatech/config";
 import { Badge, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
+import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
+import type { EmisorHoja } from "@/componentes/hoja-documento";
+
+import { AntesDeEmitir, type OpcionesEmision } from "./antes-de-emitir";
 import { cargarCotizacion } from "../acciones/cargar";
 import { emitirComprobante, type ResultadoEmision } from "../acciones/emitir";
 import {
@@ -38,6 +42,9 @@ export function EmisorComprobante({
   serieFactura,
   serieBoleta,
   cotizacionInicial,
+  emisor,
+  cuentas,
+  puedeEnviar,
 }: {
   cotizaciones: { id: string; numero: string; fecha: string; cliente: string; total: number }[];
   /** La fecha la fija el servidor: el dominio no lee reloj. */
@@ -45,6 +52,11 @@ export function EmisorComprobante({
   serieFactura: string;
   serieBoleta: string;
   cotizacionInicial?: string | null;
+  /** Para la vista previa: es la misma hoja que se imprime. */
+  emisor: EmisorHoja;
+  cuentas: readonly CuentaParaPagar[];
+  /** Hay certificado y credenciales SOL, así que se puede mandar a SUNAT. */
+  puedeEnviar: boolean;
 }) {
   const router = useRouter();
 
@@ -62,6 +74,19 @@ export function EmisorComprobante({
   // documento que acompaña el movimiento físico. Se marca solo en la venta
   // de mostrador, cuando el cliente se lleva la pieza y se le factura ahí.
   const [descargarStock, setDescargarStock] = useState(false);
+
+  /*
+    Lo que se decide antes de gastar el correlativo.
+
+    `mostrarCuenta` arranca en `true` porque es como se ha impreso desde la
+    029: lo que se añade es poder decir «esta no», no cambiar el papel de
+    todas. `enviarSunat` arranca en lo que se pueda hacer — marcarlo por
+    defecto cuando no hay certificado sería ofrecer algo que no va a pasar.
+  */
+  const [opciones, setOpciones] = useState<OpcionesEmision>({
+    mostrarCuenta: true,
+    enviarSunat: puedeEnviar,
+  });
   /**
    * Cuánto se factura de cada línea, en el orden en que vienen.
    *
@@ -74,7 +99,16 @@ export function EmisorComprobante({
   const [resultado, emitir, emitiendo] = useActionState<ResultadoEmision | null, FormData>(
     async (previo, formData) => {
       const r = await emitirComprobante(previo, formData);
-      if (r.ok) router.push(`/facturacion/${r.id}`);
+      /*
+        Se va a la ficha salvo que el envío a SUNAT haya fallado.
+
+        Si falla y redirigimos igual, el operador aterriza en un documento
+        con un botón de «Enviar a SUNAT» sin saber que ya se intentó ni por
+        qué no salió. Quedándose aquí lo lee, y el enlace a la ficha sigue a
+        un clic. El comprobante está emitido en los dos casos: eso no
+        depende del envío.
+      */
+      if (r.ok && !(r.envio && !r.envio.ok)) router.push(`/facturacion/${r.id}`);
       return r;
     },
     null,
@@ -156,6 +190,11 @@ export function EmisorComprobante({
     observaciones: observaciones.trim() || null,
     descargar_stock: descargarStock,
     cantidades,
+    mostrar_cuenta: opciones.mostrarCuenta,
+    // Nunca se manda lo que no se puede mandar: sin certificado la casilla
+    // ni se marca, y aquí se vuelve a cortar por si el estado se quedó
+    // marcado de antes de que la configuración cambiara.
+    enviar_sunat: opciones.enviarSunat && puedeEnviar,
   });
 
   const listo = Boolean(cot) && bloqueos.length === 0 && !emitiendo;
@@ -180,6 +219,33 @@ export function EmisorComprobante({
           </Button>
         </div>
       </header>
+
+      {/*
+        Emitido, pero SUNAT no lo aceptó.
+
+        En ámbar y no en rojo, y el matiz importa: el documento existe, el
+        correlativo se gastó y la venta está registrada. Lo único que falta es
+        el envío, que se reintenta. Pintarlo como un error llevaría a emitirlo
+        otra vez, y eso sí gastaría un segundo número por nada.
+      */}
+      {resultado?.ok && resultado.envio && !resultado.envio.ok ? (
+        <div className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
+          <p className="font-medium text-[var(--warn)]">
+            {resultado.numero} se emitió, pero SUNAT no lo aceptó todavía.
+          </p>
+          <p className="mt-0.5 text-[var(--fg-muted)]">{resultado.envio.mensaje}</p>
+          <p className="mt-1.5">
+            El comprobante está guardado y la venta registrada.{" "}
+            <a
+              href={`/facturacion/${resultado.id}`}
+              className="font-medium text-brand-700 underline"
+            >
+              Abrir {resultado.numero} para reintentar el envío
+            </a>
+            .
+          </p>
+        </div>
+      ) : null}
 
       {resultado && !resultado.ok ? (
         <div className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
@@ -496,11 +562,39 @@ export function EmisorComprobante({
 
             {cot && bloqueos.length === 0 ? (
               <p className="text-xs text-[var(--fg-muted)]">
-                Se emite como <Badge tone="neutral" size="xs">{serie}</Badge> y queda
-                pendiente de enviar a SUNAT. El envío es un botón aparte en la ficha.
+                Se emite como <Badge tone="neutral" size="xs">{serie}</Badge>
+                {opciones.enviarSunat && puedeEnviar
+                  ? " y se manda a SUNAT en el mismo paso."
+                  : " y queda pendiente de enviar a SUNAT, que se hace desde su ficha."}
               </p>
             ) : null}
           </div>
+
+          {/* Debajo del resumen, no encima: primero se mira lo que se cobra y
+              después cómo sale el papel. Y pegado al botón de emitir, que es
+              lo siguiente que se pulsa. */}
+          {cot && bloqueos.length === 0 ? (
+            <div className="mt-4">
+              <AntesDeEmitir
+                cot={cot}
+                lineas={aEmitir}
+                tipo={tipo}
+                serie={serie}
+                fecha={fecha}
+                condicion={condicion}
+                dias={alCredito ? dias : 0}
+                vencimiento={vencimiento}
+                cuotas={cuotas}
+                totales={totales}
+                observaciones={observaciones}
+                emisor={emisor}
+                cuentas={cuentas}
+                puedeEnviar={puedeEnviar}
+                opciones={opciones}
+                onCambiar={setOpciones}
+              />
+            </div>
+          ) : null}
         </aside>
       </div>
     </form>
