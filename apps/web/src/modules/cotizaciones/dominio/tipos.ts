@@ -111,13 +111,25 @@ export interface FiltrosCotizaciones {
 export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
   borrador: "Borrador",
   enviada: "Enviada",
-  // «Confirmada», no «Aprobada». El botón dice «Confirmar pedido» y el
-  // diálogo pregunta «¿qué te confirmó el cliente?»; que el documento quedara
-  // luego en «Aprobada» era un tercer nombre para lo mismo. El valor del enum
-  // en la base sigue siendo `aprobada` —cambiarlo es una migración y no
-  // arregla nada— pero lo que se lee en pantalla ahora es la misma palabra en
-  // los tres sitios.
-  aprobada: "Confirmada",
+  /*
+    Una sola palabra para este estado, y desde el 08/09 es «Aprobada».
+
+    Estuvo en «Confirmada» por el mismo motivo que ahora está en «Aprobada»:
+    que el botón, el diálogo y la pastilla no digan tres cosas distintas. Lo
+    que cambia es CUÁL de las dos gana, y gana esta por dos razones que la
+    otra no tenía:
+
+      · El enum de la base ya se llama `aprobada`. Quien mire la tabla y la
+        pantalla lee lo mismo, sin traducir.
+      · Es como la pide Luis (08/09: *«falta aprobar cotización»*). Buscó el
+        botón por ese nombre y no lo encontró, que es la prueba de que la
+        palabra elegida antes no era la suya.
+
+    «Confirmar» además era ambiguo en las dos direcciones: no se sabía si
+    confirmaba el cliente o la confirmábamos nosotros. Aprobar solo lo hace
+    quien vende.
+  */
+  aprobada: "Aprobada",
   rechazada: "Rechazada",
   vencida: "Vencida",
   atendida: "Atendida",

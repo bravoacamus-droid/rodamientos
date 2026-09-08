@@ -26,6 +26,13 @@ import {
  *    columna, y que `COT1-000009` y `COT1-000010` ocupen lo mismo. En un
  *    catálogo de rodamientos, donde el código ES el producto, alinear importa.
  *
+ * 3. **La columna de acciones.** Hasta hoy la única forma de entrar en una
+ *    cotización era pulsar su número —texto azul de 13 px—, y para editar un
+ *    borrador había que entrar antes a verlo. Luis, 08/09: *«una persona que
+ *    no sabe que tiene que darle click ahí»*. Ahora cada fila lleva **Ver** y,
+ *    cuando toca, el paso siguiente: editar si el cliente todavía no la ha
+ *    aceptado, facturar si ya la aceptó.
+ *
  * En móvil no es una tabla. Ocho columnas en un teléfono no se leen ni con
  * scroll, así que por debajo de `md` cada cotización es una tarjeta con el
  * mismo riel en el borde.
@@ -97,6 +104,7 @@ export async function TablaCotizaciones({
               <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 text-right font-medium">Margen</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
+              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -161,6 +169,16 @@ export async function TablaCotizaciones({
                     {ETIQUETA_ESTADO[c.estado]}
                   </span>
                 </td>
+
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Link href={`/cotizaciones/${c.id}`} className={SECUNDARIO}>
+                      <IconoVer />
+                      Ver
+                    </Link>
+                    <Siguiente cotizacion={c} />
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -175,7 +193,13 @@ export async function TablaCotizaciones({
               aria-hidden="true"
               className={`w-1 shrink-0 ${RIEL_ESTADO[c.estado]}`}
             />
-            <Link href={`/cotizaciones/${c.id}`} className="min-w-0 flex-1 p-3">
+            {/* La tarjeta ya NO es un enlace entera.
+
+                Lo era, y por eso no podía llevar botones: un `<a>` dentro de
+                otro `<a>` es HTML inválido y el navegador lo deshace por su
+                cuenta. Ahora los botones son los de la fila de escritorio, y
+                se pulsan igual en un teléfono. */}
+            <div className="min-w-0 flex-1 p-3">
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-mono text-sm font-semibold text-brand-700">
                   {c.numero}
@@ -201,7 +225,15 @@ export async function TablaCotizaciones({
                   <Margen valor={c.margen_pct} />
                 </span>
               </div>
-            </Link>
+
+              <div className="mt-3 flex items-center gap-2">
+                <Link href={`/cotizaciones/${c.id}`} className={`${SECUNDARIO} flex-1 justify-center`}>
+                  <IconoVer />
+                  Ver
+                </Link>
+                <Siguiente cotizacion={c} />
+              </div>
+            </div>
           </li>
         ))}
       </ul>
@@ -214,6 +246,85 @@ export async function TablaCotizaciones({
         />
       </div>
     </>
+  );
+}
+
+/*
+  Los dos botones de la columna de acciones.
+
+  Alto 36 px y `text-sm`: el mínimo con el que un botón sigue pareciendo un
+  botón en una fila de tabla. Se escriben aquí como constantes y no como un
+  componente para que la tabla siga siendo un componente de servidor entero —
+  `Button` es de cliente, y traérselo para nueve filas cargaría Radix en una
+  pantalla que solo pinta enlaces.
+*/
+const SECUNDARIO =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+const PRINCIPAL =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+/**
+ * El paso siguiente de esta cotización, si lo hay.
+ *
+ * Cambia con el estado, y esa es la mitad del valor: en un borrador dice
+ * «Editar» y en una aprobada «Facturar», así que la fila dice qué hacer sin
+ * que haya que abrirla y decidirlo.
+ *
+ * En `atendida`, `rechazada`, `vencida` y `anulada` no sale nada. No es un
+ * olvido: en esas cuatro no queda ningún paso, y un botón que no lleva a
+ * ninguna parte enseña a desconfiar de los que sí.
+ */
+function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
+  if (c.estado === "borrador" || c.estado === "enviada") {
+    return (
+      <Link href={`/cotizaciones/${c.id}/editar`} className={SECUNDARIO}>
+        <IconoEditar />
+        Editar
+      </Link>
+    );
+  }
+  if (c.estado === "aprobada") {
+    return (
+      <Link href={`/facturacion/nueva?cotizacion=${c.id}`} className={PRINCIPAL}>
+        <IconoFactura />
+        Facturar
+      </Link>
+    );
+  }
+  return null;
+}
+
+/* Los iconos, en línea. Tres trazos cada uno: no compensa un paquete. */
+
+function IconoVer() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function IconoEditar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function IconoFactura() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" />
+      <path d="M14 2v6h6" />
+      <path d="M9 13h6M9 17h4" />
+    </svg>
   );
 }
 

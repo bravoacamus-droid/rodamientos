@@ -9,6 +9,7 @@ import {
   type EstadoCotizacion,
   type FiltrosCotizaciones,
 } from "../dominio/tipos";
+import { BuscadorCotizaciones } from "./buscador";
 import { TablaCotizaciones } from "./tabla";
 
 interface Props {
@@ -100,9 +101,16 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
         </Link>
       </div>
 
-      <Suspense fallback={<Skeleton className="h-8 w-full max-w-80" />}>
-        <FiltroEstados activo={filtros.estado} />
-      </Suspense>
+      {/* Buscar y filtrar, en la misma línea y por ese orden: se busca por lo
+          que se sabe —un número, un cliente— antes que por un estado. */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Suspense fallback={<Skeleton className="h-11 w-full max-w-sm" />}>
+          <BuscadorCotizaciones />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-8 w-full max-w-80" />}>
+          <FiltroEstados activo={filtros.estado} />
+        </Suspense>
+      </div>
 
       <section className="card">
         <Suspense

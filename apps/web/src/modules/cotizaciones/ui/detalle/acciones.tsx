@@ -98,14 +98,47 @@ export function AccionesCotizacion({
         corrigiendo={estado === "aprobada"}
       />
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {/*
+          Editar, mientras el cliente no la haya aceptado.
+
+          Willy, 15:49: *«ya sería editar la cotización, esa es otra opción»*.
+          Hasta hoy solo se podía CLONAR, que deja la vieja viva y le da un
+          número nuevo al cliente por corregir una coma.
+
+          Va DELANTE de aprobar, y ese orden es el arreglo del 08/09: estaba el
+          séptimo de la fila, en gris, detrás de WhatsApp y de Correo, y Luis
+          lo dio por inexistente —*«falta ahí editar cotización»*—. Entre siete
+          botones iguales no destaca ninguno; el orden es el que dice cuál es
+          el importante.
+
+          Desaparece al confirmarse: una aprobada es lo que el cliente aceptó,
+          y cambiarle un precio después es reescribir un acuerdo. A partir de
+          ahí lo que hay es «Corregir cantidades», que solo mueve cantidades.
+        */}
+        {enCurso ? (
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/cotizaciones/${id}/editar`)}
+          >
+            <IconoEditar />
+            Editar cotización
+          </Button>
+        ) : null}
+
         {/* El siguiente paso, según dónde esté el documento. */}
         {enCurso ? (
           // Ya no aprueba directo: pregunta QUÉ confirmó el cliente.
           // Aprobar la cotización entera daba por vendidas las seis líneas
           // siempre, y de esa cuenta sale después lo que hay que comprar.
+          //
+          // Dice «Aprobar», no «Confirmar pedido», desde el 08/09: el estado
+          // al que lleva se llama `aprobada`, la pastilla de la lista dice
+          // «Aprobada» y Luis la pide por ese nombre. Tres palabras para una
+          // sola cosa hacían que el botón que sí existe no se encontrara.
           <Button disabled={pendiente} onClick={() => setConfirmando(true)}>
-            Confirmar pedido
+            <IconoAprobar />
+            Aprobar cotización
           </Button>
         ) : estado === "aprobada" ? (
           <>
@@ -158,26 +191,6 @@ export function AccionesCotizacion({
           sería peor: lo que esto ahorra es escribir el mensaje, que es lo que
           de verdad cuesta.
         */}
-        {/*
-          Editar, mientras el cliente no la haya aceptado.
-
-          Willy, 15:49: *«ya sería editar la cotización, esa es otra opción»*.
-          Hasta hoy solo se podía CLONAR, que deja la vieja viva y le da un
-          número nuevo al cliente por corregir una coma.
-
-          Desaparece al confirmarse: una aprobada es lo que el cliente aceptó,
-          y cambiarle un precio después es reescribir un acuerdo. A partir de
-          ahí lo que hay es «Corregir cantidades», que solo mueve cantidades.
-        */}
-        {enCurso ? (
-          <Button
-            variant="outline"
-            onClick={() => router.push(`/cotizaciones/${id}/editar`)}
-          >
-            Editar
-          </Button>
-        ) : null}
-
         {enlaceWhatsapp ? (
           <Button asChild variant="outline">
             <a href={enlaceWhatsapp} target="_blank" rel="noopener noreferrer">
@@ -281,5 +294,31 @@ export function AccionesCotizacion({
         <span className="text-right text-sm text-[var(--danger)]">{error}</span>
       ) : null}
     </div>
+  );
+}
+
+/*
+  Los iconos de las dos acciones que deciden el documento.
+
+  Solo esas dos. Ponerle un dibujo a los ocho botones los volvería a igualar,
+  que es exactamente el problema que este cambio viene a arreglar.
+*/
+
+function IconoEditar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function IconoAprobar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m20 6-11 11-5-5" />
+    </svg>
   );
 }

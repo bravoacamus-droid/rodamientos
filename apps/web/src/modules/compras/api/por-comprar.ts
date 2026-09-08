@@ -469,16 +469,69 @@ function hoyEnLima(): string {
 }
 
 /**
- * A quién se le puede entregar ya.
+ * Un pedido con lo que hace falta para decidir sobre él.
  *
- * Cierra la cadena: hasta ahora terminaba en el almacén y nadie volvía a mirar
- * al cliente que había empezado todo.
+ * El total y el documento del cliente NO salen del reparto —`v_comprometido`
+ * trabaja por línea y no sabe cuánto vale el pedido entero—, así que se leen
+ * aparte y se pegan aquí. Van juntos porque la pantalla los pinta juntos: sin
+ * el importe, «3 ítems» no dice si esto es una venta de 400 o de 40 000.
  */
-export async function listosParaEntregar(): Promise<Resultado<PedidoListo[]>> {
+export interface PedidoDelCliente extends PedidoListo {
+  /** Lo que vale el pedido entero, con IGV. */
+  total: number;
+  /** RUC o DNI, bajo el nombre. Dos clientes se llaman casi igual. */
+  cliente_documento: string | null;
+}
+
+/**
+ * Los pedidos confirmados que siguen abiertos.
+ *
+ * Cierra la cadena: terminaba en el almacén y nadie volvía a mirar al cliente
+ * que había empezado todo.
+ */
+export async function listosParaEntregar(): Promise<Resultado<PedidoDelCliente[]>> {
   try {
     const lineas = await lineasComprometidas();
     if (!lineas.ok) return lineas;
-    return { ok: true, datos: pedidosListos(lineas.datos, hoyEnLima(), sumarDias) };
+
+    const pedidos = pedidosListos(lineas.datos, hoyEnLima(), sumarDias);
+    if (pedidos.length === 0) return { ok: true, datos: [] };
+
+    const supabase = await clienteServidor();
+    const totales = new Map<string, { total: number; documento: string | null }>();
+
+    for (let i = 0; i < pedidos.length; i += POR_TANDA) {
+      const tanda = pedidos.slice(i, i + POR_TANDA).map((p) => p.cotizacion_id);
+      const { data, error } = await supabase
+        .from("cotizaciones")
+        .select("id, total, clientes(numero_documento)")
+        .in("id", tanda);
+
+      // Sin los totales la lista se pinta igual, solo que sin importe. Dejar
+      // sin abrir la pantalla que dice a quién hay que llamar, por una cifra
+      // de apoyo, sería el peor de los dos fallos.
+      if (error || !data) break;
+
+      for (const f of data as unknown as {
+        id: string;
+        total: number | string;
+        clientes: { numero_documento: string | null } | { numero_documento: string | null }[] | null;
+      }[]) {
+        // PostgREST devuelve la relación unas veces como objeto y otras como
+        // array de uno según cómo infiera la cardinalidad. Se aceptan ambas.
+        const c = Array.isArray(f.clientes) ? f.clientes[0] : f.clientes;
+        totales.set(f.id, { total: num(f.total), documento: c?.numero_documento ?? null });
+      }
+    }
+
+    return {
+      ok: true,
+      datos: pedidos.map((p) => ({
+        ...p,
+        total: totales.get(p.cotizacion_id)?.total ?? 0,
+        cliente_documento: totales.get(p.cotizacion_id)?.documento ?? null,
+      })),
+    };
   } catch (e) {
     return fallo(e, "compras/listosParaEntregar");
   }

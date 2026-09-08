@@ -332,16 +332,23 @@ export function DialogoConfirmar({
             disabled={pendiente}
             loading={pendiente}
           >
+            {/*
+              El botón dice APROBAR, aunque la pregunta de arriba diga
+              «confirmó». No es un descuido: son dos sujetos distintos y el
+              matiz importa. El cliente confirma qué líneas quiere; nosotros
+              aprobamos la cotización, que es lo que este botón hace y el
+              estado al que lleva. Un botón tiene que nombrar su efecto.
+            */}
             {pendiente ? (
-              corrigiendo ? "Guardando…" : "Confirmando…"
+              corrigiendo ? "Guardando…" : "Aprobando…"
             ) : (
               <>
                 <Check aria-hidden="true" />
                 {corrigiendo
                   ? "Guardar cantidades"
                   : completa
-                    ? "Confirmó todo"
-                    : `Confirmar ${confirmadas.length}`}
+                    ? "Aprobar todo"
+                    : `Aprobar ${confirmadas.length}`}
               </>
             )}
           </Button>

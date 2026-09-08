@@ -63,11 +63,13 @@ export interface PedidoListo {
    */
   pendientes: number;
   /**
-   * `completo` — se puede cerrar el pedido entero.
-   * `parcial`  — hay algo que entregar, pero no todo. Se factura por partes
-   *              desde la 047, así que también sirve.
+   * `completo`   — se puede cerrar el pedido entero.
+   * `parcial`    — hay algo que entregar, pero no todo. Se factura por partes
+   *                desde la 047, así que también sirve.
+   * `por_cubrir` — el almacén no tiene NADA de este pedido. Está esperando a
+   *                que compras lo traiga.
    */
-  estado: "completo" | "parcial";
+  estado: "completo" | "parcial" | "por_cubrir";
   /** El día prometido más antiguo entre sus líneas pendientes. */
   prometida: string;
   dias: number;
@@ -75,14 +77,29 @@ export interface PedidoListo {
 }
 
 /**
- * A quién se le puede entregar ya, del más antiguo al más nuevo.
+ * Los pedidos confirmados que siguen abiertos, del más urgente al menos.
  *
  * Los completos van primero: cerrar un pedido entero libera al cliente, al
  * almacén y a la cobranza de una vez, y un parcial deja las tres cosas a
  * medias. Dentro de cada grupo manda quien lleva más tiempo esperando.
  *
- * Un pedido sin NADA cubierto no sale: ese sigue siendo trabajo de compras y ya
- * tiene su sitio en la bandeja. Aquí solo entra lo que se puede mover hoy.
+ * ---------------------------------------------------------------------------
+ * Por qué ahora salen también los que no tienen nada
+ * ---------------------------------------------------------------------------
+ * Hasta el 08/09 un pedido sin NADA en almacén se descartaba aquí —«ese sigue
+ * siendo trabajo de compras y ya tiene su sitio en la bandeja»—. Sonaba bien y
+ * dejaba un agujero: la bandeja «Por comprar» está ordenada por PRODUCTO, así
+ * que el pedido entero de un cliente no aparecía en ninguna pantalla como
+ * pedido. Entre que se aprobaba la cotización y que llegaba la mercadería, el
+ * cliente no existía para el ERP.
+ *
+ * Luis, 08/09: *«después de aprobar la cotización pase a listos para entregar,
+ * porque acá podríamos ver qué productos faltan comprar, uno gestiona antes de
+ * hacer la guía»*. Es la misma lista, mirada desde el cliente en vez de desde
+ * el producto — y es la que se abre para saber a quién hay que llamar.
+ *
+ * La bandeja sigue siendo la que dice CUÁNTO comprar de cada código: las dos
+ * salen del mismo `repartirStock`, así que no pueden contradecirse.
  */
 export function pedidosListos(
   lineas: readonly LineaComprometida[],
@@ -118,7 +135,6 @@ export function pedidosListos(
       bandeja, porque seguía faltando. Se quedaba en tierra de nadie.
     */
     const unidades = dos(suyas.reduce((a, l) => a + l.cubierto, 0));
-    if (unidades <= 0) continue;
 
     // La más apretada de las que siguen pendientes. Si está todo cubierto, la
     // referencia es la del pedido entero: lo que importa entonces es cuánto
@@ -139,16 +155,36 @@ export function pedidosListos(
       cubiertas,
       unidades,
       pendientes: dos(suyas.reduce((a, l) => a + l.comprometido, 0)),
-      estado: cubiertas === suyas.length ? "completo" : "parcial",
+      // El corte de `por_cubrir` es por UNIDADES y no por líneas cubiertas:
+      // un pedido de 10 con 4 en almacén no tiene ninguna línea entera y sin
+      // embargo esas 4 se pueden entregar y facturar hoy. Contarlo como «por
+      // cubrir» mandaría a comprar algo que ya está en el estante.
+      estado:
+        unidades <= 0
+          ? "por_cubrir"
+          : cubiertas === suyas.length
+            ? "completo"
+            : "parcial",
       prometida,
       dias,
       urgencia: urgenciaDe(dias),
     });
   }
 
+  /*
+    Un rango numérico y no una comparación de dos ramas.
+
+    El orden anterior era `a.estado === "completo" ? -1 : 1`, que con dos
+    estados funcionaba y con tres se rompe en silencio: comparando un parcial
+    con un «por cubrir» devuelve 1 en los DOS sentidos —a no es completo, b
+    tampoco—, y un comparador que se contradice deja el orden a merced de cómo
+    esté implementado el sort. No lanza nada; solo sale mal.
+  */
+  const rango = { completo: 0, parcial: 1, por_cubrir: 2 } as const;
+
   return salida.sort(
     (a, b) =>
-      (a.estado === b.estado ? 0 : a.estado === "completo" ? -1 : 1) ||
+      rango[a.estado] - rango[b.estado] ||
       a.fecha.localeCompare(b.fecha) ||
       a.cotizacion.localeCompare(b.cotizacion),
   );

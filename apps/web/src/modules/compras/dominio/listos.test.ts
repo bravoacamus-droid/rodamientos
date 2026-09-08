@@ -46,8 +46,34 @@ describe("pedidosListos", () => {
     expect(r[0]!.cubiertas).toBe(1);
   });
 
-  it("sin stock no sale: eso sigue siendo trabajo de compras", () => {
-    expect(pedidosListos([linea({ stock: 0 })], HOY, sumarDias)).toEqual([]);
+  it("sin stock sale como «por cubrir», no desaparece", () => {
+    // Hasta el 08/09 este pedido no salía. Sonaba razonable —«es trabajo de
+    // compras»— y dejaba al cliente sin aparecer en ninguna pantalla como
+    // pedido entre que se aprobaba y que llegaba la mercadería: la bandeja
+    // «Por comprar» lo tiene, pero repartido por código.
+    const r = pedidosListos([linea({ comprometido: 10, stock: 0 })], HOY, sumarDias);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.estado).toBe("por_cubrir");
+    expect(r[0]!.unidades).toBe(0);
+    expect(r[0]!.pendientes).toBe(10);
+    expect(r[0]!.cubiertas).toBe(0);
+  });
+
+  it("los tres montones salen en orden: cubierto, parcial y por cubrir", () => {
+    // El orden importa porque es el del trabajo, y porque el comparador tuvo
+    // que dejar de ser `es completo ? -1 : 1` al aparecer el tercer estado:
+    // con tres, esa forma devuelve 1 en los DOS sentidos al comparar un
+    // parcial con un «por cubrir» y el resultado queda a merced del sort.
+    const r = pedidosListos(
+      [
+        linea({ cotizacion_id: "c-vacio", cotizacion: "C-3", producto_id: "p1", comprometido: 5, stock: 0 }),
+        linea({ cotizacion_id: "c-lleno", cotizacion: "C-1", producto_id: "p2", comprometido: 5, stock: 5 }),
+        linea({ cotizacion_id: "c-medio", cotizacion: "C-2", producto_id: "p3", comprometido: 5, stock: 2 }),
+      ],
+      HOY,
+      sumarDias,
+    );
+    expect(r.map((p) => p.estado)).toEqual(["completo", "parcial", "por_cubrir"]);
   });
 
   it("una línea a medias también sale: esas unidades se pueden entregar hoy", () => {
