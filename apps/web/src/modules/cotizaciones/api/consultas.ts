@@ -422,6 +422,131 @@ export interface ComprobanteDelPedido {
 }
 
 /**
+ * ¿Ya salió mercadería de este pedido?
+ *
+ * Es media respuesta a «¿se puede editar todavía?». La otra media —si hay
+ * algo facturado— sale de las líneas, que la ficha ya tiene delante.
+ *
+ * Existe para no pintar un botón condenado: desde la 070 una cotización
+ * aprobada se edita, pero deja de poder editarse en cuanto hay guía, y sin
+ * esta consulta el botón aparecería igual para rebotar al guardar. La
+ * comprobación de verdad sigue estando en la base, donde no se puede saltar;
+ * esto solo evita ofrecer lo que ya no se puede hacer.
+ *
+ * Ante la duda dice que SÍ hay guía: si la consulta falla, esconder el botón
+ * deja una pantalla pobre, y enseñarlo promete algo que va a fallar.
+ */
+export async function tieneGuia(cotizacionId: string): Promise<boolean> {
+  try {
+    const supabase = await clienteServidor();
+    const { count, error } = await supabase
+      .from("guias_remision")
+      .select("id", { count: "exact", head: true })
+      .eq("cotizacion_id", cotizacionId)
+      // Una anulada no despachó nada. Contarla bloquearía la edición por una
+      // guía que se emitió por error y se dio de baja.
+      .neq("estado", "anulada");
+
+    if (error) return true;
+    return (count ?? 0) > 0;
+  } catch {
+    return true;
+  }
+}
+
+/** Una compra abierta que lleva alguno de los productos de este pedido. */
+export interface CompraAbierta {
+  id: string;
+  numero: string;
+  proveedor: string;
+  /** Los códigos de ESTE pedido que van en esa compra. */
+  codigos: string[];
+}
+
+/**
+ * Compras en marcha que llevan productos de esta cotización.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué avisa y no bloquea
+ * ---------------------------------------------------------------------------
+ * Luis, 08/09, sobre editar una cotización aprobada: *«siempre y cuando
+ * todavía no se haga las compras de los productos»*. La intención es clara y
+ * la base no puede cumplirla al pie de la letra: **no hay vínculo entre una
+ * compra y la cotización que la motivó**. `compra_items` guarda
+ * `producto_id`, y la bandeja «Por comprar» agrupa por PRODUCTO justamente
+ * porque una compra junta lo que esperan varios clientes.
+ *
+ * Así que esto responde «hay una compra abierta con este código», que no es
+ * lo mismo que «se compró para este pedido»: puede ser reposición de almacén
+ * o el pedido de otro cliente. Con 790 productos, bloquear por eso cerraría
+ * la edición casi siempre y por un motivo que Willy no podría ver ni
+ * deshacer.
+ *
+ * Se enseña con el número de compra y el proveedor delante, y decide quien
+ * está mirando. Las `recibida` y `anulada` quedan fuera: una compra que ya
+ * llegó no se descuadra porque el pedido cambie.
+ *
+ * Si falla, devuelve vacío: es un aviso sobre una pantalla que tiene que
+ * abrir igual.
+ */
+export async function comprasAbiertasDe(
+  productoIds: readonly string[],
+): Promise<CompraAbierta[]> {
+  const ids = [...new Set(productoIds)].filter(Boolean);
+  if (ids.length === 0) return [];
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compra_items")
+      .select("producto_id, productos(codigo), compras!inner(id, numero, estado, proveedores(razon_social))")
+      .in("producto_id", ids)
+      .in("compras.estado", ["registrada", "recibida_parcial"])
+      .limit(200);
+
+    if (error || !data) return [];
+
+    // `!inner` obliga a la compra a existir, pero PostgREST sigue devolviendo
+    // la relación como objeto o como array de uno según cómo infiera la
+    // cardinalidad. Se aceptan las dos formas en vez de confiar en una.
+    const uno = <T,>(v: T | T[] | null): T | null =>
+      Array.isArray(v) ? (v[0] ?? null) : v;
+
+    const porCompra = new Map<string, CompraAbierta>();
+
+    for (const f of data as unknown as {
+      producto_id: string;
+      productos: { codigo: string } | { codigo: string }[] | null;
+      compras:
+        | { id: string; numero: string; proveedores: { razon_social: string } | { razon_social: string }[] | null }
+        | { id: string; numero: string; proveedores: { razon_social: string } | { razon_social: string }[] | null }[]
+        | null;
+    }[]) {
+      const compra = uno(f.compras);
+      if (!compra) continue;
+
+      const codigo = uno(f.productos)?.codigo ?? "";
+      const previa = porCompra.get(compra.id);
+
+      if (previa) {
+        if (codigo && !previa.codigos.includes(codigo)) previa.codigos.push(codigo);
+      } else {
+        porCompra.set(compra.id, {
+          id: compra.id,
+          numero: compra.numero,
+          proveedor: uno(compra.proveedores)?.razon_social ?? "—",
+          codigos: codigo ? [codigo] : [],
+        });
+      }
+    }
+
+    return [...porCompra.values()];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Qué se le ha facturado ya de este pedido.
  *
  * El enlace existía y solo iba en un sentido: la factura decía de qué

@@ -39,6 +39,7 @@ export function AccionesCotizacion({
   cliente,
   lineas,
   facturable,
+  editable,
 }: {
   id: string;
   estado: EstadoCotizacion;
@@ -58,6 +59,16 @@ export function AccionesCotizacion({
    * faltaba era el camino.
    */
   facturable: boolean;
+  /**
+   * El documento todavía no compromete a nadie: ni guía emitida ni nada
+   * facturado, así que se puede reescribir entero (070).
+   *
+   * Va como dato y no se deduce del estado a propósito. Desde la 070 el
+   * estado ya no dice si se puede editar —una `aprobada` se edita, y deja de
+   * poder editarse en cuanto sale la mercadería—, y esos dos hechos solo los
+   * sabe el servidor.
+   */
+  editable: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -112,11 +123,21 @@ export function AccionesCotizacion({
           botones iguales no destaca ninguno; el orden es el que dice cuál es
           el importante.
 
-          Desaparece al confirmarse: una aprobada es lo que el cliente aceptó,
-          y cambiarle un precio después es reescribir un acuerdo. A partir de
-          ahí lo que hay es «Corregir cantidades», que solo mueve cantidades.
+          Sale también en las APROBADAS desde la 070, y ese fue el arreglo del
+          08/09. Antes desaparecía al aprobar —«una aprobada es lo que el
+          cliente aceptó»—, y eso dejaba fuera el caso normal: entre el sí del
+          cliente y la salida de la mercadería pueden pasar semanas, y en ese
+          hueco llama para añadir dos rodamientos. La única salida era clonar,
+          o sea darle un número nuevo por añadir una línea.
+
+          Luis, 08/09: *«si la cotización fue aprobada puede seguir editando
+          siempre y cuando todavía no se haga las compras o se hizo la guía»*.
+
+          Desaparece cuando el documento ya compromete a alguien: con guía
+          emitida o con algo facturado. Eso lo decide la función en la base
+          —`actualizar_cotizacion`, que vuelve a comprobarlo— y no este botón.
         */}
-        {enCurso ? (
+        {viva && editable ? (
           <Button
             variant="outline"
             onClick={() => router.push(`/cotizaciones/${id}/editar`)}

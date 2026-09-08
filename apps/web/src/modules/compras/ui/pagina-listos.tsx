@@ -200,11 +200,15 @@ export default async function PaginaListos({ searchParams }: Props) {
                         <EstadoDelPedido estado={p.estado} />
                       </td>
 
+                      {/* Rejilla de dos columnas fijas y no una fila: si cada
+                          botón mide lo que mide su texto, «Preparar guía» y
+                          «Qué falta comprar» dejan el «Ver» de cada fila en
+                          una equis distinta y la columna sale en escalera. */}
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="ml-auto grid w-[268px] grid-cols-[84px_1fr] gap-1.5">
                           <Link
                             href={`/cotizaciones/${p.cotizacion_id}`}
-                            className={SECUNDARIO}
+                            className={`${SECUNDARIO} w-full justify-center`}
                           >
                             <IconoVer />
                             Ver
@@ -309,9 +313,11 @@ function EstadoDelPedido({ estado }: { estado: Monton }) {
  * lleva a la bandeja en vez de a una guía que saldría vacía.
  */
 function Siguiente({ pedido }: { pedido: PedidoDelCliente }) {
+  // El ancho lo pone la rejilla de la celda, no el texto: por eso los dos
+  // llevan `w-full` y no un ancho propio.
   if (pedido.estado === "por_cubrir") {
     return (
-      <Link href="/compras/por-comprar" className={SECUNDARIO}>
+      <Link href="/compras/por-comprar" className={`${SECUNDARIO} w-full justify-center`}>
         <IconoCarrito />
         Qué falta comprar
       </Link>
@@ -320,7 +326,7 @@ function Siguiente({ pedido }: { pedido: PedidoDelCliente }) {
   return (
     <Link
       href={`/guias/nueva?cotizacion=${pedido.cotizacion_id}`}
-      className={PRINCIPAL}
+      className={`${PRINCIPAL} w-full justify-center`}
     >
       <IconoGuia />
       Preparar guía

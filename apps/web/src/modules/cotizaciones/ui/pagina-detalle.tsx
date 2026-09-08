@@ -2,7 +2,7 @@ import { cuentasParaCobrar } from "@/lib/emisor";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
-import { comprobantesDelPedido, cotizacionPorId } from "../api/consultas";
+import { comprobantesDelPedido, cotizacionPorId, tieneGuia } from "../api/consultas";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { enlaceCorreoCotizacion, enlaceWhatsapp } from "../dominio/whatsapp";
@@ -45,9 +45,11 @@ export default async function PaginaDetalleCotizacion({
   // antes sería una consulta de más en cada 404.
   // Las dos juntas: ninguna depende de la otra, y la cotización se imprime
   // con las cuentas al pie (064).
-  const [facturas, cuentas] = await Promise.all([
+  const [facturas, cuentas, despachada] = await Promise.all([
     comprobantesDelPedido(cabecera.id),
     cuentasParaCobrar(),
+    // Para saber si el botón de editar todavía tiene sentido (070).
+    tieneGuia(cabecera.id),
   ]);
 
   const impresa = armarCotizacionImpresa({
@@ -155,6 +157,19 @@ export default async function PaginaDetalleCotizacion({
           facturable={lineas.some(
             (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
           )}
+          /*
+            Hasta dónde se puede seguir cambiando el documento (070).
+
+            Los dos hechos que lo cierran son que la mercadería haya salido o
+            que se haya facturado algo — no el estado. Es la misma regla de la
+            guía, del pedido y de la recepción: hasta donde todavía no es un
+            compromiso de nadie.
+
+            Se calcula aquí para no ofrecer un botón que la base va a
+            rechazar; la comprobación que manda sigue estando en la función,
+            porque toda Server Action es un endpoint público.
+          */
+          editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
           // Las líneas viajan para poder preguntar QUÉ confirmó el
           // cliente. Se mandan crudas, sin el `id` de la cotización
           // repetido dentro: el diálogo solo necesita qué, cuánto y a

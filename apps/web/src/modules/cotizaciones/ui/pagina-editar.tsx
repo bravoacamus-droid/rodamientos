@@ -1,8 +1,13 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { cotizacionPorId } from "../api/consultas";
+import {
+  comprasAbiertasDe,
+  cotizacionPorId,
+  type CompraAbierta,
+} from "../api/consultas";
 import { estadoInicial, type EstadoConstructor } from "../dominio/constructor";
 import { Constructor } from "./constructor";
 
@@ -17,15 +22,24 @@ const ROLES = ["gerencia", "admin", "ventas"];
  * puedo hacer porque falta editar la cotización»*.
  *
  * ---------------------------------------------------------------------------
- * Solo BORRADOR y ENVIADA
+ * Hasta que el documento comprometa a alguien
  * ---------------------------------------------------------------------------
- * Una `aprobada` es lo que el cliente ACEPTÓ. Cambiarle un precio después es
- * reescribir un acuerdo: de esa cifra salen la factura y el margen, y nadie se
- * enteraría de que el número cambió. Para eso está «Corregir cantidades», que
- * solo mueve cantidades y con topes.
+ * Empezó siendo «solo borrador y enviada», con este argumento: una `aprobada`
+ * es lo que el cliente ACEPTÓ, y cambiarle un precio después es reescribir un
+ * acuerdo. El argumento sigue siendo bueno y era incompleto.
  *
- * `enviada` sí: el cliente la vio pero no ha dicho que sí, y corregir y
- * reenviar es exactamente lo que se hace cuando pide otro precio.
+ * Luis, 08/09: *«si la cotización fue aprobada puede seguir editando siempre y
+ * cuando todavía no se haga las compras de los productos o se hizo la guía»*.
+ * Entre el sí del cliente y la salida de la mercadería pueden pasar semanas
+ * —hay que comprar, importar, esperar— y en ese hueco el cliente llama para
+ * añadir dos rodamientos. La única salida era clonar: un número nuevo por
+ * añadir una línea.
+ *
+ * Así que el corte no es el estado, es el compromiso (070): guía emitida o
+ * algo facturado. La misma regla que rige la guía, el pedido y la recepción.
+ *
+ * De las compras se AVISA, no se bloquea: no hay vínculo entre una compra y
+ * la cotización que la motivó. Lo explica `comprasAbiertasDe`.
  *
  * Se comprueba aquí, y lo vuelve a comprobar `actualizar_cotizacion` en la
  * base — que es donde no se puede saltar.
@@ -61,9 +75,21 @@ export default async function PaginaEditarCotizacion({
 
   const { cabecera, lineas } = resultado.datos;
 
-  // Confirmada, facturada o cerrada: se vuelve a la ficha en vez de enseñar un
-  // formulario que va a rebotar al guardar.
-  if (cabecera.estado !== "borrador" && cabecera.estado !== "enviada") {
+  /*
+    Cerrada: se vuelve a la ficha en vez de enseñar un formulario que va a
+    rebotar al guardar.
+
+    `aprobada` entra desde la 070. Luis, 08/09: *«si la cotización fue
+    aprobada puede seguir editando siempre y cuando todavía no se haga la
+    guía»*. El corte de verdad —guía emitida o algo facturado— lo pone la
+    función en la base, que es donde no se puede saltar: esto es solo el
+    atajo para no pintar un formulario condenado.
+  */
+  if (
+    cabecera.estado !== "borrador" &&
+    cabecera.estado !== "enviada" &&
+    cabecera.estado !== "aprobada"
+  ) {
     redirect(`/cotizaciones/${cabecera.id}`);
   }
 
@@ -116,8 +142,21 @@ export default async function PaginaEditarCotizacion({
     proximaKey: lineas.length + 1,
   };
 
+  /*
+    Solo se pregunta por las compras si el pedido ya está aprobado.
+
+    En un borrador nadie ha salido a comprar nada por él, así que la consulta
+    no diría más que ruido y costaría una lectura en cada edición.
+  */
+  const compras =
+    cabecera.estado === "aprobada"
+      ? await comprasAbiertasDe(lineas.map((l) => l.producto_id ?? ""))
+      : [];
+
   return (
-    <Constructor
+    <>
+      {compras.length > 0 ? <AvisoDeCompras compras={compras} /> : null}
+      <Constructor
       sugeridos={[]}
       hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
         new Date(),
@@ -144,7 +183,55 @@ export default async function PaginaEditarCotizacion({
         cotizaciones: 0,
         ultima_cotizacion: null,
       }}
-      editando={{ id: cabecera.id, numero: cabecera.numero, estado }}
-    />
+        editando={{ id: cabecera.id, numero: cabecera.numero, estado }}
+      />
+    </>
+  );
+}
+
+/**
+ * «Ojo: de esto ya hay una compra en marcha.»
+ *
+ * No bloquea, y esa es la decisión. No existe vínculo entre una compra y la
+ * cotización que la motivó —`compra_items` guarda el producto, y una compra
+ * junta lo que esperan varios clientes—, así que «hay una compra con este
+ * código» no prueba que se comprara para este pedido.
+ *
+ * Lo que sí es verdad es lo que dice el aviso: hay una compra abierta que
+ * lleva estos códigos. Con el número y el proveedor delante, quien está
+ * mirando sabe si le afecta; el sistema no puede saberlo por él.
+ *
+ * En ámbar y no en rojo: no es un error, es algo que hay que mirar antes de
+ * bajar una cantidad.
+ */
+function AvisoDeCompras({ compras }: { compras: CompraAbierta[] }) {
+  return (
+    <div className="mb-4 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3.5 text-sm">
+      <p className="font-medium text-[var(--warn)]">
+        {compras.length === 1
+          ? "Hay una compra en marcha con productos de este pedido"
+          : `Hay ${compras.length} compras en marcha con productos de este pedido`}
+      </p>
+      <p className="mt-1 text-[var(--fg-muted)]">
+        Si bajas cantidades o quitas líneas, revisa antes que la compra siga
+        cuadrando — puede ser de este pedido o de otro cliente.
+      </p>
+      <ul className="mt-2 flex flex-col gap-1">
+        {compras.map((c) => (
+          <li key={c.id}>
+            <Link
+              href={`/compras/${c.id}`}
+              className="font-mono text-[0.8rem] font-semibold text-brand-700 underline"
+            >
+              {c.numero}
+            </Link>{" "}
+            <span className="text-[var(--fg-muted)]">
+              · {c.proveedor}
+              {c.codigos.length > 0 ? ` · ${c.codigos.join(", ")}` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

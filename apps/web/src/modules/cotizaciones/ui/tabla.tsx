@@ -170,9 +170,25 @@ export async function TablaCotizaciones({
                   </span>
                 </td>
 
+                {/*
+                  Rejilla de dos columnas FIJAS, no una fila que se encoge.
+
+                  Con `flex` cada botón medía lo que medía su texto, así que
+                  «Editar» y «Facturar» dejaban el «Ver» de su fila en una
+                  equis distinta y la columna salía en escalera. Luis, 08/09:
+                  *«los botones no cuadran»*.
+
+                  Las dos columnas miden lo que mide el texto más largo de
+                  cada una. Cuando una fila no tiene paso siguiente, la
+                  segunda columna se queda vacía y el «Ver» no se mueve: es
+                  justamente lo que mantiene la columna a plomo.
+                */}
                 <td className="px-4 py-2.5">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <Link href={`/cotizaciones/${c.id}`} className={SECUNDARIO}>
+                  <div className="ml-auto grid w-[216px] grid-cols-[84px_1fr] gap-1.5">
+                    <Link
+                      href={`/cotizaciones/${c.id}`}
+                      className={`${SECUNDARIO} w-full justify-center`}
+                    >
                       <IconoVer />
                       Ver
                     </Link>
@@ -276,9 +292,14 @@ const PRINCIPAL =
  * ninguna parte enseña a desconfiar de los que sí.
  */
 function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
+  // `w-full justify-center` en los dos: el ancho lo pone la rejilla de la
+  // celda, no el texto de dentro. Es lo que los deja a plomo entre filas.
   if (c.estado === "borrador" || c.estado === "enviada") {
     return (
-      <Link href={`/cotizaciones/${c.id}/editar`} className={SECUNDARIO}>
+      <Link
+        href={`/cotizaciones/${c.id}/editar`}
+        className={`${SECUNDARIO} w-full justify-center`}
+      >
         <IconoEditar />
         Editar
       </Link>
@@ -286,7 +307,10 @@ function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
   }
   if (c.estado === "aprobada") {
     return (
-      <Link href={`/facturacion/nueva?cotizacion=${c.id}`} className={PRINCIPAL}>
+      <Link
+        href={`/facturacion/nueva?cotizacion=${c.id}`}
+        className={`${PRINCIPAL} w-full justify-center`}
+      >
         <IconoFactura />
         Facturar
       </Link>
