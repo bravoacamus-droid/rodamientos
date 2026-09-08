@@ -8,6 +8,9 @@ export { default as PaginaCotizaciones } from "./ui/pagina";
 export { default as PaginaNuevaCotizacion } from "./ui/pagina-nueva";
 export { default as PaginaEditarCotizacion } from "./ui/pagina-editar";
 export { default as PaginaDetalleCotizacion } from "./ui/pagina-detalle";
+// La única pantalla del ERP que se abre SIN sesión: el cliente de Willy no
+// tiene usuario. Lo que da derecho a verla es tener el enlace (072).
+export { default as PaginaCotizacionPublica } from "./ui/pagina-publica";
 
 // El papel: las seis correcciones de Willy (C1-C6) viven aquí y están probadas.
 // Facturación reusará el mismo criterio de columnas.

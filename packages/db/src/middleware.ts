@@ -3,8 +3,22 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { Database } from "./tipos";
 
-/** Rutas que no exigen sesión. */
-const PUBLICAS = ["/login", "/auth"];
+/**
+ * Rutas que no exigen sesión.
+ *
+ * `/ver/` es la cotización que se le manda al cliente por enlace (072). Es la
+ * única parte del ERP que se abre sin saber quién pregunta, y tiene que serlo:
+ * el cliente de Willy no tiene usuario y nunca lo va a tener.
+ *
+ * Lo que la protege no es esta lista sino el token de 32 caracteres de la URL
+ * y `cotizacion_por_token`, que filtra por token exacto y devuelve SOLO lo que
+ * va impreso — sin costos, sin margen y sin el contacto del cliente.
+ *
+ * Va con la barra final. Sin ella, `startsWith("/ver")` abriría también
+ * `/verificar`, `/ventas` o cualquier ruta futura que empiece igual, y eso es
+ * exactamente la clase de agujero que nadie nota hasta que ya está abierto.
+ */
+const PUBLICAS = ["/login", "/auth", "/ver/"];
 
 /**
  * Refresca el token de sesión y decide si la petición puede seguir.

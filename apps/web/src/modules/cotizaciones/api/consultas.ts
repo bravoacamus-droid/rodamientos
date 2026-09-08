@@ -290,6 +290,8 @@ export async function cotizacionPorId(id: string): Promise<
       total: number;
       costo_total: number;
       margen_pct: number;
+      /** El de la URL que se le manda al cliente (072). */
+      token_publico: string;
       cliente_id: string;
       cliente: {
         razon_social: string;
@@ -351,7 +353,7 @@ export async function cotizacionPorId(id: string): Promise<
           `id, numero, estado, fecha, validez_dias, tiempo_entrega,
            orden_compra_cliente, contacto, condiciones, observaciones,
            mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
-           igv, total, costo_total, margen_pct, cliente_id,
+           igv, total, costo_total, margen_pct, cliente_id, token_publico,
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, whatsapp, telefono,
                           condicion_pago, dias_credito, email,

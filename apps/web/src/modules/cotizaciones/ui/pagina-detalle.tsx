@@ -1,4 +1,5 @@
 import { cuentasParaCobrar } from "@/lib/emisor";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
@@ -94,12 +95,33 @@ export default async function PaginaDetalleCotizacion({
     })),
   });
 
+  /*
+    El enlace que se le manda al cliente (072).
+
+    La base se saca de la CABECERA de la petición y no de una variable de
+    entorno: así sale bien en local, en una vista previa de Vercel y en el
+    dominio de producción sin que nadie tenga que acordarse de configurar
+    nada. Una variable mal puesta aquí no rompe la pantalla —se ve igual— pero
+    manda al cliente un enlace muerto, y eso no se descubre hasta que llama.
+
+    `x-forwarded-proto` porque detrás de un proxy la petición interna llega en
+    http aunque el cliente esté en https; sin eso el enlace saldría en http y
+    el navegador se quejaría.
+  */
+  const cabeceras = await headers();
+  const host = cabeceras.get("host");
+  const protocolo = cabeceras.get("x-forwarded-proto") ?? "http";
+  const enlace = host
+    ? `${protocolo}://${host}/ver/${cabecera.token_publico}`
+    : null;
+
   const datosMensaje = {
     numero: impresa.numero,
     cliente: impresa.cliente.razonSocial,
     total: impresa.total,
     validaHasta: impresa.validaHasta,
     emisor: emisor.nombre_comercial,
+    enlace,
   };
 
   /*

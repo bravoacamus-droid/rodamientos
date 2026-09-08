@@ -1651,6 +1651,7 @@ export type Database = {
           serie: string
           subtotal: number
           tiempo_entrega: string | null
+          token_publico: string
           total: number
           validez_dias: number
           vendedor_id: string | null
@@ -1683,6 +1684,7 @@ export type Database = {
           serie?: string
           subtotal?: number
           tiempo_entrega?: string | null
+          token_publico?: string
           total?: number
           validez_dias?: number
           vendedor_id?: string | null
@@ -1715,6 +1717,7 @@ export type Database = {
           serie?: string
           subtotal?: number
           tiempo_entrega?: string | null
+          token_publico?: string
           total?: number
           validez_dias?: number
           vendedor_id?: string | null
@@ -4568,6 +4571,7 @@ export type Database = {
         Args: { p_id: string; p_lineas: Json }
         Returns: Json
       }
+      cotizacion_por_token: { Args: { p_token: string }; Returns: Json }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_consulta_precio: { Args: { p_datos: Json }; Returns: Json }
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
