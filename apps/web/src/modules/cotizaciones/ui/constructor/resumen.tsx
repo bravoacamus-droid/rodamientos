@@ -35,9 +35,17 @@ export function ResumenConstructor({
   hayNoInmediatos: boolean;
   guardando: boolean;
 }) {
+  /*
+    A todo ancho, no una columna de 320 px a la derecha (08/09).
+
+    Se movió abajo para devolverle el espacio a la tabla de productos, que
+    tiene nueve columnas y se comía la descripción. Aquí caben las secciones
+    en fila —los totales al lado de los interruptores del documento— en vez de
+    apiladas, así que ocupa menos alto del que ocupaba de ancho.
+  */
   return (
-    <aside className="flex w-full flex-col gap-4 lg:w-80">
-      <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+    <aside className="flex w-full flex-col gap-4 lg:flex-row lg:items-start">
+      <section className="flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold">Totales</h2>
 
         <dl className="flex flex-col gap-1.5 text-sm">
@@ -86,7 +94,7 @@ export function ResumenConstructor({
         ) : null}
       </section>
 
-      <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+      <section className="flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold">El documento</h2>
 
         <label className="flex items-start justify-between gap-3">
@@ -136,7 +144,7 @@ export function ResumenConstructor({
       </section>
 
       {bloqueos.length > 0 ? (
-        <section className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+        <section className="flex-1 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
           <p className="text-sm font-medium">Falta para poder guardar</p>
           <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm">
             {bloqueos.map((b) => (

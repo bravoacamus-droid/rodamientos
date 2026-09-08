@@ -554,71 +554,125 @@ function PanelSustitutos({
     );
   }
 
+  /*
+    Una tabla con un botón por fila, y no una fila que ES un botón.
+
+    Era lo segundo: cada alternativa era un `<button>` entero, sin nada que
+    dijera que se podía pulsar. Es exactamente lo que Luis lleva repitiendo
+    desde el principio y lo que CLAUDE.md prohíbe en la primera página —*«una
+    persona que no sabe que tiene que darle click ahí»*, y las celdas
+    pulsables no valen—. Yo mismo lo dejé así al mover esto a un diálogo el
+    08/09, mirando los botones de la fila y no los de dentro.
+
+    Ahora hay columnas con encabezado y un «Usar esta» por alternativa, que
+    es lo que hay en el prototipo de Luis.
+  */
   return (
-    // Sin título propio: se lo pone el diálogo, y con el código dentro.
-    // Dos encabezados seguidos diciendo casi lo mismo es ruido.
-    <div>
-      <div className="flex flex-col gap-1">
-        {sustitutos.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onElegir(s)}
-            className={`flex items-center gap-3 rounded-sm p-1.5 text-left text-sm hover:bg-[var(--surface)] ${
-              s.mejor_oferta ? "bg-[var(--ok-bg)]" : ""
-            }`}
-          >
-            <span className="w-36 shrink-0 font-medium">{s.codigo}</span>
-            <span className="w-12 shrink-0 text-sm">{s.marca}</span>
-            {/*
-              La descripción, que es por lo que se elige.
-
-              Willy, 08:04, leyendo la lista del 6309: *«el primero es un
-              rodamiento sin sellos; el siguiente también sin sellos, pero con
-              juego radial C4; el tercero con sellos de metal y juego C3; el
-              cuarto con sellos de goma y juego C3. En función a eso yo ya
-              veo»*. La pantalla enseñaba código, marca y precio — todo menos
-              lo que él mira.
-            */}
-            <span className="min-w-0 flex-1 truncate text-sm" title={s.descripcion}>
-              {s.descripcion}
-            </span>
-            {/*
-              El origen, solo cuando dice algo que el código no.
-
-              «Misma medida» es lo normal y se deduce del propio código —los
-              cuatro empiezan por 6309—, así que repetirlo en cada fila es
-              ruido. Que alguien de la casa la haya DECLARADO sí es
-              información: sabe algo que el catálogo no.
-            */}
-            {s.origen === "equivalencia" ? (
-              <Badge tone="neutral" size="xs">
-                {ETIQUETA_ORIGEN[s.origen]}
-              </Badge>
-            ) : null}
-            {s.mejor_oferta ? (
-              <Badge tone="success" size="xs">
-                la que conviene
-              </Badge>
-            ) : null}
-            <span className="text-sm text-[var(--fg-muted)]">
-              stock {s.stock ?? 0}
-            </span>
-            <span className="w-20 text-right tabular">
-              {dolar(s.precio_venta)}
-            </span>
-            <span
-              className={`w-16 text-right tabular text-xs ${
-                s.diferencia_pct < 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"
+    <div className="scroll-x">
+      <table className="w-full text-sm">
+        <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr>
+            <th className="py-2 pr-3 font-medium">Código</th>
+            <th className="px-3 py-2 font-medium">Descripción</th>
+            <th className="px-3 py-2 text-right font-medium">Precio</th>
+            <th className="px-3 py-2 text-right font-medium">Stock</th>
+            <th className="py-2 pl-3 text-right font-medium">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sustitutos.map((s) => (
+            <tr
+              key={s.id}
+              className={`border-b border-[var(--border-soft)] last:border-0 ${
+                s.mejor_oferta ? "bg-[var(--ok-bg)]" : ""
               }`}
             >
-              {s.diferencia_pct > 0 ? "+" : ""}
-              {s.diferencia_pct}%
-            </span>
-          </button>
-        ))}
-      </div>
+              <td className="py-2.5 pr-3 align-top">
+                <span className="block font-medium">{s.codigo}</span>
+                <span className="block text-xs text-[var(--fg-subtle)]">{s.marca}</span>
+              </td>
+
+              {/*
+                La descripción, que es por lo que se elige. Entera, no
+                recortada: en un diálogo cabe.
+
+                Willy, 08:04, leyendo la lista del 6309: *«el primero es un
+                rodamiento sin sellos; el siguiente también sin sellos, pero
+                con juego radial C4; el tercero con sellos de metal y juego
+                C3; el cuarto con sellos de goma y juego C3. En función a eso
+                yo ya veo»*. La pantalla enseñaba código, marca y precio —
+                todo menos lo que él mira.
+              */}
+              <td className="px-3 py-2.5 align-top">
+                <span className="block">{s.descripcion}</span>
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {/*
+                    El origen, solo cuando dice algo que el código no.
+
+                    «Misma medida» se deduce del propio código —los cuatro
+                    empiezan por 6309—, así que repetirlo es ruido. Que
+                    alguien de la casa la haya DECLARADO sí informa: sabe algo
+                    que el catálogo no.
+                  */}
+                  {s.origen === "equivalencia" ? (
+                    <Badge tone="neutral" size="xs">
+                      {ETIQUETA_ORIGEN[s.origen]}
+                    </Badge>
+                  ) : null}
+                  {s.mejor_oferta ? (
+                    <Badge tone="success" size="xs">la que conviene</Badge>
+                  ) : null}
+                </span>
+              </td>
+
+              <td className="whitespace-nowrap px-3 py-2.5 text-right align-top">
+                <span className="block tabular font-medium">{dolar(s.precio_venta)}</span>
+                {s.diferencia_pct !== 0 ? (
+                  <span
+                    className={`block text-xs tabular ${
+                      s.diferencia_pct < 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"
+                    }`}
+                  >
+                    {s.diferencia_pct > 0 ? "+" : ""}
+                    {s.diferencia_pct}%
+                  </span>
+                ) : null}
+              </td>
+
+              {/* «Sin stock» con palabras y en rojo, no un 0 que se confunde
+                  con cualquier otra cifra de la columna. */}
+              <td className="whitespace-nowrap px-3 py-2.5 text-right align-top">
+                {(s.stock ?? 0) > 0 ? (
+                  <span className="tabular">{s.stock}</span>
+                ) : (
+                  <span className="font-medium text-[var(--danger)]">Sin stock</span>
+                )}
+              </td>
+
+              <td className="py-2.5 pl-3 text-right align-top">
+                <button
+                  type="button"
+                  onClick={() => onElegir(s)}
+                  className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                >
+                  <IconoUsar />
+                  Usar esta
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
+  );
+}
+
+function IconoUsar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 17 17 7M9 7h8v8" />
+    </svg>
   );
 }
 

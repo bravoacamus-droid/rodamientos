@@ -154,8 +154,9 @@ export function Constructor({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-5 lg:flex-row">
-        <div className="flex min-w-0 flex-1 flex-col gap-5">
+      {/* Una sola columna. Era `lg:flex-row` con el resumen al lado; al
+          bajarlo, ese envoltorio ya no separaba nada. */}
+      <div className="flex min-w-0 flex-col gap-5">
           {/* ------------------------------------------------- Cabecera */}
           {/*
             Lo esencial arriba, el resto plegado.
@@ -424,9 +425,23 @@ export function Constructor({
               />
             </label>
           </section>
-        </div>
+      </div>
 
-        <ResumenConstructor
+      {/*
+        El resumen, ABAJO y a todo ancho. Antes era una columna a la derecha.
+
+        Luis, 08/09: *«el resumen se pasó abajo para que ocupe más espacio
+        producto»*. Y es lo correcto por una razón concreta de esta pantalla:
+        la tabla de líneas tiene NUEVE columnas —código, marca, descripción,
+        cantidad, unidad, entrega, precio, descuento, importe— más los botones
+        de cada fila. Quitarle 320 px a eso comprimía la descripción, que es
+        lo que Willy lee para saber qué rodamiento es (08:04: *«con sellos de
+        metal y juego C3… en función a eso yo ya veo»*).
+
+        El resumen, en cambio, son cuatro cifras: no necesita alto, necesita
+        estar al final, que es donde se mira cuando ya está todo puesto.
+      */}
+      <ResumenConstructor
           totales={totales}
           bloqueos={bloqueos}
           mostrarDescuento={estado.mostrarDescuento}
@@ -440,7 +455,6 @@ export function Constructor({
           hayNoInmediatos={estado.lineas.some((l) => l.disponibilidad !== "inmediata")}
           guardando={guardando}
         />
-      </div>
     </form>
   );
 }
