@@ -399,7 +399,7 @@ export function FilaLinea({
         open={panel === "sustitutos"}
         onOpenChange={(v) => setPanel(v ? "sustitutos" : "ninguno")}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Alternativas de {linea.codigo}</DialogTitle>
             <DialogDescription>
@@ -424,7 +424,7 @@ export function FilaLinea({
         open={panel === "historial"}
         onOpenChange={(v) => setPanel(v ? "historial" : "ninguno")}
       >
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Ventas anteriores · {linea.codigo}</DialogTitle>
             <DialogDescription>
@@ -587,7 +587,10 @@ function PanelSustitutos({
                 s.mejor_oferta ? "bg-[var(--ok-bg)]" : ""
               }`}
             >
-              <td className="py-2.5 pr-3 align-top">
+              {/* `whitespace-nowrap`: partir «6309-2Z/C3» en dos líneas por la
+                  raya lo convierte en dos códigos que no existen, y en este
+                  catálogo el código ES el producto. */}
+              <td className="whitespace-nowrap py-2.5 pr-3 align-top">
                 <span className="block font-medium">{s.codigo}</span>
                 <span className="block text-xs text-[var(--fg-subtle)]">{s.marca}</span>
               </td>
