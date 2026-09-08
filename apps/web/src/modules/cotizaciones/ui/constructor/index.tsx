@@ -328,7 +328,32 @@ export function Constructor({
 
           {/* --------------------------------------------------- Líneas */}
           <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
-            <div className="mb-3">
+            {/*
+              La sección se presenta, y el subtítulo hace un trabajo de verdad.
+
+              No está para adornar: dice EN VOZ ALTA que cada línea tiene
+              alternativas y ventas anteriores. Las dos cosas llevan meses en
+              el ERP y no se usaban porque nadie sabía que estaban —Willy,
+              47:00, preguntando por algo que ya existía: *«¿no te muestra una
+              referencia de a quién se ha vendido, a cuánto se ha vendido?»*—.
+              Un botón se encuentra si sabes que lo estás buscando.
+
+              El buscador se queda como está y a todo ancho, no detrás de un
+              «+ Agregar producto». Luis, 08/09: *«los productos añadidos por
+              el buscador que tenemos está genial, hay que diseñarlo bien
+              nomás»*. Y hay una razón para no meterlo en un diálogo: en este
+              catálogo se teclea el código y ya —6309, un código de fabricante,
+              media descripción—, y un modal por producto son dos clics de más
+              en lo que más veces se repite de la pantalla.
+            */}
+            <div className="mb-3 flex flex-col gap-3">
+              <div>
+                <h2 className="text-base font-semibold">Productos</h2>
+                <p className="text-sm text-[var(--fg-muted)]">
+                  Agrega productos y revisa las alternativas y las ventas
+                  anteriores de cada uno.
+                </p>
+              </div>
               <BuscadorLineas
                 onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
               />
@@ -358,7 +383,10 @@ export function Constructor({
                         <th className="text-right">Dscto. %</th>
                       ) : null}
                       <th className="text-right">Importe</th>
-                      <th />
+                      {/* Con nombre desde el 08/09. La columna existía sin
+                          encabezado, y una columna sin nombre al final de una
+                          tabla se lee como sobrante. */}
+                      <th className="text-right">Acciones</th>
                     </tr>
                   </THead>
                   <TBody>

@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Badge, Button, Input, SelectNativo } from "@rodatech/ui";
+import {
+  Badge,
+  Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  SelectNativo,
+} from "@rodatech/ui";
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
@@ -64,8 +75,11 @@ export function FilaLinea({
   // que salir a buscarlo entero. La pantalla ponía «sin stock» en los dos.
   const sinNada = noAlcanza && linea.stock <= 0;
 
+  // Abren siempre, sin alternar. El toggle tenía sentido cuando el botón era
+  // el mismo enlace que abría y cerraba el panel de debajo; con un diálogo se
+  // cierra con la equis o con Escape, y un botón que a veces no hace nada
+  // visible se siente roto.
   const abrirSustitutos = () => {
-    if (panel === "sustitutos") return setPanel("ninguno");
     setPanel("sustitutos");
     if (sustitutos.length > 0 || !linea.productoId) return;
     iniciar(async () => {
@@ -93,7 +107,6 @@ export function FilaLinea({
   };
 
   const abrirHistorial = () => {
-    if (panel === "historial") return setPanel("ninguno");
     setPanel("historial");
     if (historial.length > 0 || !linea.productoId) return;
     traerHistorial(cuantasVentas);
@@ -104,23 +117,29 @@ export function FilaLinea({
       <tr className={revision.ok ? "" : "bg-[var(--danger-bg)]"}>
         <td className="tabular text-[var(--fg-muted)]">{indice + 1}</td>
 
+        {/*
+          El stock, como DATO y no como puerta.
+
+          Era un enlace subrayado en ámbar de 12 px —«sin stock · ver
+          alternativas»— y hacía dos trabajos a la vez: avisar y ser el único
+          camino a las alternativas. Los dos mal. Willy no lo veía, y con
+          stock suficiente el enlace no salía, así que no había forma de
+          mirar una equivalencia por precio o por marca aunque se quisiera.
+
+          Ahora esto solo informa. Las alternativas son un botón de la
+          columna de acciones, y están siempre.
+        */}
         <td>
           <div className="font-medium">{linea.codigo}</div>
-          {noAlcanza ? (
-            <button
-              type="button"
-              onClick={abrirSustitutos}
-              className="mt-0.5 text-xs text-[var(--warn)] underline"
-            >
-              {sinNada
-                ? "sin stock · ver alternativas"
-                : `solo ${linea.stock} · ver alternativas`}
-            </button>
-          ) : (
-            <span className="text-xs text-[var(--fg-muted)]">
-              stock {linea.stock}
-            </span>
-          )}
+          <span
+            className={`text-sm ${noAlcanza ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
+          >
+            {sinNada
+              ? "sin stock"
+              : noAlcanza
+                ? `solo ${linea.stock}`
+                : `stock ${linea.stock}`}
+          </span>
         </td>
 
         {/* C2: la marca en columna propia. */}
@@ -237,21 +256,6 @@ export function FilaLinea({
             </button>
           ) : null}
 
-          {/*
-            Junto al precio, que es donde se pregunta.
-
-            Willy, 47:00, tecleando un precio: *«¿no te muestra una referencia
-            de a quién se ha vendido, a cuánto se ha vendido?»*. Estaba — pero
-            detrás de un «hist.» de 12 px, en gris, apretado entre las flechas
-            de subir y bajar. No lo vio, y con razón.
-          */}
-          <button
-            type="button"
-            onClick={abrirHistorial}
-            className="mt-1 block text-sm text-brand-600 underline"
-          >
-            {panel === "historial" ? "Ocultar ventas" : "Ventas anteriores"}
-          </button>
         </td>
 
         {mostrarDescuento ? (
@@ -284,7 +288,7 @@ export function FilaLinea({
               type="button"
               onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
               disabled={indice === 0}
-              className="rounded-sm px-1.5 py-1 text-xs disabled:opacity-30"
+              className="flex size-8 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30"
               aria-label="Subir"
             >
               ↑
@@ -293,19 +297,53 @@ export function FilaLinea({
               type="button"
               onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
               disabled={indice === total - 1}
-              className="rounded-sm px-1.5 py-1 text-xs disabled:opacity-30"
+              className="flex size-8 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30"
               aria-label="Bajar"
             >
               ↓
             </button>
-            <button
-              type="button"
-              onClick={() => despachar({ tipo: "quitar", key: linea.key })}
-              className="rounded-sm px-1.5 py-1 text-xs text-[var(--danger)]"
-              aria-label={`Quitar ${linea.codigo}`}
+
+            {/*
+              Los tres que importan, como BOTONES.
+
+              Las dos primeras cosas ya estaban y no se veían: las
+              alternativas detrás de un enlace ámbar de 12 px que solo salía
+              sin stock, y las ventas anteriores detrás de otro enlace —antes
+              incluso detrás de un «hist.» apretado entre estas dos flechas—.
+
+              Willy, 47:00, tecleando un precio: *«¿no te muestra una
+              referencia de a quién se ha vendido, a cuánto se ha vendido?»*.
+              La respuesta era que sí, y no había manera de que lo supiera.
+
+              Luis, 08/09, sobre su prototipo: *«más ordenado, más entendible
+              para Willy, con botones modales, así no rompemos nada»*.
+            */}
+            <BotonAccion
+              onClick={abrirSustitutos}
+              etiqueta="Alternativas"
+              titulo={`Ver alternativas de ${linea.codigo}`}
+              deshabilitado={!linea.productoId}
             >
-              ✕
-            </button>
+              <IconoCambio />
+            </BotonAccion>
+
+            <BotonAccion
+              onClick={abrirHistorial}
+              etiqueta="Ventas"
+              titulo={`Ventas anteriores de ${linea.codigo}`}
+              deshabilitado={!linea.productoId}
+            >
+              <IconoReloj />
+            </BotonAccion>
+
+            <BotonAccion
+              onClick={() => despachar({ tipo: "quitar", key: linea.key })}
+              etiqueta="Quitar"
+              titulo={`Quitar ${linea.codigo}`}
+              peligro
+            >
+              <IconoPapelera />
+            </BotonAccion>
           </div>
         </td>
       </tr>
@@ -342,10 +380,34 @@ export function FilaLinea({
         </tr>
       ) : null}
 
-      {panel === "sustitutos" ? (
-        <tr>
-          <td />
-          <td colSpan={mostrarDescuento ? 8 : 7} className="pb-3">
+      {/*
+        En diálogo, no como fila desplegada dentro de la tabla.
+
+        Una fila que se abre empuja hacia abajo todo lo que hay debajo: al
+        cerrarla, el precio que se estaba tecleando ha cambiado de sitio y hay
+        que volver a buscarlo. En una cotización de seis líneas eso pasa
+        constantemente, y es justo mientras se negocia.
+
+        El diálogo tampoco tiene que caber en el ancho de una celda, así que
+        las alternativas se leen con su precio y su stock al lado — que es
+        para lo que se abren.
+
+        Van FUERA del `<tr>`: un diálogo montado dentro de una fila hereda el
+        `display: table-row` del contexto y se pinta donde no debe.
+      */}
+      <Dialog
+        open={panel === "sustitutos"}
+        onOpenChange={(v) => setPanel(v ? "sustitutos" : "ninguno")}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Alternativas de {linea.codigo}</DialogTitle>
+            <DialogDescription>
+              Productos que entran en el mismo sitio. La que conviene es la que
+              tiene stock y mejor precio.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
             <PanelSustitutos
               cargando={cargando}
               sustitutos={sustitutos}
@@ -354,24 +416,109 @@ export function FilaLinea({
                 setPanel("ninguno");
               }}
             />
-          </td>
-        </tr>
-      ) : null}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
 
-      {panel === "historial" ? (
-        <tr>
-          <td />
-          <td colSpan={mostrarDescuento ? 8 : 7} className="pb-3">
+      <Dialog
+        open={panel === "historial"}
+        onOpenChange={(v) => setPanel(v ? "historial" : "ninguno")}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Ventas anteriores · {linea.codigo}</DialogTitle>
+            <DialogDescription>
+              {clienteId
+                ? "Lo que ya se le vendió a este cliente, y a cuánto."
+                : "Elige un cliente para ver lo que se le vendió a él; por ahora sale de todos."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
             <PanelHistorial
               cargando={cargando}
               ventas={historial}
               pedidas={cuantasVentas}
               onVerMas={() => traerHistorial(25)}
             />
-          </td>
-        </tr>
-      ) : null}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+/**
+ * Un botón de la columna de acciones.
+ *
+ * Con texto desde `xl`, y solo icono por debajo. No es un capricho de
+ * responsive: la fila ya lleva código, marca, descripción, cantidad, entrega,
+ * precio, descuento e importe, y tres botones con texto no caben en un
+ * portátil sin comerse la descripción — que es lo que se lee para saber qué
+ * línea es.
+ *
+ * El icono nunca va solo del todo: `title` y `aria-label` llevan la frase
+ * entera con el código dentro, así que al pasar por encima se lee «Ver
+ * alternativas de 6309».
+ */
+function BotonAccion({
+  onClick,
+  etiqueta,
+  titulo,
+  children,
+  deshabilitado,
+  peligro,
+}: {
+  onClick: () => void;
+  etiqueta: string;
+  titulo: string;
+  children: React.ReactNode;
+  deshabilitado?: boolean;
+  peligro?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={deshabilitado}
+      title={titulo}
+      aria-label={titulo}
+      className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        peligro
+          ? "border-[var(--border)] text-[var(--danger)] hover:bg-[var(--danger-bg)]"
+          : "border-[var(--border)] text-[var(--fg)] hover:bg-[var(--surface-2)]"
+      }`}
+    >
+      {children}
+      <span className="hidden xl:inline">{etiqueta}</span>
+    </button>
+  );
+}
+
+function IconoCambio() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7h13l-3-3M21 17H8l3 3" />
+    </svg>
+  );
+}
+
+function IconoReloj() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+function IconoPapelera() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+    </svg>
   );
 }
 
@@ -408,10 +555,9 @@ function PanelSustitutos({
   }
 
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2">
-      <p className="mb-1.5 text-xs font-medium text-[var(--fg-muted)]">
-        Alternativas
-      </p>
+    // Sin título propio: se lo pone el diálogo, y con el código dentro.
+    // Dos encabezados seguidos diciendo casi lo mismo es ruido.
+    <div>
       <div className="flex flex-col gap-1">
         {sustitutos.map((s) => (
           <button
@@ -500,10 +646,8 @@ function PanelHistorial({
   }
 
   return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2">
-      <p className="mb-1.5 text-sm font-medium text-[var(--fg-muted)]">
-        Ventas anteriores
-      </p>
+    // El título lo pone el diálogo, con el código y el cliente.
+    <div>
       <div className="flex flex-col gap-0.5 text-sm">
         {ventas.map((v, i) => (
           <div

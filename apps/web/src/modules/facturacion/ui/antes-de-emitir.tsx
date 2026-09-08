@@ -284,7 +284,12 @@ function Casilla({
         checked={marcada}
         disabled={deshabilitada}
         onChange={(e) => onCambiar(e.target.checked)}
-        className="mt-0.5 size-5 shrink-0 accent-[var(--brand-600,#1d4ed8)]"
+        // `accent-brand-600`, la clase de Tailwind. La marca es una escala de
+        // Tailwind y no un token CSS: escribirla como variable la deja sin
+        // declarar, y el guardián de tokens lo tumba —a mí me lo tumbó—.
+        // Aquí no se puede ni citar la forma mala: ese test escanea el
+        // archivo entero, comentarios incluidos.
+        className="mt-0.5 size-5 shrink-0 accent-brand-600"
       />
       <span className="min-w-0">
         <span className="block text-sm font-medium">{titulo}</span>
