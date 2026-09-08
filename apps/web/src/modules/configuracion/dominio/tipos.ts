@@ -88,6 +88,15 @@ export interface Empresa {
   nombre_comercial: string;
   ruc: string;
   direccion: string | null;
+  /**
+   * El ubigeo del local, seis dígitos del padrón del INEI.
+   *
+   * Va como PUNTO DE PARTIDA en cada guía de remisión. No estaba en esta
+   * pantalla, y por eso llevaba puesto 150101 -Lima Cercado- cuando la
+   * empresa está en San Juan de Lurigancho: un número que nadie podía ver
+   * ni corregir desde la aplicación.
+   */
+  ubigeo_codigo: string | null;
   telefono: string | null;
   celular: string | null;
   email: string | null;

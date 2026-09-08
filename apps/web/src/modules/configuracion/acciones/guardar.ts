@@ -52,6 +52,16 @@ const esquemaEmpresa = z.object({
   nombre_comercial: z.string().trim().min(1, "El nombre comercial es obligatorio.").max(200),
   ruc: z.string().regex(/^[0-9]{11}$/, "El RUC son 11 dígitos."),
   direccion: textoOpcional,
+  // Seis dígitos o nada. La base tiene clave foránea contra `ubigeo`, así
+  // que un código inventado lo rechaza ella; esto solo da un mensaje que se
+  // entiende antes de llegar allí.
+  ubigeo_codigo: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{6}$/, "El ubigeo son seis dígitos.")
+    .nullable()
+    .or(z.literal("").transform(() => null))
+    .default(null),
   telefono: textoOpcional,
   celular: textoOpcional,
   email: textoOpcional,

@@ -23,7 +23,7 @@ export async function empresa(): Promise<Resultado<Empresa>> {
     const { data, error } = await supabase
       .from("empresa")
       .select(
-        `razon_social, nombre_comercial, ruc, direccion, telefono, celular,
+        `razon_social, nombre_comercial, ruc, direccion, ubigeo_codigo, telefono, celular,
          email, email_ventas, web, eslogan, igv_porcentaje,
          detraccion_monto_minimo, detraccion_porcentaje, retencion_porcentaje,
          cuenta_detraccion, agente_retencion, banco, cuenta_corriente, cci,
@@ -48,6 +48,7 @@ export async function empresa(): Promise<Resultado<Empresa>> {
         nombre_comercial: String(f.nombre_comercial),
         ruc: String(f.ruc),
         direccion: (f.direccion as string | null) ?? null,
+        ubigeo_codigo: (f.ubigeo_codigo as string | null) ?? null,
         telefono: (f.telefono as string | null) ?? null,
         celular: (f.celular as string | null) ?? null,
         email: (f.email as string | null) ?? null,

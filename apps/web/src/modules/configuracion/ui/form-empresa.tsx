@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button, Campo, Input, SwitchCampo, Textarea, toast } from "@rodatech/ui";
 
 import { guardarEmpresa, type ResultadoConfig } from "../acciones/guardar";
+import { nombreDelUbigeo } from "../acciones/ubigeo";
 import type { Empresa } from "../dominio/tipos";
 
 /**
@@ -103,6 +104,24 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
           disabled={!puedeEditar}
         />
       </Campo>
+
+      {/*
+        El ubigeo, pegado a la dirección y con el distrito resuelto debajo.
+
+        No estaba en esta pantalla, y por eso llevaba puesto `150101` —Lima
+        Cercado— con el local en San Juan de Lurigancho. Va como PUNTO DE
+        PARTIDA en cada guía de remisión: un dígito cambiado es un documento
+        que declara que la mercadería salió de otro sitio.
+
+        Seis dígitos no se pueden comprobar mirándolos. Con el distrito al
+        lado, un código que no cuadra con la dirección de arriba salta a la
+        vista — que es la única forma de que alguien lo corrija.
+      */}
+      <CampoUbigeo
+        valor={datos.ubigeo_codigo ?? ""}
+        onCambio={(v) => setDatos((d) => ({ ...d, ubigeo_codigo: v || null }))}
+        puedeEditar={puedeEditar}
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Campo id="telefono" label="Teléfono">
@@ -268,5 +287,78 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </p>
       )}
     </form>
+  );
+}
+
+/**
+ * El ubigeo, con el distrito resuelto debajo.
+ *
+ * El código se comprueba contra el padrón MIENTRAS se teclea, y solo cuando
+ * están los seis dígitos: consultar con tres es gastar un viaje para decir
+ * «faltan dígitos», que ya se ve.
+ *
+ * Si el código no existe se dice, en vez de dejar que reviente la clave
+ * foránea al guardar con un mensaje de Postgres que no le sirve a nadie.
+ */
+function CampoUbigeo({
+  valor,
+  onCambio,
+  puedeEditar,
+}: {
+  valor: string;
+  onCambio: (v: string) => void;
+  puedeEditar: boolean;
+}) {
+  const [nombre, setNombre] = React.useState<string | null>(null);
+  const [problema, setProblema] = React.useState<string | null>(null);
+  const [buscando, empezar] = React.useTransition();
+
+  React.useEffect(() => {
+    if (valor.length !== 6) {
+      setNombre(null);
+      setProblema(null);
+      return;
+    }
+    empezar(async () => {
+      const r = await nombreDelUbigeo(valor);
+      if (r.ok) {
+        setNombre(r.nombre);
+        setProblema(null);
+      } else {
+        setNombre(null);
+        setProblema(r.error);
+      }
+    });
+  }, [valor]);
+
+  return (
+    <Campo
+      id="ubigeo_codigo"
+      label="Ubigeo del local"
+      ayuda={
+        buscando ? (
+          "Comprobando…"
+        ) : nombre ? (
+          <>
+            <strong>{nombre}</strong>. Comprueba que cuadre con la dirección de
+            arriba: sale como punto de partida en cada guía.
+          </>
+        ) : problema ? (
+          <span className="text-[var(--danger)]">{problema}</span>
+        ) : (
+          "Seis dígitos del padrón del INEI. Sale como punto de partida en cada guía de remisión."
+        )
+      }
+    >
+      <Input
+        id="ubigeo_codigo"
+        value={valor}
+        onChange={(e) => onCambio(e.target.value.replace(/\D/g, "").slice(0, 6))}
+        className="tabular"
+        inputMode="numeric"
+        placeholder="150132"
+        disabled={!puedeEditar}
+      />
+    </Campo>
   );
 }
