@@ -16,27 +16,52 @@ import {
 } from "@rodatech/ui";
 import { Logo } from "@/componentes/logo";
 import { IconoNav } from "@/componentes/iconos-nav";
-import { rutaActiva, type GrupoNav } from "@/lib/navegacion";
+import {
+  CONFIGURACION,
+  TABLERO,
+  rutaActiva,
+  type GrupoNav,
+  type ItemNav,
+} from "@/lib/navegacion";
 import type { PendientesDelMenu } from "@/lib/pendientes-del-menu";
 
 /**
  * Navegación de módulos.
  *
- * Tres cosas que antes no hacía:
+ * ---------------------------------------------------------------------------
+ * De dónde sale esta forma
+ * ---------------------------------------------------------------------------
+ * Del rediseño que hizo Luis el 08/09: *«así lo quiero, más dinámico… más
+ * visible, más bonito al cliente, entendible qué hace cada cosa»*. Y después:
+ * *«no olvidar los iconos de cada uno, así el tipo de letra»*.
  *
- * 1. **Iconos.** Diecinueve entradas de solo texto obligan a leer cada una.
- *    Con icono se llega por forma, que es más rápido y es lo que la gente
- *    espera de una herramienta que usa ocho horas al día.
+ * Una corrección suya que conviene no repetir: en un primer intento se
+ * **cerraron** los grupos para que el menú cupiera sin desplazarse. Era el
+ * problema equivocado. Él quiere verlo todo —con su icono, su espacio y su
+ * tamaño— y desplazarse si hace falta. Un menú que cabe pero no se entiende no
+ * ha ganado nada.
  *
- * 2. **Grupos plegables, y CERRADOS de entrada.** Un vendedor no abre
- *    Abastecimiento nunca. Plegar existía desde el principio, pero los cinco
- *    grupos nacían abiertos: veintidós entradas que no caben en pantalla, con
- *    «Configuración» fuera de la vista. Nadie lo descubría porque nada
- *    invitaba a hacerlo.
+ * ---------------------------------------------------------------------------
+ * Las medidas salen de su prototipo, no de mi gusto
+ * ---------------------------------------------------------------------------
+ * Se midieron en la pantalla que mandó: **14 px, peso 600 en los grupos, filas
+ * de 48 px**. La tipografía es Manrope, y se cambió en toda la aplicación
+ * (`layout.tsx`): tiene la altura de x más alta que Inter, así que al mismo
+ * tamaño se lee más grande — con Willy eso no es estética.
  *
- * 3. **Se acuerda.** Lo abierto va a `localStorage`. El grupo que contiene la
- *    ruta activa se abre siempre, aunque estuviera cerrado — si no, el enlace
- *    marcado quedaría escondido.
+ * ---------------------------------------------------------------------------
+ * Lo demás
+ * ---------------------------------------------------------------------------
+ *  · **Todo abierto de entrada.** Se puede plegar y lo plegado se recuerda,
+ *    pero nadie tiene que descubrir nada para ver sus módulos.
+ *
+ *  · **Icono también en el título del grupo.** Un encabezado en versalitas
+ *    grises se lee como una etiqueta de sistema; con icono se reconoce igual
+ *    que sus ítems.
+ *
+ *  · **Tablero arriba y Configuración anclada abajo**, los dos fuera de los
+ *    grupos: uno es la portada, y el otro se toca el día de la puesta en
+ *    marcha y casi nunca más — pero cuando se necesita, no se busca.
  *
  * El mismo listado se pinta en la columna fija y en el cajón de móvil desde
  * una sola función: duplicarlo garantizaba que un día se agregara un módulo en
@@ -44,93 +69,146 @@ import type { PendientesDelMenu } from "@/lib/pendientes-del-menu";
  */
 
 /*
-  Se guardan los ABIERTOS, no los plegados.
+  Se guardan los PLEGADOS.
 
-  Antes era al revés, y el efecto era que los cinco grupos nacían abiertos:
-  veintidós entradas que no caben en pantalla, con «Configuración» fuera de la
-  vista y hay que desplazarse para llegar. Plegar existía desde el principio y
-  no lo descubría nadie, porque nada invitaba a hacerlo.
-
-  Con esto nace abierto SOLO el grupo donde estás. Willy vive en Operación —
-  cotizar, guía, facturar— y lo demás lo abre el día que lo necesita. Y como
-  se recuerda, quien abra Abastecimiento lo encuentra abierto mañana.
-
-  La clave cambia de nombre a propósito: la vieja guarda lo contrario, y
-  leerla con la lógica nueva dejaría cerrado justo lo que alguien había
-  decidido tener abierto.
+  Por defecto está todo abierto, así que lo que hay que recordar es la
+  excepción. Guardar los abiertos obligaría a que el usuario «descubriera» el
+  menú antes de verlo entero.
 */
-const CLAVE = "rodatech.nav.abiertos";
+const CLAVE = "rodatech.nav.plegados";
 
-/** Grupos abiertos, leídos del navegador. Nunca revienta si el valor está roto. */
-function leerAbiertos(): Set<string> | null {
-  if (typeof window === "undefined") return null;
+/** Grupos plegados, leídos del navegador. Nunca revienta si el valor está roto. */
+function leerPlegados(): Set<string> {
+  if (typeof window === "undefined") return new Set();
   try {
     const crudo = window.localStorage.getItem(CLAVE);
-    // `null` y lista vacía NO son lo mismo: sin valor guardado manda el
-    // criterio de por defecto —abrir el de la ruta activa—, y una lista vacía
-    // es alguien que los cerró todos a propósito.
-    if (crudo === null) return null;
-    const lista: unknown = JSON.parse(crudo);
+    const lista: unknown = crudo ? JSON.parse(crudo) : [];
     return new Set(Array.isArray(lista) ? lista.filter((x) => typeof x === "string") : []);
   } catch {
-    return null;
+    return new Set();
   }
 }
 
-function useAbiertos() {
-  // Arranca en `null` y se rellena al montar: en el servidor no hay
-  // `localStorage`, y leerlo en el primer render rompería la hidratación.
-  const [abiertos, setAbiertos] = React.useState<Set<string> | null>(null);
+function usePlegados() {
+  // Arranca vacío —o sea, todo abierto— y se rellena al montar: en el servidor
+  // no hay `localStorage`, y leerlo en el primer render rompería la
+  // hidratación.
+  const [plegados, setPlegados] = React.useState<Set<string>>(new Set());
 
-  React.useEffect(() => setAbiertos(leerAbiertos()), []);
+  React.useEffect(() => setPlegados(leerPlegados()), []);
 
   const alternar = React.useCallback((titulo: string) => {
-    setAbiertos((previos) => {
-      const siguiente = new Set(previos ?? []);
+    setPlegados((previos) => {
+      const siguiente = new Set(previos);
       if (siguiente.has(titulo)) siguiente.delete(titulo);
       else siguiente.add(titulo);
       try {
         window.localStorage.setItem(CLAVE, JSON.stringify([...siguiente]));
       } catch {
-        // Modo privado o almacenamiento lleno: se pliega igual, solo que no
-        // se recuerda. No es motivo para romper el menú.
+        // Modo privado o almacenamiento lleno: se pliega igual, solo que no se
+        // recuerda. No es motivo para romper el menú.
       }
       return siguiente;
     });
   }, []);
 
-  return { abiertos, alternar };
+  return { plegados, alternar };
 }
 
 // Un solo ítem encendido, el más específico. La regla vive en
 // `lib/navegacion.ts` y está probada allí.
 const activoEn = (ruta: string, item: string) => rutaActiva(ruta) === item;
 
+/** Cuántas cosas esperan en esta ruta. Solo dos la tienen. */
+const esperaEn = (item: ItemNav, pendientes?: PendientesDelMenu) =>
+  pendientes?.[item.ruta as keyof PendientesDelMenu] ?? 0;
+
+/**
+ * Un enlace del menú.
+ *
+ * `dentroDeGrupo` distingue los que cuelgan de un grupo de los sueltos
+ * —Tablero y Configuración—, que se alinean con los títulos y van en el mismo
+ * peso que ellos.
+ */
+function Enlace({
+  item,
+  activo,
+  espera,
+  dentroDeGrupo = true,
+  onNavegar,
+}: {
+  item: ItemNav;
+  activo: boolean;
+  espera: number;
+  dentroDeGrupo?: boolean;
+  onNavegar?: () => void;
+}) {
+  return (
+    <Link
+      href={item.ruta}
+      aria-current={activo ? "page" : undefined}
+      onClick={onNavegar}
+      className={cn(
+        // 48 px, la altura de su prototipo. Se mantiene en escritorio: aquí no
+        // se gana nada apretando las filas, y en móvil es además la medida
+        // mínima para acertar con el dedo.
+        "flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+        activo
+          ? "bg-brand-600 font-semibold text-white"
+          : dentroDeGrupo
+            ? "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+            : "font-semibold text-[var(--fg)] hover:bg-[var(--surface-2)]",
+      )}
+    >
+      <IconoNav
+        nombre={item.icono}
+        className={cn("size-[18px] shrink-0", activo ? "" : "text-brand-600/75")}
+      />
+      <span className="truncate">{item.etiqueta}</span>
+
+      {/*
+        Cuántas esperan. Solo si hay: un «0» ocupa el mismo sitio que un número
+        y no dice nada, y la gracia de la pastilla es que solo la lleve lo que
+        reclama algo.
+      */}
+      {espera > 0 ? (
+        <span
+          className={cn(
+            "ml-auto min-w-6 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-bold tabular",
+            activo ? "bg-white/25 text-white" : "bg-[var(--warn-bg)] text-[var(--warn)]",
+          )}
+          aria-label={`${espera} esperando`}
+        >
+          {espera > 99 ? "99+" : espera}
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
 function Grupos({
   grupos,
   ruta,
-  abiertos,
+  plegados,
   alternar,
   pendientes,
   onNavegar,
 }: {
   grupos: GrupoNav[];
   ruta: string;
-  /** Los que el usuario dejó abiertos. `null` = todavía no ha decidido. */
-  abiertos: Set<string> | null;
+  plegados: Set<string>;
   alternar: (titulo: string) => void;
-  /** Cuántas cosas esperan en cada ruta. Solo dos la tienen. */
   pendientes?: PendientesDelMenu;
   onNavegar?: () => void;
 }) {
   return (
     <>
       {grupos.map((grupo) => {
+        // El grupo que contiene la ruta activa se abre aunque esté plegado:
+        // esconder el enlace marcado desorienta más de lo que ahorra.
         const contieneActivo = grupo.items.some((i) => activoEn(ruta, i.ruta));
-        // El grupo de la ruta activa se abre SIEMPRE, aunque lo hayan cerrado:
-        // esconder el enlace marcado desorienta más de lo que ahorra. Y sin
-        // nada guardado, ese es el único que se abre.
-        const abierto = contieneActivo || (abiertos?.has(grupo.titulo) ?? false);
+        const abierto = contieneActivo || !plegados.has(grupo.titulo);
 
         return (
           <div key={grupo.titulo} className="flex flex-col">
@@ -138,13 +216,18 @@ function Grupos({
               type="button"
               onClick={() => alternar(grupo.titulo)}
               aria-expanded={abierto}
-              className="flex items-center gap-1.5 rounded-sm px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--fg-subtle)] transition-colors hover:text-[var(--fg-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
             >
+              <IconoNav
+                nombre={grupo.icono}
+                className="size-[18px] shrink-0 text-brand-600"
+              />
+              <span className="truncate">{grupo.titulo}</span>
               <svg
                 viewBox="0 0 24 24"
                 className={cn(
-                  "size-3 shrink-0 transition-transform",
-                  abierto ? "rotate-90" : "",
+                  "ml-auto size-4 shrink-0 text-[var(--fg-subtle)] transition-transform",
+                  abierto ? "-rotate-90" : "rotate-90",
                 )}
                 aria-hidden="true"
               >
@@ -157,61 +240,22 @@ function Grupos({
                   strokeLinejoin="round"
                 />
               </svg>
-              {grupo.titulo}
             </button>
 
             {abierto ? (
-              <div className="flex flex-col gap-0.5 pb-1">
-                {grupo.items.map((item) => {
-                  const activo = activoEn(ruta, item.ruta);
-                  const espera =
-                    pendientes?.[item.ruta as keyof PendientesDelMenu] ?? 0;
-                  return (
-                    <Link
-                      key={item.ruta}
-                      href={item.ruta}
-                      aria-current={activo ? "page" : undefined}
-                      onClick={onNavegar}
-                      className={cn(
-                        // 44 px en móvil: la medida mínima para acertar con el
-                        // dedo sin pelear.
-                        "flex min-h-11 items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors md:min-h-0",
-                        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
-                        activo
-                          ? "bg-brand-600 font-medium text-white"
-                          : "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]",
-                      )}
-                    >
-                      <IconoNav
-                        nombre={item.icono}
-                        className={cn(
-                          "size-4 shrink-0",
-                          activo ? "" : "text-[var(--fg-subtle)]",
-                        )}
-                      />
-                      <span className="truncate">{item.etiqueta}</span>
-
-                      {/*
-                        Cuántas esperan. Solo si hay: un «0» ocupa el mismo
-                        sitio que un número y no dice nada, y la gracia de la
-                        pastilla es que solo la lleve lo que reclama algo.
-                      */}
-                      {espera > 0 ? (
-                        <span
-                          className={cn(
-                            "ml-auto min-w-5 shrink-0 rounded-full px-1.5 py-0.5 text-center text-xs font-semibold tabular",
-                            activo
-                              ? "bg-white/25 text-white"
-                              : "bg-[var(--warn-bg)] text-[var(--warn)]",
-                          )}
-                          aria-label={`${espera} esperando`}
-                        >
-                          {espera > 99 ? "99+" : espera}
-                        </span>
-                      ) : null}
-                    </Link>
-                  );
-                })}
+              /* La guía vertical ata los ítems a su grupo. Con los cinco
+                 abiertos y sin ella, veintidós enlaces seguidos se leen como
+                 una lista plana y el agrupamiento deja de significar nada. */
+              <div className="ml-6 flex flex-col gap-0.5 border-l border-[var(--border-soft)] pb-2 pl-2">
+                {grupo.items.map((item) => (
+                  <Enlace
+                    key={item.ruta}
+                    item={item}
+                    activo={activoEn(ruta, item.ruta)}
+                    espera={esperaEn(item, pendientes)}
+                    onNavegar={onNavegar}
+                  />
+                ))}
               </div>
             ) : null}
           </div>
@@ -221,38 +265,129 @@ function Grupos({
   );
 }
 
+/**
+ * La cabecera: qué empresa y quién está dentro.
+ *
+ * Luis la puso en su rediseño, y tiene sentido más allá de lo estético: el día
+ * que haya un entorno de pruebas al lado del de verdad, el nombre de arriba es
+ * lo que evita emitir una factura en el sitio equivocado.
+ */
+function Cabecera({
+  empresa,
+  usuario,
+  onNavegar,
+}: {
+  empresa: string;
+  usuario: string;
+  onNavegar?: () => void;
+}) {
+  return (
+    <Link
+      href="/dashboard"
+      onClick={onNavegar}
+      className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4 py-4 transition-colors hover:bg-[var(--surface-2)]"
+    >
+      <Logo className="h-9 w-auto shrink-0" />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-bold leading-tight">
+          {empresa}
+        </span>
+        <span className="block truncate text-sm text-[var(--fg-muted)]">
+          {usuario}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+/** El cuerpo del menú, igual en la columna fija y en el cajón de móvil. */
+function Cuerpo({
+  grupos,
+  ruta,
+  plegados,
+  alternar,
+  pendientes,
+  puedeConfigurar,
+  onNavegar,
+}: {
+  grupos: GrupoNav[];
+  ruta: string;
+  plegados: Set<string>;
+  alternar: (titulo: string) => void;
+  pendientes?: PendientesDelMenu;
+  puedeConfigurar: boolean;
+  onNavegar?: () => void;
+}) {
+  return (
+    <>
+      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
+        <Enlace
+          item={TABLERO}
+          activo={activoEn(ruta, TABLERO.ruta)}
+          espera={0}
+          dentroDeGrupo={false}
+          onNavegar={onNavegar}
+        />
+
+        <div className="my-1 h-px bg-[var(--border-soft)]" />
+
+        <Grupos
+          grupos={grupos}
+          ruta={ruta}
+          plegados={plegados}
+          alternar={alternar}
+          pendientes={pendientes}
+          onNavegar={onNavegar}
+        />
+      </div>
+
+      {/* Anclada abajo: se llega sin buscarla, aunque el menú esté desplazado. */}
+      {puedeConfigurar ? (
+        <div className="shrink-0 border-t border-[var(--border)] px-3 py-2">
+          <Enlace
+            item={CONFIGURACION}
+            activo={activoEn(ruta, CONFIGURACION.ruta)}
+            espera={0}
+            dentroDeGrupo={false}
+            onNavegar={onNavegar}
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 /** Columna fija. Desde `md` hacia arriba. */
 export function BarraLateral({
   grupos,
+  empresa,
+  usuario,
   pendientes,
+  puedeConfigurar,
 }: {
   grupos: GrupoNav[];
+  empresa: string;
+  usuario: string;
   pendientes?: PendientesDelMenu;
+  puedeConfigurar: boolean;
 }) {
   const ruta = usePathname();
-  const { abiertos, alternar } = useAbiertos();
+  const { plegados, alternar } = usePlegados();
 
   return (
     <nav
       aria-label="Módulos"
-      className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-[var(--border)] bg-[var(--surface)] md:flex print:!hidden"
+      className="hidden h-dvh w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:sticky md:top-0 md:flex print:!hidden"
     >
-      {/* El logo se queda quieto mientras el menú se desplaza. */}
-      <div className="sticky top-0 z-10 bg-[var(--surface)] px-4 pb-3 pt-4">
-        <Link href="/dashboard" className="block">
-          <Logo className="h-9 w-auto" />
-        </Link>
-      </div>
-
-      <div className="flex flex-col gap-1 px-3 pb-4">
-        <Grupos
-          grupos={grupos}
-          ruta={ruta}
-          abiertos={abiertos}
-          alternar={alternar}
-          pendientes={pendientes}
-        />
-      </div>
+      <Cabecera empresa={empresa} usuario={usuario} />
+      <Cuerpo
+        grupos={grupos}
+        ruta={ruta}
+        plegados={plegados}
+        alternar={alternar}
+        pendientes={pendientes}
+        puedeConfigurar={puedeConfigurar}
+      />
     </nav>
   );
 }
@@ -260,14 +395,21 @@ export function BarraLateral({
 /** Cajón de móvil. Se cierra solo al navegar. */
 export function MenuMovil({
   grupos,
+  empresa,
+  usuario,
   pendientes,
+  puedeConfigurar,
 }: {
   grupos: GrupoNav[];
+  empresa: string;
+  usuario: string;
   pendientes?: PendientesDelMenu;
+  puedeConfigurar: boolean;
 }) {
   const ruta = usePathname();
   const [abierto, setAbierto] = React.useState(false);
-  const { abiertos, alternar } = useAbiertos();
+  const { plegados, alternar } = usePlegados();
+  const cerrar = () => setAbierto(false);
 
   return (
     <Sheet open={abierto} onOpenChange={setAbierto}>
@@ -286,21 +428,18 @@ export function MenuMovil({
         </svg>
       </SheetTrigger>
 
-      <SheetContent lado="izquierda" className="w-72 max-w-[85vw] p-0">
+      <SheetContent lado="izquierda" className="flex w-72 max-w-[85vw] flex-col p-0">
         <SheetTitle className="sr-only">Módulos</SheetTitle>
-        <div className="border-b border-[var(--border)] p-4">
-          <Link href="/dashboard" onClick={() => setAbierto(false)}>
-            <Logo className="h-8 w-auto" />
-          </Link>
-        </div>
-        <SheetBody className="flex flex-col gap-1 p-3">
-          <Grupos
+        <Cabecera empresa={empresa} usuario={usuario} onNavegar={cerrar} />
+        <SheetBody className="flex min-h-0 flex-1 flex-col p-0">
+          <Cuerpo
             grupos={grupos}
             ruta={ruta}
-            abiertos={abiertos}
+            plegados={plegados}
             alternar={alternar}
             pendientes={pendientes}
-            onNavegar={() => setAbierto(false)}
+            puedeConfigurar={puedeConfigurar}
+            onNavegar={cerrar}
           />
         </SheetBody>
       </SheetContent>

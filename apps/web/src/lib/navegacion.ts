@@ -25,6 +25,15 @@ export interface ItemNav {
 
 export interface GrupoNav {
   titulo: string;
+  /**
+   * El icono del grupo, al lado del título.
+   *
+   * Luis, 08/09, sobre su rediseño: *«más visible… entendible qué hace cada
+   * cosa»*. Un título de grupo en gris y en versalitas se lee como una
+   * etiqueta de sistema; con icono se reconoce de un vistazo, igual que los
+   * ítems de dentro.
+   */
+  icono: NombreIcono;
   items: readonly ItemNav[];
 }
 
@@ -37,11 +46,40 @@ export interface GrupoNav {
  * Esto es solo la navegación. Que un rol NO vea un ítem no lo protege: la
  * autorización real vive en RLS y en la validación de cada Server Action.
  */
+/**
+ * El tablero, suelto y arriba del todo.
+ *
+ * Fuera de los grupos a propósito: no es «una cosa de ventas», es la portada
+ * — donde se mira cómo va el negocio antes de decidir a qué módulo entrar.
+ * Meterlo dentro de un grupo lo escondía cuando ese grupo se plegaba.
+ */
+export const TABLERO: ItemNav = {
+  etiqueta: "Tablero",
+  ruta: "/dashboard",
+  icono: "tablero",
+};
+
+/**
+ * Configuración, anclada abajo.
+ *
+ * Se toca el día de la puesta en marcha y casi nunca más, así que no compite
+ * por el sitio de arriba; y al estar anclada se llega sin buscarla, que es lo
+ * que no pasaba cuando vivía al final de «Gestión» y había que desplazarse.
+ */
+export const CONFIGURACION: ItemNav = {
+  etiqueta: "Configuración",
+  ruta: "/configuracion",
+  icono: "configuracion",
+  roles: ["gerencia", "admin"],
+};
+
 export const NAVEGACION: readonly GrupoNav[] = [
   {
-    titulo: "Operación",
+    // «Ventas» y no «Operación»: es como lo llama Luis y como lo entiende
+    // quien vende. «Operación» describe el software, no el trabajo.
+    titulo: "Ventas",
+    icono: "cotizacion",
     items: [
-      { etiqueta: "Tablero", ruta: "/dashboard", icono: "tablero" },
       { etiqueta: "Cotizaciones", ruta: "/cotizaciones", icono: "cotizacion" },
       // Justo después, porque es el paso siguiente del mismo hilo: se
       // cotiza, el cliente confirma, y cuando llega la mercadería alguien
@@ -55,6 +93,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
   },
   {
     titulo: "Catálogo",
+    icono: "producto",
     items: [
       { etiqueta: "Productos", ruta: "/productos", icono: "producto" },
       // Quien mantiene el maestro es Compras; gerencia y admin pueden todo.
@@ -78,6 +117,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
   },
   {
     titulo: "Almacén",
+    icono: "inventario",
     items: [
       { etiqueta: "Inventario", ruta: "/inventario", icono: "inventario" },
       { etiqueta: "Kardex", ruta: "/inventario/kardex", icono: "kardex" },
@@ -87,7 +127,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
     ],
   },
   {
-    titulo: "Abastecimiento",
+    // «Compras», por lo mismo: nadie dice «voy a abastecimiento».
+    titulo: "Compras",
+    icono: "compra",
     items: [
       // Antes que «Compras» a propósito: es la pantalla desde la que se
       // empieza. Willy no abre el ERP para registrar una compra, la abre
@@ -102,12 +144,12 @@ export const NAVEGACION: readonly GrupoNav[] = [
   },
   {
     titulo: "Gestión",
+    icono: "reporte",
     items: [
       { etiqueta: "Reportes", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
       { etiqueta: "Alertas", ruta: "/alertas", icono: "alerta" },
       // Dice quién hizo qué, así que la ve quien responde de ello.
       { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", roles: ["gerencia", "admin"] },
-      { etiqueta: "Configuración", ruta: "/configuracion", icono: "configuracion", roles: ["gerencia", "admin"] },
     ],
   },
 ];

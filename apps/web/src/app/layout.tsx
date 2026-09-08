@@ -1,13 +1,21 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@rodatech/ui";
 
 import "./globals.css";
 
-const inter = Inter({
+/*
+  Manrope, no Inter.
+
+  Es la del rediseño de Luis (08/09), y para este proyecto es mejor elección
+  que una preferencia estética: tiene la altura de x más alta y los contadores
+  más abiertos, así que al mismo tamaño se lee más grande. Con un usuario que
+  no ve bien, eso son milímetros que se notan.
+*/
+const manrope = Manrope({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -33,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es-PE" suppressHydrationWarning className={inter.variable}>
+    <html lang="es-PE" suppressHydrationWarning className={manrope.variable}>
       <body className="min-h-dvh bg-[var(--bg)] font-sans text-[var(--fg)] antialiased">
         {/*
           Arranca en CLARO y no sigue al sistema.

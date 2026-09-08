@@ -5,6 +5,7 @@ import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
 import { menuPara } from "@/lib/navegacion";
 import { pendientesDelMenu } from "@/lib/pendientes-del-menu";
+import { emisorParaImprimir } from "@/lib/emisor";
 
 export default async function LayoutErp({
   children,
@@ -21,6 +22,13 @@ export default async function LayoutErp({
   // vuelve a ceros y el menú se pinta sin números.
   const pendientes = await pendientesDelMenu();
 
+  // El nombre de la empresa va en la cabecera del menú (rediseño de Luis,
+  // 08/09). Si la fila de empresa fallara, se cae al nombre del producto en
+  // vez de dejar el hueco: un menú sin cabecera se ve roto.
+  const emisor = await emisorParaImprimir();
+  const empresa = emisor.nombreComercial || emisor.razonSocial || "Rodatech";
+  const puedeConfigurar = perfil?.rol === "gerencia" || perfil?.rol === "admin";
+
   return (
     // AL IMPRIMIR NO QUEDA NADA DE ESTO.
     //
@@ -30,13 +38,25 @@ export default async function LayoutErp({
     // no documento por documento: así vale para la cotización, la factura, la
     // boleta, la guía y lo que venga después.
     <div className="flex min-h-dvh print:block print:min-h-0">
-      <BarraLateral grupos={grupos} pendientes={pendientes} />
+      <BarraLateral
+        grupos={grupos}
+        empresa={empresa}
+        usuario={perfil?.nombre ?? "Sesión"}
+        pendientes={pendientes}
+        puedeConfigurar={puedeConfigurar}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-3 sm:px-4 md:px-6 print:hidden">
           {/* En móvil el logo cede su sitio al botón del menú: sin él no hay
               forma de llegar a ningún módulo desde un teléfono. */}
-          <MenuMovil grupos={grupos} pendientes={pendientes} />
+          <MenuMovil
+            grupos={grupos}
+            empresa={empresa}
+            usuario={perfil?.nombre ?? "Sesión"}
+            pendientes={pendientes}
+            puedeConfigurar={puedeConfigurar}
+          />
           <Logo className="h-7 w-auto md:hidden" priority={false} />
           <div className="ml-auto flex items-center gap-1">
             <SelectorTema />
