@@ -17,7 +17,8 @@ import {
 
 import { cambiarEstado, clonar } from "../../acciones/gestionar";
 import type { EstadoCotizacion } from "../../dominio/tipos";
-import { DialogoComoMandarla } from "./dialogo-como-mandarla";
+import type { DatosMensaje } from "../../dominio/whatsapp";
+import { DialogoEnviar } from "./dialogo-enviar";
 import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
 
 /**
@@ -34,8 +35,7 @@ import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
 export function AccionesCotizacion({
   id,
   estado,
-  enlaceWhatsapp,
-  enlaceCorreo,
+  datosMensaje,
   cliente,
   lineas,
   facturable,
@@ -43,9 +43,16 @@ export function AccionesCotizacion({
 }: {
   id: string;
   estado: EstadoCotizacion;
-  enlaceWhatsapp: string | null;
-  /** `mailto:` con el mismo texto. `null` si el cliente no tiene correo. */
-  enlaceCorreo: string | null;
+  /**
+   * Con qué se arma el mensaje que se manda.
+   *
+   * Antes llegaban los DOS ENLACES ya montados desde el servidor, con el
+   * número que hubiera guardado. Eso obligaba a guardar el contacto y
+   * recargar antes de poder mandar nada — y el caso normal hoy es un cliente
+   * sin teléfono. Con los datos crudos, el diálogo arma el enlace con lo que
+   * se acaba de teclear.
+   */
+  datosMensaje: DatosMensaje;
   /** Para poder apuntarle el número si no lo tiene, sin salir de aquí. */
   cliente: { id: string; nombre: string; telefono: string; whatsapp: string; email: string };
   /** Para poder preguntar qué confirmó el cliente antes de aprobar. */
@@ -91,13 +98,24 @@ export function AccionesCotizacion({
 
   return (
     <div className="flex flex-col items-stretch gap-2 sm:items-end print:hidden">
-      <DialogoComoMandarla
+      <DialogoEnviar
         abierto={pidiendoContacto}
         clienteId={cliente.id}
         cliente={cliente.nombre}
         telefono={cliente.telefono}
         whatsapp={cliente.whatsapp}
         email={cliente.email}
+        datos={datosMensaje}
+        // Imprimir vive aquí y no dentro del diálogo: `window.print()` saca
+        // por la impresora LA PÁGINA, y la página es la ficha con el
+        // documento dentro. Llamarlo desde el diálogo abierto imprimiría el
+        // diálogo encima. Se cierra primero y luego se imprime.
+        onImprimir={() => {
+          setPidiendoContacto(false);
+          // Un latido para que el diálogo termine de desmontarse: sin esto,
+          // el navegador captura la página con el velo gris por encima.
+          setTimeout(() => window.print(), 150);
+        }}
         onCerrar={() => setPidiendoContacto(false)}
       />
 
@@ -212,32 +230,23 @@ export function AccionesCotizacion({
           sería peor: lo que esto ahorra es escribir el mensaje, que es lo que
           de verdad cuesta.
         */}
-        {enlaceWhatsapp ? (
-          <Button asChild variant="outline">
-            <a href={enlaceWhatsapp} target="_blank" rel="noopener noreferrer">
-              WhatsApp
-            </a>
-          </Button>
-        ) : null}
-        {enlaceCorreo ? (
-          <Button asChild variant="outline">
-            <a href={enlaceCorreo}>Correo</a>
-          </Button>
-        ) : null}
-
         {/*
-          Sin WhatsApp ni correo no se puede mandar, y con los datos de hoy es
-          el caso NORMAL: de los 97 clientes activos, ninguno tiene teléfono y
-          solo uno tiene correo. Entraron del Excel sin esa columna.
+          Un botón, y siempre el mismo.
 
-          Un botón deshabilitado diría «no puedes» sin decir qué hacer. Este
-          lo arregla en el sitio, y al cerrarlo ya están los de mandar.
+          Eran tres —«WhatsApp», «Correo» y «¿A dónde se la mando?»— y nunca
+          se veían juntos: los dos primeros salían solo si el cliente tenía el
+          dato y el tercero solo si no tenía ninguno. Mandar una cotización se
+          veía distinto según a quién, que es lo peor que le puedes hacer a
+          una acción que se repite todos los días.
+
+          Con los datos de hoy el caso NORMAL era el tercero: de los 97
+          clientes activos, ninguno tiene teléfono y solo uno tiene correo.
+          Entraron del Excel sin esa columna.
         */}
-        {!enlaceWhatsapp && !enlaceCorreo ? (
-          <Button variant="outline" onClick={() => setPidiendoContacto(true)}>
-            ¿A dónde se la mando?
-          </Button>
-        ) : null}
+        <Button variant="outline" onClick={() => setPidiendoContacto(true)}>
+          <IconoEnviar />
+          Enviar
+        </Button>
 
         <Button variant="outline" onClick={() => window.print()}>
           Imprimir
@@ -331,6 +340,15 @@ function IconoEditar() {
       fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function IconoEnviar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z" />
     </svg>
   );
 }

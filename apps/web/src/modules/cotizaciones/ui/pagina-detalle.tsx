@@ -5,7 +5,6 @@ import { EstadoBadge } from "@rodatech/ui";
 import { comprobantesDelPedido, cotizacionPorId, tieneGuia } from "../api/consultas";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
-import { enlaceCorreoCotizacion, enlaceWhatsapp } from "../dominio/whatsapp";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
@@ -103,14 +102,18 @@ export default async function PaginaDetalleCotizacion({
     emisor: emisor.nombre_comercial,
   };
 
-  // El correo del cliente, para mandarla también por ahí (Willy 13:21:
-  // «correo y WhatsApp»). Es el mismo texto por los dos sitios.
-  const correo = enlaceCorreoCotizacion(cabecera.cliente.email, datosMensaje);
+  /*
+    Los enlaces de WhatsApp y correo YA NO se arman aquí.
 
-  const whatsapp = enlaceWhatsapp(
-    cabecera.cliente.whatsapp ?? cabecera.cliente.telefono,
-    datosMensaje,
-  );
+    Se montaban en el servidor con el contacto guardado, y eso obligaba a
+    apuntar el teléfono, guardar y recargar antes de poder mandar nada. Con 97
+    clientes sin un solo teléfono, ese era el camino normal y no la excepción.
+
+    Ahora los arma el diálogo de enviar con lo que se teclea en él —las dos
+    funciones son del dominio, sin red ni reloj, así que dan lo mismo en un
+    lado que en otro— y de paso lo guarda en la ficha para la próxima. Willy
+    13:21: *«correo y WhatsApp»*, y es el mismo texto por los dos sitios.
+  */
 
   return (
     /*
@@ -142,8 +145,10 @@ export default async function PaginaDetalleCotizacion({
         <AccionesCotizacion
           id={cabecera.id}
           estado={cabecera.estado}
-          enlaceWhatsapp={whatsapp}
-          enlaceCorreo={correo}
+          // Los datos crudos, no los enlaces montados: el diálogo de enviar
+          // arma el suyo con el número que se teclee ahí mismo, sin tener que
+          // guardar el contacto y recargar antes de poder mandar nada.
+          datosMensaje={datosMensaje}
           cliente={{
             id: cabecera.cliente_id,
             nombre: impresa.cliente.razonSocial,
