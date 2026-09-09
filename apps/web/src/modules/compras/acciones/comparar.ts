@@ -586,3 +586,190 @@ export async function anadirALaRonda(datosCrudos: unknown): Promise<ResultadoAna
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Sacar a alguien de una ronda abierta
+// ---------------------------------------------------------------------------
+
+const esquemaQuitar = z.object({
+  consulta_id: z.string().uuid(),
+  proveedor_id: z.string().uuid(),
+  /**
+   * De qué productos se le quita. Vacío o ausente = de la consulta entera.
+   *
+   * Los dos casos los pidió Luis el 09/09: *«eliminar por producto al
+   * proveedor si se equivocó, o eliminar el proveedor completo con sus
+   * productos»*.
+   */
+  items: z.array(z.string().uuid()).max(200).optional(),
+});
+
+export type ResultadoQuitar =
+  | { ok: true; quitadoEntero: boolean; preciosBorrados: number }
+  | { ok: false; error: string };
+
+/**
+ * Deshacer un «se lo pregunté a este», entero o por producto.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué se borran también las respuestas
+ * ---------------------------------------------------------------------------
+ * `consulta_precio_respuestas` NO cuelga de `consulta_precio_asignaciones`
+ * —son hermanas, las dos cuelgan del proveedor de la ronda— así que quitar la
+ * asignación sola deja el precio suelto. Y la rejilla lo seguiría pintando: la
+ * comparación se hace con las respuestas, y `preguntada` solo decide si la
+ * celda está viva. Saldría un precio de algo que, según la misma pantalla,
+ * nunca se preguntó — y podría ganar la comparación.
+ *
+ * Por eso quitar un producto borra el precio de ese producto. Es destructivo y
+ * la pantalla lo dice antes, con el número delante.
+ *
+ * ---------------------------------------------------------------------------
+ * Lo que no se deja quitar
+ * ---------------------------------------------------------------------------
+ * Al proveedor al que ya se le compró en esta ronda. Su precio es lo que
+ * justifica esa compra: borrarlo deja una compra sin de dónde salió. Si de
+ * verdad hay que deshacerlo, primero se anula la compra.
+ */
+export async function quitarDeLaRonda(datosCrudos: unknown): Promise<ResultadoQuitar> {
+  const quien = await quienEs();
+  if (quien.error) return { ok: false, error: quien.error };
+
+  let datos: z.infer<typeof esquemaQuitar>;
+  try {
+    datos = esquemaQuitar.parse(datosCrudos);
+  } catch (e) {
+    const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
+    return { ok: false, error: `Los datos no son válidos: ${detalle}` };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+
+    const { data: cab, error: eCab } = await supabase
+      .from("consultas_precio")
+      .select("estado")
+      .eq("id", datos.consulta_id)
+      .maybeSingle();
+    if (eCab) {
+      anotarFallo("compras/quitarDeLaRonda", eCab, "/compras/precios");
+      return { ok: false, error: eCab.message };
+    }
+    if (!cab) return { ok: false, error: "Esa consulta de precios no existe." };
+    if (cab.estado !== "abierta") {
+      return { ok: false, error: "Esta consulta ya está cerrada: no se puede tocar." };
+    }
+
+    // Que ya se le haya comprado en esta ronda es el único no rotundo.
+    const { data: compras, error: eCompras } = await supabase
+      .from("compras")
+      .select("id")
+      .eq("consulta_precio_id", datos.consulta_id)
+      .eq("proveedor_id", datos.proveedor_id)
+      .limit(1);
+    if (eCompras) {
+      anotarFallo("compras/quitarDeLaRonda", eCompras, "/compras/precios");
+      return { ok: false, error: eCompras.message };
+    }
+    if ((compras ?? []).length > 0) {
+      return {
+        ok: false,
+        error:
+          "A ese proveedor ya se le compró desde esta consulta. Anula la compra antes de quitarlo.",
+      };
+    }
+
+    const { data: cp, error: eCp } = await supabase
+      .from("consulta_precio_proveedores")
+      .select("id")
+      .eq("consulta_id", datos.consulta_id)
+      .eq("proveedor_id", datos.proveedor_id)
+      .maybeSingle();
+    if (eCp) {
+      anotarFallo("compras/quitarDeLaRonda", eCp, "/compras/precios");
+      return { ok: false, error: eCp.message };
+    }
+    if (!cp) return { ok: false, error: "Ese proveedor no está en esta consulta." };
+    const cpId = String(cp.id);
+
+    const pedidos = datos.items ?? [];
+
+    // Quitar de todo, o de los últimos que le quedaban, es lo mismo: un
+    // proveedor sin nada que contestar es una columna vacía para siempre.
+    let entero = pedidos.length === 0;
+    if (!entero) {
+      const { data: suyas, error: eSuyas } = await supabase
+        .from("consulta_precio_asignaciones")
+        .select("item_id")
+        .eq("consulta_proveedor_id", cpId);
+      if (eSuyas) {
+        anotarFallo("compras/quitarDeLaRonda", eSuyas, "/compras/precios");
+        return { ok: false, error: eSuyas.message };
+      }
+      const tiene = (suyas ?? []).map((a) => String(a.item_id));
+      const quedan = tiene.filter((id) => !pedidos.includes(id));
+      if (tiene.length === 0) {
+        return { ok: false, error: "A ese proveedor no se le preguntó por nada." };
+      }
+      if (quedan.length === 0) entero = true;
+    }
+
+    // Cuántos precios se lleva por delante. Se cuenta antes de borrar para
+    // poder decirlo, no para decidir.
+    const consulta = supabase
+      .from("consulta_precio_respuestas")
+      .select("id", { count: "exact", head: true })
+      .eq("consulta_proveedor_id", cpId);
+    const { count, error: eCuenta } = await (entero
+      ? consulta
+      : consulta.in("item_id", pedidos));
+    if (eCuenta) {
+      anotarFallo("compras/quitarDeLaRonda", eCuenta, "/compras/precios");
+      return { ok: false, error: eCuenta.message };
+    }
+
+    if (entero) {
+      // El `on delete cascade` de la 055 y la 058 se lleva asignaciones y
+      // respuestas: aquí no hay nada que quede suelto.
+      const { error } = await supabase
+        .from("consulta_precio_proveedores")
+        .delete()
+        .eq("id", cpId);
+      if (error) {
+        anotarFallo("compras/quitarDeLaRonda", error, "/compras/precios");
+        return { ok: false, error: error.message };
+      }
+    } else {
+      // Primero el precio y después la asignación: si falla lo segundo queda
+      // una pregunta sin respuesta, que es un estado que la pantalla sabe
+      // pintar. Al revés quedaría un precio de algo que nadie preguntó.
+      const { error: eResp } = await supabase
+        .from("consulta_precio_respuestas")
+        .delete()
+        .eq("consulta_proveedor_id", cpId)
+        .in("item_id", pedidos);
+      if (eResp) {
+        anotarFallo("compras/quitarDeLaRonda", eResp, "/compras/precios");
+        return { ok: false, error: eResp.message };
+      }
+      const { error: eAsig } = await supabase
+        .from("consulta_precio_asignaciones")
+        .delete()
+        .eq("consulta_proveedor_id", cpId)
+        .in("item_id", pedidos);
+      if (eAsig) {
+        anotarFallo("compras/quitarDeLaRonda", eAsig, "/compras/precios");
+        return { ok: false, error: eAsig.message };
+      }
+    }
+
+    revalidatePath("/compras/precios");
+    return { ok: true, quitadoEntero: entero, preciosBorrados: count ?? 0 };
+  } catch (e) {
+    anotarFallo("compras/quitarDeLaRonda", e, "/compras/precios");
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo quitar el proveedor.",
+    };
+  }
+}

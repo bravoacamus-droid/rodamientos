@@ -24,8 +24,9 @@ import {
   type ProveedorConocido,
   type Referencia,
 } from "../../dominio/referencia";
-import { anadirALaRonda, comprarDeLaRonda } from "../../acciones/comparar";
+import { anadirALaRonda, comprarDeLaRonda, quitarDeLaRonda } from "../../acciones/comparar";
 import { AnadirALaConsulta } from "./anadir-a-la-consulta";
+import { QuitarDeLaConsulta } from "./quitar-de-la-consulta";
 import { PanelRespuesta } from "./panel-respuesta";
 import { AjustarVenta } from "./ajustar-venta";
 
@@ -271,6 +272,33 @@ export function Comparativa({
     });
   }
 
+  /**
+   * Deshacer un «se lo pregunté a este», entero o por producto.
+   *
+   * Luis, 09/09: *«nos falta ahí eliminar por producto al proveedor si es que
+   * se equivocó, o eliminar el proveedor completo con sus productos»*. La
+   * lista vacía significa entero, que es lo que espera la acción.
+   *
+   * Aquí no hay parche local como en el resto de la pantalla: quitar BORRA
+   * filas, y pintar como si ya no estuvieran antes de saber que se borraron
+   * es enseñar algo que puede no haber pasado. Se espera a la recarga.
+   */
+  function quitar(proveedorId: string, items: string[]) {
+    setAviso(null);
+    empezar(async () => {
+      const r = await quitarDeLaRonda({
+        consulta_id: ronda.id,
+        proveedor_id: proveedorId,
+        items,
+      });
+      if (!r.ok) {
+        setAviso(r.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* -------------------------------------------------- Los proveedores */}
@@ -281,6 +309,16 @@ export function Comparativa({
           );
           if (!p) return null;
           const comprado = yaComprados.has(p.proveedor_id);
+          // Lo que se le preguntó A ÉL y, de eso, lo que ya contestó: es lo
+          // que el diálogo de quitar necesita para decir qué se pierde.
+          const suyos = ronda.items.filter((i) =>
+            preguntadas.has(i.item_id + '|' + r.consulta_proveedor_id),
+          );
+          const conPrecio = new Set(
+            respuestas
+              .filter((x) => x.consulta_proveedor_id === r.consulta_proveedor_id)
+              .map((x) => x.item_id),
+          );
           return (
             /*
               Un BOTÓN de verdad, no la tarjeta entera haciendo de botón.
@@ -347,6 +385,28 @@ export function Comparativa({
                 <ClipboardPen className="size-4" aria-hidden="true" />
                 {r.estado === "esperando" ? "Registrar precio" : "Ver o corregir"}
               </Button>
+
+              {/*
+                Quitar va DEBAJO del de registrar y en gris, no al lado.
+
+                Los dos botones de una tarjeta no valen lo mismo: uno se usa
+                todos los días y el otro es para arreglar un error. Puestos a
+                la par, el de borrar se pulsa por error —y aquí borrar se
+                lleva precios ya apuntados—.
+
+                Al que ya se le compró no se le puede quitar, así que no se
+                le enseña el botón: un botón que siempre da error es peor que
+                no tenerlo.
+              */}
+              {ronda.estado === "abierta" && !comprado ? (
+                <QuitarDeLaConsulta
+                  proveedor={r.proveedor}
+                  suyos={suyos}
+                  conPrecio={conPrecio}
+                  enCurso={enCurso}
+                  onQuitar={(items) => quitar(p.proveedor_id, items)}
+                />
+              ) : null}
             </div>
           );
         })}
