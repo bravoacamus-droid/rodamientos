@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
 import { comprobantesDelPedido, cotizacionPorId, tieneGuia } from "../api/consultas";
-import { loQueFaltaDelPedido } from "../api/falta";
+import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
@@ -165,8 +165,13 @@ export default async function PaginaDetalleCotizacion({
     confirmar el cliente, y avisar de que falta stock de algo que quizá no
     compre es ruido.
   */
-  const falta =
-    cabecera.estado === "aprobada" ? await loQueFaltaDelPedido(cabecera.id) : [];
+  const [falta, despachado] =
+    cabecera.estado === "aprobada"
+      ? await Promise.all([
+          loQueFaltaDelPedido(cabecera.id),
+          despachadoPorLinea(cabecera.id),
+        ])
+      : [[], new Map<string, number>()];
 
   /** Por producto, para poder marcar cada fila de la tabla. */
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
@@ -391,7 +396,10 @@ export default async function PaginaDetalleCotizacion({
                     */}
                     {cabecera.estado === "aprobada" ? (
                       <td className="whitespace-nowrap px-3 py-2.5">
-                        <EstadoDeLinea falta={faltaPorProducto.get(l.producto_id ?? "")} />
+                        <EstadoDeLinea
+                          falta={faltaPorProducto.get(l.producto_id ?? "")}
+                          despachado={despachado.get(l.id) ?? 0}
+                        />
                       </td>
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
@@ -464,7 +472,32 @@ export default async function PaginaDetalleCotizacion({
  * pedidos que esperan cada producto. No se resta aquí: dos pantallas con
  * cifras distintas sobre lo mismo es peor que una pantalla de menos.
  */
-function EstadoDeLinea({ falta }: { falta?: { falta: number; enCamino: boolean } }) {
+function EstadoDeLinea({
+  falta,
+  despachado,
+}: {
+  falta?: { falta: number; enCamino: boolean };
+  /** Cuánto de esta línea ya salió con una guía emitida. */
+  despachado: number;
+}) {
+  /*
+    Lo despachado se dice antes que nada.
+
+    Un primer intento ponía «En almacén» a toda línea que no faltara, y era
+    engañoso justo en el pedido más avanzado: la mercadería de COT1-000006
+    había salido con la guía T001-00000001 y la ficha decía que estaba en el
+    estante. Mandar a alguien a buscar algo que se entregó la semana pasada es
+    peor que no decir nada.
+  */
+  if (despachado > 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-[var(--fg-muted)]">
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+        Despachado
+      </span>
+    );
+  }
+
   if (!falta) {
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-[var(--ok)]">

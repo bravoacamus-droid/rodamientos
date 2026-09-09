@@ -3838,6 +3838,7 @@ export type Database = {
           cotizacion_id: string | null
           cotizado: number | null
           descripcion: string | null
+          despachado: number | null
           dias_entrega: number | null
           disponibilidad:
             | Database["public"]["Enums"]["disponibilidad_item"]

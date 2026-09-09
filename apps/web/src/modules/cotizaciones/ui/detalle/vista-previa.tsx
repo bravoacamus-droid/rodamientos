@@ -51,31 +51,37 @@ export function VistaPreviaDocumento({
 
       <Dialog open={abierta} onOpenChange={setAbierta}>
         <DialogContent className="max-w-4xl print:hidden">
-          <DialogHeader>
+          {/*
+            Imprimir ARRIBA, junto al título (Luis, 09/09).
+
+            Estaba al pie, debajo de la hoja: en un documento de tres líneas se
+            veía, pero en uno de veinte hay que bajar hasta el final del papel
+            para encontrar el botón, cuando lo que se acaba de hacer es
+            comprobar que está bien. La acción va donde termina la decisión, y
+            la decisión se toma nada más abrir.
+          */}
+          <DialogHeader className="flex-row items-center justify-between gap-3 pr-10">
             <DialogTitle>Así se ve {numero}</DialogTitle>
+            {/*
+              Se cierra antes de imprimir.
+
+              `window.print()` saca la PÁGINA, y con el diálogo abierto el
+              navegador la captura con el velo gris por encima. El latido es
+              para que React termine de desmontarlo.
+            */}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAbierta(false);
+                setTimeout(() => window.print(), 150);
+              }}
+            >
+              <IconoImprimir />
+              Imprimir
+            </Button>
           </DialogHeader>
           <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-4">
             <div className="overflow-hidden rounded-md bg-white elev-2">{children}</div>
-
-            <div className="mt-3 flex justify-center">
-              {/*
-                Se cierra antes de imprimir.
-
-                `window.print()` saca la PÁGINA, y con el diálogo abierto el
-                navegador la captura con el velo gris por encima. El latido
-                es para que React termine de desmontarlo.
-              */}
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setAbierta(false);
-                  setTimeout(() => window.print(), 150);
-                }}
-              >
-                <IconoImprimir />
-                Imprimir
-              </Button>
-            </div>
           </DialogBody>
         </DialogContent>
       </Dialog>
