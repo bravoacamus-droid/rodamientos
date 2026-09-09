@@ -45,7 +45,10 @@ const TIPOS_OK: Record<string, string> = {
 
 const esquema = z.object({
   recepcion_id: z.string().uuid(),
-  tipo: z.enum(["guia", "factura", "otro"]),
+  // «pago» desde la 076: el voucher, que no lo trae el proveedor sino que
+  // sale despues. Si falta aqui, el boton de la pantalla existe y la accion
+  // lo rechaza — que es la peor de las dos formas de no tener algo.
+  tipo: z.enum(["guia", "factura", "pago", "otro"]),
 });
 
 export type ResultadoAdjunto = { ok: true } | { ok: false; error: string };

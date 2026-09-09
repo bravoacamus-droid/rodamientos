@@ -297,6 +297,23 @@ export function ConstructorRecepcion({
           </label>
         </div>
 
+        {/*
+          Dónde están las fotos, dicho aquí.
+
+          Luis, 09/09: *«al recibir mercadería tengo los input de guía
+          proveedor y factura proveedor; no tengo dónde subir los documentos»*.
+          Y aquí no puede haberlos: la subida necesita el id de la recepción, y
+          la recepción todavía no existe mientras se rellena este formulario.
+
+          Lo que sí puede haber es saber a dónde se va. Al guardar, esto lleva
+          derecho a la ficha, y ahí están los tres botones — así que basta con
+          decirlo en el sitio donde se busca, que es al lado de los números.
+        */}
+        <p className="mt-3 text-sm text-[var(--fg-muted)]">
+          Aquí van los <strong>números</strong>. La foto o el PDF de la guía, la
+          factura y el pago se suben al guardar, en la ficha de la recepción.
+        </p>
+
         {/* Enlazar con una compra solo tiene sentido si hay alguna pendiente.
             Un desplegable vacío es una pregunta sin respuesta posible. */}
         {compras.length > 0 ? (

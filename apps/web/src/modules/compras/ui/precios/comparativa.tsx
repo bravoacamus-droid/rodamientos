@@ -9,7 +9,6 @@ import {
   ClipboardPen,
   PackageSearch,
   Plus,
-  ShoppingCart,
   TriangleAlert,
 } from "lucide-react";
 
@@ -33,6 +32,7 @@ import {
 } from "../../dominio/referencia";
 import { anadirALaRonda, comprarDeLaRonda, quitarDeLaRonda } from "../../acciones/comparar";
 import { AnadirALaConsulta } from "./anadir-a-la-consulta";
+import { ConfirmarCompras } from "./confirmar-compras";
 import { QuitarDeLaConsulta } from "./quitar-de-la-consulta";
 import { PanelRespuesta } from "./panel-respuesta";
 import { AjustarVenta } from "./ajustar-venta";
@@ -182,7 +182,8 @@ export function Comparativa({
     // salvo lo que esté movido a mano.
   }
 
-  function comprar() {
+  /** `afectos` va por `consulta_proveedor_id`, que es lo que marca el modal. */
+  function comprar(afectos: Record<string, boolean>) {
     setAviso(null);
     empezar(async () => {
       const r = await comprarDeLaRonda({
@@ -192,6 +193,7 @@ export function Comparativa({
           moneda: c.moneda,
           tipo_cambio: c.tipo_cambio,
           tipo: c.tipo,
+          afecto_igv: afectos[c.consulta_proveedor_id] ?? c.tipo === "local",
           fecha_estimada: null,
           lineas: c.lineas.map((l) => ({
             producto_id: l.producto_id,
@@ -799,12 +801,11 @@ export function Comparativa({
           nada: repetía en gris lo que la frase de al lado ya decía en negro.
         */}
         {propuestas.length > 0 ? (
-          <Button onClick={comprar} disabled={enCurso} className="gap-1.5">
-            <ShoppingCart className="size-4" />
-            {propuestas.length <= 1
-              ? "Registrar la compra"
-              : `Registrar ${propuestas.length} compras`}
-          </Button>
+          <ConfirmarCompras
+            propuestas={propuestas}
+            enCurso={enCurso}
+            onConfirmar={comprar}
+          />
         ) : null}
       </section>
 

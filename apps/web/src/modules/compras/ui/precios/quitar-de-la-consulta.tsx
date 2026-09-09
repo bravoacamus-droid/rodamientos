@@ -167,7 +167,7 @@ export function QuitarDeLaConsulta({
                     : `Se le quitan ${marcados.length} ${marcados.length === 1 ? "producto" : "productos"}.`}
                 </strong>
                 {preciosQueSePierden > 0
-                  ? ` Se borran ${preciosQueSePierden} ${preciosQueSePierden === 1 ? "precio que ya dio" : "precios que ya dio"}, y eso no se deshace.`
+                  ? ` Se ${preciosQueSePierden === 1 ? "borra 1 precio" : `borran ${preciosQueSePierden} precios`} que ya dio, y eso no se deshace.`
                   : " No había apuntado ningún precio, así que no se pierde nada."}
               </p>
             )}

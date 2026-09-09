@@ -4893,7 +4893,7 @@ export type Database = {
         | "salida"
         | "ajuste_positivo"
         | "ajuste_negativo"
-      tipo_papel_proveedor: "guia" | "factura" | "otro"
+      tipo_papel_proveedor: "guia" | "factura" | "otro" | "pago"
       uso_plantilla: "pedido_precio" | "cotizacion" | "cobranza" | "general"
     }
     CompositeTypes: {
@@ -5094,7 +5094,7 @@ export const Constants = {
         "ajuste_positivo",
         "ajuste_negativo",
       ],
-      tipo_papel_proveedor: ["guia", "factura", "otro"],
+      tipo_papel_proveedor: ["guia", "factura", "otro", "pago"],
       uso_plantilla: ["pedido_precio", "cotizacion", "cobranza", "general"],
     },
   },

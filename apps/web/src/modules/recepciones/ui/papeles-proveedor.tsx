@@ -30,7 +30,7 @@ import {
 
 export interface PapelDelProveedor {
   id: string;
-  tipo: "guia" | "factura" | "otro";
+  tipo: "guia" | "factura" | "pago" | "otro";
   ruta: string;
   nombre: string;
   tamanoBytes: number | null;
@@ -40,10 +40,20 @@ export interface PapelDelProveedor {
 const ETIQUETA: Record<PapelDelProveedor["tipo"], string> = {
   guia: "Guía",
   factura: "Factura",
+  pago: "Pago",
   otro: "Otro",
 };
 
 /** Los tipos que acepta el bucket, dichos al `<input>` para que filtre él. */
+type Papel = PapelDelProveedor["tipo"];
+
+const TONO: Record<Papel, "success" | "info" | "neutral"> = {
+  guia: "neutral",
+  factura: "info",
+  pago: "success",
+  otro: "neutral",
+};
+
 const ACEPTA = "application/pdf,image/jpeg,image/png,image/webp,image/heic";
 
 function pesa(bytes: number | null): string {
@@ -75,8 +85,9 @@ export function PapelesDelProveedor({
   */
   const refGuia = React.useRef<HTMLInputElement>(null);
   const refFactura = React.useRef<HTMLInputElement>(null);
+  const refPago = React.useRef<HTMLInputElement>(null);
 
-  function subir(tipo: "guia" | "factura", archivo: File | null | undefined) {
+  function subir(tipo: Papel, archivo: File | null | undefined) {
     if (!archivo) return;
     setError(null);
     setSubiendo(tipo);
@@ -126,7 +137,8 @@ export function PapelesDelProveedor({
         <div>
           <h2 className="text-base font-semibold">Papeles del proveedor</h2>
           <p className="text-sm text-[var(--fg-muted)]">
-            La guía y la factura con las que te atendieron. PDF o foto.
+            La guía y la factura con las que te atendieron, y el voucher
+            cuando se le pague. PDF o foto, y todos opcionales.
           </p>
         </div>
 
@@ -155,6 +167,16 @@ export function PapelesDelProveedor({
                 e.target.value = "";
               }}
             />
+            <input
+              ref={refPago}
+              type="file"
+              accept={ACEPTA}
+              className="hidden"
+              onChange={(e) => {
+                subir("pago", e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
             <Button
               type="button"
               variant="outline"
@@ -170,6 +192,25 @@ export function PapelesDelProveedor({
               onClick={() => refFactura.current?.click()}
             >
               {subiendo === "factura" ? "Subiendo…" : "Subir factura"}
+            </Button>
+            {/*
+              El tercero, y el que no trae el proveedor.
+
+              Luis, 09/09: *«no tengo dónde subir… la guía, la factura que
+              me hizo el proveedor y el pago»*. La guía y la factura llegan
+              con la mercadería; el voucher sale después, a veces semanas
+              después, y es el papel que cierra la operación por el otro
+              lado. Por eso tiene tipo propio y no se guarda como «otro»:
+              guardado ahí no se encuentra el día que el proveedor dice que
+              no le pagaron.
+            */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={enCurso}
+              onClick={() => refPago.current?.click()}
+            >
+              {subiendo === "pago" ? "Subiendo…" : "Subir pago"}
             </Button>
           </div>
         ) : null}
@@ -187,14 +228,17 @@ export function PapelesDelProveedor({
       {papeles.length === 0 ? (
         <p className="rounded-md bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
           Todavía no hay ningún papel. Sube la guía y la factura con las que
-          llegó la mercadería: es lo que se busca si después no cuadra un
-          precio.
+          llegó la mercadería —es lo que se busca si después no cuadra un
+          precio— y el voucher cuando le pagues.
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
           {papeles.map((p) => (
             <li key={p.id} className="flex flex-wrap items-center gap-2 py-2.5">
-              <Badge tone={p.tipo === "factura" ? "success" : "neutral"} size="xs">
+              {/* La factura es el papel del dinero que se debe y el pago el
+                  de que ya se pagó: los dos en color, y distintos, porque
+                  la pregunta de la lista es «¿está pagada esta?». */}
+              <Badge tone={TONO[p.tipo]} size="xs">
                 {ETIQUETA[p.tipo]}
               </Badge>
               <span className="min-w-0 flex-1 truncate text-sm" title={p.nombre}>

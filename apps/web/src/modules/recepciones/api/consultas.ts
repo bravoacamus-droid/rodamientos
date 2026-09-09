@@ -329,7 +329,7 @@ export async function papelesDeRecepcion(
 
 export interface PapelDeProveedor {
   id: string;
-  tipo: "guia" | "factura" | "otro";
+  tipo: "guia" | "factura" | "pago" | "otro";
   ruta: string;
   nombre: string;
   tamanoBytes: number | null;

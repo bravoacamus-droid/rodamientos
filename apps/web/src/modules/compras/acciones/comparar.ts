@@ -228,6 +228,18 @@ const esquemaComprar = z.object({
         moneda: z.enum(["USD", "PEN"]),
         tipo_cambio: z.number().positive().finite().nullable(),
         tipo: z.enum(["local", "importacion"]).default("local"),
+        /**
+         * Si su comprobante lleva IGV.
+         *
+         * Luis, 09/09: *«supuestamente, como yo estoy comprando, viene o no
+         * con IGV, ¿no? Él me dirá»*. Antes se deducía del tipo —local, con
+         * IGV; importación, sin— y eso falla con el proveedor local que emite
+         * boleta o está en el RUS: se le cargaba un 18 % que no existe.
+         *
+         * Sigue habiendo un valor por defecto, porque acertar acierta casi
+         * siempre; lo que cambia es que ahora se puede decir que no.
+         */
+        afecto_igv: z.boolean().optional(),
         fecha_estimada: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -311,7 +323,9 @@ export async function comprarDeLaRonda(datosCrudos: unknown): Promise<ResultadoC
           // El IGV lo decide de dónde viene la mercadería, NO la moneda.
           // Una compra local en dólares lleva IGV; una importación en soles,
           // no. Deducirlo de la moneda dejaba sin IGV toda compra en USD.
-          afecto_igv: c.tipo === "local",
+          // Lo que se marcó en la pantalla; si no vino nada, lo de siempre:
+          // local lleva IGV, importación no.
+          afecto_igv: c.afecto_igv ?? c.tipo === "local",
           observaciones: `De la consulta de precios`,
           items: c.lineas,
         } as unknown as Json,
