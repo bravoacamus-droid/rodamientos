@@ -77,10 +77,25 @@ export default async function PaginaDetalleComprobante({
 
         <div className="flex flex-col items-end gap-2 no-print">
           <div className="flex items-center gap-2">
+            {/*
+              Descargar e imprimir, iguales que en la guía y la cotización.
+
+              Los dos van a la hoja con `auto=1`, que abre la ventana de
+              imprimir sola. Descargar en azul porque con una factura lo
+              primero que se hace es mandársela al cliente.
+            */}
             <Link
-              href={`/facturacion/${c.id}/imprimir`}
-              className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              href={`/facturacion/${c.id}/imprimir?auto=1`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
+              <IconoDescargar />
+              Descargar
+            </Link>
+            <Link
+              href={`/facturacion/${c.id}/imprimir?auto=1`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+            >
+              <IconoImprimir />
               Imprimir
             </Link>
             {/* Corregir una factura emitida es emitir una nota, no editarla.
@@ -299,5 +314,26 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
       <dt className="w-32 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
+  );
+}
+
+function IconoDescargar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+function IconoImprimir() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9V3h12v6" />
+      <rect x="3" y="9" width="18" height="7" rx="1" />
+      <path d="M6 14h12v7H6z" />
+    </svg>
   );
 }
