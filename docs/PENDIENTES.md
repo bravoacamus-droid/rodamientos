@@ -3153,6 +3153,24 @@ diálogo sigue diciendo *«¿qué te confirmó el cliente?»* porque ahí el suj
 
 ### AH.9 · Lo que queda del rediseño
 
+- **Descargar el documento de verdad, al desplegar.** Hoy «Descargar» abre la
+  ventana de imprimir y el PDF sale eligiendo *Guardar como PDF*. Para que baje
+  el archivo directo hay que generar el PDF, y solo hay dos caminos:
+
+  | | Cómo | Coste |
+  |---|---|---|
+  | **A** | Chromium en el servidor imprimiendo la misma hoja | PDF exacto y **una sola plantilla**. Pero un navegador entero en el despliegue: 3–8 s el primero y funciones caras en Vercel |
+  | **B** | `@react-pdf/renderer` | Ligero y rápido, sin Chromium. Pero hay que **reescribir** los tres documentos: dos plantillas por documento |
+
+  Luis eligió el 09/09 **dejarlo como está y decidirlo al desplegar**, que es
+  cuando se ve el coste real. Si se hace, la A: la B deja dos plantillas de un
+  documento fiscal, y este proyecto ya sabe cómo acaba eso —un día se cambia el
+  pie en una y el cliente recibe la otra—.
+
+  Mientras tanto el botón **lo dice a la vista**, no solo en el `title`: si
+  dice «Descargar» y aparece la ventana de imprimir, sin la nota parece que se
+  pulsó el botón equivocado.
+
 - **El tablero.** Era lo siguiente de la lista de Luis y no se llegó.
 - **El responsive de los demás módulos.** No se pudo revisar: readdy.cc carga
   pero nunca llega a `document_idle`, y ni las capturas ni la lectura de texto

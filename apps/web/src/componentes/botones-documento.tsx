@@ -41,19 +41,33 @@ export function BotonesDocumento({ auto = false }: { auto?: boolean }) {
   }, [auto]);
 
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        type="button"
-        onClick={() => window.print()}
-        title="Se abre la ventana de imprimir: elige «Guardar como PDF»."
-      >
-        <IconoDescargar />
-        Descargar
-      </Button>
-      <Button type="button" variant="outline" onClick={() => window.print()}>
-        <IconoImprimir />
-        Imprimir
-      </Button>
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
+        <Button type="button" onClick={() => window.print()}>
+          <IconoDescargar />
+          Descargar
+        </Button>
+        <Button type="button" variant="outline" onClick={() => window.print()}>
+          <IconoImprimir />
+          Imprimir
+        </Button>
+      </div>
+
+      {/*
+        Se dice a la vista, no solo en el `title`.
+
+        El botón dice «Descargar» y lo que aparece es la ventana de imprimir:
+        sin esta línea parece que se pulsó el botón equivocado. Con ella, el
+        clic siguiente es evidente. Luis, 09/09, al probarlo: *«en el botón de
+        descargar sale la misma que imprimir»*.
+
+        Es la limitación del navegador, no del ERP: bajar el archivo directo
+        obliga a generar el PDF en el servidor, y eso se decide al desplegar.
+      */}
+      <p className="text-sm text-[var(--fg-subtle)]">
+        Para guardarlo, elige <strong className="font-medium">Guardar como PDF</strong> en
+        la ventana que se abre.
+      </p>
     </div>
   );
 }
