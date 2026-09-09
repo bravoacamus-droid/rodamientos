@@ -4,7 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, formatearMoneda } from "@rodatech/ui";
-import { Check, ClipboardPen, Plus, ShoppingCart, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  ClipboardPen,
+  PackageSearch,
+  Plus,
+  ShoppingCart,
+  TriangleAlert,
+} from "lucide-react";
 
 import {
   ETIQUETA_RESPUESTA,
@@ -736,8 +743,15 @@ export function Comparativa({
 
           {/* Lo que cuesta la comodidad. No se recomienda ninguna de las dos:
               tres proveedores son tres pagos y tres entregas, y si eso vale
-              diez dólares lo decide Willy — pero decide sabiendo cuánto es. */}
-          {resumen.mejorUnico && resumen.costeDeUnSoloProveedor !== null ? (
+              diez dólares lo decide Willy — pero decide sabiendo cuánto es.
+
+              Solo mientras haya algo que decidir. Con las compras ya hechas,
+              «comprándoselo todo a X son $3.00 más» es un consejo sobre una
+              decisión que ya se tomó, y encima con un número que ya no se
+              puede aprovechar. */}
+          {propuestas.length > 0 &&
+          resumen.mejorUnico &&
+          resumen.costeDeUnSoloProveedor !== null ? (
             <p className="mt-1 text-[var(--fg-muted)]">
               {resumen.costeDeUnSoloProveedor === 0
                 ? `${resumen.mejorUnico.proveedor} lo tiene todo al mismo precio.`
@@ -778,36 +792,88 @@ export function Comparativa({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {ronda.compras.length > 0 ? (
-            <span className="text-sm text-[var(--fg-muted)]">
-              Ya salieron:{" "}
-              {ronda.compras.map((c, i) => (
-                <React.Fragment key={c.id}>
-                  {i > 0 ? ", " : ""}
-                  <Link
-                    href={`/compras/${c.id}`}
-                    className="tabular-nums underline-offset-2 hover:underline"
-                  >
-                    {c.numero}
-                  </Link>
-                </React.Fragment>
-              ))}
-            </span>
-          ) : null}
+        {/*
+          El botón, solo mientras haya algo que registrar.
 
-          <Button
-            onClick={comprar}
-            disabled={enCurso || propuestas.length === 0}
-            className="gap-1.5"
-          >
+          Apagado al lado de «esta consulta ya está resuelta» no informaba de
+          nada: repetía en gris lo que la frase de al lado ya decía en negro.
+        */}
+        {propuestas.length > 0 ? (
+          <Button onClick={comprar} disabled={enCurso} className="gap-1.5">
             <ShoppingCart className="size-4" />
             {propuestas.length <= 1
               ? "Registrar la compra"
               : `Registrar ${propuestas.length} compras`}
           </Button>
-        </div>
+        ) : null}
       </section>
+
+      {/*
+        En qué acabó la ronda.
+
+        Luis, 09/09: *«cuando registro, esos enlaces ni yo los entiendo… en
+        cada orden voy a poder ver el total a pagar, ¿no? Hay que hacer mejor
+        eso»*.
+
+        Era «Ya salieron: CMP-26-00015, CMP-26-00016» en gris de 14 px. Los
+        números SÍ eran enlaces —solo que sin subrayado hasta pasarles el
+        ratón por encima, que es la definición de enlace que no se ve— y
+        aparte un correlativo suelto no dice nada: ni a quién le compraste ni
+        cuánto le debes. Justo lo que hay que saber al terminar.
+
+        Ahora es una tarjeta por compra, con el total delante y un botón de
+        verdad. Es el mismo patrón de siempre en este proyecto: la función
+        estaba, la puerta era una rendija.
+      */}
+      {ronda.compras.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-base font-semibold">
+              {ronda.compras.length === 1
+                ? "La compra que salió de aquí"
+                : "Las compras que salieron de aquí"}
+            </h2>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Una por proveedor. Ahí se registra lo que llega y lo que se le
+              paga.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {ronda.compras.map((c) => (
+              <div key={c.id} className="card flex flex-col gap-2 p-4">
+                <span className="font-mono text-base font-semibold">
+                  {c.numero}
+                </span>
+                <span
+                  className="truncate text-sm text-[var(--fg-muted)]"
+                  title={c.proveedor}
+                >
+                  {c.proveedor}
+                </span>
+
+                {/* El total, que es lo que se preguntó: cuánto hay que
+                    pagarle a este. Grande, porque es la cifra. */}
+                <span className="flex items-baseline justify-between gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2">
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    Total a pagar
+                  </span>
+                  <strong className="text-lg tabular-nums">
+                    {formatearMoneda(c.total, "USD")}
+                  </strong>
+                </span>
+
+                <Button asChild variant="outline" className="mt-auto w-full gap-1.5">
+                  <Link href={`/compras/${c.id}`}>
+                    <PackageSearch className="size-4" aria-hidden="true" />
+                    Ver la compra
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {aviso ? (
         <p

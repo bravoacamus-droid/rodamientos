@@ -100,6 +100,15 @@ export interface CompraDetalle {
   gastos_importacion: number;
   comprador: string | null;
   observaciones: string | null;
+  /**
+   * De qué ronda de precios salió, si salió de una.
+   *
+   * `compras.consulta_precio_id` está desde la 055 y no lo leía ninguna
+   * pantalla: la ficha ponía «De la consulta de precios» —el texto libre que
+   * escribe `comprarDeLaRonda`— sin decir cuál ni cómo llegar. Ir de la ronda
+   * a la compra se podía; volver, no.
+   */
+  consulta: { id: string; numero: string } | null;
   motivo_anulacion: string | null;
   creado_en: string;
   lineas: LineaCompra[];

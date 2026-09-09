@@ -123,8 +123,23 @@ export interface RondaDetalle {
    * nunca se preguntaron.
    */
   preguntadas: string[];
-  /** Las compras que ya salieron de aquí, para no proponerlas dos veces. */
-  compras: { id: string; numero: string; proveedor_id: string }[];
+  /**
+   * Las compras que ya salieron de aquí.
+   *
+   * Sirven para dos cosas: no volver a proponer lo mismo, y enseñar en qué
+   * acabó la ronda. Lo segundo necesita más que el número —Luis, 09/09:
+   * *«cuando registro, esos enlaces ni yo los entiendo… en cada orden voy a
+   * poder ver el total a pagar, ¿no?»*— así que viene con proveedor y total.
+   */
+  compras: {
+    id: string;
+    numero: string;
+    proveedor_id: string;
+    proveedor: string;
+    /** En USD, como todo lo de compras. */
+    total: number;
+    fecha: string;
+  }[];
 }
 
 /** Una ronda entera: qué se preguntó, a quién, y qué contestaron. */
@@ -160,8 +175,12 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
         .eq("consulta_id", id),
       supabase
         .from("compras")
-        .select("id, numero, proveedor_id")
-        .eq("consulta_precio_id", id),
+        .select(
+          `id, numero, proveedor_id, total, fecha,
+           proveedor:proveedores!compras_proveedor_id_fkey(razon_social)`,
+        )
+        .eq("consulta_precio_id", id)
+        .order("numero"),
     ]);
 
     if (items.error) return fallo(items.error, "compras/rondaDetalle");
@@ -258,6 +277,11 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
           id: String(c.id),
           numero: String(c.numero),
           proveedor_id: String(c.proveedor_id),
+          // El join viene como objeto o como array de uno según cómo
+          // resuelva PostgREST la relación; se normalizan los dos.
+          proveedor: nombreDe(c.proveedor),
+          total: Number(c.total ?? 0),
+          fecha: String(c.fecha),
         })),
       },
     };
@@ -459,4 +483,11 @@ function positivo(v: unknown): number | null {
   if (v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** La razón social de un join que PostgREST devuelve de dos formas. */
+function nombreDe(v: unknown): string {
+  const uno = Array.isArray(v) ? v[0] : v;
+  const razon = (uno as { razon_social?: unknown } | null)?.razon_social;
+  return typeof razon === "string" ? razon : "—";
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
+import { Scale } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleCompra } from "../api/consultas";
@@ -217,7 +218,32 @@ export default async function PaginaDetalleCompra({
               <Dato etiqueta="Registró" valor={c.comprador ?? "—"} />
             </dl>
 
-            {c.observaciones ? (
+            {/*
+              La vuelta a la ronda de precios.
+
+              La ficha decía «De la consulta de precios» y ahí se acababa: ni
+              cuál era ni cómo llegar. Es el mismo fallo que Luis vio del otro
+              lado el 09/09 —*«esos enlaces ni yo los entiendo»*—, y aquí ni
+              enlace había, con la columna guardada desde la 055.
+
+              Sustituye a esa observación en vez de acompañarla: ese texto
+              libre dice justo esto, en gris y sin llevar a ninguna parte.
+            */}
+            {c.consulta ? (
+              <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+                <Button asChild variant="outline" size="sm" className="w-full gap-1.5">
+                  <Link href={`/compras/precios/${c.consulta.id}`}>
+                    <Scale className="size-4" aria-hidden="true" />
+                    Ver los precios que se compararon
+                  </Link>
+                </Button>
+                <p className="mt-1.5 text-sm text-[var(--fg-muted)]">
+                  Salió de la consulta <strong>{c.consulta.numero}</strong>.
+                </p>
+              </div>
+            ) : null}
+
+            {c.observaciones && !c.consulta ? (
               <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
                 {c.observaciones}
               </p>

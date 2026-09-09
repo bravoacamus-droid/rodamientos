@@ -161,7 +161,8 @@ export async function detalleCompra(
         `id, numero, fecha, fecha_estimada, proveedor_id, tipo,
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
-         motivo_anulacion, creado_en,
+         motivo_anulacion, creado_en, consulta_precio_id,
+         consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento),
          perfiles(nombre),
          compra_items(
@@ -222,6 +223,21 @@ export async function detalleCompra(
         gastos_importacion: Number(c.gastos_importacion ?? 0),
         comprador: c.perfiles?.nombre ?? null,
         observaciones: (c.observaciones as string | null) ?? null,
+        /*
+          De qué ronda de precios salió esta compra.
+
+          La columna estaba desde la 055 y no se leía en ninguna pantalla:
+          la ficha ponía «De la consulta de precios» —el texto libre que
+          escribe `comprarDeLaRonda`— sin decir cuál ni cómo llegar. Ir de
+          la ronda a la compra se podía; volver, no.
+        */
+        consulta:
+          c.consulta_precio_id === null || c.consulta_precio_id === undefined
+            ? null
+            : {
+                id: String(c.consulta_precio_id),
+                numero: numeroDe(c.consulta),
+              },
         motivo_anulacion: (c.motivo_anulacion as string | null) ?? null,
         creado_en: String(c.creado_en),
         lineas,
@@ -311,4 +327,11 @@ export async function ultimosCostosDelProveedor(
   } catch (e) {
     return fallo(e, "compras/ultimosCostosDelProveedor");
   }
+}
+
+/** El número de un join que PostgREST devuelve como objeto o como array. */
+function numeroDe(v: unknown): string {
+  const uno = Array.isArray(v) ? v[0] : v;
+  const numero = (uno as { numero?: unknown } | null)?.numero;
+  return typeof numero === "string" ? numero : "—";
 }
