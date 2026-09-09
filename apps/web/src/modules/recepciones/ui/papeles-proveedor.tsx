@@ -15,7 +15,7 @@ import {
   DialogTitle,
   Input,
 } from "@rodatech/ui";
-import { Eye, FileUp, Paperclip, Trash2, X } from "lucide-react";
+import { Eye, FilePenLine, FileUp, Trash2, X } from "lucide-react";
 
 import {
   corregirNumerosDelProveedor,
@@ -42,23 +42,18 @@ import {
  *   documentos con un solo botón de guardar, y con vista previa a los
  *   documentos dentro de la página, en un modal»*.
  *
+ * Y al ver la primera versión: *«ponlo pero que tenga color; por eso yo te
+ * decía poner un botón editar al costado de Volver al listado»*.
+ *
  * Las tres cosas son la misma: **el número y el papel de una guía son la misma
  * guía**. Estaban en dos sitios —uno en el formulario de recibir y otro aquí—
- * y ninguno de los dos se podía corregir después. Ahora es un diálogo con las
- * dos columnas y un solo Guardar.
+ * y ninguno de los dos se podía corregir después. Ahora hay un botón arriba,
+ * en color, y un diálogo con las dos columnas y un solo Guardar.
  *
  * Se sigue pudiendo recibir sin ellos, y es deliberado: la mercadería llega
  * hoy y hay que cuadrar el almacén hoy; la factura viene después, o el número
  * se quedó en un papel en la camioneta. Lo que faltaba no era prohibirlo, era
  * poder volver.
- *
- * ---------------------------------------------------------------------------
- * Se ve dentro, no en otra pestaña
- * ---------------------------------------------------------------------------
- * Abrir en una pestaña nueva obliga a volver, y el bucket es privado: la URL
- * es firmada y de diez minutos, así que el enlace de esa pestaña se muere solo
- * y no vale para nada después. Dentro del modal se mira, se compara con la
- * línea de arriba y se cierra.
  */
 
 export interface PapelDelProveedor {
@@ -102,25 +97,41 @@ function esPdf(nombre: string): boolean {
   return nombre.toLowerCase().endsWith(".pdf");
 }
 
-export function PapelesDelProveedor({
+// ---------------------------------------------------------------------------
+// El botón de arriba, y el diálogo
+// ---------------------------------------------------------------------------
+
+/**
+ * Poner o corregir los números y subir los escaneos.
+ *
+ * Va arriba, al lado de «Volver al listado», y en color: Luis, 09/09, *«ponlo
+ * pero que tenga color»*. En gris y metido dentro de la sección de papeles no
+ * lo veía, y es la regla de siempre de esta casa — un botón tiene que parecer
+ * un botón, y el que se usa va donde se mira.
+ *
+ * Dice «Editar papeles» y no «Editar» a secas a propósito. En la cabecera de
+ * una recepción, «Editar» promete cambiar cantidades y costos, y eso NO se
+ * puede: ya movió el kardex, y corregirlo es un ajuste de inventario con su
+ * motivo y su responsable. Prometer lo que no se cumple es peor que no
+ * ofrecerlo.
+ */
+export function EditarPapelesDelProveedor({
   recepcionId,
-  papeles,
+  hayPapeles,
   guiaProveedor,
   facturaProveedor,
-  puedeEditar,
 }: {
   recepcionId: string;
-  papeles: PapelDelProveedor[];
+  /** Solo para decir en el botón si es la primera vez. */
+  hayPapeles: boolean;
   /** El número, no el papel. Puede no haberlo: se recibe sin ellos. */
   guiaProveedor: string | null;
   facturaProveedor: string | null;
-  puedeEditar: boolean;
 }) {
   const router = useRouter();
-  const [error, setError] = React.useState<string | null>(null);
   const [enCurso, empezar] = React.useTransition();
+  const [error, setError] = React.useState<string | null>(null);
 
-  // ------------------------------------------------------------- el diálogo
   const [abierto, setAbierto] = React.useState(false);
   const [guia, setGuia] = React.useState(guiaProveedor ?? "");
   const [factura, setFactura] = React.useState(facturaProveedor ?? "");
@@ -128,8 +139,8 @@ export function PapelesDelProveedor({
   const [guardando, setGuardando] = React.useState<string | null>(null);
 
   const abrir = () => {
-    // Se recargan del servidor al abrir: entre que se pintó la página y se
-    // pulsa, otro pudo haberlos puesto.
+    // Se recargan al abrir: entre que se pintó la página y se pulsa, otro pudo
+    // haberlos puesto.
     setGuia(guiaProveedor ?? "");
     setFactura(facturaProveedor ?? "");
     setArchivos({});
@@ -139,8 +150,15 @@ export function PapelesDelProveedor({
 
   const cambiaronNumeros =
     guia.trim() !== (guiaProveedor ?? "") || factura.trim() !== (facturaProveedor ?? "");
-  const cuantosArchivos = Object.keys(archivos).length;
-  const hayAlgo = cambiaronNumeros || cuantosArchivos > 0;
+  const hayAlgo = cambiaronNumeros || Object.keys(archivos).length > 0;
+
+  const ponArchivo = (tipo: Papel) => (f: File | undefined) =>
+    setArchivos((prev) => {
+      const copia = { ...prev };
+      if (f) copia[tipo] = f;
+      else delete copia[tipo];
+      return copia;
+    });
 
   /**
    * Un solo Guardar para todo.
@@ -192,7 +210,117 @@ export function PapelesDelProveedor({
     });
   }
 
-  // ---------------------------------------------------------- la vista previa
+  const primeraVez =
+    !hayPapeles && guiaProveedor === null && facturaProveedor === null;
+
+  return (
+    <>
+      <Button type="button" onClick={abrir} className="gap-1.5">
+        <FilePenLine className="size-4" aria-hidden="true" />
+        {primeraVez ? "Poner números y papeles" : "Editar papeles"}
+      </Button>
+
+      <Dialog open={abierto} onOpenChange={setAbierto}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Papeles del proveedor</DialogTitle>
+            <DialogDescription>
+              El número y el escaneo de cada uno. Rellena lo que tengas; lo que
+              falte se puede poner después.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody>
+            <div className="flex flex-col gap-4">
+              <FilaPapel
+                titulo="Guía del proveedor"
+                idNumero="numero-guia"
+                placeholder="001-000123"
+                valor={guia}
+                onValor={setGuia}
+                archivo={archivos.guia}
+                onArchivo={ponArchivo("guia")}
+              />
+
+              <FilaPapel
+                titulo="Factura del proveedor"
+                idNumero="numero-factura"
+                placeholder="F001-004567"
+                valor={factura}
+                onValor={setFactura}
+                archivo={archivos.factura}
+                onArchivo={ponArchivo("factura")}
+              />
+
+              {/* El pago no tiene número que apuntar: no es un comprobante del
+                  proveedor, es el voucher de la transferencia. */}
+              <FilaPapel
+                titulo="Pago"
+                ayuda="El voucher, cuando se le pague."
+                archivo={archivos.pago}
+                onArchivo={ponArchivo("pago")}
+              />
+            </div>
+
+            {error ? (
+              <p
+                role="alert"
+                className="mt-3 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm"
+              >
+                {error}
+              </p>
+            ) : null}
+          </DialogBody>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={enCurso}
+              onClick={() => setAbierto(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={guardar} disabled={enCurso || !hayAlgo}>
+              {guardando !== null
+                ? `Guardando ${guardando}…`
+                : !hayAlgo
+                  ? "Nada que guardar"
+                  : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// La lista, con la vista previa
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo que ya está subido.
+ *
+ * ---------------------------------------------------------------------------
+ * Se ve dentro, no en otra pestaña
+ * ---------------------------------------------------------------------------
+ * Abrir en una pestaña nueva obliga a volver, y el bucket es privado: la URL
+ * es firmada y de diez minutos, así que el enlace de esa pestaña se muere solo
+ * y no vale para nada después. Dentro del modal se mira, se compara con la
+ * línea de arriba y se cierra.
+ */
+export function PapelesDelProveedor({
+  papeles,
+  puedeEditar,
+}: {
+  papeles: PapelDelProveedor[];
+  puedeEditar: boolean;
+}) {
+  const router = useRouter();
+  const [error, setError] = React.useState<string | null>(null);
+  const [enCurso, empezar] = React.useTransition();
+
   const [mirando, setMirando] = React.useState<{
     papel: PapelDelProveedor;
     url: string;
@@ -225,25 +353,14 @@ export function PapelesDelProveedor({
 
   return (
     <section className="card flex flex-col gap-3 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-base font-semibold">Papeles del proveedor</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Sus números y los escaneos, todos opcionales. PDF o foto.
-          </p>
-        </div>
-
-        {puedeEditar ? (
-          <Button type="button" variant="outline" onClick={abrir} className="gap-1.5">
-            <Paperclip className="size-4" aria-hidden="true" />
-            {papeles.length === 0 && guiaProveedor === null && facturaProveedor === null
-              ? "Poner números y papeles"
-              : "Añadir o corregir"}
-          </Button>
-        ) : null}
+      <div>
+        <h2 className="text-base font-semibold">Papeles del proveedor</h2>
+        <p className="text-sm text-[var(--fg-muted)]">
+          Sus números y los escaneos, todos opcionales. PDF o foto.
+        </p>
       </div>
 
-      {error && !abierto ? (
+      {error ? (
         <p
           role="alert"
           className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm"
@@ -254,9 +371,13 @@ export function PapelesDelProveedor({
 
       {papeles.length === 0 ? (
         <p className="rounded-md bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
-          Todavía no hay ningún papel escaneado. Sube la guía y la factura con
-          las que llegó la mercadería —es lo que se busca si después no cuadra
-          un precio— y el voucher cuando le pagues.
+          {/* Se dice «el botón azul de arriba» y no su texto: ese texto
+              cambia según sea la primera vez o no, y el color es justo lo que
+              Luis pidió para poder encontrarlo. */}
+          Todavía no hay ningún papel escaneado. Con el <strong>botón azul de
+          arriba</strong> sube la guía y la factura con las que llegó la
+          mercadería —es lo que se busca si después no cuadra un precio— y el
+          voucher cuando le pagues.
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
@@ -302,101 +423,6 @@ export function PapelesDelProveedor({
         </ul>
       )}
 
-      {/* --------------------------------------------------- Números y papeles */}
-      <Dialog open={abierto} onOpenChange={(v) => (v ? setAbierto(true) : setAbierto(false))}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Papeles del proveedor</DialogTitle>
-            <DialogDescription>
-              El número y el escaneo de cada uno. Rellena lo que tengas; lo que
-              falte se puede poner después.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody>
-            <div className="flex flex-col gap-4">
-              <FilaPapel
-                titulo="Guía del proveedor"
-                idNumero="numero-guia"
-                placeholder="001-000123"
-                valor={guia}
-                onValor={setGuia}
-                archivo={archivos.guia}
-                onArchivo={(f) =>
-                  setArchivos((prev) => {
-                    const copia = { ...prev };
-                    if (f) copia.guia = f;
-                    else delete copia.guia;
-                    return copia;
-                  })
-                }
-              />
-
-              <FilaPapel
-                titulo="Factura del proveedor"
-                idNumero="numero-factura"
-                placeholder="F001-004567"
-                valor={factura}
-                onValor={setFactura}
-                archivo={archivos.factura}
-                onArchivo={(f) =>
-                  setArchivos((prev) => {
-                    const copia = { ...prev };
-                    if (f) copia.factura = f;
-                    else delete copia.factura;
-                    return copia;
-                  })
-                }
-              />
-
-              {/* El pago no tiene número que apuntar: no es un comprobante del
-                  proveedor, es el voucher de la transferencia. */}
-              <FilaPapel
-                titulo="Pago"
-                ayuda="El voucher, cuando se le pague."
-                archivo={archivos.pago}
-                onArchivo={(f) =>
-                  setArchivos((prev) => {
-                    const copia = { ...prev };
-                    if (f) copia.pago = f;
-                    else delete copia.pago;
-                    return copia;
-                  })
-                }
-              />
-            </div>
-
-            {error ? (
-              <p
-                role="alert"
-                className="mt-3 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm"
-              >
-                {error}
-              </p>
-            ) : null}
-          </DialogBody>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={enCurso}
-              onClick={() => setAbierto(false)}
-            >
-              Cancelar
-            </Button>
-            <Button type="button" onClick={guardar} disabled={enCurso || !hayAlgo}>
-              {guardando !== null
-                ? `Guardando ${guardando}…`
-                : !hayAlgo
-                  ? "Nada que guardar"
-                  : "Guardar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ------------------------------------------------------- Vista previa */}
       <Dialog open={mirando !== null} onOpenChange={(v) => (v ? null : setMirando(null))}>
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>

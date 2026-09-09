@@ -7,7 +7,10 @@ import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleRecepcion, papelesDeRecepcion } from "../api/consultas";
-import { PapelesDelProveedor } from "./papeles-proveedor";
+import {
+  EditarPapelesDelProveedor,
+  PapelesDelProveedor,
+} from "./papeles-proveedor";
 
 /**
  * Ficha de una recepción.
@@ -74,12 +77,33 @@ export default async function PaginaDetalleRecepcion({
           </p>
         </div>
 
-        <Link
-          href="/recepciones"
-          className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-        >
-          Volver al listado
-        </Link>
+        {/*
+          El botón de los papeles va aquí arriba, en color, y delante de
+          «Volver al listado». Luis, 09/09: *«ponlo pero que tenga color; por
+          eso yo te decía poner un botón editar al costado de Volver al
+          listado»*. Metido dentro de la sección de papeles y en gris no lo
+          veía.
+
+          Delante y no detrás porque es el que se usa: volver al listado se
+          hace una vez y esto se hace cada vez que llega un papel.
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          {puedeAdjuntar && !r.anulada ? (
+            <EditarPapelesDelProveedor
+              recepcionId={r.id}
+              hayPapeles={papeles.ok && papeles.datos.length > 0}
+              guiaProveedor={r.guia_proveedor}
+              facturaProveedor={r.factura_proveedor}
+            />
+          ) : null}
+
+          <Link
+            href="/recepciones"
+            className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+          >
+            Volver al listado
+          </Link>
+        </div>
       </div>
 
       <section className="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,11 +198,8 @@ export default async function PaginaDetalleRecepcion({
           con guía y factura»*. */}
       {r.anulada ? null : (
         <PapelesDelProveedor
-          recepcionId={r.id}
           papeles={papeles.ok ? papeles.datos : []}
-          guiaProveedor={r.guia_proveedor}
-          facturaProveedor={r.factura_proveedor}
-          puedeEditar={puedeAdjuntar}
+          puedeEditar={puedeAdjuntar && !r.anulada}
         />
       )}
 
