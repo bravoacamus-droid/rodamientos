@@ -176,6 +176,8 @@ export default async function PaginaDetalleRecepcion({
         <PapelesDelProveedor
           recepcionId={r.id}
           papeles={papeles.ok ? papeles.datos : []}
+          guiaProveedor={r.guia_proveedor}
+          facturaProveedor={r.factura_proveedor}
           puedeEditar={puedeAdjuntar}
         />
       )}

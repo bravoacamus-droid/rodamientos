@@ -226,3 +226,87 @@ export async function enlaceAlPapel(
     };
   }
 }
+
+/**
+ * Corregir los números de la guía y la factura del proveedor.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué una recepción cerrada deja tocar ESTO
+ * ---------------------------------------------------------------------------
+ * Luis, 09/09: *«me dejó guardar como recibido sin poner la guía y la factura;
+ * debería haber un editar o algo para guardar eso de nuevo»*.
+ *
+ * Y no choca con que la recepción sea un documento cerrado. Lo que está
+ * cerrado es el HECHO: qué entró, cuánto y a qué costo — eso ya movió el
+ * kardex y corregirlo es un ajuste de inventario, con su motivo y su
+ * responsable. Estos dos son referencias administrativas: el número que trae
+ * el papel del proveedor. Cambiarlos no mueve un gramo de stock ni un céntimo
+ * de costo.
+ *
+ * Y hace falta porque el caso corriente es justo ese: llega la mercadería, se
+ * recibe para que el almacén cuadre hoy, y la factura viene después o el
+ * número está en un papel que se quedó en la camioneta. Sin esto, el hueco se
+ * queda vacío para siempre.
+ *
+ * Lo que NO deja: tocar una recepción anulada, que sí es un hecho congelado.
+ */
+const esquemaNumeros = z.object({
+  recepcion_id: z.string().uuid(),
+  // Vacío es una respuesta: «no me dieron guía». Se guarda como null y no
+  // como cadena vacía para que la pantalla enseñe el guion de siempre.
+  guia_proveedor: z.string().trim().max(60).nullable().default(null),
+  factura_proveedor: z.string().trim().max(60).nullable().default(null),
+});
+
+export async function corregirNumerosDelProveedor(
+  datosCrudos: unknown,
+): Promise<ResultadoAdjunto> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
+    return { ok: false, error: "Tu rol no puede tocar los papeles del proveedor." };
+  }
+
+  let datos: z.infer<typeof esquemaNumeros>;
+  try {
+    datos = esquemaNumeros.parse(datosCrudos);
+  } catch (e) {
+    const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
+    return { ok: false, error: `Los datos no son válidos: ${detalle}` };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+
+    const { data: rec, error: eRec } = await supabase
+      .from("recepciones")
+      .select("anulada")
+      .eq("id", datos.recepcion_id)
+      .maybeSingle();
+    if (eRec) return { ok: false, error: eRec.message };
+    if (!rec) return { ok: false, error: "Esa recepción no existe." };
+    if (rec.anulada) {
+      return { ok: false, error: "Esa recepción está anulada: ya no se toca." };
+    }
+
+    const vacio = (v: string | null) => (v === null || v.trim() === "" ? null : v.trim());
+
+    const { error } = await supabase
+      .from("recepciones")
+      .update({
+        guia_proveedor: vacio(datos.guia_proveedor),
+        factura_proveedor: vacio(datos.factura_proveedor),
+      })
+      .eq("id", datos.recepcion_id);
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath(`/recepciones/${datos.recepcion_id}`);
+    revalidatePath("/recepciones");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudieron guardar los números.",
+    };
+  }
+}
