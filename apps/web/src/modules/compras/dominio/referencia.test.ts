@@ -10,6 +10,7 @@ import {
   referenciaVacia,
   diasPropuestos,
   textoDeLosDias,
+  sePuedeApuntarDias,
   tieneAlgoQueDecir,
   type ProveedorConocido,
   type Referencia,
@@ -289,5 +290,29 @@ describe("textoDeLosDias", () => {
   it("no dice nada cuando no hay nada que explicar", () => {
     expect(textoDeLosDias(undefined)).toBeUndefined();
     expect(textoDeLosDias(referenciaVacia("p-1"))).toBeUndefined();
+  });
+});
+
+describe("sePuedeApuntarDias", () => {
+  it("no deja apuntar plazo a lo inmediato, que es lo que significa", () => {
+    expect(
+      sePuedeApuntarDias({ ...referenciaVacia("p-1"), disponibilidad: "inmediata" }, ""),
+    ).toBe(false);
+  });
+
+  it("en lo demás sí, que ahí el plazo es la mitad de la respuesta", () => {
+    expect(
+      sePuedeApuntarDias({ ...referenciaVacia("p-1"), disponibilidad: "exterior" }, ""),
+    ).toBe(true);
+    expect(sePuedeApuntarDias(referenciaVacia("p-1"), "")).toBe(true);
+    expect(sePuedeApuntarDias(undefined, "")).toBe(true);
+  });
+
+  it("con algo ya apuntado no se bloquea, o no habría cómo corregirlo", () => {
+    // Pasa si la disponibilidad cambia después de haber anotado el plazo:
+    // un campo bloqueado con un valor dentro es un valor atrapado.
+    expect(
+      sePuedeApuntarDias({ ...referenciaVacia("p-1"), disponibilidad: "inmediata" }, "7"),
+    ).toBe(true);
   });
 });

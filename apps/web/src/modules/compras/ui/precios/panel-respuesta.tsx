@@ -36,6 +36,7 @@ import {
   contraReferencia,
   diasPropuestos,
   textoDeLosDias,
+  sePuedeApuntarDias,
   margenSi,
   porcentajeQueDiceAlgo,
   referenciaVacia,
@@ -450,7 +451,9 @@ export function PanelRespuesta({
                         inputMode="numeric"
                         className="text-right tabular-nums"
                         value={linea.dias}
-                        disabled={!linea.disponible}
+                        disabled={
+                          !linea.disponible || !sePuedeApuntarDias(ref, linea.dias)
+                        }
                         // Luis: «en compras sí puede editar los días: seguro
                         // le dijo que va a demorar menos o más». Se propone
                         // y se pisa; de dónde sale, en la ayuda de abajo.

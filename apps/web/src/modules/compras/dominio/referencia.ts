@@ -331,3 +331,24 @@ export function textoDeLosDias(ref: Referencia | undefined): string | undefined 
   if (dias === null) return "Inmediata: sin plazo que apuntar.";
   return `${dias} es lo normal de ${ETIQUETA_DISPONIBILIDAD[ref.disponibilidad].toLowerCase()}`;
 }
+
+/**
+ * Si tiene sentido apuntar un plazo de entrega para este producto.
+ *
+ * Luis, 09/09: *«si es inmediato pues el campo de días de entrega que se
+ * bloquee para rellenar»*. Y es la conclusión de lo de arriba: si
+ * `inmediata` no propone número porque no tiene plazo, dejar el campo
+ * abierto invita a inventarse uno.
+ *
+ * Con una excepción, y es para no dejar un callejón sin salida: si YA hay
+ * algo apuntado ahí —de antes, o porque la disponibilidad cambió después—
+ * el campo sigue abierto. Un campo bloqueado con un valor dentro es un
+ * valor que no se puede corregir ni borrar.
+ */
+export function sePuedeApuntarDias(
+  ref: Referencia | undefined,
+  yaApuntado: string,
+): boolean {
+  if (yaApuntado.trim() !== "") return true;
+  return ref?.disponibilidad !== "inmediata";
+}
