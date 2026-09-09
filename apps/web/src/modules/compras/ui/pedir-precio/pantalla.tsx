@@ -5,34 +5,24 @@
 // nada, y eso es deliberado.
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Input, SelectNativo } from "@rodatech/ui";
-import { ClipboardList, Copy, Mail, MessageCircle } from "lucide-react";
+import { Button, Input } from "@rodatech/ui";
+import { ClipboardList } from "lucide-react";
 
 // Por la ruta profunda: el índice de `mensajes` reexporta su `api/`, que es
 // `server-only`, y esto es un componente de cliente.
-import { canalesDisponibles, enlaceCorreo, enlaceWhatsapp } from "@/modules/mensajes/dominio/enlaces";
-import {
-  ETIQUETA_CANAL,
-  listaDeItems,
-  renderizar,
-  type Plantilla,
-} from "@/modules/mensajes/dominio/plantillas";
 import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 
 import { abrirRonda } from "../../acciones/comparar";
 import {
   aPayloadDeConsulta,
   cuantosProveedores,
-  gruposDeEnvio,
   modoSugerido,
   sinNadie,
   type ItemConsulta,
   type Modo,
   type Seleccion,
 } from "../../dominio/reparto-consulta";
-import { DialogoContactoProveedor } from "@/modules/proveedores/ui/dialogo-contacto";
 import { AnadirProveedor } from "./anadir";
 
 export type ItemPedido = ItemConsulta;
@@ -56,27 +46,30 @@ export type ItemPedido = ItemConsulta;
  *    especialistas, y es lo que se propone cuando ningún proveedor cubre
  *    todos los productos.
  *
- * **No manda nada solo.** Cada botón abre WhatsApp o el correo con el texto ya
- * escrito y la persona pulsa enviar.
+ * **No manda nada, y desde el 09/09 ni lo ofrece.**
+ *
+ * Llegó a escribir el mensaje de WhatsApp por proveedor. Willy ya había dicho
+ * que no lo quería (18:47): *«no, creo no, ya mucho ya. Yo eso lo manejo para
+ * pedir precios, yo lo hago el WhatsApp así de forma rápida: corto la imagen de
+ * mi requerimiento, o me hago un cuadrito en Excel al toque… y pum, lo mando»*.
+ * Se dejó plegado como término medio, y Luis pidió quitarlo del todo. Tenía
+ * razón: media pantalla estaba dedicada a resolver algo que él resuelve en diez
+ * segundos a su manera.
+ *
+ * De paso se fue un bloqueo que nadie había pedido: sin plantilla de mensaje
+ * configurada, la pantalla entera se negaba a abrir y no dejaba ni apuntar a
+ * quién ibas a preguntar.
  */
 export function PedirPrecio({
   items,
   proveedores: sugeridos,
   porProducto,
-  plantillas,
-  empresa,
-  yo,
-  hoy,
 }: {
   items: ItemPedido[];
   /** Los que venden algo de la lista, con cuántos de ella cubren. */
   proveedores: ProveedorParaPedir[];
   /** Y quién vende cada uno por separado. */
   porProducto: Record<string, ProveedorParaPedir[]>;
-  plantillas: Plantilla[];
-  empresa: string;
-  yo: string;
-  hoy: string;
 }) {
   const router = useRouter();
 
@@ -109,12 +102,8 @@ export function PedirPrecio({
     return r;
   });
 
-  const [plantillaId, setPlantillaId] = React.useState(plantillas[0]?.id ?? "");
-  const [copiado, setCopiado] = React.useState<string | null>(null);
   const [abriendo, empezarRonda] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
-  /** Qué proveedor está en el diálogo de «ponerle el número». */
-  const [poniendoNumero, setPoniendoNumero] = React.useState<string | null>(null);
 
   /**
    * Las cantidades, editables.
@@ -141,13 +130,6 @@ export function PedirPrecio({
       [productoId]: Number.isFinite(valor) && valor > 0 ? valor : 1,
     }));
   };
-
-  const plantilla = plantillas.find((p) => p.id === plantillaId) ?? plantillas[0];
-
-  const grupos = React.useMemo(
-    () => gruposDeEnvio(conCantidad, seleccion, proveedores),
-    [conCantidad, seleccion, proveedores],
-  );
   const huerfanos = React.useMemo(() => sinNadie(items, seleccion), [items, seleccion]);
   const cuantos = cuantosProveedores(seleccion);
 
@@ -172,33 +154,8 @@ export function PedirPrecio({
     });
   };
 
-  const textoPara = (proveedor: string, suyos: ItemPedido[]) =>
-    plantilla
-      ? renderizar(plantilla.cuerpo, {
-          proveedor,
-          items: listaDeItems(suyos),
-          empresa,
-          yo,
-          fecha: hoy,
-        })
-      : "";
 
-  const asuntoPara = (proveedor: string) =>
-    plantilla?.asunto
-      ? renderizar(plantilla.asunto, { proveedor, empresa, yo, fecha: hoy })
-      : `Solicitud de cotización · ${empresa}`;
 
-  const copiar = async (id: string, texto: string) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiado(id);
-      setTimeout(() => setCopiado(null), 2000);
-    } catch {
-      // Sin permiso de portapapeles no se rompe nada: el texto está a la
-      // vista y se puede seleccionar a mano.
-      setCopiado(null);
-    }
-  };
 
   /**
    * Guardar la ronda para poder apuntar lo que contesten.
@@ -226,17 +183,6 @@ export function PedirPrecio({
     });
   };
 
-  if (plantillas.length === 0) {
-    return (
-      <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
-        No hay ningún mensaje escrito para pedir precios.{" "}
-        <Link href="/configuracion" className="font-medium underline">
-          Escribe el primero en Configuración
-        </Link>
-        .
-      </p>
-    );
-  }
 
   const yaEstan = new Set(proveedores.map((p) => p.id));
 
@@ -286,30 +232,6 @@ export function PedirPrecio({
         </section>
       ) : null}
 
-      {/* --------------------------------------------------- Con qué texto */}
-      <section className="card p-4">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Con qué mensaje</span>
-          <SelectNativo
-            value={plantillaId}
-            onChange={(e) => setPlantillaId(e.target.value)}
-            className="h-11 md:h-control-md"
-          >
-            {plantillas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre} · {ETIQUETA_CANAL[p.canal]}
-              </option>
-            ))}
-          </SelectNativo>
-          <span className="text-xs text-[var(--fg-subtle)]">
-            Se corrigen en{" "}
-            <Link href="/configuracion" className="underline">
-              Configuración
-            </Link>
-            .
-          </span>
-        </label>
-      </section>
 
       {/* ------------------------------------------------ A quién, por producto */}
       {modo === "separado" ? (
@@ -418,133 +340,6 @@ export function PedirPrecio({
         </p>
       ) : null}
 
-      {/* ------------------------------------------- Lo que le llega a cada uno
-          Plegado y cerrado, por petición de Willy (18:47).
-
-          Le enseñé la pantalla escribiendo un mensaje por proveedor y dijo:
-          *«no, creo no, ya mucho ya. Yo eso lo manejo para pedir precios, yo lo
-          hago el WhatsApp así de forma rápida: corto la imagen de mi
-          requerimiento, o me hago un cuadrito en Excel al toque, le pongo las
-          especificaciones y pum, lo mando»*. Y a veces ni eso: *«puede que sea
-          una llamada por teléfono; como ya nos conocemos con los proveedores,
-          hay esa facilidad»*.
-
-          No se borra: el mismo texto lo quiere para mandarle la COTIZACIÓN al
-          cliente (13:00), y ahí sí lo pidió. Lo que sobra es ponérselo delante
-          cuando lo que viene a hacer aquí es apuntar a quién le va a preguntar.
-
-          Cerrado por defecto, y quien lo quiera lo abre. */}
-      {grupos.length > 0 ? (
-        <details className="card p-4">
-          <summary className="cursor-pointer text-sm font-semibold">
-            ¿Quieres que te escriba el mensaje?
-            <span className="ml-2 font-normal text-[var(--fg-muted)]">
-              {grupos.length === 1
-                ? "uno, para el proveedor"
-                : `${grupos.length}, uno por proveedor`}
-            </span>
-          </summary>
-          <p className="mb-3 mt-1 text-xs text-[var(--fg-subtle)]">
-            Se abre WhatsApp con el texto escrito y lo mandas tú. Si prefieres
-            mandarlo a tu manera, no hace falta abrir esto: la consulta se anota
-            igual con el botón de abajo.
-          </p>
-
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
-            {grupos.map((g) => {
-              const proveedor = proveedores.find((p) => p.id === g.proveedor.id);
-              if (!proveedor) return null;
-              const canales = canalesDisponibles(proveedor);
-              const texto = textoPara(g.proveedor.razon_social, g.items);
-              const wa = enlaceWhatsapp(proveedor.whatsapp ?? proveedor.telefono, texto);
-              const correo = enlaceCorreo(
-                proveedor.email,
-                asuntoPara(g.proveedor.razon_social),
-                texto,
-              );
-
-              return (
-                <li key={g.proveedor.id} className="flex flex-col gap-2 py-3">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <Link
-                      href={`/proveedores/${g.proveedor.id}`}
-                      className="text-sm font-medium text-brand-600 hover:underline"
-                    >
-                      {g.proveedor.razon_social}
-                    </Link>
-                    <span className="text-xs text-[var(--fg-subtle)]">
-                      {g.items.length === 1
-                        ? g.items[0]?.codigo
-                        : `${g.items.length} productos`}
-                    </span>
-                  </div>
-
-                  {!canales.whatsapp && !canales.correo ? (
-                    /*
-                      Un botón, no un enlace a su ficha.
-
-                      El enlace te sacaba de aquí y al volver habías perdido
-                      todo: los proveedores marcados, las cantidades, el
-                      reparto. Y no era un caso raro — los 97 proveedores
-                      entraron del Excel sin un solo teléfono, así que este
-                      aviso sale SIEMPRE.
-                    */
-                    <span className="text-xs text-[var(--warn)]">
-                      No tiene WhatsApp ni correo en su ficha. Puedes copiar el
-                      texto, o{" "}
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() => setPoniendoNumero(g.proveedor.id)}
-                      >
-                        ponerle el número
-                      </button>
-                      .
-                    </span>
-                  ) : null}
-
-                  <p className="whitespace-pre-wrap rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
-                    {texto}
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {wa ? (
-                      <a
-                        href={wa}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-                      >
-                        <MessageCircle className="size-4" aria-hidden="true" />
-                        WhatsApp
-                      </a>
-                    ) : null}
-                    {correo ? (
-                      <a
-                        href={correo}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-                      >
-                        <Mail className="size-4" aria-hidden="true" />
-                        Correo
-                      </a>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-9"
-                      onClick={() => void copiar(g.proveedor.id, texto)}
-                    >
-                      <Copy aria-hidden="true" />
-                      {copiado === g.proveedor.id ? "Copiado" : "Copiar"}
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </details>
-      ) : null}
-
       {/* ----------------------------------------------------------- Guardar */}
       <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="text-sm">
@@ -576,48 +371,18 @@ export function PedirPrecio({
         </p>
       ) : null}
 
-      <p className="text-xs text-[var(--fg-subtle)]">
-        <strong>Nada sale solo</strong>: no hay envío automático, ni falta.
+      {/*
+          Se dice lo que esta pantalla NO hace, porque su nombre promete más.
+
+          «Pedir precio» suena a que va a preguntar. Lo que hace es apuntar a
+          quién vas a preguntar, para tener dónde anotar las respuestas y poder
+          compararlas después.
+      */}
+      <p className="text-sm text-[var(--fg-subtle)]">
+        Aquí no se manda nada: preguntas tú como siempre, y esto te guarda la
+        ronda para anotar lo que te diga cada uno.
       </p>
 
-      {/* Se apunta el número aquí mismo. El enlace a la ficha te sacaba de la
-          pantalla y al volver habías perdido los proveedores marcados, las
-          cantidades y el reparto. */}
-      {poniendoNumero
-        ? (() => {
-            const p = proveedores.find((x) => x.id === poniendoNumero);
-            if (!p) return null;
-            return (
-              <DialogoContactoProveedor
-                abierto
-                proveedorId={p.id}
-                proveedor={p.razon_social}
-                telefono={p.telefono ?? ""}
-                whatsapp={p.whatsapp ?? ""}
-                email={p.email ?? ""}
-                onCerrar={() => setPoniendoNumero(null)}
-                onGuardado={(v) => {
-                  // Se repinta con lo guardado, sin recargar: el botón de
-                  // mandar aparece al instante y no se pierde nada de lo que
-                  // hay puesto en la pantalla.
-                  setProveedores((prev) =>
-                    prev.map((x) =>
-                      x.id === p.id
-                        ? {
-                            ...x,
-                            telefono: v.telefono || null,
-                            whatsapp: v.whatsapp || null,
-                            email: v.email || null,
-                          }
-                        : x,
-                    ),
-                  );
-                  setPoniendoNumero(null);
-                }}
-              />
-            );
-          })()
-        : null}
     </div>
   );
 }

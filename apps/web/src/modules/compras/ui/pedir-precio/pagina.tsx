@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
-import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { perfilActual } from "@rodatech/db/servidor";
 
-import { plantillasParaMandar } from "@/modules/mensajes";
 import { proveedoresParaPedir, proveedoresPorProducto } from "@/modules/proveedores";
 
 import { precargaDeCompra } from "../../api/por-comprar";
@@ -60,20 +59,21 @@ export default async function PaginaPedirPrecio({
     );
   }
 
-  const supabase = await clienteServidor();
-  const [proveedores, porProducto, plantillas, { data: emp }] = await Promise.all([
+  /*
+    Dos consultas, no cuatro (09/09).
+
+    Se traían además las plantillas de mensaje, la razón social de la empresa y
+    la fecha, y todo eso era solo para RELLENAR el texto del WhatsApp que se
+    ofrecía escribir aquí. Ese bloque se fue, así que la pantalla vuelve a
+    pedir lo único que usa: quién vende esto y quién vende cada cosa.
+  */
+  const [proveedores, porProducto] = await Promise.all([
     proveedoresParaPedir(items.map((i) => i.producto.id)),
     // Quién vende CADA uno. Es lo que permite mandarle a cada proveedor solo
     // lo suyo cuando los productos no comparten proveedor, que en este
     // catálogo es lo normal.
     proveedoresPorProducto(items.map((i) => i.producto.id)),
-    plantillasParaMandar("pedido_precio"),
-    supabase.from("empresa").select("razon_social").eq("id", 1).maybeSingle(),
   ]);
-
-  const hoy = new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima" }).format(
-    new Date(),
-  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,7 +81,7 @@ export default async function PaginaPedirPrecio({
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Pedir precio</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            El mismo mensaje a varios proveedores, con la lista ya escrita.
+            Apunta a quién le vas a preguntar. El mensaje lo mandas tú por donde quieras.
           </p>
         </div>
         <Link
@@ -103,10 +103,6 @@ export default async function PaginaPedirPrecio({
         }))}
         proveedores={proveedores.ok ? proveedores.datos : []}
         porProducto={porProducto.ok ? porProducto.datos : {}}
-        plantillas={plantillas.ok ? plantillas.datos : []}
-        empresa={emp?.razon_social ?? "Rodatech"}
-        yo={perfil.nombre ?? ""}
-        hoy={hoy}
       />
     </div>
   );
