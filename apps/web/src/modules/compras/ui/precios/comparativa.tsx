@@ -25,6 +25,7 @@ import {
   type Referencia,
 } from "../../dominio/referencia";
 import { anadirALaRonda, comprarDeLaRonda } from "../../acciones/comparar";
+import { AnadirProveedor } from "../pedir-precio/anadir";
 import { PanelRespuesta } from "./panel-respuesta";
 import { AjustarVenta } from "./ajustar-venta";
 
@@ -244,6 +245,31 @@ export function Comparativa({
     });
   }
 
+  /**
+   * El que se olvidó, preguntándole por la lista entera.
+   *
+   * A diferencia de `anadir`, que mete a alguien para UN producto desde su
+   * fila, esto es el caso de «me faltó este proveedor»: se le pregunta por
+   * todo, que es lo que se quiere cuando uno cae en que se lo saltó.
+   */
+  function anadirATodo(proveedorId: string) {
+    setAviso(null);
+    setAnadiendo("todos");
+    empezar(async () => {
+      const r = await anadirALaRonda({
+        consulta_id: ronda.id,
+        proveedor_id: proveedorId,
+        items: ronda.items.map((i) => i.item_id),
+      });
+      setAnadiendo(null);
+      if (!r.ok) {
+        setAviso(r.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/* -------------------------------------------------- Los proveedores */}
@@ -324,6 +350,44 @@ export function Comparativa({
           );
         })}
       </section>
+
+      {/*
+        Añadir a cualquier proveedor, no solo a los que el sistema ya conoce.
+
+        Luis, 09/09: *«si ya le puse los proveedores, no sé dónde puedo seguir
+        agregando más proveedores… debería ver un botón aquí, si es que seguro
+        se olvidó de otros»*.
+
+        La acción ya existía (`anadirALaRonda`) y su único camino era un texto
+        de 11 px bajo cada fila —«falta preguntarle a…»— que además solo
+        proponía a quien YA le habían comprado ese producto. Al que se te
+        olvidó y nunca le compraste eso, no había forma de llegar. La pieza
+        estaba y la puerta era del tamaño de una rendija.
+
+        Este buscador es el mismo de «Pedir precio»: va contra el maestro
+        entero y busca por RUC, razón social **y marca**, que es la mitad de
+        las veces que se abre esto —«¿quién me trae SKF?»—.
+
+        Se le pregunta por TODA la lista, que es lo que se quiere cuando uno
+        cae en que se olvidó de alguien. Ajustar a qué productos se le pregunta
+        se sigue haciendo fila a fila.
+      */}
+      {ronda.estado === "abierta" ? (
+        <section className="card p-4">
+          <h2 className="text-base font-semibold">¿Te falta preguntarle a alguien?</h2>
+          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+            Se le pregunta por los {ronda.items.length} productos de esta
+            consulta, y su columna aparece al momento.
+          </p>
+          <AnadirProveedor
+            yaEstan={enLaRonda}
+            onAnadir={(p) => anadirATodo(p.id)}
+          />
+          {anadiendo === "todos" ? (
+            <p className="mt-2 text-sm text-[var(--fg-muted)]">Añadiendo…</p>
+          ) : null}
+        </section>
+      ) : null}
 
       {sinContestar > 0 ? (
         <p className="text-sm text-[var(--fg-muted)]">
@@ -596,6 +660,25 @@ export function Comparativa({
             </p>
           ) : null}
 
+          {/*
+            Dos frases distintas, porque son dos situaciones distintas.
+
+            Antes había una sola y contaba «sin ganador», que incluye a los que
+            todavía no han contestado. Una ronda recién abierta decía «2
+            productos no los tiene nadie, hay que buscarlos fuera» con los dos
+            proveedores en «Esperando»: mandaba a buscar proveedores nuevos
+            mientras esperaba respuesta de los que ya tenía.
+          */}
+          {resumen.esperando > 0 ? (
+            <p className="mt-1 text-[var(--fg-muted)]">
+              {resumen.esperando}{" "}
+              {resumen.esperando === 1
+                ? "producto está esperando respuesta"
+                : "productos están esperando respuesta"}
+              .
+            </p>
+          ) : null}
+
           {resumen.sinNadie > 0 ? (
             <p className="mt-1 text-[var(--warn)]">
               {resumen.sinNadie}{" "}
@@ -724,7 +807,7 @@ function AQuienFalta({
   const primeros = faltan.slice(0, 3);
 
   return (
-    <span className="mt-1 flex flex-wrap items-center gap-1 text-[11px]">
+    <span className="mt-1 flex flex-wrap items-center gap-1 text-sm">
       <span className="text-[var(--fg-subtle)]">Falta preguntarle a</span>
       {primeros.map((p) => {
         const esperando = anadiendo === `${itemId}|${p.proveedor_id}`;

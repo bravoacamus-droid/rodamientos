@@ -105,6 +105,18 @@ export async function abrirRonda(datosCrudos: unknown): Promise<ResultadoRonda> 
     };
   }
 
+  // Y al revés, que es el que se coló hasta el 09/09: un producto de la lista
+  // al que no se le preguntó a nadie deja una fila que nunca se va a poder
+  // completar, y la rejilla la enseña vacía para siempre. La pantalla ya lo
+  // avisa, pero esto es un endpoint público y la pantalla no es la puerta.
+  const cubiertos = new Set(datos.proveedores.flatMap((p) => p.productos));
+  if (datos.items.some((i) => !cubiertos.has(i.producto_id))) {
+    return {
+      ok: false,
+      error: "Hay un producto al que no se le pregunta a nadie. Ponle proveedor o sácalo de la lista.",
+    };
+  }
+
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase.rpc("crear_consulta_precio", {

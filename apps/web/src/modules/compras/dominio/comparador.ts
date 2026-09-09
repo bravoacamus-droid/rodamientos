@@ -353,8 +353,35 @@ export function resumirProveedores(
 
 export interface ResumenComparativa {
   productos: number;
-  /** Cuántos no los tiene nadie. Son los que hay que salir a buscar. */
+  /**
+   * Cuántos hay que salir a buscar de verdad.
+   *
+   * ---------------------------------------------------------------------------
+   * Lo que contaba antes, y por qué estaba mal
+   * ---------------------------------------------------------------------------
+   * Era `ganador === null`, o sea «todavía no hay una oferta ganadora». Y eso
+   * es cierto también cuando **acabas de mandar la consulta y nadie ha
+   * contestado**, que es el estado normal de una ronda recién abierta.
+   *
+   * Resultado: nada más crear la ronda, la pantalla decía «2 productos no los
+   * tiene nadie. Esos hay que buscarlos fuera» con los dos proveedores en
+   * «Esperando». Luis lo vio el 09/09 y tenía toda la razón en desconfiar: la
+   * pantalla mandaba a buscar proveedores nuevos mientras esperaba respuesta
+   * de los que ya tenía.
+   *
+   * Ahora solo cuenta lo que de verdad está cerrado en falso:
+   *
+   *   · a nadie se le preguntó por ese producto, o
+   *   · se preguntó, todos contestaron, y todos dijeron que no lo tienen.
+   *
+   * Una fila con alguien pendiente de contestar NO entra: sigue viva.
+   */
   sinNadie: number;
+  /**
+   * Preguntados y sin respuesta todavía. Es lo que queda por esperar, no lo
+   * que hay que buscar, y por eso va en su propia cifra.
+   */
+  esperando: number;
   /** Repartiendo cada producto con el que lo dio más barato. */
   totalRepartido: number;
   /**
@@ -388,9 +415,22 @@ export function resumirComparativa(
     if (f.ganador?.dias != null) diasMaximo = Math.max(diasMaximo ?? 0, f.ganador.dias);
   }
 
+  /*
+    Una fila sigue viva mientras quede alguien por contestar.
+
+    `preguntada` y `respondida` ya existían en la celda —se añadieron en la 058
+    justo para no confundir «no me ha contestado» con «me dijo que no»— y el
+    resumen no las estaba usando.
+  */
+  const pendiente = (f: FilaComparada) =>
+    f.celdas.some((c) => c.preguntada && !c.respondida);
+
   return {
     productos: filas.length,
-    sinNadie: filas.filter((f) => f.ganador === null).length,
+    // Sin ganador Y sin nadie a quien esperar: o no se preguntó, o todos
+    // dijeron que no. Esos sí hay que buscarlos fuera.
+    sinNadie: filas.filter((f) => f.ganador === null && !pendiente(f)).length,
+    esperando: filas.filter((f) => f.ganador === null && pendiente(f)).length,
     totalRepartido,
     mejorUnico: mejor ? { proveedor: mejor.proveedor, total: mejor.totalSiTodo } : null,
     costeDeUnSoloProveedor: mejor ? dos(mejor.totalSiTodo - totalRepartido) : null,

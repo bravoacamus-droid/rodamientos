@@ -310,13 +310,28 @@ describe("resumirProveedores y resumirComparativa", () => {
   });
 
   it("cuenta los que no tiene nadie, que son los que hay que salir a buscar", () => {
-    const conHuerfano = compararTodo(
-      [...items, item({ item_id: "i3", producto_id: "p3", cantidad: 1 })],
-      proveedores,
-      respuestas,
-    );
+    // «No lo tiene nadie» es que los dos contestaron que no. Los dos «no».
+    const items3 = [...items, item({ item_id: "i3", producto_id: "p3", cantidad: 1 })];
+    const negativas: Respuesta[] = [
+      ...respuestas,
+      { item_id: "i3", consulta_proveedor_id: "a", costo_unitario: null, dias_entrega: null, disponible: false, nota: null },
+      { item_id: "i3", consulta_proveedor_id: "b", costo_unitario: null, dias_entrega: null, disponible: false, nota: null },
+    ];
+    const conHuerfano = compararTodo(items3, proveedores, negativas);
     const r = resumirComparativa(conHuerfano, resumirProveedores(conHuerfano, proveedores));
     expect(r.sinNadie).toBe(1);
+    expect(r.esperando).toBe(0);
+  });
+
+  it("no da por perdido lo que solo está esperando respuesta", () => {
+    // El fallo que vio Luis: la pantalla decía «2 productos no los tiene
+    // nadie» con los dos proveedores todavía en «Esperando». Acusar de un
+    // «no» a quien no ha contestado manda a comprar fuera sin necesidad.
+    const items3 = [...items, item({ item_id: "i3", producto_id: "p3", cantidad: 1 })];
+    const conPendiente = compararTodo(items3, proveedores, respuestas);
+    const r = resumirComparativa(conPendiente, resumirProveedores(conPendiente, proveedores));
+    expect(r.sinNadie).toBe(0);
+    expect(r.esperando).toBe(1);
   });
 
   it("sin nadie que pueda con todo, no hay mejor único", () => {

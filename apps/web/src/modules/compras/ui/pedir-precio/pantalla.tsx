@@ -133,6 +133,24 @@ export function PedirPrecio({
   const huerfanos = React.useMemo(() => sinNadie(items, seleccion), [items, seleccion]);
   const cuantos = cuantosProveedores(seleccion);
 
+  /**
+   * Los productos que se decidió dejar fuera a sabiendas.
+   *
+   * Luis, 09/09: *«en compras me deja anotar si no puse el proveedor los dos
+   * productos, otra cosa dejaría seguir»*. Y tenía razón: la ronda se abría
+   * igual y esos productos se caían en silencio —`aPayloadDeConsulta` los
+   * filtra— así que la consulta salía a medias sin que nadie se enterara.
+   *
+   * No se prohíbe del todo, porque a veces de verdad no hay a quién
+   * preguntarle. Lo que se prohíbe es que pase sin querer: hay que decirlo.
+   *
+   * Se guardan los ids y no un sí/no para que, si luego se desmarca a alguien
+   * y aparece un huérfano nuevo, vuelva a preguntar por ese.
+   */
+  const [dejarFuera, setDejarFuera] = React.useState<string[]>([]);
+  const sinDecidir = huerfanos.filter((h) => !dejarFuera.includes(h.producto_id));
+  const entran = items.length - huerfanos.length;
+
   /** Marca o desmarca un proveedor. En «junto», en todos los productos. */
   const alternar = (proveedorId: string, productoId?: string) => {
     setSeleccion((previa) => {
@@ -329,30 +347,64 @@ export function PedirPrecio({
       )}
 
       {huerfanos.length > 0 ? (
-        <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
-          <strong>
-            {huerfanos.length === 1
-              ? "Un producto no se le va a preguntar a nadie"
-              : `${huerfanos.length} productos no se le van a preguntar a nadie`}
-          </strong>
-          : {huerfanos.map((h) => h.codigo).join(", ")}. Búscales proveedor o se
-          quedan sin precio.
-        </p>
+        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+          <p className="text-sm">
+            <strong>
+              {huerfanos.length === 1
+                ? "Un producto no se le va a preguntar a nadie"
+                : `${huerfanos.length} productos no se le van a preguntar a nadie`}
+            </strong>
+            : <strong>{huerfanos.map((h) => h.codigo).join(", ")}</strong>.{" "}
+            {sinDecidir.length > 0
+              ? huerfanos.length === 1
+                ? "Márcale proveedor arriba, o búscalo con «Preguntarle a alguien más». Si no, no entra en la ronda y se queda sin precio."
+                : "Márcales proveedor arriba, o búscalos con «Preguntarle a alguien más». Si no, no entran en la ronda y se quedan sin precio."
+              : huerfanos.length === 1
+                ? "Queda fuera de la ronda. Se le puede pedir precio en otra."
+                : "Quedan fuera de la ronda. Se les puede pedir precio en otra."}
+          </p>
+
+          {sinDecidir.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={() => setDejarFuera(huerfanos.map((h) => h.producto_id))}
+            >
+              No hay a quién preguntarle: seguir sin{" "}
+              {sinDecidir.length === 1 ? "él" : "ellos"}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={() => setDejarFuera([])}
+            >
+              {huerfanos.length === 1 ? "Mejor le busco proveedor" : "Mejor les busco proveedor"}
+            </Button>
+          )}
+        </div>
       ) : null}
 
       {/* ----------------------------------------------------------- Guardar */}
       <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="text-sm">
           <p className="font-medium">¿Vas a esperar respuesta?</p>
-          <p className="text-xs text-[var(--fg-subtle)]">
-            Guarda la consulta y tendrás dónde apuntar lo que te diga cada uno,
-            ver quién sale más barato y convertirlo en compras.
+          <p className="text-[var(--fg-muted)]">
+            {cuantos === 0
+              ? "Primero marca a quién le vas a preguntar."
+              : sinDecidir.length > 0
+                ? sinDecidir.length === 1
+                  ? "Resuelve antes lo de arriba: hay un producto sin nadie a quien preguntarle."
+                  : "Resuelve antes lo de arriba: hay productos sin nadie a quien preguntarle."
+                : `Entran ${entran} ${entran === 1 ? "producto" : "productos"} y ${cuantos} ${cuantos === 1 ? "proveedor" : "proveedores"}. Tendrás dónde apuntar lo que te diga cada uno y ver quién sale más barato.`}
           </p>
         </div>
         <Button
           type="button"
           onClick={guardarRonda}
-          disabled={abriendo || cuantos === 0}
+          disabled={abriendo || cuantos === 0 || sinDecidir.length > 0}
           className="gap-1.5"
         >
           <ClipboardList className="size-4" aria-hidden="true" />
