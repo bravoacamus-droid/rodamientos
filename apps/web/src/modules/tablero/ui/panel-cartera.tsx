@@ -36,7 +36,7 @@ export async function PanelCartera() {
     <section className="card flex flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-[var(--border-soft)] px-4 py-3">
         <h2 className="text-sm font-semibold">Cartera</h2>
-        <Link href="/cobranzas" className="text-xs text-brand-600 hover:underline">
+        <Link href="/cobranzas" className="text-sm font-medium text-brand-600 hover:underline">
           Ver cobranzas
         </Link>
       </header>
@@ -44,39 +44,52 @@ export async function PanelCartera() {
       <div className="flex flex-col gap-3 p-4">
         <div className="flex items-baseline justify-between gap-3">
           <div>
-            <p className="text-xs text-[var(--fg-subtle)]">Por cobrar</p>
+            <p className="text-sm text-[var(--fg-subtle)]">Por cobrar</p>
             <Moneda valor={c.total} tamano="xl" enfasis="fuerte" />
           </div>
           {vencido > 0 ? (
             <div className="text-right">
-              <p className="text-xs text-[var(--fg-subtle)]">Vencido</p>
+              <p className="text-sm text-[var(--fg-subtle)]">Vencido</p>
               <Moneda valor={vencido} tamano="md" resaltarNegativo={false} />
             </div>
           ) : null}
         </div>
 
-        <ul className="flex flex-col gap-2">
-          {tramos.map((t) => {
-            const pct = c.total > 0 ? (t.valor / c.total) * 100 : 0;
-            return (
-              <li key={t.etiqueta} className="flex flex-col gap-1">
-                <div className="flex items-baseline justify-between gap-2 text-xs">
-                  <span className="text-[var(--fg-muted)]">{t.etiqueta}</span>
-                  <Moneda valor={t.valor} tamano="xs" enfasis="suave" />
-                </div>
-                <div
-                  className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"
-                  role="presentation"
-                >
+        {/*
+          Sin nada por cobrar, el desglose no se pinta.
+
+          Eran cinco tramos con «$ 0.00» y cinco barras vacías: seis ceros
+          seguidos que hay que leer para descubrir que no dicen nada. Cuando la
+          cartera está a cero, eso YA es la noticia entera y cabe en una línea.
+        */}
+        {c.total <= 0 ? (
+          <p className="py-4 text-center text-sm text-[var(--fg-muted)]">
+            No hay nada pendiente de cobro.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {tramos.map((t) => {
+              const pct = (t.valor / c.total) * 100;
+              return (
+                <li key={t.etiqueta} className="flex flex-col gap-1">
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="text-[var(--fg-muted)]">{t.etiqueta}</span>
+                    <Moneda valor={t.valor} tamano="sm" enfasis="suave" />
+                  </div>
                   <div
-                    className="h-full rounded-full"
-                    style={{ width: `${pct}%`, background: t.color }}
-                  />
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                    className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-2)]"
+                    role="presentation"
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, background: t.color }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </section>
   );

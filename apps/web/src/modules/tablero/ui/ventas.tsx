@@ -1,9 +1,17 @@
+import {
+  FileText,
+  Receipt,
+  ShoppingBag,
+  TrendingUp,
+  TriangleAlert,
+} from "lucide-react";
 import { EstadoError, EstadoVacio, KpiCard } from "@rodatech/ui";
 
 import { describirRango, type Rango } from "@/modules/reportes";
 
 import { kpisDeRango } from "../api/consultas";
 import { estadoDelMargen } from "../dominio/margen";
+import { periodoEnCurso } from "../dominio/periodo";
 // Recharts entra por carga diferida a través de este envoltorio: son ~90 kB
 // que no tienen por qué viajar en el bundle inicial de un ERP que se abre
 // decenas de veces al día. En la demo se importaba estáticamente.
@@ -53,6 +61,7 @@ export async function SeccionVentas({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           etiqueta="Vendido"
+          icono={<ShoppingBag aria-hidden="true" />}
           valor={dolares(k.ventaNeta)}
           actual={k.ventaNeta}
           previo={k.ventaNetaPrevia}
@@ -73,12 +82,32 @@ export async function SeccionVentas({
         {margen.tipo === "sin_costo" ? (
           <KpiCard
             etiqueta="Margen"
+            icono={<TrendingUp aria-hidden="true" />}
             valor="—"
             detalle="Sin costo registrado en estas ventas"
+          />
+        ) : margen.tipo === "costo_dudoso" ? (
+          /*
+            El costo está mal, y decirlo es más útil que el porcentaje.
+
+            El 09/09 esta tarjeta enseñaba «USD 31 · 15325.0% sobre el costo»:
+            la cuenta era correcta y el dato de partida no —se vendió a 30.85
+            un producto con `costo_unitario` en 0.20—. Enseñar la cifra da por
+            bueno un costo que no lo es; enseñar esto manda a arreglarlo.
+
+            El enlace va al catálogo: es donde se corrige.
+          */
+          <KpiCard
+            etiqueta="Margen"
+            icono={<TriangleAlert aria-hidden="true" />}
+            valor="Revisar"
+            detalle="El costo de estas ventas no cuadra"
+            href="/productos"
           />
         ) : (
           <KpiCard
             etiqueta="Margen"
+            icono={<TrendingUp aria-hidden="true" />}
             valor={dolares(margen.margen)}
             actual={margen.margen}
             previo={k.margenPrevio}
@@ -92,13 +121,18 @@ export async function SeccionVentas({
             }
           />
         )}
+        {/* Con enlace: la pregunta que sigue a «142 comprobantes» es «¿cuáles?»,
+            y hasta hoy había que ir a buscarlos por el menú. */}
         <KpiCard
           etiqueta="Comprobantes"
+          icono={<FileText aria-hidden="true" />}
           valor={k.documentos.toLocaleString("es-PE")}
           detalle={`${k.unidades.toLocaleString("es-PE")} unidades`}
+          href="/facturacion"
         />
         <KpiCard
           etiqueta="Ticket promedio"
+          icono={<Receipt aria-hidden="true" />}
           valor={dolares(k.documentos > 0 ? k.ventaNeta / k.documentos : 0)}
           detalle="venta / comprobantes"
         />
@@ -108,8 +142,43 @@ export async function SeccionVentas({
         <h2 className="mb-3 text-sm font-semibold">
           Venta y margen · {describirRango(rango, hoy)}
         </h2>
-        {k.serie.length > 0 ? (
-          <GraficoVentasLazy meses={k.serie} />
+        {/*
+          Con un solo periodo no hay gráfico que dibujar.
+
+          El 09/09, con una única factura en el mes, esto era un rectángulo
+          vacío de 256 px con un puntito en medio: cinco líneas de rejilla, un
+          eje de dólares y ningún dato del que sacar una forma. Un gráfico
+          sirve para ver una tendencia, y una tendencia necesita al menos dos
+          puntos que comparar.
+
+          Así que se dice el dato y ya. Es lo mismo que hace la guía de
+          visualización con un valor único: una cifra, no un gráfico de una
+          sola barra.
+        */}
+        {k.serie.length === 1 ? (
+          <p className="py-6 text-center text-sm text-[var(--fg-muted)]">
+            Un solo día con ventas en este periodo:{" "}
+            <strong className="text-base text-[var(--fg)]">
+              {dolares(k.serie[0]!.venta)}
+            </strong>{" "}
+            el {k.serie[0]!.etiqueta}. Amplía el rango para ver la evolución.
+          </p>
+        ) : k.serie.length > 1 ? (
+          <GraficoVentasLazy
+            meses={k.serie}
+            // La línea de margen solo se dibuja si el margen significa algo.
+            // Con costos falsos sería una curva que miente, y una gráfica se
+            // cree sin leer la letra pequeña de al lado.
+            mostrarMargen={margen.tipo === "completo" || margen.tipo === "parcial"}
+            // Si el último punto es un periodo a medias, se avisa: mirando
+            // doce meses un día 9, ese punto son nueve días contra once meses
+            // enteros y el gráfico dibuja un desplome que no ha ocurrido.
+            ultimoEnCurso={periodoEnCurso(
+              k.serie[k.serie.length - 1]!.periodo,
+              rango.grano,
+              hoy,
+            )}
+          />
         ) : (
           <EstadoVacio
             titulo="No hay ventas en este periodo"

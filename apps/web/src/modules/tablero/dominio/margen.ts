@@ -27,9 +27,36 @@
  * qué parte de la venta se calcula el margen.
  */
 
+/**
+ * A partir de aquí el margen no es un margen: es un costo mal cargado.
+ *
+ * El 09/09 el tablero decía **«USD 31 · 15325.0% sobre el costo»** con una
+ * sola factura. El comprobante era real y la cuenta correcta: se vendió a
+ * 30.85 un producto cuyo `costo_unitario` estaba en **0.20**. Un rodamiento
+ * SKF que se vende a treinta dólares no cuesta veinte céntimos.
+ *
+ * Y no es un caso raro que se arregle solo: de 790 productos, la mayoría no
+ * tiene costo y varios lo tienen residual de la carga del Excel. Cada vez que
+ * uno de esos entre en una venta, esta tarjeta dará una cifra imposible.
+ *
+ * 300 % porque en distribución de repuestos no existe. La plantilla de
+ * productos trae 20 % de objetivo; 100 % ya sería extraordinario. Por encima
+ * de 300 lo que informa el número no es cuánto se ganó, sino que hay un costo
+ * que revisar — y eso es lo que tiene que decir la pantalla.
+ *
+ * El umbral es generoso a propósito: es preferible enseñar un margen alto de
+ * verdad a callar uno bueno. Lo que se corta es lo absurdo.
+ */
+export const PCT_IMPOSIBLE = 300;
+
 export type EstadoMargen =
   /** Ninguna venta del periodo trae costo. No hay margen que dar. */
   | { tipo: "sin_costo" }
+  /**
+   * Hay costo, pero da un margen imposible. No se enseña la cifra: se dice
+   * que el costo está mal, que es lo único cierto y lo único accionable.
+   */
+  | { tipo: "costo_dudoso"; pct: number }
   /** Todas lo traen. El margen habla de la venta entera. */
   | { tipo: "completo"; margen: number; pct: number }
   /** Solo una parte. El margen habla de esa parte, y hay que decirlo. */
@@ -49,6 +76,12 @@ export function estadoDelMargen(
 
   const margen = redondear(ventaConCosto - costo);
   const pct = redondear(((ventaConCosto - costo) / costo) * 100);
+
+  // Antes que nada: si la cifra es imposible, el costo está mal y decir el
+  // porcentaje sería dar por bueno un dato que no lo es. Va delante del caso
+  // parcial porque un costo falso lo estropea igual cubra el 10 % o el 100 %
+  // de la venta.
+  if (pct > PCT_IMPOSIBLE) return { tipo: "costo_dudoso", pct };
 
   // Un céntimo de diferencia no merece una frase: puede venir del redondeo de
   // dos sumas distintas, no de una venta sin costo.

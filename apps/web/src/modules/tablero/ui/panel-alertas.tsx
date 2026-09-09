@@ -49,7 +49,7 @@ export async function PanelAlertas() {
           ) : null}
           <Link
             href="/alertas"
-            className="text-xs text-brand-600 hover:underline"
+            className="text-sm font-medium text-brand-600 hover:underline"
           >
             Ver todas
           </Link>
@@ -77,7 +77,7 @@ export async function PanelAlertas() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{a.titulo}</p>
-                  <p className="truncate text-xs text-[var(--fg-muted)]">
+                  <p className="truncate text-sm text-[var(--fg-muted)]">
                     {a.mensaje}
                   </p>
                 </div>

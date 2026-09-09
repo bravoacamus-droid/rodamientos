@@ -20,6 +20,26 @@ import {
   type Grano,
 } from "../dominio/rango";
 
+/**
+ * Una fecha ISO en letra, sin tocar zonas horarias.
+ *
+ * Se parte a mano en vez de pasar por `new Date(iso)`: eso lo interpreta como
+ * medianoche UTC y en Lima —cinco horas por detrás— pinta el día ANTERIOR. Es
+ * el fallo clásico de fechas en este proyecto, y aquí saldría en la frase que
+ * dice qué periodo se está mirando.
+ */
+const MESES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+function enLetra(iso: string): string {
+  const [a, m, d] = iso.split("-");
+  const mes = MESES[Number(m) - 1];
+  if (!a || !d || !mes) return iso;
+  return `${Number(d)} de ${mes} de ${a}`;
+}
+
 /** Los atajos, en el orden en que se usan de verdad. */
 const ATAJOS: readonly Atajo[] = [
   "hoy",
@@ -87,27 +107,45 @@ export function FiltroRango({
 
   return (
     <section className="card flex flex-col gap-3 p-3">
-      <div className="flex flex-wrap gap-1.5">
-        {ATAJOS.map((a) => (
-          <button
-            key={a}
-            type="button"
-            onClick={() => elegirAtajo(a)}
-            aria-pressed={atajo === a}
-            className={`inline-flex h-control-sm items-center rounded-sm border px-2.5 text-xs font-medium transition-colors ${
-              atajo === a
-                ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-200"
-                : "border-[var(--border)] hover:bg-[var(--surface-2)]"
-            }`}
-          >
-            {ETIQUETA_ATAJO[a]}
-          </button>
-        ))}
+      {/*
+        Los atajos y, a la derecha, QUÉ periodo se está mirando.
+
+        La frase no es adorno: los atajos dicen la intención («este mes») y las
+        dos cajas de fecha dicen el dato, pero hasta que no se leen las dos
+        juntas no se sabe si «este mes» son ocho días o treinta. En un tablero
+        que se abre para comparar contra el periodo anterior, esa diferencia lo
+        cambia todo.
+
+        Las pastillas suben a 36 px y `text-sm`: iban a 12 px, que en este
+        proyecto es directamente un fallo.
+      */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {ATAJOS.map((a) => (
+            <button
+              key={a}
+              type="button"
+              onClick={() => elegirAtajo(a)}
+              aria-pressed={atajo === a}
+              className={`inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium transition-colors ${
+                atajo === a
+                  ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-200"
+                  : "border-[var(--border)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              {ETIQUETA_ATAJO[a]}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-sm tabular text-[var(--fg-muted)]">
+          {enLetra(desde)} — {enLetra(hasta)}
+        </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="flex flex-wrap items-end gap-3 border-t border-[var(--border-soft)] pt-3">
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+          <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
           <Input
             type="date"
             value={desde}
@@ -118,7 +156,7 @@ export function FiltroRango({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+          <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
           <Input
             type="date"
             value={hasta}
@@ -129,7 +167,7 @@ export function FiltroRango({
         </label>
 
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[var(--fg-muted)]">Agrupar</span>
+          <span className="text-sm font-medium text-[var(--fg-muted)]">Agrupar</span>
           <SelectNativo
             value={grano}
             onChange={(e) => aplicar({ grano: e.target.value })}

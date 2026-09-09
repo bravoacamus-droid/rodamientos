@@ -126,17 +126,24 @@ export function KpiCard({
   const contenido = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
-        {icono && <span className="shrink-0 text-subtle [&_svg]:size-4">{icono}</span>}
+        <p className="text-sm font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
+        {icono && (
+          // En su propia caja con fondo: un icono suelto en gris al lado de un
+          // título se lee como decoración. Con superficie propia se lee como
+          // la marca de qué mide esta tarjeta, que es lo que es.
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-2)] text-[var(--fg-muted)] [&_svg]:size-[18px]">
+            {icono}
+          </span>
+        )}
       </div>
 
       <p className="tabular mt-1.5 text-2xl font-semibold leading-none text-fg">{valor}</p>
-      {detalle && <p className="mt-1.5 text-xs text-muted">{detalle}</p>}
+      {detalle && <p className="mt-1.5 text-sm text-muted">{detalle}</p>}
 
       {variacion !== null && (
         <p
           className={cn(
-            "mt-2 inline-flex items-center gap-1 text-xs font-medium",
+            "mt-2 inline-flex items-center gap-1 text-sm font-medium",
             esBueno && "text-ok",
             esMalo && "text-danger",
             !esBueno && !esMalo && "text-muted",
@@ -159,7 +166,7 @@ export function KpiCard({
 
       {/* Sin base de comparación no se inventa un porcentaje: se dice. */}
       {variacion === null && actual !== undefined && previo !== undefined && (
-        <p className="mt-2 text-xs text-subtle">Sin periodo anterior con el que comparar</p>
+        <p className="mt-2 text-sm text-subtle">Sin periodo anterior con el que comparar</p>
       )}
 
       {serie && serie.length > 1 && (

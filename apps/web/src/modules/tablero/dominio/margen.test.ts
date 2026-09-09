@@ -54,4 +54,36 @@ describe("estadoDelMargen", () => {
       pct: -16.67,
     });
   });
+
+  describe("cuando el costo es imposible", () => {
+    it("el caso real del 09/09: vender a 30.85 algo que costó 0.20", () => {
+      // Lo que el tablero llegó a enseñar con una sola factura:
+      // «USD 31 · 15325.0% sobre el costo». La cuenta estaba bien; el costo
+      // no. Un SKF de treinta dólares no cuesta veinte céntimos.
+      const r = estadoDelMargen(30.85, 30.85, 0.2);
+      expect(r.tipo).toBe("costo_dudoso");
+      if (r.tipo === "costo_dudoso") expect(r.pct).toBeGreaterThan(15000);
+    });
+
+    it("gana sobre el caso parcial: un costo falso lo estropea igual", () => {
+      // Cubra el 10 % de la venta o el 100 %, si el costo es basura el
+      // porcentaje que saldría también lo es.
+      expect(estadoDelMargen(1000, 100, 0.5).tipo).toBe("costo_dudoso");
+    });
+
+    it("un margen alto de verdad SÍ se enseña", () => {
+      // 150 % es extraordinario y puede pasar. El umbral está en 300 justo
+      // para no callar una venta buena: lo que se corta es lo absurdo.
+      const r = estadoDelMargen(250, 250, 100);
+      expect(r.tipo).toBe("completo");
+      if (r.tipo === "completo") expect(r.pct).toBe(150);
+    });
+
+    it("justo en el umbral todavía se enseña", () => {
+      // 300 exacto no es imposible; 300.01 sí. El corte tiene que estar en un
+      // sitio y conviene que el test diga en cuál.
+      expect(estadoDelMargen(400, 400, 100).tipo).toBe("completo");
+      expect(estadoDelMargen(401, 401, 100).tipo).toBe("costo_dudoso");
+    });
+  });
 });

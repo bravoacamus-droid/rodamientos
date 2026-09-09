@@ -19,6 +19,20 @@ const Grafico = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> },
 );
 
-export function GraficoVentasLazy({ meses }: { meses: PuntoSerie[] }) {
-  return <Grafico meses={meses} />;
+export function GraficoVentasLazy({
+  meses,
+  mostrarMargen,
+  ultimoEnCurso,
+}: {
+  meses: PuntoSerie[];
+  mostrarMargen?: boolean;
+  ultimoEnCurso?: boolean;
+}) {
+  return (
+    <Grafico
+      meses={meses}
+      mostrarMargen={mostrarMargen}
+      ultimoEnCurso={ultimoEnCurso}
+    />
+  );
 }
