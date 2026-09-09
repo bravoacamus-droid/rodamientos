@@ -319,10 +319,32 @@ function Siguiente({ pedido }: { pedido: PedidoDelCliente }) {
   // El ancho lo pone la rejilla de la celda, no el texto: por eso los dos
   // llevan `w-full` y no un ancho propio.
   if (pedido.estado === "por_cubrir") {
+    /*
+      A pedir precio de LO DE ESTE PEDIDO, no a la bandeja general.
+
+      Luis, 09/09: *«ese "falta comprar" tiene que dirigirme a compras, o sea a
+      pedir precios, porque falta comprar, cotizar esa compra»*.
+
+      Llevaba a `/compras/por-comprar`, que ordena por PRODUCTO y mezcla lo de
+      este cliente con lo de todos los demás: había que reconocer los códigos
+      del pedido entre los de la lista entera y marcarlos a mano. El camino
+      existía —la pantalla de pedir precio ya acepta `?items=`— y no estaba
+      conectado desde aquí.
+
+      Si por lo que fuera no hay nada descubierto que llevar, se cae a la
+      bandeja en vez de mandar a una pantalla vacía.
+    */
+    const items = pedido.faltan
+      .map((f) => `${f.producto_id}:${f.cantidad}`)
+      .join(",");
+
     return (
-      <Link href="/compras/por-comprar" className={`${SECUNDARIO} w-full justify-center`}>
+      <Link
+        href={items ? `/compras/pedir-precio?items=${items}` : "/compras/por-comprar"}
+        className={`${SECUNDARIO} w-full justify-center`}
+      >
         <IconoCarrito />
-        Qué falta comprar
+        Pedir precio
       </Link>
     );
   }

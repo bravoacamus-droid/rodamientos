@@ -74,6 +74,19 @@ export interface PedidoListo {
   prometida: string;
   dias: number;
   urgencia: Urgencia;
+  /**
+   * Lo que hay que comprar de ESTE pedido, por producto.
+   *
+   * Sale del mismo reparto que todo lo demás, y por eso viaja aquí en vez de
+   * calcularse en la pantalla: restar el stock por línea daría OTRO número,
+   * porque el almacén se reparte entre todos los pedidos que esperan el mismo
+   * producto por orden de confirmación.
+   *
+   * Existe para que «Pedir precio» pueda llevar la lista puesta. Antes ese
+   * botón dejaba en la bandeja general, con los productos de este pedido
+   * mezclados con los de todos los demás clientes y a buscarlos a mano.
+   */
+  faltan: { producto_id: string; cantidad: number }[];
 }
 
 /**
@@ -168,6 +181,15 @@ export function pedidosListos(
       prometida,
       dias,
       urgencia: urgenciaDe(dias),
+      /*
+        Lo descubierto, agrupado por producto.
+
+        Se agrupa porque un pedido puede llevar el mismo código en dos líneas
+        —pasa cuando se añade a mano lo que ya estaba— y pedir precio dos veces
+        del mismo producto al mismo proveedor es una consulta que se contesta
+        sola mal.
+      */
+      faltan: agruparDescubierto(suyas),
     });
   }
 
@@ -188,6 +210,23 @@ export function pedidosListos(
       a.fecha.localeCompare(b.fecha) ||
       a.cotizacion.localeCompare(b.cotizacion),
   );
+}
+
+/** Lo que falta de un pedido, sumado por producto y sin los que ya se cubren. */
+function agruparDescubierto(
+  suyas: readonly LineaRepartida[],
+): { producto_id: string; cantidad: number }[] {
+  const porProducto = new Map<string, number>();
+
+  for (const l of suyas) {
+    if (l.descubierto <= 0) continue;
+    porProducto.set(l.producto_id, (porProducto.get(l.producto_id) ?? 0) + l.descubierto);
+  }
+
+  return [...porProducto].map(([producto_id, cantidad]) => ({
+    producto_id,
+    cantidad: dos(cantidad),
+  }));
 }
 
 /** Un pedido esperando un producto concreto. */

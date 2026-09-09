@@ -136,6 +136,60 @@ describe("pedidosListos", () => {
     expect(r.map((p) => p.cotizacion_id)).toEqual(["a", "b", "c"]);
   });
 
+  describe("lo que falta, listo para pedir precio", () => {
+    it("lleva lo descubierto por producto", () => {
+      // Es lo que permite que «Pedir precio» abra con la lista puesta en vez
+      // de dejar en la bandeja general, con los códigos de este pedido
+      // mezclados con los de todos los clientes.
+      const r = pedidosListos(
+        [
+          linea({ producto_id: "p1", comprometido: 10, stock: 4 }),
+          linea({ producto_id: "p2", comprometido: 5, stock: 0 }),
+        ],
+        HOY,
+        sumarDias,
+      );
+      expect(r[0]!.faltan).toEqual([
+        { producto_id: "p1", cantidad: 6 },
+        { producto_id: "p2", cantidad: 5 },
+      ]);
+    });
+
+    it("no incluye lo que el almacén ya cubre", () => {
+      // Meterlo mandaría a comprar algo que está en el estante.
+      const r = pedidosListos(
+        [
+          linea({ producto_id: "p1", comprometido: 5, stock: 5 }),
+          linea({ producto_id: "p2", comprometido: 5, stock: 0 }),
+        ],
+        HOY,
+        sumarDias,
+      );
+      expect(r[0]!.faltan).toEqual([{ producto_id: "p2", cantidad: 5 }]);
+    });
+
+    it("suma el mismo producto si viene en dos líneas", () => {
+      // Pasa cuando se añade a mano algo que ya estaba. Pedir precio dos veces
+      // del mismo código al mismo proveedor es una consulta que se contesta
+      // sola mal.
+      const r = pedidosListos(
+        [
+          linea({ producto_id: "p1", comprometido: 3, stock: 0 }),
+          linea({ producto_id: "p1", comprometido: 2, stock: 0 }),
+        ],
+        HOY,
+        sumarDias,
+      );
+      expect(r[0]!.faltan).toEqual([{ producto_id: "p1", cantidad: 5 }]);
+    });
+
+    it("un pedido cubierto entero no lleva nada que pedir", () => {
+      expect(
+        pedidosListos([linea({ comprometido: 5, stock: 5 })], HOY, sumarDias)[0]!.faltan,
+      ).toEqual([]);
+    });
+  });
+
   it("una lista vacía no revienta", () => {
     expect(pedidosListos([], HOY, sumarDias)).toEqual([]);
   });
