@@ -376,11 +376,14 @@ export function Comparativa({
         <section className="card p-4">
           <h2 className="text-base font-semibold">¿Te falta preguntarle a alguien?</h2>
           <p className="mb-3 text-sm text-[var(--fg-muted)]">
-            Búscalo, marca qué le preguntas, y su columna aparece al momento.
+            Marca los productos, elige de los que ya los venden —o búscalo— y
+            su columna aparece al momento.
           </p>
           <AnadirALaConsulta
             items={ronda.items}
-            yaEstan={enLaRonda}
+            referencias={referencias}
+            enLaRonda={proveedores}
+            preguntadas={preguntadas}
             enCurso={anadiendo === "todos"}
             onAnadir={anadirATodo}
           />

@@ -525,6 +525,37 @@ export async function anadirALaRonda(datosCrudos: unknown): Promise<ResultadoAna
       cpId = String(cp.id);
     }
 
+    /*
+      Que quede algo que preguntar de verdad.
+
+      Luis, 09/09: *«puede ser que se equivoque, seleccione un producto con el
+      mismo proveedor que ya está; no debería dejar cosas así»*. El diálogo ya
+      lo bloquea, pero esto es un endpoint público y la pantalla no es la
+      puerta. Se mira solo cuando el proveedor ya estaba: si es nuevo, no
+      puede tener nada asignado.
+
+      Ojo con la diferencia: añadirle un producto que ya tenía JUNTO a otros
+      que no, sigue valiendo —es el caso corriente, el que vende cuatro de los
+      seis—. Lo que se rechaza es que no haya ni uno nuevo.
+    */
+    if (yaEsta) {
+      const { data: asignados, error: eYa } = await supabase
+        .from("consulta_precio_asignaciones")
+        .select("item_id")
+        .eq("consulta_proveedor_id", cpId)
+        .in("item_id", validos);
+      if (eYa) {
+        anotarFallo("compras/anadirALaRonda", eYa, "/compras/precios");
+        return { ok: false, error: eYa.message };
+      }
+      if ((asignados ?? []).length === validos.length) {
+        return {
+          ok: false,
+          error: "A ese proveedor ya se le preguntó por todo eso.",
+        };
+      }
+    }
+
     // `ignoreDuplicates` sobre la clave primaria de la 058: volver a asignarle
     // un producto que ya tenía no es un error, es no hacer nada.
     const { error: eAsig } = await supabase
