@@ -57,7 +57,7 @@ export async function listarGuias(
       .select(
         `id, numero, fecha_emision, fecha_traslado, motivo_descripcion,
          direccion_llegada, peso_bruto_kg, numero_bultos, estado, estado_sunat,
-         clientes(razon_social),
+         clientes(razon_social, numero_documento),
          cotizaciones(numero),
          guia_items(id)`,
       )
@@ -85,7 +85,7 @@ export async function listarGuias(
 
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
-        clientes: { razon_social: string } | null;
+        clientes: { razon_social: string; numero_documento: string | null } | null;
         cotizaciones: { numero: string } | null;
         guia_items: { id: string }[] | null;
       }
@@ -97,6 +97,9 @@ export async function listarGuias(
       fecha_emision: String(g.fecha_emision),
       fecha_traslado: String(g.fecha_traslado),
       cliente: g.clientes?.razon_social ?? null,
+      // El RUC bajo el nombre: dos clientes se llaman casi igual y en una
+      // guía equivocarse de destinatario es un viaje perdido.
+      cliente_documento: g.clientes?.numero_documento ?? null,
       cotizacion_numero: g.cotizaciones?.numero ?? null,
       motivo: (g.motivo_descripcion as string | null) ?? null,
       direccion_llegada: (g.direccion_llegada as string | null) ?? null,

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { BotonesDocumento } from "@/componentes/botones-documento";
 import { emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleGuia } from "../api/consultas";
@@ -16,13 +17,26 @@ import { DocumentoGuia } from "./documento";
  */
 export default async function PaginaImprimirGuia({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
 
   const { id } = await params;
+  const sp = await searchParams;
+  /*
+    `auto=1` llega desde la ficha.
+
+    Se abre la hoja y sale la ventana de imprimir sola, para que desde allí
+    sea un clic. Hasta hoy el botón «Imprimir» de la ficha traía aquí y ahí se
+    acababa: había que acordarse de pulsar Ctrl+P. Un botón que dice imprimir
+    y no imprime es de los que enseñan a desconfiar del resto.
+  */
+  const auto = (Array.isArray(sp.auto) ? sp.auto[0] : sp.auto) === "1";
+
   const [resultado, emisor] = await Promise.all([detalleGuia(id), emisorParaImprimir()]);
 
   if (!resultado.ok) {
@@ -60,6 +74,10 @@ export default async function PaginaImprimirGuia({
             Esta guía está ANULADA.
           </span>
         ) : null}
+
+        {/* Aquí, y no solo en la ficha: quien llega a la hoja ya viene a
+            sacarla, y hasta hoy tenía que acordarse de Ctrl+P. */}
+        <BotonesDocumento auto={auto} />
       </div>
 
       <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">

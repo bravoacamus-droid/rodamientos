@@ -86,10 +86,18 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     {g.motivo ?? "—"}
                   </span>
                 </td>
+                {/* El RUC bajo el nombre: dos clientes se llaman casi igual, y
+                    en una guía equivocarse de destinatario es un viaje
+                    perdido. */}
                 <td className="max-w-xs px-4 py-2.5">
-                  <span className="block truncate">{g.cliente ?? "—"}</span>
+                  <span className="block truncate font-medium">{g.cliente ?? "—"}</span>
+                  {g.cliente_documento ? (
+                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                      {g.cliente_documento}
+                    </span>
+                  ) : null}
                 </td>
-                <td className="hidden max-w-xs px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden max-w-xs px-4 py-2.5 text-sm text-[var(--fg-muted)] lg:table-cell">
                   <span className="block truncate">{g.direccion_llegada ?? "—"}</span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">{g.numero_bultos}</td>
@@ -101,6 +109,33 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                   <Badge tone={TONO_ESTADO[g.estado]} size="xs">
                     {ETIQUETA_ESTADO[g.estado]}
                   </Badge>
+                </td>
+
+                {/*
+                  Ver e Imprimir por fila.
+
+                  Rejilla de dos columnas fijas: si cada botón midiera lo que
+                  mide su texto, «Ver» quedaría en una equis distinta en cada
+                  fila. Es el mismo arreglo que en cotizaciones.
+
+                  Imprimir sale de la lista y va directo a la hoja con la
+                  ventana abierta (`auto=1`): el almacén saca la guía y la mete
+                  en la caja sin entrar a la ficha.
+                */}
+                <td className="px-4 py-2.5">
+                  <div className="ml-auto grid w-[210px] grid-cols-[84px_1fr] gap-1.5">
+                    <Link href={`/guias/${g.id}`} className={`${SECUNDARIO} w-full justify-center`}>
+                      <IconoVer />
+                      Ver
+                    </Link>
+                    <Link
+                      href={`/guias/${g.id}/imprimir?auto=1`}
+                      className={`${SECUNDARIO} w-full justify-center`}
+                    >
+                      <IconoImprimir />
+                      Imprimir
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -151,5 +186,36 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
         />
       </div>
     </>
+  );
+}
+
+/*
+  Los botones de la columna de acciones.
+
+  Ancho de rejilla fijo en la celda y `w-full` aquí: si cada botón midiera lo
+  que mide su texto, «Ver» quedaría en una equis distinta en cada fila y la
+  columna saldría en escalera. Es el mismo arreglo que en cotizaciones.
+*/
+const SECUNDARIO =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+function IconoVer() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function IconoImprimir() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9V3h12v6" />
+      <rect x="3" y="9" width="18" height="7" rx="1" />
+      <path d="M6 14h12v7H6z" />
+    </svg>
   );
 }

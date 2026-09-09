@@ -76,7 +76,23 @@ export function AnularGuia({
         }
       }}
     >
-      <DialogTrigger className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-bg)]">
+      {/*
+        Anular se ve, pero no invita.
+
+        Luis, 09/09: *«mejora el botón de imprimir y anular, dale color»*. El
+        borde era el gris de todos los demás, así que la acción que no se
+        deshace se veía igual que «Corregir».
+
+        Ahora lleva su color en el borde y un icono, pero se queda en contorno:
+        rellenarlo de rojo lo pondría al nivel de la acción principal, y en una
+        fila donde el botón azul es «Emitir y despachar», eso es exactamente lo
+        que no se quiere.
+      */}
+      <DialogTrigger className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--danger)] px-3 text-sm font-medium text-[var(--danger)] transition-colors hover:bg-[var(--danger-bg)]">
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
         Anular
       </DialogTrigger>
 

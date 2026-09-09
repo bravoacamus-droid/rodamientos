@@ -55,6 +55,7 @@ export interface GuiaLista {
   fecha_emision: string;
   fecha_traslado: string;
   cliente: string | null;
+  cliente_documento: string | null;
   cotizacion_numero: string | null;
   motivo: string | null;
   direccion_llegada: string | null;

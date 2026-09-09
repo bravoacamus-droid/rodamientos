@@ -65,10 +65,32 @@ export default async function PaginaDetalleGuia({
         </div>
 
         <div className="flex items-center gap-2 no-print">
+          {/*
+            Descargar e imprimir, los dos con icono y a 36 px.
+
+            Luis, 09/09: *«en cotización, guía y factura, un botón de descargar
+            el documento… y mejora el de imprimir y anular, dale color»*.
+
+            Los dos llevan a la hoja con `auto=1`, que abre la ventana de
+            imprimir sola. Antes «Imprimir» traía a la hoja y ahí se acababa:
+            había que acordarse de Ctrl+P.
+
+            Descargar va en azul porque es lo que más se hace con una guía hoy
+            —mandarla por WhatsApp al cliente o al transportista— y en el
+            diálogo del navegador «Guardar como PDF» es uno de los destinos.
+          */}
           <Link
-            href={`/guias/${g.id}/imprimir`}
-            className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            href={`/guias/${g.id}/imprimir?auto=1`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
           >
+            <IconoDescargar />
+            Descargar
+          </Link>
+          <Link
+            href={`/guias/${g.id}/imprimir?auto=1`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+          >
+            <IconoImprimir />
             Imprimir
           </Link>
           {/*
@@ -269,11 +291,23 @@ function Tarjeta({
   valor: string;
   pie?: string;
 }) {
+  /*
+    Mismo formato que las tarjetas de la cotización.
+
+    Luis, 09/09: *«mira cómo juega con las tipografías y las palabras en
+    negrita, para que se vea lo más importante»*. La jerarquía la hace el
+    contraste: la etiqueta en versalitas y en gris, el dato grande y en
+    seguida, el pie pequeño. Así el ojo cae en la cifra y no en el rótulo.
+
+    Y nada por debajo de 14 px: la etiqueta y el pie iban a 12.
+  */
   return (
-    <div className="card anim-entrada p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className="mt-0.5 truncate text-lg font-semibold tabular">{valor}</p>
-      {pie ? <p className="mt-0.5 truncate text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+    <div className="card anim-entrada p-4">
+      <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+        {etiqueta}
+      </p>
+      <p className="mt-1 truncate text-xl font-semibold tabular">{valor}</p>
+      {pie ? <p className="mt-0.5 truncate text-sm text-[var(--fg-muted)]">{pie}</p> : null}
     </div>
   );
 }
@@ -284,5 +318,26 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
       <dt className="w-32 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
+  );
+}
+
+function IconoDescargar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+function IconoImprimir() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9V3h12v6" />
+      <rect x="3" y="9" width="18" height="7" rx="1" />
+      <path d="M6 14h12v7H6z" />
+    </svg>
   );
 }
