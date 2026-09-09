@@ -1,4 +1,5 @@
 import { cuentasParaCobrar } from "@/lib/emisor";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
@@ -10,6 +11,7 @@ import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { YaFacturado } from "./detalle/ya-facturado";
+import { VistaPreviaDocumento } from "./detalle/vista-previa";
 
 /**
  * Ficha de una cotización.
@@ -137,153 +139,279 @@ export default async function PaginaDetalleCotizacion({
     13:21: *«correo y WhatsApp»*, y es el mismo texto por los dos sitios.
   */
 
+  const dolar = (n: number) =>
+    n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
+
   return (
-    /*
-      La pantalla es andamio alrededor de un papel.
+    <>
+      {/* ------------------------------------------------ Ficha de trabajo */}
+      {/*
+        Lo que se mira para TRABAJAR, y no se imprime.
 
-      Todo lo de fuera —cabecera, acciones, margen— lleva `print:hidden`, así
-      que al imprimir queda solo la hoja. Por eso el documento se pinta como
-      una hoja de verdad, con sombra y sobre el fondo de la aplicación: lo que
-      se ve en pantalla es exactamente lo que va a salir, sin una «vista
-      previa» aparte que se pueda desincronizar del documento real.
-    */
-    <div className="flex flex-col gap-4 print:gap-0">
-      <header className="flex flex-wrap items-start justify-between gap-3 print:hidden">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-lg font-semibold tracking-tight sm:text-xl">
-              {cabecera.numero}
+        Hasta el 09/09 esta pantalla era la hoja A4 con unos botones encima.
+        Tenía la ventaja de que lo que se ve es lo que sale, y el coste de que
+        para leer la condición de pago o la validez había que buscarlas dentro
+        de un documento maquetado para el cliente. Ahora los datos están en
+        tarjetas y el papel se mira con «Vista previa» — que enseña el mismo
+        componente, así que la ventaja no se pierde.
+      */}
+      <div className="flex flex-col gap-5 print:hidden">
+        <Link
+          href="/cotizaciones"
+          className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]"
+        >
+          <span aria-hidden="true">←</span> Cotizaciones
+        </Link>
+
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md bg-[var(--surface-2)] px-2 py-0.5 font-mono text-sm font-medium">
+                {cabecera.numero}
+              </span>
+              <EstadoBadge
+                estado={cabecera.estado}
+                etiqueta={ETIQUETA_ESTADO[cabecera.estado]}
+              />
+            </div>
+
+            {/*
+              El CLIENTE en grande, no el número del documento.
+
+              Es lo que identifica la cotización para quien la abre: Willy no
+              recuerda «la COT1-000006», recuerda «la de ACEROS CHILCA». El
+              número queda arriba, en pastilla, para cuando hace falta
+              exactamente ese dato.
+            */}
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {cabecera.cliente.razon_social}
             </h1>
-            <EstadoBadge
-              estado={cabecera.estado}
-              etiqueta={ETIQUETA_ESTADO[cabecera.estado]}
-            />
+            <p className="mt-1 text-sm text-[var(--fg-muted)]">
+              {cabecera.cliente.numero_documento
+                ? `${cabecera.cliente.tipo_documento} ${cabecera.cliente.numero_documento} · `
+                : ""}
+              {fechaCorta(cabecera.fecha)}
+            </p>
           </div>
-          <p className="mt-0.5 truncate text-sm text-[var(--fg-muted)]">
-            {cabecera.cliente.razon_social}
-          </p>
-        </div>
 
-        <AccionesCotizacion
-          id={cabecera.id}
-          estado={cabecera.estado}
-          // Los datos crudos, no los enlaces montados: el diálogo de enviar
-          // arma el suyo con el número que se teclee ahí mismo, sin tener que
-          // guardar el contacto y recargar antes de poder mandar nada.
-          datosMensaje={datosMensaje}
-          cliente={{
-            id: cabecera.cliente_id,
-            nombre: impresa.cliente.razonSocial,
-            telefono: cabecera.cliente.telefono ?? "",
-            whatsapp: cabecera.cliente.whatsapp ?? "",
-            email: cabecera.cliente.email ?? "",
-          }}
-          // Sobre lo CONFIRMADO, no sobre lo cotizado: lo que el cliente no
-          // aceptó no se factura nunca, así que no puede mantener vivo un
-          // botón de facturar que ya no lleva a ninguna parte.
-          facturable={lineas.some(
-            (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
-          )}
-          /*
-            Hasta dónde se puede seguir cambiando el documento (070).
-
-            Los dos hechos que lo cierran son que la mercadería haya salido o
-            que se haya facturado algo — no el estado. Es la misma regla de la
-            guía, del pedido y de la recepción: hasta donde todavía no es un
-            compromiso de nadie.
-
-            Se calcula aquí para no ofrecer un botón que la base va a
-            rechazar; la comprobación que manda sigue estando en la función,
-            porque toda Server Action es un endpoint público.
-          */
-          editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
-          // Las líneas viajan para poder preguntar QUÉ confirmó el
-          // cliente. Se mandan crudas, sin el `id` de la cotización
-          // repetido dentro: el diálogo solo necesita qué, cuánto y a
-          // cuánto, para poder decir el total de lo que se está
-          // confirmando mientras se ajusta.
-          lineas={lineas.map((l) => ({
-            id: l.id,
-            codigo: l.codigo,
-            descripcion: l.descripcion,
-            cantidad: l.cantidad,
-            // Lo ya confirmado, para que al CORREGIR el diálogo arranque de
-            // ahí y no de lo cotizado.
-            cantidadConfirmada: l.cantidad_aprobada ?? null,
-            unidad: l.unidad_codigo,
-            valorUnitario: l.valor_unitario,
-            descuentoPct: l.descuento_pct,
-          }))}
-        />
-      </header>
-
-      {/*
-        Qué falta comprar de este pedido.
-
-        Solo cuando ya es un pedido: en un borrador todavía no se sabe qué va
-        a confirmar el cliente, y avisar de que falta stock de algo que quizá
-        no compre es ruido. Va ARRIBA del documento porque, recién confirmado,
-        conseguir la mercadería es lo siguiente que hay que hacer.
-      */}
-      {cabecera.estado === "aprobada" ? (
-        <LoQueFalta cotizacionId={cabecera.id} />
-      ) : null}
-
-      {/*
-        Y lo que ya salió facturado, debajo de lo que falta comprar.
-
-        El enlace pedido↔comprobante solo iba en un sentido: la factura sabía
-        de qué pedido nacía y el pedido no sabía nada de sus facturas. Con el
-        facturado por partes eso deja la ficha contando media historia.
-      */}
-      <YaFacturado comprobantes={facturas} />
-
-      {/*
-        El margen es información INTERNA.
-
-        Borde discontinuo a propósito: es la señal de que ese bloque no forma
-        parte del documento. Quien mira la pantalla al lado de un cliente tiene
-        que ver de un golpe qué se imprime y qué no.
-      */}
-      {cabecera.costo_total > 0 ? (
-        <section className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-3 text-sm print:hidden">
-          <Interno etiqueta="Costo" valor={`$ ${cabecera.costo_total.toFixed(2)}`} />
-          <Interno
-            etiqueta="Margen"
-            valor={`${cabecera.margen_pct.toFixed(1)}%`}
-            tono={
-              cabecera.margen_pct < 10
-                ? "malo"
-                : cabecera.margen_pct < 15
-                  ? "aviso"
-                  : "ok"
+          <AccionesCotizacion
+            id={cabecera.id}
+            estado={cabecera.estado}
+            datosMensaje={datosMensaje}
+            cliente={{
+              id: cabecera.cliente_id,
+              nombre: impresa.cliente.razonSocial,
+              telefono: cabecera.cliente.telefono ?? "",
+              whatsapp: cabecera.cliente.whatsapp ?? "",
+              email: cabecera.cliente.email ?? "",
+            }}
+            facturable={lineas.some(
+              (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
+            )}
+            editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
+            lineas={lineas.map((l) => ({
+              id: l.id,
+              codigo: l.codigo,
+              descripcion: l.descripcion,
+              cantidad: l.cantidad,
+              cantidadConfirmada: l.cantidad_aprobada ?? null,
+              unidad: l.unidad_codigo,
+              valorUnitario: l.valor_unitario,
+              descuentoPct: l.descuento_pct,
+            }))}
+            vistaPrevia={
+              <VistaPreviaDocumento numero={cabecera.numero}>
+                <Documento c={impresa} cuentas={cuentas} />
+              </VistaPreviaDocumento>
             }
           />
-          <Interno
-            etiqueta="Utilidad"
-            valor={`$ ${(cabecera.subtotal - cabecera.costo_total).toFixed(2)}`}
-          />
-          <span className="text-xs text-[var(--fg-subtle)] sm:ml-auto">
-            Nada de esta franja se imprime.
-          </span>
-        </section>
-      ) : null}
+        </header>
 
-      {/* La hoja. La sombra solo existe en pantalla. */}
-      <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">
+        {/* ---------------------------------------------------- Resumen */}
+        {/*
+          Las cuatro cosas que se preguntan de una cotización sin abrirla.
+
+          Salían todas dentro del papel, en cuerpo pequeño. El margen además
+          vivía en una franja aparte con borde discontinuo porque «no se
+          imprime» — ahora nada de esta mitad se imprime, así que esa
+          advertencia sobra y el dato puede estar donde toca.
+        */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Resumen
+            etiqueta="Condición de pago"
+            valor={
+              cabecera.cliente.condicion_pago === "credito" ? "A crédito" : "Al contado"
+            }
+            detalle={
+              cabecera.cliente.condicion_pago === "credito"
+                ? `${cabecera.cliente.dias_credito} días`
+                : "sin plazo"
+            }
+          />
+          <Resumen
+            etiqueta="Orden de cliente"
+            valor={cabecera.orden_compra_cliente ?? "—"}
+            detalle="O/C"
+          />
+          <Resumen
+            etiqueta="Validez"
+            valor={`${cabecera.validez_dias} días`}
+            detalle={`hasta el ${fechaCorta(impresa.validaHasta)}`}
+          />
+          {/*
+            El margen, solo si hay costo con el que calcularlo.
+
+            Sin costo cargado la cuenta da 100 % —la venta entera como
+            ganancia— y eso ya rompió el tablero una vez. Aquí se pone una
+            raya, que es la verdad: no se sabe.
+          */}
+          <Resumen
+            etiqueta="Margen al costo"
+            valor={
+              cabecera.costo_total > 0 ? `${cabecera.margen_pct.toFixed(1)}%` : "—"
+            }
+            detalle={
+              cabecera.costo_total > 0
+                ? `${dolar(cabecera.subtotal - cabecera.costo_total)} de utilidad`
+                : "sin costo cargado"
+            }
+            tono={
+              cabecera.costo_total <= 0
+                ? undefined
+                : cabecera.margen_pct < 12
+                  ? "malo"
+                  : cabecera.margen_pct < 20
+                    ? "aviso"
+                    : "ok"
+            }
+          />
+        </div>
+
+        {/*
+          Qué falta comprar de este pedido.
+
+          Solo cuando ya es un pedido: en un borrador todavía no se sabe qué va
+          a confirmar el cliente, y avisar de que falta stock de algo que quizá
+          no compre es ruido. Va antes de los productos porque, recién
+          confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
+        */}
+        {cabecera.estado === "aprobada" ? (
+          <LoQueFalta cotizacionId={cabecera.id} />
+        ) : null}
+
+        {/*
+          Y lo que ya salió facturado.
+
+          El enlace pedido↔comprobante solo iba en un sentido: la factura sabía
+          de qué pedido nacía y el pedido no sabía nada de sus facturas.
+        */}
+        <YaFacturado comprobantes={facturas} />
+
+        {/* --------------------------------------------------- Productos */}
+        <section className="card overflow-hidden">
+          <header className="border-b border-[var(--border-soft)] px-4 py-3">
+            <h2 className="text-base font-semibold">Productos</h2>
+            <p className="text-sm text-[var(--fg-muted)]">
+              {lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} en la
+              cotización.
+            </p>
+          </header>
+
+          <div className="scroll-x">
+            <table className="w-full text-sm">
+              <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr>
+                  <th className="px-4 py-2.5 font-medium">Código</th>
+                  <th className="px-3 py-2.5 font-medium">Descripción</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Cantidad</th>
+                  <th className="px-3 py-2.5 text-right font-medium">P. unitario</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Importe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l) => (
+                  <tr key={l.id} className="border-b border-[var(--border-soft)]">
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      <span className="block font-medium">{l.codigo}</span>
+                      {l.marca ? (
+                        <span className="block text-xs text-[var(--fg-subtle)]">
+                          {l.marca}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2.5">{l.descripcion}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
+                      {l.cantidad}{" "}
+                      <span className="text-[var(--fg-subtle)]">{l.unidad_codigo}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
+                      {dolar(l.valor_unitario)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-right tabular font-medium">
+                      {dolar(
+                        Math.round(l.cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100) / 100,
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Los totales al pie y a la derecha, como en el papel: es donde el
+              ojo los busca después de leer la última línea. */}
+          <div className="flex justify-end px-4 py-3">
+            <dl className="w-full max-w-xs text-sm">
+              <div className="flex items-baseline justify-between py-1">
+                <dt className="text-[var(--fg-muted)]">Subtotal (sin IGV)</dt>
+                <dd className="tabular">{dolar(cabecera.subtotal)}</dd>
+              </div>
+              {cabecera.descuento_total > 0 ? (
+                <div className="flex items-baseline justify-between py-1">
+                  <dt className="text-[var(--fg-muted)]">Descuento</dt>
+                  <dd className="tabular text-[var(--ok)]">
+                    − {dolar(cabecera.descuento_total)}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex items-baseline justify-between py-1">
+                <dt className="text-[var(--fg-muted)]">IGV (18%)</dt>
+                <dd className="tabular">{dolar(cabecera.igv)}</dd>
+              </div>
+              <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
+                <dt className="font-semibold">Total</dt>
+                <dd className="tabular text-lg font-semibold">{dolar(cabecera.total)}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+      </div>
+
+      {/* ------------------------------------------------------- El papel */}
+      {/*
+        Montado siempre, visible solo al imprimir.
+
+        Es el mismo componente que enseña la vista previa, así que no hay una
+        versión «de pantalla» y otra «de papel» que puedan separarse con el
+        tiempo. Al pulsar Imprimir sale esto y nada más.
+      */}
+      <div className="hidden print:block">
         <Documento c={impresa} cuentas={cuentas} />
       </div>
-    </div>
+    </>
   );
 }
 
-function Interno({
+/** Una de las cuatro tarjetas de arriba. */
+function Resumen({
   etiqueta,
   valor,
+  detalle,
   tono,
 }: {
   etiqueta: string;
   valor: string;
+  detalle: string;
   tono?: "ok" | "aviso" | "malo";
 }) {
   const color =
@@ -294,10 +422,22 @@ function Interno({
         : tono === "ok"
           ? "text-[var(--ok)]"
           : "";
+
   return (
-    <span className="flex flex-col">
-      <span className="text-xs text-[var(--fg-muted)]">{etiqueta}</span>
-      <span className={`tabular font-semibold ${color}`}>{valor}</span>
-    </span>
+    <div className="card p-4">
+      <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+        {etiqueta}
+      </p>
+      <p className={`mt-1 truncate text-xl font-semibold ${color}`} title={valor}>
+        {valor}
+      </p>
+      <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{detalle}</p>
+    </div>
   );
+}
+
+/** Fecha corta en formato peruano, sin depender de la zona del servidor. */
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.slice(0, 10).split("-");
+  return d && m && a ? `${d}/${m}/${a}` : iso;
 }

@@ -4,6 +4,7 @@
 // mientras la acción va y viene, y la confirmación antes de anular. Nada más
 // de esta pantalla necesita JavaScript.
 
+import type * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -40,6 +41,7 @@ export function AccionesCotizacion({
   lineas,
   facturable,
   editable,
+  vistaPrevia,
 }: {
   id: string;
   estado: EstadoCotizacion;
@@ -76,6 +78,14 @@ export function AccionesCotizacion({
    * sabe el servidor.
    */
   editable: boolean;
+  /**
+   * El botón de vista previa, ya montado.
+   *
+   * Llega hecho desde el servidor y no se construye aquí porque lleva dentro
+   * el `<Documento>`, que se pinta en el servidor con todos sus datos. Pasarlo
+   * como elemento evita traerse esa maquetación al bundle del cliente.
+   */
+  vistaPrevia?: React.ReactNode;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -248,9 +258,15 @@ export function AccionesCotizacion({
           Enviar
         </Button>
 
-        <Button variant="outline" onClick={() => window.print()}>
-          Imprimir
-        </Button>
+        {/*
+          «Vista previa» en lugar de «Imprimir» a secas.
+
+          Imprimir sin mirar era barato cuando la ficha ERA el papel: se veía
+          antes de pulsar. Ahora la ficha son tarjetas y tabla, así que el
+          documento hay que abrirlo — y dentro de la previa está el botón de
+          imprimir, que es el orden natural: primero se comprueba y luego sale.
+        */}
+        {vistaPrevia}
 
         <DropdownMenu>
           <DropdownMenuTrigger
