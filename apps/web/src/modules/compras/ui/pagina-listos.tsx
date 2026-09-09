@@ -205,13 +205,16 @@ export default async function PaginaListos({ searchParams }: Props) {
                           «Qué falta comprar» dejan el «Ver» de cada fila en
                           una equis distinta y la columna sale en escalera. */}
                       <td className="px-4 py-2.5">
-                        <div className="ml-auto grid w-[268px] grid-cols-[84px_1fr] gap-1.5">
+                        <div className="ml-auto grid w-[312px] grid-cols-[124px_1fr] gap-1.5">
                           <Link
                             href={`/cotizaciones/${p.cotizacion_id}`}
                             className={`${SECUNDARIO} w-full justify-center`}
                           >
                             <IconoVer />
-                            Ver
+                            {/* «Ver pedido» y no «Ver» a secas: lleva a la ficha
+                                del pedido, donde ahora se ve linea a linea que hay
+                                en almacen y que falta comprar. */}
+                            Ver pedido
                           </Link>
                           <Siguiente pedido={p} />
                         </div>

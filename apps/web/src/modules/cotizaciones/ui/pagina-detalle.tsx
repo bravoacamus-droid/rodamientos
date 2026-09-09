@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
 import { comprobantesDelPedido, cotizacionPorId, tieneGuia } from "../api/consultas";
+import { loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
@@ -141,6 +142,34 @@ export default async function PaginaDetalleCotizacion({
 
   const dolar = (n: number) =>
     n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
+
+  /*
+    Qué le falta a este pedido, una sola vez y para dos sitios.
+
+    Luis, 09/09: *«cuando se apruebe, lo que falta debería salir en listos para
+    entregar… pero las cosas que hay que comprar, mira cómo podemos hacer el
+    diseño»*.
+
+    La respuesta no es una pantalla más: el «Ver» de «Listos para entregar» ya
+    trae aquí. Lo que faltaba era que **la propia tabla de productos dijera qué
+    hay y qué falta**, línea a línea. Hasta hoy el aviso de arriba decía «faltan
+    3 productos» y luego la tabla los listaba los seis iguales, sin distinguir
+    cuáles se pueden despachar hoy.
+
+    Se calcula aquí y se reparte a los dos —el aviso y la tabla— porque
+    `bandejaPorComprar()` lee TODAS las líneas confirmadas del sistema y
+    reparte el stock entre ellas. Es de las consultas más caras del ERP;
+    pagarla dos veces por pintar la misma pantalla sería absurdo.
+
+    Solo en pedidos aprobados: en un borrador todavía no se sabe qué va a
+    confirmar el cliente, y avisar de que falta stock de algo que quizá no
+    compre es ruido.
+  */
+  const falta =
+    cabecera.estado === "aprobada" ? await loQueFaltaDelPedido(cabecera.id) : [];
+
+  /** Por producto, para poder marcar cada fila de la tabla. */
+  const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
   return (
     <>
@@ -295,9 +324,7 @@ export default async function PaginaDetalleCotizacion({
           no compre es ruido. Va antes de los productos porque, recién
           confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
         */}
-        {cabecera.estado === "aprobada" ? (
-          <LoQueFalta cotizacionId={cabecera.id} />
-        ) : null}
+        <LoQueFalta falta={falta} />
 
         {/*
           Y lo que ya salió facturado.
@@ -324,6 +351,13 @@ export default async function PaginaDetalleCotizacion({
                   <th className="px-4 py-2.5 font-medium">Código</th>
                   <th className="px-3 py-2.5 font-medium">Descripción</th>
                   <th className="px-3 py-2.5 text-right font-medium">Cantidad</th>
+                  {/*
+                    Solo en un pedido aprobado: en un borrador no hay nada
+                    comprometido todavía, así que no hay nada que cubrir.
+                  */}
+                  {cabecera.estado === "aprobada" ? (
+                    <th className="px-3 py-2.5 font-medium">Almacén</th>
+                  ) : null}
                   <th className="px-3 py-2.5 text-right font-medium">P. unitario</th>
                   <th className="px-4 py-2.5 text-right font-medium">Importe</th>
                 </tr>
@@ -344,6 +378,22 @@ export default async function PaginaDetalleCotizacion({
                       {l.cantidad}{" "}
                       <span className="text-[var(--fg-subtle)]">{l.unidad_codigo}</span>
                     </td>
+
+                    {/*
+                      Línea a línea: qué se puede sacar hoy y qué hay que
+                      comprar.
+
+                      El aviso de arriba dice «faltan 3 productos» y la tabla
+                      los listaba los seis iguales, así que había que cruzar
+                      los códigos a ojo para saber cuál era cuál. Esto es lo
+                      que Luis pedía ver del pedido: *«lo que hay, lo que falta
+                      comprar, todo eso»*.
+                    */}
+                    {cabecera.estado === "aprobada" ? (
+                      <td className="whitespace-nowrap px-3 py-2.5">
+                        <EstadoDeLinea falta={faltaPorProducto.get(l.producto_id ?? "")} />
+                      </td>
+                    ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
                       {dolar(l.valor_unitario)}
                     </td>
@@ -399,6 +449,45 @@ export default async function PaginaDetalleCotizacion({
         <Documento c={impresa} cuentas={cuentas} />
       </div>
     </>
+  );
+}
+
+/**
+ * En qué estado está una línea respecto al almacén.
+ *
+ * Tres respuestas y no dos, y la del medio es la que más importa: **«ya
+ * pedido»** no es lo mismo que «falta comprar». Sin distinguirlas, quien mira
+ * el pedido vuelve a pedir lo que ya viene en camino — que es comprar dos
+ * veces, pagar dos fletes y quedarse con stock parado.
+ *
+ * Sale de la bandeja «Por comprar», que reparte el stock entre todos los
+ * pedidos que esperan cada producto. No se resta aquí: dos pantallas con
+ * cifras distintas sobre lo mismo es peor que una pantalla de menos.
+ */
+function EstadoDeLinea({ falta }: { falta?: { falta: number; enCamino: boolean } }) {
+  if (!falta) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm text-[var(--ok)]">
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+        En almacén
+      </span>
+    );
+  }
+
+  if (falta.enCamino) {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-[var(--fg-muted)]">
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+        Faltan {falta.falta} · ya pedido
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-medium text-[var(--warn)]">
+      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      Faltan {falta.falta} · comprar
+    </span>
   );
 }
 

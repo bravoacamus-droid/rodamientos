@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PackageX, ShoppingCart } from "lucide-react";
 
-import { bandejaPorComprar, loQueFaltaDe } from "@/modules/compras";
+import type { FaltaDelPedido } from "@/modules/compras";
 
 /**
  * Lo que este pedido necesita y el almacén no cubre.
@@ -31,13 +31,16 @@ import { bandejaPorComprar, loQueFaltaDe } from "@/modules/compras";
  * confirmación. Dos pantallas que contestan lo mismo con cifras distintas es
  * peor que una pantalla de menos.
  */
-export async function LoQueFalta({ cotizacionId }: { cotizacionId: string }) {
-  const r = await bandejaPorComprar();
-  // Si la bandeja no carga, esto no sale y la pantalla funciona igual: es un
-  // atajo, no el único camino. La bandeja sigue estando en su sitio.
-  if (!r.ok) return null;
+export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
+  /*
+    Lo que falta llega YA CALCULADO desde la página.
 
-  const falta = loQueFaltaDe(cotizacionId, r.datos.filas);
+    Antes lo pedía este componente por su cuenta, y la ficha acabó llamando
+    dos veces a `bandejaPorComprar()` —una aquí y otra para marcar las líneas
+    de la tabla—. Esa consulta lee todas las líneas confirmadas del sistema y
+    reparte el stock entre ellas: es de las más caras del ERP y no se puede
+    pagar dos veces por pintar la misma pantalla.
+  */
   if (falta.length === 0) return null;
 
   // Lo que ya viene en camino no se vuelve a pedir, pero sí se dice: quien
