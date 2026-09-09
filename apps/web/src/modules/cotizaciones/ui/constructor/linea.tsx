@@ -106,6 +106,9 @@ export function FilaLinea({
     });
   };
 
+  /** ¿Alguna de las ventas que llegaron es de ESTE cliente? */
+  const hayDelCliente = historial.some((v) => v.mismo_cliente);
+
   const abrirHistorial = () => {
     setPanel("historial");
     if (historial.length > 0 || !linea.productoId) return;
@@ -427,10 +430,25 @@ export function FilaLinea({
         <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Ventas anteriores · {linea.codigo}</DialogTitle>
+            {/*
+              La frase dice lo que hay, no lo que se pretendía.
+
+              Decía «lo que ya se le vendió a este cliente» siempre, y era
+              mentira en el caso más común: si el cliente nunca compró ese
+              código, la lista sale llena de OTROS clientes bajo un título que
+              afirma que son suyos. Luis lo cazó el 09/09 mirando una venta a
+              INDUSTRIAL TECHNOLOGY en una cotización que no era para ellos.
+
+              El orden sí era el correcto desde la 011 —lo de este cliente
+              primero, que es lo que pidió Willy en 50:25— y sigue igual. Lo
+              que fallaba era el rótulo.
+            */}
             <DialogDescription>
-              {clienteId
-                ? "Lo que ya se le vendió a este cliente, y a cuánto."
-                : "Elige un cliente para ver lo que se le vendió a él; por ahora sale de todos."}
+              {!clienteId
+                ? "Elige un cliente y verás primero lo que se le vendió a él."
+                : hayDelCliente
+                  ? "Primero lo de este cliente, y debajo lo de los demás."
+                  : "Este cliente no ha comprado este producto antes. Estas son las últimas ventas a otros."}
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
