@@ -285,6 +285,7 @@ export function PedirPrecio({
             />
 
             <AnadirProveedor
+              etiqueta="Añadir proveedor a este producto"
               yaEstan={new Set(seleccion[item.producto_id] ?? [])}
               onAnadir={(p) => {
                 setProveedores((previos) =>

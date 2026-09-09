@@ -25,7 +25,7 @@ import {
   type Referencia,
 } from "../../dominio/referencia";
 import { anadirALaRonda, comprarDeLaRonda } from "../../acciones/comparar";
-import { AnadirProveedor } from "../pedir-precio/anadir";
+import { AnadirALaConsulta } from "./anadir-a-la-consulta";
 import { PanelRespuesta } from "./panel-respuesta";
 import { AjustarVenta } from "./ajustar-venta";
 
@@ -246,20 +246,21 @@ export function Comparativa({
   }
 
   /**
-   * El que se olvidó, preguntándole por la lista entera.
+   * El proveedor que se olvidó, con los productos que se le marcaron.
    *
    * A diferencia de `anadir`, que mete a alguien para UN producto desde su
-   * fila, esto es el caso de «me faltó este proveedor»: se le pregunta por
-   * todo, que es lo que se quiere cuando uno cae en que se lo saltó.
+   * fila, esto entra por el diálogo: se busca en el maestro entero y se elige
+   * por qué se le pregunta. Los dos pasos son obligatorios —Luis, 09/09:
+   * *«para añadir un proveedor tiene que saber a qué producto»*—.
    */
-  function anadirATodo(proveedorId: string) {
+  function anadirATodo(proveedorId: string, items: string[]) {
     setAviso(null);
     setAnadiendo("todos");
     empezar(async () => {
       const r = await anadirALaRonda({
         consulta_id: ronda.id,
         proveedor_id: proveedorId,
-        items: ronda.items.map((i) => i.item_id),
+        items,
       });
       setAnadiendo(null);
       if (!r.ok) {
@@ -364,30 +365,38 @@ export function Comparativa({
         olvidó y nunca le compraste eso, no había forma de llegar. La pieza
         estaba y la puerta era del tamaño de una rendija.
 
-        Este buscador es el mismo de «Pedir precio»: va contra el maestro
-        entero y busca por RUC, razón social **y marca**, que es la mitad de
-        las veces que se abre esto —«¿quién me trae SKF?»—.
+        El buscador es el mismo de «Pedir precio»: va contra el maestro entero
+        y busca por RUC, razón social **y marca**, que es la mitad de las veces
+        que se abre esto —«¿quién me trae SKF?»—.
 
-        Se le pregunta por TODA la lista, que es lo que se quiere cuando uno
-        cae en que se olvidó de alguien. Ajustar a qué productos se le pregunta
-        se sigue haciendo fila a fila.
+        Y pregunta por cuáles, que no es un adorno: al de retenes no se le
+        pregunta por unas chapas SKF.
       */}
       {ronda.estado === "abierta" ? (
         <section className="card p-4">
           <h2 className="text-base font-semibold">¿Te falta preguntarle a alguien?</h2>
           <p className="mb-3 text-sm text-[var(--fg-muted)]">
-            Se le pregunta por los {ronda.items.length} productos de esta
-            consulta, y su columna aparece al momento.
+            Búscalo, marca qué le preguntas, y su columna aparece al momento.
           </p>
-          <AnadirProveedor
+          <AnadirALaConsulta
+            items={ronda.items}
             yaEstan={enLaRonda}
-            onAnadir={(p) => anadirATodo(p.id)}
+            enCurso={anadiendo === "todos"}
+            onAnadir={anadirATodo}
           />
           {anadiendo === "todos" ? (
             <p className="mt-2 text-sm text-[var(--fg-muted)]">Añadiendo…</p>
           ) : null}
         </section>
-      ) : null}
+      ) : (
+        // Y si está cerrada, se dice. Sin esto la sección desaparece sin más y
+        // parece que el botón no existe —que es justo lo que pasó el 09/09—.
+        <p className="text-sm text-[var(--fg-muted)]">
+          Esta consulta ya está cerrada, así que no se le puede añadir a nadie
+          más. Para seguir preguntando, abre una consulta nueva desde{" "}
+          <strong>Pedir precio</strong>.
+        </p>
+      )}
 
       {sinContestar > 0 ? (
         <p className="text-sm text-[var(--fg-muted)]">
