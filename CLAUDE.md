@@ -61,6 +61,11 @@ la 029 **y en el del componente que lo imprime**, y el botón no se construyó.
 Se documentó la intención y no se conectó el cable. Hasta la 071, las cuentas
 salían siempre.
 
+**Y seis veces más el 09/09**, en compras. La peor: los papeles del proveedor
+tenían migración entera —bucket privado, tabla, RLS— y un componente escrito,
+y solo se llegaba a ellos desde la ficha de la recepción, nunca al recibir. Van
+**diecinueve casos**.
+
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.
 
@@ -182,8 +187,8 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 **Documentación:**
 
 - `docs/PENDIENTES.md` — el diario del proyecto. Cada decisión, con su porqué y
-  la cita del cliente. **Empieza por §AH** (rediseño del 08/09) y **§AG**
-  (reunión del 07/09).
+  la cita del cliente. **Empieza por §AI** (compras, 09/09) y **§AH**
+  (rediseño del 08/09).
 - `docs/PREGUNTAS-WILLY.md` — lo que se le manda, listo para copiar. Máximo
   cinco preguntas; **búscalas antes en sus archivos**, que ya ahorró cuatro de
   cinco.
@@ -191,7 +196,7 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 
 ---
 
-## 8 · Estado al 08/09
+## 8 · Estado al 09/09
 
 **Funciona de punta a punta**, probado en vivo: cotizar → confirmar → pedir
 precios → comparar → comprar → recibir → avisar al cliente → guía → facturar →
@@ -212,8 +217,12 @@ cobrar.
   y ahora es `150132` (San Juan de Lurigancho). Ojo: `150118` es
   Lurigancho/Chosica, otro distrito. La guía T001-00000001, ya emitida, lleva
   el origen viejo y se deja como está.
-- **Datos de prueba en la base del cliente** — sin decidir. Hay rondas de
-  precios, compras, recepciones, una factura y su cobro.
+- **Datos de prueba en la base del cliente** — `limpiar-pruebas.sql` sigue
+  sin correrse; lo tiene que hacer Luis. Hay rondas de precios, compras,
+  recepciones, una factura y su cobro. Y uno que no se limpia borrando filas:
+  al probar el 09/09 quedó registrado que **MARCO PERUANA vende el retén
+  50X68X8TC a $ 1.40** — `proveedor_productos` se llena sola con cada
+  respuesta (046) y eso no lo deshace borrar la respuesta.
 - **Envío de guías a SUNAT (GRE)** — cambió a REST con OAuth2 y hay que
   escribirlo. Las guías valen como documento interno y mueven stock, pero **no
   se están declarando**.
@@ -221,6 +230,8 @@ cobrar.
 ### Escrito pero SIN probar en pantalla
 
 - Detalle de cuotas en la factura (no hay ninguna con más de una cuota).
+- El estado apagado de «Ya se le preguntó» al añadir un proveedor a una ronda
+  (§AI.3). Cubierto por tests; no se llegó a ver con los ojos.
 - La rejilla de precios con diez proveedores (no existe una ronda así).
 - Dar de alta una agencia nueva (se probó el caso «ya existe»).
 - El **responsive de los módulos**, salvo la página pública. El prototipo de

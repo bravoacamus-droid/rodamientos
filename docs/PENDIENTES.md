@@ -1,29 +1,29 @@
 # Pendientes
 
-Estado al **08/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
+Estado al **09/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
 al final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
-> **Si retomas hoy, empieza por §AH (08/09) y §AG (07/09).**
+> **Si retomas hoy, empieza por §AI (09/09) y §AH (08/09).**
 >
-> El 08/09 fue un día de rediseño con Luis mandando capturas: nueve commits y
-> tres migraciones (070 editar la aprobada, 071 el botón de las cuentas, 072
-> el enlace público). Está todo en **§AH**, con lo que quedó abierto en
-> **§AH.9**.
+> El 09/09 fue el módulo de **compras** de punta a punta, otra vez con Luis
+> probando y mandando capturas: once commits y dos migraciones (075 fuera las
+> plantillas de mensaje, 076 el papel del pago). Está en **§AI**, con lo que
+> quedó abierto en **§AI.10**.
 >
 > **Lo siguiente, por orden:**
 >
 > 1. **Las series de Willy y desde qué correlativo siguen.** Usa `CT02`,
 >    `T002`, `F002`; el sistema tiene otras de prueba. Es lo más urgente de
 >    todo: si emite con las nuestras, los correlativos no cuadran con lo
->    declarado. Lleva bloqueado desde el 07/09.
-> 2. **Correr `limpiar-pruebas.sql`.** Lo tiene que hacer Luis.
-> 3. **El tablero**, que es lo que queda del rediseño.
+>    declarado. Lleva bloqueado desde el 07/09 — van tres días.
+> 2. **Correr `limpiar-pruebas.sql`.** Lo tiene que hacer Luis, y ahora hay
+>    más que limpiar (§AI.10).
+> 3. **El tablero**, que es lo que queda del rediseño del 08/09.
 >
-> Y una lección de método del 08/09 que vale para cualquiera que siga: **las
-> tres correcciones más útiles del día salieron de que Luis mirara una
-> captura**, no de los tests. Los 1174 estaban en verde en todos esos
-> momentos.
+> Y la lección de método, que el 09/09 volvió a repetirse punto por punto:
+> **todo lo corregido salió de que Luis mirara una captura**, no de los
+> tests. Los 1185 estaban en verde en cada uno de esos momentos.
 
 ---
 
@@ -4499,6 +4499,259 @@ de Defontana.
       6205, ver R2—. Lo correcto es pasar un ajuste de inventario que las
       saque, y solo después borrar los documentos.
 - [ ] Decidir si los 7 productos de ejemplo se quedan (son datos reales suyos)
+
+---
+
+## §AI · 09/09 — Compras, de punta a punta
+
+Día entero en el módulo de compras, con Luis probando en su pantalla y
+mandando capturas. Once commits, dos migraciones (075 fuera las plantillas de
+mensaje, 076 el papel del pago).
+
+Y el patrón de siempre otra vez, ya sin sorpresa: **de las nueve cosas de
+abajo, seis eran piezas construidas hace semanas a las que no había puerta**.
+Una de ellas —los papeles del proveedor— tenía migración entera con bucket
+privado, tabla, RLS y componente escrito, y se llegaba a ella solo desde la
+ficha de la recepción. Van diecinueve casos documentados.
+
+---
+
+### AI.1 · Abrir una ronda de precios a medias
+
+El aviso «un producto no se le va a preguntar a nadie» estaba desde el
+principio, pero el botón seguía activo y `aPayloadDeConsulta` filtraba esos
+productos **en silencio**: la consulta salía a medias y no había forma de
+enterarse.
+
+Luis: *«en compras me deja anotar si no puse el proveedor los dos productos,
+otra cosa dejaría seguir»*.
+
+Ahora el botón se bloquea, y para el caso legítimo —a veces de verdad no hay a
+quién preguntarle— hay que decirlo a propósito: **«No hay a quién preguntarle:
+seguir sin él»**. Se guardan los ids de los que se dejan fuera, no un sí/no,
+para que un huérfano nuevo vuelva a preguntar.
+
+`abrirRonda` valida lo mismo. Ya comprobaba que a un proveedor no se le
+asignara un producto de fuera; faltaba el revés, que es el que se colaba.
+
+### AI.2 · «No lo tiene nadie» no era «todavía no ha contestado»
+
+`resumirComparativa` contaba en `sinNadie` todo lo que no tenía ganador, y sin
+ganador está también lo que nadie ha respondido aún. Una ronda recién abierta
+decía **«2 productos no los tiene nadie, esos hay que buscarlos fuera»** con
+los dos proveedores en «Esperando»: mandaba a buscar proveedores nuevos
+mientras esperaba respuesta de los que ya tenía.
+
+Partido en `sinNadie` y `esperando`, con las banderas `preguntada`/`respondida`
+que la celda ya traía desde la 058. El test que fallaba **codificaba el
+fallo**: construía un huérfano sin respuestas y esperaba `sinNadie`.
+
+### AI.3 · Añadir proveedores a una ronda abierta · el botón que no existía
+
+`anadirALaRonda` existía con toda su validación —su docblock dice literal *«me
+faltó preguntarle a este. Pasa siempre»*— y su único camino era un texto de
+**11 px** bajo cada fila que además solo proponía a quien ya se le había
+comprado ESE producto.
+
+La primera versión que hice fue una caja de búsqueda con etiqueta de 12 px.
+Luis: *«no veo el botón de añadir proveedor»*. Y no lo veía porque no había
+ninguno.
+
+Luego, la segunda corrección, que era la de fondo: *«tú sabes que para añadir
+un proveedor tiene que saber a qué producto, ¿no? ¿lo manejamos como modal o
+qué?»*. Yo le preguntaba por TODA la lista — el mismo error del 03/09, al de
+retenes preguntándole por chapas SKF.
+
+**Cómo quedó:** diálogo de dos pasos, en este orden y no al revés.
+
+1. **¿Para qué productos?** Nada marcado, con un «Todos» al lado.
+2. **¿A quién le preguntas?** Y aquí el buscador **propone sin escribir nada**,
+   porque sabiendo los productos el sistema ya sabe quién los vende
+   (`proveedor_productos`, que se llena sola con cada compra desde la 046):
+   *«vende 2 de 2 · la última vez, $ 0.20»*. Ordena por cobertura y, a
+   igualdad, por lo que cobró; los que nunca cobraron van al final —no es que
+   sean caros, es que no se sabe—.
+
+La validación que pidió —*«puede ser que se equivoque, seleccione un producto
+con el mismo proveedor que ya está»*— son dos casos y solo uno es un error:
+
+- Ya se le preguntó por **todo** lo marcado → sale apagado con un check y «Ya
+  se le preguntó», y el buscador tampoco lo ofrece. **No se esconde**:
+  esconderlo hace pensar que se olvidó y se vuelve a buscar.
+- Ya se le preguntó por **alguno** → se deja, porque es el caso corriente (el
+  que vende cuatro de los seis) y se manda solo lo que le falta.
+
+En `dominio/anadir-a-ronda.ts`, con diez tests. El servidor rechaza el caso sin
+nada nuevo: el upsert lleva `ignoreDuplicates`, así que sin eso la acción decía
+«añadido» y no añadía nada.
+
+### AI.4 · Quitar a un proveedor, entero o de un producto
+
+Luis: *«nos falta ahí eliminar por producto al proveedor si es que se
+equivocó, o eliminar el proveedor completo con sus productos»*.
+
+Un botón «Quitar» en cada tarjeta, **debajo** del de registrar precio y con
+borde rojo: los dos botones de una tarjeta no valen lo mismo, y a la par el de
+borrar se pulsa sin querer.
+
+> ⚠️ **Lo que había que mirar en el esquema.** `consulta_precio_respuestas` NO
+> cuelga de `consulta_precio_asignaciones`: son hermanas, las dos cuelgan del
+> proveedor de la ronda. Quitar la asignación sola dejaba **el precio suelto**,
+> y la rejilla lo seguiría pintando —la comparación se hace con las respuestas
+> y `preguntada` solo decide si la celda está viva—. Saldría un precio de algo
+> que, según la misma pantalla, nunca se preguntó, y podría ganar la
+> comparación.
+
+Por eso quitar un producto borra también su precio, y el diálogo lo dice con
+el número delante: «se borra 1 precio que ya dio, y eso no se deshace». Las
+líneas con respuesta salen marcadas «ya contestó».
+
+No se deja quitar al proveedor al que ya se le compró en esa ronda —su precio
+es lo que justifica la compra— ni tocar una consulta cerrada.
+
+### AI.5 · El modal de registrar precio
+
+Dos de Willy, por Luis:
+
+- **Fuera «Precio válido hasta»**: *«eso nada que ver»*. Y con una lección: el
+  comentario de la 055 decía *«Hasta cuándo respeta el precio. Willy lo
+  pregunta siempre»* y resulta que no lo preguntaba Willy, lo preguntaba yo.
+  Una cita atribuida al cliente sostuvo un campo durante seis migraciones. La
+  columna se queda y lo guardado se conserva; solo deja de pedirse.
+- **«Días» → «Días de entrega», y con el número puesto.** Estaba de
+  *placeholder* a propósito —lo que prometemos nosotros no es lo que dice el
+  proveedor— y ese razonamiento sigue siendo cierto, pero pesa menos que
+  teclear el mismo 15 en cada línea de cada ronda. El apaño es que se vea de
+  dónde sale: debajo dice «15 es lo que se le prometió al cliente» o «15 es lo
+  normal de exterior». Orden: los días de la cotización → el plazo de siempre
+  de su disponibilidad (`DIAS_POR_DEFECTO`, 040) → vacío. Lo que ya contestó el
+  proveedor manda sobre todo eso.
+
+Y después: *«si es inmediato pues el campo de días de entrega que se bloquee»*.
+Es la conclusión de lo anterior —si `inmediata` no propone número porque no
+tiene plazo, dejar el campo abierto invita a inventarse uno—. Con una
+excepción: si YA hay algo apuntado, sigue abierto. Un campo bloqueado con un
+valor dentro es un valor atrapado.
+
+### AI.6 · «A cuánto lo vendes», en columnas
+
+Luis: *«muy grandes los cards; si son dos productos pues los repartimos en
+columnas… así todo está en una sola página, sin hacer tanto scroll»*.
+
+Tenía razón en las dos cosas, y la segunda es la de fondo: esto se decide
+**comparando** —a este le saco 15 %, a este 19 %— y dos cifras que no caben a
+la vez obligan a memorizar una.
+
+Dos columnas y menos aire: el margen y el botón comparten línea (el margen es
+la razón por la que se pulsa Guardar), la descripción se trunca con el nombre
+entero al pasar por encima, y las cifras de costo bajan de `text-lg` a
+`text-base`. Nada baja de 14 px.
+
+El precio mínimo **ya se precargaba** —los dos pasan por `positivo()`, así que
+un 0 en la base llega como «sin definir», que es lo que significa desde la
+023—; en CPR-26-00007 salía vacío porque esos productos no tienen mínimo
+puesto. Lo que sí le faltaba era el «vuelve a», que la venta tenía y él no.
+
+### AI.7 · En qué acabó la ronda
+
+Era **«Ya salieron: CMP-26-00015, CMP-26-00016»** en gris de 14 px. Luis:
+*«cuando registro, esos enlaces ni yo los entiendo… en cada orden voy a poder
+ver el total a pagar, ¿no?»*.
+
+Los números **sí eran enlaces** — sin subrayado hasta pasarles el ratón por
+encima, que es la definición de enlace que no se ve. Y aparte, un correlativo
+suelto no dice ni a quién le compraste ni cuánto le debes.
+
+Ahora es una tarjeta por compra con proveedor, **total a pagar** y un botón. El
+total salía de `compras.total`, ya guardado: solo había que pedirlo.
+
+Y tirando del hilo, **el mismo fallo del otro lado**: la ficha de la compra
+ponía «De la consulta de precios» sin decir cuál ni cómo llegar.
+`compras.consulta_precio_id` está guardado **desde la 055** y no lo leía
+ninguna pantalla. Ir de la ronda a la compra se podía; volver, no.
+
+### AI.8 · El IGV lo dice el proveedor, no el sistema
+
+Luis: *«supuestamente, como yo estoy comprando, viene o no con IGV, ¿no? Él me
+dirá»*.
+
+Se deducía del tipo: local con IGV, importación sin. Acierta casi siempre y
+falla en un caso corriente en Lima —el proveedor local que da boleta o está en
+el RUS—, y ahí se le sumaba un **18 % que no existe**. Ese 18 % entra al costo
+y de ahí al margen de todo lo que se venda de ese lote.
+
+Ahora hay un paso antes de registrar, que resuelve también lo del total: una
+fila por proveedor con su casilla de IGV y su total, y el total de todo junto
+si son varias. Registrar era un botón que hacía algo irreversible sin enseñar
+antes cuánto era.
+
+En `dominio/igv.ts`, con seis tests. Uno comprueba que `subtotal + IGV = total`
+para varios importes: con dos redondeos independientes esto se descuadra por un
+céntimo, y un céntimo que no cuadra en pantalla cuesta media hora de teléfono.
+
+### AI.9 · Los papeles del proveedor · migración 076
+
+Luis: *«al recibir mercadería tengo los input de guía proveedor y factura
+proveedor; no tengo dónde subir los documentos de la guía, la factura que me
+hizo el proveedor y **el pago**»*.
+
+La subida **sí existía** —la 068 dejó el bucket privado, la tabla, la RLS y el
+componente— pero solo desde la ficha de la recepción, y el pago no existía como
+tipo. La **076** añade `pago` al enum: el voucher no lo trae el proveedor al
+entregar, sale después —a veces semanas después— y es el papel que cierra la
+operación por el otro lado. Podía ir en `otro`, pero un papel en el cajón de
+sastre no se encuentra el día que el proveedor dice que no le pagaron.
+
+Después vino lo importante, mirando una recepción guardada sin números:
+
+> *«Me dejó guardar como recibido sin poner la guía y la factura; debería
+> haber un editar o algo para guardar eso de nuevo. Aparte de eso, subir los
+> documentos con un solo botón de guardar, y con vista previa a los documentos
+> dentro de la página, en un modal»*.
+
+Y las tres eran la misma cosa: **el número y el papel de una guía son la misma
+guía**, y estaban en dos sitios —el número solo en el formulario de recibir, el
+escaneo solo en la ficha— sin poder corregir ninguno.
+
+**Cómo quedó:** un botón arriba, en azul, delante de «Volver al listado» —la
+primera versión la puse en gris y dentro de la sección de papeles, y Luis:
+*«ponlo pero que tenga color»*—. Abre un diálogo con tres bloques (guía,
+factura, pago), cada uno con su número y su archivo, y **un solo Guardar**.
+
+Que una recepción cerrada deje tocar esto **no rompe** la regla del documento
+cerrado: lo cerrado es el HECHO —qué entró, cuánto y a qué costo, que ya movió
+el kardex y se corrige con un ajuste de inventario—. Guía y factura son
+referencias administrativas: cambiarlas no mueve un gramo de stock. Una
+recepción **anulada** sí se rechaza.
+
+El botón dice «Editar papeles» y no «Editar» a secas, y eso no es lo que pidió
+Luis: en la cabecera de una recepción, «Editar» promete cambiar cantidades y
+costos. Prometer lo que no se cumple es peor que no ofrecerlo. **Pendiente de
+que Luis diga si lo prefiere igual.**
+
+La vista previa va dentro: PDF en un marco y foto como foto, a 70vh. Antes
+abría otra pestaña, que además quedaba inútil a los diez minutos porque el
+enlace es firmado y caduca.
+
+### AI.10 · Lo que queda abierto
+
+- **Las series de Willy.** Sin novedad, tercer día bloqueado. Es lo más urgente
+  de todo el proyecto.
+- **`limpiar-pruebas.sql` sigue sin correrse**, y hay más que ayer:
+  - CPR-26-00007 quedó resuelta con dos compras (CMP-26-00015 y 16).
+  - En CPR-26-00004 se apuntó y se borró un precio de MARCO PERUANA. La
+    respuesta ya no está, pero **quedó registrado que MARCO PERUANA vende el
+    retén 50X68X8TC a $ 1.40**: `proveedor_productos` se llena sola con cada
+    respuesta (046), y eso no lo deshace borrar la respuesta.
+- **El margen del 15325 %** de TMAS100-005 sigue ahí, y no es un fallo del
+  cálculo: es un costo de $ 0.20 contra una venta de $ 30.85 en el dato real.
+  `costo_dudoso` ya lo marca por encima del 300 %. Con 790 productos a medias
+  del Excel va a salir más veces.
+- **El tablero**, que es lo que quedó del rediseño del 08/09.
+- **El estado apagado de «Ya se le preguntó»** (AI.3) está cubierto por tests
+  pero no se llegó a ver en pantalla.
+- Lo de §AH.9 sigue igual: descargar el PDF de verdad al desplegar, el
+  responsive de los demás módulos, la tabla del documento en móvil.
 
 ---
 
