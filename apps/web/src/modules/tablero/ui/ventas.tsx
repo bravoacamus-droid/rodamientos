@@ -143,27 +143,20 @@ export async function SeccionVentas({
           Venta y margen · {describirRango(rango, hoy)}
         </h2>
         {/*
-          Con un solo periodo no hay gráfico que dibujar.
+          Con un solo periodo TAMBIÉN se dibuja, en barras.
 
-          El 09/09, con una única factura en el mes, esto era un rectángulo
-          vacío de 256 px con un puntito en medio: cinco líneas de rejilla, un
-          eje de dólares y ningún dato del que sacar una forma. Un gráfico
-          sirve para ver una tendencia, y una tendencia necesita al menos dos
-          puntos que comparar.
+          Estuvo unas horas siendo una frase en vez de un gráfico, y era peor.
+          El razonamiento —una tendencia necesita dos puntos— es correcto y la
+          conclusión no lo era: el tablero abre en «este mes», así que a
+          primeros de mes la pantalla principal se quedaba sin gráfico
+          ninguno. Luis, 09/09: *«¿dónde están los gráficos? En mi tablero no
+          hay ningún gráfico»*.
 
-          Así que se dice el dato y ya. Es lo mismo que hace la guía de
-          visualización con un valor único: una cifra, no un gráfico de una
-          sola barra.
+          Lo que fallaba no era tener pocos datos, era dibujarlos como área:
+          un punto suelto en un rectángulo vacío. Una barra sola sí se lee.
+          Eso lo decide `grafico-ventas.tsx` según cuántos periodos hay.
         */}
-        {k.serie.length === 1 ? (
-          <p className="py-6 text-center text-sm text-[var(--fg-muted)]">
-            Un solo día con ventas en este periodo:{" "}
-            <strong className="text-base text-[var(--fg)]">
-              {dolares(k.serie[0]!.venta)}
-            </strong>{" "}
-            el {k.serie[0]!.etiqueta}. Amplía el rango para ver la evolución.
-          </p>
-        ) : k.serie.length > 1 ? (
+        {k.serie.length > 0 ? (
           <GraficoVentasLazy
             meses={k.serie}
             // La línea de margen solo se dibuja si el margen significa algo.
