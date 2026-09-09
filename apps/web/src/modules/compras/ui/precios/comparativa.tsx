@@ -674,29 +674,45 @@ export function Comparativa({
               déjalo como está.
             </p>
           </div>
-          {filas
-            .filter((f) => f.celdas.some((c) => c.costoUsd !== null))
-            .map((f) => (
-              <AjustarVenta
-                key={f.item.item_id}
-                productoId={f.item.producto_id}
-                codigo={f.item.codigo}
-                descripcion={f.item.descripcion}
-                referencia={
-                  referencias[f.item.producto_id] ??
-                  referenciaVacia(f.item.producto_id)
-                }
-                ofertas={f.celdas
-                  .filter((c) => c.costoUsd !== null)
-                  .map((c) => ({
-                    proveedor:
-                      proveedores.find(
-                        (p) => p.consulta_proveedor_id === c.consulta_proveedor_id,
-                      )?.proveedor ?? "—",
-                    costoUsd: c.costoUsd!,
-                  }))}
-              />
-            ))}
+          {/*
+            En columnas, no una debajo de otra.
+
+            Luis, 09/09: *«muy grandes los cards; si son dos productos pues
+            los repartimos en columnas, tampoco se llena mucho… así todo está
+            en una sola página sin hacer tanto scroll»*.
+
+            Y tiene razón en lo segundo tanto como en lo primero: esto se
+            decide comparando —a este le saco 15 %, a este 19 %— y comparar
+            dos cifras que no caben a la vez obliga a memorizar una.
+
+            Dos columnas y no tres: los campos llevan etiqueta y un tercio de
+            pantalla las parte en dos líneas.
+          */}
+          <div className="grid gap-3 xl:grid-cols-2">
+            {filas
+              .filter((f) => f.celdas.some((c) => c.costoUsd !== null))
+              .map((f) => (
+                <AjustarVenta
+                  key={f.item.item_id}
+                  productoId={f.item.producto_id}
+                  codigo={f.item.codigo}
+                  descripcion={f.item.descripcion}
+                  referencia={
+                    referencias[f.item.producto_id] ??
+                    referenciaVacia(f.item.producto_id)
+                  }
+                  ofertas={f.celdas
+                    .filter((c) => c.costoUsd !== null)
+                    .map((c) => ({
+                      proveedor:
+                        proveedores.find(
+                          (p) => p.consulta_proveedor_id === c.consulta_proveedor_id,
+                        )?.proveedor ?? "—",
+                      costoUsd: c.costoUsd!,
+                    }))}
+                />
+              ))}
+          </div>
         </section>
       ) : null}
       {/* -------------------------------------------------------- El cierre */}

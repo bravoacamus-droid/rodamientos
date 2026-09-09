@@ -111,14 +111,29 @@ export function AjustarVenta({
   }
 
   return (
+    /*
+      Media pantalla de ancho, y eso cambia el reparto de dentro.
+
+      Luis, 09/09: *«muy grandes los cards… así todo está en una sola página
+      sin hacer tanto scroll»*. Lo que sobraba no eran los datos, era el
+      aire: tres bloques apilados donde caben dos, y el margen y el botón
+      ocupando una línea cada uno para decir doce palabras entre los dos.
+
+      La descripción se trunca. Entera son dos líneas y media —«TMAS100-005
+      CHAPAS CALIBRADAS SKF DE 0.05mm ESPESOR (KIT 10 UNID)»— para decir lo
+      que el código ya dice; y quien está aquí acaba de verla arriba en la
+      rejilla. Al pasar por encima sale entera.
+    */
     <section className="card flex flex-col gap-3 p-4">
       <div>
         <span className="font-mono text-base font-semibold">{codigo}</span>
-        <p className="text-sm text-[var(--fg-muted)]">{descripcion}</p>
+        <p className="truncate text-sm text-[var(--fg-muted)]" title={descripcion}>
+          {descripcion}
+        </p>
       </div>
 
       {/* Lo que te cuesta. Con dos o más, en dos colores. */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 [&>span]:py-1.5">
         {barata ? (
           <span
             className={`flex min-w-0 flex-1 flex-col rounded-md px-3 py-2 ${
@@ -130,7 +145,7 @@ export function AjustarVenta({
             <span className="text-sm opacity-80">
               {cara ? "El más barato" : "Te lo dejan a"}
             </span>
-            <strong className="text-lg tabular-nums">
+            <strong className="text-base tabular-nums">
               {formatearMoneda(barata.costoUsd, "USD")}
             </strong>
             <span className="truncate text-sm opacity-80">{barata.proveedor}</span>
@@ -138,7 +153,7 @@ export function AjustarVenta({
         ) : (
           <span className="flex min-w-0 flex-1 flex-col rounded-md bg-[var(--surface-2)] px-3 py-2">
             <span className="text-sm text-[var(--fg-subtle)]">Te lo dejan a</span>
-            <strong className="text-lg text-[var(--fg-subtle)]">—</strong>
+            <strong className="text-base text-[var(--fg-subtle)]">—</strong>
             <span className="text-sm text-[var(--fg-subtle)]">nadie ha contestado</span>
           </span>
         )}
@@ -146,7 +161,7 @@ export function AjustarVenta({
         {cara ? (
           <span className="flex min-w-0 flex-1 flex-col rounded-md bg-[var(--danger-bg)] px-3 py-2 text-[var(--danger)]">
             <span className="text-sm opacity-80">El más caro</span>
-            <strong className="text-lg tabular-nums">
+            <strong className="text-base tabular-nums">
               {formatearMoneda(cara.costoUsd, "USD")}
             </strong>
             <span className="truncate text-sm opacity-80">{cara.proveedor}</span>
@@ -155,7 +170,7 @@ export function AjustarVenta({
       </div>
 
       {/* Y a cuánto lo vendes. Editable aquí mismo. */}
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+      <div className="grid gap-3 sm:grid-cols-2">
         <Campo
           id={`venta-${productoId}`}
           label="Precio de venta ($)"
@@ -203,7 +218,35 @@ export function AjustarVenta({
         <Campo
           id={`piso-${productoId}`}
           label="Precio mínimo de venta ($)"
-          ayuda="Lo más barato que aceptas venderlo. 0 = sin mínimo."
+          /*
+            El mínimo se precarga desde `productos.precio_minimo` igual que la
+            venta —y se leen los dos con `positivo()`, así que un 0 en la base
+            llega como «sin definir», que es lo que significa—. Lo que faltaba
+            era poder deshacer: se teclea encima y el que había desaparece.
+
+            Misma regla que arriba: el «vuelve a» solo cuando hay algo que
+            deshacer; si no, la explicación de qué es esto.
+          */
+          ayuda={
+            piso !== original.piso ? (
+              <>
+                Ahora está en{" "}
+                <strong>{original.piso === "" ? "sin mínimo" : `${original.piso}`}</strong>.{" "}
+                <button
+                  type="button"
+                  className="text-brand-600 underline"
+                  onClick={() => {
+                    setPiso(original.piso);
+                    setGuardado(false);
+                  }}
+                >
+                  Volver a ese
+                </button>
+              </>
+            ) : (
+              "Lo más barato que aceptas. 0 = sin mínimo."
+            )
+          }
         >
           <Input
             id={`piso-${productoId}`}
@@ -216,33 +259,36 @@ export function AjustarVenta({
             }}
           />
         </Campo>
-        <div className="flex items-end">
-          <Button
-            type="button"
-            onClick={guardar}
-            disabled={enCurso || !cambiado}
-            variant={cambiado ? "primary" : "outline"}
-          >
-            {enCurso ? "Guardando…" : guardado ? "Guardado" : "Guardar"}
-          </Button>
-        </div>
       </div>
 
-      <p className="text-sm">
-        {margen !== null ? (
-          <>
-            <span className="text-[var(--fg-muted)]">Con estos números te queda un </span>
-            <strong className={margen < 10 ? "text-[var(--warn)]" : ""}>
-              {margen}% de margen
-            </strong>
-            <span className="text-[var(--fg-muted)]"> sobre el costo.</span>
-          </>
-        ) : (
-          <span className="text-[var(--fg-muted)]">
-            El margen sale cuando haya un costo y un precio de venta.
-          </span>
-        )}
-      </p>
+      {/* El margen y el botón comparten línea: el margen es la razón por la
+          que se pulsa Guardar, así que leerlo y guardar sin mover los ojos
+          es justo lo que se hace aquí. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm">
+          {margen !== null ? (
+            <>
+              <span className="text-[var(--fg-muted)]">Te queda un </span>
+              <strong className={margen < 10 ? "text-[var(--warn)]" : ""}>
+                {margen}% de margen
+              </strong>
+              <span className="text-[var(--fg-muted)]"> sobre el costo.</span>
+            </>
+          ) : (
+            <span className="text-[var(--fg-muted)]">
+              El margen sale cuando haya un costo y un precio de venta.
+            </span>
+          )}
+        </p>
+        <Button
+          type="button"
+          onClick={guardar}
+          disabled={enCurso || !cambiado}
+          variant={cambiado ? "primary" : "outline"}
+        >
+          {enCurso ? "Guardando…" : guardado ? "Guardado" : "Guardar"}
+        </Button>
+      </div>
 
       {error ? (
         <p
