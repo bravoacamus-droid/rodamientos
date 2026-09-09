@@ -2736,56 +2736,6 @@ export type Database = {
         }
         Relationships: []
       }
-      plantillas_mensaje: {
-        Row: {
-          activa: boolean
-          actualizado_en: string
-          asunto: string | null
-          canal: Database["public"]["Enums"]["canal_mensaje"]
-          creado_en: string
-          creado_por: string | null
-          cuerpo: string
-          id: string
-          nombre: string
-          predeterminada: boolean
-          uso: Database["public"]["Enums"]["uso_plantilla"]
-        }
-        Insert: {
-          activa?: boolean
-          actualizado_en?: string
-          asunto?: string | null
-          canal?: Database["public"]["Enums"]["canal_mensaje"]
-          creado_en?: string
-          creado_por?: string | null
-          cuerpo: string
-          id?: string
-          nombre: string
-          predeterminada?: boolean
-          uso?: Database["public"]["Enums"]["uso_plantilla"]
-        }
-        Update: {
-          activa?: boolean
-          actualizado_en?: string
-          asunto?: string | null
-          canal?: Database["public"]["Enums"]["canal_mensaje"]
-          creado_en?: string
-          creado_por?: string | null
-          cuerpo?: string
-          id?: string
-          nombre?: string
-          predeterminada?: boolean
-          uso?: Database["public"]["Enums"]["uso_plantilla"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "plantillas_mensaje_creado_por_fkey"
-            columns: ["creado_por"]
-            isOneToOne: false
-            referencedRelation: "perfiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       producto_equivalencias: {
         Row: {
           clase: string
