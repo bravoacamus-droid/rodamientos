@@ -8,6 +8,8 @@ import {
   mejorConocido,
   porcentajeQueDiceAlgo,
   referenciaVacia,
+  diasPropuestos,
+  textoDeLosDias,
   tieneAlgoQueDecir,
   type ProveedorConocido,
   type Referencia,
@@ -226,5 +228,66 @@ describe("tieneAlgoQueDecir", () => {
         proveedores: [prov("v1", "CORPUS", 0)],
       }),
     ).toBe(false);
+  });
+});
+
+describe("diasPropuestos", () => {
+  it("propone lo que se le prometió al cliente, que es lo que hay que defender", () => {
+    const ref = {
+      ...referenciaVacia("p-1"),
+      disponibilidad: "exterior" as const,
+      diasPrometidos: 21,
+    };
+    expect(diasPropuestos(ref)).toBe(21);
+  });
+
+  it("sin promesa, el plazo de siempre de esa disponibilidad", () => {
+    // 15 para exterior y 3 para fabricación son los de Willy (040).
+    expect(
+      diasPropuestos({ ...referenciaVacia("p-1"), disponibilidad: "exterior" }),
+    ).toBe(15);
+    expect(
+      diasPropuestos({ ...referenciaVacia("p-1"), disponibilidad: "fabricacion" }),
+    ).toBe(3);
+  });
+
+  it("inmediata no tiene plazo, y eso no es lo mismo que cero", () => {
+    expect(
+      diasPropuestos({ ...referenciaVacia("p-1"), disponibilidad: "inmediata" }),
+    ).toBeNull();
+  });
+
+  it("sin referencia no propone nada, y no revienta", () => {
+    // Pasa al pedir precio desde la ficha de un producto: no hay pedido
+    // detrás, así que no hay nada prometido.
+    expect(diasPropuestos(undefined)).toBeNull();
+    expect(diasPropuestos(referenciaVacia("p-1"))).toBeNull();
+  });
+});
+
+describe("textoDeLosDias", () => {
+  it("dice que el número viene de lo prometido al cliente", () => {
+    const ref = {
+      ...referenciaVacia("p-1"),
+      disponibilidad: "exterior" as const,
+      diasPrometidos: 21,
+    };
+    expect(textoDeLosDias(ref)).toContain("21");
+    expect(textoDeLosDias(ref)).toContain("prometió");
+  });
+
+  it("y si no, que es el plazo de siempre", () => {
+    // Sin esto un 15 puesto solo se lee como algo que dijo el proveedor.
+    const texto = textoDeLosDias({
+      ...referenciaVacia("p-1"),
+      disponibilidad: "exterior",
+    });
+    expect(texto).toContain("15");
+    expect(texto).toContain("exterior");
+  });
+
+  it("no dice nada cuando no hay nada que explicar", () => {
+    expect(textoDeLosDias(undefined)).toBeUndefined();
+    expect(textoDeLosDias(referenciaVacia("p-1"))).toBeUndefined();
   });
 });

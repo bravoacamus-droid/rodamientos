@@ -1,4 +1,8 @@
-import type { Disponibilidad } from "@/modules/cotizaciones/dominio/disponibilidad";
+import {
+  DIAS_POR_DEFECTO,
+  ETIQUETA_DISPONIBILIDAD,
+  type Disponibilidad,
+} from "@/modules/cotizaciones/dominio/disponibilidad";
 
 /**
  * Contra qué se compara el precio que te acaban de dar.
@@ -285,4 +289,45 @@ export function tieneAlgoQueDecir(ref: Referencia): boolean {
 function redondear(n: number, decimales: number): number {
   const f = 10 ** decimales;
   return Math.round((n + Number.EPSILON) * f) / f;
+}
+
+/**
+ * Cuántos días de entrega proponerle a un proveedor, antes de que conteste.
+ *
+ * Luis, 09/09: *«que me traiga los días que se puso en cotización o los
+ * valores por defecto, que es 15»*. En ese orden, que es el de lo más
+ * concreto a lo más general:
+ *
+ *  1. Los que se le prometieron al cliente en la cotización. Es el número
+ *     que hay que defender, así que es el primero que se propone.
+ *  2. Si no hay promesa, el plazo de siempre de su disponibilidad: 15 para
+ *     exterior, 3 para fabricación (`DIAS_POR_DEFECTO`, de la 040).
+ *  3. `inmediata` no tiene plazo —es lo que significa inmediata— y sin
+ *     referencia tampoco hay nada que proponer: el campo se queda vacío.
+ *
+ * Es una PROPUESTA. Lo que diga el proveedor la pisa, y esa es la respuesta
+ * de verdad.
+ */
+export function diasPropuestos(ref: Referencia | undefined): number | null {
+  if (ref === undefined) return null;
+  if (ref.diasPrometidos !== null && ref.diasPrometidos > 0) return ref.diasPrometidos;
+  if (ref.disponibilidad === null) return null;
+  return DIAS_POR_DEFECTO[ref.disponibilidad];
+}
+
+/**
+ * De dónde salió el número que trae el campo.
+ *
+ * Sin esto, un 15 puesto solo se lee como algo que dijo el proveedor —y no
+ * lo dijo—. La frase va debajo del campo, que es donde se mira al dudar.
+ */
+export function textoDeLosDias(ref: Referencia | undefined): string | undefined {
+  if (ref === undefined) return undefined;
+  if (ref.diasPrometidos !== null && ref.diasPrometidos > 0) {
+    return `${ref.diasPrometidos} es lo que se le prometió al cliente`;
+  }
+  if (ref.disponibilidad === null) return undefined;
+  const dias = DIAS_POR_DEFECTO[ref.disponibilidad];
+  if (dias === null) return "Inmediata: sin plazo que apuntar.";
+  return `${dias} es lo normal de ${ETIQUETA_DISPONIBILIDAD[ref.disponibilidad].toLowerCase()}`;
 }

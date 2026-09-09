@@ -34,6 +34,8 @@ import {
 import {
   alertaDePrecio,
   contraReferencia,
+  diasPropuestos,
+  textoDeLosDias,
   margenSi,
   porcentajeQueDiceAlgo,
   referenciaVacia,
@@ -101,16 +103,37 @@ export function PanelRespuesta({
     proveedor.tipo_cambio === null ? "" : String(proveedor.tipo_cambio),
   );
   const [incluyeIgv, setIncluyeIgv] = React.useState(proveedor.incluye_igv);
-  const [validez, setValidez] = React.useState(proveedor.validez_hasta ?? "");
   const [nota, setNota] = React.useState(proveedor.nota ?? "");
 
   const [lineas, setLineas] = React.useState(() =>
     items.map((i) => {
       const r = previas.get(i.item_id);
+      /*
+        Los días vienen puestos, no en gris.
+
+        Luis, 09/09: *«dentro del producto, lo que es días hay que ponerle un
+        nombre más específico, de los días de entrega, como es exterior; y
+        que me traiga los días que se puso en cotización o los valores por
+        defecto, que es 15»*.
+
+        Estaba de PLACEHOLDER a propósito —el plazo prometido al cliente no
+        es el que da el proveedor— y ese razonamiento sigue siendo verdad,
+        pero pesa menos que teclear el mismo 15 en cada línea de cada ronda.
+        El apaño es que se vea de dónde salió: debajo del campo se dice si
+        es del pedido o el plazo de siempre, y basta pisarlo.
+
+        Lo que ya contestó el proveedor manda sobre todo esto.
+      */
+      const propuestos = diasPropuestos(referencias[i.producto_id]);
       return {
         item_id: i.item_id,
         costo: r?.costo_unitario === null || r === undefined ? "" : String(r.costo_unitario),
-        dias: r?.dias_entrega === null || r === undefined ? "" : String(r.dias_entrega),
+        dias:
+          r?.dias_entrega !== null && r?.dias_entrega !== undefined
+            ? String(r.dias_entrega)
+            : propuestos === null
+              ? ""
+              : String(propuestos),
         // Lo normal es que sí lo tenga: se destilda el que no.
         disponible: r?.disponible ?? true,
         // Solo vive en esta pantalla: la base guarda «no disponible» y la
@@ -204,7 +227,9 @@ export function PanelRespuesta({
         moneda,
         tipo_cambio: moneda === "USD" ? null : tcNum,
         incluye_igv: incluyeIgv,
-        validez_hasta: validez.trim() === "" ? null : validez,
+        // Ya no se pregunta, pero lo que hubiera se respeta: dejar de
+        // enseñar un dato no es motivo para borrarlo.
+        validez_hasta: proveedor.validez_hasta,
         // Ya no hay plazo de cabecera: el de cada línea es el que manda, y el
         // servidor cae a este solo si una línea no trae el suyo.
         dias_entrega: null,
@@ -308,14 +333,19 @@ export function PanelRespuesta({
               </Campo>
             ) : null}
 
-            <Campo id="validez-respuesta" label="Precio válido hasta">
-              <Input
-                id="validez-respuesta"
-                type="date"
-                value={validez}
-                onChange={(e) => setValidez(e.target.value)}
-              />
-            </Campo>
+            {/*
+              Aquí había un «Precio válido hasta».
+
+              Luis, 09/09, de parte de Willy: *«en el modal de registro de
+              precio me vas a quitar lo de válido hasta, eso nada que ver»*.
+              El comentario de la 055 decía «Willy lo pregunta siempre», y
+              resulta que no: lo preguntaba yo.
+
+              La columna se queda en la base y lo ya guardado se conserva al
+              guardar de nuevo. Quitar el campo es deshacer una pregunta que
+              no se hacía; borrar la columna es otra decisión, y no la ha
+              pedido nadie.
+            */}
           </div>
 
           <CheckboxCampo
@@ -410,29 +440,21 @@ export function PanelRespuesta({
                       />
                     </Campo>
 
-                    <Campo id={`dias-${item.item_id}`} label="Días">
+                    <Campo
+                      id={`dias-${item.item_id}`}
+                      label="Días de entrega"
+                      ayuda={textoDeLosDias(ref)}
+                    >
                       <Input
                         id={`dias-${item.item_id}`}
                         inputMode="numeric"
                         className="text-right tabular-nums"
                         value={linea.dias}
                         disabled={!linea.disponible}
-                        /*
-                          El plazo prometido al cliente, propuesto.
-
-                          Luis: «si en cotización puse exterior ya sabe cuántos
-                          días va a demorar, pero en compras sí puede editar los
-                          días: seguro le dijo que va a demorar menos o más».
-
-                          Va de PLACEHOLDER y no de valor: es lo que prometimos
-                          nosotros, no lo que dijo el proveedor. Como valor se
-                          guardaría sin que nadie lo confirmara, y la promesa
-                          acabaría citándose a sí misma como si fuera un plazo
-                          pactado.
-                        */
-                        placeholder={
-                          ref.diasPrometidos ? String(ref.diasPrometidos) : "—"
-                        }
+                        // Luis: «en compras sí puede editar los días: seguro
+                        // le dijo que va a demorar menos o más». Se propone
+                        // y se pisa; de dónde sale, en la ayuda de abajo.
+                        placeholder="—"
                         onChange={(e) => cambiar(item.item_id, "dias", e.target.value)}
                       />
                     </Campo>
