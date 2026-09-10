@@ -8,14 +8,17 @@ import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Input, SelectNativo } from "@rodatech/ui";
 
+import { FiltroCliente } from "@/componentes/filtro-cliente";
+
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
 
 const ESPERA_MS = 300;
 
 export function FiltrosFacturacionBarra({
-  clientes,
+  nombreCliente,
 }: {
-  clientes: { id: string; razon_social: string }[];
+  /** La razón social del cliente filtrado, si hay uno. */
+  nombreCliente: string | null;
 }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -49,8 +52,17 @@ export function FiltrosFacturacionBarra({
   }, [texto, aplicar]);
 
   return (
-    <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
-      <label className="flex min-w-56 flex-1 flex-col gap-1">
+    /*
+      Rejilla, no `flex-wrap`.
+
+      Luis, 10/09: *«ese select, para que los filtros de desde y hasta estén
+      alineados»*. Con flex libre, el desplegable de clientes se estiraba al
+      ancho del nombre más largo de la cartera y empujaba las dos fechas a la
+      fila de abajo. En rejilla, cada filtro ocupa lo que le toca y la fila no
+      depende de los datos.
+    */
+    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto_auto]">
+      <label className="flex flex-col gap-1">
         <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
@@ -60,20 +72,11 @@ export function FiltrosFacturacionBarra({
         />
       </label>
 
-      <label className="flex min-w-48 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Cliente</span>
-        <SelectNativo
-          value={params.get("cliente") ?? ""}
-          onChange={(e) => aplicar("cliente", e.target.value)}
-        >
-          <option value="">Todos</option>
-          {clientes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.razon_social}
-            </option>
-          ))}
-        </SelectNativo>
-      </label>
+      <FiltroCliente
+        valor={params.get("cliente")}
+        nombre={nombreCliente}
+        onCambiar={(id) => aplicar("cliente", id ?? "")}
+      />
 
       <label className="flex flex-col gap-1">
         <span className="text-xs font-medium text-[var(--fg-muted)]">Tipo</span>

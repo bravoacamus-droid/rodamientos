@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { perfilActual } from "@rodatech/db/servidor";
+
+import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 
 import type { FiltrosGuias } from "../dominio/tipos";
 import { FiltrosGuiasBarra } from "./filtros";
@@ -36,15 +38,12 @@ export default async function PaginaGuias({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const supabase = await clienteServidor();
-  const [{ data: clientes }, perfil] = await Promise.all([
-    supabase
-      .from("clientes")
-      .select("id, razon_social")
-      .eq("activo", true)
-      .order("razon_social")
-      .limit(500),
+  /* Ya no se traen 500 clientes en cada carga para llenar un desplegable:
+     el filtro busca contra el servidor. De aquí solo sale el nombre del que
+     esté filtrado, para poder pintarlo. */
+  const [perfil, cliente] = await Promise.all([
     perfilActual(),
+    filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
   ]);
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -83,7 +82,7 @@ export default async function PaginaGuias({ searchParams }: Props) {
       </div>
 
       <section className="card pt-4">
-        <FiltrosGuiasBarra clientes={clientes ?? []} />
+        <FiltrosGuiasBarra nombreCliente={cliente?.ok ? cliente.nombre : null} />
 
         <Suspense
           key={JSON.stringify(filtros)}

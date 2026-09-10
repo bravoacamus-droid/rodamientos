@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { perfilActual } from "@rodatech/db/servidor";
+
+import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 
 import { estadoConfiguracion } from "../api/configuracion";
 import type { FiltrosComprobantes } from "../dominio/tipos";
@@ -39,16 +41,19 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const supabase = await clienteServidor();
-  const [{ data: clientes }, perfil, config] = await Promise.all([
-    supabase
-      .from("clientes")
-      .select("id, razon_social")
-      .eq("activo", true)
-      .order("razon_social")
-      .limit(500),
+  /*
+    Ya no se traen los clientes.
+
+    Eran 500 en CADA carga de la página, se filtrara por cliente o no, para
+    llenar un desplegable que casi nunca se abría. Ahora el filtro busca contra
+    el servidor mientras se teclea, y de aquí solo sale el nombre del que esté
+    filtrado —una fila— para poder pintarlo sin que el chip diga «cliente
+    8f3a…».
+  */
+  const [perfil, config, cliente] = await Promise.all([
     perfilActual(),
     estadoConfiguracion(),
+    filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
   ]);
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -157,7 +162,9 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
       ) : null}
 
       <section className="card pt-4">
-        <FiltrosFacturacionBarra clientes={clientes ?? []} />
+        <FiltrosFacturacionBarra
+          nombreCliente={cliente?.ok ? cliente.nombre : null}
+        />
 
         <Suspense
           key={JSON.stringify(filtros)}
