@@ -38,11 +38,22 @@ export type EstadoDocumento =
   | "atendida"
   | "anulada"
   | "vencida"
-  // Ciclo SUNAT
-  | "enviada_sunat"
-  | "aceptada_sunat"
-  | "rechazada_sunat"
-  | "baja_sunat"
+  /*
+    Ciclo SUNAT — los ocho del enum `estado_sunat` de la base.
+
+    Antes había cuatro aquí —`enviada_sunat`, `aceptada_sunat`,
+    `rechazada_sunat`, `baja_sunat`— que no los usaba nadie y que además no
+    coincidían con el esquema: facturación tenía su propio mapa de tonos con
+    los nombres reales. Dos catálogos para lo mismo, y el que se usaba era el
+    que no tenía punto.
+  */
+  | "no_enviado"
+  | "enviado"
+  | "aceptado"
+  | "observado"
+  | "rechazado"
+  | "baja_solicitada"
+  | "baja_aceptada"
   // Cobranza
   | "pendiente"
   | "parcial"
@@ -76,10 +87,21 @@ const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
   anulada: { etiqueta: "Anulada", tono: "rojo", forma: "raya", matiz: "sin efecto" },
   vencida: { etiqueta: "Vencida", tono: "ambar", forma: "anillo" },
 
-  enviada_sunat: { etiqueta: "Enviada a SUNAT", tono: "azul", forma: "anillo", matiz: "esperando respuesta" },
-  aceptada_sunat: { etiqueta: "Aceptada por SUNAT", tono: "verde", forma: "relleno" },
-  rechazada_sunat: { etiqueta: "Rechazada por SUNAT", tono: "rojo", forma: "raya", matiz: "requiere corrección" },
-  baja_sunat: { etiqueta: "Dada de baja", tono: "gris", forma: "raya" },
+  /*
+    Gris = no ha salido de casa. Azul = va de camino. Verde = aceptado. Ámbar =
+    hay que mirarlo. Rojo = parado.
+
+    «Observado» es aviso y no error, y esto viene del comentario de
+    `facturacion/dominio/tipos.ts`: SUNAT lo aceptó, pero con reparos. En rojo
+    se trataría como un rechazo y se reemitiría un documento que ya es válido.
+  */
+  no_enviado: { etiqueta: "Sin enviar", tono: "gris", forma: "hueco", matiz: "todavía no salió a SUNAT" },
+  enviado: { etiqueta: "Enviado", tono: "azul", forma: "anillo", matiz: "esperando respuesta de SUNAT" },
+  aceptado: { etiqueta: "Aceptado", tono: "verde", forma: "relleno" },
+  observado: { etiqueta: "Observado", tono: "ambar", forma: "anillo", matiz: "aceptado, pero con reparos" },
+  rechazado: { etiqueta: "Rechazado", tono: "rojo", forma: "raya", matiz: "requiere corrección" },
+  baja_solicitada: { etiqueta: "Baja pedida", tono: "ambar", forma: "raya" },
+  baja_aceptada: { etiqueta: "Dado de baja", tono: "rojo", forma: "raya", matiz: "sin efecto" },
 
   pendiente: { etiqueta: "Pendiente", tono: "ambar", forma: "hueco" },
   parcial: { etiqueta: "Pago parcial", tono: "ambar", forma: "anillo" },
@@ -153,7 +175,7 @@ export function EstadoBadge({ estado, etiqueta, size = "sm", className }: Estado
         CLASES_TONO[def.tono],
         TAMANOS[size],
         // Un documento anulado se lee tachado además de en rojo.
-        (estado === "anulada" || estado === "baja_sunat") && "line-through decoration-1",
+        (estado === "anulada" || estado === "baja_aceptada") && "line-through decoration-1",
         className,
       )}
     >

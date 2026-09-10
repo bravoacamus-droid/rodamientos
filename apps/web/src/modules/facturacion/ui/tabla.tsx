@@ -1,11 +1,17 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
+import {
+  Badge,
+  EstadoBadge,
+  EstadoError,
+  EstadoVacio,
+  Moneda,
+  PaginacionKeyset,
+} from "@rodatech/ui";
 
 import { listarComprobantes } from "../api/consultas";
 import {
   ETIQUETA_SUNAT,
   ETIQUETA_TIPO,
-  TONO_SUNAT,
   type FiltrosComprobantes,
 } from "../dominio/tipos";
 
@@ -94,14 +100,23 @@ export async function TablaComprobantes({
                   style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
                 >
                   <td className="px-4 py-2.5">
-                    <Link
-                      href={`/facturacion/${c.id}`}
-                      className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
-                    >
-                      {c.numero}
-                    </Link>
-                    <span className="block text-xs text-[var(--fg-subtle)]">
-                      {ETIQUETA_TIPO[c.tipo]}
+                    {/*
+                      El tipo, al lado del número y no debajo en gris.
+
+                      Es lo primero que hay que saber de una fila —una nota de
+                      crédito no se lee como una factura— y en 12 px grises se
+                      perdía. Como en el prototipo de Luis (10/09).
+                    */}
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <Link
+                        href={`/facturacion/${c.id}`}
+                        className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                      >
+                        {c.numero}
+                      </Link>
+                      <Badge tone={c.tipo === "nota_credito" ? "warning" : "info"} size="xs">
+                        {ETIQUETA_TIPO[c.tipo]}
+                      </Badge>
                     </span>
                   </td>
 
@@ -144,9 +159,18 @@ export async function TablaComprobantes({
                   </td>
 
                   <td className="px-4 py-2.5">
-                    <Badge tone={TONO_SUNAT[c.estado_sunat]} size="xs">
-                      {ETIQUETA_SUNAT[c.estado_sunat]}
-                    </Badge>
+                    {/*
+                      El mismo badge que guías y compras.
+
+                      La etiqueta la sigue poniendo el módulo: el catálogo dice
+                      «Enviado» y aquí se llama igual, pero `pendiente` es «En
+                      cola» y eso solo lo sabe facturación.
+                    */}
+                    <EstadoBadge
+                      estado={c.estado_sunat}
+                      etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
+                      size="xs"
+                    />
                     {c.estado === "anulado" ? (
                       <span className="ml-1.5 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
                         Anulado
@@ -171,7 +195,7 @@ export async function TablaComprobantes({
                       </Link>
                       <Link
                         href={`/facturacion/${c.id}/imprimir?auto=1`}
-                        className={`${SECUNDARIO} w-full justify-center`}
+                        className={`${SECUNDARIO} w-full justify-center [&>svg]:text-brand-600`}
                       >
                         <IconoImprimir />
                         Imprimir
@@ -208,9 +232,11 @@ export async function TablaComprobantes({
             <p className="mt-0.5 line-clamp-1 text-sm">{c.cliente ?? "—"}</p>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <Badge tone={TONO_SUNAT[c.estado_sunat]} size="xs">
-                {ETIQUETA_SUNAT[c.estado_sunat]}
-              </Badge>
+              <EstadoBadge
+                estado={c.estado_sunat}
+                etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
+                size="xs"
+              />
               <Moneda valor={c.total} tamano="sm" />
               {c.saldo > 0 ? (
                 <span className="text-[var(--fg-muted)]">
