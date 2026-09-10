@@ -156,6 +156,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
 
       <div className="px-3 py-3 sm:px-4">
         <PaginacionKeyset
+          porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
           cursorAnterior={null}

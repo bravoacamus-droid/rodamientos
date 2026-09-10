@@ -150,7 +150,7 @@ export async function listarClientes(
       .select(COLUMNAS_LISTA_LEFT)
       .order("razon_social", { ascending: true })
       .order("id", { ascending: true })
-      .limit(POR_PAGINA + 1);
+      .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     // El índice keyset es PARCIAL (`where activo`): mientras no se pidan los
     // desactivados, el filtro tiene que estar para que Postgres pueda usarlo.
@@ -184,8 +184,16 @@ export async function listarClientes(
     if (error) return fallo(error);
 
     const todas = (data ?? []).map((f) => conContactos(f)) as unknown as ClienteLista[];
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
+    /*
+      El corte usa el MISMO número que el límite.
+
+      Aquí estaba la mitad del fallo del selector de filas (10/09): se pedían
+      `limite + 1` para saber si hay siguiente, pero se cortaba por
+      `POR_PAGINA` —una constante— así que con 25 pedidas se pintaban 26.
+    */
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const filas = hayMas ? todas.slice(0, porPagina) : todas;
     const ultima = filas[filas.length - 1];
 
     return {

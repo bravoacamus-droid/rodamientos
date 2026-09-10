@@ -23,10 +23,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "../primitivas/button";
 import { SelectNativo } from "../primitivas/input";
-import { PARAMS } from "../tabla/tipos";
+import { PARAMS, TAMANOS_PAGINA, TAMANO_POR_DEFECTO } from "../tabla/tipos";
 import { useParamsTabla } from "../tabla/use-params-tabla";
-
-const TAMANOS = [25, 50, 100, 200] as const;
 
 export interface PaginacionKeysetProps {
   /** Filas que hay ahora en pantalla. */
@@ -47,7 +45,7 @@ export function PaginacionKeyset({
   cursorSiguiente,
   cursorAnterior,
   total,
-  porPagina = 50,
+  porPagina = TAMANO_POR_DEFECTO,
   tamanoAjustable = true,
   className,
 }: PaginacionKeysetProps) {
@@ -82,7 +80,7 @@ export function PaginacionKeyset({
               onChange={(e) => fijar({ [PARAMS.tamano]: e.target.value })}
               className="h-control-sm w-[4.5rem] text-xs"
             >
-              {TAMANOS.map((n) => (
+              {TAMANOS_PAGINA.map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>

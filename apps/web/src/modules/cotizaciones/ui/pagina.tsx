@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 
 import { conteoPorEstado } from "../api/consultas";
 import {
@@ -82,6 +82,7 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    limite: leerTamano(uno(sp.n)),
   };
 
   return (

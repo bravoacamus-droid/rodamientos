@@ -255,6 +255,7 @@ export async function TablaComprobantes({
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
           cursorAnterior={null}
+          porPagina={filtros.limite}
         />
       </div>
     </>

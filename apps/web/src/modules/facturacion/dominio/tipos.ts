@@ -170,6 +170,14 @@ export interface FiltrosComprobantes {
   desde?: string;
   hasta?: string;
   cursor?: string;
+  /**
+   * Filas por página, ya validado.
+   *
+   * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la
+   * URL: es un límite de consulta y aceptar cualquier número es aceptar que
+   * alguien pida cien mil filas.
+   */
+  limite?: number;
 }
 
 /** Lo visible de la configuración fiscal. */

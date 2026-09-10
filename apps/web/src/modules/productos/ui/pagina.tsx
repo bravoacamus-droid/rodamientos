@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { opcionesDeFiltro } from "../api/consultas";
@@ -38,6 +38,7 @@ export default async function PaginaProductos({ searchParams }: Props) {
     subfamilia: uno(sp.subfamilia),
     tipo: uno(sp.tipo),
     cursor: uno(sp.cursor),
+    limite: leerTamano(uno(sp.n)),
     archivados: uno(sp.archivados) === "1",
   };
 

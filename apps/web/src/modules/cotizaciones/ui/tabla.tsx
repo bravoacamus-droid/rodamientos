@@ -256,6 +256,7 @@ export async function TablaCotizaciones({
 
       <div className="px-3 py-3 sm:px-4">
         <PaginacionKeyset
+          porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
           cursorAnterior={null}

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import type { CondicionPago, FiltrosClientes } from "../dominio/tipos";
@@ -42,6 +42,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
     bloqueados: uno(sp.bloqueados) === "1",
     inactivos: uno(sp.inactivos) === "1",
     cursor: uno(sp.cursor),
+    limite: leerTamano(uno(sp.n)),
   };
 
   const perfil = await perfilActual();

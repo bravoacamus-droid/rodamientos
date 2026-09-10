@@ -50,7 +50,7 @@ export async function listarCotizaciones(
          cotizacion_items(count)`,
       )
       .order("numero", { ascending: false })
-      .limit(POR_PAGINA + 1);
+      .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     if (filtros.cursor) consulta = consulta.lt("numero", filtros.cursor);
     if (filtros.estado) consulta = consulta.eq("estado", filtros.estado);
@@ -94,8 +94,16 @@ export async function listarCotizaciones(
       items: c.cotizacion_items?.[0]?.count ?? 0,
     }));
 
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
+    /*
+      El corte usa el MISMO número que el límite.
+
+      Aquí estaba la mitad del fallo del selector de filas (10/09): se pedían
+      `limite + 1` para saber si hay siguiente, pero se cortaba por
+      `POR_PAGINA` —una constante— así que con 25 pedidas se pintaban 26.
+    */
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const filas = hayMas ? todas.slice(0, porPagina) : todas;
 
     return {
       ok: true,

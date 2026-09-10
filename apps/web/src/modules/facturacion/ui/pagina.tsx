@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
@@ -36,6 +36,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    limite: leerTamano(uno(sp.n)),
   };
 
   const supabase = await clienteServidor();

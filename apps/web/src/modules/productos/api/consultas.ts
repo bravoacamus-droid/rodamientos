@@ -44,7 +44,7 @@ export async function listarProductos(
       // Postgres aplique el DEFAULT de la función. Un null explícito es un
       // valor, no una ausencia.
       p_cursor: filtros.cursor ?? undefined,
-      p_limit: POR_PAGINA + 1,
+      p_limit: (filtros.limite ?? POR_PAGINA) + 1,
       p_q: filtros.q ?? undefined,
       p_familia: filtros.familia ?? undefined,
       p_subfamilia: filtros.subfamilia ?? undefined,
@@ -56,8 +56,16 @@ export async function listarProductos(
     if (error) return fallo(error);
 
     const todas = (data ?? []) as unknown as ProductoLista[];
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
+    /*
+      El corte usa el MISMO número que el límite.
+
+      Aquí estaba la mitad del fallo del selector de filas (10/09): se pedían
+      `limite + 1` para saber si hay siguiente, pero se cortaba por
+      `POR_PAGINA` —una constante— así que con 25 pedidas se pintaban 26.
+    */
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const filas = hayMas ? todas.slice(0, porPagina) : todas;
 
     return {
       ok: true,

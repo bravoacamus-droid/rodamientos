@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 
 import { productoDelKardex } from "../api/consultas";
 import type { FiltrosKardex } from "../dominio/tipos";
@@ -38,6 +38,7 @@ export default async function PaginaKardex({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    limite: leerTamano(uno(sp.n)),
   };
 
   const producto = filtros.producto

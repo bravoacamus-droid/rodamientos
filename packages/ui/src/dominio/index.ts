@@ -16,3 +16,7 @@ export { EstadoVacio } from "./estado-vacio";
 export { KpiCard, type KpiCardProps } from "./kpi-card";
 export { Moneda, type MonedaProps } from "./moneda";
 export { PaginacionKeyset, type PaginacionKeysetProps } from "./paginacion-keyset";
+/* El tamaño de página se lee en el SERVIDOR —de la URL— y se pinta en el
+   cliente, así que sale por el índice principal y no solo por `/tabla`, que
+   arrastra TanStack. */
+export { TAMANOS_PAGINA, TAMANO_POR_DEFECTO, leerTamano } from "../tabla/tipos";
