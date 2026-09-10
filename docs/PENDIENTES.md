@@ -1,15 +1,18 @@
 # Pendientes
 
-Estado al **09/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
+Estado al **10/09/2026**. Ordenado por lo que más duele. Lo ya resuelto vive
 al final, con la lección, porque los tres casos se habían diagnosticado mal y
 volver a caer sale caro.
 
-> **Si retomas hoy, empieza por §AI (09/09) y §AH (08/09).**
+> **Si retomas hoy, empieza por §AJ (10/09) y §AI (09/09).**
 >
-> El 09/09 fue el módulo de **compras** de punta a punta, otra vez con Luis
-> probando y mandando capturas: once commits y dos migraciones (075 fuera las
-> plantillas de mensaje, 076 el papel del pago). Está en **§AI**, con lo que
-> quedó abierto en **§AI.10**.
+> El 10/09 fueron **las listas**: guías, compras y facturación contra el
+> prototipo de Luis. Cinco commits, ninguna migración. Lo que se llevó el día
+> no fue el diseño sino **tres cables que nunca se conectaron**, los tres en
+> TODAS las tablas del ERP: el selector de filas no mandaba nada, el botón de
+> volver no existía y los estados se pintaban con dos catálogos distintos.
+> Está en **§AJ**, con lo abierto en **§AJ.6** — y ahí está lo primero de
+> mañana, que son cinco tablas a medias.
 >
 > **Lo siguiente, por orden:**
 >
@@ -17,13 +20,16 @@ volver a caer sale caro.
 >    `T002`, `F002`; el sistema tiene otras de prueba. Es lo más urgente de
 >    todo: si emite con las nuestras, los correlativos no cuadran con lo
 >    declarado. Lleva bloqueado desde el 07/09 — van tres días.
-> 2. **Correr `limpiar-pruebas.sql`.** Lo tiene que hacer Luis, y ahora hay
+> 2. **Terminar las cinco tablas a medias** de §AJ.6: el botón de volver y el
+>    selector de filas.
+> 3. **Correr `limpiar-pruebas.sql`.** Lo tiene que hacer Luis, y ahora hay
 >    más que limpiar (§AI.10).
-> 3. **El tablero**, que es lo que queda del rediseño del 08/09.
+> 4. **El tablero**, que es lo que queda del rediseño del 08/09.
 >
-> Y la lección de método, que el 09/09 volvió a repetirse punto por punto:
-> **todo lo corregido salió de que Luis mirara una captura**, no de los
-> tests. Los 1185 estaban en verde en cada uno de esos momentos.
+> Y la lección de método, que lleva tres días repitiéndose punto por punto:
+> **todo lo corregido sale de que Luis mire una captura**, no de los tests.
+> Los 1185 estaban en verde en cada uno de esos momentos — y los tres fallos
+> del 10/09 llevaban meses en el repo.
 
 ---
 
@@ -4499,6 +4505,164 @@ de Defontana.
       6205, ver R2—. Lo correcto es pasar un ajuste de inventario que las
       saque, y solo después borrar los documentos.
 - [ ] Decidir si los 7 productos de ejemplo se quedan (son datos reales suyos)
+
+---
+
+## §AJ · 10/09 — Las listas, y tres cables sueltos
+
+Día de listas, con Luis comparando cada pantalla contra su prototipo. Cinco
+commits, ninguna migración.
+
+Lo que se llevó el día no fue el diseño: fueron **tres cosas que nunca se
+terminaron de conectar** y que salieron tirando del hilo de un detalle visual.
+Las tres estaban en TODAS las tablas del ERP, no en la que Luis miraba.
+
+---
+
+### AJ.1 · El «+», el icono de imprimir y la cabecera vacía
+
+Luis, comparando guías con su prototipo: *«hay que arreglar; el nuestro no
+tiene ese + en Preparar guía. El botón de imprimir podemos ponerle ese botón
+azul así bonito»*.
+
+El «+» va **solo** en el botón que crea algo. Ver e Imprimir trabajan sobre lo
+que ya está, y un icono que lleva únicamente el que crea es una pista que se
+lee antes que el texto. En facturación, lo mismo con dos botones juntos:
+engranaje en Configuración, «+» en Emitir comprobante.
+
+El de imprimir lleva el icono en azul de marca y **no** relleno: veinte botones
+azules en una lista gritan a la vez y le comen el sitio al único que crea algo.
+
+Y la columna de acciones tenía la cabecera vacía. Con una fila no se nota; con
+veinte, los dos botones flotan sin decir de qué son.
+
+### AJ.2 · Los estados: dos catálogos para lo mismo
+
+Luis: *«podemos cambiar los colores así como estado, que vaya acorde»*.
+
+`EstadoBadge` existe en `@rodatech/ui` desde hace tiempo y hace justo lo que
+pedía —punto de color, forma distinta por estado, etiqueta del negocio,
+anuladas tachadas— pero **guías, compras y facturación se pintaban con `Badge`
+a secas y su propio mapa de tonos**. El mismo estado se veía de una forma en
+cotizaciones y de otra en guías, y con el color como único canal.
+
+> ⚠️ Y en facturación había algo peor: el catálogo tenía **cuatro estados
+> SUNAT** —`enviada_sunat`, `aceptada_sunat`, `rechazada_sunat`, `baja_sunat`—
+> que **no los usaba nadie** y que ni siquiera coincidían con el enum
+> `estado_sunat` de la base. Los cuatro muertos salieron; entraron los ocho
+> reales.
+
+El criterio de color queda dicho una sola vez, en el catálogo: **gris = no ha
+salido de casa, azul = va de camino, verde = aceptado, ámbar = hay que
+mirarlo, rojo = parado.**
+
+Dos cambios de significado que salieron de aplicarlo:
+
+- **Una guía emitida es AZUL, no verde.** Verde es «terminado bien», y emitir
+  no termina nada: descarga el stock y arranca lo siguiente, con la factura
+  esperando. Azul es «en curso», que es donde queda.
+- **«Observado» sigue en ámbar y no en rojo.** SUNAT lo aceptó con reparos; en
+  rojo se trataría como un rechazo y se reemitiría un documento que ya es
+  válido. Estaba en un comentario de `facturacion/dominio/tipos.ts` y ahora
+  está en el catálogo, donde lo ve todo el mundo.
+
+**Falta cotizaciones**, que sigue con los badges planos.
+
+### AJ.3 · El selector de filas no mandaba nada · las siete tablas
+
+Luis: *«pongo 25 y no se ponen 25, queda en 50; tienes que revisar bien»*.
+
+Roto en **las siete tablas**. El desplegable escribía `?n=25` en la URL y
+NINGUNA página lo leía: la lista se traía con el límite fijo del módulo —30 en
+facturación, guías, compras y cotizaciones; 50 en el resto— y el selector
+pintaba un número que no mandaba nada.
+
+Y tenía dos mitades, las dos hay que arreglarlas:
+
+1. El `.limit()` usaba la constante.
+2. **El corte también**: se pedían `limite + 1` filas para saber si hay
+   siguiente y se cortaba por `POR_PAGINA`, así que con 25 pedidas se pintaban
+   **26**. Esto se vio en pantalla DESPUÉS del primer arreglo, no antes.
+
+`leerTamano` vive ahora en `@rodatech/ui` junto a la lista de tamaños, que era
+una constante privada del componente. Hacía falta en dos sitios que no se
+hablaban: el `<select>` que la pinta y el servidor que valida lo que llega. Con
+la lista solo en el componente, el servidor no tenía con qué comparar — y no
+comparaba. `?n=100000` habría sido una consulta que tumba la página.
+
+### AJ.4 · Se podía avanzar y no volver · las diez tablas
+
+Luis: *«le doy siguiente, sí pasa, pero no deja el botón de regresar»*.
+
+**`cursorAnterior={null}` está escrito así, literal, en las diez tablas**, y
+ninguna consulta sabía ir hacia atrás. La paginación era de una sola vía desde
+el principio.
+
+Ir atrás es el mismo keyset del revés: se pide lo que está POR ENCIMA del
+cursor —`gt` en vez de `lt`— en orden ascendente, y al final se le da la vuelta
+al array. Con dos cuidados que no son obvios:
+
+- **Recortar antes de invertir.** Yendo hacia atrás la fila «de más» sobra por
+  arriba; al revés se descarta la equivocada.
+- **Los dos cursores se calculan distinto según la dirección.** Yendo hacia
+  atrás siempre hay siguiente —se viene de ahí—; yendo hacia adelante siempre
+  hay anterior salvo en la primera página. Sin eso, el botón contrario al que
+  se acaba de pulsar se apaga.
+
+### AJ.5 · El filtro de cliente, y la fila que se rompía
+
+Luis: *«ese selector de cliente, buscador infinito; tiene que ser un buscador
+de cliente inteligente… voy buscando y me va listando. Hazlo más pequeño
+también. Ese select, para que los filtros de desde y hasta estén alineados»*.
+
+**Las dos cosas eran la misma.** El desplegable se estiraba al ancho del nombre
+más largo de la cartera, y ESO empujaba «Desde» y «Hasta» a la fila de abajo.
+Con un filtro de ancho fijo se arreglan las dos de una. Y había un tercer
+problema invisible: se traían **500 clientes en cada carga de la página**, se
+filtrara por cliente o no.
+
+Y el buscador **ya existía**: el constructor de cotizaciones tiene uno contra
+`buscar_clientes` (030), y su comentario ya decía lo que Luis acababa de decir
+—*«era un select con la cartera entera dentro… con dos clientes de prueba se
+aguanta; con la cartera que Willy va a subir, no»*—. Se aplicó al constructor y
+no a los filtros.
+
+No se reutilizó aquel componente porque devuelve la ficha de venta —condición
+de pago, última cotización, por qué no se puede elegir— y un filtro solo
+necesita con qué reconocer al cliente.
+
+> Y un tropiezo propio, de los que conviene dejar escritos: la primera rejilla
+> le dio `minmax(0,1fr)` a «Buscar», que se llevaba todo el sobrante, y el
+> filtro de cliente se quedaba diminuto al lado. Luis: *«mira lo que hiciste,
+> ¿eso es profesional?»*. Tenía razón. Ahora Buscar y Cliente pesan dos
+> columnas cada uno de ocho.
+
+### AJ.6 · Lo que queda abierto
+
+**De hoy mismo, y es lo primero de mañana:**
+
+- **El botón de volver falta en cinco tablas**, y no por descuido:
+  - **Productos** pagina dentro de una función de Postgres (`p_cursor`): el
+    retroceso hay que meterlo en la RPC.
+  - **Clientes** y **proveedores** llevan cursor compuesto codificado
+    (razón social + id): hay que invertir los dos campos, no uno.
+  - **Inventario** (kardex) y **recepciones**: cursor simple, es directo; se
+    quedaron fuera por tiempo.
+- **El selector de filas tampoco está en recepciones ni proveedores.** Se
+  pasaron en la pasada de AJ.3.
+- **Cotizaciones sigue con los badges de estado planos**, sin punto.
+
+**Y una propuesta de método.** Van veintitrés casos de «la pieza existe, el
+camino no», y hoy salieron tres solo mirando dos pantallas. En vez de esperar a
+tropezarlos, merece la pena una pasada buscando cables sueltos: props que se
+pasan como `null` fijo, Server Actions sin quien las llame, columnas guardadas
+que ninguna pantalla lee. Los tres de hoy se habrían encontrado con un `grep`.
+
+**De antes, sin cambios:**
+
+- **Las series de Willy.** Cuarto día bloqueado. Sigue siendo lo más urgente.
+- **`limpiar-pruebas.sql`**, con lo apuntado en §AI.10.
+- **El tablero**, que es lo que quedó del rediseño del 08/09.
 
 ---
 

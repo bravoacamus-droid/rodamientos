@@ -63,8 +63,16 @@ salían siempre.
 
 **Y seis veces más el 09/09**, en compras. La peor: los papeles del proveedor
 tenían migración entera —bucket privado, tabla, RLS— y un componente escrito,
-y solo se llegaba a ellos desde la ficha de la recepción, nunca al recibir. Van
-**diecinueve casos**.
+y solo se llegaba a ellos desde la ficha de la recepción, nunca al recibir.
+
+**Y tres más el 10/09, en las listas**, en una variante que conviene reconocer:
+aquí la puerta estaba puesta y **faltaba el cable**. El selector de filas
+escribía `?n=25` y ninguna página lo leía; `cursorAnterior` se pasaba como
+`null` en las diez tablas; y `EstadoBadge` tenía cuatro estados SUNAT que no
+usaba nadie. Van **veintitrés casos**.
+
+Los tres se habrían encontrado con un `grep`: un prop que siempre vale `null`,
+un search param que se escribe y no se lee, un export sin quien lo importe.
 
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.
@@ -187,8 +195,8 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 **Documentación:**
 
 - `docs/PENDIENTES.md` — el diario del proyecto. Cada decisión, con su porqué y
-  la cita del cliente. **Empieza por §AI** (compras, 09/09) y **§AH**
-  (rediseño del 08/09).
+  la cita del cliente. **Empieza por §AJ** (las listas, 10/09) y **§AI**
+  (compras, 09/09).
 - `docs/PREGUNTAS-WILLY.md` — lo que se le manda, listo para copiar. Máximo
   cinco preguntas; **búscalas antes en sus archivos**, que ya ahorró cuatro de
   cinco.
@@ -196,7 +204,7 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 
 ---
 
-## 8 · Estado al 09/09
+## 8 · Estado al 10/09
 
 **Funciona de punta a punta**, probado en vivo: cotizar → confirmar → pedir
 precios → comparar → comprar → recibir → avisar al cliente → guía → facturar →
@@ -226,6 +234,14 @@ cobrar.
 - **Envío de guías a SUNAT (GRE)** — cambió a REST con OAuth2 y hay que
   escribirlo. Las guías valen como documento interno y mueven stock, pero **no
   se están declarando**.
+
+### A medias, y es lo primero que hay que terminar
+
+Del 10/09 (§AJ.6): **el botón de volver falta en cinco tablas** —productos
+pagina dentro de una función de Postgres; clientes y proveedores llevan cursor
+compuesto; inventario y recepciones son directas y se quedaron por tiempo— y
+**el selector de filas falta en recepciones y proveedores**. Cotizaciones sigue
+con los badges de estado planos.
 
 ### Escrito pero SIN probar en pantalla
 
