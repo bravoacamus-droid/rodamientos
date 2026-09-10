@@ -42,9 +42,10 @@ import {
  * el nombre con una equis para quitarlo — así el filtro aplicado se ve sin
  * abrir nada, que es lo que falla en los buscadores que se vacían al elegir.
  *
- * De ancho fijo, no elástico: los nombres largos se truncan. Un filtro que
- * cambia de tamaño según lo que tenga dentro descoloca la fila entera cada vez
- * que se usa.
+ * El ancho lo pone la rejilla que lo contiene, no él: así ocupa lo mismo que
+ * el campo de al lado. Lo que NO hace es crecer con el nombre que tenga dentro
+ * —los largos se truncan— porque un filtro que cambia de tamaño al usarlo
+ * descoloca la fila entera.
  */
 export function FiltroCliente({
   valor,
@@ -95,14 +96,14 @@ export function FiltroCliente({
   };
 
   return (
-    <div ref={caja} className="relative w-56">
+    <div ref={caja} className="relative flex min-w-0 flex-col gap-1">
       <label htmlFor={id} className="text-xs font-medium text-[var(--fg-muted)]">
         Cliente
       </label>
 
       {valor !== null && !abierto ? (
         /* Elegido: se ve quién es y cómo quitarlo, sin abrir nada. */
-        <div className="mt-1 flex h-control-md items-center gap-1.5 rounded-md border border-brand-300 bg-brand-50 px-2.5 dark:bg-brand-950">
+        <div className="flex h-control-md items-center gap-1.5 rounded-md border border-brand-300 bg-brand-50 px-2.5 dark:bg-brand-950">
           <button
             type="button"
             onClick={() => setAbierto(true)}
@@ -121,7 +122,7 @@ export function FiltroCliente({
           </button>
         </div>
       ) : (
-        <div className="relative mt-1">
+        <div className="relative">
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
             aria-hidden="true"
@@ -138,8 +139,10 @@ export function FiltroCliente({
         </div>
       )}
 
+      {/* El panel lleva ancho mínimo propio: la celda de la rejilla puede ser
+          estrecha y una razón social no se lee en 120 px. */}
       {abierto ? (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] elev-2">
+        <div className="absolute left-0 top-full z-20 mt-1 w-full min-w-64 overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] elev-2">
           {valor !== null ? (
             <button
               type="button"

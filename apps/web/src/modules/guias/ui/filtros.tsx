@@ -55,8 +55,8 @@ export function FiltrosGuiasBarra({
   return (
     /* Rejilla y no `flex-wrap`: con anchos libres, el filtro de cliente se
        estiraba al nombre más largo y empujaba las fechas a la fila de abajo. */
-    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto_auto]">
-      <label className="flex flex-col gap-1">
+    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
+      <label className="flex flex-col gap-1 xl:col-span-2">
         <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
@@ -68,11 +68,13 @@ export function FiltrosGuiasBarra({
 
       {/* El mismo buscador que en facturación: se teclea y va listando, en
           vez de un desplegable con la cartera entera dentro. */}
-      <FiltroCliente
-        valor={params.get("cliente")}
-        nombre={nombreCliente}
-        onCambiar={(id) => aplicar("cliente", id ?? "")}
-      />
+      <div className="xl:col-span-2">
+        <FiltroCliente
+          valor={params.get("cliente")}
+          nombre={nombreCliente}
+          onCambiar={(id) => aplicar("cliente", id ?? "")}
+        />
+      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-xs font-medium text-[var(--fg-muted)]">Estado</span>

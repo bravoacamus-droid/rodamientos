@@ -54,7 +54,7 @@ export async function TablaCotizaciones({
     );
   }
 
-  const { filas, siguiente } = resultado.datos;
+  const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
     const filtrando = Boolean(filtros.q || filtros.estado || filtros.cliente);
@@ -259,7 +259,7 @@ export async function TablaCotizaciones({
           porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
-          cursorAnterior={null}
+          cursorAnterior={anterior}
         />
       </div>
     </>

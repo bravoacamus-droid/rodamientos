@@ -107,6 +107,14 @@ export interface FiltrosCotizaciones {
   hasta?: string;
   cursor?: string;
   /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es la página anterior: el mismo keyset del revés —`gt` en vez de
+   * `lt` y orden ascendente— y las filas se devuelven dadas la vuelta. Sin
+   * esto, el cursor solo sabía avanzar.
+   */
+  direccion?: "sig" | "ant";
+  /**
    * Filas por página, ya validado.
    *
    * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la

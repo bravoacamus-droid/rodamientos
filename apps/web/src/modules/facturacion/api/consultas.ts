@@ -71,9 +71,25 @@ const SUNAT = [
  */
 export async function listarComprobantes(
   filtros: FiltrosComprobantes,
-): Promise<Resultado<{ filas: ComprobanteLista[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: ComprobanteLista[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    /*
+      Ir hacia atrás es el mismo keyset del revés.
+
+      Se pide lo que está POR ENCIMA del cursor, en orden ascendente, y al
+      final se le da la vuelta al array. Es lo que faltaba desde siempre: la
+      paginación solo sabía avanzar, y `cursorAnterior` se pasaba como `null`
+      en las diez tablas del ERP.
+    */
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     let consulta = supabase
       .from("comprobantes")
@@ -84,10 +100,14 @@ export async function listarComprobantes(
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
       )
-      .order("numero", { ascending: false })
+      .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    if (filtros.cursor) consulta = consulta.lt("numero", filtros.cursor);
+    if (filtros.cursor) {
+      consulta = atras
+        ? consulta.gt("numero", filtros.cursor)
+        : consulta.lt("numero", filtros.cursor);
+    }
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     if (filtros.desde) consulta = consulta.gte("fecha_emision", filtros.desde);
     if (filtros.hasta) consulta = consulta.lte("fecha_emision", filtros.hasta);
@@ -142,13 +162,29 @@ export async function listarComprobantes(
     */
     const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
-    const filas = hayMas ? todas.slice(0, porPagina) : todas;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    /*
+      Yendo hacia atrás, la fila «de más» es la que sobra por ARRIBA y el orden
+      viene invertido. Se recorta primero y se da la vuelta después: al revés
+      se descartaría la fila equivocada.
+    */
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0]?.numero ?? null;
+    const ultima = filas[filas.length - 1]?.numero ?? null;
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente: hayMas ? (filas[filas.length - 1]?.numero ?? null) : null,
+        /*
+          Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+          hacia adelante, siempre hay anterior salvo en la primera página. Sin
+          esto, el botón contrario al que se acaba de pulsar se apaga.
+        */
+        siguiente: atras ? ultima : hayMas ? ultima : null,
+        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
       },
     };
   } catch (e) {

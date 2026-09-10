@@ -31,7 +31,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
     );
   }
 
-  const { filas, siguiente } = resultado.datos;
+  const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
     const filtrando = Boolean(
@@ -193,7 +193,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
           porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
-          cursorAnterior={null}
+          cursorAnterior={anterior}
         />
       </div>
     </>
