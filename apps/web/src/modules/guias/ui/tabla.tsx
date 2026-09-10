@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
+import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 
 import { listarGuias } from "../api/consultas";
-import { ETIQUETA_ESTADO, TONO_ESTADO, type FiltrosGuias } from "../dominio/tipos";
+import type { FiltrosGuias } from "../dominio/tipos";
 
 /**
  * Listado de guías.
@@ -56,6 +56,10 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
               <th className="px-4 py-2.5 text-right font-medium">Bultos</th>
               <th className="px-4 py-2.5 text-right font-medium">Peso</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
+              {/* La columna de acciones tenía cabecera vacía. Con una fila sola
+                  no se nota; con veinte, los dos botones flotan sin decir de
+                  qué son. */}
+              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -106,9 +110,17 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                   <span className="ml-1 text-xs text-[var(--fg-subtle)]">kg</span>
                 </td>
                 <td className="px-4 py-2.5">
-                  <Badge tone={TONO_ESTADO[g.estado]} size="xs">
-                    {ETIQUETA_ESTADO[g.estado]}
-                  </Badge>
+                  {/*
+                    El mismo badge que el resto del ERP.
+
+                    Aquí se pintaba con `Badge` a secas y `TONO_ESTADO`, así que
+                    «Emitida» salía verde y sin punto: distinto de cómo se ve un
+                    estado en cotizaciones o en facturas, y con el color como
+                    único canal. `EstadoBadge` trae el punto —forma distinta por
+                    estado, que es el segundo canal para quien no distingue
+                    verde de rojo— y el tachado de las anuladas.
+                  */}
+                  <EstadoBadge estado={g.estado} size="xs" />
                 </td>
 
                 {/*
@@ -128,9 +140,18 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                       <IconoVer />
                       Ver
                     </Link>
+                    {/*
+                      El de imprimir lleva el icono en azul.
+
+                      Luis, 10/09: *«el botón de imprimir podemos ponerle ese
+                      botón azul así bonito»*. En relleno serían veinte botones
+                      azules gritando a la vez y le comerían el sitio al único
+                      que crea algo, que es «Preparar guía». Con el icono en
+                      color se distingue del de Ver sin robarle el papel.
+                    */}
                     <Link
                       href={`/guias/${g.id}/imprimir?auto=1`}
-                      className={`${SECUNDARIO} w-full justify-center`}
+                      className={`${SECUNDARIO} w-full justify-center [&>svg]:text-brand-600`}
                     >
                       <IconoImprimir />
                       Imprimir
@@ -166,9 +187,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
             <p className="mt-0.5 line-clamp-1 text-sm">{g.cliente ?? "—"}</p>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <Badge tone={TONO_ESTADO[g.estado]} size="xs">
-                {ETIQUETA_ESTADO[g.estado]}
-              </Badge>
+              <EstadoBadge estado={g.estado} size="xs" />
               <span className="tabular text-[var(--fg-muted)]">
                 {g.peso_bruto_kg.toFixed(3)} kg · {g.numero_bultos}{" "}
                 {g.numero_bultos === 1 ? "bulto" : "bultos"}

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
 import { Scale } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleCompra } from "../api/consultas";
 import { quienEsperaEstos } from "../api/por-comprar";
-import { ETIQUETA_ESTADO, TONO_ESTADO } from "../dominio/tipos";
 import { AnularCompra } from "./anular";
 import { ParaQuienEs } from "./para-quien";
 
@@ -63,7 +62,7 @@ export default async function PaginaDetalleCompra({
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {c.numero}
             </h1>
-            <Badge tone={TONO_ESTADO[c.estado]}>{ETIQUETA_ESTADO[c.estado]}</Badge>
+            <EstadoBadge estado={c.estado} size="md" />
             {c.tipo === "importacion" ? <Badge tone="neutral">Importación</Badge> : null}
           </div>
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">

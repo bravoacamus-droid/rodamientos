@@ -61,11 +61,21 @@ export default async function PaginaGuias({ searchParams }: Props) {
           </p>
         </div>
 
+        {/*
+          El «+» delante, como en el prototipo de Luis (10/09).
+
+          No es adorno: es el único botón de la pantalla que CREA algo. El
+          resto —Ver, Imprimir— trabaja sobre lo que ya está, y un icono que
+          solo lleva el que crea es una pista que se lee antes que el texto.
+        */}
         {puedeDespachar ? (
           <Link
             href="/guias/nueva"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
           >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
             Preparar guía
           </Link>
         ) : null}

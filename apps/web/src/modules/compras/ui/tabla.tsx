@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
-  Badge,
   Button,
+  EstadoBadge,
   EstadoError,
   EstadoVacio,
   Moneda,
@@ -9,12 +9,7 @@ import {
 } from "@rodatech/ui";
 
 import { listarCompras } from "../api/consultas";
-import {
-  ETIQUETA_ESTADO,
-  TONO_ESTADO,
-  type EstadoCompra,
-  type FiltrosCompras,
-} from "../dominio/tipos";
+import type { EstadoCompra, FiltrosCompras } from "../dominio/tipos";
 
 /**
  * Listado de compras.
@@ -129,9 +124,10 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   ) : null}
                 </td>
                 <td className="px-4 py-2.5">
-                  <Badge tone={TONO_ESTADO[c.estado]} size="xs">
-                    {ETIQUETA_ESTADO[c.estado]}
-                  </Badge>
+                  {/* El mismo badge que guías y cotizaciones: con punto —el
+                      segundo canal, para quien no distingue verde de rojo— y
+                      con las anuladas tachadas. */}
+                  <EstadoBadge estado={c.estado} size="xs" />
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
                   {faltaRecibir(c.estado) ? (
@@ -168,9 +164,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
             <p className="mt-0.5 line-clamp-1 text-sm">{c.proveedor ?? "—"}</p>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <Badge tone={TONO_ESTADO[c.estado]} size="xs">
-                {ETIQUETA_ESTADO[c.estado]}
-              </Badge>
+              <EstadoBadge estado={c.estado} size="xs" />
               <span className="text-[var(--fg-muted)]">
                 {c.items} {c.items === 1 ? "línea" : "líneas"}
               </span>

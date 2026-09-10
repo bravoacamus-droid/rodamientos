@@ -49,8 +49,12 @@ export type EstadoDocumento =
   | "pagada"
   // Compra / almacén
   | "por_recibir"
+  | "registrada"
+  | "recibida_parcial"
   | "recibida"
-  | "archivado";
+  | "archivado"
+  // Guía de remisión
+  | "emitida";
 
 type Tono = "gris" | "azul" | "verde" | "ambar" | "rojo" | "marca";
 type Forma = "relleno" | "hueco" | "anillo" | "raya";
@@ -81,7 +85,24 @@ const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
   parcial: { etiqueta: "Pago parcial", tono: "ambar", forma: "anillo" },
   pagada: { etiqueta: "Pagada", tono: "verde", forma: "relleno" },
 
+  /*
+    Una guía emitida es AZUL, no verde.
+
+    Verde es «terminado bien», y emitir la guía no termina nada: descarga el
+    stock y arranca lo siguiente —la mercadería va en camino y falta facturar—.
+    Azul es «en curso», que es exactamente donde queda. En verde se leería como
+    operación cerrada y hay una factura esperando.
+  */
+  emitida: { etiqueta: "Emitida", tono: "azul", forma: "relleno", matiz: "la mercadería ya salió" },
+
   por_recibir: { etiqueta: "Por recibir", tono: "azul", forma: "hueco" },
+  registrada: { etiqueta: "Registrada", tono: "azul", forma: "hueco", matiz: "todavía no ha llegado" },
+  /*
+    «Parcial» es aviso y no éxito, y esto viene de `compras/dominio/tipos.ts`:
+    una compra a medio recibir es justo la que hay que perseguir, y en verde se
+    esconde entre las que ya están cerradas.
+  */
+  recibida_parcial: { etiqueta: "Parcial", tono: "ambar", forma: "anillo", matiz: "falta parte por llegar" },
   recibida: { etiqueta: "Recibida", tono: "verde", forma: "relleno" },
   archivado: { etiqueta: "Archivado", tono: "gris", forma: "hueco", matiz: "fuera de las cotizaciones" },
 };
