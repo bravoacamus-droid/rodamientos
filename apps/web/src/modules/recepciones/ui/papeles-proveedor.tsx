@@ -329,7 +329,7 @@ export function PapelesDelProveedor({
   function ver(papel: PapelDelProveedor) {
     setError(null);
     empezar(async () => {
-      const r = await enlaceAlPapel(papel.ruta);
+      const r = await enlaceAlPapel(papel.id);
       if (!r.ok) {
         setError(r.error);
         return;

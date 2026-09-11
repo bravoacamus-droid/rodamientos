@@ -205,16 +205,48 @@ export async function quitarPapelDelProveedor(id: string): Promise<ResultadoAdju
  * para que el enlace sirva de algo si acaba pegado en un chat.
  */
 export async function enlaceAlPapel(
-  ruta: string,
+  id: string,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  /*
+    Rol, y el `id` del papel en vez de su ruta.
+
+    Auditoría del 11/09. Esta era la única de las cuatro acciones del archivo
+    que comprobaba sesión y no rol: cualquier usuario con cuenta —ventas,
+    cobranzas— podía firmar una URL sobre este bucket. Y como la ruta llegaba
+    del cliente, ni siquiera hacía falta que el papel fuera de una recepción
+    suya: bastaba leer `recepcion_adjuntos` por REST, sacar las rutas y pedir
+    una URL por cada una.
+
+    Justo lo que el bucket privado existe para evitar: una factura de compra
+    lleva el RUC del proveedor y los precios a los que compra Rodatech.
+
+    Ahora entra el id, la ruta la pone la base, y la fila se lee con la sesión
+    del usuario, así que RLS vuelve a tener voz.
+  */
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
+    return { ok: false, error: "No tienes permiso para ver los papeles del proveedor." };
+  }
+  if (!z.string().uuid().safeParse(id).success) {
+    return { ok: false, error: "El papel no es válido." };
+  }
 
   try {
     const supabase = await clienteServidor();
+
+    const { data: fila, error: errorFila } = await supabase
+      .from("recepcion_adjuntos")
+      .select("ruta")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (errorFila) return { ok: false, error: errorFila.message };
+    if (!fila?.ruta) return { ok: false, error: "Ese papel ya no está." };
+
     const { data, error } = await supabase.storage
       .from(BUCKET)
-      .createSignedUrl(ruta, 600);
+      .createSignedUrl(fila.ruta, 600);
 
     if (error) return { ok: false, error: error.message };
     if (!data?.signedUrl) return { ok: false, error: "No se pudo abrir el archivo." };
