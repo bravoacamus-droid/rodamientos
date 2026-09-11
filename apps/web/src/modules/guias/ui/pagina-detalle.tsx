@@ -151,7 +151,19 @@ export default async function PaginaDetalleGuia({
         {/* ------------------------------------------------------ Líneas */}
         <section className="card p-4">
           <h2 className="mb-3 text-sm font-semibold">Qué se traslada</h2>
-          <div className="scroll-x">
+          {/*
+            La tabla, solo de `md` para arriba.
+
+            Luis, 11/09: *«mejorar de ver cómo arreglar las tablas de
+            información de los productos, ponerlos como card podría ser, para
+            verlo bien»*. En 414 px la descripción se cortaba y había que
+            arrastrar para ver la cantidad.
+
+            Esto NO es el papel que se imprime: la guía impresa vive en
+            `/guias/[id]/imprimir` y sigue siendo una tabla, porque es un
+            documento. Aquí solo se consulta.
+          */}
+          <div className="scroll-x hidden md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -191,6 +203,29 @@ export default async function PaginaDetalleGuia({
               </tbody>
             </table>
           </div>
+
+          {/* --------------------------------------------------- Móvil */}
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+            {g.lineas.map((l) => (
+              <li key={l.id} className="flex flex-col gap-1 py-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <Link
+                    href={`/productos/${l.producto_id}`}
+                    className="font-mono text-sm font-semibold text-brand-600"
+                  >
+                    {l.codigo}
+                  </Link>
+                  <span className="shrink-0 tabular text-sm font-medium">
+                    {l.cantidad}{" "}
+                    <span className="text-[var(--fg-subtle)]">{l.unidad}</span>
+                  </span>
+                </div>
+                {/* Sin `truncate`: en la tabla la descripción compite con dos
+                    columnas más; aquí tiene la tarjeta entera. */}
+                <p className="text-sm text-[var(--fg-muted)]">{l.descripcion}</p>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* ------------------------------------------------- Datos */}

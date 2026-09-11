@@ -349,7 +349,22 @@ export default async function PaginaDetalleCotizacion({
             </p>
           </header>
 
-          <div className="scroll-x">
+          {/*
+            La tabla, solo de `md` para arriba.
+
+            Luis, 11/09, mirando el responsive: *«mejorar de ver cómo arreglar
+            las tablas de información de los productos, ponerlos como card
+            podría ser, para verlo bien»*. Y tenía razón: seis columnas en 414
+            px salían con scroll horizontal dentro de la ficha, así que para
+            leer el importe había que arrastrar la tabla y perder de vista el
+            código.
+
+            Esto NO es el documento que se imprime —ese es el `<Documento>` de
+            abajo, intacto, y sigue siendo una tabla porque es el papel—. Aquí
+            se puede partir en tarjetas sin romper nada. Era la decisión que
+            quedó abierta en §AH.9 del diario.
+          */}
+          <div className="scroll-x hidden md:block">
             <table className="w-full text-sm">
               <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
                 <tr>
@@ -415,6 +430,46 @@ export default async function PaginaDetalleCotizacion({
               </tbody>
             </table>
           </div>
+
+          {/* --------------------------------------------------------- Móvil */}
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+            {lineas.map((l) => (
+              <li key={l.id} className="flex flex-col gap-2 px-4 py-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-mono text-sm font-semibold">{l.codigo}</span>
+                  <span className="shrink-0 tabular text-sm font-medium">
+                    {dolar(
+                      Math.round(
+                        l.cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100,
+                      ) / 100,
+                    )}
+                  </span>
+                </div>
+
+                <p className="text-sm">
+                  {l.marca ? (
+                    <span className="text-[var(--fg-subtle)]">{l.marca} · </span>
+                  ) : null}
+                  {l.descripcion}
+                </p>
+
+                {/* La cuenta, dicha entera: «4 NIU × $ 25.40». En la tabla son
+                    dos columnas separadas y aquí no hay cabecera que las
+                    explique, así que se escribe la multiplicación. */}
+                <p className="text-sm text-[var(--fg-muted)]">
+                  <span className="tabular">{l.cantidad}</span> {l.unidad_codigo} ×{" "}
+                  <span className="tabular">{dolar(l.valor_unitario)}</span>
+                </p>
+
+                {cabecera.estado === "aprobada" ? (
+                  <EstadoDeLinea
+                    falta={faltaPorProducto.get(l.producto_id ?? "")}
+                    despachado={despachado.get(l.id) ?? 0}
+                  />
+                ) : null}
+              </li>
+            ))}
+          </ul>
 
           {/* Los totales al pie y a la derecha, como en el papel: es donde el
               ojo los busca después de leer la última línea. */}

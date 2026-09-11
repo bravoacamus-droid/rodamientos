@@ -136,7 +136,18 @@ export default async function PaginaDetalleComprobante({
         {/* ------------------------------------------------------ Líneas */}
         <section className="card p-4">
           <h2 className="mb-3 text-sm font-semibold">Detalle</h2>
-          <div className="scroll-x">
+          {/*
+            La tabla, solo de `md` para arriba.
+
+            Cinco columnas en 414 px se leen arrastrando, y para cruzar el
+            código con su importe hay que ir y volver. Luis, 11/09: *«las
+            tablas de información de los productos, ponerlos como card»*.
+
+            El comprobante impreso —el que vale— vive en
+            `/facturacion/[id]/imprimir` y no se toca: ahí sigue siendo una
+            tabla porque es el papel que se le entrega al cliente.
+          */}
+          <div className="scroll-x hidden md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -193,6 +204,44 @@ export default async function PaginaDetalleComprobante({
               </tbody>
             </table>
           </div>
+
+          {/* --------------------------------------------------- Móvil */}
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+            {c.lineas.map((l) => (
+              <li key={l.id} className="flex flex-col gap-1 py-2.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  {l.producto_id ? (
+                    <Link
+                      href={`/productos/${l.producto_id}`}
+                      className="font-mono text-sm font-semibold text-brand-600"
+                    >
+                      {l.codigo}
+                    </Link>
+                  ) : (
+                    <span className="font-mono text-sm font-semibold">{l.codigo}</span>
+                  )}
+                  <span className="shrink-0 tabular text-sm font-medium">
+                    {l.importe.toFixed(2)}
+                  </span>
+                </div>
+
+                <p className="text-sm text-[var(--fg-muted)]">{l.descripcion}</p>
+
+                {/* La cuenta entera: «4 NIU × 25.4000». Sin cabecera que
+                    explique las columnas, se escribe la multiplicación. */}
+                <p className="text-sm text-[var(--fg-muted)]">
+                  <span className="tabular">{l.cantidad}</span> {l.unidad} ×{" "}
+                  <span className="tabular">{l.valor_unitario.toFixed(4)}</span>
+                  {l.descuento_pct > 0 ? (
+                    <span className="text-[var(--fg-subtle)]">
+                      {" "}
+                      −{l.descuento_pct}%
+                    </span>
+                  ) : null}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* ------------------------------------------------------- Datos */}
