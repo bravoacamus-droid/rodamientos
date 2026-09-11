@@ -4577,24 +4577,72 @@ ruta que mandaba el cliente. Un usuario de ventas leía `recepcion_adjuntos`
 por REST y se llevaba las facturas de compra del proveedor. Ahora entra el id
 del papel y la ruta la pone la base.
 
-### AK.4 · Lo que la auditoría dejó como decisión, no como parche
+### AK.4 · Las tres decisiones, y en qué quedaron
 
-Tres cosas que NO se tocaron porque son decisiones, no fallos:
+La auditoría dejó tres cosas que no eran fallos que arreglar sino decisiones
+que tomar. Luis: *«claro, ayúdame a mejorar todo»*. Quedaron así.
 
-1. **El estado del documento vive solo en las RPC.** Quien puede llamar la RPC
-   también puede escribir la tabla por REST, así que en teoría se puede anular
-   por REST una cotización ya facturada. Cerrarlo es política por estado o
-   quitar el `grant` de UPDATE directo: arquitectura.
-2. **El costo y el margen los lee cualquier rol.** La política de lectura es
-   una sola para todas las tablas. No es escalada: nunca estuvo restringido.
-   Puede ser aceptable con seis empleados de confianza.
-3. **`RODATECH_ATAJOS`** entra como gerencia sin contraseña. Ya estaba en la
-   lista de entrega; mientras la variable esté puesta, el punto 1 sobra.
+**1 · El estado del documento vivía solo en las RPC → CERRADO (079).**
 
-Y un control que no controla: el centinela de la 072 busca `margen_pct` y
-`costo_*` en el TEXTO de la función, así que un `select *` pasaría. Hoy no
-filtra nada —la función devuelve solo campos del papel— pero conviene
-comprobar las claves del resultado, que ya están en `v_json`.
+El permiso de escritura es por TABLA y rol (`permisos_rol`, 007), no por
+función, y quien puede llamar la RPC puede escribir la tabla por PostgREST.
+Mirando la matriz, `ventas` escribe `cotizaciones`, `cotizacion_items`,
+`comprobantes` y `comprobante_items`.
+
+Lo que de verdad dolía no era lo fiscal: era que anular una factura por REST
+**no repone el stock** que esa factura descargó. Mercadería que sale del
+almacén y no vuelve al kardex, sin que nada avise.
+
+Se distingue una función de una petición directa por `current_user`: PostgREST
+atiende con `set role authenticated`, y dentro de una `security definer` el
+usuario actual pasa a ser el DUEÑO de la función. Una línea, y sirve para todo
+lo demás que haga falta blindar.
+
+Antes de poner el candado se revisó una por una cada escritura directa de la
+aplicación: `comprobantes` solo recibe columnas de SUNAT (el CDR),
+`cotizaciones` solo `estado` desde `cambiarEstado`, y las líneas de los dos
+documentos **no las escribe ninguna pantalla**. Esa comprobación es la que
+permitió cerrar tanto.
+
+**2 · El costo y el margen los lee cualquier rol → SE QUEDA COMO ESTÁ.**
+
+Decisión de Luis, 11/09, sobre tres opciones (que lo siga viendo / margen sí y
+costo no / ninguno de los dos): **que lo siga viendo**.
+
+No es escalada de privilegios: la política de lectura es una sola para todas
+las tablas y el costo nunca estuvo restringido. El vendedor ve el margen
+mientras negocia, que es para lo que se puso, y con seis empleados de
+confianza cerrarlo cuesta más de lo que protege —toca el cotizador, el
+catálogo, el kardex, el tablero y el comparador—.
+
+**Se revisa el día que Willy contrate a un vendedor de fuera.** Que esto esté
+escrito es el punto: dentro de seis meses, que se sepa que fue una decisión y
+no un descuido.
+
+**3 · `RODATECH_ATAJOS` → CERRADO por el lado bueno.**
+
+Seguía dependiendo de que alguien se acordara de borrar la variable el día de
+la entrega, y si no se acordaba el fallo no avisaba. Ahora el despliegue de
+producción (`VERCEL_ENV`) no ofrece atajos **aunque la variable esté puesta**;
+los previews sí, que es donde hacen falta para enseñarle el sistema al
+cliente. El olvido pasa de «se entra sin contraseña» a «el panel no sale en la
+demo», que es el lado por el que hay que equivocarse.
+
+Y la Server Action aceptaba las seis cuentas sembradas mientras el panel
+pintaba dos. Una Server Action se llama con un `fetch` a mano: la lista
+visible tiene que ser la lista aceptada.
+
+**Y el cuarto, que no era decisión sino un control roto → 080.**
+
+El centinela de la 072 buscaba `margen_pct` y `costo_*` en el TEXTO de la
+función, así que no detectaba justo el caso que su propio comentario decía
+cubrir: un `select *` no contiene esas cadenas y habría mandado el margen al
+cliente sin que nada fallara. Ahora comprueba las CLAVES DEL RESULTADO contra
+una lista blanca, usando el JSON que el centinela ya tenía en la mano.
+
+Hoy no filtraba nada: la función devuelve solo campos del papel. El fallo era
+del guardián, y un guardián en el que se confía y que no mira es peor que no
+tenerlo.
 
 ### AK.5 · Los cinco listados que solo sabían avanzar — cerrado
 

@@ -128,7 +128,7 @@ node scripts/aplicar-migraciones.mjs 070_lo_que_sea.sql   # UNA migración
 pnpm db:tipos                # regenerar tipos tras migrar
 ```
 
-**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 78 desde
+**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 80 desde
 cero y la 005 falla por vistas dependientes.
 
 ---
@@ -246,9 +246,14 @@ Lo del 10/09 (§AJ.6) quedó cerrado el 11/09: volver atrás funciona en las
 **once** tablas y el selector de filas está en todas. Cotizaciones ya usa
 `EstadoBadge`.
 
-Lo que queda abierto, y es **decisión de Luis, no trabajo pendiente** (§AK.4):
-el estado del documento solo lo vigilan las RPC mientras PostgREST expone las
-tablas en crudo; y el costo y el margen los lee cualquier rol.
+Las tres decisiones de la auditoría se cerraron el mismo 11/09 (§AK.4): las
+reglas del documento bajaron a la base (079), el atajo de desarrollo ya no
+puede quedarse encendido en producción, y el centinela del enlace público
+mira el resultado y no el fuente (080).
+
+**El costo y el margen los sigue viendo cualquier rol, y es deliberado**
+(Luis, 11/09): el vendedor los necesita al negociar y son seis empleados de
+confianza. Se revisa el día que entre un vendedor de fuera.
 
 ### Escrito pero SIN probar en pantalla
 
