@@ -58,16 +58,21 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+              {/*
+                Sin columna «Documento»: los 97 proveedores entraron del Excel
+                con el código formado a partir del RUC —«RUC-20605598553»— y
+                debajo del nombre ya se ve. Tenerlo en su propia columna era
+                el mismo número dos veces en la misma fila.
+              */}
               <th className="px-4 py-2.5 font-medium">Proveedor</th>
-              <th className="px-4 py-2.5 font-medium">Documento</th>
               <th className="px-4 py-2.5 font-medium">Marcas</th>
               <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Contacto</th>
               <th className="px-4 py-2.5 text-right font-medium">Pago</th>
               <th className="px-4 py-2.5 text-right font-medium">Lead time</th>
               <th className="px-4 py-2.5 font-medium">Tipo</th>
-              <th className="w-12 px-2 py-2.5">
-                <span className="sr-only">Acciones</span>
-              </th>
+              {/* Con botones de verdad en la fila, la cabecera se dice en voz
+                  alta: un `sr-only` valía cuando ahí solo había tres puntos. */}
+              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -90,18 +95,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                     {p.activo ? "" : " · de baja"}
                   </span>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5 tabular text-[0.8rem]">
-                  {p.numero_documento ? (
-                    <>
-                      <span className="text-xs text-[var(--fg-subtle)]">
-                        {p.tipo_documento}{" "}
-                      </span>
-                      {p.numero_documento}
-                    </>
-                  ) : (
-                    <span className="text-[var(--fg-subtle)]">sin documento</span>
-                  )}
-                </td>
+
                 <td className="max-w-xs px-4 py-2.5">
                   {p.marcas.length === 0 ? (
                     <span className="text-xs text-[var(--fg-subtle)]">—</span>

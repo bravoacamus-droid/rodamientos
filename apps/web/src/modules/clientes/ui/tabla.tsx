@@ -60,18 +60,29 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+              {/*
+                El documento baja a la razón social, y la línea de crédito se
+                junta con la condición.
+
+                Luis, 11/09: «CÓDIGO: RUC-20538379302» al lado de «DOCUMENTO:
+                RUC 20538379302» es el mismo dato dos veces, y ocupaba una
+                columna entera. Los 97 clientes entraron del Excel con el
+                código formado a partir del RUC, así que la repetición es la
+                norma, no la excepción.
+
+                «Línea» estaba vacía en las 97 filas —todos a crédito 0 días—:
+                una columna que nunca dice nada roba el ancho de las que sí.
+                Cuando Willy ponga líneas, aparece bajo su condición, que es
+                donde significa algo.
+              */}
               <th className="px-4 py-2.5 font-medium">Código</th>
-              <th className="px-4 py-2.5 font-medium">Documento</th>
               <th className="px-4 py-2.5 font-medium">Razón social</th>
               <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Contacto</th>
               <th className="px-4 py-2.5 font-medium">Condición</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
-                Línea
-              </th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="w-12 px-2 py-2.5">
-                <span className="sr-only">Acciones</span>
-              </th>
+              {/* Con botones de verdad en la fila, la cabecera se dice en voz
+                  alta: un `sr-only` valia cuando ahi solo habia tres puntos. */}
+              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -90,32 +101,28 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                     {c.codigo}
                   </Link>
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5">
-                  <span className="text-xs text-[var(--fg-subtle)]">
-                    {c.tipo_documento}
-                  </span>{" "}
-                  <span className="tabular">{c.numero_documento ?? "—"}</span>
-                </td>
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate font-medium">{c.razon_social}</span>
-                  {c.nombre_comercial ? (
-                    <span className="block truncate text-xs text-[var(--fg-subtle)]">
-                      {c.nombre_comercial}
-                    </span>
-                  ) : null}
+                  {/*
+                    El documento, solo si el código no lo lleva ya dentro.
+
+                    Los 97 clientes entraron del Excel con el código formado a
+                    partir del RUC —«RUC-20538379302»— así que repetirlo debajo
+                    es el mismo número dos veces en la misma fila. En los que se
+                    dan de alta a mano el código es otro, y ahí sí hace falta.
+                  */}
+                  <SegundaLinea c={c} />
                 </td>
                 <td className="hidden max-w-[14rem] px-4 py-2.5 lg:table-cell">
                   <Contacto c={c} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5">
                   <Condicion c={c} />
-                </td>
-                <td className="hidden px-4 py-2.5 text-right lg:table-cell">
                   {c.condicion_pago === "credito" && c.linea_credito > 0 ? (
-                    <Moneda valor={c.linea_credito} tamano="sm" enfasis="suave" />
-                  ) : (
-                    <span className="text-[var(--fg-subtle)]">—</span>
-                  )}
+                    <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
+                      hasta <Moneda valor={c.linea_credito} tamano="sm" enfasis="suave" />
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-4 py-2.5">
                   <Estado c={c} />
@@ -247,5 +254,32 @@ function Estado({ c }: { c: ClienteLista }) {
     <Badge tone="success" size="xs">
       Activo
     </Badge>
+  );
+}
+
+/**
+ * Lo que va bajo la razón social: el nombre comercial y el documento.
+ *
+ * Se calla el documento cuando el código ya lo contiene, que es el caso de
+ * los 97 clientes cargados del Excel. Si no queda nada que decir, no se pinta
+ * una línea vacía que descuadre el alto de la fila.
+ */
+function SegundaLinea({ c }: { c: ClienteLista }) {
+  const codigoLlevaElDocumento =
+    c.numero_documento !== null && c.codigo.includes(c.numero_documento);
+
+  const partes = [
+    c.nombre_comercial,
+    codigoLlevaElDocumento
+      ? null
+      : `${c.tipo_documento} ${c.numero_documento ?? "sin documento"}`,
+  ].filter(Boolean);
+
+  if (partes.length === 0) return null;
+
+  return (
+    <span className="block truncate text-sm text-[var(--fg-subtle)]">
+      {partes.join(" · ")}
+    </span>
   );
 }

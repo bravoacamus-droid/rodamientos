@@ -3,7 +3,9 @@
 // Cliente: abre el menú y el diálogo, y llama a la acción de servidor.
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, Plus } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -24,11 +26,23 @@ import {
 import { bloquearCliente } from "../acciones/guardar";
 
 /**
- * Menú de acciones de un cliente.
+ * Las acciones de un cliente: dos a la vista y el resto en el menú.
  *
- * Va al final de la fila en escritorio y a la derecha de la tarjeta en móvil:
- * el mismo menú en los dos sitios, para que la acción esté siempre donde la
- * mano ya la busca.
+ * ---------------------------------------------------------------------------
+ * Por qué «Ver» y «Cotizar» salen del menú
+ * ---------------------------------------------------------------------------
+ * Estaban las cuatro dentro de un icono de tres puntos. Y «Cotizar a este
+ * cliente» llevaba escrito al lado, desde que se construyó, que *«es el
+ * camino que se recorre veinte veces al día y no debería pasar por el
+ * buscador otra vez»* — detrás de tres puntos grises que no dicen que se
+ * pueden pulsar.
+ *
+ * Luis, 11/09, con su prototipo: en cada fila, **Ver** y **+ Cotizar**. Es
+ * la regla de esta casa aplicada a una tabla: un botón tiene que parecer un
+ * botón, y lo que se hace veinte veces al día no se esconde.
+ *
+ * En el menú se queda lo que se hace de tarde en tarde: editar la ficha y
+ * bloquear. Sacar las cuatro dejaría una fila con más botones que datos.
  *
  * Cada opción respeta el rol: quien no puede editar no ve «Editar» ni
  * «Bloquear». Un botón que aparece y luego rebota es peor que no verlo.
@@ -53,7 +67,25 @@ export function AccionesFila({
   const [abierto, setAbierto] = React.useState(false);
 
   return (
-    <>
+    <div className="flex items-center justify-end gap-1.5">
+      <Button asChild variant="outline" size="sm" className="gap-1.5">
+        <Link href={`/clientes/${id}`}>
+          <Eye className="size-4" aria-hidden="true" />
+          Ver
+        </Link>
+      </Button>
+
+      {/* A un cliente bloqueado no se le cotiza: el botón no aparece, en vez
+          de aparecer y rebotar al pulsarlo. */}
+      {!bloqueado ? (
+        <Button asChild size="sm" className="gap-1.5">
+          <Link href={`/cotizaciones/nueva?cliente=${id}`}>
+            <Plus className="size-4" aria-hidden="true" />
+            Cotizar
+          </Link>
+        </Button>
+      ) : null}
+
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Acciones de ${razonSocial}`}
@@ -69,28 +101,13 @@ export function AccionesFila({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onSelect={() => router.push(`/clientes/${id}`)}>
-            Ver cliente
-          </DropdownMenuItem>
-
+          {/* Ver y Cotizar ya están fuera, en sus botones. Aquí queda lo que
+              se hace de tarde en tarde. */}
           {puedeEditar ? (
             <DropdownMenuItem
               onSelect={() => router.push(`/clientes/${id}/editar`)}
             >
               Editar cliente
-            </DropdownMenuItem>
-          ) : null}
-
-          <DropdownMenuSeparator />
-
-          {/* Cotizar con el cliente ya puesto: es el camino que se recorre
-              veinte veces al día y no debería pasar por el buscador otra vez.
-              A un bloqueado no se le cotiza: la opción no aparece. */}
-          {!bloqueado ? (
-            <DropdownMenuItem
-              onSelect={() => router.push(`/cotizaciones/nueva?cliente=${id}`)}
-            >
-              Cotizar a este cliente
             </DropdownMenuItem>
           ) : null}
 
@@ -117,7 +134,7 @@ export function AccionesFila({
         bloqueado={bloqueado}
         onHecho={() => router.refresh()}
       />
-    </>
+    </div>
   );
 }
 

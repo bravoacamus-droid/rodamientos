@@ -3,7 +3,9 @@
 // Cliente: abre el menú y el diálogo, y llama a la acción de servidor.
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Eye, SquarePen } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -44,7 +46,32 @@ export function AccionesFila({
   const [abierto, setAbierto] = React.useState(false);
 
   return (
-    <>
+    <div className="flex items-center justify-end gap-1.5">
+      {/*
+        Ver y Editar, fuera del menú.
+
+        Luis, 11/09, con su prototipo: en cada fila de proveedores, **Ver** y
+        **Editar**. Aquí la acción corriente no es cotizar —a un proveedor no
+        se le cotiza— sino corregirle la ficha: el RUC antes de registrar su
+        factura, los días de pago cuando cambian, la marca que empezó a
+        traer. Eso es lo que sale a la vista.
+      */}
+      <Button asChild variant="outline" size="sm" className="gap-1.5">
+        <Link href={`/proveedores/${id}`}>
+          <Eye className="size-4" aria-hidden="true" />
+          Ver
+        </Link>
+      </Button>
+
+      {puedeEditar ? (
+        <Button asChild size="sm" className="gap-1.5">
+          <Link href={`/proveedores/${id}/editar`}>
+            <SquarePen className="size-4" aria-hidden="true" />
+            Editar
+          </Link>
+        </Button>
+      ) : null}
+
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Acciones de ${razonSocial}`}
@@ -60,19 +87,8 @@ export function AccionesFila({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onSelect={() => router.push(`/proveedores/${id}`)}>
-            Ver proveedor
-          </DropdownMenuItem>
-
-          {puedeEditar ? (
-            <DropdownMenuItem
-              onSelect={() => router.push(`/proveedores/${id}/editar`)}
-            >
-              Editar proveedor
-            </DropdownMenuItem>
-          ) : null}
-
-          <DropdownMenuSeparator />
+          {/* Ver y Editar ya están fuera, en sus botones. Aquí queda lo que
+              se hace de tarde en tarde. */}
 
           {/* Recibir con el proveedor ya puesto. A uno de baja no se le recibe:
               la opción no aparece. */}
@@ -112,7 +128,7 @@ export function AccionesFila({
         activo={activo}
         onHecho={() => router.refresh()}
       />
-    </>
+    </div>
   );
 }
 

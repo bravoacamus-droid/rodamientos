@@ -104,7 +104,6 @@ export const NAVEGACION: readonly GrupoNav[] = [
       },
       { etiqueta: "Equivalencias", ruta: "/equivalencias", icono: "equivalencia" },
       { etiqueta: "Clientes", ruta: "/clientes", icono: "cliente" },
-      { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", roles: ["gerencia", "admin", "compras"] },
       // Con quién y con qué se despacha: las agencias, los vehículos propios y
       // los conductores. Va en Catálogo y no en Configuración porque se
       // mantiene mientras se trabaja —a la agencia nueva se le da de alta el
@@ -139,6 +138,25 @@ export const NAVEGACION: readonly GrupoNav[] = [
       // pregunta el precio, y de ahí sale la compra.
       { etiqueta: "Precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
+      /*
+        Proveedores vive aquí desde el 11/09, y no en Catálogo.
+
+        Luis: *«no sé qué tan factible sea pasar proveedores a compras, porque
+        en sí proveedores tiene que ver con compras, ¿no?»*. Sí, y el propio
+        menú ya lo decía: era el único ítem de Catálogo con los roles
+        `gerencia, admin, compras` —los mismos que todo este grupo— mientras
+        sus vecinos los veía cualquiera.
+
+        A un proveedor solo se entra desde una compra: para pedirle precio,
+        para ver qué le compraste o para corregirle el RUC antes de registrar
+        una factura. Nadie abre «Catálogo» pensando en un proveedor.
+
+        Clientes NO se mueve, y no es incoherencia: a un cliente se entra desde
+        cotizaciones, desde facturación y desde cobranzas —tres grupos—, así
+        que no es «una cosa de ventas». Es un maestro de verdad, y ahí es donde
+        se queda.
+      */
+      { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
     ],
   },

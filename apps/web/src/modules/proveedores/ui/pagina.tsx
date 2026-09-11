@@ -57,8 +57,11 @@ export default async function PaginaProveedores({ searchParams }: Props) {
         {puedeCrear ? (
           <Link
             href="/proveedores/nuevo"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
           >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
             Nuevo proveedor
           </Link>
         ) : null}
