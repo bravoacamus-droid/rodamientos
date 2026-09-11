@@ -51,11 +51,27 @@ export const ATAJOS_VISIBLES = CUENTAS_DEV.filter((c) => c.atajo);
  *
  * Se pide una variable EXPLÍCITA y no se deduce del nombre del despliegue: el
  * día de la entrega se borra esa variable y el panel se va, sin depender de
- * que alguien se acuerde de tocar el código. Mientras esté puesta, cualquiera
- * con la URL entra con un clic; conviene tenerlo presente.
+ * que alguien se acuerde de tocar el código.
+ *
+ * ---------------------------------------------------------------------------
+ * Y un tercer candado, de la auditoría del 11/09
+ * ---------------------------------------------------------------------------
+ * El plan de arriba —«el día de la entrega se borra esa variable»— depende de
+ * que alguien se acuerde el día de la entrega. Y si no se acuerda, el fallo no
+ * avisa: la pantalla se ve normal y cualquiera con la URL entra como gerencia
+ * de un clic, sin contraseña.
+ *
+ * Así que el despliegue de PRODUCCIÓN no los ofrece nunca, aunque la variable
+ * esté puesta. `VERCEL_ENV` vale `production` solo en el despliegue de verdad;
+ * los previews valen `preview` y siguen teniendo sus botones, que es justo
+ * donde hacen falta para enseñarle el sistema al cliente.
+ *
+ * El olvido pasa de «se entra sin contraseña» a «el panel no sale en la
+ * demo». Ese es el lado por el que hay que equivocarse.
  */
 export function hayAtajos(): boolean {
   if (!process.env.RODATECH_DEV_PASSWORD) return false;
+  if (process.env.VERCEL_ENV === "production") return false;
   if (process.env.RODATECH_ATAJOS === "1") return true;
   return process.env.NODE_ENV !== "production";
 }

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { clienteServidor } from "@rodatech/db/servidor";
 
-import { CUENTAS_DEV, hayAtajos } from "./cuentas-dev";
+import { ATAJOS_VISIBLES, hayAtajos } from "./cuentas-dev";
 
 export interface ResultadoLogin {
   error: string | null;
@@ -68,7 +68,7 @@ export async function iniciarSesion(
  * Tres puertas independientes, y basta que falle una para que no haga nada:
  *   1. hayAtajos(): fuera de producción, o RODATECH_ATAJOS=1 puesto a mano
  *   2. RODATECH_DEV_PASSWORD definida
- *   3. el correo pedido está en CUENTAS_DEV
+ *   3. el correo pedido es uno de los que el panel ofrece (ATAJOS_VISIBLES)
  */
 export async function entrarComoDev(datos: FormData): Promise<void> {
   if (!hayAtajos()) return;
@@ -76,8 +76,17 @@ export async function entrarComoDev(datos: FormData): Promise<void> {
   const clave = process.env.RODATECH_DEV_PASSWORD;
   if (!clave) return;
 
+  /*
+    Solo las cuentas que el panel ofrece, no las seis.
+
+    Auditoría del 11/09: se pintaban dos botones —gerencia y ventas— pero la
+    acción aceptaba las seis cuentas de `CUENTAS_DEV`, y una Server Action se
+    llama con un `fetch` a mano sin pasar por la pantalla. La lista visible
+    tiene que ser la lista aceptada; si mañana alguien quiere entrar como
+    almacén, se le pone su botón moviendo el `atajo`.
+  */
   const correo = String(datos.get("correo") ?? "");
-  if (!CUENTAS_DEV.some((c) => c.correo === correo)) return;
+  if (!ATAJOS_VISIBLES.some((c) => c.correo === correo)) return;
 
   const supabase = await clienteServidor();
   const { error } = await supabase.auth.signInWithPassword({
