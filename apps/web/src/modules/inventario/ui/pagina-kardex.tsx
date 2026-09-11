@@ -38,6 +38,7 @@ export default async function PaginaKardex({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
   };
 

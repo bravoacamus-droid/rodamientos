@@ -34,7 +34,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
     );
   }
 
-  const { filas, siguiente } = resultado.datos;
+  const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
     const filtrando = Boolean(filtros.q || filtros.condicion);
@@ -244,7 +244,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
           porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
-          cursorAnterior={null}
+          cursorAnterior={anterior}
         />
       </div>
     </>

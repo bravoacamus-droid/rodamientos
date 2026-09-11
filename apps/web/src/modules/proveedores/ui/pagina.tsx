@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { marcasDisponibles } from "../api/consultas";
@@ -34,6 +34,8 @@ export default async function PaginaProveedores({ searchParams }: Props) {
     marca: uno(sp.marca),
     inactivos: uno(sp.inactivos) === "1",
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
+    limite: leerTamano(uno(sp.n)),
   };
 
   const [marcas, perfil] = await Promise.all([marcasDisponibles(), perfilActual()]);

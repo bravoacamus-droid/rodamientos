@@ -36,9 +36,17 @@ interface ProductoAnidado {
  */
 export async function listarRecepciones(
   filtros: FiltrosRecepciones,
-): Promise<Resultado<{ filas: RecepcionLista[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: RecepcionLista[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     let consulta = supabase
       .from("recepciones")
@@ -49,10 +57,19 @@ export async function listarRecepciones(
          perfiles(nombre),
          recepcion_items(cantidad, costo_unitario)`,
       )
-      .order("numero", { ascending: false })
-      .limit(POR_PAGINA + 1);
+      .order("numero", { ascending: atras })
+      .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    if (filtros.cursor) consulta = consulta.lt("numero", filtros.cursor);
+    /*
+      Ir hacia atrás es el mismo keyset del revés: se pide lo que está POR
+      ENCIMA del cursor, en orden ascendente, y al final se le da la vuelta al
+      array. Mismo arreglo que en guías, facturación, compras y cotizaciones.
+    */
+    if (filtros.cursor) {
+      consulta = atras
+        ? consulta.gt("numero", filtros.cursor)
+        : consulta.lt("numero", filtros.cursor);
+    }
     if (filtros.proveedor) consulta = consulta.eq("proveedor_id", filtros.proveedor);
     if (filtros.desde) consulta = consulta.gte("fecha", filtros.desde);
     if (filtros.hasta) consulta = consulta.lte("fecha", filtros.hasta);
@@ -107,14 +124,33 @@ export async function listarRecepciones(
       };
     });
 
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
+    /*
+      El corte usa el MISMO número que el límite, no la constante: es la mitad
+      del fallo del selector de filas —se pedían `limite + 1` y se cortaba por
+      `POR_PAGINA`, así que con 25 pedidas salían 26—.
+    */
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    /*
+      Yendo hacia atrás, la fila «de más» sobra por ARRIBA y el orden viene
+      invertido. Se recorta primero y se da la vuelta después: al revés se
+      descartaría la fila equivocada.
+    */
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0]?.numero ?? null;
+    const ultima = filas[filas.length - 1]?.numero ?? null;
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente: hayMas ? (filas[filas.length - 1]?.numero ?? null) : null,
+        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+        // hacia adelante, siempre hay anterior salvo en la primera página.
+        siguiente: atras ? ultima : hayMas ? ultima : null,
+        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
       },
     };
   } catch (e) {

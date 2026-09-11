@@ -89,9 +89,17 @@ interface MarcaAnidada {
 /** Una página del maestro, por keyset sobre (razon_social, id). */
 export async function listarProveedores(
   filtros: FiltrosProveedores,
-): Promise<Resultado<{ filas: ProveedorLista[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: ProveedorLista[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     // «¿Quién me vende SKF?» es la pregunta que justifica que exista
     // `proveedor_marcas`. El `!inner` la convierte en un filtro de verdad; sin
@@ -105,9 +113,11 @@ export async function listarProveedores(
     let consulta = supabase
       .from("proveedores")
       .select(`${COLUMNAS_LISTA}, ${embed}`)
-      .order("razon_social")
-      .order("id")
-      .limit(POR_PAGINA + 1);
+      // Yendo hacia atrás se recorre el índice al revés —las dos columnas del
+      // keyset, no solo la primera— y al final se le da la vuelta al array.
+      .order("razon_social", { ascending: !atras })
+      .order("id", { ascending: !atras })
+      .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     if (!filtros.inactivos) consulta = consulta.eq("activo", true);
     if (filtros.tipo) consulta = consulta.eq("tipo", filtros.tipo);
@@ -122,8 +132,11 @@ export async function listarProveedores(
     if (cursor) {
       // Keyset compuesto: o la razón social es mayor, o es la misma y el id lo
       // desempata. PostgREST no tiene tuplas, así que se escribe como un `or`.
+      // Hacia atrás es la misma condición con los dos operadores dados la
+      // vuelta: lo que está POR ENCIMA del cursor.
+      const op = atras ? "lt" : "gt";
       consulta = consulta.or(
-        `razon_social.gt.${citar(cursor.razonSocial)},and(razon_social.eq.${citar(cursor.razonSocial)},id.gt.${cursor.id})`,
+        `razon_social.${op}.${citar(cursor.razonSocial)},and(razon_social.eq.${citar(cursor.razonSocial)},id.${op}.${cursor.id})`,
       );
     }
 
@@ -155,16 +168,33 @@ export async function listarProveedores(
         .sort(),
     }));
 
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Se recorta primero y se da la vuelta después: al revés se descartaría la
+    // fila equivocada, porque yendo hacia atrás la de más sobra por arriba.
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0];
     const ultima = filas[filas.length - 1];
+    const cursorDe = (p: ProveedorLista | undefined) =>
+      p ? codificarCursor(p.razon_social, p.id) : null;
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente:
-          hayMas && ultima ? codificarCursor(ultima.razon_social, ultima.id) : null,
+        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+        // hacia adelante, siempre hay anterior salvo en la primera página.
+        siguiente: atras ? cursorDe(ultima) : hayMas ? cursorDe(ultima) : null,
+        anterior: atras
+          ? hayMas
+            ? cursorDe(primera)
+            : null
+          : filtros.cursor
+            ? cursorDe(primera)
+            : null,
       },
     };
   } catch (e) {

@@ -4508,6 +4508,141 @@ de Defontana.
 
 ---
 
+## §AK · 11/09 — El teléfono, dos agentes y un agujero de verdad
+
+Día largo. Empezó con Luis enseñando capturas de su prototipo en móvil y acabó
+con el hallazgo de seguridad más grave del proyecto.
+
+---
+
+### AK.1 · Las tarjetas de móvil: «todo junto, apegado»
+
+Luis, comparando guías: *«así es mi prototipo, se ve todo; pero acá no, los
+botones, nada»*. Y sobre facturación: *«igual que facturación, todo junto,
+apegado»*.
+
+Las dos cosas eran ciertas en las siete listas. Las tarjetas iban pegadas por
+una raya de un píxel —que basta cuando hay tres datos, no cuando hay seis y
+dos botones— y enseñaban la mitad de lo que la tabla de escritorio, sin una
+sola acción: se entraba pulsando el número, que no parece un botón.
+
+Ahora cada ficha es una tarjeta con su borde, con los datos de la fila y cada
+uno con su etiqueta encima, y abajo los botones de la fila. En guías bajó
+además la **dirección de entrega**, que solo estaba en escritorio y es lo que
+se lee para saber a dónde va el camión.
+
+Lo que se decidió NO bajar: el **costo promedio** del catálogo, el único dato
+de esas listas que no se enseña fuera de la oficina.
+
+### AK.2 · Todos los importes del ERP, en 12,75 px
+
+Lo encontró el revisor de interfaz. `Moneda` mapeaba `tamano="sm"` a
+`text-xs` —lo mismo que `xs`— y **34 de sus 36 usos pasan `sm`**: totales,
+saldos, precio de venta, valorizado, en todos los listados y las dos vistas.
+
+Con Willy, eso es el fallo que más veces se repetía en una pantalla. Una línea.
+
+Del mismo barrido salió que el número de fila se leía en **dos tamaños según
+el ancho** —12,8 px en la tabla, 14 en la tarjeta— y que cotizaciones, y las
+FICHAS de guía y de factura, seguían con badges de estado planos. Caen cuatro
+mapas de colores paralelos: el razonamiento que los justificaba ya estaba
+copiado literal dentro de `EstadoBadge`.
+
+### AK.3 · Cualquier empleado podía hacerse gerencia
+
+**El hallazgo grave del proyecto.** La política `perfiles_propio_update` de la
+006 decía en su comentario *«el rol solo lo cambia admin/gerencia»* y hacía
+otra cosa: RLS decide qué FILAS se escriben, no qué COLUMNAS, y «cada quien
+edita su propia ficha» incluye `rol`. Con el `grant update on all tables` de
+la misma migración, cualquier empleado mandaba un PATCH a PostgREST sobre su
+propia fila y quedaba de gerencia en toda la base.
+
+Sin tocar el ERP: la anon key viaja en el bundle por diseño y su JWT está en
+su cookie. Una petición HTTP.
+
+Lo peor es que `cambiarUsuario` sí lo comprobaba bien, y su comentario
+reconocía el agujero **a medias**: creía que la política solo se lo permitía a
+gerencia. El caso **veinticinco** del patrón de esta casa. La bitácora lo
+apuntaba —vigila `perfiles(rol, activo)` desde la 051— pero apuntar no es
+impedir.
+
+La **077** lo cierra con un trigger `before update`: cambiar `rol` o `activo`
+exige `es_gerencia()`. Trigger y no `grant` por columnas por dos razones: una
+columna nueva no nace sin permiso, y `service_role` salta RLS y grants pero no
+triggers. Con centinela que revienta si el trigger falta o está desactivado.
+
+También de la auditoría: `enlaceAlPapel` era la única de las cuatro acciones
+de adjuntos que comprobaba sesión y **no rol**, y firmaba la URL sobre una
+ruta que mandaba el cliente. Un usuario de ventas leía `recepcion_adjuntos`
+por REST y se llevaba las facturas de compra del proveedor. Ahora entra el id
+del papel y la ruta la pone la base.
+
+### AK.4 · Lo que la auditoría dejó como decisión, no como parche
+
+Tres cosas que NO se tocaron porque son decisiones, no fallos:
+
+1. **El estado del documento vive solo en las RPC.** Quien puede llamar la RPC
+   también puede escribir la tabla por REST, así que en teoría se puede anular
+   por REST una cotización ya facturada. Cerrarlo es política por estado o
+   quitar el `grant` de UPDATE directo: arquitectura.
+2. **El costo y el margen los lee cualquier rol.** La política de lectura es
+   una sola para todas las tablas. No es escalada: nunca estuvo restringido.
+   Puede ser aceptable con seis empleados de confianza.
+3. **`RODATECH_ATAJOS`** entra como gerencia sin contraseña. Ya estaba en la
+   lista de entrega; mientras la variable esté puesta, el punto 1 sobra.
+
+Y un control que no controla: el centinela de la 072 busca `margen_pct` y
+`costo_*` en el TEXTO de la función, así que un `select *` pasaría. Hoy no
+filtra nada —la función devuelve solo campos del papel— pero conviene
+comprobar las claves del resultado, que ya están en `v_json`.
+
+### AK.5 · Los cinco listados que solo sabían avanzar — cerrado
+
+De §AJ.6. Faltaban productos, clientes, proveedores, kardex y recepciones; y
+el selector de filas en recepciones y proveedores. Todo puesto.
+
+Clientes y proveedores llevan **cursor compuesto** `(razon_social, id)`: hacia
+atrás hay que invertir los DOS operadores y las DOS columnas del `order`, no
+solo la primera, o el desempate por id salta filas en el borde de la página.
+
+Productos era el único que no se podía arreglar en TypeScript: pagina dentro
+de `productos_pagina`. La **078** le añade `p_atras` —parámetro con default al
+final, que no rompe a quien ya la llama— y un centinela que avanza una página
+y vuelve, comprobando que lo que vuelve es exactamente de donde salió. La
+llamada manda `p_atras` como `undefined` cuando no se usa, para que avanzar
+siga funcionando aunque la 078 no esté aplicada: la pantalla más usada del ERP
+no se puede quedar esperando a una migración.
+
+Apareció una **undécima** tabla que no estaba en el recuento del 10/09: la
+bitácora. Tenía el mismo `cursorAnterior={null}`, pero con un comentario que
+lo daba por decidido —*«la bitácora solo crece, así que volver atrás es volver
+al principio»*—. Eso solo es cierto en la segunda página.
+
+### AK.6 · Dos agentes, en `.claude/agents/`
+
+Los pidió Luis: `auditor-seguridad` (audita y reporta, no parchea) y
+`revisor-diseno` (puede arreglar interfaz, no toca acciones ni migraciones).
+Se sacaron de `.gitignore` a propósito: son criterio del proyecto, no
+configuración de una máquina.
+
+El de seguridad encontró AK.3 en siete minutos. El de diseño encontró AK.2, y
+también que la tabla de recepciones se había quedado sin botones esa misma
+mañana al arreglarle la tarjeta —el fallo contra el que avisa su propio
+archivo, cometido el mismo día que se escribió—.
+
+### AK.7 · Y dos de consola
+
+`favicon.ico` daba 404 en cada carga: no había icono. Ahora hay `app/icon.svg`
+—un rodamiento, no el logo, que mide 329 × 150 y aplastado a 16 px no se lee—.
+Y el aviso de Next sobre `scroll-behavior: smooth` en cada navegación, que se
+cierra con `data-scroll-behavior="smooth"` en el `<html>`.
+
+El tercero que pasó Luis, `reportAllChanges` / `startTime`, **no es nuestro**:
+es web-vitals, y el repo no lo usa en ninguna línea. Viene de una extensión
+del navegador.
+
+---
+
 ## §AJ · 10/09 — Las listas, y tres cables sueltos
 
 Día de listas, con Luis comparando cada pantalla contra su prototipo. Cinco

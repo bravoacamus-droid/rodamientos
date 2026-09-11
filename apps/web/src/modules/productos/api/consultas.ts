@@ -35,9 +35,18 @@ export type Resultado<T> =
  */
 export async function listarProductos(
   filtros: FiltrosProductos,
-): Promise<Resultado<{ filas: ProductoLista[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: ProductoLista[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
+
     const { data, error } = await supabase.rpc("productos_pagina", {
       // undefined y no null: los parámetros del RPC son OPCIONALES, y
       // PostgREST omite del cuerpo lo que llega como undefined para que
@@ -51,6 +60,22 @@ export async function listarProductos(
       p_tipo: filtros.tipo ?? undefined,
       p_marca: filtros.marca ?? undefined,
       p_archivados: filtros.archivados ?? false,
+      /*
+        Volver atrás lo resuelve la BASE, no esta función.
+
+        Era el único de los cinco listados que faltaban (§AJ.6) que no se podía
+        arreglar aquí: el keyset del catálogo vive dentro de
+        `productos_pagina`, que solo sabía mirar hacia adelante. La 078 le
+        añade `p_atras`. La vuelta al array sí es cosa nuestra, igual que en
+        los otros nueve.
+
+        Va como `undefined` cuando no se usa —y no como `false`— para que
+        PostgREST lo omita del cuerpo. Así, mientras la 078 no esté aplicada,
+        avanzar sigue funcionando exactamente igual que antes en vez de tumbar
+        el catálogo entero con un «no existe esa función»: la pantalla más
+        usada del ERP no se puede quedar esperando a una migración.
+      */
+      p_atras: atras || undefined,
     });
 
     if (error) return fallo(error);
@@ -65,13 +90,23 @@ export async function listarProductos(
     */
     const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
-    const filas = hayMas ? todas.slice(0, porPagina) : todas;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Se recorta primero y se da la vuelta después: yendo hacia atrás la fila
+    // «de más» sobra por arriba, y la base la devuelve en orden descendente.
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0]?.codigo_norm ?? null;
+    const ultima = filas[filas.length - 1]?.codigo_norm ?? null;
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente: hayMas ? (filas[filas.length - 1]?.codigo_norm ?? null) : null,
+        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+        // hacia adelante, siempre hay anterior salvo en la primera página.
+        siguiente: atras ? ultima : hayMas ? ultima : null,
+        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
       },
     };
   } catch (e) {

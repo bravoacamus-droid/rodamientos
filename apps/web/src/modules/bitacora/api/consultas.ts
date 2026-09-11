@@ -21,20 +21,30 @@ export const POR_PAGINA = 50;
  */
 export async function movimientos(
   filtros: FiltrosBitacora,
-): Promise<Resultado<{ filas: Movimiento[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: Movimiento[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     let consulta = supabase
       .from("actividad")
       .select("id, usuario_id, usuario_nombre, accion, entidad, entidad_id, descripcion, creado_en")
-      .order("id", { ascending: false })
+      .order("id", { ascending: atras })
       // Uno de más, para saber si hay página siguiente sin contar la tabla.
-      .limit(POR_PAGINA + 1);
+      .limit((filtros.limite ?? POR_PAGINA) + 1);
 
+    // Hacia atrás, lo que está POR ENCIMA del cursor y en orden ascendente;
+    // el array se da la vuelta al final.
     if (filtros.cursor) {
       const n = Number(filtros.cursor);
-      if (Number.isFinite(n)) consulta = consulta.lt("id", n);
+      if (Number.isFinite(n)) consulta = atras ? consulta.gt("id", n) : consulta.lt("id", n);
     }
     // La entidad se compara contra la lista conocida y no se pasa tal cual: es
     // un valor que llega de la barra de direcciones.
@@ -58,13 +68,26 @@ export async function movimientos(
       creado_en: String(f.creado_en),
     }));
 
-    const hayMas = todas.length > POR_PAGINA;
-    const filas = hayMas ? todas.slice(0, POR_PAGINA) : todas;
-    const ultima = filas[filas.length - 1];
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const hayMas = todas.length > porPagina;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Se recorta primero y se da la vuelta después: yendo hacia atrás la fila
+    // «de más» sobra por arriba.
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0] ? String(filas[0].id) : null;
+    const ultima = filas[filas.length - 1]
+      ? String(filas[filas.length - 1]!.id)
+      : null;
 
     return {
       ok: true,
-      datos: { filas, siguiente: hayMas && ultima ? String(ultima.id) : null },
+      datos: {
+        filas,
+        siguiente: atras ? ultima : hayMas ? ultima : null,
+        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
+      },
     };
   } catch (e) {
     return fallo(e);

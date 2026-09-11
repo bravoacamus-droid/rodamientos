@@ -70,6 +70,7 @@ export default async function PaginaBitacora({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
   };
 
   const personas = await quienesAparecen();
@@ -144,7 +145,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
     );
   }
 
-  const { filas, siguiente } = r.datos;
+  const { filas, siguiente, anterior } = r.datos;
 
   if (filas.length === 0) {
     const filtrando = Boolean(
@@ -206,12 +207,21 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
         </table>
       </div>
 
-      {/* Sin «anterior»: la bitácora solo crece, así que volver atrás es
-          volver al principio de la lista, que es donde ya estabas. */}
+      {/*
+        Aquí decía «sin anterior: la bitácora solo crece, así que volver atrás
+        es volver al principio de la lista, que es donde ya estabas». Eso solo
+        es cierto en la segunda página. Desde la cuarta, volver atrás es ir a
+        la tercera, y no había manera de hacerlo salvo borrando el cursor de la
+        barra de direcciones.
+
+        Era el mismo `cursorAnterior={null}` de las otras diez tablas; esta no
+        entró en el recuento del 10/09 porque el comentario lo daba por
+        decidido.
+      */}
       <PaginacionKeyset
         cantidadEnPagina={filas.length}
         cursorSiguiente={siguiente}
-        cursorAnterior={null}
+        cursorAnterior={anterior}
         porPagina={POR_PAGINA}
       />
     </>

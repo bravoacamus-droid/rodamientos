@@ -63,6 +63,21 @@ export interface FiltrosRecepciones {
   desde?: string;
   hasta?: string;
   cursor?: string;
+  /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es el mismo keyset del revés. Sin esto el cursor solo sabía
+   * avanzar: se podía pasar de página y no volver. Era el último de los cinco
+   * listados que quedaban así (§AJ.6).
+   */
+  direccion?: "sig" | "ant";
+  /**
+   * Cuántas filas por página.
+   *
+   * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la
+   * URL: un `?n=100000` sería una consulta que tumba la pantalla.
+   */
+  limite?: number;
 }
 
 /** Un proveedor, para el desplegable del registro. */

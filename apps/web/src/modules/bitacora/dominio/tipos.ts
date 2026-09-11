@@ -87,6 +87,16 @@ export interface FiltrosBitacora {
   hasta?: string;
   /** Cursor keyset: el `id` de la última fila de la página anterior. */
   cursor?: string;
+  /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es el mismo keyset del revés. La bitácora no salió en el recuento
+   * del 10/09 —son diez tablas, y esta hace once— pero tenía el mismo
+   * `cursorAnterior={null}` que las demás.
+   */
+  direccion?: "sig" | "ant";
+  /** Filas por página, ya validado con `leerTamano`. */
+  limite?: number;
 }
 
 /**

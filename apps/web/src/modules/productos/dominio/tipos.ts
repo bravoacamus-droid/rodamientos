@@ -52,6 +52,14 @@ export interface FiltrosProductos {
   archivados?: boolean;
   cursor?: string;
   /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * Aquí `ant` no se resuelve en TypeScript: el keyset del catálogo vive
+   * dentro de `productos_pagina`, y es la 078 la que le enseñó a mirar hacia
+   * atrás.
+   */
+  direccion?: "sig" | "ant";
+  /**
    * Filas por página, ya validado.
    *
    * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la

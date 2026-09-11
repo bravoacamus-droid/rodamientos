@@ -54,6 +54,21 @@ export interface FiltrosProveedores {
   /** "1" incluye los desactivados. */
   inactivos?: boolean;
   cursor?: string;
+  /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es el mismo keyset compuesto del revés: los dos operadores dados la
+   * vuelta y el orden descendente. Sin esto se podía pasar de página y no
+   * volver.
+   */
+  direccion?: "sig" | "ant";
+  /**
+   * Cuántas filas por página.
+   *
+   * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la
+   * URL.
+   */
+  limite?: number;
 }
 
 /**

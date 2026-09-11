@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresActivos } from "../api/consultas";
@@ -34,6 +34,8 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
+    limite: leerTamano(uno(sp.n)),
   };
 
   const [proveedores, perfil] = await Promise.all([

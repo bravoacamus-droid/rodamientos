@@ -85,6 +85,13 @@ export interface FiltrosClientes {
   inactivos?: boolean;
   cursor?: string;
   /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es el mismo keyset compuesto del revés. Sin esto se podía pasar de
+   * página y no volver.
+   */
+  direccion?: "sig" | "ant";
+  /**
    * Filas por página, ya validado.
    *
    * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la

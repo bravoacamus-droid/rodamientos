@@ -98,6 +98,14 @@ export interface FiltrosKardex {
   hasta?: string;
   cursor?: string;
   /**
+   * Hacia dónde se mueve el cursor.
+   *
+   * `ant` es el mismo keyset del revés: el id por encima del cursor, en orden
+   * ascendente, y la vuelta al array. Sin esto se podía pasar de página y no
+   * volver.
+   */
+  direccion?: "sig" | "ant";
+  /**
    * Filas por página, ya validado.
    *
    * Lo pone la página leyendo `?n=` con `leerTamano`, no llega crudo de la

@@ -32,7 +32,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
     );
   }
 
-  const { filas, siguiente } = resultado.datos;
+  const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
     const filtrando = Boolean(filtros.q || filtros.tipo || filtros.marca);
@@ -269,9 +269,10 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
 
       <div className="px-3 py-3 sm:px-4">
         <PaginacionKeyset
+          porPagina={filtros.limite}
           cantidadEnPagina={filas.length}
           cursorSiguiente={siguiente}
-          cursorAnterior={null}
+          cursorAnterior={anterior}
         />
       </div>
     </>

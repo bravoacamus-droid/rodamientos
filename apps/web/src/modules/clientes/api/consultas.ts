@@ -141,15 +141,26 @@ function citar(valor: string): string {
  */
 export async function listarClientes(
   filtros: FiltrosClientes,
-): Promise<Resultado<{ filas: ClienteLista[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: ClienteLista[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     let consulta = supabase
       .from("clientes")
       .select(COLUMNAS_LISTA_LEFT)
-      .order("razon_social", { ascending: true })
-      .order("id", { ascending: true })
+      // Yendo hacia atrás se recorre el índice al revés, y las DOS columnas
+      // del keyset: si solo se invirtiera la primera, el desempate por id
+      // saltaría filas justo en el borde de la página.
+      .order("razon_social", { ascending: !atras })
+      .order("id", { ascending: !atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     // El índice keyset es PARCIAL (`where activo`): mientras no se pidan los
@@ -174,8 +185,11 @@ export async function listarClientes(
         // (razon_social, id) > (razón, id) del cursor, escrito como lo entiende
         // PostgREST. Los `eq` de arriba siguen aplicando: se combinan con AND.
         const razon = citar(cursor.razonSocial);
+        // Hacia atrás es la misma condición con los dos operadores dados la
+        // vuelta: lo que está POR ENCIMA del cursor.
+        const op = atras ? "lt" : "gt";
         consulta = consulta.or(
-          `razon_social.gt.${razon},and(razon_social.eq.${razon},id.gt.${cursor.id})`,
+          `razon_social.${op}.${razon},and(razon_social.eq.${razon},id.${op}.${cursor.id})`,
         );
       }
     }
@@ -193,15 +207,31 @@ export async function listarClientes(
     */
     const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
-    const filas = hayMas ? todas.slice(0, porPagina) : todas;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Se recorta primero y se da la vuelta después: yendo hacia atrás la fila
+    // «de más» sobra por arriba, y al revés se descartaría la equivocada.
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const primera = filas[0];
     const ultima = filas[filas.length - 1];
+    const cursorDe = (c: ClienteLista | undefined) =>
+      c ? codificarCursor(c.razon_social, c.id) : null;
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente:
-          hayMas && ultima ? codificarCursor(ultima.razon_social, ultima.id) : null,
+        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+        // hacia adelante, siempre hay anterior salvo en la primera página.
+        siguiente: atras ? cursorDe(ultima) : hayMas ? cursorDe(ultima) : null,
+        anterior: atras
+          ? hayMas
+            ? cursorDe(primera)
+            : null
+          : filtros.cursor
+            ? cursorDe(primera)
+            : null,
       },
     };
   } catch (e) {

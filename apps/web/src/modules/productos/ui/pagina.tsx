@@ -38,6 +38,7 @@ export default async function PaginaProductos({ searchParams }: Props) {
     subfamilia: uno(sp.subfamilia),
     tipo: uno(sp.tipo),
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
     archivados: uno(sp.archivados) === "1",
   };

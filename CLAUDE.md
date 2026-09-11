@@ -31,7 +31,7 @@ restricción de diseño principal, y ya obligó a rehacer pantallas enteras:
 ### Verifica en la pantalla, no en el typecheck
 
 **Casi todos los defectos encontrados en este proyecto eran invisibles a
-`tsc`, a `eslint` y a los 1174 tests.** Botones que no se ven, funciones sin
+`tsc`, a `eslint` y a los 1185 tests.** Botones que no se ven, funciones sin
 puerta, columnas que no existen. Si has tocado una pantalla, ábrela.
 
 Hay servidor de desarrollo en `http://localhost:4005` y herramientas de
@@ -65,11 +65,16 @@ salían siempre.
 tenían migración entera —bucket privado, tabla, RLS— y un componente escrito,
 y solo se llegaba a ellos desde la ficha de la recepción, nunca al recibir.
 
+**Y dos más el 11/09**, y una de ellas es la peor de todas: la política de
+`perfiles` decía en su comentario «el rol solo lo cambia admin/gerencia» y
+dejaba a **cualquier empleado** ascenderse con un PATCH, porque RLS decide
+filas y no columnas (§AK.3). Van **veinticinco casos**.
+
 **Y tres más el 10/09, en las listas**, en una variante que conviene reconocer:
 aquí la puerta estaba puesta y **faltaba el cable**. El selector de filas
 escribía `?n=25` y ninguna página lo leía; `cursorAnterior` se pasaba como
 `null` en las diez tablas; y `EstadoBadge` tenía cuatro estados SUNAT que no
-usaba nadie. Van **veintitrés casos**.
+usaba nadie. Eran veintitrés al cerrar ese día.
 
 Los tres se habrían encontrado con un `grep`: un prop que siempre vale `null`,
 un search param que se escribe y no se lee, un export sin quien lo importe.
@@ -115,7 +120,7 @@ contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
 
 ```bash
 pnpm dev                     # servidor en :4005
-pnpm test                    # 1174 tests
+pnpm test                    # 1185 tests
 pnpm lint
 npx tsc -p apps/web/tsconfig.json --noEmit
 
@@ -123,7 +128,7 @@ node scripts/aplicar-migraciones.mjs 070_lo_que_sea.sql   # UNA migración
 pnpm db:tipos                # regenerar tipos tras migrar
 ```
 
-**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 72 desde
+**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 78 desde
 cero y la 005 falla por vistas dependientes.
 
 ---
@@ -237,11 +242,13 @@ cobrar.
 
 ### A medias, y es lo primero que hay que terminar
 
-Del 10/09 (§AJ.6): **el botón de volver falta en cinco tablas** —productos
-pagina dentro de una función de Postgres; clientes y proveedores llevan cursor
-compuesto; inventario y recepciones son directas y se quedaron por tiempo— y
-**el selector de filas falta en recepciones y proveedores**. Cotizaciones sigue
-con los badges de estado planos.
+Lo del 10/09 (§AJ.6) quedó cerrado el 11/09: volver atrás funciona en las
+**once** tablas y el selector de filas está en todas. Cotizaciones ya usa
+`EstadoBadge`.
+
+Lo que queda abierto, y es **decisión de Luis, no trabajo pendiente** (§AK.4):
+el estado del documento solo lo vigilan las RPC mientras PostgREST expone las
+tablas en crudo; y el costo y el margen los lee cualquier rol.
 
 ### Escrito pero SIN probar en pantalla
 

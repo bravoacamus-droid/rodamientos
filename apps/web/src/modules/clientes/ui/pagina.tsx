@@ -42,6 +42,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
     bloqueados: uno(sp.bloqueados) === "1",
     inactivos: uno(sp.inactivos) === "1",
     cursor: uno(sp.cursor),
+    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
   };
 

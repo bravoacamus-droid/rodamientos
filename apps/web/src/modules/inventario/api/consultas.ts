@@ -138,17 +138,30 @@ export async function reposicion(
  */
 export async function kardex(
   filtros: FiltrosKardex,
-): Promise<Resultado<{ filas: FilaKardex[]; siguiente: string | null }>> {
+): Promise<
+  Resultado<{
+    filas: FilaKardex[];
+    siguiente: string | null;
+    anterior: string | null;
+  }>
+> {
   try {
     const supabase = await clienteServidor();
+
+    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
     let consulta = supabase
       .from("v_kardex")
       .select("*")
-      .order("id", { ascending: false })
+      .order("id", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    if (filtros.cursor) consulta = consulta.lt("id", Number(filtros.cursor));
+    // Hacia atrás, lo que está POR ENCIMA del cursor y en orden ascendente;
+    // el array se da la vuelta al final.
+    if (filtros.cursor) {
+      const desde = Number(filtros.cursor);
+      consulta = atras ? consulta.gt("id", desde) : consulta.lt("id", desde);
+    }
     if (filtros.producto) consulta = consulta.eq("producto_id", filtros.producto);
     // El tipo llega de la URL, así que se contrasta contra el enum antes de
     // usarlo: un `?tipo=loquesea` no tiene por qué llegar a Postgres para que
@@ -175,13 +188,25 @@ export async function kardex(
     */
     const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
-    const filas = hayMas ? todas.slice(0, porPagina) : todas;
+    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Se recorta primero y se da la vuelta después: yendo hacia atrás la fila
+    // «de más» sobra por arriba.
+    const filas = atras ? [...recortadas].reverse() : recortadas;
+
+    const idDe = (f: FilaKardex | undefined) =>
+      f ? String(f.id ?? "") || null : null;
+    const primera = idDe(filas[0]);
+    const ultima = idDe(filas[filas.length - 1]);
 
     return {
       ok: true,
       datos: {
         filas,
-        siguiente: hayMas ? String(filas[filas.length - 1]?.id ?? "") || null : null,
+        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
+        // hacia adelante, siempre hay anterior salvo en la primera página.
+        siguiente: atras ? ultima : hayMas ? ultima : null,
+        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
       },
     };
   } catch (e) {
