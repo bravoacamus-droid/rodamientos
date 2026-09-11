@@ -145,33 +145,60 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
       {/* ------------------------------------------------------------ Móvil */}
       <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
         {filas.map((c) => (
+          /*
+            La tarjeta, en vertical.
+
+            Estaba en dos columnas —datos a la izquierda, acciones a la
+            derecha— y aguantaba mientras las acciones eran un icono de tres
+            puntos. Al sacar «Ver» y «Cotizar» a botones de verdad (11/09),
+            los tres juntos se comían media tarjeta y el nombre se quedaba en
+            cuatro letras y puntos suspensivos.
+
+            Ahora es una columna: el código y el estado arriba, el nombre
+            entero, los datos, y los botones abajo repartiéndose el ancho. Es
+            como lo tiene el prototipo de Luis, y es lo que se puede pulsar
+            con el pulgar sin apuntar.
+          */
           <li
             key={c.id}
-            className={`flex items-start gap-2 px-3 py-3 ${c.activo ? "" : "opacity-60"}`}
+            className={`flex flex-col gap-2 px-3 py-3 ${c.activo ? "" : "opacity-60"}`}
           >
-            {/* `min-w-0` es lo que impide que un nombre largo empuje la tarjeta
-                fuera de los 360 px: sin él, flex no deja encoger al hijo. */}
-            <div className="min-w-0 flex-1">
-              <Link
-                href={`/clientes/${c.id}`}
-                className="block truncate text-sm font-semibold text-brand-600"
-              >
-                {c.razon_social}
-              </Link>
-
-              <p className="mt-0.5 truncate font-mono text-xs text-[var(--fg-subtle)]">
-                {c.codigo} · {c.tipo_documento} {c.numero_documento ?? "sin documento"}
-              </p>
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
+                {c.codigo}
+              </span>
+              <span className="shrink-0">
                 <Estado c={c} />
-                <Condicion c={c} />
-              </div>
-
-              <div className="mt-1 min-w-0 text-xs text-[var(--fg-muted)]">
-                <Contacto c={c} />
-              </div>
+              </span>
             </div>
+
+            {/* Sin `truncate`: en la tabla el nombre compite con seis
+                columnas, aquí tiene la tarjeta entera y se lee completo. */}
+            <Link
+              href={`/clientes/${c.id}`}
+              className="text-sm font-semibold text-brand-600"
+            >
+              {c.razon_social}
+            </Link>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              {/* El documento, solo si el código no lo lleva ya dentro: misma
+                  regla que en la tabla de escritorio. Con los 97 del Excel el
+                  código ES el RUC, así que repetirlo aquí sería el mismo
+                  número dos veces en una tarjeta de 414 px. */}
+              {c.numero_documento !== null &&
+              !c.codigo.includes(c.numero_documento) ? (
+                <Dato etiqueta={c.tipo_documento}>{c.numero_documento}</Dato>
+              ) : null}
+              <Dato etiqueta="Condición">
+                <Condicion c={c} />
+              </Dato>
+              <div className="col-span-2 min-w-0">
+                <Dato etiqueta="Contacto">
+                  <Contacto c={c} />
+                </Dato>
+              </div>
+            </dl>
 
             <AccionesFila
               id={c.id}
@@ -179,6 +206,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               razonSocial={c.razon_social}
               bloqueado={c.bloqueado}
               puedeEditar={puedeEditar}
+              ancho
             />
           </li>
         ))}
@@ -281,5 +309,27 @@ function SegundaLinea({ c }: { c: ClienteLista }) {
     <span className="block truncate text-sm text-[var(--fg-subtle)]">
       {partes.join(" · ")}
     </span>
+  );
+}
+
+/**
+ * Un dato de la tarjeta: su etiqueta encima, pequeña, y el valor debajo.
+ *
+ * En móvil no hay cabecera de tabla que diga qué es cada cosa, así que cada
+ * dato se presenta solo. La etiqueta va en 12 px porque no se lee, se
+ * reconoce; el valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

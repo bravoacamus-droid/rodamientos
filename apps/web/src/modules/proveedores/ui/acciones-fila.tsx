@@ -36,17 +36,27 @@ export function AccionesFila({
   razonSocial,
   activo,
   puedeEditar,
+  ancho = false,
 }: {
   id: string;
   razonSocial: string;
   activo: boolean;
   puedeEditar: boolean;
+  /**
+   * A lo ancho, para la tarjeta de móvil.
+   *
+   * En la tabla los botones van a la derecha de la fila y miden lo que miden.
+   * En una tarjeta de 360 px, al lado del nombre lo aplastan —pasó el 11/09,
+   * al sacarlos del menú de tres puntos— así que ahí van debajo,
+   * repartiéndose el ancho, que es como se pulsa con el pulgar.
+   */
+  ancho?: boolean;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className={`flex items-center gap-1.5 ${ancho ? "w-full" : "justify-end"}`}>
       {/*
         Ver y Editar, fuera del menú.
 
@@ -56,7 +66,12 @@ export function AccionesFila({
         factura, los días de pago cuando cambian, la marca que empezó a
         traer. Eso es lo que sale a la vista.
       */}
-      <Button asChild variant="outline" size="sm" className="gap-1.5">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
+      >
         <Link href={`/proveedores/${id}`}>
           <Eye className="size-4" aria-hidden="true" />
           Ver
@@ -64,7 +79,7 @@ export function AccionesFila({
       </Button>
 
       {puedeEditar ? (
-        <Button asChild size="sm" className="gap-1.5">
+        <Button asChild size="sm" className={`gap-1.5 ${ancho ? "flex-1" : ""}`}>
           <Link href={`/proveedores/${id}/editar`}>
             <SquarePen className="size-4" aria-hidden="true" />
             Editar

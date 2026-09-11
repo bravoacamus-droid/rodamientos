@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
+import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { listarProveedores } from "../api/consultas";
@@ -164,47 +164,71 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
       {/* ----------------------------------------------------- Móvil */}
       <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
         {filas.map((p) => (
+          /*
+            La tarjeta, en vertical, igual que la de clientes.
+
+            Estaba en dos columnas —datos a la izquierda, acciones a la
+            derecha— y aguantaba mientras las acciones eran un icono de tres
+            puntos. Al sacar «Ver» y «Editar» a botones de verdad (11/09), los
+            tres juntos se comían media tarjeta y el nombre se quedaba en
+            cuatro letras y puntos suspensivos.
+
+            Ahora: código y estado arriba, el nombre entero, los datos en dos
+            columnas y los botones abajo repartiéndose el ancho.
+          */
           <li
             key={p.id}
-            className={`flex items-start gap-2 px-3 py-3 ${p.activo ? "" : "opacity-60"}`}
+            className={`flex flex-col gap-2 px-3 py-3 ${p.activo ? "" : "opacity-60"}`}
           >
-            <div className="min-w-0 flex-1">
-              <Link
-                href={`/proveedores/${p.id}`}
-                className="block truncate text-sm font-semibold text-brand-600"
-              >
-                {p.razon_social}
-              </Link>
-              <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
-                {p.numero_documento
-                  ? `${p.tipo_documento} ${p.numero_documento}`
-                  : "sin documento"}
-                {" · "}
-                {ETIQUETA_TIPO[p.tipo]}
-              </p>
-
-              {p.marcas.length > 0 ? (
-                <p className="mt-1 truncate text-xs text-[var(--fg-subtle)]">
-                  {p.marcas.join(" · ")}
-                </p>
-              ) : null}
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 text-xs text-[var(--fg-muted)]">
-                <span>{p.dias_pago === 0 ? "Contado" : `Pago ${p.dias_pago} d`}</span>
-                <span>Lead {p.lead_time_dias} d</span>
-                {p.activo ? null : (
-                  <span className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5">
-                    De baja
-                  </span>
-                )}
-              </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
+                {p.codigo}
+              </span>
+              <Badge tone={p.activo ? "success" : "neutral"} size="xs">
+                {p.activo ? "Activo" : "De baja"}
+              </Badge>
             </div>
+
+            {/* Sin `truncate`: en la tabla el nombre compite con seis columnas;
+                aquí tiene la tarjeta entera y se lee completo. */}
+            <Link
+              href={`/proveedores/${p.id}`}
+              className="text-sm font-semibold text-brand-600"
+            >
+              {p.razon_social}
+            </Link>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              {/* El documento, solo si el codigo no lo lleva ya dentro:
+                  misma regla que en la tabla de escritorio. */}
+              {p.numero_documento !== null &&
+              !p.codigo.includes(p.numero_documento) ? (
+                <DatoTarjeta etiqueta={p.tipo_documento}>
+                  {p.numero_documento}
+                </DatoTarjeta>
+              ) : null}
+              <DatoTarjeta etiqueta="Tipo">{ETIQUETA_TIPO[p.tipo]}</DatoTarjeta>
+              <DatoTarjeta etiqueta="Pago">
+                {p.dias_pago === 0 ? "Contado" : `${p.dias_pago} días`}
+              </DatoTarjeta>
+              <DatoTarjeta etiqueta="Lead time">
+                {p.lead_time_dias} días
+              </DatoTarjeta>
+              {p.marcas.length > 0 ? (
+                <div className="col-span-2 min-w-0">
+                  <DatoTarjeta etiqueta="Marcas">
+                    {p.marcas.join(" · ")}
+                  </DatoTarjeta>
+                </div>
+              ) : null}
+            </dl>
 
             <AccionesFila
               id={p.id}
               razonSocial={p.razon_social}
               activo={p.activo}
               puedeEditar={puedeEditar}
+              ancho
             />
           </li>
         ))}
@@ -218,5 +242,27 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
         />
       </div>
     </>
+  );
+}
+
+/**
+ * Un dato de la tarjeta de móvil: etiqueta pequeña encima, valor debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor en 14, que es el mínimo de esta casa.
+ */
+function DatoTarjeta({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

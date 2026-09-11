@@ -54,6 +54,15 @@ export interface AccionesFilaProps {
   razonSocial: string;
   bloqueado: boolean;
   puedeEditar: boolean;
+  /**
+   * A lo ancho, para la tarjeta de móvil.
+   *
+   * En la tabla los botones van a la derecha de la fila y miden lo que
+   * miden. En una tarjeta de 360 px puestos al lado del nombre lo aplastan
+   * —pasó el 11/09, al sacarlos del menú de tres puntos— así que ahí van
+   * debajo, repartiéndose el ancho, que es como se pulsa con el pulgar.
+   */
+  ancho?: boolean;
 }
 
 export function AccionesFila({
@@ -62,13 +71,19 @@ export function AccionesFila({
   razonSocial,
   bloqueado,
   puedeEditar,
+  ancho = false,
 }: AccionesFilaProps) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
-      <Button asChild variant="outline" size="sm" className="gap-1.5">
+    <div className={`flex items-center gap-1.5 ${ancho ? "w-full" : "justify-end"}`}>
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
+      >
         <Link href={`/clientes/${id}`}>
           <Eye className="size-4" aria-hidden="true" />
           Ver
@@ -78,7 +93,7 @@ export function AccionesFila({
       {/* A un cliente bloqueado no se le cotiza: el botón no aparece, en vez
           de aparecer y rebotar al pulsarlo. */}
       {!bloqueado ? (
-        <Button asChild size="sm" className="gap-1.5">
+        <Button asChild size="sm" className={`gap-1.5 ${ancho ? "flex-1" : ""}`}>
           <Link href={`/cotizaciones/nueva?cliente=${id}`}>
             <Plus className="size-4" aria-hidden="true" />
             Cotizar
