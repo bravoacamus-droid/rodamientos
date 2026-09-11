@@ -255,6 +255,16 @@ mira el resultado y no el fuente (080).
 (Luis, 11/09): el vendedor los necesita al negociar y son seis empleados de
 confianza. Se revisa el día que entre un vendedor de fuera.
 
+### Lo siguiente que pidió Luis
+
+**Mandar la cotización por correo desde el ERP** (11/09, §AK.8), con un correo
+de dominio propio. Tres piezas, y solo una es código: el envío, los registros
+DNS del dominio (SPF/DKIM/DMARC, sin los cuales cae en spam) y el PDF —que hoy
+no existe como archivo—. Lo sensato es mandar el enlace público que ya está
+construido (072) en vez del adjunto.
+
+Bloqueado por lo de siempre: **uno de los 97 clientes tiene correo.**
+
 ### Escrito pero SIN probar en pantalla
 
 - Detalle de cuotas en la factura (no hay ninguna con más de una cuota).

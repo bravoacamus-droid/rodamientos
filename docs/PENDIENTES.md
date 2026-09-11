@@ -4644,6 +4644,29 @@ Hoy no filtraba nada: la función devuelve solo campos del papel. El fallo era
 del guardián, y un guardián en el que se confía y que no mira es peor que no
 tenerlo.
 
+### AK.4 bis · Las cuatro migraciones, aplicadas — y lo que costó la 078
+
+Las 077, 078, 079 y 080 están **aplicadas en la base del cliente** (11/09).
+
+La 078 falló a la primera, y la lección vale más que el arreglo:
+**`create or replace function` reemplaza solo si la FIRMA es la misma.** Al
+añadirle `p_atras`, Postgres no sustituyó nada: creó una función NUEVA al lado
+de la vieja. El propio centinela lo cazó —`function public.productos_pagina
+(unknown, integer) is not unique`— y, como el batch va en transacción
+implícita, no quedó nada a medias.
+
+Lo traicionero es que **la pantalla habría seguido funcionando**: llama por
+nombre de argumento y ahí no hay ambigüedad. La base se habría quedado con dos
+versiones de la misma función, y el error le habría salido a otra persona,
+otro día, llamándola posicionalmente. Ahora la migración hace `drop` de las
+dos firmas antes de crear.
+
+**El trigger de la 079, verificado por Luis en pantalla**: COT1-000003, de
+borrador a «Marcar como enviada», pasa. Era el único punto del día que estaba
+en «debería funcionar»: el riesgo no era que dejara pasar lo malo —eso se
+revisó línea por línea— sino que el candado fuera tan estricto que bloqueara
+lo legítimo. No lo es.
+
 ### AK.5 · Los cinco listados que solo sabían avanzar — cerrado
 
 De §AJ.6. Faltaban productos, clientes, proveedores, kardex y recepciones; y
@@ -4688,6 +4711,36 @@ cierra con `data-scroll-behavior="smooth"` en el `<html>`.
 El tercero que pasó Luis, `reportAllChanges` / `startTime`, **no es nuestro**:
 es web-vitals, y el repo no lo usa en ninguna línea. Viene de una extensión
 del navegador.
+
+### AK.8 · Mandar la cotización por correo, con dominio propio
+
+Luis, al cerrar el día: *«con Hostinger o otro, enviar la cotización por correo
+automáticamente… su plantilla y el PDF de cada cliente»*.
+
+Se puede, y con un correo de dominio (`ventas@rodatech.pe`) es la forma
+correcta: sale del servidor sin que nadie abra Gmail y llega con la cara de la
+empresa. Son tres piezas y **solo una es código**:
+
+1. **El envío.** El buzón de Hostinger basta para mandar. Un servicio
+   transaccional (Resend, Brevo) usa la MISMA dirección pero además avisa de
+   rebotes y aperturas, que en una cotización importa. No son correos masivos:
+   es uno a uno.
+2. **El DNS: SPF, DKIM y DMARC.** Sin los tres, el correo sale y cae en spam.
+   Media hora en el panel del dominio, se hace una vez, y **es lo que decide si
+   el botón sirve o es decorativo**. No es código.
+3. **El PDF.** Hoy no existe como archivo: lo fabrica el navegador al imprimir.
+   O se genera en el servidor (Chromium sin ventana, pesado en Vercel), o —lo
+   sensato— **se manda el enlace público que ya está construido** (072): token
+   de 32 hex, sin sesión, con su botón de descargar. Cero infraestructura
+   nueva, y encima se sabe si lo abrió.
+
+**Y el bloqueo de siempre: de los 97 clientes, uno solo tiene correo.** El
+botón perfecto sin nadie a quien mandárselo. Va con los teléfonos, en la lista
+de Willy.
+
+Plan propuesto: **paso 1**, botón que manda la plantilla con el enlace (un
+día, funciona al desplegar); **paso 2**, adjuntar el PDF de verdad si Willy lo
+pide. Pendiente de saber si Rodatech tiene dominio propio y dónde.
 
 ---
 
