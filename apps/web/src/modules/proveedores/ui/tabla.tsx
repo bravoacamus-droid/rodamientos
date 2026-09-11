@@ -68,7 +68,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               <th className="px-4 py-2.5 font-medium">Marcas</th>
               <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Contacto</th>
               <th className="px-4 py-2.5 text-right font-medium">Pago</th>
-              <th className="px-4 py-2.5 text-right font-medium">Lead time</th>
+              <th className="px-4 py-2.5 text-right font-medium">Entrega</th>
               <th className="px-4 py-2.5 font-medium">Tipo</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valía cuando ahí solo había tres puntos. */}
@@ -162,7 +162,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((p) => (
           /*
             La tarjeta, en vertical, igual que la de clientes.
@@ -174,11 +174,14 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
             cuatro letras y puntos suspensivos.
 
             Ahora: código y estado arriba, el nombre entero, los datos en dos
-            columnas y los botones abajo repartiéndose el ancho.
+            columnas y los botones abajo repartiéndose el ancho. Y con su
+            borde, suelta de la siguiente —*«todo junto, apegado»*, Luis el
+            mismo día—, que es lo único que separa una ficha de otra cuando
+            cada una lleva dos botones dentro.
           */
           <li
             key={p.id}
-            className={`flex flex-col gap-2 px-3 py-3 ${p.activo ? "" : "opacity-60"}`}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${p.activo ? "" : "opacity-60"}`}
           >
             <div className="flex items-start justify-between gap-2">
               <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
@@ -211,7 +214,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               <DatoTarjeta etiqueta="Pago">
                 {p.dias_pago === 0 ? "Contado" : `${p.dias_pago} días`}
               </DatoTarjeta>
-              <DatoTarjeta etiqueta="Lead time">
+              <DatoTarjeta etiqueta="Entrega">
                 {p.lead_time_dias} días
               </DatoTarjeta>
               {p.marcas.length > 0 ? (

@@ -146,43 +146,94 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
         </table>
       </div>
 
-      {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      {/*
+        Los productos, en tarjetas sueltas y con botones.
+
+        Luis, 11/09: *«todo junto, apegado»*. Estaban pegados por una raya y en
+        dos columnas —los datos a la izquierda, los tres puntos a la derecha—,
+        así que la única manera de abrir un producto era pulsar el código o
+        buscar el menú. Ahora «Ver» y «Cotizar» son botones, que es lo que se
+        hace veinte veces al día, y el menú se queda con lo demás.
+
+        El costo promedio NO baja al teléfono: es el único dato de esta lista
+        que no se enseña fuera de la oficina.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((p) => (
           <li
             key={p.id}
-            className={`flex items-start gap-2 px-3 py-3 ${p.archivado ? "opacity-60" : ""}`}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+              p.archivado ? "opacity-60" : ""
+            }`}
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
                 <Link
                   href={`/productos/${p.id}`}
                   className="font-mono text-sm font-semibold text-brand-600"
                 >
                   {p.codigo}
                 </Link>
-                <span className="text-xs text-[var(--fg-muted)]">{p.marca}</span>
+                {p.codigo_fabricante ? (
+                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    {p.codigo_fabricante}
+                  </span>
+                ) : null}
               </div>
-
-              <p className="mt-0.5 line-clamp-2 text-sm">{p.descripcion}</p>
-
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <div className="flex shrink-0 items-center gap-1">
                 <Estado p={p} />
-                <span className="tabular text-[var(--fg-muted)]">
-                  {p.stock.toLocaleString("es-PE")} {p.unidad}
-                </span>
-                <Moneda valor={p.precio_venta} tamano="sm" />
+                <AccionesFila
+                  id={p.id}
+                  codigo={p.codigo}
+                  descripcion={p.descripcion}
+                  stock={p.stock}
+                  archivado={p.archivado}
+                  {...permisos}
+                />
               </div>
             </div>
 
-            <AccionesFila
-              id={p.id}
-              codigo={p.codigo}
-              descripcion={p.descripcion}
-              stock={p.stock}
-              archivado={p.archivado}
-              {...permisos}
-            />
+            {/* Sin recortar a dos líneas: en la tabla la descripción compite
+                con siete columnas; aquí tiene la tarjeta entera, y en este
+                catálogo la diferencia entre dos rodamientos está al final de
+                la descripción. */}
+            <div>
+              <p className="text-sm">{p.descripcion}</p>
+              <p className="text-xs text-[var(--fg-subtle)]">
+                {p.marca}
+                {p.subfamilia ? ` · ${p.subfamilia}` : ""}
+                {p.tipo ? ` · ${p.tipo}` : ""}
+              </p>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              <Dato etiqueta="Stock">
+                <span className="tabular">{p.stock.toLocaleString("es-PE")}</span>{" "}
+                <span className="text-xs text-[var(--fg-subtle)]">{p.unidad}</span>
+              </Dato>
+              <Dato etiqueta="Precio venta">
+                <Moneda valor={p.precio_venta} tamano="sm" />
+              </Dato>
+            </dl>
+
+            <div className="flex items-center gap-1.5">
+              <Link
+                href={`/productos/${p.id}`}
+                className={`${SECUNDARIO} flex-1 justify-center`}
+              >
+                Ver
+              </Link>
+              {/* Cotizar es el camino que se recorre veinte veces al día: no
+                  puede vivir dentro del menú de los tres puntos. */}
+              {!p.archivado ? (
+                <Link
+                  href={`/cotizaciones/nueva?producto=${p.id}`}
+                  className={`${PRINCIPAL} flex-1 justify-center`}
+                >
+                  Cotizar
+                </Link>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>
@@ -213,5 +264,38 @@ function Estado({ p }: { p: ProductoLista }) {
     >
       {ETIQUETA_STOCK[p.estado_stock]}
     </span>
+  );
+}
+
+/*
+  Los dos botones de la tarjeta de móvil. Mismo aspecto que en guías y
+  facturación: en esta casa un botón tiene que parecer un botón.
+*/
+const SECUNDARIO =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+const PRINCIPAL =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
+ * debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

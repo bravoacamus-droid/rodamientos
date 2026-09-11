@@ -278,7 +278,7 @@ export function FormularioProveedor({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Lead time</span>
+            <span className="text-sm font-medium">Plazo de entrega</span>
             <Input
               type="number"
               min={0}

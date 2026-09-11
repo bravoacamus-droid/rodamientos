@@ -165,33 +165,100 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      {/*
+        Las guías, en tarjetas sueltas y con sus botones.
+
+        Luis, 11/09, comparando con su prototipo: *«así es mi prototipo, se ve
+        todo; pero acá no, los botones, nada»*. Y tenía razón por partida
+        doble:
+
+        1. La tarjeta enseñaba número, fecha, cliente y peso. Faltaba a dónde
+           va —la dirección de entrega, que en escritorio está en su columna—,
+           que es justo lo que se mira para saber cuál es cuál.
+        2. Para verla o imprimirla había que pulsar el número. Un enlace no
+           parece un botón, y aquí eso no es una opinión: *«una persona que no
+           sabe que tiene que darle click ahí»*.
+
+        Y van sueltas, con su borde, en vez de pegadas con una línea entre
+        ellas. Luis, el mismo día, sobre facturación: *«todo junto, apegado»*.
+        Con cuatro datos y dos botones dentro, una raya de un píxel ya no
+        alcanza para decir dónde acaba una guía y empieza la siguiente.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((g, i) => (
           <li
             key={g.id}
-            className={`anim-entrada px-3 py-3 ${g.estado === "anulada" ? "opacity-60" : ""}`}
+            className={`anim-entrada flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+              g.estado === "anulada" ? "opacity-60" : ""
+            }`}
             style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-              <Link
-                href={`/guias/${g.id}`}
-                className="font-mono text-sm font-semibold text-brand-600"
-              >
-                {g.numero}
-              </Link>
-              <span className="tabular text-xs text-[var(--fg-muted)]">
-                {g.fecha_traslado}
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  href={`/guias/${g.id}`}
+                  className="font-mono text-sm font-semibold text-brand-600"
+                >
+                  {g.numero}
+                </Link>
+                {g.cotizacion_numero ? (
+                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    {g.cotizacion_numero}
+                  </span>
+                ) : null}
+              </div>
+              <span className="shrink-0">
+                <EstadoBadge estado={g.estado} size="xs" />
               </span>
             </div>
 
-            <p className="mt-0.5 line-clamp-1 text-sm">{g.cliente ?? "—"}</p>
+            {/* Sin recortar: en la tabla el nombre compite con siete columnas;
+                aquí tiene la tarjeta entera, y equivocarse de destinatario en
+                una guía es un viaje perdido. */}
+            <div>
+              <p className="text-sm font-medium">{g.cliente ?? "—"}</p>
+              {g.cliente_documento ? (
+                <p className="font-mono text-xs text-[var(--fg-subtle)]">
+                  {g.cliente_documento}
+                </p>
+              ) : null}
+            </div>
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <EstadoBadge estado={g.estado} size="xs" />
-              <span className="tabular text-[var(--fg-muted)]">
-                {g.peso_bruto_kg.toFixed(3)} kg · {g.numero_bultos}{" "}
-                {g.numero_bultos === 1 ? "bulto" : "bultos"}
-              </span>
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              <Dato etiqueta="Traslado">{g.fecha_traslado}</Dato>
+              {/* El peso primero de los dos números: es lo que Willy llamó «lo
+                  más importante» (02:46), porque es lo que el transportista
+                  necesita antes de cargar. */}
+              <Dato etiqueta="Peso">{g.peso_bruto_kg.toFixed(3)} kg</Dato>
+              <Dato etiqueta="Bultos">{g.numero_bultos}</Dato>
+              <Dato etiqueta="Motivo">{g.motivo ?? "—"}</Dato>
+              {/* La dirección, a ancho completo y SIN recortar: los demás
+                  datos caben en media tarjeta, esta no, y una dirección
+                  cortada en «AV. PLACIDO JIMENEZ NRO. 1051 COO. LAS PIRAMID…»
+                  no dice a dónde va el camión, que es para lo que se mira. */}
+              <div className="col-span-2 min-w-0">
+                <dt className="text-xs text-[var(--fg-subtle)]">Entrega</dt>
+                <dd className="text-sm">{g.direccion_llegada ?? "—"}</dd>
+              </div>
+            </dl>
+
+            {/* Los mismos dos botones de la fila de escritorio, repartiéndose
+                el ancho: con el pulgar se pulsa sin apuntar. */}
+            <div className="flex items-center gap-1.5">
+              <Link
+                href={`/guias/${g.id}`}
+                className={`${SECUNDARIO} flex-1 justify-center`}
+              >
+                <IconoVer />
+                Ver
+              </Link>
+              <Link
+                href={`/guias/${g.id}/imprimir?auto=1`}
+                className={`${SECUNDARIO} flex-1 justify-center [&>svg]:text-brand-600`}
+              >
+                <IconoImprimir />
+                Imprimir
+              </Link>
             </div>
           </li>
         ))}
@@ -237,5 +304,28 @@ function IconoImprimir() {
       <rect x="3" y="9" width="18" height="7" rx="1" />
       <path d="M6 14h12v7H6z" />
     </svg>
+  );
+}
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
+ * debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

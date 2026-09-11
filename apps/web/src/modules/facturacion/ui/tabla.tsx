@@ -210,44 +210,124 @@ export async function TablaComprobantes({
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
-        {filas.map((c, i) => (
-          <li
-            key={c.id}
-            className={`anim-entrada px-3 py-3 ${c.estado === "anulado" ? "opacity-60" : ""}`}
-            style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-              <Link
-                href={`/facturacion/${c.id}`}
-                className="font-mono text-sm font-semibold text-brand-600"
-              >
-                {c.numero}
-              </Link>
-              <span className="tabular text-xs text-[var(--fg-muted)]">
-                {c.fecha_emision}
-              </span>
-            </div>
+      {/*
+        Los comprobantes, en tarjetas sueltas.
 
-            <p className="mt-0.5 line-clamp-1 text-sm">{c.cliente ?? "—"}</p>
+        Luis, 11/09, mirando esta pantalla en el teléfono: *«igual que
+        facturación, todo junto, apegado»*. Estaban separadas por una raya de
+        un píxel y con tres datos apretados en una línea: total, saldo y estado
+        de SUNAT seguidos, sin decir cuál es cuál.
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <EstadoBadge
-                estado={c.estado_sunat}
-                etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
-                size="xs"
-              />
-              <Moneda valor={c.total} tamano="sm" />
-              {c.saldo > 0 ? (
-                <span className="text-[var(--fg-muted)]">
-                  debe {c.saldo.toFixed(2)}
+        Ahora cada comprobante es una tarjeta con su borde, y dentro lleva lo
+        mismo que la fila de escritorio —incluidos los dos botones—, cada dato
+        con su etiqueta. Es como lo tiene su prototipo.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+        {filas.map((c, i) => {
+          const vencida =
+            c.saldo > 0 &&
+            c.fecha_vencimiento !== null &&
+            c.fecha_vencimiento < hoy &&
+            c.estado !== "anulado";
+
+          return (
+            <li
+              key={c.id}
+              className={`anim-entrada flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+                c.estado === "anulado" ? "opacity-60" : ""
+              }`}
+              style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <Link
+                    href={`/facturacion/${c.id}`}
+                    className="font-mono text-sm font-semibold text-brand-600"
+                  >
+                    {c.numero}
+                  </Link>
+                  {/* El tipo pegado al número: una nota de crédito no se lee
+                      como una factura, y es lo primero que hay que saber. */}
+                  <Badge tone={c.tipo === "nota_credito" ? "warning" : "info"} size="xs">
+                    {ETIQUETA_TIPO[c.tipo]}
+                  </Badge>
                 </span>
-              ) : (
-                <span className="font-medium text-[var(--ok)]">Cobrado</span>
-              )}
-            </div>
-          </li>
-        ))}
+                <span className="shrink-0">
+                  <EstadoBadge
+                    estado={c.estado_sunat}
+                    etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
+                    size="xs"
+                  />
+                </span>
+              </div>
+
+              {c.estado === "anulado" ? (
+                <span className="self-start rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
+                  Anulado
+                </span>
+              ) : null}
+
+              <div>
+                <p className="text-sm font-medium">{c.cliente ?? "—"}</p>
+                {c.cliente_documento ? (
+                  <p className="font-mono text-xs text-[var(--fg-subtle)]">
+                    {c.cliente_documento}
+                  </p>
+                ) : null}
+              </div>
+
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                <Dato etiqueta="Fecha">
+                  {c.fecha_emision}
+                  {/* El vencimiento debajo y en rojo cuando ya pasó: en la
+                      tabla es un renglón más de la celda de fecha, y aquí no
+                      puede perderse, que es de lo que se cobra. */}
+                  {c.fecha_vencimiento ? (
+                    <span
+                      className={`block text-xs ${
+                        vencida
+                          ? "font-medium text-[var(--danger)]"
+                          : "text-[var(--fg-subtle)]"
+                      }`}
+                    >
+                      vence {c.fecha_vencimiento}
+                    </span>
+                  ) : null}
+                </Dato>
+                <Dato etiqueta="Cotización">{c.cotizacion_numero ?? "—"}</Dato>
+                <Dato etiqueta="Total">
+                  <Moneda valor={c.total} tamano="sm" />
+                </Dato>
+                <Dato etiqueta="Saldo">
+                  {c.saldo <= 0 ? (
+                    <span className="font-medium text-[var(--ok)]">Cobrado</span>
+                  ) : (
+                    <span className={vencida ? "text-[var(--danger)]" : ""}>
+                      <Moneda valor={c.saldo} tamano="sm" />
+                    </span>
+                  )}
+                </Dato>
+              </dl>
+
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href={`/facturacion/${c.id}`}
+                  className={`${SECUNDARIO} flex-1 justify-center`}
+                >
+                  <IconoVer />
+                  Ver
+                </Link>
+                <Link
+                  href={`/facturacion/${c.id}/imprimir?auto=1`}
+                  className={`${SECUNDARIO} flex-1 justify-center [&>svg]:text-brand-600`}
+                >
+                  <IconoImprimir />
+                  Imprimir
+                </Link>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       <div className="px-3 py-3 sm:px-4">
@@ -289,5 +369,28 @@ function IconoImprimir() {
       <rect x="3" y="9" width="18" height="7" rx="1" />
       <path d="M6 14h12v7H6z" />
     </svg>
+  );
+}
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
+ * debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

@@ -145,45 +145,94 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      {/*
+        Las compras, en tarjetas sueltas y con etiquetas.
+
+        Luis, 11/09: *«todo junto, apegado»*. Iban pegadas por una raya de un
+        píxel y con fecha, líneas y total seguidos en una misma línea de 12 px,
+        sin decir cuál era cuál. Ahora cada compra es una tarjeta con su borde,
+        cada dato con su nombre encima, y el botón de ver abajo: hasta hoy solo
+        se entraba pulsando el número, que no parece un botón.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((c) => (
           <li
             key={c.id}
-            className={`px-3 py-3 ${c.estado === "anulada" ? "opacity-60" : ""}`}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+              c.estado === "anulada" ? "opacity-60" : ""
+            }`}
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-              <Link
-                href={`/compras/${c.id}`}
-                className="font-mono text-sm font-semibold text-brand-600"
-              >
-                {c.numero}
-              </Link>
-              <span className="tabular text-xs text-[var(--fg-muted)]">{c.fecha}</span>
-            </div>
-
-            <p className="mt-0.5 line-clamp-1 text-sm">{c.proveedor ?? "—"}</p>
-
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <EstadoBadge estado={c.estado} size="xs" />
-              <span className="text-[var(--fg-muted)]">
-                {c.items} {c.items === 1 ? "línea" : "líneas"}
-              </span>
-              <Moneda valor={c.total} tamano="sm" />
-            </div>
-
-            {c.estado !== "anulada" && c.avance < 100 ? (
-              <div className="mt-2">
-                <BarraAvance valor={c.avance} anulada={false} />
-              </div>
-            ) : null}
-
-            {faltaRecibir(c.estado) ? (
-              <Button asChild variant="outline" className="mt-2 w-full">
-                <Link href={`/recepciones/nueva?compra=${c.id}`}>
-                  Recibir mercadería
+            <div className="flex items-start justify-between gap-2">
+              <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <Link
+                  href={`/compras/${c.id}`}
+                  className="font-mono text-sm font-semibold text-brand-600"
+                >
+                  {c.numero}
                 </Link>
+                {c.tipo === "importacion" ? (
+                  <span className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--fg-muted)]">
+                    Import.
+                  </span>
+                ) : null}
+              </span>
+              <span className="shrink-0">
+                <EstadoBadge estado={c.estado} size="xs" />
+              </span>
+            </div>
+
+            <div>
+              <p className="text-sm font-medium">{c.proveedor ?? "—"}</p>
+              {c.documento_proveedor ? (
+                <p className="text-xs text-[var(--fg-subtle)]">
+                  {c.documento_proveedor}
+                </p>
+              ) : null}
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              <Dato etiqueta="Fecha">
+                {c.fecha}
+                {/* Cuándo llega, debajo: en una compra pendiente es el dato
+                    por el que se entra a mirarla. */}
+                {c.fecha_estimada ? (
+                  <span className="block text-xs text-[var(--fg-subtle)]">
+                    llega {c.fecha_estimada}
+                  </span>
+                ) : null}
+              </Dato>
+              <Dato etiqueta="Líneas">{c.items}</Dato>
+              <Dato etiqueta="Total">
+                <Moneda valor={c.total} tamano="sm" />
+                {c.gastos_importacion > 0 ? (
+                  <span className="block text-xs text-[var(--fg-subtle)]">
+                    +{c.gastos_importacion.toFixed(2)} gastos
+                  </span>
+                ) : null}
+              </Dato>
+              <div className="min-w-0">
+                <dt className="text-xs text-[var(--fg-subtle)]">Recibido</dt>
+                <dd className="pt-1">
+                  <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} />
+                </dd>
+              </div>
+            </dl>
+
+            {/* «Recibir mercadería» es el paso siguiente de la compra, así que
+                manda sobre «Ver»: relleno y a la derecha, que es donde el
+                pulgar cae. */}
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="flex-1">
+                <Link href={`/compras/${c.id}`}>Ver</Link>
               </Button>
-            ) : null}
+              {faltaRecibir(c.estado) ? (
+                <Button asChild className="flex-1">
+                  <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                    Recibir mercadería
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>
@@ -246,6 +295,29 @@ function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
         <div className={`h-full ${color}`} style={{ width: `${valor}%` }} />
       </div>
       <span className="tabular text-xs text-[var(--fg-muted)]">{valor}%</span>
+    </div>
+  );
+}
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
+ * debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );
 }

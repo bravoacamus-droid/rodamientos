@@ -84,7 +84,7 @@ export default async function PaginaDetalleProveedor({
           pie="lo que él nos da a nosotros"
         />
         <Dato
-          etiqueta="Lead time"
+          etiqueta="Plazo de entrega"
           valor={`${p.lead_time_dias} días`}
           pie="desde que se le pide hasta que llega"
         />

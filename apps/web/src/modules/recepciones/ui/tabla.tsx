@@ -111,32 +111,78 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      {/*
+        Las recepciones, en tarjetas sueltas y con etiquetas.
+
+        Luis, 11/09: *«todo junto, apegado»*. Y faltaban los papeles del
+        proveedor —la guía y la factura con las que llegó la mercadería—, que
+        en escritorio están en su columna y en el teléfono no salían: son el
+        dato por el que se busca una recepción cuando el proveedor llama
+        reclamando.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((r) => (
-          <li key={r.id} className={`px-3 py-3 ${r.anulada ? "opacity-60" : ""}`}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-              <Link
-                href={`/recepciones/${r.id}`}
-                className="font-mono text-sm font-semibold text-brand-600"
-              >
-                {r.numero}
-              </Link>
-              <span className="tabular text-xs text-[var(--fg-muted)]">{r.fecha}</span>
-            </div>
-
-            <p className="mt-0.5 line-clamp-1 text-sm">{r.proveedor ?? "—"}</p>
-
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <span className="text-[var(--fg-muted)]">
-                {r.items} {r.items === 1 ? "línea" : "líneas"}
-              </span>
-              <Moneda valor={r.valorizado} tamano="sm" />
+          <li
+            key={r.id}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+              r.anulada ? "opacity-60" : ""
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <Link
+                  href={`/recepciones/${r.id}`}
+                  className="font-mono text-sm font-semibold text-brand-600"
+                >
+                  {r.numero}
+                </Link>
+                {r.compra_numero ? (
+                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    {r.compra_numero}
+                  </span>
+                ) : null}
+              </div>
               {r.anulada ? (
-                <span className="rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 font-medium text-[var(--danger)]">
+                <span className="shrink-0 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
                   Anulada
                 </span>
               ) : null}
             </div>
+
+            <p className="text-sm font-medium">{r.proveedor ?? "—"}</p>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+              <Dato etiqueta="Fecha">{r.fecha}</Dato>
+              <Dato etiqueta="Líneas">{r.items}</Dato>
+              <Dato etiqueta="Valorizado">
+                <Moneda valor={r.valorizado} tamano="sm" />
+              </Dato>
+              <Dato etiqueta="Recibió">{r.recibido_por ?? "—"}</Dato>
+              <div className="col-span-2 min-w-0">
+                <dt className="text-xs text-[var(--fg-subtle)]">
+                  Papeles del proveedor
+                </dt>
+                <dd className="text-sm">
+                  {r.guia_proveedor || r.factura_proveedor
+                    ? [
+                        r.guia_proveedor ? `G: ${r.guia_proveedor}` : null,
+                        r.factura_proveedor ? `F: ${r.factura_proveedor}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            {/* Una recepción no se edita ni se imprime: solo se abre para ver
+                qué llegó y colgarle los papeles. Un botón, entero. */}
+            <Link
+              href={`/recepciones/${r.id}`}
+              className={`${SECUNDARIO} w-full justify-center`}
+            >
+              Ver recepción
+            </Link>
           </li>
         ))}
       </ul>
@@ -149,5 +195,35 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
         />
       </div>
     </>
+  );
+}
+
+/*
+  El botón de la tarjeta de móvil. Mismo aspecto que el «Ver» de guías y
+  facturación: en esta casa un botón tiene que parecer un botón.
+*/
+const SECUNDARIO =
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
+ * debajo.
+ *
+ * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
+ * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
+ * valor, en 14, que es el mínimo de esta casa.
+ */
+function Dato({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dd className="min-w-0 truncate">{children}</dd>
+    </div>
   );
 }

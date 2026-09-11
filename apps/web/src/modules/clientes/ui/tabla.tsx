@@ -143,7 +143,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
       </div>
 
       {/* ------------------------------------------------------------ Móvil */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
         {filas.map((c) => (
           /*
             La tarjeta, en vertical.
@@ -158,10 +158,15 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
             entero, los datos, y los botones abajo repartiéndose el ancho. Es
             como lo tiene el prototipo de Luis, y es lo que se puede pulsar
             con el pulgar sin apuntar.
+
+            Y suelta, con su borde, no pegada a la siguiente por una raya.
+            Luis, el mismo día, mirando facturación: *«todo junto, apegado»*.
+            Con cinco datos y dos botones dentro, un píxel de línea no basta
+            para decir dónde acaba un cliente y empieza el otro.
           */
           <li
             key={c.id}
-            className={`flex flex-col gap-2 px-3 py-3 ${c.activo ? "" : "opacity-60"}`}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${c.activo ? "" : "opacity-60"}`}
           >
             <div className="flex items-start justify-between gap-2">
               <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
