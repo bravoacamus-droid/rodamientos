@@ -22,11 +22,14 @@ export const ETIQUETA_ESTADO: Record<EstadoGuia, string> = {
   anulada: "Anulada",
 };
 
-export const TONO_ESTADO: Record<EstadoGuia, "neutral" | "success" | "danger"> = {
-  borrador: "neutral",
-  emitida: "success",
-  anulada: "danger",
-};
+/*
+  Aquí vivía TONO_ESTADO, el mapa de tonos con el que se pintaba el estado con
+  un `Badge` a secas. Se va el 11/09, cuando la ficha siguió al listado y pasó
+  a `EstadoBadge`: no lo importa ya nadie, y un mapa de tonos a mano es lo que
+  hace que vuelva a aparecer un estado sin punto. El catálogo —incluido que una
+  guía emitida es AZUL y no verde, porque emitirla no cierra nada— vive en
+  `packages/ui/src/dominio/estado-badge.tsx`.
+*/
 
 /**
  * Modalidad de traslado (catálogo 18 de SUNAT).

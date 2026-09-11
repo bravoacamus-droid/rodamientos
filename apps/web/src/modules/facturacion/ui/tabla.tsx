@@ -110,7 +110,7 @@ export async function TablaComprobantes({
                     <span className="flex flex-wrap items-center gap-1.5">
                       <Link
                         href={`/facturacion/${c.id}`}
-                        className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                        className="font-mono text-sm font-medium text-brand-600 hover:underline"
                       >
                         {c.numero}
                       </Link>
@@ -124,7 +124,7 @@ export async function TablaComprobantes({
                     {c.fecha_emision}
                     {c.fecha_vencimiento ? (
                       <span
-                        className={`block text-xs ${
+                        className={`block text-sm ${
                           vencida ? "font-medium text-[var(--danger)]" : "text-[var(--fg-subtle)]"
                         }`}
                       >
@@ -140,7 +140,7 @@ export async function TablaComprobantes({
                     </span>
                   </td>
 
-                  <td className="hidden px-4 py-2.5 font-mono text-xs text-[var(--fg-muted)] lg:table-cell">
+                  <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] lg:table-cell">
                     {c.cotizacion_numero ?? "—"}
                   </td>
 
@@ -149,8 +149,11 @@ export async function TablaComprobantes({
                   </td>
 
                   <td className="px-4 py-2.5 text-right">
+                    {/* «Cobrado» es el VALOR de la columna Saldo, no una
+                        etiqueta: va al lado de importes y en 12 px se leía
+                        como un pie de nota. En la tarjeta ya iba en 14. */}
                     {c.saldo <= 0 ? (
-                      <span className="text-xs font-medium text-[var(--ok)]">Cobrado</span>
+                      <span className="font-medium text-[var(--ok)]">Cobrado</span>
                     ) : (
                       <span className={vencida ? "text-[var(--danger)]" : ""}>
                         <Moneda valor={c.saldo} tamano="sm" />
@@ -284,7 +287,7 @@ export async function TablaComprobantes({
                       puede perderse, que es de lo que se cobra. */}
                   {c.fecha_vencimiento ? (
                     <span
-                      className={`block text-xs ${
+                      className={`block text-sm ${
                         vencida
                           ? "font-medium text-[var(--danger)]"
                           : "text-[var(--fg-subtle)]"

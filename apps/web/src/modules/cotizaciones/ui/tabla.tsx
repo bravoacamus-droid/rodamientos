@@ -1,9 +1,14 @@
 import Link from "next/link";
-import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
+import {
+  EstadoBadge,
+  EstadoError,
+  EstadoVacio,
+  Moneda,
+  PaginacionKeyset,
+} from "@rodatech/ui";
 
 import { listarCotizaciones } from "../api/consultas";
 import {
-  COLOR_ESTADO,
   ETIQUETA_ESTADO,
   RIEL_ESTADO,
   type CotizacionLista,
@@ -123,7 +128,7 @@ export async function TablaCotizaciones({
                 <td className="py-2.5 pl-3 pr-4">
                   <Link
                     href={`/cotizaciones/${c.id}`}
-                    className="font-mono text-[0.8rem] font-semibold text-brand-700 group-hover:underline"
+                    className="font-mono text-sm font-semibold text-brand-700 group-hover:underline"
                   >
                     {c.numero}
                   </Link>
@@ -147,7 +152,10 @@ export async function TablaCotizaciones({
                   ) : null}
                 </td>
 
-                <td className="hidden px-4 py-2.5 font-mono text-xs text-[var(--fg-muted)] lg:table-cell">
+                {/* La orden de compra del cliente se busca por esta pantalla
+                    —está en el marcador del buscador— y es lo que hay que
+                    citar al facturar. Se lee: en 14, no en 12. */}
+                <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] lg:table-cell">
                   {c.orden_compra_cliente ?? "—"}
                 </td>
                 <td className="hidden px-4 py-2.5 text-right tabular text-[var(--fg-muted)] lg:table-cell">
@@ -163,11 +171,27 @@ export async function TablaCotizaciones({
                 </td>
 
                 <td className="px-4 py-2.5">
-                  <span
-                    className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_ESTADO[c.estado]}`}
-                  >
-                    {ETIQUETA_ESTADO[c.estado]}
-                  </span>
+                  {/*
+                    El mismo badge que el resto del ERP.
+
+                    Aquí se pintaba con un `span` y `COLOR_ESTADO`, un mapa de
+                    colores propio de este módulo: rectángulo plano, sin punto
+                    y con el color como ÚNICO canal. Era el tercer catálogo
+                    paralelo de estados —ya cayeron el de guías y el de
+                    facturación—, y encima el de la pantalla que más se mira.
+                    `EstadoBadge` trae el punto (forma distinta por estado,
+                    para quien no distingue verde de rojo) y el tachado de las
+                    anuladas.
+
+                    La etiqueta la sigue poniendo el módulo, igual que en la
+                    ficha: el catálogo y `ETIQUETA_ESTADO` dicen lo mismo hoy,
+                    pero el nombre de un estado de cotización se discute aquí.
+                  */}
+                  <EstadoBadge
+                    estado={c.estado}
+                    etiqueta={ETIQUETA_ESTADO[c.estado]}
+                    size="xs"
+                  />
                 </td>
 
                 {/*
@@ -225,17 +249,20 @@ export async function TablaCotizaciones({
 
               <p className="mt-0.5 truncate text-sm">{c.cliente}</p>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                <span
-                  className={`rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_ESTADO[c.estado]}`}
-                >
-                  {ETIQUETA_ESTADO[c.estado]}
-                </span>
+              {/* En 14 px, no en 12. Esta línea lleva la fecha, el aviso de
+                  vencida y el MARGEN —el número por el que Willy abre esta
+                  pantalla—, y los tres iban al tamaño de una etiqueta. */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <EstadoBadge
+                  estado={c.estado}
+                  etiqueta={ETIQUETA_ESTADO[c.estado]}
+                  size="xs"
+                />
                 <span className="tabular text-[var(--fg-muted)]">
                   {fechaCorta(c.fecha)}
                 </span>
                 {vencida(c) ? (
-                  <span className="text-[var(--warn)]">vencida</span>
+                  <span className="font-medium text-[var(--warn)]">vencida</span>
                 ) : null}
                 <span className="ml-auto">
                   <Margen valor={c.margen_pct} />

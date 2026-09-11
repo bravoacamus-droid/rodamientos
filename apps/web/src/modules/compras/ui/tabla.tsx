@@ -87,7 +87,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/compras/${c.id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.numero}
                   </Link>
@@ -100,7 +100,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {c.fecha}
                   {c.fecha_estimada ? (
-                    <span className="block text-xs text-[var(--fg-subtle)]">
+                    <span className="block text-sm text-[var(--fg-subtle)]">
                       llega {c.fecha_estimada}
                     </span>
                   ) : null}
@@ -108,7 +108,10 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{c.proveedor ?? "—"}</span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
+                {/* El número de factura del proveedor es por lo que se busca
+                    una compra —así está escrito en el marcador del buscador de
+                    esta misma pantalla—, así que se lee: en 14, no en 12. */}
+                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
                   {c.documento_proveedor ?? "—"}
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">{c.items}</td>
@@ -184,7 +187,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
             <div>
               <p className="text-sm font-medium">{c.proveedor ?? "—"}</p>
               {c.documento_proveedor ? (
-                <p className="text-xs text-[var(--fg-subtle)]">
+                <p className="text-sm text-[var(--fg-subtle)]">
                   {c.documento_proveedor}
                 </p>
               ) : null}
@@ -196,7 +199,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 {/* Cuándo llega, debajo: en una compra pendiente es el dato
                     por el que se entra a mirarla. */}
                 {c.fecha_estimada ? (
-                  <span className="block text-xs text-[var(--fg-subtle)]">
+                  <span className="block text-sm text-[var(--fg-subtle)]">
                     llega {c.fecha_estimada}
                   </span>
                 ) : null}
@@ -273,7 +276,7 @@ function faltaRecibir(estado: EstadoCompra): boolean {
  * «parcial», pero no si falta el 5 % o el 90 %.
  */
 function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
-  if (anulada) return <span className="text-xs text-[var(--fg-subtle)]">—</span>;
+  if (anulada) return <span className="text-[var(--fg-subtle)]">—</span>;
 
   const color =
     valor >= 100
@@ -294,7 +297,9 @@ function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
       >
         <div className={`h-full ${color}`} style={{ width: `${valor}%` }} />
       </div>
-      <span className="tabular text-xs text-[var(--fg-muted)]">{valor}%</span>
+      {/* El porcentaje es la única lectura exacta de la barra —el estado dice
+          «parcial», pero no si falta el 5 % o el 90 %—, así que va en 14. */}
+      <span className="tabular text-sm text-[var(--fg-muted)]">{valor}%</span>
     </div>
   );
 }

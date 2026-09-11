@@ -58,6 +58,18 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
               <th className="px-4 py-2.5 text-right font-medium">Líneas</th>
               <th className="px-4 py-2.5 text-right font-medium">Valorizado</th>
               <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Recibió</th>
+              {/*
+                La fila de escritorio se quedó sin botón.
+
+                El 11/09 la tarjeta de móvil estrenó su «Ver recepción» y esta
+                tabla no se abrió: en escritorio la única forma de entrar
+                seguía siendo pulsar el número. Es el fallo contra el que avisa
+                el propio revisor —*«cambié la tabla, la miré en el escritorio,
+                y no abrí lo de al lado»*—, esta vez del revés. Y es el mismo
+                que Luis dio por cerrado en compras: *«falta el botón de
+                recibir mercadería, no darle clic al número»*.
+              */}
+              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +83,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/recepciones/${r.id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {r.numero}
                   </Link>
@@ -90,7 +102,10 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{r.proveedor ?? "—"}</span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
+                {/* Los papeles del proveedor son por lo que se busca una
+                    recepción cuando llama reclamando —así lo dice el marcador
+                    del buscador—, así que se leen: en 14, no en 12. */}
+                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
                   {r.guia_proveedor ? <span className="block">G: {r.guia_proveedor}</span> : null}
                   {r.factura_proveedor ? (
                     <span className="block">F: {r.factura_proveedor}</span>
@@ -101,8 +116,20 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={r.valorizado} tamano="sm" />
                 </td>
-                <td className="hidden px-4 py-2.5 text-xs text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
                   {r.recibido_por ?? "—"}
+                </td>
+                {/* Ancho fijo y no el del texto, como en guías y facturación:
+                    es lo que mantiene la columna a plomo entre filas. */}
+                <td className="px-4 py-2.5">
+                  <div className="ml-auto w-[140px]">
+                    <Link
+                      href={`/recepciones/${r.id}`}
+                      className={`${SECUNDARIO} w-full justify-center`}
+                    >
+                      Ver recepción
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -199,7 +226,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
 }
 
 /*
-  El botón de la tarjeta de móvil. Mismo aspecto que el «Ver» de guías y
+  El botón de la fila y el de la tarjeta. Mismo aspecto que el «Ver» de guías y
   facturación: en esta casa un botón tiene que parecer un botón.
 */
 const SECUNDARIO =

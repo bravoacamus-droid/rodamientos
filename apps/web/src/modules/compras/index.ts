@@ -80,7 +80,6 @@ export {
 
 export {
   ETIQUETA_ESTADO,
-  TONO_ESTADO,
   type CompraDetalle,
   type CompraLista,
   type EstadoCompra,

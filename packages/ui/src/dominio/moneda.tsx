@@ -34,9 +34,26 @@ export interface MonedaProps {
   className?: string;
 }
 
+/*
+  `sm` valía 12,75 px, y una cifra de dinero no es letra pequeña.
+
+  Encontrado en la revisión de interfaz del 11/09. `sm` y `xs` daban lo mismo
+  —`text-xs`—, así que 34 de los 36 usos de este componente pintaban importes
+  por debajo del suelo de la casa: totales, saldos, precio de venta,
+  valorizado, en todos los listados del ERP y en las dos vistas. Con el usuario
+  que tiene este sistema, eso es el fallo que más veces se repite en una
+  pantalla.
+
+  La regla no admite matices: **nada por debajo de 14 px en lo que hay que
+  leer**, y un importe es el dato que más se lee de una fila. Que ahora `sm` y
+  `md` den lo mismo es correcto: el suelo se alcanzó antes de que la escala
+  tuviera sitio para otro peldaño. `xs` se queda en 12,75 para lo que acompaña
+  a una cifra sin ser la cifra —una unidad, un «+gastos»—, y hoy no lo usa
+  nadie.
+*/
 const TAMANOS: Record<NonNullable<MonedaProps["tamano"]>, string> = {
   xs: "text-xs",
-  sm: "text-xs",
+  sm: "text-sm",
   md: "text-sm",
   lg: "text-base",
   xl: "text-2xl",

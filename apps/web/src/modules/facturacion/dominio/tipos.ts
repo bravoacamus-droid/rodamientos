@@ -42,23 +42,16 @@ export const ETIQUETA_SUNAT: Record<EstadoSunat, string> = {
   baja_aceptada: "Dado de baja",
 };
 
-/**
- * Tono de la insignia por estado SUNAT.
- *
- * «Observado» es aviso y no error: SUNAT lo aceptó, pero con reparos que hay
- * que mirar. Pintarlo en rojo haría que se tratara como un rechazo y se
- * reemitiera un documento que ya es válido.
- */
-export const TONO_SUNAT: Record<EstadoSunat, "neutral" | "warning" | "success" | "danger"> = {
-  no_enviado: "neutral",
-  pendiente: "neutral",
-  enviado: "warning",
-  aceptado: "success",
-  observado: "warning",
-  rechazado: "danger",
-  baja_solicitada: "warning",
-  baja_aceptada: "danger",
-};
+/*
+  Aquí vivía TONO_SUNAT, el mapa de tonos de la insignia. Se va el 11/09, con
+  la ficha siguiendo al listado a `EstadoBadge`: ya no lo importaba nadie, y un
+  mapa suelto es lo que hace que reaparezca un estado sin punto.
+
+  El motivo que lo justificaba no se pierde: «Observado» sigue en ámbar y no en
+  rojo —SUNAT lo aceptó, pero con reparos, y en rojo se trataría como un
+  rechazo y se reemitiría un documento que ya es válido—, y eso está escrito
+  con esas palabras en `packages/ui/src/dominio/estado-badge.tsx`.
+*/
 
 /** Una fila del listado. */
 export interface ComprobanteLista {

@@ -97,7 +97,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/productos/${p.id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {p.codigo}
                   </Link>

@@ -30,7 +30,6 @@ export {
 export {
   ETIQUETA_SUNAT,
   ETIQUETA_TIPO,
-  TONO_SUNAT,
   type ComprobanteDetalle,
   type ComprobanteLista,
   type ConfigFiscal,

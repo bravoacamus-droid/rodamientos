@@ -152,7 +152,6 @@ export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
   anulada: "Anulada",
 };
 
-/** Color semántico por estado: lo que exige acción se distingue de un vistazo. */
 /**
  * Riel de color del estado, a la izquierda de cada fila.
  *
@@ -160,9 +159,9 @@ export const ETIQUETA_ESTADO: Record<EstadoCotizacion, string> = {
  * Estado: en una lista de treinta cotizaciones el ojo encuentra las azules
  * —las enviadas, las que esperan respuesta— sin leer una sola palabra.
  *
- * Va aparte de COLOR_ESTADO porque aquella pinta una pastilla con fondo y
- * texto, y esto es un borde de tres píxeles. Mezclarlas obligaba a recortar
- * clases con expresiones regulares.
+ * Es lo ÚNICO que se pinta con colores de este módulo. La pastilla del estado
+ * la pone `EstadoBadge`, que es donde vive el catálogo del ERP; aquí solo
+ * queda el borde de tres píxeles, que ningún componente compartido dibuja.
  */
 export const RIEL_ESTADO: Record<EstadoCotizacion, string> = {
   borrador: "bg-[var(--border-strong)]",
@@ -174,15 +173,13 @@ export const RIEL_ESTADO: Record<EstadoCotizacion, string> = {
   anulada: "bg-[var(--border)]",
 };
 
-export const COLOR_ESTADO: Record<EstadoCotizacion, string> = {
-  borrador: "bg-[var(--surface-2)] text-[var(--fg-muted)]",
-  enviada: "bg-[var(--info-bg)] text-[var(--info)]",
-  aprobada: "bg-[var(--ok-bg)] text-[var(--ok)]",
-  rechazada: "bg-[var(--danger-bg)] text-[var(--danger)]",
-  vencida: "bg-[var(--warn-bg)] text-[var(--warn)]",
-  atendida: "bg-brand-50 text-brand-700",
-  anulada: "bg-[var(--surface-2)] text-[var(--fg-muted)] line-through",
-};
+/*
+  Aquí vivía COLOR_ESTADO, el mapa de colores con el que la tabla pintaba la
+  pastilla del estado a mano. Se va entero el 11/09 al pasar el listado a
+  `EstadoBadge`: era un catálogo paralelo —sin punto, con el color como único
+  canal— y dejarlo aquí sin nadie que lo importe es justo la pieza sin camino
+  que en este proyecto acaba volviendo a usarse por error.
+*/
 
 /** ¿Es un estado real del enum? Filtra lo que llegue por la query string. */
 export function esEstadoCotizacion(v: unknown): v is EstadoCotizacion {

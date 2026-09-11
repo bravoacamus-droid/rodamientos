@@ -29,18 +29,17 @@ export const ETIQUETA_ESTADO: Record<EstadoCompra, string> = {
 };
 
 /**
- * Tono de la insignia por estado.
+ * Aquí vivía TONO_ESTADO, el mapa de tonos de la insignia.
  *
- * «Parcial» es aviso y no éxito a propósito: una compra a medio recibir es
- * justo la que hay que perseguir, y pintarla en verde la esconde entre las que
- * ya están cerradas.
+ * Llevaba SIN un solo importador desde que el listado pasó a `EstadoBadge`:
+ * un export que no usa nadie, de los que se encuentran con un `grep` y que en
+ * este proyecto acaban volviendo a usarse por error. Se retira el 11/09.
+ *
+ * El motivo que lo justificaba no se pierde: «Parcial» sigue en ámbar y no en
+ * verde —una compra a medio recibir es justo la que hay que perseguir, y en
+ * verde se esconde entre las cerradas—, y eso está escrito con esas palabras
+ * en `packages/ui/src/dominio/estado-badge.tsx`.
  */
-export const TONO_ESTADO: Record<EstadoCompra, "neutral" | "warning" | "success" | "danger"> = {
-  registrada: "neutral",
-  recibida_parcial: "warning",
-  recibida: "success",
-  anulada: "danger",
-};
 
 /** Una fila del listado. */
 export interface CompraLista {

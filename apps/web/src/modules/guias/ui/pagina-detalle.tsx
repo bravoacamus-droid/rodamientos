@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, EstadoError } from "@rodatech/ui";
+import { EstadoBadge, EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleGuia } from "../api/consultas";
-import { ETIQUETA_ESTADO, ETIQUETA_MODALIDAD, TONO_ESTADO } from "../dominio/tipos";
+import { ETIQUETA_ESTADO, ETIQUETA_MODALIDAD } from "../dominio/tipos";
 import { AnularGuia } from "./anular-guia";
 import { EmitirGuia } from "./emitir-guia";
 
@@ -56,7 +56,11 @@ export default async function PaginaDetalleGuia({
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {g.numero}
             </h1>
-            <Badge tone={TONO_ESTADO[g.estado]}>{ETIQUETA_ESTADO[g.estado]}</Badge>
+            {/* El mismo badge que el listado, que pasó a `EstadoBadge` el
+                11/09. La ficha de al lado se quedó con `Badge` y `TONO_ESTADO`
+                —plano, sin punto—, así que la misma guía se veía de dos formas
+                según se mirara en la lista o dentro. */}
+            <EstadoBadge estado={g.estado} etiqueta={ETIQUETA_ESTADO[g.estado]} />
           </div>
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
             {g.cliente ?? "—"}

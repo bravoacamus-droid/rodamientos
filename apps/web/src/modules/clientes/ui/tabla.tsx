@@ -96,7 +96,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/clientes/${c.id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.codigo}
                   </Link>
@@ -179,12 +179,23 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
 
             {/* Sin `truncate`: en la tabla el nombre compite con seis
                 columnas, aquí tiene la tarjeta entera y se lee completo. */}
-            <Link
-              href={`/clientes/${c.id}`}
-              className="text-sm font-semibold text-brand-600"
-            >
-              {c.razon_social}
-            </Link>
+            <div>
+              <Link
+                href={`/clientes/${c.id}`}
+                className="text-sm font-semibold text-brand-600"
+              >
+                {c.razon_social}
+              </Link>
+              {/* El nombre comercial, igual que en la fila de escritorio.
+                  Bajaba a la tarjeta todo menos esto, y es por el nombre
+                  comercial por el que se reconoce a media cartera: la razón
+                  social es la del papel, no la que se dice por teléfono. */}
+              {c.nombre_comercial ? (
+                <p className="text-sm text-[var(--fg-subtle)]">
+                  {c.nombre_comercial}
+                </p>
+              ) : null}
+            </div>
 
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
               {/* El documento, solo si el código no lo lleva ya dentro: misma
@@ -197,6 +208,17 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               ) : null}
               <Dato etiqueta="Condición">
                 <Condicion c={c} />
+                {/* La línea de crédito, igual que en la fila de escritorio.
+                    Hoy no se ve nunca —los 97 entraron a crédito 0 días— y
+                    por eso se cayó de la tarjeta sin que se notara. En cuanto
+                    Willy conteste cuánto fía (sigue bloqueado en él, CLAUDE.md
+                    §8.2), es el dato que decide si se le despacha o no. */}
+                {c.condicion_pago === "credito" && c.linea_credito > 0 ? (
+                  <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
+                    hasta{" "}
+                    <Moneda valor={c.linea_credito} tamano="sm" enfasis="suave" />
+                  </span>
+                ) : null}
               </Dato>
               <div className="col-span-2 min-w-0">
                 <Dato etiqueta="Contacto">

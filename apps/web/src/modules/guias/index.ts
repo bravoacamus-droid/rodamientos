@@ -30,7 +30,6 @@ export {
 export {
   ETIQUETA_ESTADO,
   ETIQUETA_MODALIDAD,
-  TONO_ESTADO,
   type CotizacionDespachable,
   type EstadoGuia,
   type FiltrosGuias,

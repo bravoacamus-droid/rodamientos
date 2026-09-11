@@ -117,10 +117,13 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                     </div>
                   )}
                 </td>
-                <td className="hidden max-w-[14rem] px-4 py-2.5 text-xs lg:table-cell">
+                {/* La celda entera iba en 12 px. El nombre de a quién se llama
+                    no es una etiqueta que se reconoce: se lee, y va en 14. El
+                    número debajo sí es dato secundario. */}
+                <td className="hidden max-w-[14rem] px-4 py-2.5 lg:table-cell">
                   {p.contacto ? <span className="block truncate">{p.contacto}</span> : null}
                   {p.telefono || p.whatsapp ? (
-                    <span className="block truncate text-[var(--fg-muted)]">
+                    <span className="block truncate text-xs text-[var(--fg-muted)]">
                       {p.telefono ?? p.whatsapp}
                     </span>
                   ) : null}
@@ -128,12 +131,14 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                     <span className="text-[var(--fg-subtle)]">—</span>
                   ) : null}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular text-[0.8rem]">
+                {/* Estas dos iban en 12,8 px, y son cifras: cuánto se paga y en
+                    cuánto llega. Ahora en los 14 de la tabla. */}
+                <td className="px-4 py-2.5 text-right tabular">
                   {/* 0 días no es «sin dato»: es al contado, que es una
                       condición tan real como 30 días. */}
                   {p.dias_pago === 0 ? "contado" : `${p.dias_pago} d`}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular text-[0.8rem]">
+                <td className="px-4 py-2.5 text-right tabular">
                   {p.lead_time_dias} d
                 </td>
                 <td className="px-4 py-2.5">
@@ -217,6 +222,31 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               <DatoTarjeta etiqueta="Entrega">
                 {p.lead_time_dias} días
               </DatoTarjeta>
+              {/* El contacto, que en escritorio tiene su columna y en la
+                  tarjeta no bajaba. Es a quién se llama para pedir precio, y
+                  en el teléfono es justamente cuando hace falta. Hoy los 97
+                  proveedores entraron del Excel sin un solo número (CLAUDE.md
+                  §2), así que la mitad de las tarjetas dirá «Sin datos de
+                  contacto» — y eso también es información: dice a cuáles les
+                  falta la ficha. */}
+              <div className="col-span-2 min-w-0">
+                <DatoTarjeta etiqueta="Contacto">
+                  {p.contacto || p.telefono || p.whatsapp ? (
+                    <>
+                      {p.contacto ? <span className="block">{p.contacto}</span> : null}
+                      {p.telefono || p.whatsapp ? (
+                        <span className="block text-[var(--fg-muted)]">
+                          {p.telefono ?? p.whatsapp}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <span className="text-[var(--fg-subtle)]">
+                      Sin datos de contacto
+                    </span>
+                  )}
+                </DatoTarjeta>
+              </div>
               {p.marcas.length > 0 ? (
                 <div className="col-span-2 min-w-0">
                   <DatoTarjeta etiqueta="Marcas">

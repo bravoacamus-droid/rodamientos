@@ -74,7 +74,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/guias/${g.id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {g.numero}
                   </Link>
@@ -84,9 +84,13 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     </span>
                   ) : null}
                 </td>
+                {/* El motivo, en 14: en la tarjeta de móvil tiene su propio
+                    `Dato` a tamaño de dato, y aquí era la letra pequeña de la
+                    celda de la fecha. La misma cifra no puede leerse en dos
+                    tamaños según el ancho de la pantalla. */}
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {g.fecha_traslado}
-                  <span className="block text-xs text-[var(--fg-subtle)]">
+                  <span className="block text-sm text-[var(--fg-subtle)]">
                     {g.motivo ?? "—"}
                   </span>
                 </td>

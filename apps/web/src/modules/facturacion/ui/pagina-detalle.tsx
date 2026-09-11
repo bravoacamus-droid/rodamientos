@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
 import { detalleComprobante, motivosNota, yaAcreditadoDe } from "../api/consultas";
-import { ETIQUETA_SUNAT, ETIQUETA_TIPO, TONO_SUNAT } from "../dominio/tipos";
+import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
 import { EmisorNota } from "./emisor-nota";
 import { EnviarASunat } from "./enviar-sunat";
 
@@ -64,9 +64,14 @@ export default async function PaginaDetalleComprobante({
               {c.numero}
             </h1>
             <Badge tone="neutral">{ETIQUETA_TIPO[c.tipo]}</Badge>
-            <Badge tone={TONO_SUNAT[c.estado_sunat]}>
-              {ETIQUETA_SUNAT[c.estado_sunat]}
-            </Badge>
+            {/* El mismo badge que el listado. Aquí se quedó `Badge` con
+                `TONO_SUNAT` —plano y sin punto— cuando la tabla pasó a
+                `EstadoBadge`: el estado ante SUNAT es lo que más caro sale
+                confundir, y se leía distinto en la lista y en la ficha. */}
+            <EstadoBadge
+              estado={c.estado_sunat}
+              etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
+            />
             {c.estado === "anulado" ? <Badge tone="danger">Anulado</Badge> : null}
           </div>
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
