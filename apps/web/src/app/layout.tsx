@@ -40,8 +40,22 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  /*
+    `data-scroll-behavior="smooth"` no es decorativo.
+
+    Los tokens ponen `scroll-behavior: smooth` en el `<html>`, y hasta hoy Next
+    lo desactivaba solo durante los cambios de ruta. Va a dejar de hacerlo, y
+    lo avisaba en la consola en cada navegación (11/09). Sin este atributo, al
+    cambiar de pantalla el navegador ANIMARÍA el salto al principio de la
+    página: media pantalla de desplazamiento antes de poder leer nada.
+  */
   return (
-    <html lang="es-PE" suppressHydrationWarning className={manrope.variable}>
+    <html
+      lang="es-PE"
+      suppressHydrationWarning
+      data-scroll-behavior="smooth"
+      className={manrope.variable}
+    >
       <body className="min-h-dvh bg-[var(--bg)] font-sans text-[var(--fg)] antialiased">
         {/*
           Arranca en CLARO y no sigue al sistema.

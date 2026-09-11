@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Rodatech">
+  <!--
+    El icono de la pestaña.
+
+    No estaba: el navegador pedía /favicon.ico en cada carga y se llevaba un
+    404 —era el primer error de la consola que me pasó Luis el 11/09—, y en la
+    barra de pestañas el ERP salía con la hoja en blanco de Chrome.
+
+    No es el logo: logo.png mide 329 × 150 y aplastado a 16 px no se lee nada.
+    Es un rodamiento —pista, bolas y eje—, que es lo que vende la casa, en el
+    azul de la marca con el dorado del logo. A 16 px se distingue como una
+    rueda oscura con puntos claros, que es todo lo que un favicon tiene que
+    conseguir.
+  -->
+  <rect width="64" height="64" rx="14" fill="#0e4c73" />
+  <circle cx="32" cy="32" r="20" fill="none" stroke="#fdbe16" stroke-width="3" />
+  <circle cx="32" cy="32" r="8" fill="#fdbe16" />
+  <g fill="#fdbe16">
+    <circle cx="32" cy="18" r="3.6" />
+    <circle cx="46" cy="32" r="3.6" />
+    <circle cx="32" cy="46" r="3.6" />
+    <circle cx="18" cy="32" r="3.6" />
+  </g>
+</svg>

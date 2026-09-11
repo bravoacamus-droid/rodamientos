@@ -13,6 +13,9 @@ yarn-error.log*
 next-env.d.ts
 tsconfig.tsbuildinfo
 .claude/
+# Menos los agentes: son criterio del proyecto —las reglas de Willy, qué se
+# audita antes de subir— y sirven de poco en la máquina de uno solo.
+!.claude/agents/
 .next-dev
 
 # Caché y logs de Turborepo
