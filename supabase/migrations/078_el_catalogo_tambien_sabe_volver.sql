@@ -12,14 +12,42 @@
 -- base.
 --
 -- Se añade `p_atras`, con default `false`. Un parámetro con valor por defecto
--- al FINAL de la lista no rompe a nadie que ya la llame, que es la única forma
--- de tocar una función a la que apunta la pantalla más usada del ERP.
+-- al FINAL de la lista no rompe a quien ya la llame por nombre de argumento,
+-- que es la única forma de tocar una función a la que apunta la pantalla más
+-- usada del ERP.
 --
 -- Ojo con el orden: la vuelta al array la sigue dando TypeScript, igual que en
 -- las otras nueve. Aquí solo se invierte el sentido del recorrido.
+--
+-- ---------------------------------------------------------------------------
+-- Por qué el DROP, y no solo `create or replace`
+-- ---------------------------------------------------------------------------
+-- Esta migración falló en el primer intento (11/09) y la lección vale más que
+-- el arreglo: **`create or replace function` reemplaza solo si la FIRMA es la
+-- misma**. Al añadir un parámetro, Postgres no sustituye nada: crea una
+-- función NUEVA al lado de la vieja, sobrecargada.
+--
+-- Y entonces `productos_pagina(null, 5)` deja de tener una sola respuesta:
+--
+--   ERROR 42725: function public.productos_pagina(unknown, integer) is not unique
+--
+-- La pantalla habría seguido funcionando —llama por nombre de argumento, y ahí
+-- no hay ambigüedad— pero la base se queda con dos versiones de la misma cosa,
+-- y la siguiente persona que la llame posicionalmente se lleva el error.
+--
+-- Los dos `drop` dejan exactamente una función, se haya aplicado antes esto o
+-- no. Sin `cascade` a propósito: si algo dependiera de ella, preferimos que
+-- reviente aquí a enterarnos por una pantalla en blanco.
 -- ###########################################################################
 
-create or replace function public.productos_pagina(
+drop function if exists public.productos_pagina(
+  text, int, text, uuid, uuid, uuid, uuid, boolean
+);
+drop function if exists public.productos_pagina(
+  text, int, text, uuid, uuid, uuid, uuid, boolean, boolean
+);
+
+create function public.productos_pagina(
   p_cursor    text default null,
   p_limit     int  default 50,
   p_q         text default null,
@@ -95,7 +123,7 @@ declare
 begin
   select array_agg(codigo_norm order by codigo_norm)
     into v_pag1
-    from (select codigo_norm from public.productos_pagina(null, 5) ) x;
+    from (select codigo_norm from public.productos_pagina(null::text, 5) ) x;
 
   v_n := coalesce(array_length(v_pag1, 1), 0);
 
@@ -109,7 +137,7 @@ begin
 
   -- Y desde la primera fila de la SEGUNDA página, volver.
   select codigo_norm into v_cursor
-    from public.productos_pagina(v_cursor, 1)
+    from public.productos_pagina(v_cursor::text, 1)
    limit 1;
 
   if v_cursor is null then
@@ -119,7 +147,7 @@ begin
 
   select array_agg(codigo_norm order by codigo_norm)
     into v_vuelta
-    from (select codigo_norm from public.productos_pagina(v_cursor, 5, null, null, null, null, null, false, true)) y;
+    from (select codigo_norm from public.productos_pagina(v_cursor::text, 5, null, null, null, null, null, false, true)) y;
 
   if v_vuelta is distinct from v_pag1 then
     raise exception

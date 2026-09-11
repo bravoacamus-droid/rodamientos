@@ -4543,6 +4543,7 @@ export type Database = {
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
       es_gerencia: { Args: never; Returns: boolean }
+      escribe_una_funcion: { Args: never; Returns: boolean }
       generar_alertas: { Args: never; Returns: Json }
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       historial_precio_producto: {
@@ -4595,6 +4596,7 @@ export type Database = {
       productos_pagina: {
         Args: {
           p_archivados?: boolean
+          p_atras?: boolean
           p_cursor?: string
           p_familia?: string
           p_limit?: number
