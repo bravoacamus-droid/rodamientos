@@ -144,7 +144,7 @@ export async function guardarConfigSunat(
       if (errorSecretos) return { ok: false, error: errorSecretos.message };
     }
 
-    revalidatePath("/facturacion/configuracion");
+    revalidatePath("/configuracion/sunat");
     revalidatePath("/facturacion");
 
     return {
@@ -233,7 +233,7 @@ export async function probarConexionSunat(): Promise<ResultadoPrueba> {
       })
       .eq("id", 1);
 
-    revalidatePath("/facturacion/configuracion");
+    revalidatePath("/configuracion/sunat");
 
     return { ok: true, funciona: resultado.ok, mensaje };
   } catch (e) {

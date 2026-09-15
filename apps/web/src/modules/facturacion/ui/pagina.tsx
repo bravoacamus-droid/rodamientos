@@ -82,7 +82,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         <div className="flex items-center gap-2">
           {esGerencia ? (
             <Link
-              href="/facturacion/configuracion"
+              href="/configuracion/sunat"
               className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="size-4" aria-hidden="true">
@@ -140,7 +140,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
             </ul>
             {esGerencia ? (
               <Link
-                href="/facturacion/configuracion"
+                href="/configuracion/sunat"
                 className="mt-2 inline-block font-medium underline"
               >
                 Ir a configurarlo

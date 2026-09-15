@@ -8,7 +8,6 @@ export { default as PaginaFacturacion } from "./ui/pagina";
 export { default as PaginaNuevoComprobante } from "./ui/pagina-nueva";
 export { default as PaginaDetalleComprobante } from "./ui/pagina-detalle";
 export { default as PaginaImprimirComprobante } from "./ui/pagina-imprimir";
-export { default as PaginaConfiguracionSunat } from "./ui/pagina-configuracion";
 
 /*
   Qué falta para poder emitir.
@@ -17,7 +16,17 @@ export { default as PaginaConfiguracionSunat } from "./ui/pagina-configuracion";
   ahí se decide si hace falta entrar al certificado, y para decidirlo hay que
   saber qué falta. La lectura sigue viviendo aquí, que es donde se sabe.
 */
-export { estadoConfiguracion } from "./api/configuracion";
+export { configFiscal, estadoConfiguracion } from "./api/configuracion";
+
+/*
+  El formulario del certificado y las credenciales SOL.
+
+  Se publica porque desde el 15/09 lo pinta «Configuración → SUNAT y
+  numeración»: es configuración, y estaba colgando de facturación por accidente
+  de la historia. La lógica —descifrar, guardar, validar el .pfx— sigue
+  viviendo aquí, que es de quien es.
+*/
+export { FormularioConfigSunat } from "./ui/formulario-config";
 
 // Reglas de emisión puras. Se publican porque guías y cobranzas necesitan las
 // mismas: qué documento toca según el receptor, y cómo se reparten las cuotas.

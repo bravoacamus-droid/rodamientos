@@ -118,7 +118,7 @@ export async function guardarEmpresa(
 
     if (error) return { ok: false, error: mensajeDeError(error) };
 
-    revalidatePath("/configuracion");
+    revalidatePath("/configuracion/empresa");
     // El pie de la cotización y de la factura salen de aquí.
     revalidatePath("/cotizaciones", "layout");
     revalidatePath("/facturacion", "layout");
@@ -209,7 +209,7 @@ export async function guardarSerie(
 
     if (error) return { ok: false, error: mensajeDeError(error) };
 
-    revalidatePath("/configuracion");
+    revalidatePath("/configuracion/empresa");
     return { ok: true, mensaje: "Serie guardada." };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
@@ -283,7 +283,7 @@ export async function crearSerie(entrada: {
       return { ok: false, error: mensajeDeError(error) };
     }
 
-    revalidatePath("/configuracion");
+    revalidatePath("/configuracion/empresa");
     return { ok: true, mensaje: `Serie ${datos.data.serie} creada.` };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
@@ -348,7 +348,7 @@ export async function cambiarUsuario(
     const { error } = await supabase.from("perfiles").update(datos.data).eq("id", id);
     if (error) return { ok: false, error: mensajeDeError(error) };
 
-    revalidatePath("/configuracion");
+    revalidatePath("/configuracion/empresa");
     return { ok: true, mensaje: "Usuario actualizado." };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };

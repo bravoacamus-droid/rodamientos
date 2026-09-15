@@ -69,7 +69,9 @@ function aNodo(data: unknown): NodoCreado {
 /** Revalida las pantallas donde se elige la clasificación. */
 function revalidar() {
   revalidatePath("/productos", "layout");
-  revalidatePath("/configuracion");
+  // El recuento de catálogos se enseña en «Datos de la empresa». Antes esto
+  // apuntaba a `/configuracion`, que desde el 15/09 es solo un redirect.
+  revalidatePath("/configuracion/empresa");
 }
 
 export async function crearFamilia(texto: string): Promise<ResultadoCatalogo> {
