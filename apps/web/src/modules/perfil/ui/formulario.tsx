@@ -6,6 +6,7 @@
  */
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button, Campo, Input, toast } from "@rodatech/ui";
 
 import { cambiarMiContrasena, guardarMiPerfil } from "../acciones/guardar";
@@ -24,24 +25,38 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
     telefono: perfil.telefono ?? "",
     cargo: perfil.cargo ?? "",
   });
-  const [guardando, setGuardando] = React.useState(false);
+  const router = useRouter();
+
+  /*
+    Dentro de una transición, y no con un `await` a pelo.
+
+    Una Server Action que hace `revalidatePath` devuelve también el árbol nuevo
+    del servidor, y fuera de una transición React no tiene dónde aplicarlo: la
+    promesa no vuelve y el botón se queda en «Guardando…» para siempre, aunque
+    el servidor haya respondido bien. Es el patrón que ya usa el resto del ERP.
+  */
+  const [guardando, empezar] = React.useTransition();
 
   const sinCambios =
     datos.nombre === perfil.nombre &&
     datos.telefono === (perfil.telefono ?? "") &&
     datos.cargo === (perfil.cargo ?? "");
 
-  async function enviar(e: React.FormEvent) {
+  function enviar(e: React.FormEvent) {
     e.preventDefault();
-    setGuardando(true);
-    const r = await guardarMiPerfil({
-      nombre: datos.nombre,
-      telefono: datos.telefono || null,
-      cargo: datos.cargo || null,
+    empezar(async () => {
+      const r = await guardarMiPerfil({
+        nombre: datos.nombre,
+        telefono: datos.telefono || null,
+        cargo: datos.cargo || null,
+      });
+      if (r.ok) {
+        toast.success(r.mensaje);
+        router.refresh();
+      } else {
+        toast.error(r.error);
+      }
     });
-    setGuardando(false);
-    if (r.ok) toast.success(r.mensaje);
-    else toast.error(r.error);
   }
 
   return (
@@ -102,7 +117,7 @@ export function FormContrasena() {
   const [actual, setActual] = React.useState("");
   const [nueva, setNueva] = React.useState("");
   const [repetida, setRepetida] = React.useState("");
-  const [enviando, setEnviando] = React.useState(false);
+  const [enviando, empezar] = React.useTransition();
 
   const cortaDeMas = nueva.length > 0 && nueva.length < MINIMO_CONTRASENA;
   const noCoinciden = repetida.length > 0 && nueva !== repetida;
@@ -112,19 +127,19 @@ export function FormContrasena() {
     nueva === repetida &&
     !enviando;
 
-  async function enviar(e: React.FormEvent) {
+  function enviar(e: React.FormEvent) {
     e.preventDefault();
-    setEnviando(true);
-    const r = await cambiarMiContrasena(actual, nueva);
-    setEnviando(false);
-    if (r.ok) {
-      toast.success(r.mensaje);
-      setActual("");
-      setNueva("");
-      setRepetida("");
-    } else {
-      toast.error(r.error);
-    }
+    empezar(async () => {
+      const r = await cambiarMiContrasena(actual, nueva);
+      if (r.ok) {
+        toast.success(r.mensaje);
+        setActual("");
+        setNueva("");
+        setRepetida("");
+      } else {
+        toast.error(r.error);
+      }
+    });
   }
 
   return (

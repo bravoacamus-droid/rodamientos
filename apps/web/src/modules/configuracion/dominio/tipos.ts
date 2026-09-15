@@ -157,3 +157,34 @@ export interface ConteosCatalogo {
   tipos: number;
   unidades: number;
 }
+
+/**
+ * Una cuenta a la que se le cobra al cliente.
+ *
+ * Son VARIAS, no una: Rodatech factura en dólares y cobra en soles a quien
+ * paga en soles. Con una sola, el cliente que paga en soles transfiere a la de
+ * dólares, y eso no es un fallo de formato — es una transferencia que hay que
+ * ir a rescatar al banco (064).
+ *
+ * Existen desde la 064 y salen impresas en cada cotización y factura… pero
+ * hasta el 15/09 **no había pantalla para darlas de alta**. Luis: *«no puedo
+ * ver las cuentas que se crearon, que están en cotización»*. La pieza puesta y
+ * el camino sin abrir, otra vez.
+ */
+export interface CuentaBancaria {
+  id: string;
+  banco: string;
+  /** `PEN` o `USD`. Decide a cuál se le manda al cliente según la moneda. */
+  moneda: "PEN" | "USD";
+  numero: string;
+  /** El que sirve para transferir desde OTRO banco. Es el que más piden. */
+  cci: string | null;
+  /** En qué orden salen en el papel. */
+  orden: number;
+  activo: boolean;
+}
+
+export const ETIQUETA_MONEDA_CUENTA: Record<CuentaBancaria["moneda"], string> = {
+  USD: "Dólares US$",
+  PEN: "Soles S/",
+};

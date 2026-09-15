@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { EstadoError, Skeleton } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { conteosCatalogo, empresa } from "../api/consultas";
+import { conteosCatalogo, cuentasBancarias, empresa } from "../api/consultas";
 import { CabeceraConfig } from "./cabecera";
+import { CuentasParaCobrar } from "./cuentas";
 import { FormEmpresa } from "./form-empresa";
 
 /**
@@ -37,6 +38,21 @@ export default async function PaginaConfigEmpresa() {
       </section>
 
       {/*
+        Las cuentas para cobrar, en su propio bloque.
+
+        Existen desde la 064 y salen impresas en cada cotización y factura, y
+        hasta el 15/09 se daban de alta con SQL contra producción: no había
+        pantalla. Luis: *«no puedo ver las cuentas que se crearon, que están en
+        cotización»*. El caso veintisiete del patrón de esta casa.
+      */}
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-semibold">Cuentas para cobrar</h2>
+        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+          <BloqueCuentas puedeEditar={puedeEditar} />
+        </Suspense>
+      </section>
+
+      {/*
         Lo que todavía no tiene pantalla, dicho en voz alta.
 
         Es una costumbre de esta casa: se cuenta lo que falta en vez de dejar
@@ -55,6 +71,14 @@ async function BloqueEmpresa({ puedeEditar }: { puedeEditar: boolean }) {
     return <EstadoError titulo="No se pudo cargar la empresa" detalle={r.error} />;
   }
   return <FormEmpresa empresa={r.datos} puedeEditar={puedeEditar} />;
+}
+
+async function BloqueCuentas({ puedeEditar }: { puedeEditar: boolean }) {
+  const r = await cuentasBancarias();
+  if (!r.ok) {
+    return <EstadoError titulo="No se pudieron cargar las cuentas" detalle={r.error} />;
+  }
+  return <CuentasParaCobrar cuentas={r.datos} puedeEditar={puedeEditar} />;
 }
 
 async function BloqueCatalogos() {

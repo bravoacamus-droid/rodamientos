@@ -146,55 +146,21 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </Campo>
       </div>
 
-      {/* Willy, 26/08 (14:40): «hay clientes que me piden indicar número de
-          cuenta. En la cotización siempre debe salir. En la factura también es
-          una práctica recomendable que ya lleve pre-impresa la cuenta
-          corriente, porque a veces se confunden». */}
-      <div className="rounded-md border border-[var(--border-soft)] p-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
-          Cuenta para cobrar
-        </h3>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
-          Sale <strong>siempre</strong> en la cotización. En la factura sale por
-          defecto y se puede quitar documento a documento. No es la cuenta de
-          detracción: esa es del Banco de la Nación y el cliente no puede
-          transferir ahí.
-        </p>
+      {/*
+        Aquí vivían «Banco», «Cuenta corriente» y «CCI», y eran tres campos
+        MUERTOS: la 064 se llevó las cuentas a su propia tabla —porque son
+        varias, una por moneda— y desde entonces el papel imprime
+        `cuentas_bancarias`, no estas columnas. Se podían rellenar y no pasaba
+        nada.
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <Campo id="banco" label="Banco">
-            <Input
-              id="banco"
-              value={datos.banco ?? ""}
-              onChange={texto("banco")}
-              placeholder="BCP"
-              disabled={!puedeEditar}
-            />
-          </Campo>
-          <Campo id="cuenta_corriente" label="Cuenta corriente">
-            <Input
-              id="cuenta_corriente"
-              value={datos.cuenta_corriente ?? ""}
-              onChange={texto("cuenta_corriente")}
-              className="tabular"
-              disabled={!puedeEditar}
-            />
-          </Campo>
-          <Campo
-            id="cci"
-            label="CCI"
-            ayuda="Para quien transfiere desde otro banco. Es el que más piden."
-          >
-            <Input
-              id="cci"
-              value={datos.cci ?? ""}
-              onChange={texto("cci")}
-              className="tabular"
-              disabled={!puedeEditar}
-            />
-          </Campo>
-        </div>
-      </div>
+        Un formulario que acepta un dato y lo tira es peor que no tenerlo: el
+        que lo escribe se queda convencido de que ya está puesto. Se quitan, y
+        las cuentas se editan en su propio bloque, abajo, donde se ve cuál sale
+        en el papel.
+
+        Las columnas de `empresa` NO se borran de la base: las mira la 064 al
+        migrar, y borrarlas es trabajo de limpieza que no toca hacer hoy.
+      */}
 
       <div className="rounded-md border border-[var(--border-soft)] p-3">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">

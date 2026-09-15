@@ -7,6 +7,7 @@ import { fallo } from "@/lib/errores";
 import { ordenarSeries } from "../dominio/serie";
 import type {
   ConteosCatalogo,
+  CuentaBancaria,
   Empresa,
   Rol,
   SerieDocumento,
@@ -178,5 +179,44 @@ export async function conteosCatalogo(): Promise<Resultado<ConteosCatalogo>> {
     };
   } catch (e) {
     return fallo(e);
+  }
+}
+
+/**
+ * Las cuentas a las que se cobra, todas — activas y desactivadas.
+ *
+ * El papel solo imprime las activas (`cuentasParaCobrar` en `lib/emisor`),
+ * pero la pantalla de configuración las enseña todas: una cuenta apagada que
+ * no se ve es una cuenta que se vuelve a dar de alta por duplicado.
+ */
+export async function cuentasBancarias(): Promise<Resultado<CuentaBancaria[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("cuentas_bancarias")
+      .select("id, banco, moneda, numero, cci, orden, activo")
+      // Las activas primero y en su orden de impresión; las apagadas al final.
+      .order("activo", { ascending: false })
+      .order("orden")
+      .order("banco");
+
+    if (error) return fallo(error, "configuracion/cuentasBancarias");
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((c) => ({
+        id: String(c.id),
+        banco: String(c.banco ?? ""),
+        moneda: (String(c.moneda ?? "USD").toUpperCase() === "PEN"
+          ? "PEN"
+          : "USD") as CuentaBancaria["moneda"],
+        numero: String(c.numero ?? ""),
+        cci: (c.cci as string | null) ?? null,
+        orden: Number(c.orden ?? 0),
+        activo: Boolean(c.activo),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "configuracion/cuentasBancarias");
   }
 }
