@@ -54,24 +54,43 @@ export const ATAJOS_VISIBLES = CUENTAS_DEV.filter((c) => c.atajo);
  * que alguien se acuerde de tocar el código.
  *
  * ---------------------------------------------------------------------------
- * Y un tercer candado, de la auditoría del 11/09
+ * En producción hace falta decirlo con todas las letras
  * ---------------------------------------------------------------------------
  * El plan de arriba —«el día de la entrega se borra esa variable»— depende de
  * que alguien se acuerde el día de la entrega. Y si no se acuerda, el fallo no
  * avisa: la pantalla se ve normal y cualquiera con la URL entra como gerencia
  * de un clic, sin contraseña.
  *
- * Así que el despliegue de PRODUCCIÓN no los ofrece nunca, aunque la variable
- * esté puesta. `VERCEL_ENV` vale `production` solo en el despliegue de verdad;
- * los previews valen `preview` y siguen teniendo sus botones, que es justo
- * donde hacen falta para enseñarle el sistema al cliente.
+ * El 12/09 se cerró del todo en producción. Y el 15/09 Luis enseñó por qué eso
+ * no vale: `rodamientos.vercel.app` ES el despliegue de producción, y es
+ * también la URL por la que Willy mira el sistema. Cerrarlo a cal y canto le
+ * quitó los botones justo donde los usa.
  *
- * El olvido pasa de «se entra sin contraseña» a «el panel no sale en la
- * demo». Ese es el lado por el que hay que equivocarse.
+ * Así que el candado no desaparece: **cambia de forma**. Fuera de producción,
+ * `RODATECH_ATAJOS=1` como siempre. En producción hace falta el valor
+ * `demo-publica`, que no se teclea sin querer y que dice lo que significa:
+ * esta URL deja entrar sin contraseña.
+ *
+ * La propiedad que importa se conserva: **el olvido ya no abre la puerta.**
+ * Quien se deje un `1` puesto el día de la entrega no deja nada abierto — el
+ * panel simplemente no sale. Para abrirlo hay que haber escrito, a propósito,
+ * una palabra que lo dice.
+ *
+ * El día de la entrega de verdad: se borra la variable y se acabó.
  */
+
+/** Lo que hay que escribir en `RODATECH_ATAJOS` para abrirlos en producción. */
+const PERMISO_EN_PRODUCCION = "demo-publica";
+
 export function hayAtajos(): boolean {
   if (!process.env.RODATECH_DEV_PASSWORD) return false;
-  if (process.env.VERCEL_ENV === "production") return false;
-  if (process.env.RODATECH_ATAJOS === "1") return true;
+
+  const pedido = process.env.RODATECH_ATAJOS;
+
+  if (process.env.VERCEL_ENV === "production") {
+    return pedido === PERMISO_EN_PRODUCCION;
+  }
+
+  if (pedido === "1" || pedido === PERMISO_EN_PRODUCCION) return true;
   return process.env.NODE_ENV !== "production";
 }
