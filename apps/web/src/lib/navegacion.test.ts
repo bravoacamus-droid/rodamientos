@@ -66,10 +66,25 @@ describe("lo que va fuera de los grupos", () => {
     expect(TABLERO.ruta).toBe("/dashboard");
   });
 
-  it("la configuración solo la ve quien manda", () => {
+  it("la configuración solo la ve quien manda, en sus tres pantallas", () => {
     // Ahí se cambian el RUC, las series y los correlativos: con la lista mal,
     // un vendedor podría mover el número desde el que se factura.
-    expect(CONFIGURACION.roles).toEqual(["gerencia", "admin"]);
+    //
+    // Desde el 15/09 son tres pantallas y no una, así que la comprobación va
+    // por cada una: el fallo que importa es que a UNA se le olvide la lista.
+    expect(CONFIGURACION.items.length).toBe(3);
+    for (const item of CONFIGURACION.items) {
+      expect(item.roles).toEqual(["gerencia", "admin"]);
+    }
+  });
+
+  it("la configuración se enciende cuando estás dentro", () => {
+    // Hasta el 15/09 no lo hacía: `rutaActiva` solo recorría `NAVEGACION` y la
+    // configuración vive fuera, así que la comparación era contra `null` y el
+    // ítem no se marcaba nunca. Se veía en cuanto se abría la pantalla.
+    expect(rutaActiva("/configuracion/empresa")).toBe("/configuracion/empresa");
+    expect(rutaActiva("/configuracion/sunat")).toBe("/configuracion/sunat");
+    expect(rutaActiva("/configuracion/usuarios")).toBe("/configuracion/usuarios");
   });
 
   it("ninguno de los dos se repite dentro de un grupo", () => {
@@ -77,7 +92,9 @@ describe("lo que va fuera de los grupos", () => {
     // dos veces y el marcado de ruta activa encendería dos ítems.
     const enGrupos = menuPara("gerencia").flatMap((g) => g.items.map((i) => i.ruta));
     expect(enGrupos).not.toContain(TABLERO.ruta);
-    expect(enGrupos).not.toContain(CONFIGURACION.ruta);
+    for (const item of CONFIGURACION.items) {
+      expect(enGrupos).not.toContain(item.ruta);
+    }
   });
 });
 

@@ -343,17 +343,95 @@ function Cuerpo({
 
       {/* Anclada abajo: se llega sin buscarla, aunque el menú esté desplazado. */}
       {puedeConfigurar ? (
-        <div className="shrink-0 border-t border-[var(--border)] px-3 py-2">
-          <Enlace
-            item={CONFIGURACION}
-            activo={activoEn(ruta, CONFIGURACION.ruta)}
-            espera={0}
-            dentroDeGrupo={false}
-            onNavegar={onNavegar}
-          />
-        </div>
+        <BloqueConfiguracion ruta={ruta} onNavegar={onNavegar} />
       ) : null}
     </>
+  );
+}
+
+/**
+ * La configuración, anclada abajo y desplegable.
+ *
+ * Tiene su propio estado de abierto/cerrado en vez de compartir `plegados`
+ * con los demás grupos, y por una razón: los otros cinco nacen ABIERTOS y esta
+ * nace CERRADA. Se toca el día de la puesta en marcha y casi nunca más, y tres
+ * enlaces permanentes robándole sitio al menú de trabajo serían tres enlaces
+ * que estorban trescientos días al año.
+ *
+ * Estando dentro se abre sola, igual que los grupos de arriba: esconder el
+ * enlace marcado desorienta más de lo que ahorra.
+ *
+ * El título va ENCIMA de sus ítems, como en los demás grupos. Se probó al
+ * revés —`flex-col-reverse`, para que el título no se moviera de sitio al
+ * abrirse— y se veía mal: tres enlaces sueltos y su etiqueta debajo parecen
+ * colgar del grupo de arriba, no del suyo. Que el bloque entero crezca hacia
+ * arriba es menos raro que leer una lista antes de saber de qué es.
+ */
+function BloqueConfiguracion({
+  ruta,
+  onNavegar,
+}: {
+  ruta: string;
+  onNavegar?: () => void;
+}) {
+  const dentro = CONFIGURACION.items.some((i) => activoEn(ruta, i.ruta));
+  const [abiertoPorMano, setAbiertoPorMano] = React.useState(false);
+  const abierto = dentro || abiertoPorMano;
+
+  return (
+    <div className="shrink-0 border-t border-[var(--border)] px-3 py-2">
+      <div className="flex flex-col">
+        <button
+          type="button"
+          onClick={() => setAbiertoPorMano((v) => !v)}
+          aria-expanded={abierto}
+          className={cn(
+            "flex min-h-12 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+            dentro
+              ? "bg-[var(--surface-2)] text-[var(--fg)]"
+              : "text-[var(--fg)] hover:bg-[var(--surface-2)]",
+          )}
+        >
+          <IconoNav
+            nombre={CONFIGURACION.icono}
+            className="size-[18px] shrink-0 text-brand-600"
+          />
+          <span className="truncate">{CONFIGURACION.titulo}</span>
+          <svg
+            viewBox="0 0 24 24"
+            className={cn(
+              "ml-auto size-4 shrink-0 text-[var(--fg-subtle)] transition-transform",
+              abierto ? "-rotate-90" : "rotate-90",
+            )}
+            aria-hidden="true"
+          >
+            <path
+              d="M9 5l7 7-7 7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {abierto ? (
+          <div className="ml-6 flex flex-col gap-0.5 border-l border-[var(--border-soft)] pb-2 pl-2">
+            {CONFIGURACION.items.map((item) => (
+              <Enlace
+                key={item.ruta}
+                item={item}
+                activo={activoEn(ruta, item.ruta)}
+                espera={0}
+                onNavegar={onNavegar}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

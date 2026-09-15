@@ -196,6 +196,32 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <circle cx="17" cy="18.5" r="1.7" {...T} />
     </>
   ),
+  // Empresa: un edificio con su puerta. La ficha fiscal de la casa.
+  empresa: (
+    <>
+      <path d="M4 21V6l7-3 7 3v15" {...T} />
+      <path d="M2 21h20M10 21v-4h4v4" {...T} />
+      <path d="M8 9h1M8 13h1M15 9h1M15 13h1" {...T} />
+    </>
+  ),
+  // SUNAT y numeración: un documento sellado. El sello es lo que lo distingue
+  // de los otros papeles del menú: aquí se decide con qué serie sale.
+  sunat: (
+    <>
+      <path d="M6 3h8l4 4v14H6z" {...T} />
+      <path d="M14 3v4h4" {...T} />
+      <circle cx="12" cy="14" r="3" {...T} />
+      <path d="M12 12.5v3M10.5 14h3" {...T} />
+    </>
+  ),
+  // Usuarios: dos personas. Quién entra y con qué rol.
+  usuarios: (
+    <>
+      <circle cx="9" cy="8" r="3.2" {...T} />
+      <path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" {...T} />
+      <path d="M16.5 5.6a3.2 3.2 0 0 1 0 5.8M17 14.2a5 5 0 0 1 4 4.8v1" {...T} />
+    </>
+  ),
   // Configuración: engranaje simplificado.
   configuracion: (
     <>

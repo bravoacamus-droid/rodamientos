@@ -10,6 +10,15 @@ export { default as PaginaDetalleComprobante } from "./ui/pagina-detalle";
 export { default as PaginaImprimirComprobante } from "./ui/pagina-imprimir";
 export { default as PaginaConfiguracionSunat } from "./ui/pagina-configuracion";
 
+/*
+  Qué falta para poder emitir.
+
+  Se publica porque lo pregunta la pantalla de «SUNAT y numeración» (15/09):
+  ahí se decide si hace falta entrar al certificado, y para decidirlo hay que
+  saber qué falta. La lectura sigue viviendo aquí, que es donde se sabe.
+*/
+export { estadoConfiguracion } from "./api/configuracion";
+
 // Reglas de emisión puras. Se publican porque guías y cobranzas necesitan las
 // mismas: qué documento toca según el receptor, y cómo se reparten las cuotas.
 export {
