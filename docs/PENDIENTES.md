@@ -4508,6 +4508,156 @@ de Defontana.
 
 ---
 
+## §AL · 15/09 — Configuración, de una pantalla a un módulo
+
+Día de ordenar. Cinco commits, una migración, y dos fallos que llevaban meses
+escondidos porque nadie había probado con los ojos.
+
+---
+
+### AL.1 · La configuración era una pantalla de scroll infinito
+
+Luis: *«en vez de tener un botón de configuración abajo del módulo de gestión,
+pongamos otro de configuración y que cada uno tenga su propio menú: datos de
+empresa, configuración de SUNAT con sus series y correlativos, usuarios; así
+tenerlo ordenado»*.
+
+Eran tres bloques encadenados en una sola página, y las tres cosas se tocan en
+momentos distintos y a veces por personas distintas: los datos fiscales una vez
+en la vida, las series el día que SUNAT da una nueva, los usuarios cada vez que
+entra o sale alguien. Para llegar a los usuarios —el que más se vuelve a
+abrir— había que pasar por encima de catorce series.
+
+Ahora son tres rutas con sus tres entradas de menú. `/configuracion` redirige
+a la primera: es la dirección que está en los marcadores.
+
+**«SUNAT y numeración» y no «SUNAT» a secas**, porque dentro viven también las
+series de cotización, orden de compra, ajuste y recepción, que son numeración
+nuestra. Llamar SUNAT a esa pantalla sería enseñar mal lo que hay dentro.
+
+### AL.2 · Dónde va la configuración en el menú
+
+Primero se dejó anclada al pie, fuera de los grupos, con el argumento de que
+así se llega sin buscarla. Luis, con la captura: *«pero no está dentro del
+sidebar, jaja»* y *«debería estar abajo de Gestión»*.
+
+Tenía razón, y por dos motivos. Uno no era nuestro: **el indicador de
+desarrollo de Next vive abajo a la izquierda**, justo encima del botón, y lo
+tapaba. Movido a la derecha en `next.config`. El otro sí: es un módulo como
+los otros cinco, y puesta aparte parecía pegada por fuera del menú.
+
+De paso cayó un cable suelto de los de siempre: **«Configuración» no se
+encendía nunca al estar dentro**, porque `rutaActiva` solo recorría
+`NAVEGACION` y la configuración vivía fuera. La comparación era contra `null`.
+Van veintiséis.
+
+### AL.3 · A `perfiles` no se le podía escribir. Nunca.
+
+Encontrado probando en pantalla la nueva página «Mi perfil»: se guardaba, el
+servidor respondía 200, y el teléfono seguía vacío.
+
+La 002 reparte el trigger `tocar_actualizado_en` sobre nueve tablas y las
+nueve tienen esa columna… **menos `perfiles`**. En PL/pgSQL, asignar a un
+campo que el registro no tiene es un error en tiempo de ejecución:
+
+    ERROR 42703: record "new" has no field "actualizado_en"
+
+O sea que **cualquier UPDATE sobre `perfiles` ha fallado desde la 002**.
+Cambiar el rol de alguien desde Configuración → Usuarios: fallaba. Desactivar
+a quien se va: fallaba. Nadie lo sabía porque nadie lo había probado.
+
+La **081** añade la columna, y su centinela vigila la CLASE de fallo: toda
+tabla con ese trigger y sin esa columna. Si mañana alguien mete otra a la
+lista, revienta la migración en vez de dejarla de solo lectura en silencio.
+
+**Corrección al hallazgo «crítico» del 11/09 (§AK.3).** La auditoría dijo que
+cualquier empleado podía ascenderse a gerencia con un PATCH, y se le contó a
+Luis con alarma. La lectura de las políticas era correcta —RLS lo permitía—
+pero **no era explotable**: ese PATCH se habría estrellado contra el mismo
+42703. El agujero estaba tapiado por accidente.
+
+Eso no quita la 077: un candado que existe por accidente no es un candado, y la
+081 arregla justo el accidente. Desde hoy, lo único que impide el ascenso es el
+trigger de verdad. Pero la gravedad estaba sobredicha y conviene que quede
+escrito.
+
+### AL.4 · Mi perfil
+
+Luis, con la captura del menú de arriba abierto: *«falta editar perfil para que
+pueda editar su perfil»*. Ese menú solo sabía cerrar sesión.
+
+`/perfil`, en su propio módulo y no colgando de configuración: aquella es «los
+demás» y la ve gerencia, esta es «yo» y la ve cualquiera con sesión. Nombre,
+cargo, teléfono — y **cambiar la contraseña**, que no es adorno: las seis
+cuentas nacieron con `RODATECH_DEV_PASSWORD`, la misma para todas, y hasta hoy
+no había forma de cambiarla desde el ERP.
+
+La acción **no recibe un id**: lo saca de la sesión. Así no puede tocar la
+ficha de otro aunque la llamen con un `fetch` — quitar el identificador sale
+más barato que comprobarlo.
+
+Y el `update` lleva `.select()`: sin él, una escritura que RLS no deja pasar
+devuelve éxito y cero filas, y la pantalla dice «guardado». Es como se
+encontró AL.3.
+
+### AL.5 · Las cuentas para cobrar, por fin editables
+
+Luis: *«no puedo ver las cuentas que se crearon, que están en cotización…
+debería traerlo como card para añadir, cuál aparecerían; agregar, editar o
+eliminar»*.
+
+Existen desde la 064, son varias —una por moneda— y salen impresas al pie de
+cada cotización y factura. **Nunca tuvieron pantalla**: se daban de alta con
+SQL contra producción. Caso veintisiete.
+
+«Eliminar» es desactivar, y es decisión de la propia 064: *«sin DELETE: se
+desactivan. Una cotización vieja cita la cuenta que citó»*. Apagada deja de
+imprimirse y se sigue viendo, para no darla de alta dos veces.
+
+Con un aviso que no existía: **si solo queda cuenta en una moneda, lo dice**.
+Es el fallo que la 064 describe y que acaba en una transferencia que hay que ir
+a rescatar al banco.
+
+**Y tres campos muertos, fuera.** El formulario de empresa seguía enseñando
+«Banco», «Cuenta corriente» y «CCI»: columnas que la 064 dejó atrás y que no
+imprime nadie. Se podían rellenar y no pasaba nada. Un formulario que acepta un
+dato y lo tira es peor que no tenerlo.
+
+### AL.6 · La configuración de SUNAT, donde tiene que estar
+
+Luis: *«en lo que es SUNAT y numeración falta la configuración de SUNAT»*.
+
+El certificado y el usuario SOL colgaban de facturación porque es donde se
+construyeron primero, y eso obligaba a saber que **para cambiar el certificado
+había que entrar a emitir una factura**. Ahora están en «SUNAT y numeración»,
+con el estado arriba y las series debajo. La lógica no se movió — sigue en el
+módulo de facturación—; lo que se publica es el formulario.
+
+Al partir la configuración en tres, `/configuracion` pasó a ser un redirect, y
+**tres acciones seguían haciéndole `revalidatePath`**: guardar empresa, los
+catálogos de productos y la configuración de SUNAT. Refrescar una ruta que solo
+redirige no hace nada. Corregidas.
+
+### AL.7 · La tarde que se fue persiguiendo un fantasma
+
+Conviene que quede escrito, porque volverá a pasar.
+
+Guardar una cuenta dejaba el botón clavado en «Guardando…» **con un 200 en el
+log del servidor**. Se probó de todo: quitar `revalidatePath`, envolver en
+`useTransition`, migrar a `useActionState` con `FormData`, reiniciar el
+servidor de desarrollo. Nada.
+
+**No era el código: era la pestaña del navegador.** Llevaba toda la tarde con
+el renderizador medio congelado —las capturas y las evaluaciones venían
+fallando con «renderer may be frozen»— así que React nunca aplicaba la
+actualización. En una pestaña nueva funcionó a la primera, sin tocar nada.
+
+La regla que sale de aquí: **si el servidor responde bien y el cliente no
+reacciona, sospecha del navegador antes que del código** — y ábrelo en una
+pestaña limpia antes de cambiar una línea.
+
+---
+
 ## §AK · 11/09 — El teléfono, dos agentes y un agujero de verdad
 
 Día largo. Empezó con Luis enseñando capturas de su prototipo en móvil y acabó

@@ -31,7 +31,7 @@ restricción de diseño principal, y ya obligó a rehacer pantallas enteras:
 ### Verifica en la pantalla, no en el typecheck
 
 **Casi todos los defectos encontrados en este proyecto eran invisibles a
-`tsc`, a `eslint` y a los 1185 tests.** Botones que no se ven, funciones sin
+`tsc`, a `eslint` y a los 1187 tests.** Botones que no se ven, funciones sin
 puerta, columnas que no existen. Si has tocado una pantalla, ábrela.
 
 Hay servidor de desarrollo en `http://localhost:4005` y herramientas de
@@ -65,16 +65,22 @@ salían siempre.
 tenían migración entera —bucket privado, tabla, RLS— y un componente escrito,
 y solo se llegaba a ellos desde la ficha de la recepción, nunca al recibir.
 
-**Y dos más el 11/09**, y una de ellas es la peor de todas: la política de
-`perfiles` decía en su comentario «el rol solo lo cambia admin/gerencia» y
-dejaba a **cualquier empleado** ascenderse con un PATCH, porque RLS decide
-filas y no columnas (§AK.3). Van **veinticinco casos**.
+**Y dos más el 11/09**: la política de `perfiles` decía en su comentario «el
+rol solo lo cambia admin/gerencia» y dejaba a cualquier empleado ascenderse con
+un PATCH, porque RLS decide filas y no columnas (§AK.3). *Ojo: resultó no ser
+explotable, y por un accidente — ver §AL.3.*
 
 **Y tres más el 10/09, en las listas**, en una variante que conviene reconocer:
 aquí la puerta estaba puesta y **faltaba el cable**. El selector de filas
 escribía `?n=25` y ninguna página lo leía; `cursorAnterior` se pasaba como
 `null` en las diez tablas; y `EstadoBadge` tenía cuatro estados SUNAT que no
 usaba nadie. Eran veintitrés al cerrar ese día.
+
+**Y tres más el 15/09** (§AL): «Configuración» no se encendía nunca en el menú;
+las **cuentas para cobrar** llevaban desde la 064 imprimiéndose en cada
+cotización **sin pantalla donde darlas de alta**; y el menú de usuario solo
+sabía cerrar sesión, sin sitio donde editar el propio perfil. Van
+**veintisiete casos**.
 
 Los tres se habrían encontrado con un `grep`: un prop que siempre vale `null`,
 un search param que se escribe y no se lee, un export sin quien lo importe.
@@ -120,7 +126,7 @@ contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
 
 ```bash
 pnpm dev                     # servidor en :4005
-pnpm test                    # 1185 tests
+pnpm test                    # 1187 tests
 pnpm lint
 npx tsc -p apps/web/tsconfig.json --noEmit
 
@@ -128,7 +134,7 @@ node scripts/aplicar-migraciones.mjs 070_lo_que_sea.sql   # UNA migración
 pnpm db:tipos                # regenerar tipos tras migrar
 ```
 
-**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 80 desde
+**No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 81 desde
 cero y la 005 falla por vistas dependientes.
 
 ---
@@ -254,6 +260,23 @@ mira el resultado y no el fuente (080).
 **El costo y el margen los sigue viendo cualquier rol, y es deliberado**
 (Luis, 11/09): el vendedor los necesita al negociar y son seis empleados de
 confianza. Se revisa el día que entre un vendedor de fuera.
+
+### Configuración, desde el 15/09
+
+Son **tres pantallas** y no una (§AL.1): `/configuracion/empresa`,
+`/configuracion/sunat` y `/configuracion/usuarios`, con su propio grupo en el
+menú detrás de «Gestión». `/configuracion` redirige a la primera.
+
+«SUNAT y numeración» lleva **todo** lo de emitir: el estado, el certificado y
+el usuario SOL —que colgaban de facturación—, y las series.
+`/facturacion/configuracion` redirige allí.
+
+Ahí se editan también las **cuentas para cobrar** (en «Datos de la empresa»),
+que desde la 064 se imprimían en cada cotización y solo se podían dar de alta
+por SQL.
+
+Y hay **`/perfil`**: cada uno cambia su nombre, su cargo, su teléfono y **su
+contraseña** — las seis cuentas nacieron con la misma.
 
 ### Lo siguiente que pidió Luis
 
