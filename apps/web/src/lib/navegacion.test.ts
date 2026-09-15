@@ -58,7 +58,7 @@ describe("qué ítem se enciende", () => {
 
   Lo que garantizaban sigue garantizado, ahora donde de verdad vive la regla.
 */
-describe("lo que va fuera de los grupos", () => {
+describe("el tablero y la configuración", () => {
   it("el tablero lo ve todo el mundo, tenga rol o no", () => {
     // Sin `roles` = abierto a cualquiera con sesión. Si alguien se lo pone
     // algún día, el usuario recién creado se quedaría sin portada.
@@ -87,14 +87,24 @@ describe("lo que va fuera de los grupos", () => {
     expect(rutaActiva("/configuracion/usuarios")).toBe("/configuracion/usuarios");
   });
 
-  it("ninguno de los dos se repite dentro de un grupo", () => {
-    // Salían del menú al sacarlos fuera; si alguien los devuelve, aparecerían
-    // dos veces y el marcado de ruta activa encendería dos ítems.
+  it("el tablero no se repite dentro de un grupo", () => {
+    // Salió del menú al sacarlo fuera; si alguien lo devuelve, aparecería dos
+    // veces y el marcado de ruta activa encendería dos ítems.
     const enGrupos = menuPara("gerencia").flatMap((g) => g.items.map((i) => i.ruta));
     expect(enGrupos).not.toContain(TABLERO.ruta);
-    for (const item of CONFIGURACION.items) {
-      expect(enGrupos).not.toContain(item.ruta);
-    }
+  });
+
+  it("la configuración es el ÚLTIMO grupo, y solo para quien manda", () => {
+    // Luis, 15/09: *«debería estar abajo de Gestión, del sidebar»*. Estuvo
+    // anclada al pie, fuera de los grupos, y parecía pegada por fuera.
+    const deGerencia = menuPara("gerencia");
+    expect(deGerencia[deGerencia.length - 1]?.titulo).toBe("Configuración");
+
+    // Y a quien no tiene permiso no le sale el grupo entero: `menuPara` tira
+    // los grupos que se quedan sin ítems, así que no hace falta esconderla a
+    // mano desde el layout.
+    const deVentas = menuPara("ventas").map((g) => g.titulo);
+    expect(deVentas).not.toContain("Configuración");
   });
 });
 

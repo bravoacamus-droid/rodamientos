@@ -40,6 +40,22 @@ const nextConfig: NextConfig = {
   compress: true,
 
   /**
+   * El indicador de desarrollo de Next, a la derecha.
+   *
+   * Vive por defecto abajo a la IZQUIERDA, que es exactamente donde está
+   * anclada la configuración del menú: el círculo negro se sentaba encima del
+   * botón y lo tapaba. Luis, 15/09, con la captura: *«pero no está dentro del
+   * sidebar, jaja»*.
+   *
+   * Solo se ve en desarrollo, así que no cambia nada de lo que usa Willy. Pero
+   * es la pantalla sobre la que se decide, y una pieza tapada por una chincheta
+   * del framework se discute como si fuera un fallo del diseño.
+   */
+  devIndicators: {
+    position: "bottom-right",
+  },
+
+  /**
    * `dev` y `build` escriben en directorios distintos.
    *
    * Comparten `.next` por defecto, y entonces correr `pnpm build` con el

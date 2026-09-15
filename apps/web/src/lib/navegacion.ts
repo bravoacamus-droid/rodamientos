@@ -61,14 +61,18 @@ export const TABLERO: ItemNav = {
 };
 
 /**
- * Configuración, anclada abajo y con sus tres pantallas.
+ * Configuración: un grupo más, el último.
  *
- * Sigue anclada: se toca el día de la puesta en marcha y casi nunca más, así
- * que no compite por el sitio de arriba, y al estar abajo se llega sin
- * buscarla aunque el menú esté desplazado.
+ * Estuvo anclada al pie de la barra, fuera de los grupos, con el argumento de
+ * que así se llegaba sin buscarla. Luis, 15/09, viéndolo: *«debería estar
+ * abajo de Gestión, del sidebar»*. Y es lo correcto: anclada parecía un
+ * añadido pegado por fuera —encima el indicador de desarrollo de Next se le
+ * sentaba encima y la tapaba— cuando es un módulo como los otros cinco.
  *
- * Lo que cambia el 15/09 es que deja de ser UN enlace a una pantalla de
- * scroll infinito. Luis: *«en vez de tener un botón de configuración abajo
+ * Va la última porque es la que menos se abre, no porque sea distinta.
+ *
+ * Lo que también cambia el 15/09 es que deja de ser UN enlace a una pantalla
+ * de scroll infinito. Luis: *«en vez de tener un botón de configuración abajo
  * del módulo de gestión, pongamos otro de configuración y que cada uno tenga
  * su propio menú: datos de empresa, configuración de SUNAT con sus series y
  * correlativos, usuarios; así tenerlo ordenado»*.
@@ -207,6 +211,8 @@ export const NAVEGACION: readonly GrupoNav[] = [
       { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", roles: ["gerencia", "admin"] },
     ],
   },
+  // Y la última, definida arriba porque es larga y tiene su propia historia.
+  CONFIGURACION,
 ];
 
 /**
@@ -224,7 +230,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
  */
 export function rutaActiva(
   ruta: string,
-  grupos: readonly GrupoNav[] = TODOS_LOS_GRUPOS,
+  grupos: readonly GrupoNav[] = NAVEGACION,
 ): string | null {
   let mejor: string | null = null;
   for (const grupo of grupos) {
@@ -239,18 +245,12 @@ export function rutaActiva(
 }
 
 /**
- * Todo lo que se puede marcar como activo, incluida la configuración.
+ * Filtra el menú para un rol. Sin rol conocido, solo lo abierto a todos.
  *
- * Hasta el 15/09 `rutaActiva` solo recorría `NAVEGACION`, y la configuración
- * vive fuera de ella. Resultado: estando en `/configuracion` la comparación
- * era `null === "/configuracion"`, o sea falsa, y **el ítem nunca se
- * encendía**. Otra vez el patrón de la casa: la pieza puesta y el cable sin
- * conectar. Se ve en cuanto se abre la pantalla, y llevaba así desde que se
- * ancló abajo.
+ * Los grupos que se quedan sin ítems desaparecen, así que la configuración no
+ * le sale a quien no tiene ninguno de sus tres permisos: no hace falta un
+ * interruptor aparte para esconderla.
  */
-const TODOS_LOS_GRUPOS: readonly GrupoNav[] = [...NAVEGACION, CONFIGURACION];
-
-/** Filtra el menú para un rol. Sin rol conocido, solo lo abierto a todos. */
 export function menuPara(rol: Rol | null): GrupoNav[] {
   return NAVEGACION.map((grupo) => ({
     ...grupo,

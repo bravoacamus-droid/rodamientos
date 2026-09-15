@@ -27,7 +27,6 @@ export default async function LayoutErp({
   // vez de dejar el hueco: un menú sin cabecera se ve roto.
   const emisor = await emisorParaImprimir();
   const empresa = emisor.nombreComercial || emisor.razonSocial || "Rodatech";
-  const puedeConfigurar = perfil?.rol === "gerencia" || perfil?.rol === "admin";
 
   return (
     // AL IMPRIMIR NO QUEDA NADA DE ESTO.
@@ -43,7 +42,6 @@ export default async function LayoutErp({
         empresa={empresa}
         usuario={perfil?.nombre ?? "Sesión"}
         pendientes={pendientes}
-        puedeConfigurar={puedeConfigurar}
       />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
@@ -55,7 +53,6 @@ export default async function LayoutErp({
             empresa={empresa}
             usuario={perfil?.nombre ?? "Sesión"}
             pendientes={pendientes}
-            puedeConfigurar={puedeConfigurar}
           />
           <Logo className="h-7 w-auto md:hidden" priority={false} />
           <div className="ml-auto flex items-center gap-1">
