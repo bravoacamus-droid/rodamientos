@@ -2682,6 +2682,7 @@ export type Database = {
       perfiles: {
         Row: {
           activo: boolean
+          actualizado_en: string
           cargo: string | null
           creado_en: string
           email: string | null
@@ -2693,6 +2694,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          actualizado_en?: string
           cargo?: string | null
           creado_en?: string
           email?: string | null
@@ -2704,6 +2706,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          actualizado_en?: string
           cargo?: string | null
           creado_en?: string
           email?: string | null
