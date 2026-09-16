@@ -4728,7 +4728,33 @@ La tabla entera cabe sin desplazamiento lateral. Comprobado en el navegador,
 no en el typecheck: menú abierto, diálogo abierto, las tres opciones probadas y
 el menú del catálogo repasado por el cambio de tamaño.
 
-### AM.11 · Datos de prueba creados en la base del cliente
+### AM.11 · Guardar, al pie
+
+Luis, 16/09: *«al terminar una cotización debe aparecer en la parte de abajo el
+botón de vista previa o guardar, no arriba»*.
+
+El constructor se recorre de arriba abajo —cliente, productos, totales— y el
+botón que cierra ese recorrido estaba en el punto de partida. Al teclear la
+última línea había que volver arriba a buscarlo.
+
+Ahora hay una barra al final con el **total, Cancelar y Guardar**. Y es
+`sticky`: al pie porque es donde termina la decisión, y pegada porque una
+cotización de veinte líneas es una página larga — un botón que solo existe al
+final del scroll obliga a bajar hasta el fondo cada vez. Es la misma pega que
+Luis cazó el 09/09 con «Imprimir» debajo de la hoja, y la solución es la que
+evita las dos: último de la página **y** siempre a la vista.
+
+El total va repetido ahí porque es la cifra que se mira justo antes de pulsar;
+la tarjeta de «Totales» sigue explicándola entera. Y si hay algo que falta, se
+dice al lado del botón apagado: un botón deshabilitado sin explicación se lee
+como una pantalla rota.
+
+**Pendiente de aclarar con Luis:** el constructor no tiene «Vista previa» —la
+cotización todavía no existe, así que no hay documento que enseñar—, y en la
+ficha ese botón sigue arriba, que es donde tiene sentido porque el papel está
+debajo. Falta saber si quería también una previa **antes** de guardar.
+
+### AM.12 · Datos de prueba creados en la base del cliente
 
 Probando el alta rápida hubo que crear cosas de verdad: el producto `22208`
 —descripción correcta, **la marca SKF la elegí yo**— y `ZZ MARCA PRUEBA`, `ZZ

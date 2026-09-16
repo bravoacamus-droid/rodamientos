@@ -165,28 +165,20 @@ export function Constructor({
         )}
       />
 
-      <header className="flex items-center justify-between">
+      {/*
+        Solo el título. Guardar se fue al pie.
+
+        Luis, 16/09: *«al terminar una cotización debe aparecer en la parte de
+        abajo el botón de guardar, no arriba»*. Y tiene la razón de siempre en
+        esta pantalla: el orden en que se trabaja es cliente → productos →
+        totales, y el botón que cierra ese recorrido estaba en el punto de
+        partida. Al terminar de teclear la última línea había que volver
+        arriba a buscarlo.
+      */}
+      <header>
         <h1 className="text-xl font-semibold">
           {editando ? `Editar ${editando.numero}` : "Nueva cotización"}
         </h1>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones")
-            }
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando
-              ? "Guardando…"
-              : editando
-                ? "Guardar cambios"
-                : "Guardar cotización"}
-          </Button>
-        </div>
       </header>
 
       {resultado && !resultado.ok ? (
@@ -514,6 +506,75 @@ export function Constructor({
           hayNoInmediatos={estado.lineas.some((l) => l.disponibilidad !== "inmediata")}
           guardando={guardando}
         />
+
+      {/*
+        La barra de cierre: el total y los dos botones, al final y PEGADA.
+
+        Al pie porque lo pidió Luis y porque es donde termina el recorrido. Y
+        pegada al borde de abajo (`sticky`) por lo contrario: una cotización de
+        veinte líneas es una página larga, y un botón que solo existe al final
+        del scroll obliga a bajar hasta el fondo cada vez que se quiere
+        guardar. Es exactamente la pega que él mismo cazó el 09/09 con el botón
+        de imprimir debajo de la hoja.
+
+        Así está siempre a la vista sin estar arriba: es lo último de la
+        página, y a la vez no hay que ir a buscarlo.
+
+        Y el total va aquí, repetido, porque es lo que se mira justo antes de
+        pulsar. La tarjeta de «Totales» lo explica —valor de venta, IGV,
+        margen—; esto solo recuerda la cifra que se está por firmar.
+      */}
+      <div className="sticky bottom-0 -mx-6 -mb-6 mt-1 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 elev-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-baseline gap-2">
+            <span className="text-sm text-[var(--fg-muted)]">
+              {estado.lineas.length === 1
+                ? "1 producto · total"
+                : `${estado.lineas.length} productos · total`}
+            </span>
+            <span className="tabular text-lg font-semibold">
+              {totales.total.toLocaleString("es-PE", {
+                style: "currency",
+                currency: "USD",
+              })}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/*
+              Lo que falta, junto al botón que no se puede pulsar.
+
+              El detalle está arriba, en el recuadro ámbar del resumen. Aquí va
+              el porqué en una línea: un botón apagado sin explicación al lado
+              se lee como que la pantalla está rota.
+            */}
+            {bloqueos.length > 0 ? (
+              <span className="text-sm font-medium text-[var(--warn)]">
+                {bloqueos.length === 1 && bloqueos[0]
+                  ? bloqueos[0].mensaje
+                  : `Faltan ${bloqueos.length} cosas para poder guardar`}
+              </span>
+            ) : null}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones")
+              }
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
+              {guardando
+                ? "Guardando…"
+                : editando
+                  ? "Guardar cambios"
+                  : "Guardar cotización"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/*
         El alta rápida, fuera del flujo pero dentro del formulario.
