@@ -4868,7 +4868,53 @@ sube de **213 a 278**. Sin desbordar.
 Comprobado en vivo: la línea 1 de COT1-000007 quedó como **NQK** y el producto
 6310-2Z/C3 sigue siendo **SKF** en el catálogo.
 
-### AM.15 · Datos de prueba creados en la base del cliente
+### AM.15 · Las series dejan de estar «bloqueadas» y pasan a estar a medias
+
+Llevaban once días como *«lo más urgente del proyecto»*. Luis, 16/09: *«eso ya
+será cuando estemos vinculados con SUNAT; aparte él dijo que iba a seguir con
+los números siguientes, que ya hace sus facturas, para que siga nomás y no
+empiece desde 0»*.
+
+Dos cosas, y las dos cambian el estado:
+
+1. **La regla está decidida:** se continúa la numeración, no se reinicia. Eso
+   era la mitad de la pregunta, y ya no hace falta preguntarlo.
+2. **El momento es la vinculación con SUNAT**, no ahora.
+
+Lo primero que hice fue comprobar que el sistema pueda hacerlo, porque si no
+podía, era mejor saberlo hoy que el día del arranque. **Sí puede, y con todo
+lo que hace falta:** `correlativo_inicial` («Desde» en la pantalla),
+`siguiente_correlativo()` tomando `greatest(actual + 1, inicial)`, y
+`avisosDelInicial` diciendo cuántos números se saltan —con distinto tono según
+la serie la vea SUNAT o no— antes de guardar. El comentario del dominio ya lo
+decía: *«saltar la numeración es EXACTAMENTE lo que hay que hacer al migrar
+desde el sistema anterior»*.
+
+Por una vez, la pieza y la puerta estaban las dos.
+
+**Lo que se encontró de paso, mirando la pantalla:**
+
+| Serie | Estado | Va por |
+|---|---|---|
+| `F002` factura | **existe, con el histórico real cargado** | 515 |
+| `FC02` nota de crédito | existe | 3 |
+| `T002` guía | **no existe** | — |
+| `CT02` cotización | **no existe** | — |
+
+O sea: la numeración de facturas de Willy **ya está dentro**, hasta la
+`F002-00000515` del 26/08, con sus clientes de verdad. Para facturas y notas
+de crédito no hay nada que preguntar: el próximo sale solo.
+
+**Y un riesgo que no depende de SUNAT ni de Willy:** las series
+**predeterminadas siguen siendo `F001` y `FC01`**, las de prueba. Emitir hoy
+una factura daría `F001-00000002` en vez de `F002-00000516`. Es un clic en
+«Usar por defecto» de la fila, pero es una decisión de numeración fiscal y la
+toma Luis — no se cambia la configuración del cliente por iniciativa propia.
+
+Queda pendiente de Willy solo esto: **desde qué número van su guía `T002` y su
+cotización `CT02`**, que son las dos series que todavía no existen.
+
+### AM.16 · Datos de prueba creados en la base del cliente
 
 Probando el alta rápida hubo que crear cosas de verdad: el producto `22208`
 —descripción correcta, **la marca SKF la elegí yo**— y `ZZ MARCA PRUEBA`, `ZZ

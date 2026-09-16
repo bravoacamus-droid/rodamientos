@@ -40,11 +40,12 @@ migración 064 solo lleva la estructura.
 Buenos días Willy. Con sus formatos ya quedó casi todo 🙌
 Me faltan 4 cositas, las 3 primeras de una palabra:
 
-1️⃣ SUS SERIES Y DESDE QUÉ NÚMERO SIGUEN
-Usted usa CT02 para cotizaciones, T002 para guías y F002
-para facturas. El sistema tiene otras de prueba.
-Dígame la serie y el ÚLTIMO número que emitió de cada una,
-para que siga contando desde ahí y no se le repita ninguno.
+1️⃣ EL ÚLTIMO NÚMERO DE SU GUÍA Y DE SU COTIZACIÓN
+Sus FACTURAS ya están: el sistema tiene sus F002 hasta la
+515, del 26 de agosto, y sigue desde la 516 sin repetir
+ninguna. Igual sus notas de crédito FC02.
+Me faltan las otras dos: ¿por qué número va su GUÍA T002
+y su COTIZACIÓN CT02? El último de cada una y sigo desde ahí.
 
 2️⃣ ¿A CUÁNTOS DÍAS VENDE AL CRÉDITO, NORMALMENTE?
 ¿30, 45, 60?
@@ -70,6 +71,13 @@ un botón para apuntarlo en el momento.
 Juan de Lurigancho, y el código lo sacamos del padrón nosotros — preguntárselo
 sería pedirle que busque un número que no usa nunca. Va en cada guía, así que
 hay que ponerlo antes de emitir en producción.
+
+**Y otra que dejó de preguntarse el 16/09**: desde qué número sigue su
+FACTURA. Ya está dentro — el histórico real llega hasta `F002-00000515` del
+26/08 — y la regla la confirmó Luis: *«que siga nomás y no empiece desde 0»*.
+Preguntarle algo que el sistema ya sabe es justo lo que gasta las cinco
+preguntas. La de arriba se quedó solo con la guía y la cotización, que son las
+dos series que de verdad faltan.
 
 ---
 

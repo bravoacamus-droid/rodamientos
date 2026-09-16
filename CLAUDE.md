@@ -242,12 +242,38 @@ cobrar.
 
 ### Bloqueado en Willy
 
-1. **Sus series y desde qué correlativo siguen** — usa `CT02`, `T002`, `F002`;
-   el sistema tiene otras de prueba. **Es lo más urgente**: si emite con las
-   nuestras, los correlativos no cuadran con lo declarado.
+1. **Desde qué número siguen su guía (`T002`) y su cotización (`CT02`)** —
+   ninguna de las dos existe todavía como serie. Ver abajo: las de facturación
+   ya están resueltas.
 2. Plazo de crédito habitual (los 97 clientes están a 0 días).
 3. Plazo de entrega de un proveedor de Lima.
 4. Los teléfonos de sus clientes.
+
+### Numeración: qué está resuelto y qué no (16/09)
+
+Luis, 16/09, sobre las series: *«eso ya será cuando estemos vinculados con
+SUNAT; aparte él dijo que iba a seguir con los números siguientes, que ya hace
+sus facturas, para que siga nomás y no empiece desde 0»*.
+
+**La regla queda fijada: se CONTINÚA la numeración, no se reinicia.** Y el
+sistema ya sabe hacerlo: cada serie tiene `correlativo_inicial` («Desde» en la
+pantalla), `siguiente_correlativo()` toma `greatest(actual + 1, inicial)`, y
+`avisosDelInicial` dice cuántos números se saltan antes de guardar.
+
+Comprobado en `/configuracion/sunat` el 16/09:
+
+| Serie | Estado | Va por |
+|---|---|---|
+| `F002` factura | **existe, con el histórico real cargado** | 515 |
+| `FC02` nota de crédito | existe | 3 |
+| `T002` guía | **no existe** | — |
+| `CT02` cotización | **no existe** | — |
+
+**El riesgo que sí es urgente, y no depende de SUNAT:** las predeterminadas
+siguen siendo `F001` y `FC01`, las de prueba. Emitir hoy una factura daría
+`F001-00000002` en vez de `F002-00000516`. Se arregla con el enlace «Usar por
+defecto» de la fila — pero es una decisión de numeración fiscal, así que la
+toma Luis, no se cambia por iniciativa propia.
 
 ### Pendiente técnico
 
