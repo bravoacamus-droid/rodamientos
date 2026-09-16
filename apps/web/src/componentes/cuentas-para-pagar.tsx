@@ -66,13 +66,17 @@ export function CuentasParaPagar({
 
       <table className="w-full border-collapse text-xs">
         <thead>
-          <tr className="text-left">
+          {/* En mayúsculas como en el cuadro que mandó Willy, no en
+              minúscula como el resto del papel: es una tabla de cifras dentro
+              del pie, y los títulos en caja alta la separan de la prosa que
+              tiene encima. */}
+          <tr className="text-left uppercase">
             <th className="border-b border-[#999] px-2 py-1 font-semibold">Banco</th>
             <th className="border-b border-[#999] px-2 py-1 font-semibold">
               Tipo de cuenta
             </th>
             <th className="border-b border-[#999] px-2 py-1 font-semibold">
-              N.º de cuenta
+              N.° de cuenta
             </th>
             <th className="border-b border-[#999] px-2 py-1 font-semibold">
               CCI cta. interbancaria
