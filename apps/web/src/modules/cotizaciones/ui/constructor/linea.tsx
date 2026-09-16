@@ -118,7 +118,43 @@ export function FilaLinea({
   return (
     <>
       <tr className={revision.ok ? "" : "bg-[var(--danger-bg)]"}>
-        <td className="tabular text-[var(--fg-muted)]">{indice + 1}</td>
+        {/*
+          El número de línea y las flechas que lo cambian, juntos.
+
+          Estaban al final, en «Acciones», donde ocupaban 70 px fijos de una
+          columna que en la pantalla de Willy ahogaba a todas las demás. Y
+          estaban lejos de lo único que modifican: este número.
+
+          No se esconden —siguen siendo dos botones con su `aria-label`—; se
+          mudan a donde significan algo.
+        */}
+        <td className="align-top">
+          <div className="flex items-center gap-0.5">
+            <span className="tabular text-[var(--fg-muted)]">{indice + 1}</span>
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
+                disabled={indice === 0}
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-xs leading-none text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                aria-label={`Subir ${linea.codigo}`}
+                title="Subir"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
+                disabled={indice === total - 1}
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-xs leading-none text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                aria-label={`Bajar ${linea.codigo}`}
+                title="Bajar"
+              >
+                ↓
+              </button>
+            </div>
+          </div>
+        </td>
 
         {/*
           El stock, como DATO y no como puerta.
@@ -132,8 +168,10 @@ export function FilaLinea({
           Ahora esto solo informa. Las alternativas son un botón de la
           columna de acciones, y están siempre.
         */}
-        <td>
-          <div className="font-medium">{linea.codigo}</div>
+        {/* Un código no se parte: «6310-2Z/C3» en dos renglones deja de
+            parecerse a lo que el cliente tiene escrito en su orden. */}
+        <td className="min-w-[6.5rem]">
+          <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
           <span
             className={`text-sm ${noAlcanza ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
           >
@@ -151,6 +189,26 @@ export function FilaLinea({
         {/* C3: la descripción no repite el código. */}
         <td className="text-sm">{linea.descripcion}</td>
 
+        {/*
+          La cantidad, con un ancho que NO se puede aplastar.
+
+          Willy, 16/09: *«le he ingresado 50 unidades y no se ve la cantidad
+          completa, solo el 0»*. Y era literal: en su pantalla esta caja medía
+          **42 px**.
+
+          El motivo no estaba aquí sino al final de la fila. Los botones de
+          «Alternativas» y «Ventas» enseñan su texto desde `xl` (1280 px) y no
+          se encogen, así que en una pantalla de 1600 —la de Willy— la columna
+          de acciones se queda con 414 px fijos y el resto de columnas se
+          reparten lo que sobra. Las de texto se parten en más renglones; las
+          que llevan un campo dentro, no: se quedan sin sitio donde escribir.
+
+          `min-w` en el propio campo es lo que lo impide. Un ancho en el `<td>`
+          no basta: en una tabla es una sugerencia, y el navegador la ignora
+          cuando va justo. Si con esto la tabla no cabe, se desplaza —para eso
+          está `scroll-x`—, que es mucho mejor que una caja donde no se lee lo
+          que se acaba de teclear.
+        */}
         <td className="w-24">
           <Input
             type="number"
@@ -160,7 +218,7 @@ export function FilaLinea({
             onChange={(e) =>
               despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
             }
-            className="text-right tabular"
+            className="min-w-[4.5rem] text-right tabular"
             aria-label={`Cantidad de ${linea.codigo}`}
           />
         </td>
@@ -187,7 +245,9 @@ export function FilaLinea({
                 valor: e.target.value as Disponibilidad,
               })
             }
-            className="h-control-sm text-xs"
+            // Sin `min-w`, la columna lo estrechaba hasta dejar «Inmedia» y
+            // media flecha: una promesa de entrega a medio leer.
+            className="h-control-sm min-w-[7rem] text-xs"
             aria-label={`Disponibilidad de ${linea.codigo}`}
           >
             {DISPONIBILIDADES.map((d) => (
@@ -225,10 +285,25 @@ export function FilaLinea({
               el día casi todo lo que no tiene— pero sí se dice: lo que salga
               en esa columna es una promesa impresa. */}
           {prometeDeMas(linea.disponibilidad, linea.cantidad, linea.stock) ? (
-            <span className="mt-1 block text-xs text-[var(--warn)]">
-              {sinNada
-                ? "sin stock para prometer entrega inmediata"
-                : `solo hay ${linea.stock} para prometer entrega inmediata`}
+            /*
+              El aviso, corto.
+
+              Decía «sin stock para prometer entrega inmediata»: cuarenta
+              caracteres dentro de una columna estrecha, que en la pantalla de
+              Willy se partían en CUATRO renglones y estiraban la fila entera.
+              La frase completa se queda en el `title`, para quien pase el
+              ratón; lo que se lee de un vistazo es que algo va mal, y eso cabe
+              en dos palabras. La columna de al lado ya dice qué se prometió.
+            */
+            <span
+              className="mt-1 block text-sm font-medium text-[var(--warn)]"
+              title={
+                sinNada
+                  ? "No hay stock para prometer entrega inmediata"
+                  : `Solo hay ${linea.stock} para prometer entrega inmediata`
+              }
+            >
+              {sinNada ? "sin stock" : `solo ${linea.stock}`}
             </span>
           ) : null}
         </td>
@@ -245,7 +320,7 @@ export function FilaLinea({
             onChange={(e) =>
               despachar({ tipo: "precio", key: linea.key, valor: Number(e.target.value) })
             }
-            className={`text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
+            className={`min-w-[5.5rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
             aria-label={`Valor unitario de ${linea.codigo}`}
           />
           {linea.valorUnitario !== linea.precioLista ? (
@@ -272,7 +347,7 @@ export function FilaLinea({
               onChange={(e) =>
                 despachar({ tipo: "descuento", key: linea.key, valor: Number(e.target.value) })
               }
-              className={`text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
+              className={`min-w-[4rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
               aria-label={`Descuento de ${linea.codigo}`}
             />
             {revision.descuentoMaximoPct !== null && revision.ok ? (
@@ -287,25 +362,6 @@ export function FilaLinea({
 
         <td>
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
-              disabled={indice === 0}
-              className="flex size-8 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30"
-              aria-label="Subir"
-            >
-              ↑
-            </button>
-            <button
-              type="button"
-              onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
-              disabled={indice === total - 1}
-              className="flex size-8 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] disabled:opacity-30"
-              aria-label="Bajar"
-            >
-              ↓
-            </button>
-
             {/*
               Los tres que importan, como BOTONES.
 
@@ -344,6 +400,7 @@ export function FilaLinea({
               etiqueta="Quitar"
               titulo={`Quitar ${linea.codigo}`}
               peligro
+              soloIcono
             >
               <IconoPapelera />
             </BotonAccion>
@@ -485,6 +542,7 @@ function BotonAccion({
   children,
   deshabilitado,
   peligro,
+  soloIcono,
 }: {
   onClick: () => void;
   etiqueta: string;
@@ -492,6 +550,19 @@ function BotonAccion({
   children: React.ReactNode;
   deshabilitado?: boolean;
   peligro?: boolean;
+  /**
+   * Sin texto, solo el dibujo.
+   *
+   * Se usa en UNO: la papelera. No contradice la regla de la casa —«un botón
+   * tiene que parecer un botón»—, que va de enlaces grises e iconos sueltos:
+   * esto sigue siendo un botón con su borde, su `title` y su `aria-label`.
+   *
+   * Y se hace por una razón medida: la columna de acciones se llevaba 414 px
+   * fijos en la pantalla de Willy y ahogaba a las demás. Una papelera es el
+   * dibujo que menos falta le hace a su palabra; «Alternativas» y «Ventas»
+   * conservan la suya, que costó dos correcciones ponerlas ahí.
+   */
+  soloIcono?: boolean;
 }) {
   return (
     <button
@@ -507,7 +578,7 @@ function BotonAccion({
       }`}
     >
       {children}
-      <span className="hidden xl:inline">{etiqueta}</span>
+      {soloIcono ? null : <span className="hidden xl:inline">{etiqueta}</span>}
     </button>
   );
 }
