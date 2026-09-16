@@ -183,8 +183,39 @@ export function FilaLinea({
           </span>
         </td>
 
-        {/* C2: la marca en columna propia. */}
-        <td className="text-sm">{linea.marca ?? "—"}</td>
+        {/*
+          C2: la marca en columna propia. Y desde el 16/09, EDITABLE.
+
+          Willy: *«aparece sin marca, no me da opción a editar para grabarlo con
+          una marca determinada»*, y explicó por qué importa: en retenes el
+          código son las medidas —45x60x8TC— y el mismo código es LYO, NQK,
+          PHK o NAK. Solo SKF tiene codificación propia.
+
+          Así que la marca no se puede grabar en el maestro: hay UNA fila de
+          producto para las cinco marcas, y cuál se entrega se decide al
+          cotizar. Se escribe aquí, en la copia que la línea lleva desde
+          siempre.
+
+          Con `list`: se sugieren las del catálogo y se admite cualquier otra.
+          Obligar a elegir de una lista cerrada sería exigirle dar de alta una
+          marca en el maestro para poder cotizar un retén.
+        */}
+        <td>
+          <Input
+            list="marcas-conocidas"
+            value={linea.marca ?? ""}
+            onChange={(e) =>
+              despachar({ tipo: "marca", key: linea.key, valor: e.target.value })
+            }
+            placeholder="sin marca"
+            // El `min-w` va en el CAMPO y no en la celda. Es la misma lección
+            // que costó la caja de cantidad un rato antes, el mismo día: en
+            // una tabla, un ancho de celda es una sugerencia; el navegador la
+            // ignora cuando va justo y deja «SKF» en «SI».
+            className="h-control-sm min-w-[4.5rem] text-sm"
+            aria-label={`Marca de ${linea.codigo}`}
+          />
+        </td>
 
         {/* C3: la descripción no repite el código. */}
         <td className="text-sm">{linea.descripcion}</td>

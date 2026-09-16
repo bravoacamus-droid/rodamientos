@@ -153,3 +153,20 @@ export async function crearProductoRapido(datos: {
     },
   };
 }
+
+/**
+ * Los nombres de las marcas que ya existen, para sugerir al escribir.
+ *
+ * Willy, 16/09, sobre los retenes: *«puede ser diversas marcas: LYO, NQK, PHK,
+ * NAK… etc»*. Ese «etc» es el motivo de que esto sugiera y no obligue: la
+ * marca de una línea de cotización es texto —una copia de lo que se imprimió—
+ * y no una clave ajena. Si la que hace falta no está en el catálogo, se
+ * escribe y ya; el maestro no se toca.
+ */
+export async function marcasConocidas(): Promise<string[]> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return [];
+
+  const r = await catalogosParaProducto();
+  return r.ok ? r.datos.marcas.map((m) => m.nombre) : [];
+}

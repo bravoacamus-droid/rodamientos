@@ -124,6 +124,26 @@ export type Accion =
   | { tipo: "cantidad"; key: string; valor: number }
   | { tipo: "precio"; key: string; valor: number }
   | { tipo: "descuento"; key: string; valor: number }
+  /**
+   * La marca de ESTA línea, que no tiene por qué ser la del maestro.
+   *
+   * Willy, 16/09, con un retén: *«aparece sin marca, no me da opción a editar
+   * para grabarlo con una marca determinada… en el mercado de retenes los
+   * códigos se guardan con las medidas, como 45x60x8TC, pero puede ser
+   * diversas marcas: LYO, NQK, PHK, NAK… solo SKF tiene una codificación
+   * particular»*.
+   *
+   * Eso cambia dónde va el arreglo. El código NO identifica una marca: un
+   * 45X60X8TC es cualquiera de ellas, y cuál se entrega se decide al cotizar,
+   * según lo que se vaya a conseguir. Grabarla en el maestro sería mentir
+   * sobre las otras cuatro, y el maestro tiene UNA fila para las cinco.
+   *
+   * Por eso se edita en la línea: `cotizacion_items.marca` es una copia propia
+   * desde la 002 —«snapshot: lo que se imprimió en el PDF no puede cambiar
+   * porque después se editó el maestro»— y viaja en el payload desde siempre.
+   * Lo único que faltaba era poder escribirla.
+   */
+  | { tipo: "marca"; key: string; valor: string | null }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
@@ -299,6 +319,14 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
       return mapear(estado, accion.key, (l) => ({
         ...l,
         descuentoPct: pctValido(accion.valor),
+      }));
+
+    case "marca":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        // Vacío es «sin marca», no una cadena vacía: es lo que el papel
+        // imprime como un guion y lo que la base guarda como nulo.
+        marca: accion.valor?.trim() ? accion.valor.trim() : null,
       }));
 
     case "disponibilidad":

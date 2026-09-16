@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useReducer, useState } from "react";
+import { useActionState, useEffect, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
 
@@ -25,6 +25,8 @@ import {
   entregaPrometeSinRespaldo,
   entregaSeContradice,
 } from "../../dominio/disponibilidad";
+import { marcasConocidas } from "@/modules/productos/acciones/alta-rapida";
+
 import { AltaProducto } from "./alta-producto";
 import { BuscadorLineas } from "./buscador";
 import { BuscadorClientes } from "./buscador-clientes";
@@ -111,6 +113,25 @@ export function Constructor({
   */
   /** El código que se está dando de alta, o null. */
   const [creando, setCreando] = useState<string | null>(null);
+
+  /*
+    Las marcas que ya existen, para sugerirlas al escribir la de una línea.
+
+    Se piden una vez al montar: son 24 nombres. Y solo SUGIEREN — la marca de
+    una línea es texto, no una clave ajena, así que se puede escribir una que
+    no esté en el catálogo. Willy, 16/09, sobre los retenes: *«puede ser
+    diversas marcas: LYO, NQK, PHK, NAK… etc»*, y ese «etc» es el motivo.
+  */
+  const [marcas, setMarcas] = useState<string[]>([]);
+  useEffect(() => {
+    let vivo = true;
+    marcasConocidas().then((m) => {
+      if (vivo) setMarcas(m);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const entregaSinRespaldo = useMemo(
     () => entregaPrometeSinRespaldo(estado.tiempoEntrega, estado.lineas),
@@ -500,6 +521,13 @@ export function Constructor({
         Se monta solo cuando hace falta: así las listas de marcas y familias se
         piden la vez que se usa y no en cada cotización.
       */}
+      {/* Las sugerencias de marca, una sola vez para todas las líneas. */}
+      <datalist id="marcas-conocidas">
+        {marcas.map((m) => (
+          <option key={m} value={m} />
+        ))}
+      </datalist>
+
       {creando !== null ? (
         <AltaProducto
           codigoInicial={creando}

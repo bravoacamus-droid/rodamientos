@@ -427,3 +427,88 @@ describe("el tiempo de entrega se sincroniza con las líneas", () => {
     expect(r.entregaAMano).toBe(true);
   });
 });
+
+describe("la marca de la línea · el caso del retén (Willy, 16/09)", () => {
+  /*
+    Willy: *«aparece sin marca, no me da opción a editar para grabarlo con una
+    marca determinada… en el mercado de retenes los códigos se guardan con las
+    medidas, como 45x60x8TC, pero puede ser diversas marcas: LYO, NQK, PHK,
+    NAK… solo SKF tiene una codificación particular»*.
+
+    O sea: el código NO identifica una marca. Hay UNA fila en el maestro para
+    las cinco, y cuál se entrega se decide al cotizar. Por eso la marca se
+    escribe en la línea y no en el producto.
+  */
+  const RETEN: ProductoParaCotizar = {
+    id: "p-reten",
+    codigo: "45X60X8TC",
+    descripcion: "RETEN 45 X 60 X 8 TC",
+    marca: null,
+    unidad: "NIU",
+    stock: 0,
+    precio_venta: 1.5,
+  };
+
+  const conReten = () =>
+    reducir(estadoInicial(), { tipo: "agregar", producto: RETEN });
+
+  it("se le puede poner una marca que NO está en el catálogo", () => {
+    // «LYO, NQK, PHK, NAK… etc». El «etc» es justo el motivo de que esto sea
+    // texto libre y no una clave ajena al maestro de marcas.
+    const e = correr(conReten(), {
+      tipo: "marca",
+      key: conReten().lineas[0]!.key,
+      valor: "NQK",
+    });
+    expect(e.lineas[0]!.marca).toBe("NQK");
+  });
+
+  it("vaciarla la deja en «sin marca», no en cadena vacía", () => {
+    // Es lo que el papel imprime como un guion y lo que la base guarda como
+    // nulo. Una cadena vacía se imprimiría como un hueco.
+    const base = conReten();
+    const e = correr(
+      base,
+      { tipo: "marca", key: base.lineas[0]!.key, valor: "NAK" },
+      { tipo: "marca", key: base.lineas[0]!.key, valor: "   " },
+    );
+    expect(e.lineas[0]!.marca).toBeNull();
+  });
+
+  it("los espacios de los bordes se recortan", () => {
+    const base = conReten();
+    const e = correr(base, {
+      tipo: "marca",
+      key: base.lineas[0]!.key,
+      valor: "  PHK  ",
+    });
+    expect(e.lineas[0]!.marca).toBe("PHK");
+  });
+
+  it("solo toca SU línea", () => {
+    const dos = correr(
+      estadoInicial(),
+      { tipo: "agregar", producto: RETEN },
+      { tipo: "agregar", producto: P6209 },
+    );
+    const e = correr(dos, {
+      tipo: "marca",
+      key: dos.lineas[0]!.key,
+      valor: "LYO",
+    });
+    expect(e.lineas[0]!.marca).toBe("LYO");
+    expect(e.lineas[1]!.marca).toBe(P6209.marca);
+  });
+
+  it("la marca editada es la que viaja al guardar", () => {
+    // Si se quedara solo en la pantalla, el papel saldría «SIN MARCA» igual y
+    // el arreglo no serviría de nada.
+    const base = conReten();
+    const e = correr(base, {
+      tipo: "marca",
+      key: base.lineas[0]!.key,
+      valor: "NQK",
+    });
+    expect(aPayload(e).items[0]!.marca).toBe("NQK");
+  });
+});
