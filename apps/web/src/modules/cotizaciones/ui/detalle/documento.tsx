@@ -65,8 +65,44 @@ export function Documento({
       titulo="Cotización"
       numero={c.numero}
       datos={[
+        /*
+          El orden del bloque: a quién va, dónde está, y solo después quién es
+          ante SUNAT.
+
+          Luis, 16/09, comparando con el formato de Willy: *«pone el nombre
+          arriba, señor; la dirección, segundo; así lo tenemos más ordenado»*.
+          Y el formato de Willy hace justo eso — Señor(es), Dirección, R.U.C.,
+          Fecha de emisión.
+
+          Tiene sentido más allá de la costumbre: las dos primeras líneas son
+          «a quién le mando esto y a dónde». El RUC es un dato administrativo
+          que se comprueba después, no lo que se lee de un vistazo.
+        */
         { etiqueta: "Señores", valor: c.cliente.razonSocial },
         { etiqueta: "Fecha", valor: formatoFecha(c.fecha) },
+
+        /*
+          La dirección, a lo ancho de las dos columnas.
+
+          Willy, 16/09: *«la fila de la "Dirección" debe estar libre, porque la
+          razón social es siempre amplia»*. Partida en media hoja, una
+          dirección del Callao salía en cinco renglones y empujaba hacia abajo
+          todo lo que tenía al lado.
+
+          Cuando NO hay dirección se omite entera, en vez de dejar un `null`:
+          un hueco en una fila de ancho completo correría el RUC a la columna
+          de la derecha y descuadraría todo lo de abajo.
+        */
+        ...(c.cliente.direccion
+          ? [
+              {
+                etiqueta: "Dirección",
+                valor: c.cliente.direccion,
+                ancho: true,
+              },
+            ]
+          : []),
+
         {
           etiqueta: c.cliente.tipoDocumento ?? "Doc.",
           valor: c.cliente.documento ?? "—",
@@ -75,18 +111,6 @@ export function Documento({
           etiqueta: "Válida hasta",
           valor: `${formatoFecha(c.validaHasta)} (${c.validezDias} días)`,
         },
-        /*
-          La dirección, a lo ancho de las dos columnas.
-
-          Willy, 16/09: *«la fila de la "Dirección" debe estar libre, porque la
-          razón social es siempre amplia»*. Partida en media hoja, una
-          dirección del Callao salía en cinco renglones y empujaba hacia abajo
-          todo lo que tenía al lado — «Válida hasta» y «Entrega» quedaban
-          flotando lejos de su pareja.
-        */
-        c.cliente.direccion
-          ? { etiqueta: "Dirección", valor: c.cliente.direccion, ancho: true }
-          : null,
         { etiqueta: "Entrega", valor: c.tiempoEntrega ?? "Por confirmar" },
         /*
           Junto a la entrega, que es su pareja: las dos son la condición
