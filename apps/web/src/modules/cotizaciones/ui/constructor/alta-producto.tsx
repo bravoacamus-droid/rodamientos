@@ -17,14 +17,21 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  SelectNativo,
   toast,
 } from "@rodatech/ui";
 
 import {
+  crearFamilia,
+  crearMarca,
+  crearSubfamilia,
+  type ResultadoCatalogo,
+} from "@/modules/productos/acciones/catalogos";
+import {
   catalogosParaAlta,
   crearProductoRapido,
 } from "@/modules/productos/acciones/alta-rapida";
+
+import { SelectorCatalogo, type OpcionCatalogo } from "./selector-catalogo";
 
 import type { ProductoParaCotizar } from "../../dominio/constructor";
 
@@ -95,6 +102,69 @@ export function AltaProducto({
     [catalogos, datos.familia_id],
   );
 
+  /**
+   * Dar de alta una marca, una familia o una sub-familia sin cerrar nada.
+   *
+   * Lo creado se mete en la lista que ya está en memoria en vez de volver a
+   * pedir el catálogo entero: la RPC devuelve la fila, así que un segundo
+   * viaje sería pedir 68 filas para enterarse de una.
+   *
+   * Y devuelve `null` si falla, que es lo que el selector entiende como «no
+   * elijas nada»: el mensaje se enseña aquí, que es donde se sabe por qué.
+   */
+  async function alta(
+    accion: () => Promise<ResultadoCatalogo>,
+    lista: "marcas" | "familias" | "subfamilias",
+    familiaId?: string,
+  ): Promise<OpcionCatalogo | null> {
+    const r = await accion();
+    if (!r.ok) {
+      toast.error(r.error);
+      return null;
+    }
+
+    const nueva = { id: r.datos.id, nombre: r.datos.nombre };
+
+    setCatalogos((c) => {
+      if (!c) return c;
+      if (lista === "subfamilias") {
+        return {
+          ...c,
+          subfamilias: [
+            ...c.subfamilias,
+            { ...nueva, familia_id: familiaId ?? "" },
+          ],
+        };
+      }
+      return { ...c, [lista]: [...c[lista], nueva] };
+    });
+
+    /*
+      «Creada» y no «ya existía».
+
+      La RPC es idempotente: si el nombre ya estaba, devuelve la fila de
+      siempre con `creada: false` en vez de reventar. Decirlo evita la duda
+      de «¿la he duplicado?» — que es justo lo que lleva a mirar el catálogo
+      para comprobarlo.
+    */
+    toast.success(
+      r.datos.creada ? `«${nueva.nombre}» creada.` : `«${nueva.nombre}» ya existía.`,
+    );
+    return nueva;
+  }
+
+  // El selector habla de `{id, nombre}`; las unidades vienen con `codigo` y
+  // su abreviatura. Se traducen aquí en vez de darle al selector un caso
+  // especial que solo usa una de las cuatro listas.
+  const unidades = React.useMemo(
+    () =>
+      (catalogos?.unidades ?? []).map((u) => ({
+        id: u.codigo,
+        nombre: `${u.nombre} (${u.abreviatura})`,
+      })),
+    [catalogos],
+  );
+
   const listo =
     datos.codigo.trim().length > 0 &&
     datos.descripcion.trim().length >= 3 &&
@@ -140,7 +210,15 @@ export function AltaProducto({
 
   return (
     <Dialog open onOpenChange={(v) => (v ? null : onCerrar())}>
-      <DialogContent>
+      {/*
+        Más ancho que el de por defecto.
+
+        Luis, 16/09: *«este modal debe ser más grande»*. Con tres selectores que
+        se despliegan y una descripción larga, `max-w-lg` dejaba los
+        desplegables en una rendija y la descripción —que es lo que lee el
+        cliente— en media línea.
+      */}
+      <DialogContent ancho="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Crear producto</DialogTitle>
           <DialogDescription>
@@ -170,23 +248,17 @@ export function AltaProducto({
                 />
               </Campo>
 
-              <Campo id="alta-marca" label="Marca" requerido>
-                <SelectNativo
-                  id="alta-marca"
-                  value={datos.marca_id}
-                  onChange={(e) =>
-                    setDatos((d) => ({ ...d, marca_id: e.target.value }))
-                  }
-                  required
-                >
-                  <option value="">Elige una marca</option>
-                  {(catalogos?.marcas ?? []).map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </Campo>
+              <SelectorCatalogo
+                id="alta-marca"
+                label="Marca"
+                requerido
+                opciones={catalogos?.marcas ?? []}
+                valor={datos.marca_id}
+                onElegir={(o) =>
+                  setDatos((d) => ({ ...d, marca_id: o?.id ?? "" }))
+                }
+                onCrear={(nombre) => alta(() => crearMarca(nombre), "marcas")}
+              />
             </div>
 
             <Campo
@@ -206,71 +278,73 @@ export function AltaProducto({
             </Campo>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Campo id="alta-familia" label="Familia" requerido>
-                <SelectNativo
-                  id="alta-familia"
-                  value={datos.familia_id}
-                  onChange={(e) =>
-                    // Al cambiar de familia, la sub-familia elegida deja de
-                    // tener sentido: se limpia en vez de quedarse colgando de
-                    // otra familia.
-                    setDatos((d) => ({
-                      ...d,
-                      familia_id: e.target.value,
-                      subfamilia_id: "",
-                    }))
-                  }
-                  required
-                >
-                  <option value="">Elige una familia</option>
-                  {(catalogos?.familias ?? []).map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.nombre}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </Campo>
+              <SelectorCatalogo
+                id="alta-familia"
+                label="Familia"
+                requerido
+                opciones={catalogos?.familias ?? []}
+                valor={datos.familia_id}
+                onElegir={(o) =>
+                  // Al cambiar de familia, la sub-familia elegida deja de
+                  // tener sentido: se limpia en vez de quedarse colgando de
+                  // otra familia.
+                  setDatos((d) => ({
+                    ...d,
+                    familia_id: o?.id ?? "",
+                    subfamilia_id: "",
+                  }))
+                }
+                onCrear={(nombre) => alta(() => crearFamilia(nombre), "familias")}
+              />
 
-              <Campo id="alta-subfamilia" label="Sub-familia" requerido>
-                <SelectNativo
-                  id="alta-subfamilia"
-                  value={datos.subfamilia_id}
-                  onChange={(e) =>
-                    setDatos((d) => ({ ...d, subfamilia_id: e.target.value }))
-                  }
-                  disabled={datos.familia_id === ""}
-                  required
-                >
-                  <option value="">
-                    {datos.familia_id === ""
-                      ? "Elige antes la familia"
-                      : "Elige una sub-familia"}
-                  </option>
-                  {subfamilias.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nombre}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </Campo>
+              <SelectorCatalogo
+                id="alta-subfamilia"
+                label="Sub-familia"
+                requerido
+                opciones={subfamilias}
+                valor={datos.subfamilia_id}
+                onElegir={(o) =>
+                  setDatos((d) => ({ ...d, subfamilia_id: o?.id ?? "" }))
+                }
+                deshabilitado={datos.familia_id === ""}
+                textoVacio="Elige antes la familia"
+                /*
+                  La sub-familia nueva cuelga de la familia elegida, no de una
+                  cualquiera: es lo que pidió Luis —*«una nueva familia, de la
+                  cual de esa familia se puede crear una sub-familia»*— y
+                  además lo exige la base, cuya clave ajena es compuesta
+                  (subfamilia_id, familia_id) para que no se pueda colgar de
+                  otra.
+                */
+                onCrear={(nombre) =>
+                  alta(
+                    () => crearSubfamilia(datos.familia_id, nombre),
+                    "subfamilias",
+                    datos.familia_id,
+                  )
+                }
+              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <Campo id="alta-unidad" label="Unidad">
-                <SelectNativo
-                  id="alta-unidad"
-                  value={datos.unidad_codigo}
-                  onChange={(e) =>
-                    setDatos((d) => ({ ...d, unidad_codigo: e.target.value }))
-                  }
-                >
-                  {(catalogos?.unidades ?? []).map((u) => (
-                    <option key={u.codigo} value={u.codigo}>
-                      {u.nombre} ({u.abreviatura})
-                    </option>
-                  ))}
-                </SelectNativo>
-              </Campo>
+              {/*
+                La unidad también se busca —son 42— pero NO se crea.
+
+                Luis, 16/09: *«todos los select»*. Se busca, sí; darlas de alta
+                no: el catálogo de unidades es el de SUNAT (`unidades_medida`,
+                con sus códigos oficiales), y una unidad inventada es un
+                comprobante rechazado. Por eso este selector va sin `onCrear`,
+                que es justo para lo que existe ese prop opcional.
+              */}
+              <SelectorCatalogo
+                id="alta-unidad"
+                label="Unidad"
+                opciones={unidades}
+                valor={datos.unidad_codigo}
+                onElegir={(o) =>
+                  setDatos((d) => ({ ...d, unidad_codigo: o?.id ?? "NIU" }))
+                }
+              />
 
               <Campo
                 id="alta-precio"
