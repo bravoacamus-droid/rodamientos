@@ -117,10 +117,14 @@ export function Constructor({
   /*
     Las marcas que ya existen, para sugerirlas al escribir la de una línea.
 
-    Se piden una vez al montar: son 24 nombres. Y solo SUGIEREN — la marca de
-    una línea es texto, no una clave ajena, así que se puede escribir una que
-    no esté en el catálogo. Willy, 16/09, sobre los retenes: *«puede ser
-    diversas marcas: LYO, NQK, PHK, NAK… etc»*, y ese «etc» es el motivo.
+    Alimentan el `<datalist>` del final, que usa «Editar artículo» cuando se
+    elige «solo en esta cotización» — el caso del retén. Ahí la marca es texto
+    y no una clave ajena, así que se puede escribir una que no esté en el
+    catálogo: Willy, 16/09, *«puede ser diversas marcas: LYO, NQK, PHK, NAK…
+    etc»*, y ese «etc» es el motivo de que sugiera en vez de obligar.
+
+    Se piden una vez al montar, no al abrir el diálogo: son 24 nombres, y
+    pedirlos aquí evita que la caja salga sin sugerencias el primer segundo.
   */
   const [marcas, setMarcas] = useState<string[]>([]);
   useEffect(() => {

@@ -24,6 +24,7 @@ import {
 import {
   editarProductoRapido,
   fichaParaEditar,
+  type FichaParaEditar,
 } from "@/modules/productos/acciones/alta-rapida";
 
 import { SelectorCatalogo, type OpcionCatalogo } from "./selector-catalogo";
@@ -77,9 +78,28 @@ export function EditarArticulo({
     descripcion: string;
   }) => void;
 }) {
-  const enCatalogo = linea.productoId !== null;
+  /** ¿Tiene ficha que editar, o es una línea escrita a mano? */
+  const hayFicha = linea.productoId !== null;
+
+  /*
+    Hasta dónde llega lo que se cambia. Es la primera pregunta del diálogo.
+
+    Sin esto había dos sitios para cambiar una marca —la caja de la fila y este
+    diálogo— y nada decía en qué se diferencian. Luis, 16/09: *«¿por qué se
+    puede cambiar eso?, no quedamos… y ocupa mucho»*. La caja se fue; la
+    decisión se queda, porque el caso que la hacía falta sigue existiendo.
+
+    Por defecto, el catálogo: es lo que se quiere el 90 % de las veces —un
+    producto mal descrito, una familia equivocada— y es lo que pidió Luis que
+    trajera el editar.
+  */
+  const [alcance, setAlcance] = React.useState<"catalogo" | "linea">(
+    hayFicha ? "catalogo" : "linea",
+  );
+  const enCatalogo = hayFicha && alcance === "catalogo";
 
   const [catalogos, setCatalogos] = React.useState<Catalogos | null>(null);
+  const [ficha, setFicha] = React.useState<FichaParaEditar | null>(null);
   const [errorCarga, setErrorCarga] = React.useState<string | null>(null);
   const [guardando, empezar] = React.useTransition();
 
@@ -125,6 +145,7 @@ export function EditarArticulo({
         NQK—. Si el diálogo arrancara con eso y se pulsara «Guardar», esa marca
         de una cotización se escribiría en el catálogo sin que nadie lo pidiera.
       */
+      setFicha(r.datos.producto);
       setDatos((d) => ({
         ...d,
         codigo: r.datos.producto.codigo,
@@ -140,6 +161,23 @@ export function EditarArticulo({
       vivo = false;
     };
   }, [linea.productoId]);
+
+  /**
+   * Cambiar de alcance recarga el código y la descripción del sitio que toca.
+   *
+   * No son el mismo dato: el catálogo tiene el suyo y la línea lleva una copia
+   * que pudo editarse. Si al pasar de «en el catálogo» a «solo aquí» se
+   * quedara en pantalla la descripción del maestro, se escribiría encima de la
+   * que ya tenía esta cotización sin haberla tocado nadie.
+   */
+  function cambiarAlcance(nuevo: "catalogo" | "linea") {
+    setAlcance(nuevo);
+    const origen =
+      nuevo === "catalogo" && ficha
+        ? { codigo: ficha.codigo, descripcion: ficha.descripcion }
+        : { codigo: linea.codigo, descripcion: linea.descripcion };
+    setDatos((d) => ({ ...d, ...origen }));
+  }
 
   // Las sub-familias cuelgan de la familia elegida. Enseñar las 35 a la vez
   // obliga a buscar la que toca entre las de otras familias.
@@ -248,11 +286,13 @@ export function EditarArticulo({
       {/* Tan ancho como el de crear: son los mismos campos. */}
       <DialogContent ancho="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Editar artículo</DialogTitle>
+          <DialogTitle>Editar {linea.codigo}</DialogTitle>
           <DialogDescription>
-            {enCatalogo
-              ? "Cambia la ficha del producto en el catálogo, y de paso lo que sale en esta cotización."
-              : "Este artículo se escribió a mano y no está en el catálogo, así que solo se cambia lo que sale impreso."}
+            {!hayFicha
+              ? "Este artículo se escribió a mano y no está en el catálogo, así que solo se cambia lo que sale impreso."
+              : enCatalogo
+                ? "Lo que cambies queda en el catálogo y sale en esta cotización."
+                : "Lo que cambies sale solo en esta cotización. El catálogo se queda como está."}
           </DialogDescription>
         </DialogHeader>
 
@@ -262,6 +302,40 @@ export function EditarArticulo({
               <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
                 {errorCarga}
               </p>
+            ) : null}
+
+            {/*
+              Hasta dónde llega el cambio: la primera pregunta, y en botones
+              grandes con su explicación.
+
+              Podría ser una casilla de «guardar también en el catálogo», pero
+              una casilla se lee después de haber rellenado todo, y aquí la
+              respuesta cambia qué campos tiene sentido enseñar. Puesta arriba,
+              lo que sigue ya es coherente con lo que se eligió.
+
+              Cada opción dice lo que hace con palabras, no con jerga: «para
+              todas las cotizaciones» y «solo en esta». Willy no tiene por qué
+              saber qué es un maestro.
+            */}
+            {hayFicha ? (
+              <div
+                role="radiogroup"
+                aria-label="Hasta dónde llega el cambio"
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                <OpcionAlcance
+                  activa={alcance === "catalogo"}
+                  onClick={() => cambiarAlcance("catalogo")}
+                  titulo="En el catálogo"
+                  ayuda="Para todas las cotizaciones, también las próximas."
+                />
+                <OpcionAlcance
+                  activa={alcance === "linea"}
+                  onClick={() => cambiarAlcance("linea")}
+                  titulo="Solo en esta cotización"
+                  ayuda="Para un retén 45X60X8TC que esta vez es NQK."
+                />
+              </div>
             ) : null}
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -401,25 +475,10 @@ export function EditarArticulo({
                   </Campo>
                 </div>
 
-                {/*
-                  El alcance, dicho donde se decide.
-
-                  Sin esta frase, «editar artículo» dentro de una cotización se
-                  lee como «editar esta línea», y la diferencia importa: aquí
-                  se escribe el maestro, que es lo que verá la próxima
-                  cotización de cualquiera.
-
-                  Y con el caso del retén al lado, porque es el que hace que la
-                  distinción no sea teórica.
-                */}
-                <p className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
-                  Esto cambia el producto en el catálogo, para todas las
-                  cotizaciones. Si este código lo vendes con varias marcas —un
-                  retén <span className="font-mono">45X60X8TC</span> es LYO,
-                  NQK, PHK o NAK—, cambia la marca solo en esta cotización
-                  desde la columna <strong>Marca</strong> de la tabla.
-                </p>
-
+                {/* Lo que este diálogo NO toca, dicho para que nadie lo vaya a
+                    buscar y para que nadie tema habérselo llevado por delante:
+                    el costo y el precio mínimo son de lo que más cuesta
+                    rellenar en este catálogo. */}
                 <p className="text-sm text-[var(--fg-subtle)]">
                   El costo, el peso, los mínimos y la ubicación no se tocan
                   desde aquí: siguen como están, y se editan en la ficha del
@@ -447,5 +506,62 @@ export function EditarArticulo({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Una de las dos opciones de alcance.
+ *
+ * Es un botón con borde, título y explicación, no un radio de 16 px con una
+ * etiqueta al lado: la regla de la casa —*«un botón tiene que parecer un
+ * botón»*— y, sobre todo, un blanco grande. Esta es la decisión que separa
+ * «corrijo la ficha» de «este retén va como NQK», y fallar el clic cambia lo
+ * que se escribe en el catálogo de 790 productos.
+ *
+ * `role="radio"` y `aria-checked` van puestos porque visualmente es un botón
+ * pero funcionalmente es una elección entre dos.
+ */
+function OpcionAlcance({
+  activa,
+  onClick,
+  titulo,
+  ayuda,
+}: {
+  activa: boolean;
+  onClick: () => void;
+  titulo: string;
+  ayuda: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={activa}
+      onClick={onClick}
+      className={`rounded-md border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${
+        activa
+          ? "border-brand-600 bg-[var(--info-bg)]"
+          : "border-[var(--border)] hover:bg-[var(--surface-2)]"
+      }`}
+    >
+      <span className="flex items-center gap-2">
+        {/* El punto del radio, dibujado con dos divs: un `<input type=radio>`
+            dentro de un botón no se puede pulsar dos veces seguidas sin pelea
+            de foco. */}
+        <span
+          className={`grid size-4 shrink-0 place-items-center rounded-full border-2 ${
+            activa ? "border-brand-600" : "border-[var(--border-strong)]"
+          }`}
+        >
+          {activa ? (
+            <span className="size-2 rounded-full bg-brand-600" />
+          ) : null}
+        </span>
+        <span className="text-sm font-medium">{titulo}</span>
+      </span>
+      <span className="mt-1 block pl-6 text-sm text-[var(--fg-muted)]">
+        {ayuda}
+      </span>
+    </button>
   );
 }

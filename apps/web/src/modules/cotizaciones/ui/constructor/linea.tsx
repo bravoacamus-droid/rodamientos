@@ -218,37 +218,28 @@ export function FilaLinea({
         </td>
 
         {/*
-          C2: la marca en columna propia. Y desde el 16/09, EDITABLE.
+          C2: la marca en columna propia. Y se LEE, no se teclea.
 
-          Willy: *«aparece sin marca, no me da opción a editar para grabarlo con
-          una marca determinada»*, y explicó por qué importa: en retenes el
-          código son las medidas —45x60x8TC— y el mismo código es LYO, NQK,
-          PHK o NAK. Solo SKF tiene codificación propia.
+          Estuvo unas horas siendo una caja de texto, porque era el único sitio
+          donde se podía arreglar el retén que sale «sin marca». Luis, 16/09,
+          en cuanto «Editar artículo» pasó a traer la ficha entera: *«¿qué pasó
+          con esto?, ¿por qué se puede cambiar eso?, no quedamos… y ocupa mucho
+          también»*.
 
-          Así que la marca no se puede grabar en el maestro: hay UNA fila de
-          producto para las cinco marcas, y cuál se entrega se decide al
-          cotizar. Se escribe aquí, en la copia que la línea lleva desde
-          siempre.
+          Las dos cosas son ciertas. La caja se comía entre 112 y 199 px de una
+          fila donde la descripción es lo que hay que leer, y desde que el
+          diálogo edita el catálogo había dos maneras de cambiar la marca sin
+          que nada dijera en qué se diferencian.
 
-          Con `list`: se sugieren las del catálogo y se admite cualquier otra.
-          Obligar a elegir de una lista cerrada sería exigirle dar de alta una
-          marca en el maestro para poder cotizar un retén.
+          Ahora hay una sola puerta —el menú— con las dos salidas dentro y su
+          alcance escrito. Y el caso del retén no se pierde: en el diálogo se
+          elige «solo en esta cotización», que es donde 45x60x8TC se vende como
+          LYO, NQK, PHK o NAK sobre una única fila del maestro.
         */}
-        <td>
-          <Input
-            list="marcas-conocidas"
-            value={linea.marca ?? ""}
-            onChange={(e) =>
-              despachar({ tipo: "marca", key: linea.key, valor: e.target.value })
-            }
-            placeholder="sin marca"
-            // El `min-w` va en el CAMPO y no en la celda. Es la misma lección
-            // que costó la caja de cantidad un rato antes, el mismo día: en
-            // una tabla, un ancho de celda es una sugerencia; el navegador la
-            // ignora cuando va justo y deja «SKF» en «SI».
-            className="h-control-sm min-w-[4.5rem] text-sm"
-            aria-label={`Marca de ${linea.codigo}`}
-          />
+        <td className="text-sm">
+          {linea.marca ?? (
+            <span className="text-[var(--fg-subtle)]">sin marca</span>
+          )}
         </td>
 
         {/* C3: la descripción no repite el código. */}

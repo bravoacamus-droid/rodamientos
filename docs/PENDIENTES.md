@@ -4829,7 +4829,46 @@ mismo elemento; el `<input>` se crea en ese mismo render—. Quien pulsaba
 «cambiar» y se ponía a teclear no escribía en ninguna parte: el desplegable
 se abría con las 24 marcas y el filtro vacío, como si el teclado no existiera.
 
-### AM.14 · Datos de prueba creados en la base del cliente
+### AM.14 · La marca vuelve a leerse, y el alcance se pregunta
+
+Luis, viendo la caja de texto de la columna «Marca» ya con el editar
+terminado: *«¿qué pasó con esto rey?, ¿por qué se puede cambiar eso?, no
+quedamos… y ocupa mucho también»*.
+
+Las dos cosas eran ciertas, y la segunda la había provocado yo:
+
+- la caja se comía entre **112 y 199 px** de una fila donde lo que hay que
+  leer es la descripción;
+- y desde que «Editar artículo» pasó a tocar el catálogo (§AM.12) había **dos
+  maneras de cambiar una marca** sin que nada dijera en qué se diferencian.
+  Una escribía en la línea y la otra en el maestro de 790 productos.
+
+La columna vuelve a ser texto. Y la decisión —que sigue existiendo, porque el
+retén sigue existiendo— se pregunta **dentro del diálogo**, arriba del todo y
+en dos botones grandes con su explicación en palabras:
+
+| Opción | Qué hace |
+|---|---|
+| **En el catálogo** (por defecto) | Para todas las cotizaciones, también las próximas |
+| **Solo en esta cotización** | Para un retén 45X60X8TC que esta vez es NQK |
+
+Elegir cambia lo que se enseña: con «solo aquí» quedan tres campos —código,
+marca como texto libre, descripción— y el botón pasa a decir «Guardar en esta
+línea».
+
+**Un detalle que había que acertar:** al cambiar de alcance se recargan el
+código y la descripción del sitio que toca. No son el mismo dato —el catálogo
+tiene el suyo y la línea lleva una copia que pudo editarse—, y dejar en
+pantalla la descripción del maestro al pasar a «solo aquí» la habría escrito
+encima de la de esta cotización sin que nadie la tocara.
+
+Medido a 1180 px: la columna «Marca» baja de **137 a 72 px** y la descripción
+sube de **213 a 278**. Sin desbordar.
+
+Comprobado en vivo: la línea 1 de COT1-000007 quedó como **NQK** y el producto
+6310-2Z/C3 sigue siendo **SKF** en el catálogo.
+
+### AM.15 · Datos de prueba creados en la base del cliente
 
 Probando el alta rápida hubo que crear cosas de verdad: el producto `22208`
 —descripción correcta, **la marca SKF la elegí yo**— y `ZZ MARCA PRUEBA`, `ZZ
