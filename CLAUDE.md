@@ -31,7 +31,7 @@ restricción de diseño principal, y ya obligó a rehacer pantallas enteras:
 ### Verifica en la pantalla, no en el typecheck
 
 **Casi todos los defectos encontrados en este proyecto eran invisibles a
-`tsc`, a `eslint` y a los 1187 tests.** Botones que no se ven, funciones sin
+`tsc`, a `eslint` y a los 1197 tests.** Botones que no se ven, funciones sin
 puerta, columnas que no existen. Si has tocado una pantalla, ábrela.
 
 Hay servidor de desarrollo en `http://localhost:4005` y herramientas de
@@ -126,7 +126,7 @@ contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
 
 ```bash
 pnpm dev                     # servidor en :4005
-pnpm test                    # 1187 tests
+pnpm test                    # 1197 tests
 pnpm lint
 npx tsc -p apps/web/tsconfig.json --noEmit
 
@@ -277,6 +277,23 @@ por SQL.
 
 Y hay **`/perfil`**: cada uno cambia su nombre, su cargo, su teléfono y **su
 contraseña** — las seis cuentas nacieron con la misma.
+
+### El papel de la cotización, al 16/09
+
+Willy lo repasó y mandó cinco observaciones (§AM). Lo que conviene saber antes
+de tocar `HojaDocumento` o el documento de la cotización:
+
+- El membrete lleva la **razón social** en azul, no el nombre comercial: ese ya
+  está en el logo, al lado.
+- El bloque del cliente son **dos filas a lo ancho** —Señores y Dirección— y
+  debajo dos columnas: el cliente a la izquierda, las fechas y plazos del
+  documento a la derecha.
+- La columna **«Entrega» ya no depende solo del interruptor**: si las líneas no
+  prometen lo mismo, sale siempre. Sin ella, «parte inmediato, el resto hasta
+  15 días» no se puede leer.
+- Las cuentas van en **tabla** —BANCO · TIPO DE CUENTA · N.° DE CUENTA · CCI—,
+  dólares arriba. No es estética: un número de cuenta y un CCI seguidos en la
+  misma línea se confunden al copiarlos.
 
 ### Lo siguiente que pidió Luis
 

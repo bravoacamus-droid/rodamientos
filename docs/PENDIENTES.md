@@ -4508,6 +4508,108 @@ de Defontana.
 
 ---
 
+## §AM · 16/09 — El papel de la cotización, repasado por Willy
+
+Willy simuló una cotización de tres ítems —uno de importación a 15 días y dos
+inmediatos— y mandó cinco observaciones. Las cinco son del PAPEL, no de la
+aplicación: es el documento que ve su cliente.
+
+---
+
+### AM.1 · «No se indica qué ítem es de importación»
+
+La primera, y la que escondía algo.
+
+El papel decía arriba «Parte inmediato, el resto hasta 15 días» y en la tabla
+no había columna de entrega. Abriendo su cotización: **las tres líneas estaban
+en «inmediata» en la base**. No es que no se indicara cuál era el de
+importación — es que ninguno lo era. La frase de la cabecera había quedado de
+un momento anterior y las líneas decían otra cosa.
+
+Dos agujeros distintos, y los dos se cerraron:
+
+**a) La columna «Entrega» dependía solo de un interruptor.** La regla era
+«solo si `mostrar_disponibilidad` está puesto Y algo no es inmediato», y el
+motivo era bueno: activarla y que salga «Inmediata» seis veces es peor que no
+tenerla. Pero se le escapaba el caso que importa. Ahora, **si las líneas no
+prometen lo mismo, la columna sale siempre**: la frase de arriba es ambigua
+por definición en ese caso, y la columna es la única que la desambigua.
+Esconderla es publicar una promesa que nadie puede leer.
+
+**b) Y avisa quien no avisaba.** `entregaSeContradice` cubría un solo sentido
+—dice inmediato y hay líneas que tardan— y el reverso estaba descartado por
+escrito: *«prometer más despacio de lo que se puede entregar no rompe nada»*.
+Comercialmente es cierto; para quien lee el papel, no: busca cuál tarda y no
+lo encuentra. `entregaPrometeSinRespaldo` avisa en el constructor cuando la
+cabecera promete una espera y todas las líneas están en inmediata.
+
+Probado de punta a punta: se marcó el ítem 1 como exterior a 15 días y el
+papel salió con «15 días · exterior» en la primera línea e «Inmediata» en las
+otras dos, con el interruptor apagado.
+
+### AM.2 · El membrete decía el nombre dos veces
+
+*«La palabra RODATECH (primera línea en azul) está de más, solo la siguiente
+fila (INVERSIONES RODATECH EIRL) resaltado en azul»*.
+
+Arriba iba el nombre comercial en azul grande y debajo la razón social en gris
+de pie de página. Pero **el nombre comercial ya está en el logo**, al lado: se
+decía dos veces, y el nombre que identifica a la empresa ante SUNAT —el que
+tiene que leer quien recibe el papel— quedaba en letra pequeña.
+
+### AM.3 · La cabecera del cliente, en dos pasadas
+
+Primero: *«la fila de la "Dirección" debe estar libre, porque la razón social
+es siempre amplia»* e *«incluir también el campo "Vendedor"»*. Partida en
+media hoja, una dirección del Callao salía en cinco renglones y empujaba lo
+que tenía al lado. `HojaDocumento` acepta ahora un campo `ancho`, que vale
+para los cuatro documentos.
+
+Luego Luis, comparando las dos cabeceras: *«pone el nombre arriba, señor; la
+dirección, segundo»*. Y después: *«la fecha de la derecha ponla en la
+siguiente línea, o sea pasando la dirección, así no se pierde»*.
+
+Las dos frases piden lo mismo, y la segunda lo explica: con la fecha arriba a
+la derecha, la razón social y la dirección la empujaban y quedaba flotando
+sola sobre un hueco. El bloque quedó en dos mitades:
+
+    Señores      (a lo ancho)
+    Dirección    (a lo ancho)
+
+    izquierda · el CLIENTE      derecha · el DOCUMENTO
+      RUC                         Fecha
+      Atención                    Válida hasta
+      Forma de pago               Entrega
+      O/C del cliente             Vendedor
+
+Es el reparto del formato de Willy. Y cuando el cliente no tiene dirección, la
+fila se omite ENTERA en vez de dejar un `null`: un hueco en una fila de ancho
+completo correría la columna de abajo y descuadraría el resto.
+
+### AM.4 y AM.5 · Las cuentas
+
+*«No pongas "Cuentas para el pago", en su lugar pon solo CUENTAS
+BANCARIAS»* y *«ponlas más ordenadas, sería mejor en una tabla como esa…
+primero DÓLARES y abajo SOLES»*, con el cuadro de su formato: BANCO · TIPO DE
+CUENTA · N° DE CUENTA · CCI.
+
+Lo que arregla la tabla no es la estética: **un número de cuenta y un CCI
+seguidos en la misma línea se confunden**. Son dos cifras largas y sin
+espacios, y quien transfiere copia una de las dos. En columnas con su título
+encima, no hay forma de equivocarse.
+
+Por eso el orden deja de depender de la moneda del documento y pasa a ser fijo
+—dólares y luego soles—: ya no es el orden lo que evita el error, y un pie que
+siempre sale igual se lee más rápido que uno que se reordena solo.
+
+### AM.6 · Lo que NO se copió del formato de Willy
+
+Su cuadro lleva **Moneda** como campo de cabecera. El nuestro lo dice en el
+pie: *«los precios están expresados en dólares americanos»*. No lo pidió, así
+que no se movió — queda anotado por si lo quiere arriba.
+
+---
+
 ## §AL · 15/09 — Configuración, de una pantalla a un módulo
 
 Día de ordenar. Cinco commits, una migración, y dos fallos que llevaban meses
