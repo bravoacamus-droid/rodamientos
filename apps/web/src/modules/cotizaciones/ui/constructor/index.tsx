@@ -25,6 +25,7 @@ import {
   entregaPrometeSinRespaldo,
   entregaSeContradice,
 } from "../../dominio/disponibilidad";
+import { AltaProducto } from "./alta-producto";
 import { BuscadorLineas } from "./buscador";
 import { BuscadorClientes } from "./buscador-clientes";
 import { SelectorContacto } from "./selector-contacto";
@@ -108,6 +109,9 @@ export function Constructor({
     indicaba porque no había ninguno marcado. Quien lee el papel busca cuál
     tarda, no lo encuentra, y llama.
   */
+  /** El código que se está dando de alta, o null. */
+  const [creando, setCreando] = useState<string | null>(null);
+
   const entregaSinRespaldo = useMemo(
     () => entregaPrometeSinRespaldo(estado.tiempoEntrega, estado.lineas),
     [estado.tiempoEntrega, estado.lineas],
@@ -378,8 +382,19 @@ export function Constructor({
                   anteriores de cada uno.
                 </p>
               </div>
+              {/*
+                Y la salida cuando el código no existe.
+
+                Willy, 16/09: *«digito un código que no está creado y no me sale
+                la opción para crearlo en el sistema»*. El buscador se abría
+                vacío y no había por dónde seguir. Ahora ofrece darlo de alta
+                aquí mismo — el constructor no guarda borrador, así que
+                mandarlo a «Nuevo producto» se llevaría por delante la
+                cotización a medias.
+              */}
               <BuscadorLineas
                 onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
+                onCrear={(codigo) => setCreando(codigo)}
               />
             </div>
 
@@ -478,6 +493,20 @@ export function Constructor({
           hayNoInmediatos={estado.lineas.some((l) => l.disponibilidad !== "inmediata")}
           guardando={guardando}
         />
+
+      {/*
+        El alta rápida, fuera del flujo pero dentro del formulario.
+
+        Se monta solo cuando hace falta: así las listas de marcas y familias se
+        piden la vez que se usa y no en cada cotización.
+      */}
+      {creando !== null ? (
+        <AltaProducto
+          codigoInicial={creando}
+          onCerrar={() => setCreando(null)}
+          onCreado={(producto) => despachar({ tipo: "agregar", producto })}
+        />
+      ) : null}
     </form>
   );
 }

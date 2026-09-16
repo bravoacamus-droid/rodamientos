@@ -21,8 +21,22 @@ import {
 
 export function BuscadorLineas({
   onElegir,
+  onCrear,
 }: {
   onElegir: (p: ProductoBusqueda) => void;
+  /**
+   * Qué hacer cuando lo que se busca no existe.
+   *
+   * Willy, 16/09: *«digito un código que no está creado y no me sale la opción
+   * para crearlo en el sistema»*. Tecleó `22208` y esta caja se abría vacía:
+   * ni un resultado, ni una salida. La búsqueda funcionaba — lo que faltaba
+   * era la puerta.
+   *
+   * Si no se pasa, el vacío sigue siendo un vacío: lo decide quien monta el
+   * buscador, porque no todas las pantallas que buscan productos pueden
+   * crearlos.
+   */
+  onCrear?: (termino: string) => void;
 }) {
   const [termino, setTermino] = useState("");
   const [abierto, setAbierto] = useState(false);
@@ -102,6 +116,59 @@ export function BuscadorLineas({
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {error && resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>
+          ) : null}
+
+          {/*
+            El vacío, con salida.
+
+            Antes esto no existía: la caja se abría, no pintaba nada, y el
+            resultado era una caja blanca que parece un fallo. Ahora dice qué
+            pasó —con el término entre comillas, para que se vea si hay una
+            errata— y ofrece lo único que se puede hacer desde aquí.
+          */}
+          {!error && crudos?.length === 0 && termino.trim().length > 0 ? (
+            <div className="p-3">
+              <p className="text-sm">
+                No hay ningún producto con{" "}
+                <strong className="font-mono">«{termino.trim()}»</strong>.
+              </p>
+              {onCrear ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    /*
+                      Se limpia igual que al elegir un producto.
+
+                      Sin esto, la caja se queda con el término de antes y con
+                      el «no hay ningún producto» encima —una respuesta que ya
+                      no es verdad, porque acaba de crearse—. Probado en
+                      pantalla el 16/09: la línea entraba bien y el aviso viejo
+                      seguía tapándola.
+
+                      Se limpia AL ABRIR el diálogo y no al crear: el código ya
+                      viaja dentro, y si se cancela, el sitio donde se vuelve a
+                      escribir es una caja vacía, que es lo que se espera.
+                    */
+                    const codigo = termino.trim();
+                    setTermino("");
+                    limpiar();
+                    setAbierto(false);
+                    onCrear(codigo);
+                  }}
+                  className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+                    fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Crear «{termino.trim()}» en el catálogo
+                </button>
+              ) : (
+                <p className="mt-1 text-sm text-[var(--fg-muted)]">
+                  Pídele a Compras o a Gerencia que lo den de alta.
+                </p>
+              )}
+            </div>
           ) : null}
 
           {resultados.length > 0 ? (
