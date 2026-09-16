@@ -79,11 +79,15 @@ usaba nadie. Eran veintitrés al cerrar ese día.
 **Y tres más el 15/09** (§AL): «Configuración» no se encendía nunca en el menú;
 las **cuentas para cobrar** llevaban desde la 064 imprimiéndose en cada
 cotización **sin pantalla donde darlas de alta**; y el menú de usuario solo
-sabía cerrar sesión, sin sitio donde editar el propio perfil. Van
-**veintisiete casos**.
+sabía cerrar sesión, sin sitio donde editar el propio perfil.
 
-Los tres se habrían encontrado con un `grep`: un prop que siempre vale `null`,
-un search param que se escribe y no se lee, un export sin quien lo importe.
+**Y uno más el 16/09** (§AM.7b): `crearMarca`, `crearFamilia` y
+`crearSubfamilia` estaban desde la **033** —con su RPC, su candado de rol y su
+normalización— y **ninguna pantalla las llamaba**. Van **veintiocho casos**.
+
+Los tres del 15/09 se habrían encontrado con un `grep`: un prop que siempre
+vale `null`, un search param que se escribe y no se lee, un export sin quien lo
+importe. El del 16/09, también.
 
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.

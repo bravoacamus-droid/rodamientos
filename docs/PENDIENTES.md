@@ -4610,6 +4610,139 @@ que no se movió — queda anotado por si lo quiere arriba.
 
 ---
 
+### AM.7 · La misma tarde, cotizando: cinco cosas que no se podían hacer
+
+Repasado el papel, Willy siguió usando el constructor de cotizaciones y fue
+mandando lo que se encontraba. Todo lo de abajo salió de ahí, en ese orden.
+
+**a · Un código que no existe no se podía crear.** *«Digito un código que no
+está creado y no me sale la opción para crearlo en el sistema»*. Tecleó `22208`
+—un rodamiento real— y el buscador le devolvió una caja vacía: ni resultados ni
+salida. Ahora el estado vacío ofrece crearlo, y se crea de verdad en el
+maestro, sin salir de la cotización.
+
+No se hizo como «línea libre» aunque la tabla admite `producto_id` nulo y el
+PDF la imprimiría bien: **todo lo que viene después se mueve por
+`producto_id`** —lo que falta comprar, el stock que descarga la guía, el
+kardex—. Una línea sin producto sale preciosa en el papel y luego no se puede
+comprar ni recibir.
+
+**b · Los desplegables del alta no se buscaban.** Luis: *«búsqueda inteligente,
+más rápido de buscar, todos los select… una nueva familia, de la cual de esa
+familia se puede crear una sub-familia»*. Se escribió `SelectorCatalogo`, que
+filtra sin tildes ni mayúsculas y ofrece crear lo que no está.
+
+Y otra vez lo de siempre: `crearMarca`, `crearFamilia` y `crearSubfamilia`
+existían **desde la 033**, con su RPC, su candado de rol y su normalización, y
+**ninguna pantalla las llamaba**. La pieza puesta y la puerta sin abrir. Van
+**veintiocho casos**.
+
+La unidad se busca pero **no se crea**: su catálogo es el de SUNAT, y una
+unidad inventada es un comprobante rechazado.
+
+**c · «Le he ingresado 50 unidades y solo se ve el 0».** Era literal: medida en
+su pantalla, la caja de cantidad tenía **42 px**. Y la causa no estaba en la
+caja sino al final de la fila — los botones «Alternativas» y «Ventas» enseñan
+su texto desde `xl` y no se encogen, así que la columna de acciones se quedaba
+con **414 px fijos** y las demás se repartían lo que sobraba.
+
+**La lección, que costó cometerla dos veces el mismo día:** en una tabla, un
+`min-w` en el `<td>` es una *sugerencia*, y el navegador la ignora cuando va
+justo. Tiene que ir **en el campo**. Con el ancho en la celda, «SKF» se leía
+«SI».
+
+**d · El retén sin marca.** *«Reten 45x60x8 que aparece sin marca, no me da
+opción a editar»*, y con ello la explicación del negocio que lo cambia todo:
+*«en el mercado de retenes los códigos se guardan con las medidas, como
+45x60x8TC, pero puede ser diversas marcas: LYO, NQK, PHK, NAK… solo la marca
+SKF tiene una codificación particular»*.
+
+O sea: **hay una fila de producto para cinco marcas**, y cuál se entrega se
+decide al cotizar. Por eso la marca se edita **en la línea** —en la copia que
+`cotizacion_items` guarda desde la 002— y no en el maestro. Grabarla en el
+producto se la dejaría puesta al siguiente cliente que pida el mismo código.
+
+**e · Y de ahí, el menú de la fila** — que es lo que sigue.
+
+### AM.8 · El menú «⋮» de la línea, y una decisión que se deshace
+
+Luis, con el menú de otro sistema en la pantalla: *«yo creo que así está bien;
+en la opción de editar artículo debe aparecer todos los campos editables:
+código, marca, descripción… ahí adentro también estaría alternativas, ventas,
+eliminar si se queda»*.
+
+Hecho: un disparador «⋮» por línea con **Editar artículo · Ver alternativas ·
+Ventas anteriores · Quitar de la cotización**, y un diálogo con las tres cajas.
+
+**Esto revierte lo del 08/09, y conviene que quede escrito.** «Alternativas» y
+«Ventas anteriores» existen desde la 011 y Willy no las encontró nunca: la
+primera era un enlace ámbar de 12 px que **solo aparecía sin stock**; la
+segunda, un enlace azul partido en dos renglones. En 47:00, tecleando un
+precio, preguntó si el sistema no le mostraba *«a quién se ha vendido, a cuánto
+se ha vendido»* — y lo tenía delante. Por eso se sacaron a botones con su
+palabra, a petición del propio Luis: *«más ordenado, más entendible para Willy,
+con botones modales»*.
+
+Volver a meterlas en un menú repite la forma de aquel problema. Se hace porque
+lo pidió, y con tres diferencias que no son de estilo:
+
+- el menú lo abre un **botón con borde**, no un enlace gris — el disparador se
+  ve, que es exactamente lo que fallaba;
+- dentro se leen **con su nombre entero y a 14 px**, no abreviadas («hist.») ni
+  a doce;
+- y salen **siempre**, con stock o sin él. Lo de 011 no era solo que fuera
+  pequeño: es que con stock no existía.
+
+**Queda como riesgo anotado.** Si Willy vuelve a preguntar por el histórico de
+precios mientras cotiza, la respuesta no es hacerlo más grande: es sacarlo del
+menú otra vez.
+
+El diálogo dice en voz alta que cambia **la línea y no el catálogo**, con el
+caso del retén dentro. Sin esa frase, «editar artículo» se lee como «editar el
+producto», que es justo lo contrario de lo que hace.
+
+### AM.9 · Los ítems de menú de toda la casa medían 12,8 px
+
+`DropdownMenuItem` llevaba `text-[0.8rem]`. Por debajo del suelo de la casa
+—«nada por debajo de 14 px»— **en los cinco menús que ya existían**: catálogo,
+clientes, proveedores, acciones de la cotización y la propia cuenta. No lo cazó
+nadie porque un menú se abre, se lee de una pasada y se cierra.
+
+Ahora es `text-sm` con `min-h-9`. La altura va junta a propósito: 14 px con
+`py-1.5` deja un blanco de 30 px, y un ratón que no acierta vale lo mismo que
+un botón que no está.
+
+### AM.10 · Lo que se midió, que es lo que importa
+
+En el ancho de contenido de la pantalla de Willy (1180 px), antes y después de
+todo lo anterior:
+
+| | antes | después |
+|---|---|---|
+| Caja de cantidad | 42 px | **77 px** |
+| Columna de acciones | 414 px | **92 px** |
+| Alto de fila | 107 px | **95 px** |
+| Desborde de la tabla | 24 px | **0** |
+
+La tabla entera cabe sin desplazamiento lateral. Comprobado en el navegador,
+no en el typecheck: menú abierto, diálogo abierto, las tres opciones probadas y
+el menú del catálogo repasado por el cambio de tamaño.
+
+### AM.11 · Datos de prueba creados en la base del cliente
+
+Probando el alta rápida hubo que crear cosas de verdad: el producto `22208`
+—descripción correcta, **la marca SKF la elegí yo**— y `ZZ MARCA PRUEBA`, `ZZ
+FAMILIA PRUEBA`, `ZZ SUBFAMILIA PRUEBA`.
+
+`scripts/limpiar-pruebas-16-09.sql` las **desactiva** (no las borra: las claves
+ajenas son `on delete restrict`, y el catálogo ya filtra por `activo`). El
+22208 lo decide Willy, y la línea para archivarlo está comentada.
+
+Y la línea 1 de **COT1-000007** quedó en `exterior · 15 días`, que es lo que él
+dijo haber simulado.
+
+---
+
 ## §AL · 15/09 — Configuración, de una pantalla a un módulo
 
 Día de ordenar. Cinco commits, una migración, y dos fallos que llevaban meses

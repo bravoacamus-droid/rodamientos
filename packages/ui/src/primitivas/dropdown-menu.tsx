@@ -23,8 +23,23 @@ const contenidoBase = [
   "data-[state=open]:anim-pop-in data-[state=closed]:anim-pop-out",
 ].join(" ");
 
+/*
+  `text-sm` y `min-h-9`, no `text-[0.8rem]`.
+
+  Eran 12.8 px, por debajo del suelo de la casa —«nada por debajo de 14 px»— y
+  en los cinco menús que ya existen: el del catálogo, el de clientes, el de
+  proveedores, el de la cotización y el de la propia cuenta. Nadie lo cazó
+  porque un menú se abre, se lee de una pasada y se cierra.
+
+  Deja de ser tolerable el 16/09, cuando este menú pasa a ser el único camino a
+  las alternativas y a las ventas anteriores de una línea — las dos funciones
+  que a Willy ya se le perdieron una vez por ir en 12 px (011).
+
+  La altura mínima va junta: 14 px con `py-1.5` deja un blanco de 30 px, y un
+  ratón que no acierta es lo mismo que un botón que no está.
+*/
 const itemBase = [
-  "relative flex cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-[0.8rem] text-fg outline-none",
+  "relative flex min-h-9 cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm text-fg outline-none",
   "focus:bg-surface-2 data-[highlighted]:bg-surface-2",
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
   "[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-subtle",

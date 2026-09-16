@@ -144,6 +144,21 @@ export type Accion =
    * Lo único que faltaba era poder escribirla.
    */
   | { tipo: "marca"; key: string; valor: string | null }
+  /**
+   * El código y la descripción de ESTA línea.
+   *
+   * Por el mismo motivo que la marca: las tres columnas de `cotizacion_items`
+   * son una copia de lo que se imprimió, no un espejo del maestro. Y hacen
+   * falta las tres —Luis, 16/09: *«en la opción de editar artículo deben
+   * aparecer todos los campos editables: código, marca, descripción… lo quiere
+   * así»*—.
+   *
+   * Cambiarlas NO toca el catálogo: un retén que se cotiza como NQK sigue
+   * siendo la misma fila del maestro, y el cliente siguiente puede pedir el
+   * mismo código de otra marca.
+   */
+  | { tipo: "codigo"; key: string; valor: string }
+  | { tipo: "descripcion"; key: string; valor: string }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
@@ -327,6 +342,22 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         // Vacío es «sin marca», no una cadena vacía: es lo que el papel
         // imprime como un guion y lo que la base guarda como nulo.
         marca: accion.valor?.trim() ? accion.valor.trim() : null,
+      }));
+
+    case "codigo":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        // Si se borra entero se conserva el que tenía: el código es lo que el
+        // cliente busca en su orden de compra, y una línea sin código en el
+        // papel no la puede reclamar nadie. La base además lo exige.
+        codigo: accion.valor.trim() ? accion.valor.trim() : l.codigo,
+      }));
+
+    case "descripcion":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        // Igual: es lo que el cliente LEE para saber qué está comprando.
+        descripcion: accion.valor.trim() ? accion.valor.trim() : l.descripcion,
       }));
 
     case "disponibilidad":

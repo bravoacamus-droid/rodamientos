@@ -10,11 +10,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   SelectNativo,
 } from "@rodatech/ui";
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
+import { EditarArticulo } from "./editar-articulo";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import {
@@ -59,6 +65,7 @@ export function FilaLinea({
   despachar: (a: Accion) => void;
 }) {
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
+  const [editando, setEditando] = useState(false);
   const [sustitutos, setSustitutos] = useState<Sustituto[]>([]);
   const [historial, setHistorial] = useState<VentaAnterior[]>([]);
   const [cargando, iniciar] = useTransition();
@@ -391,51 +398,102 @@ export function FilaLinea({
 
         <td className="text-right tabular font-medium">{dolar(importe)}</td>
 
+        {/*
+          Todo lo de la línea, en un menú.
+
+          Luis, 16/09, con el menú de otro sistema en la pantalla: *«yo creo
+          que así está bien… ahí adentro también estaría alternativas, ventas,
+          eliminar si se queda»*.
+
+          -------------------------------------------------------------------
+          Esto DESHACE una decisión del 08/09, y conviene saberlo
+          -------------------------------------------------------------------
+          «Alternativas» y «Ventas anteriores» existen desde la 011 y Willy no
+          las encontró nunca: la primera era un enlace ámbar de 12 px que solo
+          aparecía SIN stock; la segunda, un enlace azul partido en dos
+          renglones. En 47:00, tecleando un precio, preguntó si el sistema no
+          le mostraba *«a quién se ha vendido, a cuánto se ha vendido»* — y lo
+          tenía delante. Por eso el 08/09 se sacaron a botones con su palabra.
+
+          Volverlas a meter en un menú es repetir la forma del problema. Se
+          hace igual, porque lo pidió, y porque hay tres diferencias que no
+          son de estilo:
+
+            · el menú lo abre un botón con borde, no un enlace gris — el
+              disparador SE VE, que es lo que fallaba;
+            · dentro se leen con su nombre entero a 14 px, no abreviadas
+              («hist.») ni a 12;
+            · y salen SIEMPRE, con stock o sin él. Lo de 011 no era solo que
+              fuera pequeño: es que con stock no existía.
+
+          A cambio, la columna baja de 414 px fijos a los 52 de un botón, que
+          es de donde sale el sitio para que se lea la cantidad.
+        */}
         <td>
-          <div className="flex items-center gap-1">
-            {/*
-              Los tres que importan, como BOTONES.
-
-              Las dos primeras cosas ya estaban y no se veían: las
-              alternativas detrás de un enlace ámbar de 12 px que solo salía
-              sin stock, y las ventas anteriores detrás de otro enlace —antes
-              incluso detrás de un «hist.» apretado entre estas dos flechas—.
-
-              Willy, 47:00, tecleando un precio: *«¿no te muestra una
-              referencia de a quién se ha vendido, a cuánto se ha vendido?»*.
-              La respuesta era que sí, y no había manera de que lo supiera.
-
-              Luis, 08/09, sobre su prototipo: *«más ordenado, más entendible
-              para Willy, con botones modales, así no rompemos nada»*.
-            */}
-            <BotonAccion
-              onClick={abrirSustitutos}
-              etiqueta="Alternativas"
-              titulo={`Ver alternativas de ${linea.codigo}`}
-              deshabilitado={!linea.productoId}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              title={`Opciones de ${linea.codigo}`}
+              aria-label={`Opciones de ${linea.codigo}`}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
             >
-              <IconoCambio />
-            </BotonAccion>
+              <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.8" fill="currentColor" />
+                <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+                <circle cx="12" cy="19" r="1.8" fill="currentColor" />
+              </svg>
+            </DropdownMenuTrigger>
 
-            <BotonAccion
-              onClick={abrirHistorial}
-              etiqueta="Ventas"
-              titulo={`Ventas anteriores de ${linea.codigo}`}
-              deshabilitado={!linea.productoId}
-            >
-              <IconoReloj />
-            </BotonAccion>
+            <DropdownMenuContent align="end" className="w-60">
+              {/*
+                Lo primero, lo que pidió Luis: *«en la opción de editar
+                artículo deben aparecer todos los campos editables: código,
+                marca, descripción»*. Se puede en las líneas escritas a mano
+                —sin `productoId`— igual que en las del catálogo: lo que se
+                edita es la copia impresa, y esa la tienen las dos.
+              */}
+              <DropdownMenuItem onSelect={() => setEditando(true)}>
+                <IconoLapiz />
+                Editar artículo
+              </DropdownMenuItem>
 
-            <BotonAccion
-              onClick={() => despachar({ tipo: "quitar", key: linea.key })}
-              etiqueta="Quitar"
-              titulo={`Quitar ${linea.codigo}`}
-              peligro
-              soloIcono
-            >
-              <IconoPapelera />
-            </BotonAccion>
-          </div>
+              <DropdownMenuSeparator />
+
+              {/*
+                `onSelect` con el diálogo: Radix devuelve el foco al
+                disparador al cerrarse el menú, y si el diálogo ya se montó se
+                lo quita de las manos. Se deja cerrar antes con un
+                `requestAnimationFrame`.
+              */}
+              <DropdownMenuItem
+                disabled={!linea.productoId}
+                onSelect={() => requestAnimationFrame(abrirSustitutos)}
+              >
+                <IconoCambio />
+                Ver alternativas
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                disabled={!linea.productoId}
+                onSelect={() => requestAnimationFrame(abrirHistorial)}
+              >
+                <IconoReloj />
+                Ventas anteriores
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* «Quitar de la cotización» y no «Eliminar»: no se borra nada,
+                  sale de este papel. La misma distinción que «dar de baja» en
+                  el catálogo (24:21). */}
+              <DropdownMenuItem
+                destructivo
+                onSelect={() => despachar({ tipo: "quitar", key: linea.key })}
+              >
+                <IconoPapelera />
+                Quitar de la cotización
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </td>
       </tr>
 
@@ -486,6 +544,27 @@ export function FilaLinea({
         Van FUERA del `<tr>`: un diálogo montado dentro de una fila hereda el
         `display: table-row` del contexto y se pinta donde no debe.
       */}
+      {/*
+        Montado solo cuando se abre, y no con `open={editando}`.
+
+        Sus tres cajas nacen de la línea con `useState`, y `useState` no se
+        reinicializa cuando cambia una prop —la trampa que ya mordió en este
+        proyecto—. Si el diálogo viviera siempre montado, editar una línea,
+        cerrar y abrir otra enseñaría los datos de la primera. Desmontarlo es
+        lo que garantiza que empiece por lo que hay AHORA en la línea.
+      */}
+      {editando ? (
+        <EditarArticulo
+          linea={linea}
+          onCerrar={() => setEditando(false)}
+          onGuardar={(c) => {
+            despachar({ tipo: "codigo", key: linea.key, valor: c.codigo });
+            despachar({ tipo: "marca", key: linea.key, valor: c.marca });
+            despachar({ tipo: "descripcion", key: linea.key, valor: c.descripcion });
+          }}
+        />
+      ) : null}
+
       <Dialog
         open={panel === "sustitutos"}
         onOpenChange={(v) => setPanel(v ? "sustitutos" : "ninguno")}
@@ -553,64 +632,12 @@ export function FilaLinea({
   );
 }
 
-/**
- * Un botón de la columna de acciones.
- *
- * Con texto desde `xl`, y solo icono por debajo. No es un capricho de
- * responsive: la fila ya lleva código, marca, descripción, cantidad, entrega,
- * precio, descuento e importe, y tres botones con texto no caben en un
- * portátil sin comerse la descripción — que es lo que se lee para saber qué
- * línea es.
- *
- * El icono nunca va solo del todo: `title` y `aria-label` llevan la frase
- * entera con el código dentro, así que al pasar por encima se lee «Ver
- * alternativas de 6309».
- */
-function BotonAccion({
-  onClick,
-  etiqueta,
-  titulo,
-  children,
-  deshabilitado,
-  peligro,
-  soloIcono,
-}: {
-  onClick: () => void;
-  etiqueta: string;
-  titulo: string;
-  children: React.ReactNode;
-  deshabilitado?: boolean;
-  peligro?: boolean;
-  /**
-   * Sin texto, solo el dibujo.
-   *
-   * Se usa en UNO: la papelera. No contradice la regla de la casa —«un botón
-   * tiene que parecer un botón»—, que va de enlaces grises e iconos sueltos:
-   * esto sigue siendo un botón con su borde, su `title` y su `aria-label`.
-   *
-   * Y se hace por una razón medida: la columna de acciones se llevaba 414 px
-   * fijos en la pantalla de Willy y ahogaba a las demás. Una papelera es el
-   * dibujo que menos falta le hace a su palabra; «Alternativas» y «Ventas»
-   * conservan la suya, que costó dos correcciones ponerlas ahí.
-   */
-  soloIcono?: boolean;
-}) {
+function IconoLapiz() {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={deshabilitado}
-      title={titulo}
-      aria-label={titulo}
-      className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-        peligro
-          ? "border-[var(--border)] text-[var(--danger)] hover:bg-[var(--danger-bg)]"
-          : "border-[var(--border)] text-[var(--fg)] hover:bg-[var(--surface-2)]"
-      }`}
-    >
-      {children}
-      {soloIcono ? null : <span className="hidden xl:inline">{etiqueta}</span>}
-    </button>
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h4l10-10-4-4L4 16v4ZM14 6l4 4" />
+    </svg>
   );
 }
 
