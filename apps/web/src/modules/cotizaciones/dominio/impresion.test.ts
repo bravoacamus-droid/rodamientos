@@ -293,3 +293,133 @@ describe("formaDePago", () => {
     expect(formaDePago("credito", 0)).toBe("Crédito");
   });
 });
+
+describe("la columna «Entrega», y el papel que se contradecía", () => {
+  /*
+    Willy, 16/09, simulando una cotización de tres ítems —uno del exterior a
+    15 días y dos inmediatos—: *«sale este mensaje, pero no se indica qué ítem
+    es de importación»*.
+
+    Arriba salía «Parte inmediato, el resto hasta 15 días», que el sistema
+    calcula solo mire el interruptor o no. Y en la tabla no había forma de
+    saber cuál era cuál, porque la columna dependía de un interruptor que
+    estaba apagado. El papel prometía dos plazos y no decía a qué.
+  */
+  const tresItems = (mostrar?: boolean) =>
+    base({
+      mostrarDisponibilidad: mostrar,
+      lineas: [
+        {
+          codigo: "6310-2Z/C3",
+          marca: "SKF",
+          descripcion: "RODAMIENTO RIGIDO",
+          cantidad: 4,
+          unidad: "NIU",
+          valorUnitario: 28.35,
+          descuentoPct: 0,
+          disponibilidad: "exterior",
+          diasEntrega: 15,
+        },
+        {
+          codigo: "22211E1-XL",
+          marca: "FAG",
+          descripcion: "RODAMIENTO DE RODILLOS A ROTULA",
+          cantidad: 6,
+          unidad: "NIU",
+          valorUnitario: 72.03,
+          descuentoPct: 0,
+        },
+        {
+          codigo: "6008-2RS1/C3",
+          marca: "SKF",
+          descripcion: "RODAMIENTO RIGIDO DE BOLAS",
+          cantidad: 8,
+          unidad: "NIU",
+          valorUnitario: 9.87,
+          descuentoPct: 0,
+        },
+      ],
+    });
+
+  it("si las líneas no prometen lo mismo, la columna sale AUNQUE el interruptor esté apagado", () => {
+    // Es el caso de Willy. Sin esto, el papel dice «parte inmediato, el resto
+    // hasta 15 días» y el cliente no sabe qué parte.
+    expect(armarCotizacionImpresa(tresItems(false)).mostrarDisponibilidad).toBe(true);
+    expect(armarCotizacionImpresa(tresItems(undefined)).mostrarDisponibilidad).toBe(true);
+  });
+
+  it("si TODAS prometen lo mismo, manda el interruptor", () => {
+    const todasIguales = (mostrar: boolean) =>
+      base({
+        mostrarDisponibilidad: mostrar,
+        lineas: [
+          {
+            codigo: "A",
+            marca: "SKF",
+            descripcion: "UNO",
+            cantidad: 1,
+            unidad: "NIU",
+            valorUnitario: 10,
+            descuentoPct: 0,
+            disponibilidad: "exterior",
+            diasEntrega: 20,
+          },
+          {
+            codigo: "B",
+            marca: "SKF",
+            descripcion: "DOS",
+            cantidad: 1,
+            unidad: "NIU",
+            valorUnitario: 10,
+            descuentoPct: 0,
+            disponibilidad: "exterior",
+            diasEntrega: 20,
+          },
+        ],
+      });
+
+    expect(armarCotizacionImpresa(todasIguales(true)).mostrarDisponibilidad).toBe(true);
+    expect(armarCotizacionImpresa(todasIguales(false)).mostrarDisponibilidad).toBe(false);
+  });
+
+  it("si TODO es inmediato no sale, ni encendiendo el interruptor", () => {
+    // Una columna con «Inmediata» repetida seis veces es ruido: la promesa
+    // general ya va arriba, en «Entrega».
+    expect(
+      armarCotizacionImpresa(base({ mostrarDisponibilidad: true })).mostrarDisponibilidad,
+    ).toBe(false);
+  });
+
+  it("dos plazos distintos del exterior también cuentan como distintos", () => {
+    // 15 días y 30 días son dos promesas, aunque las dos sean «exterior».
+    const dosPlazos = base({
+      mostrarDisponibilidad: false,
+      lineas: [
+        {
+          codigo: "A",
+          marca: "SKF",
+          descripcion: "UNO",
+          cantidad: 1,
+          unidad: "NIU",
+          valorUnitario: 10,
+          descuentoPct: 0,
+          disponibilidad: "exterior",
+          diasEntrega: 15,
+        },
+        {
+          codigo: "B",
+          marca: "SKF",
+          descripcion: "DOS",
+          cantidad: 1,
+          unidad: "NIU",
+          valorUnitario: 10,
+          descuentoPct: 0,
+          disponibilidad: "exterior",
+          diasEntrega: 30,
+        },
+      ],
+    });
+
+    expect(armarCotizacionImpresa(dosPlazos).mostrarDisponibilidad).toBe(true);
+  });
+});

@@ -199,7 +199,7 @@ export function DocumentoComprobante({
           ) : null}
 
           {c.mostrar_cuenta ? (
-            <CuentasParaPagar cuentas={cuentas} moneda={c.moneda} />
+            <CuentasParaPagar cuentas={cuentas} />
           ) : null}
 
           <div className="mt-3 flex items-end justify-between">

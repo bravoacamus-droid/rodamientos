@@ -83,9 +83,17 @@ export function HojaDocumento({
   /** «COTIZACIÓN», «FACTURA ELECTRÓNICA», «GUÍA DE REMISIÓN»… */
   titulo: string;
   numero: string;
-  /** Los pares del bloque de arriba. Un `null` deja el hueco y mantiene las
-   *  dos columnas alineadas, que es para lo que existe. */
-  datos: ({ etiqueta: string; valor: string } | null)[];
+  /**
+   * Los pares del bloque de arriba. Un `null` deja el hueco y mantiene las
+   * dos columnas alineadas, que es para lo que existe.
+   *
+   * `ancho` ocupa las DOS columnas. Willy, 16/09: *«la fila de la
+   * "Dirección" debe estar libre, porque la razón social es siempre
+   * amplia»*. Una dirección de Lima —«AV. NÉSTOR GAMBETTA NRO. 6448 Z.I.
+   * ZONA GRAN INDUSTRIA I3. CALLAO - PROV. CONST. DEL CALLAO»— partida en
+   * media hoja son cinco renglones que empujan todo lo de al lado.
+   */
+  datos: ({ etiqueta: string; valor: string; ancho?: boolean } | null)[];
   columnas: ColumnaHoja[];
   /** Una fila es un valor por clave de columna. */
   filas: Record<string, ReactNode>[];
@@ -105,11 +113,23 @@ export function HojaDocumento({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={emisor.logoUrl} alt="" className="h-16 w-auto object-contain" />
           ) : null}
+          {/*
+            La razón social, y nada encima.
+
+            Aquí iba «RODATECH» en grande y azul —el nombre comercial— y debajo
+            «INVERSIONES RODATECH E.I.R.L.» en gris pequeño. Willy, 16/09:
+            *«la palabra RODATECH (primera línea en azul) está de más, solo la
+            siguiente fila (INVERSIONES RODATECH EIRL) resaltado en azul»*.
+
+            Y tiene razón: el nombre comercial ya está EN EL LOGO, que va al
+            lado. Repetirlo en texto era decir dos veces lo mismo y dejar el
+            nombre que de verdad identifica a la empresa ante SUNAT —el que
+            tiene que leer quien recibe el papel— en letra de pie de página.
+          */}
           <div>
-            <h1 className="text-lg font-bold" style={{ color: AZUL }}>
-              {emisor.nombreComercial ?? emisor.razonSocial}
+            <h1 className="text-base font-bold" style={{ color: AZUL }}>
+              {emisor.razonSocial}
             </h1>
-            <p className="text-xs text-[#444]">{emisor.razonSocial}</p>
             <p className="text-xs text-[#444]">RUC {emisor.ruc}</p>
             {emisor.direccion ? (
               <p className="text-xs text-[#444]">{emisor.direccion}</p>
@@ -140,7 +160,10 @@ export function HojaDocumento({
       <section className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-xs sm:grid-cols-2 print:grid-cols-2">
         {datos.map((d, i) =>
           d ? (
-            <p key={`${d.etiqueta}-${i}`} className="flex gap-2">
+            <p
+              key={`${d.etiqueta}-${i}`}
+              className={`flex gap-2 ${d.ancho ? "sm:col-span-2 print:col-span-2" : ""}`}
+            >
               <span className="w-28 shrink-0 font-semibold" style={{ color: AZUL }}>
                 {d.etiqueta}
               </span>

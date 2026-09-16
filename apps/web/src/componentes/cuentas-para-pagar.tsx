@@ -11,18 +11,22 @@
  * número de cuentas siempre»*.
  *
  * ---------------------------------------------------------------------------
- * Van las DOS, y primero la del documento
+ * En TABLA, y con los dólares arriba
  * ---------------------------------------------------------------------------
- * Su formato imprime la de dólares y la de soles. Se enseñan las dos porque el
- * cliente que factura en dólares a veces paga en soles, y quitarle la otra le
- * obliga a llamar para pedirla.
+ * Willy, 16/09, sobre cómo salían —dos bloques de texto corrido, uno al lado
+ * del otro—: *«las cuentas de banco ponlas más ordenadas, sería mejor en una
+ * tabla como esa… primero DÓLARES y abajo SOLES»*, y mandó el cuadro de su
+ * formato: BANCO · TIPO DE CUENTA · N° DE CUENTA · CCI.
  *
- * Pero la de la moneda del documento va PRIMERA. Con las dos seguidas y sin
- * orden, transferir a la que no es cuesta una mañana en el banco.
+ * Lo que arregla la tabla no es la estética: es que **un número de cuenta y un
+ * CCI seguidos en la misma línea se confunden**. Son dos cifras largas, sin
+ * espacios, y quien transfiere copia una de las dos. En columnas con su título
+ * encima, no hay forma de equivocarse.
  *
- * El CCI va al lado del número, no debajo ni escondido: es el que sirve para
- * pagar desde otro banco, y sin él un cliente que no es del BCP no puede
- * transferir.
+ * El orden es FIJO —dólares y luego soles— y no «la moneda del documento
+ * primero», como estaba. Con el tipo de cuenta escrito en su columna, el orden
+ * deja de ser lo que evita el error, y un pie que siempre sale igual se lee
+ * más rápido que uno que se reordena solo.
  */
 
 export interface CuentaParaPagar {
@@ -32,46 +36,68 @@ export interface CuentaParaPagar {
   cci: string | null;
 }
 
-const ETIQUETA_MONEDA: Record<string, string> = {
-  USD: "Cuenta dólares US$",
-  PEN: "Cuenta soles S/",
+/** Como lo escribe Willy en su formato, no como lo guarda la base. */
+const TIPO_DE_CUENTA: Record<string, string> = {
+  USD: "CTA. CTE. DÓLARES",
+  PEN: "CTA. CTE. SOLES",
 };
+
+/** Dólares arriba, soles debajo, y lo que no sea ninguno de los dos al final. */
+const ORDEN: Record<string, number> = { USD: 0, PEN: 1 };
 
 export function CuentasParaPagar({
   cuentas,
-  /** La moneda del documento. La cuenta que la comparte sale primero. */
-  moneda,
-  titulo = "Cuentas para el pago",
+  titulo = "CUENTAS BANCARIAS",
 }: {
   cuentas: readonly CuentaParaPagar[];
-  moneda?: string | null;
+  /** Willy, 16/09: *«no pongas "Cuentas para el pago", pon CUENTAS BANCARIAS»*. */
   titulo?: string;
 }) {
   if (cuentas.length === 0) return null;
 
-  const preferida = (moneda ?? "").toUpperCase();
-  const ordenadas = [...cuentas].sort((a, b) => {
-    const ma = a.moneda.toUpperCase() === preferida ? 0 : 1;
-    const mb = b.moneda.toUpperCase() === preferida ? 0 : 1;
-    return ma - mb;
-  });
+  const ordenadas = [...cuentas].sort(
+    (a, b) =>
+      (ORDEN[a.moneda.toUpperCase()] ?? 9) - (ORDEN[b.moneda.toUpperCase()] ?? 9),
+  );
 
   return (
     <div className="mt-3 break-inside-avoid border-t border-[#ccc] pt-2">
-      <p className="mb-1 font-semibold">{titulo}</p>
-      <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2 print:grid-cols-2">
-        {ordenadas.map((c) => (
-          <div key={c.numero}>
-            <p>
-              <strong>{c.banco}</strong> · {ETIQUETA_MONEDA[c.moneda.toUpperCase()] ?? c.moneda}
-            </p>
-            <p className="tabular">
-              N.º {c.numero}
-              {c.cci ? <> · CCI {c.cci}</> : null}
-            </p>
-          </div>
-        ))}
-      </div>
+      <p className="mb-1 font-semibold uppercase tracking-wide">{titulo}</p>
+
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr className="text-left">
+            <th className="border-b border-[#999] px-2 py-1 font-semibold">Banco</th>
+            <th className="border-b border-[#999] px-2 py-1 font-semibold">
+              Tipo de cuenta
+            </th>
+            <th className="border-b border-[#999] px-2 py-1 font-semibold">
+              N.º de cuenta
+            </th>
+            <th className="border-b border-[#999] px-2 py-1 font-semibold">
+              CCI cta. interbancaria
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {ordenadas.map((c) => (
+            <tr key={c.numero}>
+              <td className="border-b border-[#ddd] px-2 py-1 font-semibold">
+                {c.banco}
+              </td>
+              <td className="border-b border-[#ddd] px-2 py-1">
+                {TIPO_DE_CUENTA[c.moneda.toUpperCase()] ?? c.moneda}
+              </td>
+              <td className="border-b border-[#ddd] px-2 py-1 tabular">{c.numero}</td>
+              {/* Sin CCI no se puede pagar desde otro banco, así que el hueco
+                  se dice en voz alta en vez de dejarlo en blanco. */}
+              <td className="border-b border-[#ddd] px-2 py-1 tabular">
+                {c.cci ?? "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

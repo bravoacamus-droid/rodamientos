@@ -218,13 +218,44 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
   // mostrar. Activarla y que salga una columna de ceros es peor que no tenerla.
   const conDescuento = d.mostrarDescuento && descuento > 0;
 
-  // Misma regla que el descuento y por el mismo motivo: activarla y que salga
-  // «Inmediata» en las seis líneas es peor que no tenerla. Si TODO es
-  // inmediato no hay nada que comunicar — la promesa general ya va en el pie
-  // del documento, en «tiempo de entrega».
+  /*
+    Cuándo se dibuja la columna «Entrega».
+
+    Regla vieja: solo si el interruptor está puesto Y algo no es inmediato. El
+    motivo era bueno —activarla y que salga «Inmediata» en las seis líneas es
+    peor que no tenerla— pero se le escapaba el caso que importa.
+
+    Willy, 16/09, simulando una cotización de tres ítems, uno de importación a
+    15 días: *«sale este mensaje, pero no se indica qué ítem es de
+    importación»*. Arriba ponía «Parte inmediato, el resto hasta 15 días» —que
+    lo calcula el sistema solo, mire el interruptor o no— y en la tabla no
+    había forma de saber cuál era cuál. El papel se contradecía a sí mismo, y
+    el cliente que lo lee tiene que llamar para preguntar.
+
+    Así que hay dos motivos para dibujarla, y el primero no admite interruptor:
+
+      1. **Las líneas no prometen lo mismo.** Entonces la frase de arriba es
+         ambigua por definición y la columna es la única que la desambigua.
+         Esconderla es publicar una promesa que no se puede cumplir a ciegas.
+      2. El interruptor está puesto y algo no es inmediato — lo de siempre,
+         para cuando se quiere detallar aunque todas coincidan.
+
+    Si TODAS son inmediatas no hay nada que decir, y ahí el interruptor sigue
+    mandando.
+  */
+  const entregas = new Set(
+    d.lineas.map(
+      (l) => `${l.disponibilidad ?? "inmediata"}|${l.diasEntrega ?? ""}`,
+    ),
+  );
+  const prometenCosasDistintas = entregas.size > 1;
+  const algoNoEsInmediato = d.lineas.some(
+    (l) => (l.disponibilidad ?? "inmediata") !== "inmediata",
+  );
+
   const conEntrega =
-    (d.mostrarDisponibilidad ?? false) &&
-    d.lineas.some((l) => (l.disponibilidad ?? "inmediata") !== "inmediata");
+    prometenCosasDistintas ||
+    ((d.mostrarDisponibilidad ?? false) && algoNoEsInmediato);
 
   return {
     emisor: d.emisor,

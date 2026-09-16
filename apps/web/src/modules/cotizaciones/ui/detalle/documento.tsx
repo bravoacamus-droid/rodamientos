@@ -75,8 +75,17 @@ export function Documento({
           etiqueta: "Válida hasta",
           valor: `${formatoFecha(c.validaHasta)} (${c.validezDias} días)`,
         },
+        /*
+          La dirección, a lo ancho de las dos columnas.
+
+          Willy, 16/09: *«la fila de la "Dirección" debe estar libre, porque la
+          razón social es siempre amplia»*. Partida en media hoja, una
+          dirección del Callao salía en cinco renglones y empujaba hacia abajo
+          todo lo que tenía al lado — «Válida hasta» y «Entrega» quedaban
+          flotando lejos de su pareja.
+        */
         c.cliente.direccion
-          ? { etiqueta: "Dirección", valor: c.cliente.direccion }
+          ? { etiqueta: "Dirección", valor: c.cliente.direccion, ancho: true }
           : null,
         { etiqueta: "Entrega", valor: c.tiempoEntrega ?? "Por confirmar" },
         /*
@@ -90,6 +99,15 @@ export function Documento({
         */
         c.formaPago ? { etiqueta: "Forma de pago", valor: c.formaPago } : null,
         { etiqueta: "Atención", valor: c.cliente.contacto ?? "—" },
+        /*
+          El vendedor, arriba y no solo en el pie.
+
+          Willy, 16/09: *«incluir también el campo "Vendedor"»*, y su formato
+          lo lleva en la cabecera. Estaba abajo del todo, en el «Atendido por»,
+          que es una firma de cortesía — no el dato con el que el cliente
+          pregunta «¿con quién hablé?» seis semanas después.
+        */
+        { etiqueta: "Vendedor", valor: c.vendedor ?? "—" },
         c.ordenCompraCliente
           ? { etiqueta: "O/C del cliente", valor: c.ordenCompraCliente }
           : null,
@@ -139,7 +157,7 @@ export function Documento({
             Los precios están expresados en <strong>dólares americanos</strong> y no
             incluyen IGV en la columna de valor unitario.
           </p>
-          <CuentasParaPagar cuentas={cuentas} moneda="USD" />
+          <CuentasParaPagar cuentas={cuentas} />
 
           <div className="mt-3 flex items-end justify-between">
             <span>{c.vendedor ? `Atendido por ${c.vendedor}` : ""}</span>

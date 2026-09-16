@@ -7,6 +7,7 @@ import {
   ETIQUETA_DISPONIBILIDAD,
   diasDe,
   entregaDelDocumento,
+  entregaPrometeSinRespaldo,
   entregaSeContradice,
   faltaComprar,
   prometeDeMas,
@@ -212,5 +213,50 @@ describe("entregaSeContradice", () => {
 
   it("sin texto no hay nada que contradecir", () => {
     expect(entregaSeContradice(null, [l("exterior")])).toBe(false);
+  });
+});
+
+describe("entregaPrometeSinRespaldo · el caso de Willy (16/09)", () => {
+  const l = (d: Disponibilidad) => ({ disponibilidad: d, diasEntrega: null });
+
+  it("la cabecera promete 15 días y todas las líneas son inmediatas: avisa", () => {
+    // Es el documento que mandó: «Parte inmediato, el resto hasta 15 días» y
+    // tres líneas idénticas. *«No se indica qué ítem es de importación»* —
+    // porque no había ninguno.
+    expect(
+      entregaPrometeSinRespaldo("Parte inmediato, el resto hasta 15 días", [
+        l("inmediata"),
+        l("inmediata"),
+        l("inmediata"),
+      ]),
+    ).toBe(true);
+  });
+
+  it("si alguna línea SÍ tarda, no avisa: la promesa está respaldada", () => {
+    expect(
+      entregaPrometeSinRespaldo("Parte inmediato, el resto hasta 15 días", [
+        l("inmediata"),
+        l("exterior"),
+      ]),
+    ).toBe(false);
+  });
+
+  it("«Stock inmediato» no promete espera, así que nunca avisa", () => {
+    expect(entregaPrometeSinRespaldo("Stock inmediato", [l("inmediata")])).toBe(false);
+  });
+
+  it("«24 a 48 horas» tampoco: no es una espera que se marque en la línea", () => {
+    expect(entregaPrometeSinRespaldo("24 a 48 horas", [l("inmediata")])).toBe(false);
+  });
+
+  it("«15 días (importación)» elegido a mano, con todo inmediato: avisa", () => {
+    expect(entregaPrometeSinRespaldo("15 días (importación)", [l("inmediata")])).toBe(
+      true,
+    );
+  });
+
+  it("sin texto o sin líneas, no hay nada que comparar", () => {
+    expect(entregaPrometeSinRespaldo(null, [l("inmediata")])).toBe(false);
+    expect(entregaPrometeSinRespaldo("Hasta 30 días", [])).toBe(false);
   });
 });

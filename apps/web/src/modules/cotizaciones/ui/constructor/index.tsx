@@ -22,6 +22,7 @@ import {
 } from "../../dominio/constructor";
 import {
   entregaDelDocumento,
+  entregaPrometeSinRespaldo,
   entregaSeContradice,
 } from "../../dominio/disponibilidad";
 import { BuscadorLineas } from "./buscador";
@@ -94,6 +95,21 @@ export function Constructor({
 
   const entregaMiente = useMemo(
     () => entregaSeContradice(estado.tiempoEntrega, estado.lineas),
+    [estado.tiempoEntrega, estado.lineas],
+  );
+
+  /*
+    El reverso, que faltaba: la cabecera promete una demora y ninguna línea la
+    respalda.
+
+    Willy, 16/09, con una cotización de tres ítems: arriba decía «Parte
+    inmediato, el resto hasta 15 días» y las tres líneas estaban en inmediata.
+    Su observación fue *«no se indica qué ítem es de importación»* — y no se
+    indicaba porque no había ninguno marcado. Quien lee el papel busca cuál
+    tarda, no lo encuentra, y llama.
+  */
+  const entregaSinRespaldo = useMemo(
+    () => entregaPrometeSinRespaldo(estado.tiempoEntrega, estado.lineas),
     [estado.tiempoEntrega, estado.lineas],
   );
 
@@ -270,6 +286,13 @@ export function Constructor({
                       </option>
                     ))}
                   </SelectNativo>
+                  {entregaSinRespaldo ? (
+                    <span className="text-xs font-medium text-[var(--warn)]">
+                      Prometes una espera y las líneas están todas como
+                      inmediatas. Marca en su línea cuál tarda, o el cliente no
+                      sabrá por cuál está esperando.
+                    </span>
+                  ) : null}
                   {entregaMiente ? (
                     <span className="text-xs font-medium text-[var(--warn)]">
                       Dice inmediato y hay líneas que tardan. Lo que cuadra:{" "}

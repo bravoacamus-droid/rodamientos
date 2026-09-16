@@ -190,3 +190,49 @@ export function entregaSeContradice(
   if (dice.includes("resto") || dice.includes("parte")) return false;
   return lineas.some((l) => l.disponibilidad !== "inmediata");
 }
+
+/**
+ * ¿La cabecera promete una demora que NINGUNA línea respalda?
+ *
+ * Es el reverso de `entregaSeContradice`, y hasta el 16/09 se dio por
+ * inofensivo: *«prometer más despacio de lo que se puede entregar no rompe
+ * nada»*. Comercialmente es verdad. Pero Willy enseñó por qué sí rompe algo.
+ *
+ * Simuló una cotización de tres ítems, uno de importación a 15 días. En el
+ * papel salió arriba «Parte inmediato, el resto hasta 15 días» y en la tabla
+ * las tres líneas iguales, todas inmediatas. Su observación, textual:
+ * *«sale este mensaje, pero no se indica qué ítem es de importación»*.
+ *
+ * Y no se indicaba porque **no había ninguno**: la frase de arriba había
+ * quedado de un momento anterior y las líneas decían otra cosa. El cliente que
+ * lo recibe hace exactamente lo que hizo Willy — buscar cuál tarda— y no lo
+ * encuentra, así que llama.
+ *
+ * No se bloquea: puede ser deliberado, y un plazo de cortesía es asunto de
+ * quien vende. Se avisa, que es lo que permite corregirlo antes de mandarlo.
+ */
+export function entregaPrometeSinRespaldo(
+  texto: string | null,
+  lineas: readonly LineaConEntrega[],
+): boolean {
+  if (texto === null || lineas.length === 0) return false;
+
+  const dice = texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+  // Solo cuando la cabecera habla de una ESPERA. «Stock inmediato» o «24 a 48
+  // horas» no prometen demora, y avisar ahí sería ruido en cada cotización.
+  const prometeEspera =
+    /\d+\s*(dia|semana|mes)/.test(dice) ||
+    dice.includes("importacion") ||
+    dice.includes("resto") ||
+    dice.includes("fabricacion");
+  if (!prometeEspera) return false;
+
+  // 24 y 48 HORAS no son una espera de las que hay que marcar en la línea.
+  if (/hora/.test(dice) && !/dia|semana|mes/.test(dice)) return false;
+
+  return lineas.every((l) => l.disponibilidad === "inmediata");
+}
