@@ -7,6 +7,7 @@
 import type * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Pencil, Send } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -170,7 +171,7 @@ export function AccionesCotizacion({
             variant="outline"
             onClick={() => router.push(`/cotizaciones/${id}/editar`)}
           >
-            <IconoEditar />
+            <Pencil className="size-[18px] shrink-0" />
             Editar cotización
           </Button>
         ) : null}
@@ -186,7 +187,7 @@ export function AccionesCotizacion({
           // «Aprobada» y Luis la pide por ese nombre. Tres palabras para una
           // sola cosa hacían que el botón que sí existe no se encontrara.
           <Button disabled={pendiente} onClick={() => setConfirmando(true)}>
-            <IconoAprobar />
+            <Check className="size-[18px] shrink-0" />
             Aprobar cotización
           </Button>
         ) : estado === "aprobada" ? (
@@ -254,7 +255,7 @@ export function AccionesCotizacion({
           Entraron del Excel sin esa columna.
         */}
         <Button variant="outline" onClick={() => setPidiendoContacto(true)}>
-          <IconoEnviar />
+          <Send className="size-[18px] shrink-0" />
           Enviar
         </Button>
 
@@ -350,30 +351,3 @@ export function AccionesCotizacion({
   que es exactamente el problema que este cambio viene a arreglar.
 */
 
-function IconoEditar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function IconoEnviar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7Z" />
-    </svg>
-  );
-}
-
-function IconoAprobar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m20 6-11 11-5-5" />
-    </svg>
-  );
-}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Download, Printer } from "lucide-react";
 import { Button } from "@rodatech/ui";
 
 /**
@@ -25,34 +26,14 @@ export function BotonesDelCliente() {
   return (
     <div className="flex items-center gap-2">
       <Button type="button" onClick={() => window.print()}>
-        <IconoDescargar />
+        <Download className="size-[18px] shrink-0" />
         Descargar
       </Button>
       <Button type="button" variant="outline" onClick={() => window.print()}>
-        <IconoImprimir />
+        <Printer className="size-[18px] shrink-0" />
         Imprimir
       </Button>
     </div>
   );
 }
 
-function IconoDescargar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
-      <path d="M4 19h16" />
-    </svg>
-  );
-}
-
-function IconoImprimir() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9V3h12v6" />
-      <rect x="3" y="9" width="18" height="7" rx="1" />
-      <path d="M6 14h12v7H6z" />
-    </svg>
-  );
-}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, FileText, Pencil } from "lucide-react";
 import {
   EstadoBadge,
   EstadoError,
@@ -213,7 +214,7 @@ export async function TablaCotizaciones({
                       href={`/cotizaciones/${c.id}`}
                       className={`${SECUNDARIO} w-full justify-center`}
                     >
-                      <IconoVer />
+                      <Eye className="size-4 shrink-0" />
                       Ver
                     </Link>
                     <Siguiente cotizacion={c} />
@@ -271,7 +272,7 @@ export async function TablaCotizaciones({
 
               <div className="mt-3 flex items-center gap-2">
                 <Link href={`/cotizaciones/${c.id}`} className={`${SECUNDARIO} flex-1 justify-center`}>
-                  <IconoVer />
+                  <Eye className="size-4 shrink-0" />
                   Ver
                 </Link>
                 <Siguiente cotizacion={c} />
@@ -328,7 +329,7 @@ function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
         href={`/cotizaciones/${c.id}/editar`}
         className={`${SECUNDARIO} w-full justify-center`}
       >
-        <IconoEditar />
+        <Pencil className="size-4 shrink-0" />
         Editar
       </Link>
     );
@@ -339,7 +340,7 @@ function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
         href={`/facturacion/nueva?cotizacion=${c.id}`}
         className={`${PRINCIPAL} w-full justify-center`}
       >
-        <IconoFactura />
+        <FileText className="size-4 shrink-0" />
         Facturar
       </Link>
     );
@@ -348,37 +349,6 @@ function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
 }
 
 /* Los iconos, en línea. Tres trazos cada uno: no compensa un paquete. */
-
-function IconoVer() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconoEditar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function IconoFactura() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" />
-      <path d="M14 2v6h6" />
-      <path d="M9 13h6M9 17h4" />
-    </svg>
-  );
-}
 
 /**
  * El margen.

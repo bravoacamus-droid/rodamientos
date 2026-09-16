@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Download, Mail } from "lucide-react";
 import {
   Button,
   Campo,
@@ -197,7 +198,7 @@ export function DialogoEnviar({
               onClick={() => aCorreo && mandar(aCorreo)}
               className="w-full"
             >
-              <IconoSobre />
+              <Mail className="size-[18px] shrink-0" />
               {aCorreo ? "Enviar por correo" : "Escribe un correo"}
             </Button>
           </div>
@@ -216,7 +217,7 @@ export function DialogoEnviar({
               onClick={onImprimir}
               className="mt-2 w-full"
             >
-              <IconoDescargar />
+              <Download className="size-[18px] shrink-0" />
               Descargar la cotización
             </Button>
             <p className="mt-1.5 text-xs text-[var(--fg-subtle)]">
@@ -238,6 +239,14 @@ export function DialogoEnviar({
   );
 }
 
+/*
+  El único que sigue dibujado a mano, y a propósito.
+
+  Los demás de esta pantalla pasaron a lucide el 16/09 para que todo calce.
+  Este no puede: lucide es un juego de iconos genéricos y no trae logotipos de
+  marca. Un `MessageCircle` en el botón de WhatsApp diría «mensaje», que es
+  justo lo que no hay que decir cuando al lado está el de correo.
+*/
 function IconoWhatsapp() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
@@ -247,22 +256,3 @@ function IconoWhatsapp() {
   );
 }
 
-function IconoSobre() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </svg>
-  );
-}
-
-function IconoDescargar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
-      <path d="M4 19h16" />
-    </svg>
-  );
-}

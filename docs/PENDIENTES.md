@@ -4754,7 +4754,82 @@ cotización todavía no existe, así que no hay documento que enseñar—, y en 
 ficha ese botón sigue arriba, que es donde tiene sentido porque el papel está
 debajo. Falta saber si quería también una previa **antes** de guardar.
 
-### AM.12 · Datos de prueba creados en la base del cliente
+### AM.12 · «Editar artículo» edita la FICHA, no solo lo impreso
+
+Luis, viendo la primera versión: *«el editar nada que ver, no trae las marcas
+ni las familias ni las subfamilias, qué pasó rey; todo eso tiene que traer,
+todo lo que se puede editar»*.
+
+Tenía razón y el error era mío de alcance. Yo había hecho que tocara solo la
+copia impresa —código, marca, descripción— por el caso del retén de §AM.7d, y
+eso dejaba fuera media ficha. Ahora son los **mismos siete campos del alta**,
+con los mismos selectores que se buscan y crean, y **escriben en el catálogo**.
+
+**El retén no se pierde por esto**, porque ya tiene su propio camino: la
+columna «Marca» de la fila, que cambia solo esa línea. Son dos alcances y cada
+uno se dice en su sitio:
+
+| Dónde | Qué cambia |
+|---|---|
+| Columna «Marca» de la tabla | solo esta cotización |
+| «Editar artículo» del menú | el catálogo, para todos |
+
+**Lo que había que cuidar, y casi se rompe:** `guardarProducto` recibe el
+producto ENTERO y hace un `update` de todas las columnas. Mandar ceros en lo
+que este diálogo no pregunta —costo, precio mínimo, stock mínimo y máximo,
+peso, ubicación, precio de mercado, proveedor— **habría borrado** esos datos
+al cambiar una marca.
+
+Por eso `editarProductoRapido` **relee la ficha en el servidor** y solo aplica
+encima los siete campos del diálogo. Y se relee en el servidor a propósito: si
+esos campos viajaran ocultos en el formulario, la Server Action —que es un
+endpoint público— aceptaría el costo que le mandaran.
+
+Comprobado con el `1210SC3`, que tiene costo 15 y precio mínimo 26.96: tras
+guardar desde la cotización, los dos siguen ahí.
+
+Una línea escrita a mano —sin producto en el catálogo— no tiene ficha, así que
+el diálogo enseña solo lo que se imprime. Se puede abrir igual: un menú donde
+una opción a veces no está obliga a recordar por qué.
+
+### AM.13 · Los iconos, y por qué no era cosmética
+
+Luis: *«hay que poner buenos iconos, la ✕ y todo eso; tiene que verse bien,
+que todo calce, que tenga buena lógica, porque no es más que un CRUD que se
+repite»*.
+
+Y esa última frase es el argumento. Lo que había en cotizaciones:
+
+- **18 iconos dibujados a mano** como `<path>`, cada uno con su propio trazo;
+- dos flechas que eran **caracteres de texto** —«↑», «↓»—, que cambian de
+  forma con la fuente y no se alinean con nada;
+- una **«✕» tipográfica** como único modo de soltar lo elegido en un selector,
+  con un blanco de unos diez píxeles.
+
+Y `lucide-react` estaba en `package.json`, dentro del propio sistema de
+diseño y ya en uso en otras diez pantallas. **Otra pieza puesta sin usar.**
+
+Ahora los 17 salen de lucide. El único que sigue a mano es el de WhatsApp: es
+un logotipo de marca, y un `MessageCircle` diría «mensaje» justo al lado del
+botón de correo.
+
+**El que no se veía y era el de verdad:** medido con el diálogo abierto, los
+selectores de catálogo daban **47 px** y los `Input` de la misma fila **40**.
+Siete píxeles de desnivel entre campos contiguos, porque el selector copiaba
+`border`, `rounded-md` y `bg-surface` a mano en vez de usar `campoBase`, la
+constante que comparten `Input`, `Textarea` y `SelectNativo`. Copiar tokens es
+lo que garantiza que el día que cambien, lo copiado se quede atrás.
+
+Con `campoBase`, los siete campos del diálogo miden **40 px exactos**, y el
+foco y el estado deshabilitado salen gratis.
+
+**De paso, un fallo de uso que no era de estilo:** al pulsar la ✕ de un
+selector, el foco no pasaba a la caja de búsqueda —la ✕ y la caja no son el
+mismo elemento; el `<input>` se crea en ese mismo render—. Quien pulsaba
+«cambiar» y se ponía a teclear no escribía en ninguna parte: el desplegable
+se abría con las 24 marcas y el filtro vacío, como si el teclado no existiera.
+
+### AM.14 · Datos de prueba creados en la base del cliente
 
 Probando el alta rápida hubo que crear cosas de verdad: el producto `22208`
 —descripción correcta, **la marca SKF la elegí yo**— y `ZZ MARCA PRUEBA`, `ZZ

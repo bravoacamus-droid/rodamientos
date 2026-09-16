@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Campo } from "@rodatech/ui";
+import { Plus, X } from "lucide-react";
+import { Campo, campoBase } from "@rodatech/ui";
 
 export interface OpcionCatalogo {
   id: string;
@@ -66,8 +67,30 @@ export function SelectorCatalogo({
   const [abierto, setAbierto] = React.useState(false);
   const [creando, setCreando] = React.useState(false);
   const contenedor = React.useRef<HTMLDivElement>(null);
+  const campo = React.useRef<HTMLInputElement>(null);
+  /** Si el desplegable se abrió por la ✕, y no por pulsar el campo. */
+  const alCambiar = React.useRef(false);
 
   const elegida = opciones.find((o) => o.id === valor) ?? null;
+
+  /*
+    Al pulsar la ✕, el foco tiene que ir a la caja de búsqueda.
+
+    La ✕ y la caja no son el mismo elemento: mientras hay algo elegido se
+    enseña el nombre con su ✕, y solo al soltarlo aparece el `<input>`. Recién
+    montado no tiene el foco, así que quien pulsaba «cambiar» y se ponía a
+    teclear no escribía en ninguna parte — el desplegable se abría con las 24
+    marcas y el filtro vacío, como si el teclado no existiera.
+
+    Va en un efecto y no en el propio `onClick` porque ahí el input todavía no
+    está en el DOM: se crea en el render que dispara ese mismo clic.
+  */
+  React.useEffect(() => {
+    if (!elegida && alCambiar.current) {
+      alCambiar.current = false;
+      campo.current?.focus();
+    }
+  }, [elegida]);
 
   // Se cierra al pulsar fuera. Sin esto, el desplegable se queda abierto
   // encima del campo siguiente y parece que la pantalla está trabada.
@@ -115,26 +138,59 @@ export function SelectorCatalogo({
           de texto con el nombre dentro. Es el mismo trato que el filtro de
           clientes: lo que ya está decidido se lee, no se edita por accidente.
         */}
+        {/*
+          `campoBase` del sistema de diseño, no un borde copiado a mano.
+
+          Medido con el diálogo abierto: esta caja daba **47 px** y el `Input`
+          de al lado **40**. Siete píxeles de desnivel entre dos campos de la
+          misma fila, con el radio y el foco pintados por otro sitio. Luis,
+          16/09: *«que todo calce bien»*.
+
+          Copiar `border`, `rounded-md` y `bg-surface` a mano es lo que produce
+          eso: el día que el token cambia, los campos copiados se quedan atrás.
+          Usando la misma constante que `Input`, calzan por construcción — y
+          sale gratis el estado de foco y el de deshabilitado.
+        */}
         {elegida ? (
-          <div className="flex min-h-11 w-full items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm md:min-h-control-md">
+          <div
+            className={`${campoBase} flex h-control-md items-center gap-2 px-3 text-sm ${
+              deshabilitado ? "opacity-60" : ""
+            }`}
+          >
             <span className="min-w-0 flex-1 truncate">{elegida.nombre}</span>
             <button
               type="button"
               onClick={() => {
+                alCambiar.current = true;
                 onElegir(null);
                 setTexto("");
                 setAbierto(true);
               }}
               disabled={deshabilitado}
               aria-label={`Cambiar ${label.toLowerCase()}`}
-              className="shrink-0 rounded-sm px-1 text-[var(--fg-muted)] transition-colors hover:text-[var(--fg)]"
+              title={`Cambiar ${label.toLowerCase()}`}
+              /*
+                Un botón redondo de 28 px con su icono, no una «✕» de texto.
+
+                Luis, 16/09: *«hay que poner buenos iconos, la ✕ y todo eso»*.
+                Era el carácter tipográfico, que cambia de forma con la fuente,
+                no se alinea con nada y ofrecía un blanco de unos diez píxeles
+                — en una fila donde al lado hay campos que se teclean, fallar
+                el clic significa borrar lo elegido sin querer o no borrarlo
+                cuando se quiere.
+
+                Y el fondo al pasar por encima existe por lo mismo: es lo que
+                dice que eso se pulsa, sin necesidad de descubrirlo probando.
+              */
+              className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:opacity-40"
             >
-              ✕
+              <X className="size-4" aria-hidden="true" />
             </button>
           </div>
         ) : (
           <input
             id={id}
+            ref={campo}
             type="text"
             value={texto}
             onChange={(e) => {
@@ -147,7 +203,7 @@ export function SelectorCatalogo({
               deshabilitado ? (textoVacio ?? "") : (placeholder ?? "Escribe para buscar…")
             }
             autoComplete="off"
-            className="min-h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:opacity-60 md:min-h-control-md"
+            className={`${campoBase} h-control-md px-3 text-sm`}
           />
         )}
 
@@ -181,17 +237,7 @@ export function SelectorCatalogo({
                 disabled={creando}
                 className="flex min-h-11 w-full items-center gap-1.5 border-t border-[var(--border-soft)] px-3 text-left text-sm font-medium text-brand-600 transition-colors hover:bg-[var(--surface-2)]"
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  className="size-4 shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
+                <Plus className="size-4 shrink-0" aria-hidden="true" />
                 {creando ? "Creando…" : `Crear «${texto.trim()}»`}
               </button>
             ) : null}

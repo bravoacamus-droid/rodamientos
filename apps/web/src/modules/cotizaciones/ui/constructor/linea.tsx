@@ -1,6 +1,33 @@
 "use client";
 
 import { useState, useTransition } from "react";
+/*
+  Los iconos salen de lucide, no de `<path>` escritos a mano.
+
+  Luis, 16/09: *«hay que poner buenos iconos, la ✕ y todo eso; tiene que verse
+  bien, que todo calce, que tenga buena lógica, porque no es más que un CRUD
+  que se repite»*.
+
+  Y esa última frase es el argumento entero. Esta pantalla tenía cinco iconos
+  dibujados a mano y dos flechas que eran **caracteres de texto** —«↑», «↓»—,
+  así que ni el grosor del trazo ni el tamaño ni el centrado coincidían con
+  los de las otras diez pantallas, que ya usaban lucide. Un lápiz de trazo 2
+  al lado de una flecha tipográfica no se lee como un juego de botones: se lee
+  como una pantalla a medio hacer.
+
+  La librería ya estaba en `package.json` y en el propio menú del sistema de
+  diseño. Era otra pieza puesta sin usar.
+*/
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronUp,
+  History,
+  MoreVertical,
+  Pencil,
+  SquareArrowOutUpRight,
+  Trash2,
+} from "lucide-react";
 import {
   Badge,
   Button,
@@ -143,21 +170,21 @@ export function FilaLinea({
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
                 disabled={indice === 0}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-xs leading-none text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
                 aria-label={`Subir ${linea.codigo}`}
                 title="Subir"
               >
-                ↑
+                <ChevronUp className="size-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
                 disabled={indice === total - 1}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-xs leading-none text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
                 aria-label={`Bajar ${linea.codigo}`}
                 title="Bajar"
               >
-                ↓
+                <ChevronDown className="size-3.5" />
               </button>
             </div>
           </div>
@@ -436,11 +463,7 @@ export function FilaLinea({
               aria-label={`Opciones de ${linea.codigo}`}
               className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
             >
-              <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-                <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-                <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-                <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-              </svg>
+              <MoreVertical className="size-[18px]" aria-hidden="true" />
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="w-60">
@@ -452,7 +475,7 @@ export function FilaLinea({
                 edita es la copia impresa, y esa la tienen las dos.
               */}
               <DropdownMenuItem onSelect={() => setEditando(true)}>
-                <IconoLapiz />
+                <Pencil />
                 Editar artículo
               </DropdownMenuItem>
 
@@ -468,7 +491,7 @@ export function FilaLinea({
                 disabled={!linea.productoId}
                 onSelect={() => requestAnimationFrame(abrirSustitutos)}
               >
-                <IconoCambio />
+                <ArrowLeftRight />
                 Ver alternativas
               </DropdownMenuItem>
 
@@ -476,7 +499,7 @@ export function FilaLinea({
                 disabled={!linea.productoId}
                 onSelect={() => requestAnimationFrame(abrirHistorial)}
               >
-                <IconoReloj />
+                <History />
                 Ventas anteriores
               </DropdownMenuItem>
 
@@ -489,7 +512,7 @@ export function FilaLinea({
                 destructivo
                 onSelect={() => despachar({ tipo: "quitar", key: linea.key })}
               >
-                <IconoPapelera />
+                <Trash2 />
                 Quitar de la cotización
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -632,43 +655,6 @@ export function FilaLinea({
   );
 }
 
-function IconoLapiz() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 20h4l10-10-4-4L4 16v4ZM14 6l4 4" />
-    </svg>
-  );
-}
-
-function IconoCambio() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 7h13l-3-3M21 17H8l3 3" />
-    </svg>
-  );
-}
-
-function IconoReloj() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
-
-function IconoPapelera() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-    </svg>
-  );
-}
-
 /*
   Solo quedan dos, y los dos afirman que la pieza ENTRA (061).
 
@@ -805,7 +791,7 @@ function PanelSustitutos({
                   onClick={() => onElegir(s)}
                   className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
                 >
-                  <IconoUsar />
+                  <SquareArrowOutUpRight className="size-4 shrink-0" />
                   Usar esta
                 </button>
               </td>
@@ -814,15 +800,6 @@ function PanelSustitutos({
         </tbody>
       </table>
     </div>
-  );
-}
-
-function IconoUsar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 17 17 7M9 7h8v8" />
-    </svg>
   );
 }
 

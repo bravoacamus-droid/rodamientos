@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import { catalogosParaProducto } from "../api/consultas";
+import { catalogosParaProducto, productoPorId } from "../api/consultas";
 import { guardarProducto, type ResultadoProducto } from "./guardar";
 
 /**
@@ -149,6 +149,160 @@ export async function crearProductoRapido(datos: {
       precio_venta: v.data.precio_venta,
       // Nace sin stock, y eso es un dato: la línea saldrá marcada como algo
       // que hay que conseguir, no como algo que está en el almacén.
+      stock: 0,
+    },
+  };
+}
+
+/* =========================================================================
+   EDITAR la ficha sin salir de la cotización
+   =========================================================================
+
+   Luis, 16/09, viendo el primer diálogo —que solo tocaba lo impreso—: *«el
+   editar nada que ver, no trae las marcas ni las familias ni las subfamilias;
+   todo eso tiene que traer, todo lo que se puede editar»*.
+
+   Así que «Editar artículo» edita la FICHA DEL CATÁLOGO, con los mismos siete
+   campos del alta. Y el caso del retén —un código, varias marcas— se queda
+   resuelto por el otro camino, que ya existe: la columna «Marca» de la fila,
+   que cambia solo esa línea.
+
+   Dos caminos, dos alcances, y cada uno dicho en su sitio:
+
+     · columna Marca de la tabla  →  solo esta cotización;
+     · Editar artículo            →  el catálogo, para todos.
+*/
+
+export interface FichaParaEditar {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  marca_id: string;
+  familia_id: string;
+  subfamilia_id: string;
+  unidad_codigo: string;
+  precio_venta: number;
+}
+
+/** La ficha y las listas, en un viaje: el diálogo necesita las dos cosas. */
+export async function fichaParaEditar(id: string) {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) {
+    return { ok: false as const, error: "Hay que iniciar sesión." };
+  }
+
+  const [p, c] = await Promise.all([productoPorId(id), catalogosParaProducto()]);
+  if (!p.ok) return { ok: false as const, error: p.error };
+  if (!c.ok) return { ok: false as const, error: c.error };
+
+  return {
+    ok: true as const,
+    datos: {
+      producto: {
+        id: p.datos.id,
+        codigo: p.datos.codigo,
+        descripcion: p.datos.descripcion,
+        marca_id: p.datos.marca_id,
+        familia_id: p.datos.familia_id,
+        subfamilia_id: p.datos.subfamilia_id,
+        unidad_codigo: p.datos.unidad_codigo,
+        precio_venta: p.datos.precio_venta,
+      } satisfies FichaParaEditar,
+      marcas: c.datos.marcas,
+      familias: c.datos.familias,
+      subfamilias: c.datos.subfamilias,
+      unidades: c.datos.unidades,
+    },
+  };
+}
+
+const esquemaEdicion = esquema.extend({ id: z.string().uuid() });
+
+export async function editarProductoRapido(datos: {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  marca_id: string;
+  familia_id: string;
+  subfamilia_id: string;
+  unidad_codigo: string;
+  precio_venta: number;
+  marcaNombre: string | null;
+}): Promise<ResultadoAlta> {
+  const v = esquemaEdicion.safeParse(datos);
+  if (!v.success) {
+    return { ok: false, error: v.error.issues[0]?.message ?? "Los datos no son válidos." };
+  }
+
+  /*
+    El resto de la ficha se relee AQUÍ, no viaja por el navegador.
+
+    `guardarProducto` recibe el producto entero y hace un `update` con todas
+    las columnas, así que mandar ceros en lo que este diálogo no pregunta
+    —costo, precio mínimo, stock mínimo y máximo, peso, ubicación, precio de
+    mercado, proveedor— **borraría** esos datos sin que nadie lo pidiera.
+    Editar la marca de un rodamiento no puede dejar su costo en cero.
+
+    Y se relee en el servidor a propósito. Si estos campos viajaran ocultos en
+    el formulario, una Server Action —que es un endpoint público— aceptaría el
+    costo que le mandaran. Aquí lo único que puede cambiar es lo que el
+    diálogo enseña.
+  */
+  const actual = await productoPorId(v.data.id);
+  if (!actual.ok) return { ok: false, error: actual.error };
+
+  const formData = new FormData();
+  formData.set(
+    "producto",
+    JSON.stringify({
+      id: v.data.id,
+
+      // Lo que el diálogo edita.
+      codigo: v.data.codigo,
+      descripcion: v.data.descripcion,
+      marca_id: v.data.marca_id,
+      familia_id: v.data.familia_id,
+      subfamilia_id: v.data.subfamilia_id,
+      unidad_codigo: v.data.unidad_codigo,
+      precio_venta: v.data.precio_venta,
+
+      // Lo que se conserva tal cual estaba.
+      codigo_fabricante: actual.datos.codigo_fabricante,
+      ultimo_costo: actual.datos.ultimo_costo,
+      precio_minimo: actual.datos.precio_minimo,
+      stock_minimo: actual.datos.stock_minimo,
+      stock_maximo: actual.datos.stock_maximo,
+      peso_kg: actual.datos.peso_kg,
+      ubicacion: actual.datos.ubicacion,
+      precio_mercado: actual.datos.precio_mercado,
+      proveedor_id: actual.datos.proveedor_id,
+
+      /*
+        `tipo_id` NO se conserva: se manda en null a propósito.
+
+        Es lo que empareja este producto con el mismo de otra marca en el
+        buscador de equivalentes (004). Si aquí se cambia la descripción, el
+        tipo viejo deja de describirlo, y `guardarProducto` lo vuelve a
+        deducir con `crear_tipo`, que es idempotente: si la descripción no
+        cambió, devuelve el tipo que ya tenía.
+      */
+      tipo_id: null,
+    }),
+  );
+
+  const r: ResultadoProducto = await guardarProducto(null, formData);
+  if (!r.ok) return { ok: false, error: r.error };
+
+  return {
+    ok: true,
+    producto: {
+      id: r.id,
+      codigo: r.codigo,
+      descripcion: v.data.descripcion,
+      marca: datos.marcaNombre,
+      unidad: v.data.unidad_codigo,
+      precio_venta: v.data.precio_venta,
+      // La edición no toca el almacén; quien la llama ya sabe su stock.
       stock: 0,
     },
   };

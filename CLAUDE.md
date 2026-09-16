@@ -31,7 +31,7 @@ restricción de diseño principal, y ya obligó a rehacer pantallas enteras:
 ### Verifica en la pantalla, no en el typecheck
 
 **Casi todos los defectos encontrados en este proyecto eran invisibles a
-`tsc`, a `eslint` y a los 1197 tests.** Botones que no se ven, funciones sin
+`tsc`, a `eslint` y a los 1202 tests.** Botones que no se ven, funciones sin
 puerta, columnas que no existen. Si has tocado una pantalla, ábrela.
 
 Hay servidor de desarrollo en `http://localhost:4005` y herramientas de
@@ -81,13 +81,16 @@ las **cuentas para cobrar** llevaban desde la 064 imprimiéndose en cada
 cotización **sin pantalla donde darlas de alta**; y el menú de usuario solo
 sabía cerrar sesión, sin sitio donde editar el propio perfil.
 
-**Y uno más el 16/09** (§AM.7b): `crearMarca`, `crearFamilia` y
-`crearSubfamilia` estaban desde la **033** —con su RPC, su candado de rol y su
-normalización— y **ninguna pantalla las llamaba**. Van **veintiocho casos**.
+**Y dos más el 16/09**: `crearMarca`, `crearFamilia` y `crearSubfamilia`
+estaban desde la **033** —con su RPC, su candado de rol y su normalización— y
+**ninguna pantalla las llamaba** (§AM.7b); y `lucide-react` estaba en el
+`package.json`, dentro del sistema de diseño y en uso en otras diez pantallas,
+mientras cotizaciones dibujaba **18 iconos a mano** y dos flechas de texto
+(§AM.13). Van **veintinueve casos**.
 
 Los tres del 15/09 se habrían encontrado con un `grep`: un prop que siempre
 vale `null`, un search param que se escribe y no se lee, un export sin quien lo
-importe. El del 16/09, también.
+importe. Los del 16/09, también.
 
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.
@@ -130,7 +133,7 @@ contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
 
 ```bash
 pnpm dev                     # servidor en :4005
-pnpm test                    # 1197 tests
+pnpm test                    # 1202 tests
 pnpm lint
 npx tsc -p apps/web/tsconfig.json --noEmit
 
@@ -158,6 +161,18 @@ cero y la 005 falla por vistas dependientes.
 - **El margen va sobre el COSTO** (`(venta − costo) / costo`), desde la 023.
 - **El stock negativo es deliberado** (002): *preferimos un descuadre visible a
   bloquear el despacho*.
+
+### Interfaz: dos cosas que no se copian a mano
+
+- **Los iconos salen de `lucide-react`.** Está en el `package.json` y en el
+  sistema de diseño. Un `<path>` escrito a mano no calza en trazo ni en
+  tamaño con el de la pantalla de al lado, y los caracteres «↑ ↓ ✕» cambian
+  de forma con la fuente. Única excepción: logotipos de marca, que lucide no
+  trae (WhatsApp).
+- **Un campo usa `campoBase` de `@rodatech/ui`**, no `border` + `rounded-md` +
+  `bg-surface` copiados. Copiarlos dio **47 px contra 40** entre dos campos de
+  la misma fila (§AM.13), y el día que cambie el token lo copiado se queda
+  atrás.
 
 ### Trampas que ya mordieron
 

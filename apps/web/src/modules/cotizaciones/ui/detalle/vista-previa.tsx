@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Eye, Printer } from "lucide-react";
 import { Button, Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@rodatech/ui";
 
 /**
@@ -45,7 +46,7 @@ export function VistaPreviaDocumento({
   return (
     <>
       <Button variant="outline" onClick={() => setAbierta(true)}>
-        <IconoOjo />
+        <Eye className="size-[18px] shrink-0" />
         Vista previa
       </Button>
 
@@ -76,7 +77,7 @@ export function VistaPreviaDocumento({
                 setTimeout(() => window.print(), 150);
               }}
             >
-              <IconoImprimir />
+              <Printer className="size-[18px] shrink-0" />
               Imprimir
             </Button>
           </DialogHeader>
@@ -89,23 +90,3 @@ export function VistaPreviaDocumento({
   );
 }
 
-function IconoOjo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function IconoImprimir() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9V3h12v6" />
-      <rect x="3" y="9" width="18" height="7" rx="1" />
-      <path d="M6 14h12v7H6z" />
-    </svg>
-  );
-}
