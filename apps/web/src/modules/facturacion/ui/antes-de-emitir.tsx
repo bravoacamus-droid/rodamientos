@@ -67,6 +67,14 @@ export interface OpcionesEmision {
    * eso es una casilla y no un automatismo.
    */
   retencion: boolean;
+  /**
+   * Las guías de remisión que ampara este comprobante.
+   *
+   * Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos guías;
+   * no puede estar dos guías asociadas, ¿cómo saldría?»*. Van los ids; los
+   * números los pone el documento.
+   */
+  guias: string[];
 }
 
 export function AntesDeEmitir({
@@ -179,7 +187,13 @@ export function AntesDeEmitir({
     dias_credito: dias,
     moneda: "USD",
     mostrar_cuenta: opciones.mostrarCuenta,
-    guia_numero: null,
+    // En la previa se arman los números de las marcadas; al emitir salen de
+    // la base. El documento los pinta igual en los dos casos.
+    guia_numero:
+      cot.guias
+        .filter((g) => opciones.guias.includes(g.id))
+        .map((g) => g.numero)
+        .join(", ") || null,
     cuotas: cuotas.map((q) => ({
       numero: q.numero,
       fecha_vencimiento: q.vencimiento,
@@ -245,6 +259,64 @@ export function AntesDeEmitir({
           crédito. Mira cómo va a quedar.
         </p>
       </div>
+
+      {/*
+        Las guías que ampara, arriba del todo.
+
+        Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos
+        guías: seis o dos guías y tienen una sola factura»*. Es el caso normal
+        de esta casa —el pedido sale en dos despachos y se factura una vez— y
+        hasta hoy no había dónde anotarlo. Peor: `guia_id` existía desde la
+        002 y la Server Action **no la mandaba nunca**, así que ninguna
+        factura tenía guía y el rótulo del documento no salía jamás.
+
+        Van marcadas de entrada, no sin marcar: lo normal es facturar lo que
+        se despachó. Y van como una LISTA y no como un desplegable con «+
+        agregar otra», porque con dos o tres guías la lista se lee de un
+        vistazo y el desplegable obliga a abrirlo para saber cuáles hay.
+
+        Si no hay ninguna emitida, esto no aparece: no todas las ventas pasan
+        por guía —la de mostrador se factura y se lleva—.
+      */}
+      {cot.guias.length > 0 ? (
+        <div className="rounded-md border border-[var(--border)] p-3">
+          <p className="text-sm font-medium">
+            {cot.guias.length === 1
+              ? "Guía de remisión que ampara"
+              : "Guías de remisión que ampara"}
+          </p>
+          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+            Sus números salen impresos en el comprobante.
+          </p>
+          <div className="mt-2 flex flex-col gap-1">
+            {cot.guias.map((g) => {
+              const marcada = opciones.guias.includes(g.id);
+              return (
+                <label
+                  key={g.id}
+                  className="flex min-h-9 cursor-pointer items-center gap-2.5 rounded-sm px-1 text-sm hover:bg-[var(--surface-2)]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={marcada}
+                    onChange={(e) =>
+                      onCambiar({
+                        ...opciones,
+                        guias: e.target.checked
+                          ? [...opciones.guias, g.id]
+                          : opciones.guias.filter((x) => x !== g.id),
+                      })
+                    }
+                    className="size-4 shrink-0 accent-brand-600"
+                  />
+                  <span className="font-medium">{g.numero}</span>
+                  <span className="text-[var(--fg-muted)]">{g.fecha}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {/*
         La retención, primero: es la única de las tres que cambia el DINERO.

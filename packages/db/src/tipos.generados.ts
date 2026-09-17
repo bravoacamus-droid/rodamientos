@@ -672,6 +672,60 @@ export type Database = {
           },
         ]
       }
+      comprobante_guias: {
+        Row: {
+          comprobante_id: string
+          guia_id: string
+          orden: number
+        }
+        Insert: {
+          comprobante_id: string
+          guia_id: string
+          orden?: number
+        }
+        Update: {
+          comprobante_id?: string
+          guia_id?: string
+          orden?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comprobante_guias_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "comprobantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_cartera"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_guia_id_fkey"
+            columns: ["guia_id"]
+            isOneToOne: false
+            referencedRelation: "guias_remision"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_guia_id_fkey"
+            columns: ["guia_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["guia_id"]
+          },
+        ]
+      }
       comprobante_items: {
         Row: {
           cantidad: number
@@ -4552,6 +4606,7 @@ export type Database = {
       escribe_una_funcion: { Args: never; Returns: boolean }
       generar_alertas: { Args: never; Returns: Json }
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      guia_esta_facturada: { Args: { p_guia: string }; Returns: boolean }
       historial_precio_producto: {
         Args: { p_cliente?: string; p_limit?: number; p_producto: string }
         Returns: {
@@ -4835,6 +4890,10 @@ export type Database = {
         }[]
       }
       unidad_periodo: { Args: { p_grano: string }; Returns: string }
+      vincular_guias_comprobante: {
+        Args: { p_comprobante: string; p_guias: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       canal_mensaje: "whatsapp" | "correo"

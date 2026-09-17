@@ -87,7 +87,16 @@ export function DocumentoComprobante({
         // que ata el papel que firmó el almacén del cliente con la factura
         // que tiene que pagar: la guía sellada es lo que autoriza a facturar.
         c.guia_numero
-          ? { etiqueta: "Guía de remisión", valor: c.guia_numero }
+          ? {
+              // En plural cuando ampara varias (084). Willy, 16/09: «a veces
+              // hay que hacer una factura de dos guías».
+              etiqueta: c.guia_numero.includes(",")
+                ? "Guías de remisión"
+                : "Guía de remisión",
+              valor: c.guia_numero,
+              // A lo ancho: tres números de guía no caben en media columna.
+              ancho: c.guia_numero.includes(","),
+            }
           : null,
       ]}
       columnas={[
@@ -202,10 +211,23 @@ export function DocumentoComprobante({
             <CuentasParaPagar cuentas={cuentas} />
           ) : null}
 
-          <div className="mt-3 flex items-end justify-between">
-            <span>{c.vendedor ? `Atendido por ${c.vendedor}` : ""}</span>
-            {emisor.email ? <span>{emisor.email}</span> : null}
-          </div>
+          {/*
+            El pie de la factura se queda VACÍO, y las dos cosas que había son
+            pedido de Willy del 16/09 (50:07).
+
+            «Atendido por» —el vendedor—: *«en la factura no debe aparecer el
+            nombre del vendedor. Eso en la cotización, sí»*. Y tiene su lógica:
+            la cotización es una conversación con una persona detrás, a la que
+            se llama para negociar. La factura es un documento tributario que
+            va a contabilidad del cliente, y ahí el nombre no sirve de nada.
+
+            El correo: *«sale un correo debajo del número de cuentas… eso
+            quítalo»*. Ya está en el membrete, arriba, junto al teléfono y la
+            web. Repetirlo al pie era decirlo dos veces en el mismo papel.
+
+            Se quita SOLO aquí: el documento de la cotización sigue llevando su
+            vendedor, que es lo que él pidió el mismo día por la mañana.
+          */}
         </>
       }
     />

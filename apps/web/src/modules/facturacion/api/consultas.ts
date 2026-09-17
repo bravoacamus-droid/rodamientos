@@ -215,6 +215,7 @@ export async function detalleComprobante(
          clientes(razon_social, numero_documento, tipo_documento, direccion, email),
          cotizaciones(numero),
          guias_remision(numero),
+         comprobante_guias(orden, guias_remision(numero)),
          comprobante_cuotas(numero, fecha_vencimiento, monto, pagado),
          perfiles!comprobantes_vendedor_id_fkey(nombre),
          comprobante_items(
@@ -316,7 +317,24 @@ export async function detalleComprobante(
         // Por defecto SÍ, como decidió la 029: Willy dijo que es «una
         // práctica recomendable que ya lleve pre-impresa la cuenta».
         mostrar_cuenta: c.mostrar_cuenta !== false,
-        guia_numero: (c.guias_remision as { numero?: string } | null)?.numero ?? null,
+        /*
+          Todas las guías que ampara, no solo la primera.
+
+          `comprobantes.guia_id` conserva la primera —es lo que mantiene la
+          protección de no anular una guía facturada— y `comprobante_guias`
+          tiene las demás desde la 084. Si hay varias se imprimen separadas
+          por coma; si la tabla está vacía se cae a la columna, que es como
+          quedaron las facturas anteriores a la 084.
+        */
+        guia_numero: (() => {
+          const varias = ((c.comprobante_guias ?? []) as GuiaVinculada[])
+            .slice()
+            .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+            .map((g) => g.guias_remision?.numero)
+            .filter((n): n is string => Boolean(n));
+          if (varias.length > 0) return varias.join(", ");
+          return (c.guias_remision as { numero?: string } | null)?.numero ?? null;
+        })(),
         // Ordenadas por número, que es como se leen: la 1 vence antes que la 2.
         cuotas: ((c.comprobante_cuotas ?? []) as Record<string, unknown>[])
           .map((q) => ({
@@ -438,6 +456,20 @@ export async function cotizacionesFacturables(): Promise<
 }
 
 /** Una cotización con todo lo que hace falta para emitir su comprobante. */
+/** Una fila de `comprobante_guias` con su guía, tal como llega de PostgREST. */
+interface GuiaVinculada {
+  orden: number | null;
+  guias_remision: { numero: string } | null;
+}
+
+/** Lo que PostgREST devuelve de `guias_remision` en la consulta de abajo. */
+interface GuiaDeCotizacion {
+  id: string;
+  numero: string;
+  fecha_emision: string;
+  estado: string;
+}
+
 export async function cotizacionParaFacturar(
   id: string,
 ): Promise<Resultado<CotizacionFacturable | null>> {
@@ -453,7 +485,8 @@ export async function cotizacionParaFacturar(
            producto_id, orden, codigo, descripcion, unidad_codigo,
            cantidad, cantidad_aprobada, cantidad_atendida,
            valor_unitario, descuento_pct, importe
-         )`,
+         ),
+         guias_remision(id, numero, fecha_emision, estado)`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -523,6 +556,15 @@ export async function cotizacionParaFacturar(
         dias_credito: Number(c.clientes?.dias_credito ?? 0),
         total: Number(c.total ?? 0),
         lineas_ya_facturadas: lineasCrudas.filter((l) => pendienteDe(l) <= 0).length,
+        /*
+          Solo las EMITIDAS. Una guía en borrador no tiene número todavía, y
+          una anulada no ampara nada — vincularla sería decir que la
+          mercadería viajó con un documento que ya no existe.
+        */
+        guias: ((c.guias_remision ?? []) as GuiaDeCotizacion[])
+          .filter((g) => g.estado === "emitida")
+          .map((g) => ({ id: g.id, numero: g.numero, fecha: g.fecha_emision }))
+          .sort((a, b) => a.numero.localeCompare(b.numero)),
         lineas: lineasCrudas
           // Solo lo que queda por facturar. Una línea ya entregada entera
           // no puede volver a salir en otro comprobante.

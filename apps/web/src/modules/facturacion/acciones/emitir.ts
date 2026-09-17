@@ -99,6 +99,16 @@ const esquema = z.object({
    */
   retencion_aplica: z.boolean(),
   /**
+   * Las guías de remisión que ampara el comprobante.
+   *
+   * Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos guías»*.
+   *
+   * No viajan en el payload de `emitir_comprobante`: se vinculan justo
+   * después con `vincular_guias_comprobante`, que comprueba que cada una sea
+   * del MISMO cliente y no esté anulada. Ver el porqué en la 084.
+   */
+  guias: z.array(z.string().uuid()).max(50),
+  /**
    * ¿El documento impreso lleva al pie las cuentas para pagar?
    *
    * Willy, 07/09 (13:21): *«al momento de elaborar la factura tiene un botón
@@ -276,6 +286,32 @@ export async function emitirComprobante(
     if (error) return { ok: false, error: error.message };
 
     const r = data as unknown as { id: string; numero: string; total: number };
+
+    /*
+      Las guías que ampara, justo después de emitir.
+
+      Va en una RPC aparte y no dentro de `emitir_comprobante` por riesgo:
+      aquella gasta el correlativo, mueve stock y arma el cronograma de
+      cuotas. Meterle mano para una referencia sería arriesgar la emisión
+      entera por un dato que no es un importe.
+
+      Por eso un fallo aquí NO convierte esto en `ok: false`, igual que el
+      envío a SUNAT: el comprobante ya existe y el número ya se gastó. Decir
+      que no se emitió mandaría a emitirlo otra vez, y eso sí sería un
+      problema. Lo que queda es una factura sin sus guías anotadas, que se
+      arregla volviendo a vincularlas.
+
+      `vincular_guias_comprobante` comprueba que cada guía sea del MISMO
+      cliente y no esté anulada: una factura que ampara la guía de otro dice
+      ante SUNAT que la mercadería viajó a donde no fue.
+    */
+    if (datos.guias.length > 0) {
+      await supabase.rpc("vincular_guias_comprobante", {
+        p_comprobante: r.id,
+        p_guias: datos.guias,
+      });
+      revalidatePath("/guias");
+    }
 
     revalidatePath("/facturacion");
     revalidatePath("/cotizaciones");

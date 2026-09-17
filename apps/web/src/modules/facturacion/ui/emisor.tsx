@@ -88,6 +88,15 @@ export function EmisorComprobante({
     // Apagada por defecto: la mayoría de clientes NO son agentes de retención,
     // y marcarla de más le haría cobrar un 3 % menos sin que nadie se lo pida.
     retencion: false,
+    /*
+      Las guías arrancan VACÍAS y se rellenan al cargar la cotización.
+
+      Aquí todavía no se sabe cuáles hay: la cotización se pide después. El
+      efecto que la carga las marca todas, que es lo que pasa el 90 % de las
+      veces —se despachó y se factura eso—; quien facture solo una parte las
+      desmarca.
+    */
+    guias: [],
     enviarSunat: puedeEnviar,
   });
   /**
@@ -145,6 +154,19 @@ export function EmisorComprobante({
       setTipo(tipoSugerido(r.datos.cliente_tipo_documento));
       setCondicion(r.datos.condicion_pago === "credito" ? "credito" : "contado");
       setDias(r.datos.dias_credito ?? 0);
+      /*
+        Todas las guías de la cotización, marcadas.
+
+        Es lo que pasa casi siempre: se despachó y se factura eso. Dejarlas
+        sin marcar obligaría a marcarlas una por una en el caso normal, y ya
+        se sabe cómo acaban las casillas que hay que acordarse de marcar —la
+        de las cuentas para cobrar tardó dos migraciones en aparecer.
+
+        `guias` ya viene filtrada a las EMITIDAS: una en borrador no tiene
+        número, y lo que la factura ampara es un número.
+      */
+      const ids = r.datos.guias.map((g) => g.id);
+      setOpciones((o) => ({ ...o, guias: ids }));
     });
   }, [cotizacionId]);
 

@@ -27,6 +27,7 @@ const COT: CotizacionFacturable = {
   dias_credito: 30,
   total: 1000,
   lineas_ya_facturadas: 0,
+  guias: [],
   lineas: [
     {
       producto_id: "33333333-3333-3333-3333-333333333333",

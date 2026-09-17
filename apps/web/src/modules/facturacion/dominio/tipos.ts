@@ -225,6 +225,17 @@ export interface CotizacionFacturable {
    * de «ya está toda facturada», que llevan a acciones opuestas.
    */
   lineas_ya_facturadas: number;
+  /**
+   * Las guías EMITIDAS de esta cotización, para amparar la factura.
+   *
+   * Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos guías;
+   * no puede estar dos guías asociadas, ¿cómo saldría?»*. Salen todas y se
+   * eligen las que correspondan.
+   *
+   * Las de borrador no entran: una guía sin emitir no tiene número, y lo que
+   * la factura ampara es un número.
+   */
+  guias: { id: string; numero: string; fecha: string }[];
   /** Solo lo que queda por facturar. Lo entregado ya no está aquí. */
   lineas: {
     producto_id: string;
