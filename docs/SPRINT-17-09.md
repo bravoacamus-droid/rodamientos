@@ -218,10 +218,45 @@ registre solamente los últimos, el 345»*. Es texto libre, así que ya funciona
 Willy, 42:27: *«una vez que me confirman, me envían una orden de compra, yo
 emito mi guía y salgo a recoger las compras que ya hice»*.
 
-En la grabación quedó en que sí se puede, y encaja con la 002 —el stock
-negativo es deliberado, *«preferimos un descuadre visible a bloquear el
-despacho»*—. **Verificar en pantalla**, no dar por hecho: es exactamente el
-tipo de cosa que en este proyecto se documentó y no se conectó.
+**✅ COMPROBADO el 17/09. Sí se puede, y no lo impide nadie.**
+
+No se llegó a emitir una guía de verdad —eso quema un correlativo `T001` y
+mueve stock real del cliente— así que se comprobó de las dos formas que sí se
+podían: leyendo las cuatro capas y abriendo la pantalla con un producto que
+hoy está a cero.
+
+| Capa | Qué hace |
+|---|---|
+| Base | **Nada.** `emitir_guia` solo valida rol, que la guía exista y que sea borrador; luego llama a `registrar_movimientos`, que acepta el saldo negativo por diseño (002). En las 88 migraciones no aparece la palabra «insuficiente» ni una vez |
+| Server Actions | **Nada.** `generar.ts` y `emitir.ts` validan sesión, rol, Zod y transporte. Cero consultas a `stock` |
+| Dominio | **Nada.** `Bloqueo.campo` es `cotizacion \| lineas \| destino \| peso \| fecha \| transporte`. `LineaDespacho` ni siquiera transporta el stock |
+| Pantalla | **Nada.** El botón se deshabilita por peso, destino, fecha y transporte. El `max` de «Sale ahora» es lo PEDIDO, no lo que hay |
+
+Comprobado en `/guias/nueva` con `COT1-000007`: el `6310-2Z/C3` está a **stock
+0** en el catálogo y la pantalla deja poner las 4 unidades sin decir nada. Y en
+el borrador `T001-00000002`, «Emitir y despachar» está habilitado.
+
+Los únicos topes que existen son de **cantidad confirmada**, no de existencias:
+la 057 impide despachar más de lo que el cliente aprobó. Su propia cabecera ya
+lo decía: *«el stock se va a negativo sin que salte nada»*, y la 057 no arregló
+esa parte porque no era su problema.
+
+#### Lo que sí falta, y no es lo que se preguntó
+
+**La guía no avisa.** Y cotizaciones sí: ahí una línea sin stock lo dice —«sin
+stock», «solo 3», «faltan 2»— sin impedir nada (`cotizaciones/dominio/
+constructor.ts`). La guía, que es donde el stock sale de verdad, no tiene nada
+de eso: ni columna, ni insignia, ni aviso.
+
+Con 787 de 793 productos a cero, eso significa que hoy casi cualquier guía
+deja saldo negativo y quien la prepara no se entera. El único que lo dice es el
+motor de alertas (021) —`stock_negativo`, severidad crítica— y habla **después
+del hecho consumado**.
+
+No bloquear es la decisión de Willy y se respeta. **Avisar es lo que falta**, y
+el patrón ya está escrito en cotizaciones: sería llevar el stock a
+`cotizacionParaDespachar`, un campo en `LineaDespacho` y una entrada en
+`avisos()`. Pendiente de decidir con Luis.
 
 ---
 
@@ -360,7 +395,7 @@ WhatsApp (14:34).
 
 ## ✅ Estado al cerrar el 17/09
 
-De todo el sprint queda **una sola cosa**, y es la que depende de Willy.
+Del sprint no queda nada por hacer. Lo de los kits lo desbloqueó Luis el mismo 17/09 —agrupación, no ensamblaje— y está construido (§5). Lo único abierto es una mejora que salió al comprobar §4.3: **la guía no avisa de la falta de stock**.
 
 | | Estado |
 |---|---|
@@ -372,8 +407,8 @@ De todo el sprint queda **una sola cosa**, y es la que depende de Willy.
 | **§3** El precio mínimo | ✅ Avisa y no impide (decisión de Luis) |
 | **§4.1** Factura con varias guías | ✅ Migración 084. Y salió que NINGUNA factura tenía guía |
 | **§4.2** La O/C a mano | ✅ No estaba: se heredaba de la cotización y no se podía teclear |
-| **§4.3** La guía antes del stock | ⚠️ **Sin comprobar en pantalla.** No hay validación de stock en el código y en la reunión se vio funcionando, pero probarlo aquí gastaría un correlativo T001 de verdad |
-| **§5** Kits | ⛔ **Esperando a Willy** |
+| **§4.3** La guía antes del stock | ✅ Comprobado: no lo impide ninguna de las cuatro capas. Y salió que TAMPOCO avisa, al revés que cotizaciones |
+| **§5** Kits | ✅ Luis decidió agrupación, no ensamblaje. Construido: 085-088, la guía explota el kit en sus piezas, y precio y descuento por pieza. Falta que Willy mande los campos que quedó en mandar por WhatsApp (14:34) |
 
 Y dos fallos que el acta no podía ver, encontrados por el camino:
 
