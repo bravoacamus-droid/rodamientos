@@ -5,7 +5,13 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { transportePropioActivo } from "@/modules/transporte";
 
-import { agenciasActivas, cotizacionesDespachables, motivosTraslado } from "../api/consultas";
+import {
+  agenciasActivas,
+  cotizacionesDespachables,
+  guiasDeCotizacion,
+  motivosTraslado,
+  numeroDeCotizacion,
+} from "../api/consultas";
 import { ConstructorGuia } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
@@ -71,6 +77,72 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
     );
   }
 
+  /*
+    Se pidió una cotización concreta y no está entre las despachables.
+
+    Luis, 17/09, pulsando «Generar guía» en la COT1-000008: *«¿por qué no me
+    trae mis datos automáticamente, como lo teníamos anteriormente?»*.
+
+    No era el enlace —con una cotización con algo pendiente carga sola—: esa ya
+    estaba despachada ENTERA en la T001-00000002, así que no entraba en la
+    lista y el desplegable se quedaba en «Elige una cotización…» porque su
+    opción no existía. Cero líneas, ningún error, nada que leer.
+
+    El sistema estaba haciendo lo correcto. Pero una pantalla que hace lo
+    correcto y no lo dice se parece demasiado a una rota, y lo que se rompe de
+    verdad es la confianza en ella. Así que se dice, con el número de la guía y
+    el camino para llegar.
+  */
+  const pedida = crudo && crudo.length > 0 ? crudo : null;
+  const estaEnLaLista = pedida !== null && cotizaciones.datos.some((c) => c.id === pedida);
+
+  if (pedida !== null && !estaEnLaLista) {
+    const [numero, guias] = await Promise.all([
+      numeroDeCotizacion(pedida),
+      guiasDeCotizacion(pedida),
+    ]);
+    const suyas = guias.ok ? guias.datos : [];
+    const nombre = numero ?? "Esa cotización";
+
+    return (
+      <EstadoVacio
+        titulo={
+          suyas.length > 0
+            ? `${nombre} ya está despachada entera`
+            : `${nombre} no tiene nada que despachar`
+        }
+        descripcion={
+          suyas.length > 0
+            ? `Todo lo que lleva ya salió en ${
+                suyas.length === 1 ? "la guía" : "las guías"
+              } ${suyas.map((g) => g.numero).join(", ")}. Para despachar de nuevo habría que corregir las cantidades de la cotización primero.`
+            : "No le queda ninguna línea pendiente, así que no hay de dónde sacar una guía."
+        }
+        accion={
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {suyas.map((g) => (
+              <Link
+                key={g.id}
+                href={`/guias/${g.id}`}
+                className="inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              >
+                Ver {g.numero}
+              </Link>
+            ))}
+            {/* Sin este, la única salida sería el botón de atrás: se llega
+                aquí desde una cotización, no desde el menú. */}
+            <Link
+              href="/guias/nueva"
+              className="inline-flex h-control-md items-center rounded-md border border-[var(--border)] px-4 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+            >
+              Despachar otra cotización
+            </Link>
+          </div>
+        }
+      />
+    );
+  }
+
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
     new Date(),
   );
@@ -87,7 +159,7 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
       vehiculos={propio.ok ? propio.datos.vehiculos : []}
       conductores={propio.ok ? propio.datos.conductores : []}
       hoy={hoy}
-      cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
+      cotizacionInicial={pedida}
     />
   );
 }

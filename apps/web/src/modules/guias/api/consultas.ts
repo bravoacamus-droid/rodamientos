@@ -396,6 +396,63 @@ function stockDe(s: { cantidad: number }[] | { cantidad: number } | null): numbe
 }
 
 /** Una cotización con lo que falta por despachar de cada línea. */
+/**
+ * Las guías que YA tiene una cotización.
+ *
+ * Existe por un caso que se veía como una avería: Luis, 17/09, pulsó «Generar
+ * guía» en la COT1-000008 y llegó a la pantalla con el desplegable vacío —
+ * *«¿por qué no me trae mis datos automáticamente?»*.
+ *
+ * No era el enlace: la cotización estaba **despachada entera** en la guía
+ * T001-00000002, así que `cotizacionesDespachables` la excluía con razón y el
+ * `<select>` se quedaba en el texto de relleno porque su opción no existía. El
+ * sistema hacía lo correcto y no lo decía, que en esta pantalla es lo mismo
+ * que hacerlo mal.
+ *
+ * Con esto se puede decir CUÁL es esa guía y llevar a ella.
+ */
+export async function guiasDeCotizacion(
+  cotizacionId: string,
+): Promise<Resultado<{ id: string; numero: string; estado: string }[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("guias_remision")
+      .select("id, serie, correlativo, estado")
+      .eq("cotizacion_id", cotizacionId)
+      .neq("estado", "anulada")
+      .order("correlativo", { ascending: false });
+
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((g) => ({
+        id: String(g.id),
+        numero: `${g.serie}-${String(g.correlativo).padStart(8, "0")}`,
+        estado: String(g.estado),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** El número de una cotización, para poder nombrarla en un mensaje. */
+export async function numeroDeCotizacion(id: string): Promise<string | null> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("cotizaciones")
+      .select("numero")
+      .eq("id", id)
+      .maybeSingle();
+    return data ? String(data.numero) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function cotizacionParaDespachar(
   id: string,
 ): Promise<Resultado<CotizacionDespachable | null>> {
