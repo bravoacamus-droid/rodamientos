@@ -2497,6 +2497,70 @@ export type Database = {
           },
         ]
       }
+      kit_componentes: {
+        Row: {
+          cantidad: number
+          kit_id: string
+          orden: number
+          producto_id: string
+        }
+        Insert: {
+          cantidad: number
+          kit_id: string
+          orden?: number
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          kit_id?: string
+          orden?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kit_componentes_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_componentes_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_componentes_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_componentes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_componentes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_componentes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marcas: {
         Row: {
           activo: boolean
@@ -2892,6 +2956,7 @@ export type Database = {
           creado_por: string | null
           descripcion: string
           designacion_base: string | null
+          es_kit: boolean
           familia_id: string
           id: string
           imagen_url: string | null
@@ -2931,6 +2996,7 @@ export type Database = {
           creado_por?: string | null
           descripcion: string
           designacion_base?: string | null
+          es_kit?: boolean
           familia_id: string
           id?: string
           imagen_url?: string | null
@@ -2970,6 +3036,7 @@ export type Database = {
           creado_por?: string | null
           descripcion?: string
           designacion_base?: string | null
+          es_kit?: boolean
           familia_id?: string
           id?: string
           imagen_url?: string | null
@@ -4447,6 +4514,7 @@ export type Database = {
           codigo_fabricante: string
           costo_promedio: number
           descripcion: string
+          es_kit: boolean
           estado_stock: string
           familia: string
           id: string
@@ -4621,6 +4689,13 @@ export type Database = {
       importar_productos: {
         Args: { p_filas: Json; p_simular?: boolean }
         Returns: Json
+      }
+      kit_suma: {
+        Args: { p_kit: string }
+        Returns: {
+          costo: number
+          venta: number
+        }[]
       }
       kpis_dashboard: {
         Args: { p_desde?: string; p_hasta?: string }
@@ -4812,6 +4887,7 @@ export type Database = {
         Args: { p_tipo: Database["public"]["Enums"]["tipo_documento"] }
         Returns: string
       }
+      stock_armable: { Args: { p_kit: string }; Returns: number }
       sustitutos_de: {
         Args: { p_limit?: number; p_producto: string }
         Returns: {

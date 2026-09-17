@@ -75,6 +75,14 @@ const TRAZOS: Record<NombreIcono, React.ReactNode> = {
       <circle cx="8" cy="8" r="1.4" {...T} />
     </>
   ),
+  // Kit: una caja con lo que lleva dentro. Willy los llama por su código, así
+  // que el icono solo tiene que decir «esto es un conjunto».
+  kit: (
+    <>
+      <path d="M21 8 12 3 3 8v8l9 5 9-5z" {...T} />
+      <path d="M3 8l9 5 9-5M12 13v8" {...T} />
+    </>
+  ),
   // Cargar: hoja con flecha hacia arriba.
   cargar: (
     <>

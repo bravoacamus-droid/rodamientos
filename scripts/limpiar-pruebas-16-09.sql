@@ -63,3 +63,24 @@ commit;
 --   select 'familia',      nombre, activo from familias    where nombre like 'ZZ %'
 --   union all
 --   select 'subfamilia',   nombre, activo from subfamilias where nombre like 'ZZ %';
+
+-- ###########################################################################
+-- 4 · El kit de prueba del 17/09
+-- ###########################################################################
+--
+-- Probando el módulo de kits (085) se creó `ZZ-KIT-PRUEBA`, con el 1210SC3 y
+-- el retén 45X60X8TC dentro. Es basura de prueba.
+--
+-- Un kit es un producto con `es_kit`, así que se archiva como cualquier otro;
+-- sus componentes se van solos por el `on delete cascade` solo si se BORRA la
+-- fila, y no se borra: archivar deja el rastro y lo saca del cotizador.
+
+begin;
+
+update productos set archivado = true where codigo = 'ZZ-KIT-PRUEBA';
+
+commit;
+
+-- Para comprobarlo:
+--
+--   select codigo, descripcion, archivado from productos where es_kit;

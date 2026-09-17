@@ -10,7 +10,7 @@ import type { Rol } from "@rodatech/config";
  */
 export type NombreIcono =
   | "tablero" | "cotizacion" | "listos" | "guia" | "factura" | "cobranza"
-  | "producto" | "cargar" | "equivalencia" | "cliente" | "proveedor"
+  | "producto" | "kit" | "cargar" | "equivalencia" | "cliente" | "proveedor"
   | "inventario" | "kardex" | "recepcion" | "ajuste"
   | "compra" | "porcomprar" | "precios" | "importacion"
   | "reporte" | "alerta" | "bitacora" | "configuracion" | "transporte"
@@ -143,6 +143,17 @@ export const NAVEGACION: readonly GrupoNav[] = [
         ruta: "/productos/cargar", icono: "cargar",
         roles: ["gerencia", "admin", "compras"],
       },
+      /*
+        Los kits (085), justo debajo de Productos.
+
+        Willy, 16/09: *«me lo vas a presentar como un kit; ya me ha pasado
+        tres y en adelante te voy a pasar todo, por máquina»*. Es catálogo —se
+        define una vez y se cotiza muchas—, no una operación.
+
+        Va en el menú desde el primer día a propósito: en este proyecto lo que
+        no está en el menú no existe, y ya van treinta veces.
+      */
+      { etiqueta: "Kits", ruta: "/productos/kits", icono: "kit" },
       { etiqueta: "Equivalencias", ruta: "/equivalencias", icono: "equivalencia" },
       { etiqueta: "Clientes", ruta: "/clientes", icono: "cliente" },
       // Con quién y con qué se despacha: las agencias, los vehículos propios y

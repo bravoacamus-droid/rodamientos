@@ -1,0 +1,202 @@
+import "server-only";
+
+import { clienteServidor } from "@rodatech/db/servidor";
+
+/**
+ * Lecturas del módulo de kits.
+ *
+ * Un kit es un producto con `es_kit` y su lista en `kit_componentes` (085), así
+ * que todo esto lee de `productos` — no hay una segunda tabla de cosas
+ * vendibles.
+ */
+
+export interface ComponenteDeKit {
+  producto_id: string;
+  codigo: string;
+  descripcion: string;
+  marca: string | null;
+  unidad: string;
+  /** Cuántas unidades de este producto lleva UN kit. */
+  cantidad: number;
+  /** Lo que hay en el almacén de este componente. */
+  stock: number;
+  precioVenta: number;
+  costo: number;
+  /** Cuántos kits completos dan las existencias de este componente. */
+  alcanzaPara: number;
+}
+
+export interface KitDetalle {
+  id: string;
+  codigo: string;
+  descripcion: string;
+  precioVenta: number;
+  archivado: boolean;
+  componentes: ComponenteDeKit[];
+  /** Cuántos se pueden armar: el componente que menos alcanza manda. */
+  armable: number;
+  /** La suma de los componentes, para comparar con el precio que se cobra. */
+  sumaVenta: number;
+  sumaCosto: number;
+}
+
+type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
+
+/** Lo que PostgREST devuelve de cada componente. */
+interface FilaComponente {
+  cantidad: number;
+  orden: number;
+  productos: {
+    id: string;
+    codigo: string;
+    descripcion: string;
+    unidad_codigo: string;
+    precio_venta: number;
+    costo_promedio: number;
+    ultimo_costo: number;
+    marcas: { nombre: string } | null;
+    stock: { cantidad: number }[] | { cantidad: number } | null;
+  } | null;
+}
+
+/** El stock de un producto, que PostgREST devuelve como fila o como lista. */
+function stockDe(s: FilaComponente["productos"] extends null ? never : NonNullable<FilaComponente["productos"]>["stock"]): number {
+  if (!s) return 0;
+  if (Array.isArray(s)) return Number(s[0]?.cantidad ?? 0);
+  return Number(s.cantidad ?? 0);
+}
+
+function armar(filas: FilaComponente[]): {
+  componentes: ComponenteDeKit[];
+  armable: number;
+  sumaVenta: number;
+  sumaCosto: number;
+} {
+  const componentes = filas
+    .filter((f) => f.productos !== null)
+    .sort((a, b) => a.orden - b.orden)
+    .map((f) => {
+      const p = f.productos!;
+      const stock = stockDe(p.stock);
+      const cantidad = Number(f.cantidad);
+      return {
+        producto_id: p.id,
+        codigo: p.codigo,
+        descripcion: p.descripcion,
+        marca: p.marcas?.nombre ?? null,
+        unidad: p.unidad_codigo,
+        cantidad,
+        stock,
+        precioVenta: Number(p.precio_venta ?? 0),
+        // El del kardex manda, el de la ficha es el respaldo (083).
+        costo: Number(p.costo_promedio) || Number(p.ultimo_costo) || 0,
+        // Cuántos kits enteros salen de lo que hay de ESTE componente. Medio
+        // kit no se vende, así que se trunca.
+        alcanzaPara: cantidad > 0 ? Math.floor(stock / cantidad) : 0,
+      };
+    });
+
+  return {
+    componentes,
+    // Un kit sin componentes no se puede armar: 0, no infinito.
+    armable:
+      componentes.length === 0
+        ? 0
+        : Math.min(...componentes.map((c) => c.alcanzaPara)),
+    sumaVenta: componentes.reduce((t, c) => t + c.precioVenta * c.cantidad, 0),
+    sumaCosto: componentes.reduce((t, c) => t + c.costo * c.cantidad, 0),
+  };
+}
+
+const SELECT_COMPONENTES = `
+  cantidad, orden,
+  productos!kit_componentes_producto_id_fkey(
+    id, codigo, descripcion, unidad_codigo, precio_venta,
+    costo_promedio, ultimo_costo,
+    marcas(nombre),
+    stock(cantidad)
+  )`;
+
+/** Los kits del catálogo, con cuántos se pueden armar. */
+export async function listarKits(): Promise<Resultado<KitDetalle[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("productos")
+      .select(
+        `id, codigo, descripcion, precio_venta, archivado,
+         kit_componentes!kit_componentes_kit_id_fkey(${SELECT_COMPONENTES})`,
+      )
+      .eq("es_kit", true)
+      .order("codigo");
+
+    if (error) return { ok: false, error: error.message };
+
+    const filas = (data ?? []) as unknown as (Record<string, unknown> & {
+      kit_componentes: FilaComponente[];
+    })[];
+
+    return {
+      ok: true,
+      datos: filas.map((k) => {
+        const { componentes, armable, sumaVenta, sumaCosto } = armar(
+          k.kit_componentes ?? [],
+        );
+        return {
+          id: String(k.id),
+          codigo: String(k.codigo),
+          descripcion: String(k.descripcion),
+          precioVenta: Number(k.precio_venta ?? 0),
+          archivado: Boolean(k.archivado),
+          componentes,
+          armable,
+          sumaVenta,
+          sumaCosto,
+        };
+      }),
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer los kits." };
+  }
+}
+
+/** Un kit con todo su contenido. */
+export async function kitPorId(id: string): Promise<Resultado<KitDetalle | null>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("productos")
+      .select(
+        `id, codigo, descripcion, precio_venta, archivado,
+         kit_componentes!kit_componentes_kit_id_fkey(${SELECT_COMPONENTES})`,
+      )
+      .eq("id", id)
+      .eq("es_kit", true)
+      .maybeSingle();
+
+    if (error) return { ok: false, error: error.message };
+    if (!data) return { ok: true, datos: null };
+
+    const k = data as unknown as Record<string, unknown> & {
+      kit_componentes: FilaComponente[];
+    };
+    const { componentes, armable, sumaVenta, sumaCosto } = armar(k.kit_componentes ?? []);
+
+    return {
+      ok: true,
+      datos: {
+        id: String(k.id),
+        codigo: String(k.codigo),
+        descripcion: String(k.descripcion),
+        precioVenta: Number(k.precio_venta ?? 0),
+        archivado: Boolean(k.archivado),
+        componentes,
+        armable,
+        sumaVenta,
+        sumaCosto,
+      },
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer el kit." };
+  }
+}
