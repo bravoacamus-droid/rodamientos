@@ -70,6 +70,35 @@ const esquema = z.object({
    */
   cantidades: z.array(z.number().min(0)).max(200).optional(),
   /**
+   * ¿La operación está sujeta a RETENCIÓN del IGV?
+   *
+   * Willy, 16/09 (45:03): *«si hay detracción… digo la retención. Para mi caso
+   * es retención porque yo vendo productos»*.
+   *
+   * -------------------------------------------------------------------------
+   * Otra pieza que estaba entera menos el interruptor
+   * -------------------------------------------------------------------------
+   * `comprobantes` guarda `retencion_aplica`, `retencion_porcentaje` y
+   * `retencion_monto` desde la 002; `emitir_comprobante` lee
+   * `p_datos -> 'retencion' ->> 'aplica'` desde la 004, saca el porcentaje de
+   * la configuración de la empresa y **calcula el monto sola**; y el documento
+   * lo imprime —«Sujeto al régimen de retenciones del IGV»—. Lo único que no
+   * existía era alguien que mandara `aplica: true`.
+   *
+   * -------------------------------------------------------------------------
+   * Solo `aplica`, y el resto lo pone la base
+   * -------------------------------------------------------------------------
+   * Ni el porcentaje ni el monto viajan desde el navegador, y es deliberado:
+   * son plata, y una acción de servidor es un endpoint público. El 3 % sale de
+   * `configuracion.retencion_porcentaje` y el monto de
+   * `round(total * pct / 100, 2)` dentro de la misma transacción que fija el
+   * total. Mandarlos sería dejar que el cliente decidiera cuánto se retiene.
+   *
+   * Quién decide que aplica sí es humano: depende de que el CLIENTE sea agente
+   * de retención designado por SUNAT, y eso no está en ninguna tabla todavía.
+   */
+  retencion_aplica: z.boolean(),
+  /**
    * ¿El documento impreso lleva al pie las cuentas para pagar?
    *
    * Willy, 07/09 (13:21): *«al momento de elaborar la factura tiene un botón
@@ -205,6 +234,15 @@ export async function emitirComprobante(
       // `default true` del esquema y las cuentas salían siempre.
       mostrar_cuenta: datos.mostrar_cuenta,
       descargar_stock: datos.descargar_stock,
+      /*
+        Solo `aplica`. El porcentaje y el monto los pone la base.
+
+        Y la boleta no retiene nunca: `emitir_comprobante` fuerza el `false`
+        para `v_tipo = 'boleta'` y la tabla lo respalda con
+        `comp_boleta_sin_spot`. No se comprueba aquí para no tener la misma
+        regla escrita en dos sitios que mañana se separan.
+      */
+      retencion: { aplica: datos.retencion_aplica },
       items: aEmitir.map((l) => ({
         producto_id: l.producto_id,
         codigo: l.codigo,

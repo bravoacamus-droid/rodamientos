@@ -59,7 +59,28 @@ Lo que sigue en este documento es lo que **queda**.
 
 *(El «+» de la marca, §1.4, ya está hecho — ver arriba.)*
 
-### 1.1 · El interruptor de la retención · **la pieza existe, el camino no (30)**
+### ✅ 1.1 · El interruptor de la retención · HECHO el 17/09 · **caso 30**
+
+Estaba todo menos el interruptor, y resultó ser aún más completo de lo que
+parecía: `emitir_comprobante` ya leía `p_datos -> 'retencion' ->> 'aplica'`
+desde la **004**, sacaba el porcentaje de la configuración y **calculaba el
+monto sola** (`round(total * pct / 100, 2)`); la tabla lo guarda desde la 002
+con tres constraints —ni en boletas, ni junto a la detracción, y si aplica el
+monto tiene que ser > 0—; el documento lo imprime; y **cobranzas ya admite el
+medio de pago `retencion`**, que es como se cierra el 3 % que el cliente no
+paga. Solo faltaba que alguien mandara `aplica: true`.
+
+Cómo quedó: una casilla **la primera de las tres**, porque es la única que
+cambia el dinero. Al marcarla dice en números lo que va a pasar —*«El cliente
+retiene USD 12.45 y te paga USD 402.59»*—. En boletas ni se enseña.
+
+Y solo viaja `aplica`: el porcentaje y el monto los pone la base, dentro de la
+misma transacción que fija el total. Una Server Action es un endpoint público,
+y esto es plata.
+
+*(Texto original del plan, abajo, por si hace falta el contexto.)*
+
+### ~~1.1 · El interruptor de la retención~~
 
 Willy, 45:03: *«si hay detracción… digo la retención. Para mi caso es retención
 porque yo vendo productos»*.

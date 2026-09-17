@@ -86,7 +86,11 @@ estaban desde la **033** —con su RPC, su candado de rol y su normalización—
 **ninguna pantalla las llamaba** (§AM.7b); y `lucide-react` estaba en el
 `package.json`, dentro del sistema de diseño y en uso en otras diez pantallas,
 mientras cotizaciones dibujaba **18 iconos a mano** y dos flechas de texto
-(§AM.13). Van **veintinueve casos**.
+(§AM.13). Y **uno más el 17/09**: la RETENCIÓN del IGV tenía sus tres columnas
+desde la 002, `emitir_comprobante` la leía y calculaba el monto desde la 004,
+el documento la imprimía y cobranzas admitía el medio de pago `retencion` —y
+`antes-de-emitir` la mandaba en `false` siempre, porque no había interruptor.
+Van **treinta casos**.
 
 Los tres del 15/09 se habrían encontrado con un `grep`: un prop que siempre
 vale `null`, un search param que se escribe y no se lee, un export sin quien lo

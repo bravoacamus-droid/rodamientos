@@ -56,6 +56,17 @@ import { DocumentoComprobante } from "./documento";
 export interface OpcionesEmision {
   mostrarCuenta: boolean;
   enviarSunat: boolean;
+  /**
+   * La operación está sujeta a RETENCIÓN del IGV.
+   *
+   * Willy, 16/09 (45:03): *«si hay detracción… digo la retención. Para mi caso
+   * es retención porque yo vendo productos»*.
+   *
+   * No se puede deducir: depende de que el CLIENTE sea agente de retención
+   * designado por SUNAT, y eso no está en la ficha del cliente todavía. Por
+   * eso es una casilla y no un automatismo.
+   */
+  retencion: boolean;
 }
 
 export function AntesDeEmitir({
@@ -102,6 +113,34 @@ export function AntesDeEmitir({
   onCambiar: (o: OpcionesEmision) => void;
 }) {
   const [viendo, setViendo] = React.useState(false);
+
+  /*
+    La boleta no retiene NUNCA, y la pantalla lo respeta antes de preguntarlo.
+
+    `comp_boleta_sin_spot` lo prohíbe en la tabla y `emitir_comprobante` fuerza
+    el `false` para boletas, así que enseñar la casilla en una boleta sería
+    ofrecer algo que la base va a ignorar. Se calcula aquí y no se manda: la
+    regla sigue viviendo abajo.
+  */
+  const puedeRetener = tipo === "factura";
+  const retiene = puedeRetener && opciones.retencion;
+
+  /** Como en el documento: la moneda la pone el rótulo, no el número. */
+  const dinero = (n: number) =>
+    `USD ${n.toLocaleString("es-PE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+
+  /*
+    El 3 % está fijo en la pantalla y sale de la configuración al emitir.
+
+    Es el porcentaje del régimen de retenciones del IGV y lleva ahí desde 2014,
+    pero está en `configuracion.retencion_porcentaje` porque cambia por norma —
+    igual que el umbral de la detracción—. Aquí se usa solo para enseñar el
+    número en la previa; el que cuenta es el de la base.
+  */
+  const retencionPct = 3;
 
   /*
     El borrador que se pinta.
@@ -168,8 +207,17 @@ export function AntesDeEmitir({
     detraccion_porcentaje: 0,
     detraccion_monto: 0,
     detraccion_codigo: null,
-    retencion_aplica: false,
-    retencion_monto: 0,
+    /*
+      En la PREVIA el monto se calcula aquí; al emitir lo calcula la base.
+
+      Son dos sitios para la misma fórmula y es a propósito: el documento
+      todavía no existe, así que no hay nada que leer. Lo que se manda a
+      emitir sigue siendo solo `aplica` —el porcentaje y el monto los pone
+      `emitir_comprobante` con el 3 % de la configuración—, de modo que esta
+      cuenta no puede cambiar lo que se guarda. Solo lo que se ve antes.
+    */
+    retencion_aplica: retiene,
+    retencion_monto: retiene ? Math.round(totales.total * retencionPct) / 100 : 0,
     vendedor: null,
     observaciones: observaciones.trim() || null,
     motivo_anulacion: null,
@@ -197,6 +245,36 @@ export function AntesDeEmitir({
           crédito. Mira cómo va a quedar.
         </p>
       </div>
+
+      {/*
+        La retención, primero: es la única de las tres que cambia el DINERO.
+
+        Willy, 16/09 (45:03): *«si hay detracción… digo la retención. Para mi
+        caso es retención porque yo vendo productos»*.
+
+        Las otras dos casillas deciden cómo se imprime y si se manda; esta
+        decide cuánto va a cobrar. Y no se puede corregir después: la
+        retención va en el comprobante, y un comprobante emitido solo se
+        arregla con una nota de crédito.
+
+        Solo en facturas. En boletas ni se enseña — ver `puedeRetener`.
+      */}
+      {puedeRetener ? (
+        <Casilla
+          marcada={opciones.retencion}
+          onCambiar={(v) => onCambiar({ ...opciones, retencion: v })}
+          titulo={`Sujeta a retención del IGV (${retencionPct} %)`}
+          detalle={
+            opciones.retencion
+              ? `El cliente retiene ${dinero(
+                  Math.round(totales.total * retencionPct) / 100,
+                )} y te paga ${dinero(
+                  totales.total - Math.round(totales.total * retencionPct) / 100,
+                )}. Sale impreso en el documento.`
+              : "Márcalo si el cliente es agente de retención designado por SUNAT. Te pagará el total menos el 3 %."
+          }
+        />
+      ) : null}
 
       <Casilla
         marcada={opciones.mostrarCuenta}

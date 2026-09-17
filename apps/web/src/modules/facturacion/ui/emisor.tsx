@@ -85,6 +85,9 @@ export function EmisorComprobante({
   */
   const [opciones, setOpciones] = useState<OpcionesEmision>({
     mostrarCuenta: true,
+    // Apagada por defecto: la mayoría de clientes NO son agentes de retención,
+    // y marcarla de más le haría cobrar un 3 % menos sin que nadie se lo pida.
+    retencion: false,
     enviarSunat: puedeEnviar,
   });
   /**
@@ -191,6 +194,7 @@ export function EmisorComprobante({
     descargar_stock: descargarStock,
     cantidades,
     mostrar_cuenta: opciones.mostrarCuenta,
+    retencion_aplica: opciones.retencion,
     // Nunca se manda lo que no se puede mandar: sin certificado la casilla
     // ni se marca, y aquí se vuelve a cortar por si el estado se quedó
     // marcado de antes de que la configuración cambiara.
