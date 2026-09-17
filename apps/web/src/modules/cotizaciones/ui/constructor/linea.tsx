@@ -20,8 +20,10 @@ import { useState, useTransition } from "react";
 */
 import {
   ArrowLeftRight,
+  Boxes,
   ChevronDown,
   ChevronUp,
+  DollarSign,
   History,
   MoreVertical,
   Pencil,
@@ -48,6 +50,7 @@ import {
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
 import { EditarArticulo } from "./editar-articulo";
+import { PreciosYStock } from "./precios-y-stock";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import {
@@ -93,6 +96,8 @@ export function FilaLinea({
 }) {
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
   const [editando, setEditando] = useState(false);
+  /** El diálogo de precios y stock (17/09). */
+  const [viendo, setViendo] = useState(false);
   const [sustitutos, setSustitutos] = useState<Sustituto[]>([]);
   const [historial, setHistorial] = useState<VentaAnterior[]>([]);
   const [cargando, iniciar] = useTransition();
@@ -473,6 +478,39 @@ export function FilaLinea({
               <DropdownMenuSeparator />
 
               {/*
+                Ver precios y ver stock, las dos que pidió Luis el 17/09:
+                *«en las opciones hay que ponerlo ver stock y ver precios, y le
+                salga modal de los precios pues: compra, precio mínimo, precio
+                venta, etc.»*.
+
+                Son DOS entradas y UN diálogo, no dos pantallas. Quien busca el
+                stock y quien busca el costo entran por la palabra que tiene en
+                la cabeza, pero una vez dentro lo que se mira es lo mismo: si
+                este precio vale la pena y si hay para despachar. Partirlo en
+                dos modales obligaría a abrir los dos para decidir una cosa.
+
+                Y responde a lo que Willy pidió el 16/09 (7:30): *«puede verlos
+                los precios como un ojito, y ver a cuánto lo compró, a cuánto
+                le costó y a cuánto lo está vendiendo»*.
+              */}
+              <DropdownMenuItem onSelect={() => requestAnimationFrame(() => setViendo(true))}>
+                <DollarSign />
+                Ver precios
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onSelect={() => requestAnimationFrame(() => setViendo(true))}>
+                <Boxes />
+                Ver stock
+                {/* El número, ya en el menú: muchas veces es lo único que se
+                    venía a mirar, y así no hace falta abrir nada. */}
+                <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
+                  {linea.stock}
+                </span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/*
                 `onSelect` con el diálogo: Radix devuelve el foco al
                 disparador al cerrarse el menú, y si el diálogo ya se montó se
                 lo quita de las manos. Se deja cerrar antes con un
@@ -567,6 +605,10 @@ export function FilaLinea({
         cerrar y abrir otra enseñaría los datos de la primera. Desmontarlo es
         lo que garantiza que empiece por lo que hay AHORA en la línea.
       */}
+      {viendo ? (
+        <PreciosYStock linea={linea} onCerrar={() => setViendo(false)} />
+      ) : null}
+
       {editando ? (
         <EditarArticulo
           linea={linea}

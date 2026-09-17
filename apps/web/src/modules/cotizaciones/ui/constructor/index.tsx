@@ -13,6 +13,7 @@ import {
 import type { ClienteOpcion } from "../../dominio/cliente";
 import {
   aPayload,
+  avisosDeVenta,
   bloqueos as calcularBloqueos,
   ENTREGAS,
   estadoInicial,
@@ -157,6 +158,8 @@ export function Constructor({
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
+  // Lo que conviene mirar y NO impide guardar (17/09): hoy, el precio mínimo.
+  const avisos = useMemo(() => avisosDeVenta(estado), [estado]);
 
   return (
     <form action={guardar} className="flex flex-col gap-5 p-6">
@@ -499,6 +502,7 @@ export function Constructor({
       <ResumenConstructor
           totales={totales}
           bloqueos={bloqueos}
+          avisos={avisos}
           mostrarDescuento={estado.mostrarDescuento}
           onMostrarDescuento={(v) =>
             despachar({ tipo: "cabecera", campo: "mostrarDescuento", valor: v })

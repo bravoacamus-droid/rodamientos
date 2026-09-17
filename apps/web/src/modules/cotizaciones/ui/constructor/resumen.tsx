@@ -18,6 +18,7 @@ const dolar = (n: number) =>
 export function ResumenConstructor({
   totales,
   bloqueos,
+  avisos,
   mostrarDescuento,
   onMostrarDescuento,
   mostrarDisponibilidad,
@@ -27,6 +28,8 @@ export function ResumenConstructor({
 }: {
   totales: TotalesCotizacion;
   bloqueos: Bloqueo[];
+  /** Lo que conviene mirar, pero no impide guardar (17/09). */
+  avisos: Bloqueo[];
   mostrarDescuento: boolean;
   onMostrarDescuento: (v: boolean) => void;
   mostrarDisponibilidad: boolean;
@@ -158,6 +161,38 @@ export function ResumenConstructor({
               <li key={b.campo}>{b.mensaje}</li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {/*
+        Los avisos, en su propio recuadro y con otras palabras.
+
+        Van SEPARADOS de los bloqueos a propósito. Desde el 17/09 bajar del
+        precio mínimo ya no impide guardar —Luis, con las tres opciones
+        delante— pero sigue siendo lo que más conviene mirar antes de mandar
+        el papel. Si se mezclara con «Falta para poder guardar», diría una
+        mentira: no falta nada, se puede guardar.
+
+        Y hace falta aquí, y no solo en la fila: en una cotización de veinte
+        líneas, el rojo de la línea catorce está fuera de la pantalla cuando
+        se va a pulsar guardar.
+
+        `order-1` también: se lee antes que los interruptores del documento,
+        que es lo que menos decide.
+      */}
+      {avisos.length > 0 ? (
+        <section className="flex-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface-2)] p-3 lg:order-1">
+          <p className="text-sm font-medium">Antes de mandarla, mira esto</p>
+          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-[var(--fg-muted)]">
+            {avisos.map((a) => (
+              <li key={a.campo}>{a.mensaje}</li>
+            ))}
+          </ul>
+          {/* Se dice que se puede guardar igual, para que el recuadro no se
+              lea como un impedimento. */}
+          <p className="mt-2 text-sm text-[var(--fg-subtle)]">
+            Puedes guardarla igual: el precio lo decides tú.
+          </p>
         </section>
       ) : null}
 

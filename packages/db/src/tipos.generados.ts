@@ -4397,6 +4397,8 @@ export type Database = {
           familia: string
           id: string
           marca: string
+          precio_mercado: number
+          precio_minimo: number
           precio_promedio: number
           precio_venta: number
           relevancia: number

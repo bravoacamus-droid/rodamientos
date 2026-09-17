@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   aPayload,
+  avisosDeVenta,
   bloqueos,
   estadoInicial,
   lineasSinStock,
@@ -133,11 +134,28 @@ describe("negociación", () => {
     expect(revisionDe(e.lineas[0]!).ok).toBe(false);
   });
 
-  it("pero guardar queda bloqueado, con el código en el mensaje", () => {
+  /*
+    La regla cambió el 17/09 y estos dos tests la fijan por los dos lados.
+
+    Bajar del precio mínimo AVISA, no impide. Luis lo decidió con las tres
+    opciones delante, por lo que Willy dijo el 16/09 (4:29): *«a un cliente
+    puede que le dé con 20, a otro con el doble o con 50 % de margen. Eso yo
+    lo manejo»*.
+
+    Se prueban las dos mitades a propósito: que ya no bloquee **y** que siga
+    avisando. Quitar el bloqueo sin dejar el aviso sería perder la advertencia
+    entera, que es lo contrario de lo que se pidió.
+  */
+  it("bajar del piso NO impide guardar", () => {
     const e = reducir(base, { tipo: "precio", key, valor: 11.0 });
-    const b = bloqueos(e);
-    expect(b.some((x) => x.campo === "piso")).toBe(true);
-    expect(b.find((x) => x.campo === "piso")?.mensaje).toContain("6209-2RS1/C3");
+    expect(bloqueos(e).some((x) => x.campo === "piso")).toBe(false);
+  });
+
+  it("pero sí avisa, con el código en el mensaje", () => {
+    const e = reducir(base, { tipo: "precio", key, valor: 11.0 });
+    const a = avisosDeVenta(e);
+    expect(a.some((x) => x.campo === "piso")).toBe(true);
+    expect(a.find((x) => x.campo === "piso")?.mensaje).toContain("6209-2RS1/C3");
   });
 
   it("detecta las DOS palancas juntas", () => {
@@ -183,13 +201,16 @@ describe("negociación", () => {
     expect(reducir(base, { tipo: "descuento", key, valor: -5 }).lineas[0]?.descuentoPct).toBe(0);
   });
 
-  it("un producto sin piso cargado no bloquea nada", () => {
+  it("un producto sin piso cargado no avisa ni bloquea", () => {
+    // Es el caso de casi todo el catálogo: 790 productos entraron del Excel
+    // sin precio mínimo. Con el piso en 0 no hay nada que advertir.
     const sinPiso = { ...P6209, id: "x", precio_minimo: 0 };
     const e = correr(
       estadoInicial("cli"),
       { tipo: "agregar", producto: sinPiso },
       { tipo: "precio", key: "l1", valor: 0.5 },
     );
+    expect(avisosDeVenta(e)).toEqual([]);
     expect(bloqueos(e).some((b) => b.campo === "piso")).toBe(false);
   });
 });
@@ -284,7 +305,7 @@ describe("bloqueos", () => {
     expect(bloqueos(e)).toEqual([]);
   });
 
-  it("con varias líneas bajo el piso las cuenta y las nombra", () => {
+  it("con varias líneas bajo el piso las cuenta y las nombra en el AVISO", () => {
     const e = correr(
       estadoInicial("cli"),
       { tipo: "agregar", producto: P6209 },
@@ -292,7 +313,10 @@ describe("bloqueos", () => {
       { tipo: "precio", key: "l1", valor: 1 },
       { tipo: "precio", key: "l2", valor: 1 },
     );
-    const m = bloqueos(e).find((x) => x.campo === "piso")?.mensaje ?? "";
+    // Dos líneas tiradas de precio y aun así se puede guardar (17/09).
+    expect(bloqueos(e).some((x) => x.campo === "piso")).toBe(false);
+
+    const m = avisosDeVenta(e).find((x) => x.campo === "piso")?.mensaje ?? "";
     expect(m).toContain("2 líneas");
     expect(m).toContain("6209-2RS1/C3");
     expect(m).toContain("7210 BEP");

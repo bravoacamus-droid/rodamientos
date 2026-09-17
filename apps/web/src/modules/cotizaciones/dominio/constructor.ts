@@ -26,6 +26,8 @@ export interface ProductoParaCotizar {
   precio_venta: number;
   precio_minimo?: number;
   costo_promedio?: number;
+  /** Referencia de a cuánto se ve el mercado (025). Para el modal de precios. */
+  precio_mercado?: number;
 }
 
 import { entregaDelDocumento, type Disponibilidad } from "./disponibilidad";
@@ -44,6 +46,14 @@ export interface LineaConstructor {
   costoUnitario: number;
   /** Piso del maestro. 0 = el producto no tiene P.M. cargado. */
   precioMinimo: number;
+  /**
+   * A cuánto se ve el mercado (025). 0 = no cargado.
+   *
+   * No entra en ningún cálculo: es una referencia para negociar, y por eso
+   * vive en el modal de precios y no en la fila. Puede estar por encima o por
+   * debajo del precio de lista y seguir siendo verdad.
+   */
+  precioMercado: number;
   /** P.V. del maestro, para poder volver a él tras negociar. */
   precioLista: number;
   stock: number;
@@ -238,6 +248,7 @@ function desdeProducto(
     descuentoPct: 0,
     costoUnitario: producto.costo_promedio ?? 0,
     precioMinimo: producto.precio_minimo ?? 0,
+    precioMercado: producto.precio_mercado ?? 0,
     precioLista: producto.precio_venta,
     stock: producto.stock ?? 0,
     disponibilidad: "inmediata",
@@ -466,6 +477,43 @@ export function bloqueos(estado: EstadoConstructor): Bloqueo[] {
     lista.push({ campo: "lineas", mensaje: "La cotización no tiene productos." });
   }
 
+  /*
+    El precio mínimo NO está aquí, y es deliberado desde el 17/09.
+
+    Estuvo: una línea bajo el mínimo entraba en esta lista y apagaba el botón
+    de guardar. Y eso contradice lo único que Willy dijo del precio en la
+    reunión del 16/09 (4:29): *«a un cliente puede que le dé con 20, a otro
+    puede que le dé con el doble o con 50 % de margen. Eso yo lo manejo»*.
+
+    No se notaba porque de los 790 productos casi ninguno tiene mínimo
+    cargado, así que el piso era 0 y no saltaba nunca. Habría empezado a
+    frenarle cotizaciones justo la semana que cargara sus precios reales.
+
+    Se convierte en AVISO —`avisosDeVenta`, aquí debajo— y no se pierde nada:
+    la fila sigue en rojo, se sigue diciendo cuánto falta y el botón «Dejar en
+    el mínimo» sigue estando. Lo que desaparece es la puerta cerrada.
+
+    Y el registro tampoco se pierde: `cotizacion_items.precio_minimo_ref`
+    guarda, línea a línea, cuál era el mínimo cuando se cotizó. Saber quién
+    bajó del piso y cuánto es una consulta, no una función nueva.
+
+    Decisión de Luis, 17/09, con las tres opciones delante.
+  */
+  return lista;
+}
+
+/**
+ * Lo que conviene mirar antes de guardar, pero no impide guardar.
+ *
+ * Distinto de `bloqueos()` a propósito: aquello es «no se puede», esto es «¿lo
+ * sabes?». Mezclarlos fue el error que se corrigió el 17/09 — un aviso con
+ * forma de puerta cerrada obliga a falsear el dato para poder seguir.
+ *
+ * Va aparte de la fila porque una cotización de veinte líneas no se revisa
+ * entera antes de guardar: si la catorce va bajo el mínimo, el rojo de esa
+ * fila está fuera de la pantalla.
+ */
+export function avisosDeVenta(estado: EstadoConstructor): Bloqueo[] {
   const bajas = lineasBajoPiso(
     estado.lineas.map((l) => ({
       cantidad: l.cantidad,
@@ -474,21 +522,22 @@ export function bloqueos(estado: EstadoConstructor): Bloqueo[] {
       precioMinimo: l.precioMinimo,
     })),
   );
-  if (bajas.length > 0) {
-    const codigos = bajas
-      .map((b) => estado.lineas[b.indice]?.codigo)
-      .filter(Boolean)
-      .join(", ");
-    lista.push({
+  if (bajas.length === 0) return [];
+
+  const codigos = bajas
+    .map((b) => estado.lineas[b.indice]?.codigo)
+    .filter(Boolean)
+    .join(", ");
+
+  return [
+    {
       campo: "piso",
       mensaje:
         bajas.length === 1
-          ? `${codigos} está por debajo del precio mínimo.`
-          : `${bajas.length} líneas están por debajo del precio mínimo: ${codigos}.`,
-    });
-  }
-
-  return lista;
+          ? `${codigos} va por debajo de su precio mínimo de venta.`
+          : `${bajas.length} líneas van por debajo de su precio mínimo de venta: ${codigos}.`,
+    },
+  ];
 }
 
 /** Cuántas líneas se están cotizando sin stock suficiente. */

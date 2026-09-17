@@ -134,6 +134,7 @@ export default async function PaginaEditarCotizacion({
       // producto. Inventarlos aquí sería peor — diría que hay un piso que
       // nadie ha comprobado.
       precioMinimo: 0,
+      precioMercado: 0,
       precioLista: l.valor_unitario,
       stock: 0,
       disponibilidad: l.disponibilidad,
