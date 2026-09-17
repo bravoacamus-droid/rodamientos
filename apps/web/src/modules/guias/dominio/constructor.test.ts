@@ -38,6 +38,7 @@ const COT: CotizacionDespachable = {
       cantidad: 20,
       despachado: 5,
       peso_kg: 0.13,
+      stock: 3,
     },
     {
       cotizacion_item_id: "bbbb2222-2222-2222-2222-222222222222",
@@ -48,6 +49,7 @@ const COT: CotizacionDespachable = {
       cantidad: 6,
       despachado: 6,
       peso_kg: 0.55,
+      stock: 0,
     },
   ],
 };
@@ -308,6 +310,61 @@ describe("avisos", () => {
   it("avisa de que falta el ubigeo, que SUNAT va a pedir", () => {
     const estado = conCotizacion({ tipo: "campo", campo: "ubigeoLlegada", valor: "" });
     expect(avisos(estado).some((a) => a.key === "ubigeo")).toBe(true);
+  });
+
+  /*
+    §4.3 — la guía se puede emitir sin stock, pero se dice.
+
+    Willy, 42:27: *«yo emito mi guía y salgo a recoger las compras que ya
+    hice»*. Así que esto avisa y NO bloquea, y estos tests vigilan las dos
+    mitades: que el aviso salga, y que no se cuele en los bloqueos.
+
+    En el ejemplo, p1 pide 20, ya salieron 5 —así que en esta guía caben 15—
+    y en almacén hay 3. Es el caso de Willy tal cual.
+  */
+  it("avisa cuando sale más de lo que hay, y dice cuánto hay", () => {
+    const aviso = avisos(conCotizacion()).find((a) => a.key === "stock");
+    expect(aviso).toBeDefined();
+    expect(aviso!.mensaje).toContain("6205-2RS1/C3");
+    expect(aviso!.mensaje).toContain("hay 3");
+  });
+
+  it("no avisa si lo que sale cabe en lo que hay", () => {
+    const estado = conCotizacion({
+      tipo: "cantidad",
+      key: "aaaa1111-1111-1111-1111-111111111111",
+      valor: 2,
+    });
+    expect(avisos(estado).some((a) => a.key === "stock")).toBe(false);
+  });
+
+  it("justo lo que hay NO es falta de stock", () => {
+    const estado = conCotizacion({
+      tipo: "cantidad",
+      key: "aaaa1111-1111-1111-1111-111111111111",
+      valor: 3,
+    });
+    expect(avisos(estado).some((a) => a.key === "stock")).toBe(false);
+  });
+
+  it("una línea en cero no avisa, aunque no haya stock", () => {
+    // Si no sale nada de esa línea, no hay nada de lo que avisar.
+    const estado = conCotizacion({
+      tipo: "cantidad",
+      key: "aaaa1111-1111-1111-1111-111111111111",
+      valor: 0,
+    });
+    expect(avisos(estado).some((a) => a.key === "stock")).toBe(false);
+  });
+
+  it("la falta de stock NO impide guardar ni emitir: es decisión de Willy", () => {
+    const estado = conCotizacion(
+      { tipo: "campo", campo: "transportistaPlaca", valor: "AUE169" },
+      { tipo: "peso", valor: 2 },
+    );
+    expect(avisos(estado).some((a) => a.key === "stock")).toBe(true);
+    expect(bloqueosBorrador(estado)).toEqual([]);
+    expect(bloqueosEmision(estado)).toEqual([]);
   });
 });
 

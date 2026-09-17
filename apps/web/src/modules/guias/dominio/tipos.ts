@@ -174,5 +174,16 @@ export interface CotizacionDespachable {
     despachado: number;
     /** Peso unitario del maestro. Cero si nadie lo registró. */
     peso_kg: number;
+    /**
+     * Lo que hay HOY en el almacén de este producto.
+     *
+     * No impide nada —Willy emite la guía y sale a recoger la compra
+     * (42:27)—, pero sin el dato la pantalla no puede ni avisar, que es lo
+     * que faltaba: cotizaciones dice «sin stock» y la guía, que es donde el
+     * stock sale de verdad, no decía nada.
+     *
+     * Puede venir NEGATIVO, y es deliberado (002).
+     */
+    stock: number;
   }[];
 }

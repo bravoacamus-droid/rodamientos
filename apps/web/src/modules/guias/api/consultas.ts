@@ -381,6 +381,20 @@ export async function cotizacionesDespachables(): Promise<
   }
 }
 
+/**
+ * El saldo de un producto, que PostgREST devuelve como fila o como lista.
+ *
+ * Depende de cómo infiera la relación, y las dos formas son legítimas: si solo
+ * se tratara una, el stock llegaría como 0 sin que nadie se enterase — y un
+ * cero falso en esta pantalla es peor que no tener el dato, porque avisaría de
+ * una falta que no existe.
+ */
+function stockDe(s: { cantidad: number }[] | { cantidad: number } | null): number {
+  if (!s) return 0;
+  if (Array.isArray(s)) return Number(s[0]?.cantidad ?? 0);
+  return Number(s.cantidad ?? 0);
+}
+
 /** Una cotización con lo que falta por despachar de cada línea. */
 export async function cotizacionParaDespachar(
   id: string,
@@ -397,7 +411,7 @@ export async function cotizacionParaDespachar(
            cotizacion_items(
              id, producto_id, orden, codigo, descripcion, unidad_codigo,
              cantidad, cantidad_aprobada,
-             productos(peso_kg)
+             productos(peso_kg, stock(cantidad))
            )`,
         )
         .eq("id", id)
@@ -441,7 +455,12 @@ export async function cotizacionParaDespachar(
         unidad_codigo: string | null;
         cantidad: number;
         cantidad_aprobada: number | null;
-        productos: { peso_kg: number | null } | null;
+        productos: {
+          peso_kg: number | null;
+          // PostgREST devuelve la relación 1-1 como fila o como lista segun
+          // como la infiera; se tratan las dos, igual que en kits.
+          stock: { cantidad: number }[] | { cantidad: number } | null;
+        } | null;
       }> | null;
     };
 
@@ -469,6 +488,7 @@ export async function cotizacionParaDespachar(
             cantidad: confirmado(i),
             despachado: despachado.get(String(i.id)) ?? 0,
             peso_kg: Number(i.productos?.peso_kg ?? 0),
+            stock: stockDe(i.productos?.stock ?? null),
           })),
       },
     };

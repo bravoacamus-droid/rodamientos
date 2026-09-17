@@ -253,10 +253,24 @@ deja saldo negativo y quien la prepara no se entera. El único que lo dice es el
 motor de alertas (021) —`stock_negativo`, severidad crítica— y habla **después
 del hecho consumado**.
 
-No bloquear es la decisión de Willy y se respeta. **Avisar es lo que falta**, y
-el patrón ya está escrito en cotizaciones: sería llevar el stock a
-`cotizacionParaDespachar`, un campo en `LineaDespacho` y una entrada en
-`avisos()`. Pendiente de decidir con Luis.
+No bloquear es la decisión de Willy y se respeta. **Avisar era lo que faltaba,
+y se hizo el mismo 17/09** (Luis: «vale»):
+
+- `cotizacionParaDespachar` trae el stock de cada línea.
+- `LineaDespacho` lo lleva, y **solo para avisar**: no entra en ningún bloqueo
+  ni en el payload.
+- La tabla gana la columna **«Hay»** —esa palabra y no «Stock», que es como se
+  pregunta hablando—, en ámbar cuando sale más de lo que hay.
+- `avisos()` añade UNA entrada, no una por línea: con seis líneas sin stock,
+  seis avisos iguales empujaban fuera de la pantalla al del peso y al del
+  ubigeo, que sí piden hacer algo.
+
+Comprobado en `/guias/nueva` con `COT1-000007`: la columna «Hay» dice 0 en las
+tres, y abajo, en **«Conviene mirar»** y no en «Falta para guardar», sale
+*«3 líneas salen con más de lo que hay en almacén: 6310-2Z/C3 (salen 4, hay 0)
+· … El saldo quedará en negativo al emitir»*. Al poner una línea en cero, el
+aviso baja a dos solo. Cinco tests nuevos en el dominio vigilan las dos
+mitades: que avise, y que no bloquee.
 
 ---
 
@@ -395,7 +409,7 @@ WhatsApp (14:34).
 
 ## ✅ Estado al cerrar el 17/09
 
-Del sprint no queda nada por hacer. Lo de los kits lo desbloqueó Luis el mismo 17/09 —agrupación, no ensamblaje— y está construido (§5). Lo único abierto es una mejora que salió al comprobar §4.3: **la guía no avisa de la falta de stock**.
+Del sprint no queda nada por hacer. Lo de los kits lo desbloqueó Luis el mismo 17/09 —agrupación, no ensamblaje— y está construido (§5). La mejora que salió al comprobar §4.3 —que la guía no avisaba de la falta de stock— también quedó hecha.
 
 | | Estado |
 |---|---|
@@ -407,7 +421,7 @@ Del sprint no queda nada por hacer. Lo de los kits lo desbloqueó Luis el mismo 
 | **§3** El precio mínimo | ✅ Avisa y no impide (decisión de Luis) |
 | **§4.1** Factura con varias guías | ✅ Migración 084. Y salió que NINGUNA factura tenía guía |
 | **§4.2** La O/C a mano | ✅ No estaba: se heredaba de la cotización y no se podía teclear |
-| **§4.3** La guía antes del stock | ✅ Comprobado: no lo impide ninguna de las cuatro capas. Y salió que TAMPOCO avisa, al revés que cotizaciones |
+| **§4.3** La guía antes del stock | ✅ Comprobado: no lo impide ninguna de las cuatro capas. Salió que tampoco avisaba, y eso sí se arregló: columna «Hay» y aviso que no bloquea |
 | **§5** Kits | ✅ Luis decidió agrupación, no ensamblaje. Construido: 085-088, la guía explota el kit en sus piezas, y precio y descuento por pieza. Falta que Willy mande los campos que quedó en mandar por WhatsApp (14:34) |
 
 Y dos fallos que el acta no podía ver, encontrados por el camino:

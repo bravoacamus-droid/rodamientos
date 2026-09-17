@@ -216,6 +216,9 @@ export function ConstructorGuia({
                       <th className="py-2 pr-3 font-medium">Descripción</th>
                       <th className="py-2 pr-3 text-right font-medium">Pedido</th>
                       <th className="py-2 pr-3 text-right font-medium">Ya salió</th>
+                      {/* «Hay» y no «Stock»: es la palabra que se usa
+                          hablando —«¿hay?»— y cabe en menos sitio. */}
+                      <th className="py-2 pr-3 text-right font-medium">Hay</th>
                       <th className="py-2 pr-3 text-right font-medium">Sale ahora</th>
                     </tr>
                   </thead>
@@ -236,6 +239,38 @@ export function ConstructorGuia({
                         <td className="py-2 pr-3 text-right tabular text-[var(--fg-muted)]">
                           {l.despachado || "—"}
                         </td>
+
+                        {/*
+                          Lo que hay en el almacén.
+
+                          No impide despachar —Willy emite la guía y sale a
+                          recoger la compra (42:27)—, pero hasta hoy no se
+                          decía en ninguna parte y con 787 de 793 productos a
+                          cero casi cualquier guía dejaba saldo negativo sin
+                          que se enterase quien la preparaba.
+
+                          Se marca la LÍNEA y no el número suelto: lo que
+                          importa no es que haya poco, es que salga más de lo
+                          que hay. Un producto con 2 unidades del que salen 2
+                          no tiene ningún problema.
+                        */}
+                        <td className="py-2 pr-3 text-right">
+                          <span
+                            className={`tabular ${
+                              l.cantidad > 0 && l.stock < l.cantidad
+                                ? "font-semibold text-[var(--warn)]"
+                                : "text-[var(--fg-muted)]"
+                            }`}
+                            title={
+                              l.cantidad > 0 && l.stock < l.cantidad
+                                ? `Salen ${l.cantidad} y hay ${l.stock}. Se puede emitir igual: el saldo quedará en negativo.`
+                                : undefined
+                            }
+                          >
+                            {l.stock}
+                          </span>
+                        </td>
+
                         <td className="py-2 pr-3 text-right">
                           <Input
                             type="number"

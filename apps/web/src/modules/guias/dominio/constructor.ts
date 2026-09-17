@@ -34,6 +34,14 @@ export interface LineaDespacho {
   cantidad: number;
   /** Peso unitario del maestro. Cero si nadie lo registró. */
   pesoUnitario: number;
+  /**
+   * Lo que hay hoy en el almacén. Puede ser negativo (002).
+   *
+   * Está aquí solo para poder AVISAR. No entra en ningún bloqueo ni en el
+   * payload: Willy emite la guía y luego sale a recoger la compra (42:27), y
+   * eso es una decisión suya que la pantalla no discute.
+   */
+  stock: number;
 }
 
 export interface EstadoGuiaEnCurso {
@@ -259,6 +267,7 @@ export function reducir(
           despachado: l.despachado,
           cantidad: l.falta,
           pesoUnitario: l.peso_kg,
+          stock: l.stock,
         })),
       };
     }
@@ -401,6 +410,38 @@ export function avisos(estado: EstadoGuiaEnCurso): Aviso[] {
         mensaje: `${l.codigo}: salen ${l.cantidad} de ${falta}. Quedan ${redondear2(falta - l.cantidad)} por despachar en otra guía.`,
       });
     }
+  }
+
+  /*
+    Lo que sale sin haberlo (§4.3).
+
+    Willy, 42:27: *«una vez que me confirman, me envían una orden de compra, yo
+    emito mi guía y salgo a recoger las compras que ya hice»*. Así que esto NO
+    bloquea, igual que en la cotización.
+
+    Pero se dice, y hasta el 17/09 no se decía en ninguna parte: la base acepta
+    el saldo negativo por diseño (002), las Server Actions no lo miran y la
+    pantalla tampoco. Con 787 de 793 productos a cero, casi cualquier guía
+    dejaba el almacén en negativo sin que quien la preparaba se enterase. El
+    único que hablaba era el motor de alertas (021), después de que la
+    mercadería ya hubiera salido.
+
+    Va en UN solo aviso y no en uno por línea: con seis líneas sin stock,
+    seis avisos iguales empujan fuera de la pantalla al del peso y al del
+    ubigeo, que sí piden hacer algo. Los códigos van dentro del mensaje.
+  */
+  const sinStock = estado.lineas.filter((l) => l.cantidad > 0 && l.stock < l.cantidad);
+  if (sinStock.length > 0) {
+    const detalle = sinStock
+      .map((l) => `${l.codigo} (salen ${l.cantidad}, hay ${l.stock})`)
+      .join(" · ");
+    lista.push({
+      key: "stock",
+      mensaje:
+        sinStock.length === 1
+          ? `Sale más de lo que hay en almacén: ${detalle}. El saldo quedará en negativo al emitir.`
+          : `${sinStock.length} líneas salen con más de lo que hay en almacén: ${detalle}. El saldo quedará en negativo al emitir.`,
+    });
   }
 
   if (estado.pesoDeclarado !== null && pesoCalculado(estado) > 0) {
