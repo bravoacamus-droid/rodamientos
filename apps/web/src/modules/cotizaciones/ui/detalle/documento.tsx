@@ -144,7 +144,39 @@ export function Documento({
         n: l.n,
         codigo: <span className="font-medium">{l.codigo}</span>,
         marca: l.marca,
-        descripcion: l.descripcion,
+        /*
+          La descripción, y debajo lo que lleva el kit.
+
+          Willy, 16/09 (10:35): *«puedes indicar kit de reparación de máquina
+          tal y debajo puede aparecer una lista. Pero no son varios ítems de la
+          factura: todo eso es un solo ítem que tiene un solo precio»*.
+
+          Sin precios, que es lo que él remarcó: *«solamente se podría indicar
+          lo que contiene, pero no precios detallados por cada parte»*.
+          Detallarlos invitaría al cliente a comprar las piezas sueltas por su
+          cuenta, que es justo lo contrario de vender un kit.
+
+          Y va DENTRO de la celda de la descripción, no como filas aparte: en
+          un comprobante una fila es un ítem con su importe, y las líneas a
+          cero se rechazan.
+        */
+        descripcion:
+          l.contiene.length > 0 ? (
+            <>
+              <span className="block">{l.descripcion}</span>
+              {/*
+                11.5 px y no 10: la tabla del papel está en 12.75 y Willy no ve
+                bien. Un escalón se lee; dos, no. Es más pequeño que la
+                descripción a propósito —es información secundaria— pero no
+                tanto como para que haya que acercar la hoja.
+              */}
+              <span className="mt-0.5 block text-[11.5px] leading-snug text-[#444]">
+                Contiene: {l.contiene.map((c) => `${c.cantidad} × ${c.texto}`).join(" · ")}
+              </span>
+            </>
+          ) : (
+            l.descripcion
+          ),
         cantidad: <span className="tabular">{l.cantidad}</span>,
         unidad: l.unidad,
         entrega: l.entrega,

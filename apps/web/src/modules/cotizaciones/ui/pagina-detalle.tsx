@@ -93,6 +93,16 @@ export default async function PaginaDetalleCotizacion({
       unidad: l.unidad_codigo,
       valorUnitario: l.valor_unitario,
       descuentoPct: l.descuento_pct,
+      // Lo que lleva el kit, para imprimirlo debajo de la descripción. Sin
+      // precios: Willy, 16/09, *«no precios detallados por cada parte»*.
+      contiene: (l.productos?.kit_componentes ?? [])
+        .slice()
+        .sort((a, b) => a.orden - b.orden)
+        .map((c) => ({
+          cantidad: c.cantidad,
+          codigo: c.productos?.codigo ?? "",
+          descripcion: c.productos?.descripcion ?? "",
+        })),
       disponibilidad: l.disponibilidad,
       diasEntrega: l.dias_entrega,
     })),

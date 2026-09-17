@@ -84,3 +84,23 @@ commit;
 -- Para comprobarlo:
 --
 --   select codigo, descripcion, archivado from productos where es_kit;
+
+-- ###########################################################################
+-- 5 · La cotización COT1-000009, del 17/09
+-- ###########################################################################
+--
+-- Se creó para comprobar que un kit se cotiza como UN ítem y que el papel
+-- imprime debajo lo que contiene. Lleva una sola línea: ZZ-KIT-PRUEBA.
+--
+-- Gastó un correlativo de COT1, que NO es una serie fiscal —las cotizaciones
+-- no se declaran—, así que el salto no hay que explicárselo a nadie. Se anula
+-- en vez de borrarse: una cotización borrada deja el número sin rastro y al
+-- revisar la lista no se entiende por qué falta.
+
+begin;
+
+update cotizaciones set estado = 'anulada'
+ where numero = 'COT1-000009'
+   and estado = 'borrador';
+
+commit;

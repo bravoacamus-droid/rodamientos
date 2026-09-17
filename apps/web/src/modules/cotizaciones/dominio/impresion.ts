@@ -51,6 +51,23 @@ export interface LineaCruda {
   disponibilidad?: Disponibilidad;
   /** Plazo propio de la línea. Null = el habitual de su tipo. */
   diasEntrega?: number | null;
+  /**
+   * Si esta línea es un KIT, lo que lleva dentro.
+   *
+   * Willy, 16/09 (10:35): *«puedes indicar kit de reparación de máquina tal y
+   * debajo puede aparecer una lista. Pero no son varios ítems de la factura:
+   * todo eso es un solo ítem que tiene un solo precio. Solamente se podría
+   * indicar lo que contiene, pero no precios detallados por cada parte»*.
+   *
+   * Por eso son `{ cantidad, texto }` y NO llevan importe. El precio de cada
+   * pieza es información interna, y detallarlo en el papel invita al cliente a
+   * comprarlas sueltas por su cuenta — que es justo lo contrario de vender un
+   * kit.
+   *
+   * Y cuidado con SUNAT: esto va como parte de la DESCRIPCIÓN del ítem, nunca
+   * como líneas con importe 0. Un comprobante con líneas a cero se rechaza.
+   */
+  contiene?: { cantidad: number; codigo: string; descripcion: string }[];
 }
 
 export interface DatosImpresion {
@@ -91,6 +108,8 @@ export interface LineaImpresa {
   importe: number;
   /** Ya resuelto a texto: «Inmediata», «15 días · exterior». */
   entrega: string;
+  /** Lo que lleva dentro, si es un kit. Sin precios, a propósito. */
+  contiene: { cantidad: number; texto: string }[];
 }
 
 export interface CotizacionImpresa {
@@ -197,6 +216,12 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
       valorUnitario: l.valorUnitario,
       descuentoPct: l.descuentoPct,
     }),
+    contiene: (l.contiene ?? []).map((c) => ({
+      cantidad: c.cantidad,
+      // Al componente se le aplica la misma limpieza que a la línea (C3): su
+      // descripción no repite el código, porque el código ya va delante.
+      texto: `${c.codigo} ${limpiarDescripcion(c.descripcion, c.codigo, null)}`.trim(),
+    })),
     // Resuelto aquí y no en la plantilla: el texto que lee el cliente sale de
     // una sola función, y así el PDF y lo que se manda por WhatsApp dicen lo
     // mismo sin que nadie tenga que acordarse.

@@ -371,6 +371,21 @@ export async function cotizacionPorId(id: string): Promise<
       /** Lo ya facturado de esta línea (047). Decide si queda algo por cobrar. */
       cantidad_atendida: number;
       importe: number;
+      /**
+       * El producto, solo para saber si es un KIT y qué lleva (085).
+       *
+       * Willy, 16/09: el kit se cotiza como un ítem pero el papel dice debajo
+       * lo que contiene. Es lo único que se lee del maestro aquí: el resto de
+       * la línea es su copia impresa y no se toca.
+       */
+      productos: {
+        es_kit: boolean;
+        kit_componentes: {
+          cantidad: number;
+          orden: number;
+          productos: { codigo: string; descripcion: string } | null;
+        }[];
+      } | null;
     }[];
     emisor: {
       razon_social: string;
@@ -405,7 +420,14 @@ export async function cotizacionPorId(id: string): Promise<
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,
-                            cantidad_aprobada, cantidad_atendida)`,
+                            cantidad_aprobada, cantidad_atendida,
+                            productos(
+                              es_kit,
+                              kit_componentes!kit_componentes_kit_id_fkey(
+                                cantidad, orden,
+                                productos!kit_componentes_producto_id_fkey(codigo, descripcion)
+                              )
+                            ))`,
         )
         .eq("id", id)
         .maybeSingle(),

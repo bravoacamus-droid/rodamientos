@@ -423,3 +423,60 @@ describe("la columna «Entrega», y el papel que se contradecía", () => {
     expect(armarCotizacionImpresa(dosPlazos).mostrarDisponibilidad).toBe(true);
   });
 });
+
+/**
+ * Los KITS en el papel (085).
+ *
+ * Willy, 16/09 (10:35): *«puedes indicar kit de reparación de máquina tal y
+ * debajo puede aparecer una lista. Pero no son varios ítems de la factura:
+ * todo eso es un solo ítem que tiene un solo precio. Solamente se podría
+ * indicar lo que contiene, pero no precios detallados por cada parte»*.
+ */
+describe("kits", () => {
+  const conKit = () =>
+    base({
+      lineas: [
+        {
+          codigo: "KIT-1",
+          marca: null,
+          descripcion: "KIT DE REPARACION MOTORREDUCTOR 1",
+          cantidad: 2,
+          unidad: "NIU",
+          valorUnitario: 300,
+          descuentoPct: 0,
+          contiene: [
+            { cantidad: 2, codigo: "6310-2Z/C3", descripcion: "6310-2Z/C3 RODAMIENTO RIGIDO" },
+            { cantidad: 1, codigo: "45X60X8TC", descripcion: "RETEN 45 X 60 X 8 TC" },
+          ],
+        },
+      ],
+    });
+
+  it("el kit es UNA línea, no una por componente", () => {
+    const c = armarCotizacionImpresa(conKit());
+    expect(c.lineas).toHaveLength(1);
+    expect(c.lineas[0]?.importe).toBe(600);
+  });
+
+  it("lleva su contenido, y el código no se repite dentro de la descripción", () => {
+    const c = armarCotizacionImpresa(conKit());
+    const dentro = c.lineas[0]?.contiene ?? [];
+    expect(dentro).toHaveLength(2);
+    // «6310-2Z/C3 RODAMIENTO RIGIDO» se queda en «6310-2Z/C3 RODAMIENTO
+    // RIGIDO»: el código va delante UNA vez, no dos (C3).
+    expect(dentro[0]?.texto).toBe("6310-2Z/C3 RODAMIENTO RIGIDO");
+    expect(dentro[0]?.cantidad).toBe(2);
+  });
+
+  it("el contenido NO lleva precios ni importes", () => {
+    const c = armarCotizacionImpresa(conKit());
+    for (const x of c.lineas[0]?.contiene ?? []) {
+      expect(Object.keys(x).sort()).toEqual(["cantidad", "texto"]);
+    }
+  });
+
+  it("una línea normal no trae contenido, y no revienta", () => {
+    const c = armarCotizacionImpresa(base());
+    expect(c.lineas[0]?.contiene).toEqual([]);
+  });
+});
