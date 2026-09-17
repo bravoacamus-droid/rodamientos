@@ -29,7 +29,35 @@ eso ya tiene nombre. Va en §1.
 
 ---
 
+## ✅ CERRADO el 17/09 — el bloque «Flujo de cotizaciones» del acta
+
+Los cuatro puntos que el acta pone bajo *Flujo de cotizaciones* están hechos y
+vistos en pantalla. Queda de cotización solo **§5, los kits**, que dependen de
+una respuesta de Willy.
+
+| Del acta | Cómo quedó |
+|---|---|
+| Botón «+» para crear marca | Al costado de Marca, Familia y Sub-familia. El campo se convierte en «Marca nueva» con su caja, «Crear» y una ✕ — sin diálogo dentro de diálogo |
+| Precio unitario editable | Ya lo era; lo que cambió es que bajar del mínimo **avisa** y ya no impide guardar (§3) |
+| Ojo de precios de referencia | «Ver precios» y «Ver stock» en el menú de la línea, con costo, mínimo, lista, mercado, margen y stock |
+| Guardar abajo | Barra al pie, pegada, con el total al lado |
+
+Y por el camino salieron **dos fallos que el acta no podía ver**:
+
+1. **`buscar_productos` llevaba tres semanas sin reemplazarse** (082). La
+   búsqueda por marca no encontraba nada y el precio mínimo no llegaba nunca
+   al cotizador — con lo que todo el aparato de la negociación llevaba desde
+   la 011 sin ejecutarse contra un producto real.
+2. **El buscador no traía `ultimo_costo`** (083), así que un producto recién
+   cargado con su costo salía igual que uno sin costo: sin margen posible.
+
+Lo que sigue en este documento es lo que **queda**.
+
+---
+
 ## 1 · Rápidos — horas, no días
+
+*(El «+» de la marca, §1.4, ya está hecho — ver arriba.)*
 
 ### 1.1 · El interruptor de la retención · **la pieza existe, el camino no (30)**
 

@@ -66,6 +66,9 @@ export function SelectorCatalogo({
   const [texto, setTexto] = React.useState("");
   const [abierto, setAbierto] = React.useState(false);
   const [creando, setCreando] = React.useState(false);
+  /** El campo convertido en «dar de alta una nueva» (17/09). */
+  const [modoCrear, setModoCrear] = React.useState(false);
+  const [nombreNuevo, setNombreNuevo] = React.useState("");
   const contenedor = React.useRef<HTMLDivElement>(null);
   const campo = React.useRef<HTMLInputElement>(null);
   /** Si el desplegable se abrió por la ✕, y no por pulsar el campo. */
@@ -118,21 +121,109 @@ export function SelectorCatalogo({
   const yaExiste = opciones.some((o) => normal(o.nombre) === busca);
   const puedeCrear = Boolean(onCrear) && busca.length >= 2 && !yaExiste;
 
-  async function crear() {
-    if (!onCrear) return;
+  async function crear(nombre = texto.trim()) {
+    if (!onCrear || nombre.length < 2) return;
     setCreando(true);
-    const nueva = await onCrear(texto.trim());
+    const nueva = await onCrear(nombre);
     setCreando(false);
     if (nueva) {
       onElegir(nueva);
       setTexto("");
       setAbierto(false);
+      setModoCrear(false);
+      setNombreNuevo("");
     }
+  }
+
+  /*
+    El «+» de crear, en un modo propio del campo.
+
+    Willy, 16/09 (1:23), preguntado dónde se crea una marca que no existe:
+    *«aquí le voy a poner un botoncito al costado, un más, que le abre y como
+    es un componente nada más va a poder crear la marca»*.
+
+    Hasta ahora se podía crear, pero **solo si escribías** un nombre que no
+    estaba: la opción aparecía al final del desplegable. Es exactamente lo que
+    esta casa lleva treinta veces arreglando —la función existía y el camino
+    no se veía—, y la regla de la primera página lo dice: un botón tiene que
+    parecer un botón, y *«una persona que no sabe que tiene que darle click
+    ahí»* no lo descubre tecleando.
+
+    Se resuelve con un modo dentro del propio campo y NO con un diálogo: este
+    selector ya vive dentro del diálogo de alta o de edición, y un diálogo
+    encima de otro se lleva el foco y deja al de abajo sin saber si sigue
+    abierto.
+  */
+  if (modoCrear && onCrear) {
+    return (
+      <Campo id={id} label={`${label} nueva`} requerido={requerido}>
+        <div className="flex gap-2">
+          <input
+            id={id}
+            autoFocus
+            type="text"
+            value={nombreNuevo}
+            onChange={(e) => setNombreNuevo(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter crea; Escape se vuelve. Sin esto habría que ir al ratón
+              // para algo que se hace tecleando.
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void crear(nombreNuevo.trim());
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                setModoCrear(false);
+                setNombreNuevo("");
+              }
+            }}
+            placeholder={`Nombre de la ${label.toLowerCase()}`}
+            className={`${campoBase} h-control-md min-w-0 flex-1 px-3 text-sm`}
+          />
+          <button
+            type="button"
+            onClick={() => void crear(nombreNuevo.trim())}
+            disabled={creando || nombreNuevo.trim().length < 2}
+            className="h-control-md shrink-0 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+          >
+            {creando ? "Creando…" : "Crear"}
+          </button>
+          {/*
+            Volver es una ✕ y no la palabra «Cancelar».
+
+            Medido: con los dos botones de texto, la caja del nombre se quedaba
+            en «Nombre de la marc…». Los tres caben en una columna de la
+            rejilla solo si el de salir es un icono — y salir de aquí no tiene
+            consecuencias, así que no necesita una palabra que lo piense.
+          */}
+          <button
+            type="button"
+            onClick={() => {
+              setModoCrear(false);
+              setNombreNuevo("");
+            }}
+            title="Volver sin crear"
+            aria-label="Volver sin crear"
+            className="grid h-control-md w-control-md shrink-0 place-items-center rounded-md border border-[var(--border)] text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+          >
+            <X className="size-[18px]" aria-hidden="true" />
+          </button>
+        </div>
+      </Campo>
+    );
   }
 
   return (
     <Campo id={id} label={label} requerido={requerido} ayuda={ayuda}>
-      <div ref={contenedor} className="relative">
+      {/*
+        El campo y el «+», en una fila.
+
+        El «+» va FUERA del campo y no dentro: dentro sería un icono más entre
+        el texto y la ✕, y ya se vio lo que pasa con los iconos sueltos en esta
+        casa. Fuera, con su borde y su `title`, se lee como lo que es.
+      */}
+      <div className="flex gap-2">
+      <div ref={contenedor} className="relative min-w-0 flex-1">
         {/*
           Elegida, se enseña el nombre con una × para cambiarlo — no una caja
           de texto con el nombre dentro. Es el mismo trato que el filtro de
@@ -233,7 +324,7 @@ export function SelectorCatalogo({
             {puedeCrear ? (
               <button
                 type="button"
-                onClick={crear}
+                onClick={() => void crear()}
                 disabled={creando}
                 className="flex min-h-11 w-full items-center gap-1.5 border-t border-[var(--border-soft)] px-3 text-left text-sm font-medium text-brand-600 transition-colors hover:bg-[var(--surface-2)]"
               >
@@ -243,6 +334,33 @@ export function SelectorCatalogo({
             ) : null}
           </div>
         ) : null}
+      </div>
+
+      {/*
+        El «+», siempre a la vista mientras se pueda crear.
+
+        Se apaga con el campo —la sub-familia no se puede crear sin haber
+        elegido antes la familia, porque su clave ajena es compuesta— y no se
+        esconde: un botón que aparece y desaparece obliga a recordar cuándo
+        sale, y eso es lo mismo que no tenerlo.
+      */}
+      {onCrear ? (
+        <button
+          type="button"
+          onClick={() => {
+            // Lo ya tecleado en la búsqueda se lleva al nombre: si alguien
+            // escribió media marca y luego pulsa «+», no tiene que repetirla.
+            setNombreNuevo(texto.trim());
+            setModoCrear(true);
+          }}
+          disabled={deshabilitado}
+          title={`Crear una ${label.toLowerCase()} nueva`}
+          aria-label={`Crear una ${label.toLowerCase()} nueva`}
+          className="grid h-control-md w-control-md shrink-0 place-items-center rounded-md border border-[var(--border)] text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:opacity-40"
+        >
+          <Plus className="size-[18px]" aria-hidden="true" />
+        </button>
+      ) : null}
       </div>
     </Campo>
   );
