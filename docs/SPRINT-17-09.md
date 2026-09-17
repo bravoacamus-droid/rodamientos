@@ -279,6 +279,44 @@ líneas con importe 0** — eso sí lo rechazan.
 
 ---
 
+### Lo que se decidió y lo que quedó construido (17/09, tarde)
+
+Luis contestó la pregunta de arriba: **agrupación**, no ensamblaje. El kit no
+tiene stock propio; lo que se sabe de él es **cuántos se pueden armar hoy**,
+que es una cuenta sobre el stock de las piezas (`stock_armable`).
+
+Eso trae una consecuencia que había que resolver y está resuelta: la **guía
+despacha las PIEZAS**, no el kit (086, un disparador sobre `guia_items`). Si
+no, el stock se movería en un producto que no existe en el almacén.
+
+Queda construido:
+
+| Pieza | Dónde |
+|---|---|
+| `productos.es_kit`, `kit_componentes`, `stock_armable()`, `kit_suma()` | 085 |
+| La guía explota el kit en sus piezas | 086 |
+| El precio de cada pieza DENTRO del kit | 087 |
+| Lista con indicadores, filtros, paginación y columna de acciones | `productos/ui/kits/` |
+| El papel dice qué lleva el kit, **sin precios** | `cotizaciones/dominio/impresion.ts` |
+
+**El precio de cada pieza dentro del kit** (087) salió de que Luis intentó
+armar uno: *«¿por qué no me sale el precio? Recuerda que él puede variar el
+precio, igual como hacer una cotización es hacer un kit, nomás que van a hacer
+un kit»*. Armar un kit **es** cotizar. `kit_componentes.precio_unitario` es
+nullable a propósito: `null` = usa el de lista del producto —y así el kit sigue
+al maestro cuando ese precio suba—, `0` = va sin cargo dentro del kit, que es
+una decisión distinta de no haberlo puesto.
+
+Lo que **no** llega todavía: la lista de componentes **no sale en el enlace
+público** `/ver/<token>`. Eso lo lee `cotizacion_por_token`, que es
+`security definer` y tiene su propio centinela (§AH.7); añadirle el contenido
+del kit es tocar esa función, y se hace aparte y con cuidado.
+
+Y sigue pendiente de Willy: los campos del kit que quedó en mandar por
+WhatsApp (14:34).
+
+---
+
 ## 6 · Lo que NO va en este sprint, y por qué
 
 - **Línea de detalles por ítem** (poleas maquinadas, canal chavetero, buje).

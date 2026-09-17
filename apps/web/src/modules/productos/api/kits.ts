@@ -20,7 +20,12 @@ export interface ComponenteDeKit {
   cantidad: number;
   /** Lo que hay en el almacén de este componente. */
   stock: number;
+  /** El de lista del producto, para poder volver a él. */
+  precioLista: number;
+  /** Lo que vale DENTRO de este kit: el propio si lo tiene, si no el de lista. */
   precioVenta: number;
+  /** ¿Tiene precio propio en el kit, o hereda el de lista? (087) */
+  precioPropio: boolean;
   costo: number;
   /** ¿El costo sale del kardex o de lo anotado en la ficha? (083) */
   costoDelKardex: boolean;
@@ -50,6 +55,7 @@ type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 interface FilaComponente {
   cantidad: number;
   orden: number;
+  precio_unitario: number | null;
   productos: {
     id: string;
     codigo: string;
@@ -93,7 +99,15 @@ function armar(filas: FilaComponente[]): {
         unidad: p.unidad_codigo,
         cantidad,
         stock,
-        precioVenta: Number(p.precio_venta ?? 0),
+        precioLista: Number(p.precio_venta ?? 0),
+        // El del kit manda; el de lista es el respaldo. Un 0 puesto a mano
+        // vale 0 —la pieza va sin cargo—, así que se compara con null y no
+        // con falsy.
+        precioVenta:
+          f.precio_unitario !== null && f.precio_unitario !== undefined
+            ? Number(f.precio_unitario)
+            : Number(p.precio_venta ?? 0),
+        precioPropio: f.precio_unitario !== null && f.precio_unitario !== undefined,
         // El del kardex manda, el de la ficha es el respaldo (083).
         costo: Number(p.costo_promedio) || Number(p.ultimo_costo) || 0,
         costoDelKardex: Number(p.costo_promedio) > 0,
@@ -118,7 +132,7 @@ function armar(filas: FilaComponente[]): {
 }
 
 const SELECT_COMPONENTES = `
-  cantidad, orden,
+  cantidad, orden, precio_unitario,
   productos!kit_componentes_producto_id_fkey(
     id, codigo, descripcion, unidad_codigo, precio_venta,
     precio_minimo, precio_mercado, costo_promedio, ultimo_costo,

@@ -2502,18 +2502,21 @@ export type Database = {
           cantidad: number
           kit_id: string
           orden: number
+          precio_unitario: number | null
           producto_id: string
         }
         Insert: {
           cantidad: number
           kit_id: string
           orden?: number
+          precio_unitario?: number | null
           producto_id: string
         }
         Update: {
           cantidad?: number
           kit_id?: string
           orden?: number
+          precio_unitario?: number | null
           producto_id?: string
         }
         Relationships: [

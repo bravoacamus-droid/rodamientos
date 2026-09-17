@@ -38,6 +38,14 @@ export type ResultadoKit = { ok: true; id: string; codigo: string } | { ok: fals
 const componente = z.object({
   producto_id: z.string().uuid(),
   cantidad: z.number().positive().finite(),
+  /**
+   * Lo que vale esta pieza DENTRO del kit.
+   *
+   * Luis, 17/09: *«él puede variar el precio, igual como hacer una cotización
+   * es hacer un kit»*. `null` = usa el de lista del producto; `0` = va sin
+   * cargo, que es una decisión distinta de no haberlo puesto (087).
+   */
+  precio_unitario: z.number().nonnegative().finite().nullable(),
 });
 
 const esquema = z.object({
@@ -162,6 +170,7 @@ export async function guardarKit(datos: unknown): Promise<ResultadoKit> {
         kit_id: kitId,
         producto_id: c.producto_id,
         cantidad: c.cantidad,
+        precio_unitario: c.precio_unitario,
         orden: i + 1,
       })),
     );

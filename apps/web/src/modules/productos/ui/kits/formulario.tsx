@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Boxes, DollarSign, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+  Boxes,
+  DollarSign,
+  MoreVertical,
+  Pencil,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import {
   Badge,
   Button,
@@ -49,7 +56,10 @@ interface Linea {
   unidad: string;
   cantidad: number;
   stock: number;
+  /** Lo que vale DENTRO del kit. Se puede cambiar, como en una cotización. */
   precioVenta: number;
+  /** El de lista del producto, para poder volver a él. */
+  precioLista: number;
   costo: number;
   costoDelKardex: boolean;
   precioMinimo: number;
@@ -84,7 +94,10 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
     costoDelKardex: l.costoDelKardex,
     precioMinimo: l.precioMinimo,
     precioMercado: l.precioMercado,
-    precioLista: l.precioVenta,
+    // Lo que se COBRA en el kit va en `valorUnitario`; el de lista es la
+    // referencia contra la que se compara. Si fueran el mismo, el modal no
+    // podría decir «lo bajaste de 100 a 70».
+    precioLista: l.precioLista,
     stock: l.stock,
     disponibilidad: "inmediata",
     diasEntrega: null,
@@ -117,6 +130,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
       cantidad: c.cantidad,
       stock: c.stock,
       precioVenta: c.precioVenta,
+      precioLista: c.precioLista,
       costo: c.costo,
       marca: c.marca,
       costoDelKardex: c.costoDelKardex,
@@ -211,6 +225,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
           cantidad: 1,
           stock: p.stock ?? 0,
           precioVenta: p.precio_venta,
+          precioLista: p.precio_venta,
           costo: p.costo_promedio || p.ultimo_costo || 0,
           marca: p.marca,
           costoDelKardex: (p.costo_promedio ?? 0) > 0,
@@ -237,6 +252,15 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
         componentes: lineas.map((l) => ({
           producto_id: l.producto_id,
           cantidad: l.cantidad,
+          /*
+            Si el precio es el mismo de lista, se guarda NULL.
+
+            Así el kit sigue al maestro: el día que suba el precio de un
+            rodamiento, los kits que no lo habían tocado suben con él. Guardar
+            una copia del precio de lista los dejaría congelados en el de hoy
+            sin que nadie lo hubiera decidido.
+          */
+          precio_unitario: l.precioVenta === l.precioLista ? null : l.precioVenta,
         })),
       });
 
@@ -322,6 +346,11 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                   <th className="text-left">Descripción</th>
                   <th className="text-right">Cant.</th>
                   <th className="text-left">U.M.</th>
+                  {/* Las mismas dos columnas de una cotización, y en el mismo
+                      orden. Luis, 17/09: *«igual como hacer una cotización es
+                      hacer un kit»*. */}
+                  <th className="text-right">Valor unit.</th>
+                  <th className="text-right">Importe</th>
                   <th className="text-right">Stock</th>
                   <th className="text-right">Alcanza</th>
                   {/* Solo si alguna pieza está en otro kit: una columna vacía
@@ -361,6 +390,76 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                         />
                       </td>
                       <td className="text-sm text-[var(--fg-muted)]">{l.unidad}</td>
+
+                      {/*
+                        El precio de la pieza DENTRO del kit, editable.
+
+                        Luis, 17/09: *«¿por qué no me sale el precio? Recuerda
+                        que él puede variar el precio»*. Tomarlo de lista y no
+                        dejarlo tocar obligaría a retocar el maestro para armar
+                        un kit —cambiándole el precio a esa pieza para todo el
+                        mundo— o a cuadrar el total a mano, perdiendo de dónde
+                        sale.
+
+                        `min-w` en el CAMPO y no en la celda: en una tabla el
+                        ancho de una celda es una sugerencia que el navegador
+                        ignora cuando va justo. Lección del 16/09, dos veces.
+                      */}
+                      <td className="w-32">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={l.precioVenta}
+                          onChange={(e) =>
+                            setLineas((ls) =>
+                              ls.map((x) =>
+                                x.producto_id === l.producto_id
+                                  ? { ...x, precioVenta: Number(e.target.value) || 0 }
+                                  : x,
+                              ),
+                            )
+                          }
+                          className="min-w-[5.5rem] text-right tabular"
+                          aria-label={`Valor unitario de ${l.codigo} en el kit`}
+                        />
+                        {/*
+                          Si se movió del de lista, se puede volver.
+
+                          En UNA línea y con `whitespace-nowrap`: la primera
+                          versión decía «volver a USD 1.50» en una celda de
+                          7 rem y el navegador lo partió en dos renglones —que
+                          es el enlace azul partido en dos que ya costó una
+                          corrección el 08/09—. Aquí la flecha lleva el trabajo
+                          y el texto es solo el número al que se vuelve; la
+                          frase entera vive en el `title` y en el `aria-label`.
+                        */}
+                        {l.precioVenta !== l.precioLista ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setLineas((ls) =>
+                                ls.map((x) =>
+                                  x.producto_id === l.producto_id
+                                    ? { ...x, precioVenta: x.precioLista }
+                                    : x,
+                                ),
+                              )
+                            }
+                            className="mt-1 ml-auto flex h-7 items-center gap-1 whitespace-nowrap rounded px-1 text-sm text-[var(--fg-muted)] underline transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                            title={`Volver al precio de lista de ${l.codigo}: ${dolar(l.precioLista)}`}
+                            aria-label={`Volver al precio de lista de ${l.codigo}, ${dolar(l.precioLista)}`}
+                          >
+                            <RotateCcw className="size-3.5 shrink-0" aria-hidden="true" />
+                            {dolar(l.precioLista)}
+                          </button>
+                        ) : null}
+                      </td>
+
+                      <td className="text-right tabular text-sm font-medium">
+                        {dolar(l.precioVenta * l.cantidad)}
+                      </td>
+
                       <td className="text-right tabular text-sm">{l.stock}</td>
                       <td
                         className={`text-right tabular text-sm ${
@@ -615,7 +714,17 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                                 costo: c.ficha.costoUnitario,
                                 costoDelKardex: false,
                                 precioMinimo: c.ficha.precioMinimo,
-                                precioVenta: c.ficha.precioLista,
+                                precioLista: c.ficha.precioLista,
+                                /*
+                                  El precio DEL KIT solo cambia si seguía al de
+                                  lista. Si alguien lo había bajado a mano para
+                                  este kit, corregir la ficha del producto no
+                                  puede deshacer esa decisión.
+                                */
+                                precioVenta:
+                                  x.precioVenta === x.precioLista
+                                    ? c.ficha.precioLista
+                                    : x.precioVenta,
                               }
                             : {}),
                         }
