@@ -598,10 +598,25 @@ export function Comparativa({
                                 alternar(fila.item.item_id, celda.consulta_proveedor_id)
                               }
                               className={`inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 tabular-nums transition-colors ${
+                                /*
+                                  El mejor precio se sigue viendo aunque se
+                                  elija otro.
+
+                                  Willy, 16/09 (31:40): *«tú puedes
+                                  seleccionar el otro… por ejemplo picas el de
+                                  16, y el otro es 10; debe quedarse resaltado
+                                  porque es el mejor precio»*.
+
+                                  Ya conservaba el color, pero solo el color
+                                  del texto: al lado de un elegido con fondo
+                                  azul sólido, un verde suelto se pierde. Con
+                                  fondo propio compiten de igual a igual, que
+                                  es justo lo que hay que comparar.
+                                */
                                 esElegido
                                   ? "bg-brand-600 text-white"
                                   : gana
-                                    ? "font-semibold text-[var(--ok)] hover:bg-[var(--surface-2)]"
+                                    ? "bg-[var(--ok-bg)] font-semibold text-[var(--ok)]"
                                     : masCaro
                                       ? "text-[var(--danger)] hover:bg-[var(--surface-2)]"
                                       : "hover:bg-[var(--surface-2)]"
@@ -648,6 +663,36 @@ export function Comparativa({
                               menos que {fila.ganador.segundo}
                             </span>
                           ) : null}
+
+                          {/*
+                            Y si se eligió uno que NO es el más barato, cuánto
+                            cuesta esa decisión.
+
+                            Es la mitad que faltaba. Se decía cuánto se AHORRA
+                            al elegir al ganador —cuando ya se eligió bien, o
+                            sea cuando la información no cambia nada— y se
+                            callaba en el único caso donde sirve.
+
+                            No se impide: hay motivos para pagar más —plazo de
+                            entrega, un proveedor que no falla, el que tiene
+                            los otros cuatro ítems—. Lo que no puede pasar es
+                            que se pague de más sin saberlo.
+                          */}
+                          {(() => {
+                            if (elegido === fila.ganador.consulta_proveedor_id) return null;
+                            const suyo = fila.celdas.find(
+                              (c) => c.consulta_proveedor_id === elegido,
+                            )?.costoUsd;
+                            if (suyo == null || fila.ganador.costoUsd == null) return null;
+                            const demas = (suyo - fila.ganador.costoUsd) * fila.item.cantidad;
+                            if (demas <= 0) return null;
+                            return (
+                              <span className="block text-xs font-medium text-[var(--warn)]">
+                                {formatearMoneda(demas, "USD")} más que{" "}
+                                {fila.ganador.proveedor}
+                              </span>
+                            );
+                          })()}
                         </span>
                       ) : (
                         <span className="text-[var(--fg-subtle)]">Sin elegir</span>
