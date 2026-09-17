@@ -92,7 +92,7 @@ export function TablaSeries({
       <div className="scroll-x">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-3 py-2 font-medium">Documento</th>
               <th className="px-3 py-2 font-medium">Serie</th>
               <th className="px-3 py-2 text-right font-medium">Desde</th>

@@ -107,13 +107,17 @@ export function FormControl(props: React.ComponentPropsWithRef<typeof Slot>) {
 
 export function FormDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {
   const { idDescripcion } = useCampoForm();
-  return <p id={idDescripcion} className={cn("mt-1 text-xs text-subtle", className)} {...props} />;
+  return <p id={idDescripcion} className={cn("mt-1 text-sm text-subtle", className)} {...props} />;
 }
 
 /**
  * Mensaje de error. `role="alert"` para que el lector de pantalla lo anuncie
  * en cuanto aparece: en una emisión a SUNAT el operador tiene que enterarse
  * del fallo sin volver a recorrer el formulario.
+ *
+ * Y a `text-sm` desde el 17/09, por la misma razón pero para quien SÍ mira la
+ * pantalla: un error a 12,75 px anunciado a un lector de pantalla y no legible
+ * a ojo solo está resuelto para la mitad de la gente.
  */
 export function FormMessage({ className, children, ...props }: React.ComponentPropsWithRef<"p">) {
   const { error, idMensaje } = useCampoForm();
@@ -123,7 +127,7 @@ export function FormMessage({ className, children, ...props }: React.ComponentPr
     <p
       id={idMensaje}
       role="alert"
-      className={cn("mt-1 text-xs font-medium text-danger", className)}
+      className={cn("mt-1 text-sm font-medium text-danger", className)}
       {...props}
     >
       {cuerpo}
@@ -145,12 +149,12 @@ export function FormResumenErrores({ className }: { className?: string }) {
       role="alert"
       className={cn("rounded-lg border border-danger/40 bg-danger-bg px-4 py-3", className)}
     >
-      <p className="text-xs font-semibold text-danger">
+      <p className="text-sm font-semibold text-danger">
         {entradas.length === 1 ? "Hay un campo con error" : `Hay ${entradas.length} campos con error`}
       </p>
       <ul className="mt-1.5 space-y-0.5">
         {entradas.map(([nombre, error]) => (
-          <li key={nombre} className="text-xs text-danger">
+          <li key={nombre} className="text-sm text-danger">
             {String((error as { message?: unknown } | undefined)?.message ?? nombre)}
           </li>
         ))}

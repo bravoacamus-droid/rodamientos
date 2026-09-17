@@ -59,7 +59,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
       <div className="scroll-x hidden md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               {/*
                 El documento baja a la razón social, y la línea de crédito se
                 junta con la condición.

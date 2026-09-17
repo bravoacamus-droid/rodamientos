@@ -752,7 +752,7 @@ function PanelSustitutos({
   return (
     <div className="scroll-x">
       <table className="w-full text-sm">
-        <thead className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+        <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
           <tr>
             <th className="py-2 pr-3 font-medium">Código</th>
             <th className="px-3 py-2 font-medium">Descripción</th>

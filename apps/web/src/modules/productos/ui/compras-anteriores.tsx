@@ -56,7 +56,7 @@ export function ComprasAnteriores({ compras }: { compras: CompraDeProducto[] }) 
           <div className="scroll-x">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                   <th className="py-2 pr-3 font-medium">Fecha</th>
                   <th className="py-2 pr-3 font-medium">Proveedor</th>
                   <th className="py-2 pr-3 text-right font-medium">Cant.</th>

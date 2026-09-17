@@ -71,7 +71,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
       <div className="scroll-x hidden md:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-4 py-2.5 font-medium">Código</th>
               <th className="px-4 py-2.5 font-medium">Marca</th>
               <th className="px-4 py-2.5 font-medium">Descripción</th>

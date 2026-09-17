@@ -23,7 +23,10 @@ export function Label({ className, requerido, children, ...props }: LabelProps) 
     <label
       data-slot="label"
       className={cn(
-        "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-subtle",
+        // `text-sm`: el nombre de un campo es lo que dice QUÉ se está
+        // tecleando. En mayúsculas y en gris ya cuesta, y a 12,75 px se
+        // convertía en decoración encima de la casilla.
+        "mb-1.5 block text-sm font-semibold uppercase tracking-wide text-subtle",
         "peer-disabled:opacity-60",
         className,
       )}
@@ -97,7 +100,11 @@ export function Campo({
         </p>
       )}
       {error && (
-        <p id={idError} role="alert" className="mt-1 text-xs font-medium text-danger">
+        // Del mismo tamaño que la `ayuda` de arriba, y por un motivo que se
+        // veía raro: la explicación que NO hace falta leer era más grande que
+        // el error que sí. Un «falta la descripción» que no se lee deja a
+        // alguien atascado sin saber por qué no le guarda.
+        <p id={idError} role="alert" className="mt-1 text-sm font-medium text-danger">
           {error}
         </p>
       )}

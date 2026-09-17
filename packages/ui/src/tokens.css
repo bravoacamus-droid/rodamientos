@@ -310,6 +310,24 @@
    * Ahora la escala del ERP es: text-xs · text-[0.8rem] · text-sm · text-base
    * y hacia arriba. Si hace falta algo más pequeño que `text-xs`, la respuesta
    * es que no cabe la información, no que se encoja la letra.
+   *
+   * ---------------------------------------------------------------------------
+   * 17/09: lo que hay que LEER no baja de `text-sm` (14,875 px)
+   * ---------------------------------------------------------------------------
+   * El suelo de arriba sigue valiendo para lo accesorio —una insignia, el
+   * contador de una pestaña, un atajo de teclado—. Pero se midió la pantalla
+   * de un kit y salió que los TÍTULOS DE LAS COLUMNAS, los NOMBRES DE LOS
+   * CAMPOS y los MENSAJES DE ERROR estaban a 12,75 px mientras las cifras que
+   * rodean estaban a 14,875. Justo al revés de lo que hace falta: la cifra se
+   * reconoce de un vistazo y el rótulo es lo que dice qué es.
+   *
+   * Luis lo aprobó el 17/09 con la medición delante. Subieron los tres:
+   * `THead` y la cabecera de `DataTable`, `Label`, y los errores de `Campo`,
+   * `FormMessage` y `FormResumenErrores`.
+   *
+   * La regla, para no volver a discutirla: si hay que leerlo para entender lo
+   * que hay al lado, es `text-sm`. `text-xs` es para lo que se mira, no para
+   * lo que se lee.
    */
 
   body {

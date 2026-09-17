@@ -34,7 +34,12 @@ export function THead({ className, ...props }: React.ComponentPropsWithRef<"thea
     <thead
       className={cn(
         "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface-2",
-        "[&_th]:border-b [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-xs",
+        // `text-sm` y no `text-xs`: el título de una columna hay que LEERLO
+        // para saber qué es la cifra de debajo, y la regla de Willy es que
+        // nada legible baja de 14 px. Luis, 17/09, con la medición delante.
+        // Lo que se pierde es ancho —la fila crece un pelo de alto— y lo que
+        // se gana es que «VALOR UNIT.» e «IMPORTE» no se confundan.
+        "[&_th]:border-b [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-sm",
         "[&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-subtle [&_th]:whitespace-nowrap",
         className,
       )}
