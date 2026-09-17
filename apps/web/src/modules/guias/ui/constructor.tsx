@@ -74,6 +74,17 @@ export function ConstructorGuia({
   const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
 
   const [cotizacionId, setCotizacionId] = useState(cotizacionInicial ?? "");
+
+  /*
+    La cotización de la que se vino, si se vino de una.
+
+    Se busca en la lista para poder ENSEÑARLA con su número y su cliente. Si no
+    estuviera —porque ya se despachó entera—, aquí no se llega: la pantalla lo
+    resuelve antes y lo explica (`pagina-nueva.tsx`).
+  */
+  const laDeLaQueVengo = cotizacionInicial
+    ? (cotizaciones.find((c) => c.id === cotizacionInicial) ?? null)
+    : null;
   // Qué agencia se eligió. Solo controla el desplegable: lo que viaja a la
   // guía son el RUC y la razón social ya copiados, no el id.
   const [agenciaId, setAgenciaId] = useState("");
@@ -173,27 +184,52 @@ export function ConstructorGuia({
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* --------------------------------------------- Qué se despacha */}
           <section className="card p-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
-                Cotización aprobada <span className="text-[var(--danger)]">*</span>
-              </span>
-              <SelectNativo
-                value={cotizacionId}
-                onChange={(e) => setCotizacionId(e.target.value)}
-              >
-                <option value="">Elige una cotización…</option>
-                {cotizaciones.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.numero} · {c.cliente}
-                  </option>
-                ))}
-              </SelectNativo>
-              {cotizaciones.length === 0 ? (
-                <span className="text-xs text-[var(--fg-muted)]">
-                  No hay cotizaciones aprobadas con mercadería pendiente de salir.
+            {/*
+              Si se vino DESDE una cotización, no se pregunta cuál.
+
+              Luis, 17/09: *«si le estoy dando de mi cotización "generar guía",
+              debería ser directo, no preguntarme si ver la misma cotización u
+              otra»*. Y tiene razón: pulsar «Generar guía» en la COT1-000008 ya
+              dice cuál. Dejar el desplegable delante convierte una respuesta
+              en una pregunta, y encima con la respuesta ya puesta.
+
+              El desplegable sigue existiendo para quien entra por el menú, que
+              ahí sí hay que elegir. Y para volverse atrás está «Cancelar», que
+              está arriba desde siempre.
+            */}
+            {laDeLaQueVengo ? (
+              <div>
+                <span className="text-sm text-[var(--fg-muted)]">Se despacha de</span>
+                <p className="text-base font-semibold">
+                  {laDeLaQueVengo.numero}
+                  <span className="ml-2 font-normal text-[var(--fg-muted)]">
+                    {laDeLaQueVengo.cliente}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <label className="flex flex-col gap-1">
+                <span className="text-sm font-medium">
+                  Cotización aprobada <span className="text-[var(--danger)]">*</span>
                 </span>
-              ) : null}
-            </label>
+                <SelectNativo
+                  value={cotizacionId}
+                  onChange={(e) => setCotizacionId(e.target.value)}
+                >
+                  <option value="">Elige una cotización…</option>
+                  {cotizaciones.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.numero} · {c.cliente}
+                    </option>
+                  ))}
+                </SelectNativo>
+                {cotizaciones.length === 0 ? (
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    No hay cotizaciones aprobadas con mercadería pendiente de salir.
+                  </span>
+                ) : null}
+              </label>
+            )}
 
             {cargando ? (
               <p className="anim-latido mt-3 text-sm text-[var(--fg-muted)]">

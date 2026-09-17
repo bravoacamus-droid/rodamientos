@@ -4,7 +4,12 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
 
-import { comprobantesDelPedido, cotizacionPorId, tieneGuia } from "../api/consultas";
+import {
+  comprobantesDelPedido,
+  cotizacionPorId,
+  despachoDelPedido,
+  tieneGuia,
+} from "../api/consultas";
 import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
@@ -48,11 +53,13 @@ export default async function PaginaDetalleCotizacion({
   // antes sería una consulta de más en cada 404.
   // Las dos juntas: ninguna depende de la otra, y la cotización se imprime
   // con las cuentas al pie (064).
-  const [facturas, cuentas, despachada] = await Promise.all([
+  const [facturas, cuentas, despachada, despacho] = await Promise.all([
     comprobantesDelPedido(cabecera.id),
     cuentasParaCobrar(),
     // Para saber si el botón de editar todavía tiene sentido (070).
     tieneGuia(cabecera.id),
+    // Y para no ofrecer una guía cuando ya salió todo (17/09).
+    despachoDelPedido(cabecera.id),
   ]);
 
   const impresa = armarCotizacionImpresa({
@@ -253,6 +260,8 @@ export default async function PaginaDetalleCotizacion({
               (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
             )}
             editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
+            despachable={despacho.pendiente}
+            guias={despacho.guias}
             lineas={lineas.map((l) => ({
               id: l.id,
               codigo: l.codigo,

@@ -42,6 +42,8 @@ export function AccionesCotizacion({
   lineas,
   facturable,
   editable,
+  despachable,
+  guias,
   vistaPrevia,
 }: {
   id: string;
@@ -69,6 +71,18 @@ export function AccionesCotizacion({
    * faltaba era el camino.
    */
   facturable: boolean;
+  /**
+   * Queda algo confirmado por despachar.
+   *
+   * Luis, 17/09, tras pulsar «Generar guía» en una cotización ya despachada
+   * entera: *«¿por qué no me trae mis datos automáticamente?»*. El botón
+   * llevaba a una pantalla sin nada que hacer. Un botón que promete lo que no
+   * puede dar es la forma más cara de mentir en una interfaz: se descubre
+   * después de pulsar.
+   */
+  despachable: boolean;
+  /** Las guías que ya tiene, para poder llevar a ellas en vez de a la nada. */
+  guias: { id: string; numero: string }[];
   /**
    * El documento todavía no compromete a nadie: ni guía emitida ni nada
    * facturado, así que se puede reescribir entero (070).
@@ -218,12 +232,33 @@ export function AccionesCotizacion({
                 Facturar
               </Button>
             ) : null}
-            <Button
-              variant={facturable ? "outline" : "primary"}
-              onClick={() => router.push(`/guias/nueva?cotizacion=${id}`)}
-            >
-              Generar guía
-            </Button>
+            {/*
+              «Generar guía» solo si de verdad queda algo que despachar.
+
+              Si ya salió todo, el botón llevaba a una pantalla vacía —Luis,
+              17/09— y lo único que se podía concluir es que el sistema estaba
+              roto. Cuando no queda nada, lo útil es ir a la guía que ya
+              existe, que es lo que se iba a buscar.
+
+              Solo la última: con varias guías, cuatro botones en esta fila
+              tapan a «Facturar», que es lo que sigue. El resto están en la
+              lista de guías, filtradas por este mismo pedido.
+            */}
+            {despachable ? (
+              <Button
+                variant={facturable ? "outline" : "primary"}
+                onClick={() => router.push(`/guias/nueva?cotizacion=${id}`)}
+              >
+                Generar guía
+              </Button>
+            ) : guias.length > 0 ? (
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/guias/${guias[guias.length - 1]!.id}`)}
+              >
+                Ver guía {guias[guias.length - 1]!.numero}
+              </Button>
+            ) : null}
           </>
         ) : null}
 

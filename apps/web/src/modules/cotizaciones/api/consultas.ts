@@ -520,6 +520,82 @@ export async function tieneGuia(cotizacionId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Qué queda por despachar de un pedido, y en qué guías salió lo demás.
+ *
+ * `tieneGuia` responde «¿hay alguna?», que sirve para saber si se puede
+ * editar. Esto responde otra cosa: **¿tiene sentido ofrecer otra guía?**
+ *
+ * Luis, 17/09, pulsando «Generar guía» en la COT1-000008: *«¿por qué no me
+ * trae mis datos automáticamente?»*. Estaba despachada entera, así que el
+ * botón llevaba a una pantalla sin nada que hacer. El botón prometía algo que
+ * no podía dar, que es la forma más cara de mentir en una interfaz: se
+ * descubre después de pulsar.
+ *
+ * Ante la duda dice que SÍ queda pendiente: si la consulta falla, esconder el
+ * botón deja sin salida a quien de verdad tiene que despachar, y enseñarlo
+ * como mucho lleva a una pantalla que ya explica lo que pasa.
+ */
+export async function despachoDelPedido(cotizacionId: string): Promise<{
+  pendiente: boolean;
+  guias: { id: string; numero: string }[];
+}> {
+  try {
+    const supabase = await clienteServidor();
+
+    const [{ data: items, error: eItems }, { data: guias, error: eGuias }] =
+      await Promise.all([
+        supabase
+          .from("cotizacion_items")
+          .select("id, cantidad, cantidad_aprobada")
+          .eq("cotizacion_id", cotizacionId),
+        supabase
+          .from("guias_remision")
+          .select("id, serie, correlativo, guia_items(cotizacion_item_id, cantidad)")
+          .eq("cotizacion_id", cotizacionId)
+          .neq("estado", "anulada")
+          .order("correlativo", { ascending: true }),
+      ]);
+
+    if (eItems || eGuias) return { pendiente: true, guias: [] };
+
+    const filas = (guias ?? []) as unknown as Array<{
+      id: string;
+      serie: string;
+      correlativo: number;
+      guia_items: { cotizacion_item_id: string | null; cantidad: number }[] | null;
+    }>;
+
+    const salido = new Map<string, number>();
+    for (const g of filas) {
+      for (const i of g.guia_items ?? []) {
+        if (!i.cotizacion_item_id) continue;
+        salido.set(
+          i.cotizacion_item_id,
+          (salido.get(i.cotizacion_item_id) ?? 0) + Number(i.cantidad ?? 0),
+        );
+      }
+    }
+
+    // Lo confirmado manda sobre lo pedido, igual que en guías: si el cliente
+    // aprobó 10 de 20, lo que hay que despachar son 10.
+    const pendiente = (items ?? []).some((i) => {
+      const confirmado = Number(i.cantidad_aprobada ?? i.cantidad ?? 0);
+      return confirmado - (salido.get(String(i.id)) ?? 0) > 0;
+    });
+
+    return {
+      pendiente,
+      guias: filas.map((g) => ({
+        id: String(g.id),
+        numero: `${g.serie}-${String(g.correlativo).padStart(8, "0")}`,
+      })),
+    };
+  } catch {
+    return { pendiente: true, guias: [] };
+  }
+}
+
 /** Una compra abierta que lleva alguno de los productos de este pedido. */
 export interface CompraAbierta {
   id: string;
