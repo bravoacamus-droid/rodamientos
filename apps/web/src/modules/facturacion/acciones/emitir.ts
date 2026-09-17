@@ -109,6 +109,19 @@ const esquema = z.object({
    */
   guias: z.array(z.string().uuid()).max(50),
   /**
+   * La orden de compra del cliente, tal como la manda él.
+   *
+   * Willy, 16/09 (46:40): *«me da campos para digitar a mano el número de guía
+   * y el número de orden de compra»*, y el motivo es de calendario: la O/C
+   * llega CUANDO EL CLIENTE CONFIRMA, después de cotizar. Antes solo se podía
+   * heredar la de la cotización, que casi nunca existía.
+   *
+   * Texto libre a propósito: *«algunos piden que le registre solamente los
+   * números significativos, los últimos, el 345 nada más»*. Validar un formato
+   * sería inventarse una regla que el cliente no sigue.
+   */
+  orden_compra_cliente: z.string().trim().max(60).nullable(),
+  /**
    * ¿El documento impreso lleva al pie las cuentas para pagar?
    *
    * Willy, 07/09 (13:21): *«al momento de elaborar la factura tiene un botón
@@ -234,7 +247,9 @@ export async function emitirComprobante(
       serie: datos.serie,
       cliente_id: cot.cliente_id,
       cotizacion_id: cot.id,
-      orden_compra_cliente: cot.orden_compra_cliente,
+      // Lo tecleado al facturar manda sobre lo que traía la cotización: la
+      // orden de compra suele llegar después de cotizar.
+      orden_compra_cliente: datos.orden_compra_cliente ?? cot.orden_compra_cliente,
       fecha_emision: datos.fecha_emision,
       condicion_pago: datos.condicion_pago,
       dias_credito: alCredito ? datos.dias_credito : 0,

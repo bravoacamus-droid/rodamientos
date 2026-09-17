@@ -295,6 +295,33 @@ líneas con importe 0** — eso sí lo rechazan.
 
 ---
 
+## ✅ Estado al cerrar el 17/09
+
+De todo el sprint queda **una sola cosa**, y es la que depende de Willy.
+
+| | Estado |
+|---|---|
+| **§1.1** Retención del IGV | ✅ Caso 30: estaba todo menos el interruptor |
+| **§1.2** El pie de la factura | ✅ Fuera «Atendido por» y el correo repetido |
+| **§1.3** El ojo de los precios | ✅ «Ver precios» y «Ver stock» en el menú de la línea |
+| **§1.4** El «+» de la marca | ✅ |
+| **§2** Historial y mejor precio | ✅ El historial ya estaba; ahora el ganador conserva su fondo y se dice cuánto cuesta no elegirlo |
+| **§3** El precio mínimo | ✅ Avisa y no impide (decisión de Luis) |
+| **§4.1** Factura con varias guías | ✅ Migración 084. Y salió que NINGUNA factura tenía guía |
+| **§4.2** La O/C a mano | ✅ No estaba: se heredaba de la cotización y no se podía teclear |
+| **§4.3** La guía antes del stock | ⚠️ **Sin comprobar en pantalla.** No hay validación de stock en el código y en la reunión se vio funcionando, pero probarlo aquí gastaría un correlativo T001 de verdad |
+| **§5** Kits | ⛔ **Esperando a Willy** |
+
+Y dos fallos que el acta no podía ver, encontrados por el camino:
+
+- **`buscar_productos` llevaba tres semanas sin reemplazarse** (082): la
+  búsqueda por marca no encontraba nada y el precio mínimo no llegaba al
+  cotizador.
+- **El buscador no traía `ultimo_costo`** (083): un producto recién cargado
+  con su costo salía sin margen posible.
+
+---
+
 ## 7 · Orden propuesto
 
 1. **§3 — decidir lo del precio mínimo.** Es una conversación, no código, y

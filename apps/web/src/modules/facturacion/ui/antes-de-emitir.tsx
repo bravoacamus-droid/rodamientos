@@ -89,6 +89,7 @@ export function AntesDeEmitir({
   cuotas,
   totales,
   observaciones,
+  ordenCompra,
   emisor,
   cuentas,
   puedeEnviar,
@@ -107,6 +108,16 @@ export function AntesDeEmitir({
   cuotas: { numero: number; monto: number; vencimiento: string }[];
   totales: { gravada: number; descuento: number; igv: number; total: number };
   observaciones: string;
+  /**
+   * La O/C tecleada al facturar, que manda sobre la de la cotización.
+   *
+   * Se pasa aparte y no se lee de `cot` porque `cot` es lo que se cotizó y
+   * esto es lo que se está escribiendo ahora. Sin este cable, la previa
+   * enseñaba la de la cotización —casi siempre vacía— mientras el comprobante
+   * se emitía con la buena: una previa que no enseña lo que va a salir es
+   * peor que no tenerla.
+   */
+  ordenCompra: string;
   emisor: EmisorHoja;
   cuentas: readonly CuentaParaPagar[];
   /**
@@ -177,7 +188,7 @@ export function AntesDeEmitir({
     cliente_email: null,
     cotizacion_id: cot.id,
     cotizacion_numero: cot.numero,
-    orden_compra_cliente: cot.orden_compra_cliente,
+    orden_compra_cliente: ordenCompra.trim() || cot.orden_compra_cliente,
     referencia_id: null,
     referencia_numero: null,
     motivo_nota_codigo: null,

@@ -70,6 +70,22 @@ export function EmisorComprobante({
   const [condicion, setCondicion] = useState<"contado" | "credito">("contado");
   const [dias, setDias] = useState(0);
   const [observaciones, setObservaciones] = useState("");
+  /*
+    La orden de compra del cliente, TECLEABLE al facturar.
+
+    Venía de la cotización y solo de ahí. Pero Willy, 16/09 (46:40): *«sí, me
+    da campos para digitar a mano el número de guía y el número de orden de
+    compra»* — y el motivo es de calendario: la O/C la manda el cliente CUANDO
+    CONFIRMA, o sea después de que se cotizó. Al cotizar casi nunca existe.
+
+    Y admite escribir solo un trozo: *«una orden de compra es 2026-000-345, y
+    algunos piden que le registre solamente los números significativos, los
+    últimos, el 345 nada más»*. Por eso es texto libre y no se valida el
+    formato: quien decide qué se imprime es el cliente que la manda.
+
+    Arranca con la de la cotización si la hubiera, que es lo que se hacía.
+  */
+  const [ordenCompra, setOrdenCompra] = useState("");
   // Por defecto NO: el stock sale con la guía de remisión, que es el
   // documento que acompaña el movimiento físico. Se marca solo en la venta
   // de mostrador, cuando el cliente se lleva la pieza y se le factura ahí.
@@ -154,6 +170,7 @@ export function EmisorComprobante({
       setTipo(tipoSugerido(r.datos.cliente_tipo_documento));
       setCondicion(r.datos.condicion_pago === "credito" ? "credito" : "contado");
       setDias(r.datos.dias_credito ?? 0);
+      setOrdenCompra(r.datos.orden_compra_cliente ?? "");
       /*
         Todas las guías de la cotización, marcadas.
 
@@ -213,6 +230,7 @@ export function EmisorComprobante({
     condicion_pago: condicion,
     dias_credito: alCredito ? dias : 0,
     observaciones: observaciones.trim() || null,
+    orden_compra_cliente: ordenCompra.trim() || null,
     descargar_stock: descargarStock,
     cantidades,
     mostrar_cuenta: opciones.mostrarCuenta,
@@ -529,6 +547,21 @@ export function EmisorComprobante({
               </label>
 
               <label className="flex flex-col gap-1 border-t border-[var(--border-soft)] pt-4">
+                <span className="text-sm font-medium">
+                  Orden de compra del cliente
+                </span>
+                <Input
+                  value={ordenCompra}
+                  onChange={(e) => setOrdenCompra(e.target.value)}
+                  placeholder="La que mandó al confirmar"
+                />
+                <span className="text-xs text-[var(--fg-muted)]">
+                  Sale impresa en el comprobante. Si te piden solo los últimos
+                  dígitos —el 345 de 2026-000-345—, escribe esos.
+                </span>
+              </label>
+
+              <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Observaciones</span>
                 <Textarea
                   value={observaciones}
@@ -613,6 +646,7 @@ export function EmisorComprobante({
                 cuotas={cuotas}
                 totales={totales}
                 observaciones={observaciones}
+                ordenCompra={ordenCompra}
                 emisor={emisor}
                 cuentas={cuentas}
                 puedeEnviar={puedeEnviar}
