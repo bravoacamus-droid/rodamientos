@@ -229,8 +229,30 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
   const [precio, setPrecio] = React.useState(
     kit ? String(kit.precioVenta) : "",
   );
-  /** Si nadie lo tocó, sigue lo que digan los componentes. */
-  const [precioAMano, setPrecioAMano] = React.useState(Boolean(kit));
+
+  /*
+    Sigue a la suma también AL EDITAR, no solo al crear.
+
+    Luis, 17/09: *«en editar veo que no suma automáticamente; el precio actual
+    sí debería sumar automáticamente, y abajo debería salirle el precio
+    anterior — así como en los productos, cuando cambio me dice "regresar como
+    estaba"»*.
+
+    Antes arrancaba en `true` al editar, con el argumento de que el precio
+    guardado es una decisión y no se pisa sola. Pero eso dejaba la pantalla
+    mintiendo: se cambiaba el precio de una pieza, la suma se movía, y arriba
+    seguía el número viejo sin decir nada. Un precio que no se entera de que
+    cambió lo que lo compone es peor que uno que se mueve a la vista.
+
+    Lo que hace que esto sea seguro es el aviso de abajo: mientras el precio
+    no sea el guardado, se dice cuál era y se puede volver de un clic. Es el
+    mismo trato que ya tienen el precio de la pieza y el de la ficha del
+    producto.
+  */
+  const [precioAMano, setPrecioAMano] = React.useState(false);
+
+  /** El que tenía guardado al abrir, para poder volver a él. */
+  const precioGuardado = kit?.precioVenta ?? null;
 
   React.useEffect(() => {
     if (!precioAMano) setPrecio(suma > 0 ? suma.toFixed(2) : "");
@@ -768,7 +790,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
           <Campo
             id="kit-precio"
             label="Se vende a"
-            ayuda="Arranca en la suma. Puedes redondearlo o bajarlo."
+            ayuda="Sigue a la suma de los productos. Si escribes uno, se queda con ese."
           >
             <Input
               id="kit-precio"
@@ -784,16 +806,50 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
             />
           </Campo>
 
-          {precioAMano && suma > 0 && Math.abs(Number(precio) - suma) >= 0.01 ? (
+          {/*
+            Las dos vueltas atrás, y nunca las dos a la vez.
+
+            Luis, 17/09: *«abajo debería salirle el precio anterior, así como
+            en los productos, cuando cambio me dice "regresar como estaba"»*.
+
+            · Si el precio ya no es el que estaba guardado, lo primero que hay
+              que poder hacer es volver a ÉL: es la red que hace seguro que el
+              precio siga a la suma solo.
+            · Si no, y se tecleó a mano, se puede volver a la suma.
+
+            Se prefiere el guardado porque responde a la pregunta más urgente
+            —«¿le he cambiado el precio a un kit que ya vendo?»— y porque la
+            suma siempre está ahí arriba, a dos renglones.
+          */}
+          {precioGuardado !== null &&
+          Math.abs(Number(precio) - precioGuardado) >= 0.01 ? (
+            <p className="mt-2 text-sm">
+              <span className="text-[var(--fg-muted)]">Antes se vendía a </span>
+              <span className="tabular">{dolar(precioGuardado)}</span>
+              {". "}
+              <button
+                type="button"
+                onClick={() => {
+                  setPrecioAMano(true);
+                  setPrecio(precioGuardado.toFixed(2));
+                }}
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1 align-baseline text-brand-600 underline transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <RotateCcw className="size-3.5 shrink-0" aria-hidden="true" />
+                Dejarlo como estaba
+              </button>
+            </p>
+          ) : precioAMano && suma > 0 && Math.abs(Number(precio) - suma) >= 0.01 ? (
             <button
               type="button"
               onClick={() => {
                 setPrecioAMano(false);
                 setPrecio(suma.toFixed(2));
               }}
-              className="mt-1 text-sm text-brand-600 underline"
+              className="mt-2 inline-flex items-center gap-1 whitespace-nowrap rounded px-1 text-sm text-brand-600 underline transition-colors hover:bg-[var(--surface-2)]"
             >
-              volver a la suma ({dolar(suma)})
+              <RotateCcw className="size-3.5 shrink-0" aria-hidden="true" />
+              Volver a la suma ({dolar(suma)})
             </button>
           ) : null}
         </div>
