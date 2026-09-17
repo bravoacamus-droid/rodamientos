@@ -282,3 +282,20 @@ export interface CotizacionFacturable {
     importe: number;
   }[];
 }
+
+/**
+ * Una guía del cliente que se puede añadir a mano a una factura.
+ *
+ * Vive aquí y no en `api/` porque la usa el buscador del «+», que es un
+ * componente CLIENTE: `api/` lleva `server-only` y el tipo tiene que poder
+ * cruzar esa frontera.
+ */
+export interface GuiaDelCliente {
+  id: string;
+  numero: string;
+  fecha: string;
+  /** De qué cotización salió, para reconocerla. Puede no tener. */
+  cotizacion: string | null;
+  /** Ya la ampara otro comprobante vivo: se enseña, pero no se deja marcar. */
+  yaFacturada: boolean;
+}

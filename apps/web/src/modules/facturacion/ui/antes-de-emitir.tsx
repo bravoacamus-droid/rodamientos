@@ -40,7 +40,19 @@
  */
 
 import * as React from "react";
-import { Button, Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@rodatech/ui";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import {
+  Button,
+  campoBase,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@rodatech/ui";
+
+import { buscarGuiasDelCliente } from "../acciones/cargar";
 
 import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
@@ -48,6 +60,7 @@ import type { EmisorHoja } from "@/componentes/hoja-documento";
 import type {
   ComprobanteDetalle,
   CotizacionFacturable,
+  GuiaDelCliente,
   LineaComprobante,
   TipoComprobante,
 } from "../dominio/tipos";
@@ -134,6 +147,26 @@ export function AntesDeEmitir({
   const [viendo, setViendo] = React.useState(false);
 
   /*
+    Las guías que se añaden A MANO, además de las de esta cotización.
+
+    Luis, 17/09: *«si ya tiene una guía me trae la guía, y un botón de más si
+    quiere agregar manualmente una guía, ya sea generada —input de búsqueda
+    inteligente— o una nueva»*. Y Willy lo pidió igual (48:10): *«a veces hay
+    que hacer una factura de dos guías»*.
+
+    Van en estado local y no en `cot` porque `cot` es lo que trajo el
+    servidor de ESA cotización; esto es lo que está decidiendo quien factura.
+    Al marcarlas entran en `opciones.guias` como las demás, así que el resto
+    de la pantalla —la previa, el payload— no se entera de la diferencia.
+  */
+  const [extras, setExtras] = React.useState<
+    { id: string; numero: string; fecha: string }[]
+  >([]);
+
+  /** Las de la cotización más las añadidas. El orden es el de aparición. */
+  const guiasVisibles = [...cot.guias, ...extras];
+
+  /*
     La boleta no retiene NUNCA, y la pantalla lo respeta antes de preguntarlo.
 
     `comp_boleta_sin_spot` lo prohíbe en la tabla y `emitir_comprobante` fuerza
@@ -201,7 +234,7 @@ export function AntesDeEmitir({
     // En la previa se arman los números de las marcadas; al emitir salen de
     // la base. El documento los pinta igual en los dos casos.
     guia_numero:
-      cot.guias
+      guiasVisibles
         .filter((g) => opciones.guias.includes(g.id))
         .map((g) => g.numero)
         .join(", ") || null,
@@ -296,10 +329,10 @@ export function AntesDeEmitir({
         orden guía→factura es decisión de Willy y está en la primera página del
         proyecto.
       */}
-      {cot.guias.length > 0 ? (
+      {guiasVisibles.length > 0 ? (
         <div className="rounded-md border border-[var(--border)] p-3">
           <p className="text-sm font-medium">
-            {cot.guias.length === 1
+            {guiasVisibles.length === 1
               ? "Guía de remisión que ampara"
               : "Guías de remisión que ampara"}
           </p>
@@ -307,7 +340,7 @@ export function AntesDeEmitir({
             Sus números salen impresos en el comprobante.
           </p>
           <div className="mt-2 flex flex-col gap-1">
-            {cot.guias.map((g) => {
+            {guiasVisibles.map((g) => {
               const marcada = opciones.guias.includes(g.id);
               return (
                 <label
@@ -333,6 +366,24 @@ export function AntesDeEmitir({
               );
             })}
           </div>
+
+          {/*
+            El «+», que es lo que pidió Luis.
+
+            Busca entre las guías EMITIDAS del mismo cliente, no solo las de
+            esta cotización: es justo el caso que faltaba —una factura que
+            ampara una guía salida de otro pedido del mismo cliente—, y la base
+            ya lo permite desde la 084, que solo exige el mismo cliente.
+          */}
+          <BuscadorDeGuias
+            clienteId={cot.cliente_id}
+            cotizacionId={cot.id}
+            yaPuestas={guiasVisibles.map((g) => g.id)}
+            onElegir={(g) => {
+              setExtras((xs) => [...xs, g]);
+              onCambiar({ ...opciones, guias: [...opciones.guias, g.id] });
+            }}
+          />
         </div>
       ) : null}
 
@@ -474,5 +525,172 @@ function IconoOjo() {
       <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
+  );
+}
+
+/**
+ * El «+» para amparar una guía que no salió de esta cotización.
+ *
+ * Luis, 17/09: *«un botón de más si quiere agregar manualmente una guía, ya sea
+ * generada —input de búsqueda inteligente— o una nueva»*.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué una lista filtrable y no un campo donde teclear el número
+ * ---------------------------------------------------------------------------
+ * Porque el número de guía es lo que se IMPRIME en un documento fiscal. Un
+ * campo libre admite `T001-2` o un número que no existe, y eso no se descubre
+ * hasta que el cliente reclama. Eligiendo de la lista, lo que entra es un id
+ * real de una guía real, emitida y de este cliente — y la base lo vuelve a
+ * comprobar al vincular.
+ *
+ * Se teclea igual: el campo filtra por número o por cotización, que es como se
+ * busca de verdad («la del pedido de agosto»).
+ */
+function BuscadorDeGuias({
+  clienteId,
+  cotizacionId,
+  yaPuestas,
+  onElegir,
+}: {
+  clienteId: string;
+  cotizacionId: string;
+  yaPuestas: string[];
+  onElegir: (g: { id: string; numero: string; fecha: string }) => void;
+}) {
+  const [abierto, setAbierto] = React.useState(false);
+  const [cargando, iniciar] = React.useTransition();
+  const [todas, setTodas] = React.useState<GuiaDelCliente[] | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [texto, setTexto] = React.useState("");
+
+  // Se piden al ABRIR y no al montar: la mayoría de las facturas se emiten sin
+  // tocar esto, y sería una consulta por cada pantalla para nada.
+  function abrir() {
+    setAbierto(true);
+    if (todas !== null) return;
+    iniciar(async () => {
+      const r = await buscarGuiasDelCliente(clienteId);
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
+      setTodas(r.datos);
+    });
+  }
+
+  const busca = texto.trim().toLowerCase();
+  const candidatas = (todas ?? [])
+    .filter((g) => !yaPuestas.includes(g.id))
+    .filter(
+      (g) =>
+        !busca ||
+        g.numero.toLowerCase().includes(busca) ||
+        (g.cotizacion ?? "").toLowerCase().includes(busca),
+    );
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={abrir}
+        className="mt-2 inline-flex h-control-md items-center gap-1.5 rounded-md border border-[var(--border)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+      >
+        <Plus className="size-4 shrink-0" aria-hidden="true" />
+        Añadir otra guía
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium">Buscar otra guía de este cliente</span>
+        <input
+          type="search"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          placeholder="Por número de guía o de cotización…"
+          aria-label="Buscar una guía de este cliente"
+          autoFocus
+          className={`${campoBase} h-control-md px-3 text-sm`}
+        />
+      </label>
+
+      {cargando ? (
+        <p className="anim-latido mt-2 text-sm text-[var(--fg-muted)]">
+          Trayendo sus guías…
+        </p>
+      ) : null}
+
+      {error ? (
+        <p className="mt-2 rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+
+      {todas !== null && candidatas.length === 0 && !cargando ? (
+        <p className="mt-2 text-sm text-[var(--fg-muted)]">
+          {todas.length === 0
+            ? "Este cliente no tiene ninguna otra guía emitida."
+            : "Ninguna guía coincide, o ya están todas puestas."}
+        </p>
+      ) : null}
+
+      <div className="mt-2 flex max-h-48 flex-col gap-1 overflow-y-auto">
+        {candidatas.map((g) => (
+          <button
+            key={g.id}
+            type="button"
+            // Una guía ya amparada por otro comprobante NO se puede volver a
+            // facturar: sería cobrar dos veces el mismo despacho. Se enseña
+            // apagada y con el motivo, porque esconderla llevaría a emitir
+            // otra guía creyendo que esta se perdió.
+            disabled={g.yaFacturada}
+            onClick={() => {
+              onElegir({ id: g.id, numero: g.numero, fecha: g.fecha });
+              setAbierto(false);
+              setTexto("");
+            }}
+            className="flex min-h-9 items-center gap-2.5 rounded-sm px-2 text-left text-sm transition-colors enabled:hover:bg-[var(--surface-2)] disabled:opacity-60"
+          >
+            <span className="font-medium">{g.numero}</span>
+            <span className="text-[var(--fg-muted)]">{g.fecha}</span>
+            {g.cotizacion ? (
+              <span className="text-[var(--fg-muted)]">· {g.cotizacion}</span>
+            ) : null}
+            {g.yaFacturada ? (
+              <span className="ml-auto text-[var(--warn)]">ya facturada</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            setAbierto(false);
+            setTexto("");
+          }}
+          className="text-sm text-[var(--fg-muted)] underline hover:text-[var(--fg)]"
+        >
+          Cerrar
+        </button>
+        {/*
+          «O una nueva», que es la otra mitad de lo que pidió Luis.
+
+          Dice que se SALE de aquí, porque se sale: esta pantalla no ha emitido
+          nada —el correlativo no se gasta hasta pulsar Emitir— pero lo tecleado
+          en ella, la orden de compra y las observaciones, se pierde. Es mejor
+          decirlo en el enlace que descubrirlo al volver.
+        */}
+        <Link
+          href={`/guias/nueva?cotizacion=${cotizacionId}`}
+          className="text-sm text-brand-600 underline"
+        >
+          ¿No está? Preparar una guía nueva (sales de aquí)
+        </Link>
+      </div>
+    </div>
   );
 }

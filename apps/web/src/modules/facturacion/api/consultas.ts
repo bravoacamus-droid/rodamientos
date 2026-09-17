@@ -14,6 +14,7 @@ import type {
   EstadoComprobante,
   EstadoSunat,
   FiltrosComprobantes,
+  GuiaDelCliente,
   LineaComprobante,
   TipoComprobante,
 } from "../dominio/tipos";
@@ -662,5 +663,93 @@ export async function yaAcreditadoDe(comprobanteId: string): Promise<number> {
     );
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Las guías EMITIDAS de un cliente, para el «+» de la factura.
+ *
+ * Luis, 17/09: *«si ya tiene una guía me trae la guía, y un botón de más si
+ * quiere agregar manualmente una guía, ya sea generada —input de búsqueda
+ * inteligente— o una nueva»*. Y Willy lo había pedido igual (48:10): *«a veces
+ * hay que hacer una factura de dos guías»*, a lo que se respondió en la
+ * reunión con *«le puedo jalar la guía y un botoncito de agregar más»*.
+ *
+ * Por CLIENTE y no por cotización, que es justo el caso que faltaba: la
+ * pantalla ya listaba las guías de esa cotización sola, y lo que no se podía
+ * era amparar con una factura una guía que salió de otro pedido del mismo
+ * cliente. `vincular_guias_comprobante` (084) lo permite —solo exige el mismo
+ * cliente—, así que la regla de la base y la de la pantalla ya coinciden.
+ *
+ * Las ya facturadas vienen MARCADAS en vez de escondidas: si alguien busca una
+ * guía y no aparece, lo siguiente que hace es volver a emitirla. Verla y leer
+ * por qué no se puede vale más que no verla.
+ */
+export async function guiasDelCliente(
+  clienteId: string,
+): Promise<Resultado<GuiaDelCliente[]>> {
+  try {
+    const supabase = await clienteServidor();
+
+    const { data, error } = await supabase
+      .from("guias_remision")
+      .select("id, numero, fecha_emision, cotizaciones(numero)")
+      .eq("cliente_id", clienteId)
+      .eq("estado", "emitida")
+      .order("numero", { ascending: false })
+      .limit(200);
+
+    if (error) return fallo(error, "facturacion/guiasDelCliente");
+
+    const filas = (data ?? []) as unknown as Array<{
+      id: string;
+      numero: string;
+      fecha_emision: string;
+      cotizaciones: { numero: string } | null;
+    }>;
+    if (filas.length === 0) return { ok: true, datos: [] };
+
+    /*
+      Cuáles ya están amparadas.
+
+      Se preguntan las dos vías a la vez —`comprobantes.guia_id`, que es la
+      vieja, y `comprobante_guias`, la de la 084— porque conviven: las
+      facturas anteriores a esa migración solo tienen la columna. Mirar una
+      sola dejaría pasar la mitad.
+    */
+    const ids = filas.map((f) => f.id);
+    const [{ data: viejas }, { data: nuevas }] = await Promise.all([
+      supabase
+        .from("comprobantes")
+        .select("guia_id")
+        .in("guia_id", ids)
+        .neq("estado", "anulado"),
+      supabase
+        .from("comprobante_guias")
+        .select("guia_id, comprobantes!inner(estado)")
+        .in("guia_id", ids)
+        .neq("comprobantes.estado", "anulado"),
+    ]);
+
+    const facturadas = new Set<string>();
+    for (const c of (viejas ?? []) as { guia_id: string | null }[]) {
+      if (c.guia_id) facturadas.add(String(c.guia_id));
+    }
+    for (const c of (nuevas ?? []) as { guia_id: string }[]) {
+      facturadas.add(String(c.guia_id));
+    }
+
+    return {
+      ok: true,
+      datos: filas.map((f) => ({
+        id: f.id,
+        numero: f.numero,
+        fecha: f.fecha_emision,
+        cotizacion: f.cotizaciones?.numero ?? null,
+        yaFacturada: facturadas.has(f.id),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "facturacion/guiasDelCliente");
   }
 }

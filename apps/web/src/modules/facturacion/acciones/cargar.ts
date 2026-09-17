@@ -2,7 +2,7 @@
 
 import { usuarioActual } from "@rodatech/db/servidor";
 
-import { cotizacionParaFacturar } from "../api/consultas";
+import { cotizacionParaFacturar, guiasDelCliente } from "../api/consultas";
 
 /**
  * Trae una cotización entera para previsualizar el comprobante.
@@ -20,4 +20,18 @@ export async function cargarCotizacion(id: string) {
     return { ok: false as const, error: "Sesión expirada." };
   }
   return cotizacionParaFacturar(id);
+}
+
+/**
+ * Las guías del cliente, para el «+» de la factura.
+ *
+ * Misma envoltura y mismo motivo que `cargarCotizacion`: la consulta vive en
+ * `api/`, que es `server-only`, y esto se pide al vuelo desde el navegador
+ * cuando alguien abre el buscador de guías.
+ */
+export async function buscarGuiasDelCliente(clienteId: string) {
+  if ((await usuarioActual()) === null) {
+    return { ok: false as const, error: "Sesión expirada." };
+  }
+  return guiasDelCliente(clienteId);
 }
