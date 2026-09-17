@@ -447,3 +447,86 @@ Y dos fallos que el acta no podía ver, encontrados por el camino:
 
 Lo de Willy, en paralelo: terminar la lista de productos, el stock y los
 precios, los campos del kit, y **desde qué número van `T002` y `CT02`**.
+
+---
+
+## 8 · Facturación, cerrada el 17/09 por la tarde
+
+### 8.1 · Sin guía no se factura
+
+Luis: *«no debería emitir la factura si no tengo la guía hecha, ¿no? Aparte, te
+acuerdas que la guía va sujeta a la cotización — si no, no deja facturar»*.
+
+Era el orden de Willy y estaba en la primera página del proyecto, pero como
+**costumbre**: ni la pantalla ni la Server Action lo pedían, y por eso el 17/09
+salió que ninguna factura tenía guía. Ahora es una regla, en las tres capas:
+
+| Capa | Qué comprueba |
+|---|---|
+| `bloqueosEmision` | que la cotización tenga alguna guía **emitida** |
+| Server Action | que esta emisión haya **marcado** al menos una |
+| `emitir_comprobante` (089) | que el payload declare `guias`, pegado al control de rol |
+
+Son dos cosas distintas y las dos se pueden incumplir: que exista una guía, y
+que esta factura diga cuál. La segunda se salta desmarcando una casilla.
+
+El aviso va **separado** de «SUNAT lo rechazaría», porque sería falso: SUNAT no
+rechaza una factura sin guía. Quien no la admite es Willy.
+
+**Dos consecuencias que salieron al probarlo:**
+
+- La casilla **«la mercadería sale del almacén con esta factura»** deja de
+  enseñarse. Era para la venta de mostrador, que ya no existe aquí: al llegar a
+  facturar el stock SIEMPRE salió con la guía, así que marcarla solo podía
+  restar dos veces. Una casilla cuya única función posible es equivocarse no se
+  deja «por si acaso». *Si Willy sí hace venta de mostrador, la regla hay que
+  replanteársela — no la casilla.*
+- Con la guía hecha pero **en borrador**, decir «no hay ninguna guía» mandaba a
+  crear una segunda, y guías contestaba que esa cotización ya estaba despachada
+  entera. Un callejón en dos pasos. Ahora dice *«la guía T001-00000002 está en
+  borrador, emítela y vuelve»* y lleva a ella.
+
+### 8.2 · El «+» para amparar otra guía
+
+Luis: *«si ya tiene una guía me trae la guía, y un botón de más si quiere
+agregar manualmente una guía, ya sea generada —input de búsqueda inteligente— o
+una nueva»*. Se le prometió a Willy en la reunión (48:10) y no se había hecho.
+
+Busca entre las guías **emitidas del mismo cliente**, no solo las de esa
+cotización — que era el caso que faltaba, y que la base permite desde la 084,
+que solo exige el mismo cliente.
+
+Es una **lista filtrable y no un campo de texto**, y es deliberado: el número de
+guía se imprime en un documento fiscal, y un campo libre admite `T001-2` o un
+número que no existe, cosa que no se descubre hasta que el cliente reclama. Se
+teclea igual —filtra por número o por cotización— pero lo que entra es un id
+real.
+
+Las **ya facturadas** salen marcadas y apagadas, no escondidas: si alguien busca
+una guía y no aparece, lo siguiente que hace es emitir otra. Se miran las dos
+vías —`comprobantes.guia_id` y `comprobante_guias`— porque conviven.
+
+### 8.3 · Lo de «escribe manual» era al revés
+
+Luis lo recordaba como que Willy quería teclear el número de guía. El acta dice
+lo contrario. En 46:40 lo pidió, sí, pero en **47:56** contestó a la pregunta
+directa:
+
+> *«No, no. O sea, directo, porque ya, como usted dice, la guía ya está
+> amarrada… **lo que no está amarrado es la compra, es lo único que va a
+> digitar**»*.
+
+Así que la guía la trae el sistema y lo único que se teclea a mano es la **orden
+de compra**, que está desde el 17/09 por la mañana.
+
+### 8.4 · Lo que NO se comprobó, y por qué
+
+**La emisión en sí.** Todo lo demás se vio en pantalla —los tres casos del
+bloqueo y el buscador abriendo y consultando— pero llamar a `emitir_comprobante`
+gasta un correlativo de verdad en la base del cliente. El payload ahora lleva
+`guias` y la base los exige: **van juntos y hay que probarlos juntos**, en la
+serie de prueba `F001`, antes de dar la facturación por buena.
+
+Y **elegir una guía en el «+» y verla entrar**: en la base solo hay dos guías,
+una emitida y una en borrador, así que ningún cliente tiene una segunda que
+ofrecer.

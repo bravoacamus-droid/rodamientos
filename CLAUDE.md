@@ -200,6 +200,16 @@ Cotización → Pedido confirmado → [Compra → Recepción] → Guía → Fact
 técnicos se revisan, y con la guía sellada por el almacén del cliente es con lo
 que se puede facturar sin arriesgar una anulación.
 
+Desde el 17/09 **es una regla y no una costumbre**: sin una guía *emitida* no
+se emite comprobante. Lo comprueban las tres capas —`bloqueosEmision`, la
+Server Action y `emitir_comprobante` (089)—, y el payload declara `guias`: si
+alguien quita eso, la base rechaza TODAS las facturas. Van juntos.
+
+Consecuencia: **el stock nunca sale con la factura**. La casilla de la venta de
+mostrador se retiró, porque al llegar a facturar el stock ya salió con la guía
+y marcarla solo podía restarlo dos veces. Si aparece una venta sin guía, lo que
+hay que replantear es la regla, no volver a poner la casilla.
+
 | Documento | Se edita | Hasta cuándo |
 |---|---|---|
 | Cotización | todo | borrador, enviada **o aprobada sin guía ni factura** (070) |
@@ -356,6 +366,14 @@ Bloqueado por lo de siempre: **uno de los 97 clientes tiene correo.**
 
 ### Escrito pero SIN probar en pantalla
 
+- **Emitir un comprobante**, desde que la 089 exige guía (17/09). Es lo más
+  urgente de esta lista: la base pide `guias` en el payload y la Server Action
+  lo manda, pero esa llamada no se ha ejecutado — hacerlo gasta un correlativo
+  real. **Pruébalo en la serie `F001`, que es la de prueba, antes de dar la
+  facturación por buena.**
+- Elegir una guía en el «+» de la factura. Solo hay dos guías en la base —una
+  emitida y una en borrador—, así que ningún cliente tiene una segunda que
+  ofrecer.
 - Detalle de cuotas en la factura (no hay ninguna con más de una cuota).
 - El estado apagado de «Ya se le preguntó» al añadir un proveedor a una ronda
   (§AI.3). Cubierto por tests; no se llegó a ver con los ojos.
