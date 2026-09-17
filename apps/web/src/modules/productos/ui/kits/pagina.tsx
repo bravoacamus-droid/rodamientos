@@ -14,6 +14,7 @@ import {
 } from "@rodatech/ui";
 
 import { listarKits, type KitDetalle } from "../../api/kits";
+import { AccionesKit } from "./acciones";
 import { FiltrosKits } from "./filtros";
 
 const dolar = (n: number) =>
@@ -159,6 +160,7 @@ export async function PaginaKits({
                   <th className="text-left">Lo frena</th>
                   <th className="text-right">Piezas</th>
                   <th className="text-right">Precio</th>
+                  <th className="text-right">Acciones</th>
                 </tr>
               </THead>
               <TBody>
@@ -185,9 +187,10 @@ export async function PaginaKits({
 /**
  * Una fila de la tabla.
  *
- * La fila ENTERA no es un enlace: es la regla de la casa desde el 08/09 —una
- * celda pulsable no se ve pulsable—. El enlace es el código, que además es lo
- * que Willy usa para identificar un kit.
+ * La fila ENTERA no es un enlace, y el código tampoco: es la regla de la casa
+ * desde el 08/09 —una celda pulsable no se ve pulsable, y un texto azul obliga
+ * a descubrir que lo es—. Lo que se pulsa son los dos botones de la derecha,
+ * como en las otras diez tablas del ERP.
  */
 function FilaKit({ kit: k }: { kit: KitDetalle }) {
   const freno =
@@ -200,14 +203,20 @@ function FilaKit({ kit: k }: { kit: KitDetalle }) {
 
   return (
     <tr className={k.archivado ? "opacity-60" : ""}>
+      {/*
+        El código ya NO es el enlace.
+
+        Luis, 17/09: *«¿por qué no tenemos los botones necesarios, ver,
+        editar?»*. Un código azul subrayado obliga a descubrir que se puede
+        pulsar; dos botones con su palabra, no. Es la regla de la primera
+        página, y la columna de acciones es como se resuelve en las otras diez
+        tablas del ERP.
+      */}
       <td className="whitespace-nowrap">
-        <Link
-          href={`/productos/kits/${k.id}`}
-          className="inline-flex items-center gap-2 font-mono font-medium text-brand-600 hover:underline"
-        >
+        <span className="inline-flex items-center gap-2 font-mono font-medium">
           <Boxes className="size-4 shrink-0 text-[var(--fg-muted)]" />
           {k.codigo}
-        </Link>
+        </span>
         {k.archivado ? (
           <Badge tone="neutral" size="xs" className="ml-2">
             de baja
@@ -246,6 +255,10 @@ function FilaKit({ kit: k }: { kit: KitDetalle }) {
             suma {dolar(k.sumaVenta)}
           </span>
         ) : null}
+      </td>
+
+      <td className="text-right">
+        <AccionesKit kit={k} />
       </td>
     </tr>
   );
