@@ -614,6 +614,22 @@ export function FilaLinea({
           linea={linea}
           onCerrar={() => setEditando(false)}
           onGuardar={(c) => {
+            // Con ficha: un solo hecho, una sola acción, y la línea se pone al
+            // día del costo y del piso además de lo impreso.
+            if (c.ficha) {
+              despachar({
+                tipo: "fichaActualizada",
+                key: linea.key,
+                datos: {
+                  codigo: c.codigo,
+                  marca: c.marca.trim() ? c.marca.trim() : null,
+                  descripcion: c.descripcion,
+                  ...c.ficha,
+                },
+              });
+              return;
+            }
+            // Solo en esta cotización: se toca lo que se imprime y nada más.
             despachar({ tipo: "codigo", key: linea.key, valor: c.codigo });
             despachar({ tipo: "marca", key: linea.key, valor: c.marca });
             despachar({ tipo: "descripcion", key: linea.key, valor: c.descripcion });

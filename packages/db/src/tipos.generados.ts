@@ -4405,6 +4405,7 @@ export type Database = {
           stock: number
           subfamilia: string
           tipo: string
+          ultimo_costo: number
           unidad: string
         }[]
       }

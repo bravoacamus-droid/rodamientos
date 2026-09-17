@@ -44,6 +44,16 @@ update marcas      set activo = false where nombre = 'ZZ MARCA PRUEBA';
 --
 -- update productos set archivado = true where codigo = '22208';
 
+-- 3 · El MB-26, del 17/09. Probando que «Editar artículo» ya escribe el costo
+--     y el precio mínimo, se le pusieron **USD 7.00 de costo y USD 9.00 de
+--     mínimo, los dos inventados**. Su precio de lista (10.96) es el bueno.
+--
+--     Descoméntalo para dejarlos en cero otra vez, o mejor: que Willy ponga
+--     los de verdad, que es justo lo que va a hacer esta semana.
+--
+-- update productos set ultimo_costo = 0, precio_minimo = 0
+--  where codigo = 'MB-26';
+
 commit;
 
 -- Para comprobar que quedó limpio:

@@ -128,6 +128,11 @@ export default async function PaginaEditarCotizacion({
       valorUnitario: l.valor_unitario,
       descuentoPct: l.descuento_pct,
       costoUnitario: l.costo_unitario,
+      // El costo guardado en la línea es el que había al cotizar: viene del
+      // kardex o de la ficha, y a estas alturas ya no se sabe cuál. Se dice
+      // que no, que es lo prudente: el modal de precios lo llamará «lo
+      // anotado» en vez de afirmar que salió de una recepción.
+      costoDelKardex: false,
       // El piso y el precio de lista del MAESTRO no viajan en la cotización.
       // Se quedan en cero, que el dominio lee como «sin P.M. cargado»: no
       // bloquea, y el aviso vuelve en cuanto se toca la línea y se rebusca el

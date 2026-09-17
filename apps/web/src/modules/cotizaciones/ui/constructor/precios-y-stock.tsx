@@ -137,9 +137,22 @@ export function PreciosYStock({
           <section>
             <h3 className="mb-2 text-sm font-semibold">Precios de referencia</h3>
             <dl className="flex flex-col">
+              {/*
+                Se dice DE DÓNDE sale el costo, no solo cuánto es.
+
+                Son dos datos distintos: el del kardex es lo que de verdad se
+                pagó al recibirlo, y el de la ficha es lo que alguien anotó.
+                Al negociar no pesan igual, y hoy casi todo el catálogo solo
+                tiene el segundo — 790 productos entraron del Excel sin una
+                sola recepción.
+              */}
               <Referencia
                 etiqueta="Costo"
-                ayuda="Lo que costó la última vez que entró al almacén."
+                ayuda={
+                  linea.costoDelKardex
+                    ? "Lo que costó la última vez que entró al almacén."
+                    : "Lo anotado en su ficha. Todavía no ha entrado ninguno."
+                }
                 valor={linea.costoUnitario}
               />
               <Referencia

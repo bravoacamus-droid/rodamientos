@@ -28,6 +28,12 @@ export interface ProductoParaCotizar {
   costo_promedio?: number;
   /** Referencia de a cuánto se ve el mercado (025). Para el modal de precios. */
   precio_mercado?: number;
+  /**
+   * Lo que alguien anotó en la ficha, frente a `costo_promedio`, que lo lleva
+   * el kardex con cada recepción. Es lo ÚNICO que hay mientras el producto no
+   * haya entrado nunca al almacén — el caso de casi todo el catálogo.
+   */
+  ultimo_costo?: number;
 }
 
 import { entregaDelDocumento, type Disponibilidad } from "./disponibilidad";
@@ -44,6 +50,14 @@ export interface LineaConstructor {
   valorUnitario: number;
   descuentoPct: number;
   costoUnitario: number;
+  /**
+   * ¿El costo sale de una recepción real o de lo anotado en la ficha?
+   *
+   * No cambia ningún cálculo; cambia lo que la pantalla puede afirmar. «Lo
+   * que costó la última vez que entró» y «lo que alguien escribió» no pesan
+   * igual cuando se está decidiendo un precio.
+   */
+  costoDelKardex: boolean;
   /** Piso del maestro. 0 = el producto no tiene P.M. cargado. */
   precioMinimo: number;
   /**
@@ -169,6 +183,31 @@ export type Accion =
    */
   | { tipo: "codigo"; key: string; valor: string }
   | { tipo: "descripcion"; key: string; valor: string }
+  /**
+   * La ficha del catálogo cambió: la línea se pone al día de una vez.
+   *
+   * Desde el 17/09 «Editar artículo» también escribe el COSTO y el PRECIO
+   * MÍNIMO (Luis: *«en editar no puedo poner el precio de costo, precio
+   * mínimo y el precio de lista pues»*), y eso mueve dos cosas que la línea
+   * lleva copiadas del maestro y usa para decidir: el margen y el aviso del
+   * piso.
+   *
+   * Va en UNA acción y no en cinco despachos sueltos porque es un solo hecho
+   * —«se guardó la ficha»— y porque cinco reducciones seguidas dejan cuatro
+   * estados intermedios donde el margen y el piso no se corresponden.
+   */
+  | {
+      tipo: "fichaActualizada";
+      key: string;
+      datos: {
+        codigo: string;
+        marca: string | null;
+        descripcion: string;
+        costoUnitario: number;
+        precioMinimo: number;
+        precioLista: number;
+      };
+    }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
@@ -246,7 +285,20 @@ function desdeProducto(
     cantidad,
     valorUnitario: producto.precio_venta,
     descuentoPct: 0,
-    costoUnitario: producto.costo_promedio ?? 0,
+    /*
+      El del KARDEX manda; el de la ficha es el respaldo.
+
+      Un producto que nunca entró al almacén tiene el costo promedio en cero
+      aunque su ficha diga a cuánto se compró. Quedarse con ese cero deja sin
+      margen a casi todo el catálogo —790 productos entraron del Excel sin una
+      sola recepción—, y un margen que no se puede calcular no ayuda a
+      negociar, que es justo para lo que se mira.
+
+      Cuál de los dos se está usando lo dice el modal de precios, con todas
+      las letras.
+    */
+    costoUnitario: producto.costo_promedio || producto.ultimo_costo || 0,
+    costoDelKardex: (producto.costo_promedio ?? 0) > 0,
     precioMinimo: producto.precio_minimo ?? 0,
     precioMercado: producto.precio_mercado ?? 0,
     precioLista: producto.precio_venta,
@@ -369,6 +421,29 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         ...l,
         // Igual: es lo que el cliente LEE para saber qué está comprando.
         descripcion: accion.valor.trim() ? accion.valor.trim() : l.descripcion,
+      }));
+
+    case "fichaActualizada":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        codigo: accion.datos.codigo,
+        marca: accion.datos.marca,
+        descripcion: accion.datos.descripcion,
+        costoUnitario: accion.datos.costoUnitario,
+        // Acaba de escribirse a mano en la ficha, no salió de una recepción.
+        // Decirlo mal haría que el modal afirmara que ese costo se pagó.
+        costoDelKardex: false,
+        precioMinimo: accion.datos.precioMinimo,
+        precioLista: accion.datos.precioLista,
+        /*
+          El valor que se está cobrando NO se toca.
+
+          Es lo único de la línea que no vino del maestro: lo puso quien está
+          negociando. Pisarlo porque cambió el precio de lista borraría el
+          descuento que se acaba de pactar — y el motivo de tocar la ficha
+          suele ser justo el contrario, cargar el costo para ver si ese
+          precio da margen.
+        */
       }));
 
     case "disponibilidad":

@@ -182,6 +182,8 @@ export interface FichaParaEditar {
   subfamilia_id: string;
   unidad_codigo: string;
   precio_venta: number;
+  ultimo_costo: number;
+  precio_minimo: number;
 }
 
 /** La ficha y las listas, en un viaje: el diálogo necesita las dos cosas. */
@@ -207,6 +209,8 @@ export async function fichaParaEditar(id: string) {
         subfamilia_id: p.datos.subfamilia_id,
         unidad_codigo: p.datos.unidad_codigo,
         precio_venta: p.datos.precio_venta,
+        ultimo_costo: p.datos.ultimo_costo,
+        precio_minimo: p.datos.precio_minimo,
       } satisfies FichaParaEditar,
       marcas: c.datos.marcas,
       familias: c.datos.familias,
@@ -216,7 +220,23 @@ export async function fichaParaEditar(id: string) {
   };
 }
 
-const esquemaEdicion = esquema.extend({ id: z.string().uuid() });
+/*
+  La edición admite tres campos que el alta no pregunta: costo, precio mínimo
+  y —ya estaba— precio de lista.
+
+  Luis, 17/09: *«en editar no puedo poner el precio de costo, precio mínimo y
+  el precio normal o de lista pues»*. Y es donde hacen falta: 790 productos
+  entraron del Excel sin costo y sin mínimo, y uno se entera de que faltan
+  justo cotizando, no visitando el catálogo.
+
+  `guardarProducto` sigue siendo quien valida que el mínimo no supere al de
+  lista. Aquí solo se comprueba que sean números que existen.
+*/
+const esquemaEdicion = esquema.extend({
+  id: z.string().uuid(),
+  ultimo_costo: z.number().nonnegative().finite(),
+  precio_minimo: z.number().nonnegative().finite(),
+});
 
 export async function editarProductoRapido(datos: {
   id: string;
@@ -227,6 +247,8 @@ export async function editarProductoRapido(datos: {
   subfamilia_id: string;
   unidad_codigo: string;
   precio_venta: number;
+  ultimo_costo: number;
+  precio_minimo: number;
   marcaNombre: string | null;
 }): Promise<ResultadoAlta> {
   const v = esquemaEdicion.safeParse(datos);
@@ -265,11 +287,14 @@ export async function editarProductoRapido(datos: {
       subfamilia_id: v.data.subfamilia_id,
       unidad_codigo: v.data.unidad_codigo,
       precio_venta: v.data.precio_venta,
+      // Luis, 17/09: *«en editar no puedo poner el precio de costo, precio
+      // mínimo y el precio de lista pues»*. Los tres se editan aquí porque
+      // aquí es donde uno se entera de que faltan: cotizando.
+      ultimo_costo: v.data.ultimo_costo,
+      precio_minimo: v.data.precio_minimo,
 
       // Lo que se conserva tal cual estaba.
       codigo_fabricante: actual.datos.codigo_fabricante,
-      ultimo_costo: actual.datos.ultimo_costo,
-      precio_minimo: actual.datos.precio_minimo,
       stock_minimo: actual.datos.stock_minimo,
       stock_maximo: actual.datos.stock_maximo,
       peso_kg: actual.datos.peso_kg,

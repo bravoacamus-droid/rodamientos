@@ -76,6 +76,8 @@ export function EditarArticulo({
     codigo: string;
     marca: string;
     descripcion: string;
+    /** Solo cuando se guardó en el CATÁLOGO: la línea copia lo nuevo. */
+    ficha?: { costoUnitario: number; precioMinimo: number; precioLista: number };
   }) => void;
 }) {
   /** ¿Tiene ficha que editar, o es una línea escrita a mano? */
@@ -111,6 +113,8 @@ export function EditarArticulo({
     subfamilia_id: "",
     unidad_codigo: linea.unidad,
     precio_venta: String(linea.precioLista),
+    ultimo_costo: String(linea.costoUnitario),
+    precio_minimo: String(linea.precioMinimo),
     /** Solo para las líneas sin ficha: la marca es texto suelto. */
     marcaTexto: linea.marca ?? "",
   });
@@ -155,6 +159,8 @@ export function EditarArticulo({
         subfamilia_id: r.datos.producto.subfamilia_id,
         unidad_codigo: r.datos.producto.unidad_codigo,
         precio_venta: String(r.datos.producto.precio_venta),
+        ultimo_costo: String(r.datos.producto.ultimo_costo),
+        precio_minimo: String(r.datos.producto.precio_minimo),
       }));
     });
     return () => {
@@ -227,12 +233,19 @@ export function EditarArticulo({
     return nueva;
   }
 
+  /** El mínimo por encima del de lista: la base lo rechaza, así que se dice antes. */
+  const minimoSobrePasa =
+    Number(datos.precio_minimo) > 0 &&
+    Number(datos.precio_venta) > 0 &&
+    Number(datos.precio_minimo) > Number(datos.precio_venta);
+
   const listo = enCatalogo
     ? datos.codigo.trim().length > 0 &&
       datos.descripcion.trim().length >= 3 &&
       datos.marca_id !== "" &&
       datos.familia_id !== "" &&
-      datos.subfamilia_id !== ""
+      datos.subfamilia_id !== "" &&
+      !minimoSobrePasa
     : datos.codigo.trim().length > 0 && datos.descripcion.trim().length >= 3;
 
   const nombreDeMarca = () =>
@@ -263,6 +276,8 @@ export function EditarArticulo({
         subfamilia_id: datos.subfamilia_id,
         unidad_codigo: datos.unidad_codigo,
         precio_venta: Number(datos.precio_venta) || 0,
+        ultimo_costo: Number(datos.ultimo_costo) || 0,
+        precio_minimo: Number(datos.precio_minimo) || 0,
         marcaNombre: nombreDeMarca(),
       });
 
@@ -276,6 +291,15 @@ export function EditarArticulo({
         codigo: r.producto.codigo,
         marca: r.producto.marca ?? "",
         descripcion: r.producto.descripcion,
+        // Sin esto, el costo y el mínimo recién escritos no llegarían a la
+        // línea: el modal de precios seguiría diciendo «sin cargar» y el
+        // margen seguiría sin poder calcularse, justo después de haberlos
+        // rellenado para verlos.
+        ficha: {
+          costoUnitario: Number(datos.ultimo_costo) || 0,
+          precioMinimo: Number(datos.precio_minimo) || 0,
+          precioLista: Number(datos.precio_venta) || 0,
+        },
       });
       onCerrar();
     });
@@ -459,7 +483,7 @@ export function EditarArticulo({
                   <Campo
                     id="ed-precio"
                     label="Precio de lista"
-                    ayuda="El de la cotización se sigue cambiando en la fila."
+                    ayuda="Con el que el producto entra a una cotización."
                   >
                     <Input
                       id="ed-precio"
@@ -475,14 +499,72 @@ export function EditarArticulo({
                   </Campo>
                 </div>
 
-                {/* Lo que este diálogo NO toca, dicho para que nadie lo vaya a
-                    buscar y para que nadie tema habérselo llevado por delante:
-                    el costo y el precio mínimo son de lo que más cuesta
-                    rellenar en este catálogo. */}
+                {/*
+                  Costo y precio mínimo, que antes no se podían tocar aquí.
+
+                  Luis, 17/09: *«en editar no puedo poner el precio de costo,
+                  precio mínimo y el precio normal o de lista pues»*. Y es el
+                  sitio donde hacen falta: de los 790 productos del Excel,
+                  casi ninguno tiene los dos, y uno se entera de que faltan
+                  cotizando —no paseando por el catálogo—.
+                */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Campo
+                    id="ed-costo"
+                    label="Costo"
+                    ayuda="A cuánto lo compras. Es lo que da el margen."
+                  >
+                    <Input
+                      id="ed-costo"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={datos.ultimo_costo}
+                      onChange={(e) =>
+                        setDatos((d) => ({ ...d, ultimo_costo: e.target.value }))
+                      }
+                      className="tabular"
+                    />
+                  </Campo>
+
+                  <Campo
+                    id="ed-minimo"
+                    label="Precio mínimo de venta"
+                    ayuda="Por debajo de esto la cotización avisa. No impide."
+                  >
+                    <Input
+                      id="ed-minimo"
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={datos.precio_minimo}
+                      onChange={(e) =>
+                        setDatos((d) => ({ ...d, precio_minimo: e.target.value }))
+                      }
+                      className="tabular"
+                      aria-invalid={minimoSobrePasa}
+                    />
+                  </Campo>
+                </div>
+
+                {/*
+                  El único choque entre estos tres, dicho antes de guardar.
+
+                  La base lo rechaza con un `check`, pero su mensaje no se
+                  entiende. Aquí se dice con los dos números delante, que es
+                  cuando se puede corregir.
+                */}
+                {minimoSobrePasa ? (
+                  <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+                    El precio mínimo no puede ser mayor que el de lista. Sube el
+                    de lista o baja el mínimo.
+                  </p>
+                ) : null}
+
                 <p className="text-sm text-[var(--fg-subtle)]">
-                  El costo, el peso, los mínimos y la ubicación no se tocan
-                  desde aquí: siguen como están, y se editan en la ficha del
-                  producto.
+                  El peso, los stocks, la ubicación y el precio de mercado no se
+                  tocan desde aquí: siguen como están, y se editan en la ficha
+                  del producto.
                 </p>
               </>
             ) : null}
