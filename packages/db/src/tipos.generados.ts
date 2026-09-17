@@ -2500,6 +2500,7 @@ export type Database = {
       kit_componentes: {
         Row: {
           cantidad: number
+          descuento_pct: number
           kit_id: string
           orden: number
           precio_unitario: number | null
@@ -2507,6 +2508,7 @@ export type Database = {
         }
         Insert: {
           cantidad: number
+          descuento_pct?: number
           kit_id: string
           orden?: number
           precio_unitario?: number | null
@@ -2514,6 +2516,7 @@ export type Database = {
         }
         Update: {
           cantidad?: number
+          descuento_pct?: number
           kit_id?: string
           orden?: number
           precio_unitario?: number | null

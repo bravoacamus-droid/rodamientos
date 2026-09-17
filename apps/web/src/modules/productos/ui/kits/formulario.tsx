@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
+  Switch,
   Table,
   TableContenedor,
   TBody,
@@ -60,6 +61,8 @@ interface Linea {
   precioVenta: number;
   /** El de lista del producto, para poder volver a él. */
   precioLista: number;
+  /** El descuento de esta pieza dentro del kit, en por ciento (088). */
+  descuentoPct: number;
   costo: number;
   costoDelKardex: boolean;
   precioMinimo: number;
@@ -75,9 +78,10 @@ interface Linea {
  * muchísimo más barato que mantener dos versiones de cada diálogo, que es como
  * se garantiza que el día que se arregle uno, el otro no.
  *
- * Lo que un kit no tiene —descuento, plazo de entrega— va en su valor neutro:
- * los diálogos lo leen solo para enseñar lo que se está cobrando, y aquí lo
- * que se cobra es el precio del kit, no el de la pieza.
+ * El descuento SÍ viaja desde la 088, y hace falta que viaje: «Ver precios»
+ * enseña el neto y avisa si se bajó del precio mínimo, y esa cuenta no sale
+ * sin él. Lo que un kit no tiene es plazo de entrega —eso se promete en la
+ * cotización, sobre el kit entero— y va en su valor neutro.
  */
 function comoLineaDeCotizacion(l: Linea): LineaConstructor {
   return {
@@ -89,7 +93,7 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
     unidad: l.unidad,
     cantidad: l.cantidad,
     valorUnitario: l.precioVenta,
-    descuentoPct: 0,
+    descuentoPct: l.descuentoPct,
     costoUnitario: l.costo,
     costoDelKardex: l.costoDelKardex,
     precioMinimo: l.precioMinimo,
@@ -131,6 +135,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
       stock: c.stock,
       precioVenta: c.precioVenta,
       precioLista: c.precioLista,
+      descuentoPct: c.descuentoPct,
       costo: c.costo,
       marca: c.marca,
       costoDelKardex: c.costoDelKardex,
@@ -174,8 +179,43 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
   /** ¿Alguna pieza está en otro kit? Si no, la columna no se dibuja. */
   const hayCompartidos = lineas.some((l) => (otros[l.producto_id] ?? []).length > 0);
 
-  const suma = lineas.reduce((t, l) => t + l.precioVenta * l.cantidad, 0);
+  /*
+    El descuento por pieza, y el interruptor que lo enseña.
+
+    Luis, 17/09: *«falta poner esto, si va a haber descuento o no»*. Es el
+    mismo trato que en la cotización —Willy, 16/09 (15:52): *«esa columna se
+    puede incluir o no según el caso»*—, y por el mismo motivo: una columna
+    que dice 0 en las seis filas es ruido en una pantalla que hay que leer.
+
+    Arranca encendido si el kit YA trae descuentos, porque si no, al abrirlo
+    se vería una suma que no cuadra con los precios de al lado y no habría
+    dónde mirar por qué. No se guarda en ninguna columna a propósito: «sin
+    descuento» y «descuento del 0 %» son lo mismo, así que el estado se
+    deduce de los datos y no hay dos sitios que puedan discrepar.
+  */
+  const [conDescuento, setConDescuento] = React.useState(
+    (kit?.componentes ?? []).some((c) => c.descuentoPct > 0),
+  );
+
+  /** El unitario ya rebajado. Mismo redondeo a 4 que `kit_suma` en la base. */
+  const netoDe = (l: Linea) =>
+    Math.round(l.precioVenta * (1 - l.descuentoPct / 100) * 1e4) / 1e4;
+
+  const suma = lineas.reduce((t, l) => t + netoDe(l) * l.cantidad, 0);
   const sumaCosto = lineas.reduce((t, l) => t + l.costo * l.cantidad, 0);
+
+  /*
+    Piezas que quedaron por debajo de su precio mínimo de venta.
+
+    Se AVISA y se deja guardar, que es lo que decidió Luis el 17/09 para la
+    cotización. Aquí con más razón: lo que el cliente paga es el precio del
+    kit, y dentro del kit una pieza puede ir a pérdida mientras el conjunto
+    gane. Pero que se sepa: un kit entero bajo mínimo se hace de una pieza en
+    una pieza sin que nadie lo note.
+  */
+  const bajoMinimo = lineas.filter(
+    (l) => l.precioMinimo > 0 && netoDe(l) < l.precioMinimo,
+  );
 
   /*
     El precio se PROPONE y se puede cambiar.
@@ -226,6 +266,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
           stock: p.stock ?? 0,
           precioVenta: p.precio_venta,
           precioLista: p.precio_venta,
+          descuentoPct: 0,
           costo: p.costo_promedio || p.ultimo_costo || 0,
           marca: p.marca,
           costoDelKardex: (p.costo_promedio ?? 0) > 0,
@@ -261,6 +302,16 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
             sin que nadie lo hubiera decidido.
           */
           precio_unitario: l.precioVenta === l.precioLista ? null : l.precioVenta,
+          /*
+            El PORCENTAJE, no el precio ya rebajado (088).
+
+            Un 20 % y un «23.17» no dicen lo mismo dentro de seis meses: con el
+            porcentaje el kit sigue al precio de lista sin perder lo negociado;
+            con el número final se queda congelado y hay que rehacer la cuenta
+            a mano. Y si el interruptor está apagado no hay descuento que
+            guardar, aunque queden números viejos en el estado.
+          */
+          descuento_pct: conDescuento ? l.descuentoPct : 0,
         })),
       });
 
@@ -323,12 +374,41 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
 
       {/* --------------------------------------------------- Contenido */}
       <section className="card p-4">
-        <div className="mb-3">
-          <h2 className="text-base font-semibold">Qué lleva dentro</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Búscalos igual que en una cotización. El precio de cada uno no se
-            imprime: solo suma para el total.
-          </p>
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold">Qué lleva dentro</h2>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Búscalos igual que en una cotización. El precio de cada uno no se
+              imprime: solo suma para el total.
+            </p>
+          </div>
+
+          {/*
+            El interruptor del descuento, pegado a la tabla que gobierna.
+
+            Luis, 17/09: *«falta poner esto, si va a haber descuento o no»*. En
+            la cotización vive en el panel «El documento» porque allí decide
+            qué se IMPRIME. Aquí no imprime nada —los precios de las piezas no
+            salen en el papel—: decide qué columna se ve mientras se arma, así
+            que va donde está lo que cambia.
+
+            Apagarlo NO borra lo tecleado del estado, para que encenderlo otra
+            vez por error no cueste rehacer seis descuentos. Lo que sí hace es
+            guardar ceros: al apagarlo, el kit no lleva descuento.
+          */}
+          <label className="flex cursor-pointer items-start gap-3">
+            <span className="text-sm">
+              Trabajar con descuento
+              <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
+                Solo si de verdad hay algo que descontar.
+              </span>
+            </span>
+            <Switch
+              checked={conDescuento}
+              onCheckedChange={setConDescuento}
+              aria-label="Trabajar con descuento en las piezas del kit"
+            />
+          </label>
         </div>
 
         <BuscadorLineas onElegir={agregar} />
@@ -350,6 +430,7 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                       orden. Luis, 17/09: *«igual como hacer una cotización es
                       hacer un kit»*. */}
                   <th className="text-right">Valor unit.</th>
+                  {conDescuento ? <th className="text-right">Desc. %</th> : null}
                   <th className="text-right">Importe</th>
                   <th className="text-right">Stock</th>
                   <th className="text-right">Alcanza</th>
@@ -456,8 +537,52 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                         ) : null}
                       </td>
 
+                      {/*
+                        El descuento de la pieza, solo si el interruptor está.
+
+                        Luis, 17/09: *«falta poner esto, si va a haber
+                        descuento o no»*. Va donde la cotización lo tiene
+                        —entre el valor unitario y el importe—, porque el orden
+                        de las columnas es parte de lo que ya está aprendido.
+
+                        El tope de 100 lo pone el campo, la Server Action y el
+                        check de la base: los tres, porque un `max` en un
+                        `<input type=number>` no impide teclear 120.
+                      */}
+                      {conDescuento ? (
+                        <td className="w-24">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="0.01"
+                            value={l.descuentoPct}
+                            onChange={(e) => {
+                              const v = Number(e.target.value) || 0;
+                              setLineas((ls) =>
+                                ls.map((x) =>
+                                  x.producto_id === l.producto_id
+                                    ? { ...x, descuentoPct: Math.min(100, Math.max(0, v)) }
+                                    : x,
+                                ),
+                              );
+                            }}
+                            className="min-w-[4rem] text-right tabular"
+                            aria-label={`Descuento de ${l.codigo} en el kit`}
+                          />
+                        </td>
+                      ) : null}
+
                       <td className="text-right tabular text-sm font-medium">
-                        {dolar(l.precioVenta * l.cantidad)}
+                        {dolar(netoDe(l) * l.cantidad)}
+                        {/* Con descuento, el bruto tachado debajo: es lo que
+                            permite ver de un vistazo cuánto se rebajó sin
+                            hacer la cuenta. */}
+                        {conDescuento && l.descuentoPct > 0 ? (
+                          <span className="block text-sm font-normal text-[var(--fg-muted)] line-through">
+                            {dolar(l.precioVenta * l.cantidad)}
+                          </span>
+                        ) : null}
                       </td>
 
                       <td className="text-right tabular text-sm">{l.stock}</td>
@@ -606,6 +731,37 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
               </span>
             ) : null}
           </div>
+
+          {/*
+            Piezas por debajo de su precio mínimo de venta.
+
+            Avisa y deja guardar, que es lo que se decidió el 17/09 para la
+            cotización. Aquí con más motivo: lo que cobra el kit es SU precio,
+            y una pieza puede ir a pérdida dentro de un conjunto que gana. Pero
+            sin este aviso, un kit entero bajo mínimo se arma pieza a pieza sin
+            que nadie lo vea — y el precio mínimo lo puso Willy por algo.
+
+            Dice CUÁLES y CUÁNTO, no «hay 3 líneas con problemas»: lo primero
+            se puede corregir, lo segundo obliga a buscarlas a mano.
+          */}
+          {bajoMinimo.length > 0 ? (
+            <p className="mt-3 rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3 text-sm">
+              <strong className="text-[var(--warn)]">
+                {bajoMinimo.length === 1
+                  ? "Una pieza va por debajo de su precio mínimo de venta:"
+                  : `${bajoMinimo.length} piezas van por debajo de su precio mínimo de venta:`}
+              </strong>{" "}
+              {bajoMinimo.map((l, i) => (
+                <span key={l.producto_id}>
+                  {i > 0 ? " · " : ""}
+                  <span className="font-medium">{l.codigo}</span> a{" "}
+                  <span className="tabular">{dolar(netoDe(l))}</span>, el mínimo
+                  es <span className="tabular">{dolar(l.precioMinimo)}</span>
+                </span>
+              ))}
+              . Se puede guardar igual: lo que se cobra es el precio del kit.
+            </p>
+          ) : null}
         </div>
 
         <div className="lg:w-72">

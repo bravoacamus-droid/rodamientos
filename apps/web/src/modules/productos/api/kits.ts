@@ -26,6 +26,10 @@ export interface ComponenteDeKit {
   precioVenta: number;
   /** ¿Tiene precio propio en el kit, o hereda el de lista? (087) */
   precioPropio: boolean;
+  /** El descuento de esta pieza dentro del kit, en por ciento (088). */
+  descuentoPct: number;
+  /** `precioVenta` ya con el descuento aplicado. Es lo que suma. */
+  precioNeto: number;
   costo: number;
   /** ¿El costo sale del kardex o de lo anotado en la ficha? (083) */
   costoDelKardex: boolean;
@@ -56,6 +60,7 @@ interface FilaComponente {
   cantidad: number;
   orden: number;
   precio_unitario: number | null;
+  descuento_pct: number | null;
   productos: {
     id: string;
     codigo: string;
@@ -91,6 +96,11 @@ function armar(filas: FilaComponente[]): {
       const p = f.productos!;
       const stock = stockDe(p.stock);
       const cantidad = Number(f.cantidad);
+      const bruto =
+        f.precio_unitario !== null && f.precio_unitario !== undefined
+          ? Number(f.precio_unitario)
+          : Number(p.precio_venta ?? 0);
+      const descuentoPct = Number(f.descuento_pct ?? 0);
       return {
         producto_id: p.id,
         codigo: p.codigo,
@@ -103,11 +113,14 @@ function armar(filas: FilaComponente[]): {
         // El del kit manda; el de lista es el respaldo. Un 0 puesto a mano
         // vale 0 —la pieza va sin cargo—, así que se compara con null y no
         // con falsy.
-        precioVenta:
-          f.precio_unitario !== null && f.precio_unitario !== undefined
-            ? Number(f.precio_unitario)
-            : Number(p.precio_venta ?? 0),
+        precioVenta: bruto,
         precioPropio: f.precio_unitario !== null && f.precio_unitario !== undefined,
+        descuentoPct,
+        // A 4 decimales, como `precioNeto` de la cotización: el unitario se
+        // redondea a 4 y la suma después. Si la pantalla y la base no usaran
+        // el mismo redondeo, el kit se guardaría con un precio y se leería
+        // con otro.
+        precioNeto: Math.round(bruto * (1 - descuentoPct / 100) * 1e4) / 1e4,
         // El del kardex manda, el de la ficha es el respaldo (083).
         costo: Number(p.costo_promedio) || Number(p.ultimo_costo) || 0,
         costoDelKardex: Number(p.costo_promedio) > 0,
@@ -126,13 +139,15 @@ function armar(filas: FilaComponente[]): {
       componentes.length === 0
         ? 0
         : Math.min(...componentes.map((c) => c.alcanzaPara)),
-    sumaVenta: componentes.reduce((t, c) => t + c.precioVenta * c.cantidad, 0),
+    // Sobre el NETO, igual que `kit_suma` en la base (088): si la pantalla
+    // sumara el bruto, el total del kit cambiaría al guardar.
+    sumaVenta: componentes.reduce((t, c) => t + c.precioNeto * c.cantidad, 0),
     sumaCosto: componentes.reduce((t, c) => t + c.costo * c.cantidad, 0),
   };
 }
 
 const SELECT_COMPONENTES = `
-  cantidad, orden, precio_unitario,
+  cantidad, orden, precio_unitario, descuento_pct,
   productos!kit_componentes_producto_id_fkey(
     id, codigo, descripcion, unidad_codigo, precio_venta,
     precio_minimo, precio_mercado, costo_promedio, ultimo_costo,

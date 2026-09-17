@@ -296,6 +296,7 @@ Queda construido:
 | `productos.es_kit`, `kit_componentes`, `stock_armable()`, `kit_suma()` | 085 |
 | La guía explota el kit en sus piezas | 086 |
 | El precio de cada pieza DENTRO del kit | 087 |
+| El descuento de cada pieza, con su interruptor | 088 |
 | Lista con indicadores, filtros, paginación y columna de acciones | `productos/ui/kits/` |
 | El papel dice qué lleva el kit, **sin precios** | `cotizaciones/dominio/impresion.ts` |
 
@@ -306,6 +307,30 @@ un kit»*. Armar un kit **es** cotizar. `kit_componentes.precio_unitario` es
 nullable a propósito: `null` = usa el de lista del producto —y así el kit sigue
 al maestro cuando ese precio suba—, `0` = va sin cargo dentro del kit, que es
 una decisión distinta de no haberlo puesto.
+
+**El descuento** (088) cierra lo del precio. Luis: *«falta poner esto, si va a
+haber descuento o no»*. Es la otra mitad de la 087: en una cotización el precio
+de una línea son DOS campos, el unitario y el descuento, y aquí faltaba el
+segundo.
+
+Se guarda el **porcentaje**, no el precio ya rebajado, y esa es toda la
+decisión. Un 20 % y un «23.17» no dicen lo mismo dentro de seis meses: con el
+porcentaje el kit sigue al precio de lista **sin perder lo negociado**; con el
+número final se queda congelado en el precio de hoy y hay que rehacer la cuenta
+a mano cada vez que suba algo. Un kit es recurrente —*«se van a ir generando
+más según las máquinas»*— así que se vuelve a abrir, y es ahí donde se nota.
+
+El interruptor **no se guarda en ninguna columna**: «sin descuento» y
+«descuento del 0 %» son la misma cosa, así que el estado se deduce de los datos
+—si alguna pieza trae descuento, la columna sale— y no hay dos sitios que
+puedan discrepar.
+
+Y con el descuento aparece el aviso que faltaba: si una pieza queda **por
+debajo de su precio mínimo de venta**, se dice cuál y cuánto, y se deja
+guardar. Es lo que se decidió el 17/09 para la cotización, y aquí con más
+motivo: lo que el cliente paga es el precio del kit, y dentro de un kit una
+pieza puede ir a pérdida mientras el conjunto gane. Pero sin el aviso, un kit
+entero bajo mínimo se arma pieza a pieza sin que nadie lo vea.
 
 Lo que **no** llega todavía: la lista de componentes **no sale en el enlace
 público** `/ver/<token>`. Eso lo lee `cotizacion_por_token`, que es

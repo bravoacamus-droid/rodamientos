@@ -46,6 +46,17 @@ const componente = z.object({
    * cargo, que es una decisión distinta de no haberlo puesto (087).
    */
   precio_unitario: z.number().nonnegative().finite().nullable(),
+  /**
+   * El descuento de esta pieza dentro del kit.
+   *
+   * Luis, 17/09: *«falta poner esto, si va a haber descuento o no»*. Se guarda
+   * el PORCENTAJE y no el precio ya rebajado, para que el kit pueda seguir al
+   * precio de lista sin perder lo que se negoció (088).
+   *
+   * El tope de 100 no es decorativo: la base lo vuelve a comprobar con
+   * `kit_comp_descuento_rango`, y un 120 % daría un precio negativo.
+   */
+  descuento_pct: z.number().min(0).max(100).finite(),
 });
 
 const esquema = z.object({
@@ -171,6 +182,7 @@ export async function guardarKit(datos: unknown): Promise<ResultadoKit> {
         producto_id: c.producto_id,
         cantidad: c.cantidad,
         precio_unitario: c.precio_unitario,
+        descuento_pct: c.descuento_pct,
         orden: i + 1,
       })),
     );
