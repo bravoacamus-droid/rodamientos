@@ -184,3 +184,52 @@ export async function guardarKit(datos: unknown): Promise<ResultadoKit> {
     };
   }
 }
+
+/**
+ * En qué OTROS kits está cada uno de estos productos.
+ *
+ * Luis, 17/09: *«también si el producto está en otro kit, así»*.
+ *
+ * Es la pregunta que aparece en cuanto hay más de un kit y no se puede
+ * responder mirando: si se cambia el precio de un retén, o si se agota, hay
+ * que saber a qué otros kits arrastra. Un o-ring puede estar en los seis.
+ *
+ * Y es información de decisión, no de adorno: quitar una pieza de un kit
+ * porque «total, no la uso» es distinto si esa pieza sostiene otros tres.
+ */
+export async function otrosKitsDe(
+  productoIds: string[],
+  exceptoKitId?: string,
+): Promise<Record<string, { id: string; codigo: string }[]>> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return {};
+  if (productoIds.length === 0) return {};
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("kit_componentes")
+      .select("producto_id, kit_id, productos!kit_componentes_kit_id_fkey(codigo, archivado)")
+      .in("producto_id", productoIds.slice(0, 100));
+
+    if (error) return {};
+
+    const mapa: Record<string, { id: string; codigo: string }[]> = {};
+    for (const f of (data ?? []) as unknown as {
+      producto_id: string;
+      kit_id: string;
+      productos: { codigo: string; archivado: boolean } | null;
+    }[]) {
+      // El kit que se está editando no cuenta como «otro», y uno archivado
+      // tampoco: ya no se cotiza, así que avisar de él sería ruido.
+      if (f.kit_id === exceptoKitId) continue;
+      if (!f.productos || f.productos.archivado) continue;
+      (mapa[f.producto_id] ??= []).push({ id: f.kit_id, codigo: f.productos.codigo });
+    }
+    return mapa;
+  } catch {
+    // Que falle esto NO puede impedir editar un kit: es un aviso, no un dato
+    // del que dependa guardar.
+    return {};
+  }
+}

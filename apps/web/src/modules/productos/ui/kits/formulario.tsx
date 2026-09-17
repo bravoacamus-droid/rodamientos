@@ -2,10 +2,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Boxes, DollarSign, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import {
+  Badge,
   Button,
   Campo,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   Table,
   TableContenedor,
@@ -14,10 +20,22 @@ import {
   toast,
 } from "@rodatech/ui";
 
-import { BuscadorLineas } from "@/modules/cotizaciones/ui/constructor/buscador";
-import type { ProductoParaCotizar } from "@/modules/cotizaciones/dominio/constructor";
+/*
+  Por RUTA y no desde `@/modules/cotizaciones`.
 
-import { guardarKit } from "../../acciones/kits";
+  Ese barrel mezcla Server y Client Components, así que importarlo desde aquí
+  —que es cliente— arrastra `lib/emisor.ts` con su `server-only` y el build
+  falla. Se probó, y falló. Los tres archivos de abajo son clientes puros.
+*/
+import { BuscadorLineas } from "@/modules/cotizaciones/ui/constructor/buscador";
+import { EditarArticulo } from "@/modules/cotizaciones/ui/constructor/editar-articulo";
+import { PreciosYStock } from "@/modules/cotizaciones/ui/constructor/precios-y-stock";
+import type {
+  LineaConstructor,
+  ProductoParaCotizar,
+} from "@/modules/cotizaciones/dominio/constructor";
+
+import { guardarKit, otrosKitsDe } from "../../acciones/kits";
 import type { KitDetalle } from "../../api/kits";
 
 const dolar = (n: number) =>
@@ -27,11 +45,50 @@ interface Linea {
   producto_id: string;
   codigo: string;
   descripcion: string;
+  marca: string | null;
   unidad: string;
   cantidad: number;
   stock: number;
   precioVenta: number;
   costo: number;
+  costoDelKardex: boolean;
+  precioMinimo: number;
+  precioMercado: number;
+}
+
+/**
+ * La línea del kit, vestida de línea de cotización.
+ *
+ * «Ver precios», «Ver stock» y «Editar artículo» son los MISMOS diálogos del
+ * cotizador —Luis, 17/09: *«no hay los puntos, así como cotización, para que
+ * edite, ver stock, precio»*— y hablan `LineaConstructor`. Traducir aquí sale
+ * muchísimo más barato que mantener dos versiones de cada diálogo, que es como
+ * se garantiza que el día que se arregle uno, el otro no.
+ *
+ * Lo que un kit no tiene —descuento, plazo de entrega— va en su valor neutro:
+ * los diálogos lo leen solo para enseñar lo que se está cobrando, y aquí lo
+ * que se cobra es el precio del kit, no el de la pieza.
+ */
+function comoLineaDeCotizacion(l: Linea): LineaConstructor {
+  return {
+    key: l.producto_id,
+    productoId: l.producto_id,
+    codigo: l.codigo,
+    marca: l.marca,
+    descripcion: l.descripcion,
+    unidad: l.unidad,
+    cantidad: l.cantidad,
+    valorUnitario: l.precioVenta,
+    descuentoPct: 0,
+    costoUnitario: l.costo,
+    costoDelKardex: l.costoDelKardex,
+    precioMinimo: l.precioMinimo,
+    precioMercado: l.precioMercado,
+    precioLista: l.precioVenta,
+    stock: l.stock,
+    disponibilidad: "inmediata",
+    diasEntrega: null,
+  };
 }
 
 /**
@@ -61,8 +118,47 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
       stock: c.stock,
       precioVenta: c.precioVenta,
       costo: c.costo,
+      marca: c.marca,
+      costoDelKardex: c.costoDelKardex,
+      precioMinimo: c.precioMinimo,
+      precioMercado: c.precioMercado,
     })),
   );
+
+  /** Qué fila tiene abierto cada diálogo, por producto_id. */
+  const [viendo, setViendo] = React.useState<string | null>(null);
+  const [editando, setEditando] = React.useState<string | null>(null);
+
+  /*
+    En qué OTROS kits está cada pieza.
+
+    Luis, 17/09: *«también si el producto está en otro kit»*. Es la pregunta
+    que aparece en cuanto hay más de un kit: si se cambia el precio de un retén
+    o si se agota, ¿a qué más arrastra? Un o-ring puede estar en los seis.
+
+    Se pide cuando cambia la LISTA de ids, no en cada tecla: cambiar una
+    cantidad no cambia en qué kits está nada.
+  */
+  const [otros, setOtros] = React.useState<Record<string, { id: string; codigo: string }[]>>({});
+  const idsComponentes = lineas.map((l) => l.producto_id).join(",");
+
+  React.useEffect(() => {
+    const ids = idsComponentes ? idsComponentes.split(",") : [];
+    if (ids.length === 0) {
+      setOtros({});
+      return;
+    }
+    let vivo = true;
+    otrosKitsDe(ids, kit?.id).then((m) => {
+      if (vivo) setOtros(m);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [idsComponentes, kit?.id]);
+
+  /** ¿Alguna pieza está en otro kit? Si no, la columna no se dibuja. */
+  const hayCompartidos = lineas.some((l) => (otros[l.producto_id] ?? []).length > 0);
 
   const suma = lineas.reduce((t, l) => t + l.precioVenta * l.cantidad, 0);
   const sumaCosto = lineas.reduce((t, l) => t + l.costo * l.cantidad, 0);
@@ -116,6 +212,10 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
           stock: p.stock ?? 0,
           precioVenta: p.precio_venta,
           costo: p.costo_promedio || p.ultimo_costo || 0,
+          marca: p.marca,
+          costoDelKardex: (p.costo_promedio ?? 0) > 0,
+          precioMinimo: p.precio_minimo ?? 0,
+          precioMercado: p.precio_mercado ?? 0,
         },
       ];
     });
@@ -224,7 +324,10 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                   <th className="text-left">U.M.</th>
                   <th className="text-right">Stock</th>
                   <th className="text-right">Alcanza</th>
-                  <th className="text-right">Quitar</th>
+                  {/* Solo si alguna pieza está en otro kit: una columna vacía
+                      en todas las filas es una pregunta que nadie hizo. */}
+                  {hayCompartidos ? <th className="text-left">En otros kits</th> : null}
+                  <th className="text-right" />
                 </tr>
               </THead>
               <TBody>
@@ -267,20 +370,101 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
                       >
                         {alcanza}
                       </td>
+                      {hayCompartidos ? (
+                        <td className="text-sm">
+                          {(otros[l.producto_id] ?? []).length > 0 ? (
+                            <span
+                              className="flex flex-wrap gap-1"
+                              title="Si cambias el precio o se agota, estos kits también se mueven"
+                            >
+                              {(otros[l.producto_id] ?? []).map((k) => (
+                                <Badge key={k.id} tone="neutral" size="xs">
+                                  {k.codigo}
+                                </Badge>
+                              ))}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--fg-subtle)]">solo aquí</span>
+                          )}
+                        </td>
+                      ) : null}
+
+                      {/*
+                        El mismo menú «⋮» de la línea de cotización.
+
+                        Luis, 17/09: *«aquí tampoco hay los puntos, así como
+                        cotización, para que edite, ver stock, precio; falta
+                        eso para que puedan tener control total»*. Y tiene
+                        razón por dónde se decide: armando un kit es cuando uno
+                        se entera de que a una pieza le falta el costo, o de
+                        que su descripción está mal — no visitando el catálogo.
+
+                        Los diálogos son los MISMOS del cotizador, no copias.
+                      */}
                       <td className="text-right">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setLineas((ls) =>
-                              ls.filter((x) => x.producto_id !== l.producto_id),
-                            )
-                          }
-                          title={`Quitar ${l.codigo} del kit`}
-                          aria-label={`Quitar ${l.codigo} del kit`}
-                          className="inline-flex h-9 items-center rounded-md border border-[var(--border)] px-2 text-[var(--danger)] transition-colors hover:bg-[var(--danger-bg)]"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            /*
+                              `type="button"` NO es decorativo aquí.
+
+                              Este menú vive DENTRO del `<form>` del kit, y un
+                              `<button>` sin type dentro de un formulario es
+                              un botón de ENVÍO. Sin esto, abrir el menú
+                              guardaba el kit.
+
+                              En la cotización no se notaba porque allí el
+                              submit está deshabilitado mientras falten datos.
+                            */
+                            type="button"
+                            title={`Opciones de ${l.codigo}`}
+                            aria-label={`Opciones de ${l.codigo}`}
+                            className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+                          >
+                            <MoreVertical className="size-[18px]" aria-hidden="true" />
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end" className="w-60">
+                            <DropdownMenuItem
+                              onSelect={() => setEditando(l.producto_id)}
+                            >
+                              <Pencil />
+                              Editar artículo
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              onSelect={() => setViendo(l.producto_id)}
+                            >
+                              <DollarSign />
+                              Ver precios
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onSelect={() => setViendo(l.producto_id)}
+                            >
+                              <Boxes />
+                              Ver stock
+                              <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
+                                {l.stock}
+                              </span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              destructivo
+                              onSelect={() =>
+                                setLineas((ls) =>
+                                  ls.filter((x) => x.producto_id !== l.producto_id),
+                                )
+                              }
+                            >
+                              <Trash2 />
+                              Quitar del kit
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );
@@ -377,6 +561,72 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
           </span>
         </div>
       </div>
+
+      {/*
+        Los diálogos, FUERA de la tabla y montados solo al abrirse.
+
+        Montados: sus campos nacen de la línea con `useState`, que no se
+        reinicializa cuando cambia una prop —la trampa que ya mordió en este
+        proyecto—. Desmontarlos es lo que garantiza que abrir la segunda pieza
+        no enseñe los datos de la primera.
+
+        Fuera de la tabla: un diálogo dentro de un `<td>` hereda el
+        `display` del contexto de tabla y se pinta donde no debe.
+      */}
+      {viendo ? (
+        (() => {
+          const l = lineas.find((x) => x.producto_id === viendo);
+          if (!l) return null;
+          return (
+            <PreciosYStock
+              linea={comoLineaDeCotizacion(l)}
+              onCerrar={() => setViendo(null)}
+            />
+          );
+        })()
+      ) : null}
+
+      {editando ? (
+        (() => {
+          const l = lineas.find((x) => x.producto_id === editando);
+          if (!l) return null;
+          return (
+            <EditarArticulo
+              linea={comoLineaDeCotizacion(l)}
+              onCerrar={() => setEditando(null)}
+              onGuardar={(c) => {
+                /*
+                  Lo guardado en el catálogo se refleja en la fila del kit.
+
+                  Sin esto, corregir el costo de una pieza desde aquí no
+                  movería ni la suma ni el margen del kit hasta recargar — y
+                  el motivo de corregirlo suele ser justo ver el margen.
+                */
+                setLineas((ls) =>
+                  ls.map((x) =>
+                    x.producto_id === editando
+                      ? {
+                          ...x,
+                          codigo: c.codigo,
+                          descripcion: c.descripcion,
+                          marca: c.marca.trim() ? c.marca.trim() : null,
+                          ...(c.ficha
+                            ? {
+                                costo: c.ficha.costoUnitario,
+                                costoDelKardex: false,
+                                precioMinimo: c.ficha.precioMinimo,
+                                precioVenta: c.ficha.precioLista,
+                              }
+                            : {}),
+                        }
+                      : x,
+                  ),
+                );
+              }}
+            />
+          );
+        })()
+      ) : null}
     </form>
   );
 }

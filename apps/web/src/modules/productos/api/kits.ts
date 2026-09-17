@@ -22,6 +22,10 @@ export interface ComponenteDeKit {
   stock: number;
   precioVenta: number;
   costo: number;
+  /** ¿El costo sale del kardex o de lo anotado en la ficha? (083) */
+  costoDelKardex: boolean;
+  precioMinimo: number;
+  precioMercado: number;
   /** Cuántos kits completos dan las existencias de este componente. */
   alcanzaPara: number;
 }
@@ -52,6 +56,8 @@ interface FilaComponente {
     descripcion: string;
     unidad_codigo: string;
     precio_venta: number;
+    precio_minimo: number;
+    precio_mercado: number;
     costo_promedio: number;
     ultimo_costo: number;
     marcas: { nombre: string } | null;
@@ -90,6 +96,9 @@ function armar(filas: FilaComponente[]): {
         precioVenta: Number(p.precio_venta ?? 0),
         // El del kardex manda, el de la ficha es el respaldo (083).
         costo: Number(p.costo_promedio) || Number(p.ultimo_costo) || 0,
+        costoDelKardex: Number(p.costo_promedio) > 0,
+        precioMinimo: Number(p.precio_minimo ?? 0),
+        precioMercado: Number(p.precio_mercado ?? 0),
         // Cuántos kits enteros salen de lo que hay de ESTE componente. Medio
         // kit no se vende, así que se trunca.
         alcanzaPara: cantidad > 0 ? Math.floor(stock / cantidad) : 0,
@@ -112,7 +121,7 @@ const SELECT_COMPONENTES = `
   cantidad, orden,
   productos!kit_componentes_producto_id_fkey(
     id, codigo, descripcion, unidad_codigo, precio_venta,
-    costo_promedio, ultimo_costo,
+    precio_minimo, precio_mercado, costo_promedio, ultimo_costo,
     marcas(nombre),
     stock(cantidad)
   )`;

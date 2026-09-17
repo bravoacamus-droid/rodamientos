@@ -80,3 +80,19 @@ export type {
   FiltrosCotizaciones,
   LineaCotizacion,
 } from "./dominio/tipos";
+
+/*
+  Las piezas del constructor que REUSA el módulo de kits (085) NO salen por
+  aquí, y es a propósito.
+
+  Este barrel mezcla Server y Client Components —lo dice su cabecera— y eso
+  funciona mientras cada archivo declare su frontera. Pero importarlo DESDE un
+  componente cliente arrastra el módulo entero, y con él `lib/emisor.ts`, que
+  lleva `server-only`: el build falla con «You are importing a component that
+  needs server-only».
+
+  Así que `BuscadorLineas`, `PreciosYStock` y `EditarArticulo` se importan por
+  su ruta —`./ui/constructor/…`— desde el formulario de kits. Es la excepción
+  a la regla del README, y tiene nombre: un barrel mixto no es una superficie
+  pública para el cliente.
+*/
