@@ -236,6 +236,18 @@ export interface CotizacionFacturable {
    * la factura ampara es un número.
    */
   guias: { id: string; numero: string; fecha: string }[];
+  /**
+   * Las que están en BORRADOR, solo para poder explicarse.
+   *
+   * No se pueden vincular —una guía sin emitir no ha movido nada— pero sí hay
+   * que nombrarlas: desde que sin guía no se factura (17/09), decirle a
+   * alguien que «no hay ninguna guía» cuando la tiene hecha y sin emitir lo
+   * manda a crear una segunda, y la pantalla de guías le contestaría que esa
+   * cotización ya está despachada entera. Un callejón perfecto.
+   *
+   * Con esto el mensaje puede decir lo único que sirve: emite la que ya tienes.
+   */
+  guias_borrador: { id: string; numero: string }[];
   /** Solo lo que queda por facturar. Lo entregado ya no está aquí. */
   lineas: {
     producto_id: string;

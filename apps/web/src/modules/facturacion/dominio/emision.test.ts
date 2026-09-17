@@ -27,7 +27,10 @@ const COT: CotizacionFacturable = {
   dias_credito: 30,
   total: 1000,
   lineas_ya_facturadas: 0,
-  guias: [],
+  // Con guía, que es el caso normal: primero sale la mercadería y luego se
+  // factura. Sin ella no se puede emitir (17/09).
+  guias: [{ id: "99999999-9999-9999-9999-999999999999", numero: "T001-00000012", fecha: "2026-08-26" }],
+  guias_borrador: [],
   lineas: [
     {
       producto_id: "33333333-3333-3333-3333-333333333333",
@@ -90,6 +93,30 @@ describe("bloqueosEmision", () => {
   it("sin líneas y sin nada facturado, dice que la cotización está vacía", () => {
     const r = bloqueosEmision({ ...COT, lineas: [], lineas_ya_facturadas: 0 }, "factura");
     expect(r.map((b) => b.mensaje)).toContain("La cotización no tiene líneas.");
+  });
+
+  /*
+    La guía va ANTES que la factura, y ahora es una regla y no una costumbre.
+
+    Luis, 17/09: *«no debería emitir la factura si no tengo la guía hecha; la
+    guía va sujeta a la cotización, si no, no deja facturar»*. Hasta entonces
+    la pantalla no lo pedía y salió que NINGUNA factura tenía guía.
+  */
+  it("sin guía emitida no se puede facturar", () => {
+    const r = bloqueosEmision({ ...COT, guias: [] }, "factura");
+    expect(r.some((b) => b.campo === "guia")).toBe(true);
+  });
+
+  it("la boleta tampoco se libra: también mueve mercadería", () => {
+    const r = bloqueosEmision(
+      { ...COT, guias: [], cliente_tipo_documento: "DNI", cliente_documento: "45678912" },
+      "boleta",
+    );
+    expect(r.some((b) => b.campo === "guia")).toBe(true);
+  });
+
+  it("con guía, ese bloqueo desaparece", () => {
+    expect(bloqueosEmision(COT, "factura").some((b) => b.campo === "guia")).toBe(false);
   });
 
   it("sin líneas porque ya se facturó todo, lo dice así", () => {

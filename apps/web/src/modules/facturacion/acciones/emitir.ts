@@ -206,6 +206,28 @@ export async function emitirComprobante(
     };
   }
 
+  /*
+    Que EXISTA una guía no basta: hay que decir cuál ampara esta factura.
+
+    `bloqueosEmision` ya comprobó que la cotización tenga alguna emitida. Esto
+    comprueba lo otro: que en esta emisión se haya marcado al menos una. Son
+    dos cosas distintas y las dos se pueden incumplir — la pantalla las marca
+    todas de entrada, pero desmarcarlas es un clic, y esta Server Action es un
+    endpoint público al que se puede llamar sin pantalla ninguna.
+
+    Y hay que decir cuál porque el número sale IMPRESO en el comprobante: es
+    el dato que amarra el papel que cobra con el papel que viajó.
+  */
+  if (datos.guias.length === 0) {
+    return {
+      ok: false,
+      error: "No se puede emitir todavía.",
+      bloqueos: [
+        "Marca la guía de remisión que ampara esta factura. Su número sale impreso en el comprobante.",
+      ],
+    };
+  }
+
   // La serie tiene que casar con el tipo: SUNAT exige F para factura y B para
   // boleta, y un cruce se rechaza con el correlativo ya gastado.
   const inicial = datos.tipo === "factura" ? "F" : "B";
@@ -268,6 +290,19 @@ export async function emitirComprobante(
         regla escrita en dos sitios que mañana se separan.
       */
       retencion: { aplica: datos.retencion_aplica },
+      /*
+        Las guías, DECLARADAS aquí además de vinculadas después.
+
+        `emitir_comprobante` las exige desde la 089 —sin guía no se factura, y
+        esa regla tenía que bajar a la base porque la función es
+        `security definer` y se llega a ella por PostgREST sin pasar por
+        ninguna pantalla—. El vínculo de verdad lo escribe
+        `vincular_guias_comprobante` justo después (084); esto es la
+        declaración que la función comprueba antes de gastar el correlativo.
+
+        Si esto faltara, la base rechazaría TODAS las facturas. Van juntos.
+      */
+      guias: datos.guias,
       items: aEmitir.map((l) => ({
         producto_id: l.producto_id,
         codigo: l.codigo,

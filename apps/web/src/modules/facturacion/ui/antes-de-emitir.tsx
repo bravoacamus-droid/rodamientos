@@ -286,8 +286,15 @@ export function AntesDeEmitir({
         agregar otra», porque con dos o tres guías la lista se lee de un
         vistazo y el desplegable obliga a abrirlo para saber cuáles hay.
 
-        Si no hay ninguna emitida, esto no aparece: no todas las ventas pasan
-        por guía —la de mostrador se factura y se lleva—.
+        Y si no hay ninguna emitida, esto YA NO se esconde: se dice, y se dice
+        que sin ella no se factura.
+
+        La primera versión lo daba por opcional —«no todas las ventas pasan por
+        guía, la de mostrador se factura y se lleva»— y eso era mío, no de
+        Willy. Luis, 17/09: *«no debería emitir la factura si no tengo la guía
+        hecha; la guía va sujeta a la cotización, si no, no deja facturar»*. El
+        orden guía→factura es decisión de Willy y está en la primera página del
+        proyecto.
       */}
       {cot.guias.length > 0 ? (
         <div className="rounded-md border border-[var(--border)] p-3">

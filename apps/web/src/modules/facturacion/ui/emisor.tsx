@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { importeConDescuento } from "@rodatech/config";
 import { Badge, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
@@ -86,10 +87,20 @@ export function EmisorComprobante({
     Arranca con la de la cotización si la hubiera, que es lo que se hacía.
   */
   const [ordenCompra, setOrdenCompra] = useState("");
-  // Por defecto NO: el stock sale con la guía de remisión, que es el
-  // documento que acompaña el movimiento físico. Se marca solo en la venta
-  // de mostrador, cuando el cliente se lleva la pieza y se le factura ahí.
-  const [descargarStock, setDescargarStock] = useState(false);
+  /*
+    El stock NUNCA sale con la factura. Ya no es una opción, es un hecho.
+
+    Salía con la guía de remisión, que es el documento que acompaña el
+    movimiento físico, salvo en la venta de mostrador — y desde el 17/09 la
+    venta de mostrador no existe aquí: sin guía no se factura. Así que esto es
+    `false` siempre, y su casilla dejó de enseñarse (ver más abajo).
+
+    Se queda como constante y no se borra del payload porque la base sigue
+    leyendo `descargar_stock`: quitarlo la dejaría con su `coalesce(..., false)`
+    haciendo lo mismo, pero de forma implícita y a través de un campo ausente.
+    Explícito es más fácil de volver a encender el día que haga falta.
+  */
+  const descargarStock = false;
 
   /*
     Lo que se decide antes de gastar el correlativo.
@@ -483,19 +494,18 @@ export function EmisorComprobante({
                                     : "")
                                 : `${l.cantidad} pendientes`}
                           </span>
-                          {/* Cuánto hay de verdad en el estante.
+                          {/*
+                              Aquí iba «en almacén hay N», y se quita con la
+                              casilla que lo encendía.
 
-                              Solo cuando la mercadería sale con esta factura y
-                              no alcanza: el resto del tiempo es ruido. El
-                              saldo negativo está permitido a propósito (002),
-                              pero eso vale mientras se decida a sabiendas — y
-                              esta pantalla precargaba 5 unidades con 1 sola en
-                              almacén sin decir nada. */}
-                          {descargarStock && (cantidades[i] ?? l.cantidad) > l.stock ? (
-                            <span className="block text-xs font-medium text-[var(--warn)]">
-                              en almacén hay {l.stock}
-                            </span>
-                          ) : null}
+                              Solo salía cuando la mercadería iba a salir con
+                              ESTA factura, y desde el 17/09 eso no pasa nunca:
+                              sin guía no se factura, así que el stock ya se
+                              movió antes. El aviso de falta de stock está
+                              donde ahora corresponde —al preparar la guía, que
+                              es donde se decide qué sale— y repetirlo aquí
+                              sería avisar de algo que ya ocurrió.
+                          */}
                         </td>
                         <td className="py-2 pr-3 text-right tabular">
                           {l.valor_unitario.toFixed(4)}
@@ -523,30 +533,27 @@ export function EmisorComprobante({
 
           {cot ? (
             <section className="anim-entrada card flex flex-col gap-4 p-4">
-              {/* La salida de almacén es una DECISIÓN, y por eso está aquí y
-                  no implícita. Lo normal es que la mercadería ya haya salido
-                  con la guía de remisión; marcar esto entonces restaría el
-                  stock dos veces. */}
-              <label className="flex cursor-pointer items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  checked={descargarStock}
-                  onChange={(e) => setDescargarStock(e.target.checked)}
-                  className="mt-0.5 size-4 accent-brand-600"
-                />
-                <span>
-                  <span className="block text-sm font-medium">
-                    La mercadería sale del almacén con esta factura
-                  </span>
-                  <span className="block text-xs text-[var(--fg-muted)]">
-                    Solo para venta de mostrador, sin guía previa. Si ya emitiste
-                    guía de remisión, déjalo sin marcar: el stock salió con ella y
-                    marcarlo lo restaría dos veces.
-                  </span>
-                </span>
-              </label>
+              {/*
+                La casilla «la mercadería sale con esta factura» YA NO SE
+                ENSEÑA, y es consecuencia directa de la regla del 17/09.
 
-              <label className="flex flex-col gap-1 border-t border-[var(--border-soft)] pt-4">
+                Existía para la venta de mostrador: sin guía previa, el stock
+                salía con la factura. Pero desde que **sin guía no se factura**
+                —Luis: *«no debería emitir la factura si no tengo la guía
+                hecha»*—, ese caso no existe: cuando se llega hasta aquí, la
+                mercadería SIEMPRE salió ya con la guía.
+
+                Y entonces la casilla dejó de ser una opción para convertirse
+                en una trampa: marcarla restaría el stock dos veces, y no
+                quedaba ni un solo caso en que fuera correcta. Una casilla cuya
+                única función posible es equivocarse no se deja «por si acaso».
+
+                El estado se queda en `false` y viaja igual en el payload, así
+                que la base sigue recibiendo lo mismo. Si algún día vuelve la
+                venta sin guía, se vuelve a enseñar aquí y ya está.
+              */}
+
+              <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">
                   Orden de compra del cliente
                 </span>
@@ -606,15 +613,82 @@ export function EmisorComprobante({
               </div>
             ) : null}
 
-            {bloqueos.length > 0 ? (
+            {/*
+              La falta de guía va SEPARADA del resto, y no bajo «SUNAT lo
+              rechazaría».
+
+              Porque no es lo mismo ni se arregla igual. Los otros bloqueos son
+              datos del cliente que hay que corregir en su ficha; este es un
+              paso del flujo que falta hacer — Luis, 17/09: *«no debería emitir
+              la factura si no tengo la guía hecha»*— y lo único útil aquí es
+              el botón que lleva a hacerlo. Meterlo en la lista de SUNAT diría
+              además una cosa falsa: SUNAT no rechaza una factura sin guía;
+              quien no la admite es Willy.
+            */}
+            {bloqueos.some((b) => b.campo === "guia") && cot ? (
+              <div className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3">
+                {/*
+                  Dos casos muy distintos, y el segundo casi se me escapa.
+
+                  Si la guía está HECHA pero en borrador, decir «no hay ninguna
+                  guía» manda a crear una segunda — y la pantalla de guías
+                  contestaría que esa cotización ya está despachada entera. Un
+                  callejón sin salida construido en dos pasos.
+
+                  Lo único útil ahí es: emite la que ya tienes.
+                */}
+                {cot.guias_borrador.length > 0 ? (
+                  <>
+                    <p className="text-sm font-medium text-[var(--warn)]">
+                      La guía está sin emitir
+                    </p>
+                    <p className="mt-0.5 text-sm">
+                      {cot.guias_borrador.length === 1
+                        ? `La guía ${cot.guias_borrador[0]!.numero} está en borrador: la mercadería todavía no ha salido del almacén.`
+                        : `Sus guías (${cot.guias_borrador.map((g) => g.numero).join(", ")}) están en borrador: la mercadería todavía no ha salido del almacén.`}{" "}
+                      Emítela y vuelve — su número va impreso en la factura.
+                    </p>
+                    <Link
+                      href={`/guias/${cot.guias_borrador[0]!.id}`}
+                      className="mt-2 inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                    >
+                      Ir a {cot.guias_borrador[0]!.numero}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-[var(--warn)]">
+                      Falta la guía de remisión
+                    </p>
+                    <p className="mt-0.5 text-sm">
+                      {bloqueos.find((b) => b.campo === "guia")!.mensaje} Su
+                      número va impreso en la factura.
+                    </p>
+                    <Link
+                      href={`/guias/nueva?cotizacion=${cot.id}`}
+                      className="mt-2 inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                    >
+                      Generar la guía
+                    </Link>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {bloqueos.some((b) => b.campo !== "guia") ? (
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
-                <p className="mb-1 text-xs font-medium text-[var(--danger)]">
+                <p className="mb-1 text-sm font-medium text-[var(--danger)]">
                   SUNAT lo rechazaría:
                 </p>
-                <ul className="flex flex-col gap-1 text-xs">
-                  {bloqueos.map((b) => (
-                    <li key={b.campo}>· {b.mensaje}</li>
-                  ))}
+                {/* `text-sm` y no `text-xs`: es un mensaje que hay que LEER
+                    para saber qué corregir, y la regla de la casa es que eso
+                    no baja de 14 px (17/09). */}
+                <ul className="flex flex-col gap-1 text-sm">
+                  {bloqueos
+                    .filter((b) => b.campo !== "guia")
+                    .map((b) => (
+                      <li key={b.campo}>· {b.mensaje}</li>
+                    ))}
                 </ul>
               </div>
             ) : null}

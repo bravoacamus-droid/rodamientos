@@ -52,7 +52,7 @@ export function tipoSugerido(tipoDocumento: string | null): TipoComprobante {
 }
 
 export interface Bloqueo {
-  campo: "cliente" | "documento" | "lineas" | "tipo" | "montos";
+  campo: "cliente" | "documento" | "lineas" | "tipo" | "montos" | "guia";
   mensaje: string;
 }
 
@@ -102,6 +102,33 @@ export function bloqueosEmision(
         mensaje: `El DNI ${numero || "(vacío)"} no tiene ocho dígitos.`,
       });
     }
+  }
+
+  /*
+    Sin guía emitida no se factura.
+
+    Luis, 17/09: *«no debería emitir la factura si no tengo la guía hecha;
+    aparte, la guía va sujeta a la cotización — si no, no deja facturar»*.
+
+    Es el orden que fijó Willy y está en la primera página del proyecto: la
+    guía va ANTES que la factura porque los productos técnicos se revisan, y
+    con la guía sellada por el almacén del cliente es con lo que se puede
+    facturar sin arriesgar una anulación. Facturar antes de despachar es
+    prometer por escrito algo que todavía no salió.
+
+    Hasta hoy esto era una costumbre y no una regla: la pantalla no lo pedía y
+    la Server Action tampoco, así que se podía emitir sin guía sin que nada
+    chistara. Y el 17/09 salió que NINGUNA factura tenía guía.
+
+    Solo cuentan las EMITIDAS: un borrador no ha movido mercadería. Eso ya lo
+    filtra `cotizacionParaFacturar`, así que aquí basta con contar.
+  */
+  if (cotizacion.guias.length === 0) {
+    lista.push({
+      campo: "guia",
+      mensaje:
+        "Todavía no hay ninguna guía emitida de esta cotización. La mercadería sale primero: emite la guía y luego factura.",
+    });
   }
 
   if (cotizacion.lineas.length === 0) {

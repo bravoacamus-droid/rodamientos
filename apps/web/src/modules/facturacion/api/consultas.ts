@@ -565,6 +565,12 @@ export async function cotizacionParaFacturar(
           .filter((g) => g.estado === "emitida")
           .map((g) => ({ id: g.id, numero: g.numero, fecha: g.fecha_emision }))
           .sort((a, b) => a.numero.localeCompare(b.numero)),
+        // Las de BORRADOR, solo para poder decir «emite la que ya tienes» en
+        // vez de «no hay ninguna» y mandar a hacer una segunda (17/09).
+        guias_borrador: ((c.guias_remision ?? []) as GuiaDeCotizacion[])
+          .filter((g) => g.estado === "borrador")
+          .map((g) => ({ id: g.id, numero: g.numero }))
+          .sort((a, b) => a.numero.localeCompare(b.numero)),
         lineas: lineasCrudas
           // Solo lo que queda por facturar. Una línea ya entregada entera
           // no puede volver a salir en otro comprobante.
