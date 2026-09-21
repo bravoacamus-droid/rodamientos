@@ -157,3 +157,49 @@ commit;
 -- OJO: eso NO deshace `proveedor_productos`. Al anotar esos precios quedó
 -- registrado que AUTOLAND vende el 6205-2RSH/C3 a $8 y MARCO PERUANA a $6.
 -- Es el mismo caso que el retén del 09/09, y se limpia a mano si molesta.
+
+-- ###########################################################################
+-- 7 · Las compras CMP-26-00023 y CMP-26-00024, del 21/09
+-- ###########################################################################
+--
+-- Salieron de confirmar la ronda CPR-26-00012 (bloque 6) y son la prueba de
+-- que el reparto llega hasta el final: el mismo producto, 4 unidades a
+-- AUTOLAND a $8 y 6 a MARCO PERUANA a $6, en DOS compras creadas de una sola
+-- vez. Antes del 21/09 esto no se podía ni expresar.
+--
+-- No han recibido mercadería, así que NO han movido stock: las compras lo
+-- mueven al recepcionarse, no al registrarse.
+--
+-- ---------------------------------------------------------------------------
+-- Se ANULAN, no se borran
+-- ---------------------------------------------------------------------------
+-- Gastaron dos correlativos de CMP, que no es una serie fiscal —una compra no
+-- se declara— pero sí es una secuencia que se mira. Una compra borrada deja un
+-- hueco que nadie sabe explicar; una anulada se entiende leyendo su motivo.
+--
+-- Y se anulan por la RPC y no con un UPDATE: `anular_compra` comprueba el rol,
+-- exige motivo y se niega si ya se recibió algo. Escribir el estado a mano se
+-- saltaría las tres cosas.
+
+begin;
+
+select public.anular_compra(c.id, 'Prueba del reparto entre proveedores (21/09). No llegó mercadería.')
+  from compras c
+ where c.numero in ('CMP-26-00023', 'CMP-26-00024')
+   and c.estado = 'registrada';
+
+commit;
+
+-- OJO con lo que esto NO deshace, que es lo de siempre:
+--
+--   · `proveedor_productos` quedó con que AUTOLAND vende el 6205-2RSH/C3 a $8
+--     y MARCO PERUANA a $6. Lo escribió la ronda al anotar los precios (046),
+--     no la compra, así que anularla no lo toca.
+--   · Y esos dos precios salen ahora en «A quién preguntarle» de la ficha de
+--     ese producto, etiquetados «lo cotizó».
+--
+-- Si molestan, se quitan a mano:
+--
+--   delete from proveedor_productos pp
+--    using productos p
+--    where pp.producto_id = p.id and p.codigo = '6205-2RSH/C3';
