@@ -200,6 +200,13 @@ export async function detalleComprobante(
   try {
     const supabase = await clienteServidor();
 
+    /*
+      `guias_remision` se pide con el nombre de la clave delante, y no puede
+      ir sin él: desde la 084 hay DOS caminos entre comprobantes y guías —la
+      columna vieja `guia_id` y la tabla `comprobante_guias`—, y ante dos
+      PostgREST no elige, tumba la consulta entera (PGRST201). Se vio el
+      21/09: la factura se emitía bien y su ficha no cargaba.
+    */
     const { data, error } = await supabase
       .from("comprobantes")
       .select(
@@ -215,7 +222,7 @@ export async function detalleComprobante(
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento, tipo_documento, direccion, email),
          cotizaciones(numero),
-         guias_remision(numero),
+         guias_remision!comprobantes_guia_id_fkey(numero),
          comprobante_guias(orden, guias_remision(numero)),
          comprobante_cuotas(numero, fecha_vencimiento, monto, pagado),
          perfiles!comprobantes_vendedor_id_fkey(nombre),

@@ -302,6 +302,17 @@ export default async function PaginaDetalleComprobante({
                 }
               />
               <Dato etiqueta="Cotización" valor={c.cotizacion_numero ?? "—"} />
+              {/*
+                Desde la 089 no se factura sin guía, así que el número de la
+                guía es lo que justifica que esta factura exista. Salía en el
+                papel y no en la ficha: para comprobarlo había que imprimir.
+              */}
+              <Dato
+                etiqueta={
+                  c.guia_numero?.includes(",") ? "Guías de remisión" : "Guía de remisión"
+                }
+                valor={c.guia_numero ?? "—"}
+              />
               <Dato etiqueta="Orden de compra" valor={c.orden_compra_cliente ?? "—"} />
               {c.referencia_numero ? (
                 <Dato etiqueta="Corrige a" valor={c.referencia_numero} />
