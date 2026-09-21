@@ -222,7 +222,7 @@ export function TablaPorComprar({
                       )}
                     </td>
 
-                    <td className="px-3 py-3 align-top">
+                    <td className="w-px whitespace-nowrap px-3 py-3 align-top">
                       {/*
                         «Pedir precio» PRIMERO, y en cada fila.
 
@@ -244,16 +244,36 @@ export function TablaPorComprar({
                         pendiente y no un 1 de relleno.
                       */}
                       {enCamino ? null : (
-                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                        /*
+                          En una sola línea y sin envolver.
+
+                          La primera versión los puso con `flex-wrap` y
+                          «Pedir precio» se partía en dos renglones dentro de
+                          una celda estrecha — el mismo fallo del «volver a
+                          USD 1.50» del 17/09. `whitespace-nowrap` en cada
+                          botón y `justify-end` para que queden pegados al
+                          borde, como en las otras tablas.
+                        */
+                        <span className="flex items-center justify-end gap-2">
+                          {/*
+                            «Pedir precio» va en COLOR y «Comprar» en outline.
+
+                            No es decoración: de los dos, el que hay que pulsar
+                            casi siempre es el primero —Willy pregunta antes de
+                            comprar— y dos botones iguales no dicen cuál. La
+                            regla de la primera página es que un botón parezca
+                            un botón; dos botones idénticos para acciones
+                            distintas obligan a leerlos los dos cada vez.
+                          */}
                           <Link
                             href={enlacePedir([f])}
-                            className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
                           >
                             Pedir precio
                           </Link>
                           <Link
                             href={enlaceCompra([f])}
-                            className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
                           >
                             Comprar
                           </Link>

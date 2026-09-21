@@ -1,7 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
-import { rucValido } from "@rodatech/consultas";
+import { rucValido } from "@rodatech/consultas/validacion";
 
 import { consultarDocumentoSunat, type ResultadoSunat } from "@/lib/documento-sunat";
 
