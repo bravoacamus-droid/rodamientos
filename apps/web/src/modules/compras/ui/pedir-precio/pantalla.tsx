@@ -128,6 +128,127 @@ export function PedirPrecio({
 
   const [abriendo, empezarRonda] = React.useTransition();
   const [, consultarQuienVende] = React.useTransition();
+
+  /*
+    «Ya tengo los precios»: se anotan aquí y la ronda nace contestada.
+
+    Luis, 21/09: *«¿qué te parece resumir en uno todo? Es decir, voy sumando
+    los proveedores y puedo ir registrando los precios»*.
+
+    Es el segundo de los dos casos que describió —*«ya cotizó»*, o sea que ya
+    habló por WhatsApp y solo quiere dejar constancia—. Sin esto había que
+    guardar una ronda vacía, entrar en la rejilla y abrir un diálogo por
+    proveedor: tres pasos para un trabajo de uno.
+
+    Va APAGADO por defecto porque el otro caso —preguntar y esperar— sigue
+    siendo el normal, y veinte casillas de precio en blanco encima de una
+    pantalla que solo sirve para elegir a quién preguntar son ruido.
+
+    La clave es `proveedor|producto`: un proveedor puede dar precios distintos
+    de cada cosa, que es justo por lo que existe la rejilla.
+  */
+  const [yaTengoPrecios, setYaTengoPrecios] = React.useState(false);
+  const [precios, setPrecios] = React.useState<Record<string, string>>({});
+  const [cantidadesProv, setCantidadesProv] = React.useState<Record<string, string>>({});
+
+  const clave = (proveedorId: string, productoId: string) => `${proveedorId}|${productoId}`;
+
+  /**
+   * El precio de UN proveedor para UN producto, si se están anotando aquí.
+   *
+   * Dos campos y no uno: el precio y cuántas tiene. El segundo es lo que
+   * permite el reparto —Willy, 21/09: *«a veces tienen stock parcial y habría
+   * que completar con los demás»*— y va vacío por defecto, que significa «las
+   * que le pido».
+   *
+   * Sangrado bajo su proveedor para que se lea de quién es. Con un solo
+   * producto no hace falta repetir el código; con varios, sí.
+   */
+  const campoPrecio = (
+    proveedorId: string,
+    item: ItemPedido,
+    conCodigo = false,
+  ): React.ReactNode => {
+    if (!yaTengoPrecios) return null;
+    const k = clave(proveedorId, item.producto_id);
+    return (
+      <div className="mb-2 ml-7 flex flex-wrap items-end gap-2">
+        {conCodigo ? (
+          <span className="min-w-[7rem] pb-2 font-mono text-sm text-[var(--fg-muted)]">
+            {item.codigo}
+          </span>
+        ) : null}
+        <label className="flex flex-col gap-1">
+          <span className="text-sm text-[var(--fg-muted)]">Precio ($)</span>
+          <Input
+            type="number"
+            min={0}
+            step="0.0001"
+            value={precios[k] ?? ""}
+            onChange={(e) => setPrecios((prev) => ({ ...prev, [k]: e.target.value }))}
+            className="h-9 w-28 text-right tabular"
+            placeholder="—"
+            aria-label={`Precio de ${item.codigo}`}
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm text-[var(--fg-muted)]">¿Cuántas tiene?</span>
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            value={cantidadesProv[k] ?? ""}
+            onChange={(e) =>
+              setCantidadesProv((prev) => ({ ...prev, [k]: e.target.value }))
+            }
+            className="h-9 w-28 text-right tabular"
+            placeholder={String(cantidades[item.producto_id] ?? item.cantidad)}
+            aria-label={`Cuántas ${item.codigo} tiene`}
+          />
+        </label>
+      </div>
+    );
+  };
+
+  /** Los precios tecleados, agrupados como los espera `abrirRonda`. */
+  const preciosParaGuardar = () => {
+    if (!yaTengoPrecios) return [];
+
+    return proveedores
+      .map((p) => {
+        const lineas = items
+          .filter((i) => (seleccion[i.producto_id] ?? []).includes(p.id))
+          .map((i) => {
+            const bruto = precios[clave(p.id, i.producto_id)] ?? "";
+            if (bruto.trim() === "") return null;
+            const costo = Number(bruto);
+            if (!Number.isFinite(costo) || costo < 0) return null;
+
+            const cant = cantidadesProv[clave(p.id, i.producto_id)] ?? "";
+            return {
+              producto_id: i.producto_id,
+              costo_unitario: costo,
+              // Vacío = tiene las que se le piden, igual que en la rejilla.
+              cantidad_disponible:
+                cant.trim() === "" ? null : Math.round(Number(cant)) || null,
+            };
+          })
+          .filter((l): l is NonNullable<typeof l> => l !== null);
+
+        return lineas.length === 0
+          ? null
+          : {
+              proveedor_id: p.id,
+              moneda: "USD" as const,
+              tipo_cambio: null,
+              // En dólares y sin IGV, que es como se comparan. Si alguien lo
+              // dio con IGV, se corrige en la rejilla, que tiene la casilla.
+              incluye_igv: false,
+              lineas,
+            };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  };
   const [aviso, setAviso] = React.useState<string | null>(null);
 
   /**
@@ -268,8 +389,8 @@ export function PedirPrecio({
   const guardarRonda = () => {
     setAviso(null);
     empezarRonda(async () => {
-      const r = await abrirRonda(
-        aPayloadDeConsulta(
+      const r = await abrirRonda({
+        ...aPayloadDeConsulta(
           conCantidad,
           seleccion,
           proveedores,
@@ -284,7 +405,8 @@ export function PedirPrecio({
             itemsIniciales.length > 0 ? "de la bandeja" : "preguntados a mano"
           }`,
         ),
-      );
+        precios: preciosParaGuardar(),
+      });
       if (!r.ok) {
         setAviso(r.error);
         return;
@@ -325,6 +447,45 @@ export function PedirPrecio({
             : "Busca otro producto si quieres preguntarlo en la misma ronda."}
         </p>
         <BuscadorCompra onElegir={agregar} ultimosCostos={{}} />
+
+        {/*
+          «Ya tengo los precios»: los dos caminos de Luis, en una pantalla.
+
+          Luis, 21/09: *«¿qué te parece resumir en uno todo? Es decir, voy
+          sumando los proveedores y puedo ir registrando los precios»*. Y antes
+          había descrito los dos casos: *«desde 0, registrar qué productos va a
+          cotizar»* o *«ya cotizó, ya tiene los precios»*.
+
+          Apagado: se elige a quién preguntar y se espera — lo de siempre.
+          Encendido: bajo cada proveedor marcado salen su precio y cuántas
+          tiene, y la ronda nace ya contestada.
+
+          Apagado POR DEFECTO porque preguntar y esperar sigue siendo el caso
+          normal, y veinte casillas en blanco encima de una pantalla que solo
+          sirve para elegir a quién preguntar son ruido.
+
+          Solo aparece con productos en la lista: sin ellos no hay nada de lo
+          que poner precio.
+        */}
+        {items.length > 0 ? (
+          <label className="mt-3 flex cursor-pointer items-start gap-3 border-t border-[var(--border-soft)] pt-3">
+            <input
+              type="checkbox"
+              checked={yaTengoPrecios}
+              onChange={(e) => setYaTengoPrecios(e.target.checked)}
+              className="mt-0.5 size-4 accent-brand-600"
+            />
+            <span>
+              <span className="block text-sm font-medium">
+                Ya tengo los precios
+              </span>
+              <span className="block text-sm text-[var(--fg-muted)]">
+                Si ya les preguntaste, anótalos aquí mismo debajo de cada
+                proveedor y la ronda queda cerrada de una vez.
+              </span>
+            </span>
+          </label>
+        ) : null}
       </section>
 
       {/* ------------------------------------------------------- Cómo se pide */}
@@ -415,6 +576,7 @@ export function PedirPrecio({
               ]}
               marcados={seleccion[item.producto_id] ?? []}
               onAlternar={(id) => alternar(id, item.producto_id)}
+              debajoDe={(provId) => campoPrecio(provId, item)}
               vacio="Todavía no consta que nadie venda este producto. Búscalo aquí abajo."
             />
 
@@ -478,6 +640,15 @@ export function PedirPrecio({
             proveedores={proveedores}
             marcados={seleccion[items[0]?.producto_id ?? ""] ?? []}
             onAlternar={(id) => alternar(id)}
+            debajoDe={(provId) => (
+              <>
+                {items.map((i) => (
+                  <React.Fragment key={i.producto_id}>
+                    {campoPrecio(provId, i, items.length > 1)}
+                  </React.Fragment>
+                ))}
+              </>
+            )}
             totalItems={items.length}
             vacio="Todavía no consta que nadie venda estos productos. Búscalos aquí abajo."
           />
@@ -621,6 +792,7 @@ function ListaProveedores({
   onAlternar,
   totalItems,
   vacio,
+  debajoDe,
 }: {
   proveedores: ProveedorParaPedir[];
   marcados: readonly string[];
@@ -628,6 +800,13 @@ function ListaProveedores({
   /** Solo en modo junto: para decir «vende 2 de 3». */
   totalItems?: number;
   vacio: string;
+  /**
+   * Qué pintar bajo un proveedor MARCADO.
+   *
+   * Existe para los precios que ya se saben (21/09): la lista sigue siendo la
+   * misma en los dos modos y no tiene que enterarse de lo que cuelga de ella.
+   */
+  debajoDe?: (proveedorId: string) => React.ReactNode;
 }) {
   if (proveedores.length === 0) {
     return <p className="text-sm text-[var(--fg-muted)]">{vacio}</p>;
@@ -658,6 +837,8 @@ function ListaProveedores({
               </span>
             </span>
           </label>
+          {/* Los precios, si se están anotando aquí mismo (21/09). */}
+          {marcados.includes(p.id) ? debajoDe?.(p.id) : null}
         </li>
       ))}
     </ul>

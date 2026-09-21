@@ -67,6 +67,45 @@ const esquemaCrear = z.object({
     )
     .min(1, "Hay que elegir a quién preguntarle.")
     .max(20),
+  /**
+   * Los precios que YA se saben, si es que se saben.
+   *
+   * Luis, 21/09: *«¿qué te parece resumir en uno todo? Es decir, voy sumando
+   * los proveedores y puedo ir registrando los precios»*.
+   *
+   * Es el caso (b) de los dos que describió: *«ya cotizó»* — ya habló por
+   * WhatsApp y solo quiere dejar constancia de quién le dio qué. Obligarle a
+   * guardar una ronda vacía y abrir después un diálogo por proveedor es
+   * pedirle tres pasos para un trabajo de uno.
+   *
+   * Opcional: si no llegan, la ronda nace esperando respuesta como siempre.
+   */
+  precios: z
+    .array(
+      z.object({
+        proveedor_id: z.string().uuid(),
+        moneda: z.enum(["USD", "PEN"]).default("USD"),
+        tipo_cambio: z.number().positive().finite().nullable().default(null),
+        incluye_igv: z.boolean().default(false),
+        lineas: z
+          .array(
+            z.object({
+              producto_id: z.string().uuid(),
+              costo_unitario: z.number().nonnegative().finite(),
+              cantidad_disponible: z
+                .number()
+                .int("Las unidades que tiene se cuentan enteras.")
+                .positive()
+                .finite()
+                .nullable()
+                .default(null),
+            }),
+          )
+          .max(200),
+      }),
+    )
+    .max(20)
+    .default([]),
 });
 
 export type ResultadoRonda =
@@ -128,6 +167,23 @@ export async function abrirRonda(datosCrudos: unknown): Promise<ResultadoRonda> 
     }
 
     const r = data as unknown as { id: string; numero: string };
+
+    /*
+      Y si venían precios, se anotan aquí mismo.
+
+      El RPC devuelve solo `{id, numero}`, así que hay que releer los ids de
+      la ronda recién creada para traducir proveedor→consulta_proveedor y
+      producto→item. Es una consulta de más, y solo pasa cuando de verdad hay
+      precios que anotar.
+
+      Un fallo aquí NO tumba la ronda: ya está creada y es lo que importa. Se
+      devuelve igual y los precios se apuntan a mano en la rejilla, que es lo
+      que se hacía hasta hoy.
+    */
+    if (datos.precios.length > 0) {
+      await anotarLoQueYaSeSabia(supabase, r.id, datos.precios);
+    }
+
     revalidatePath("/compras/precios");
     return { ok: true, id: r.id, numero: r.numero };
   } catch (e) {
@@ -136,6 +192,77 @@ export async function abrirRonda(datosCrudos: unknown): Promise<ResultadoRonda> 
       ok: false,
       error: e instanceof Error ? e.message : "No se pudo abrir la consulta.",
     };
+  }
+}
+
+/**
+ * Anota los precios que ya se sabían, justo después de crear la ronda.
+ *
+ * Traduce `proveedor_id` → `consulta_proveedor_id` y `producto_id` → `item_id`
+ * leyendo la ronda recién creada, y llama a la MISMA RPC que usa la rejilla
+ * —`anotar_respuesta_precio`— para no tener dos formas de escribir una
+ * respuesta. Esa RPC ya se ocupa de dejar constancia de que el proveedor vende
+ * el producto (046) y de recalcular lo que haga falta.
+ *
+ * No lanza: si algo falla, la ronda ya existe y los precios se apuntan a mano.
+ */
+async function anotarLoQueYaSeSabia(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  consultaId: string,
+  precios: z.infer<typeof esquemaCrear>["precios"],
+): Promise<void> {
+  try {
+    const [{ data: provs }, { data: items }] = await Promise.all([
+      supabase
+        .from("consulta_precio_proveedores")
+        .select("id, proveedor_id")
+        .eq("consulta_id", consultaId),
+      supabase
+        .from("consulta_precio_items")
+        .select("id, producto_id")
+        .eq("consulta_id", consultaId),
+    ]);
+
+    const porProveedor = new Map(
+      (provs ?? []).map((p) => [String(p.proveedor_id), String(p.id)]),
+    );
+    const porProducto = new Map(
+      (items ?? []).map((i) => [String(i.producto_id), String(i.id)]),
+    );
+
+    for (const bloque of precios) {
+      const cpId = porProveedor.get(bloque.proveedor_id);
+      if (!cpId) continue;
+
+      const lineas = bloque.lineas
+        .map((l) => ({
+          item_id: porProducto.get(l.producto_id),
+          costo_unitario: l.costo_unitario,
+          dias_entrega: null,
+          disponible: true,
+          cantidad_disponible: l.cantidad_disponible,
+          nota: null,
+        }))
+        .filter((l): l is typeof l & { item_id: string } => Boolean(l.item_id));
+
+      if (lineas.length === 0) continue;
+
+      await supabase.rpc("anotar_respuesta_precio", {
+        p_datos: {
+          consulta_proveedor_id: cpId,
+          estado: "respondio",
+          moneda: bloque.moneda,
+          tipo_cambio: bloque.tipo_cambio,
+          incluye_igv: bloque.incluye_igv,
+          validez_hasta: null,
+          nota: null,
+          lineas,
+        } as unknown as Json,
+      });
+    }
+  } catch (e) {
+    // Se registra y se sigue: la ronda vale igual sin los precios precargados.
+    anotarFallo("compras/anotarLoQueYaSeSabia", e, "/compras/precios");
   }
 }
 

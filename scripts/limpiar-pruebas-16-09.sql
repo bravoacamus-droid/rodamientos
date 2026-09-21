@@ -106,7 +106,7 @@ update cotizaciones set estado = 'anulada'
 commit;
 
 -- ###########################################################################
--- 6 · Las rondas de precios CPR-26-00011 y CPR-26-00012, del 21/09
+-- 6 · Las rondas de precios CPR-26-00011, 00012 y 00013, del 21/09
 -- ###########################################################################
 --
 -- La 00011 se creó para comprobar de punta a punta que una ronda se puede armar SIN
@@ -144,18 +144,27 @@ commit;
 -- $6.80— y ESA SÍ tiene respuestas anotadas, así que el borrado de arriba la
 -- deja en pie a propósito.
 --
--- Para llevársela también, hay que quitar antes sus respuestas. Va aparte
--- porque borra trabajo anotado y eso no puede pasar por descuido:
+-- La CPR-26-00013 es la del «ya tengo los precios»: la misma ronda con los
+-- precios tecleados al armarla, sin pasar por la rejilla. MB-26, AUTOLAND a $9
+-- con stock de sobra y MARCO PERUANA a $7 con solo 4 → $8.20 la unidad.
+-- También tiene respuestas, así que tampoco la toca el borrado de arriba.
+--
+-- Para llevárselas, hay que quitar antes sus respuestas. Va aparte porque
+-- borra trabajo anotado y eso no puede pasar por descuido:
 --
 --   delete from consulta_precio_respuestas r
 --    using consulta_precio_proveedores cp, consultas_precio c
 --    where r.consulta_proveedor_id = cp.id
 --      and cp.consulta_id = c.id
---      and c.numero = 'CPR-26-00012';
---   delete from consultas_precio where numero = 'CPR-26-00012';
+--      and c.numero in ('CPR-26-00012', 'CPR-26-00013');
+--   delete from consultas_precio where numero in ('CPR-26-00012', 'CPR-26-00013');
+--
+-- OJO: la CPR-26-00012 tiene compras colgando (bloque 7). Anúlalas primero o
+-- el borrado chocará contra su clave ajena.
 --
 -- OJO: eso NO deshace `proveedor_productos`. Al anotar esos precios quedó
--- registrado que AUTOLAND vende el 6205-2RSH/C3 a $8 y MARCO PERUANA a $6.
+-- registrado que AUTOLAND vende el 6205-2RSH/C3 a $8 y el MB-26 a $9, y MARCO
+-- PERUANA el 6205-2RSH/C3 a $6 y el MB-26 a $7.
 -- Es el mismo caso que el retén del 09/09, y se limpia a mano si molesta.
 
 -- ###########################################################################
