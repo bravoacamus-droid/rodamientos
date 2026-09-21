@@ -39,12 +39,28 @@ export function AjustarVenta({
   referencia,
   /** Lo que contestaron en esta ronda, en USD sin IGV. */
   ofertas,
+  /**
+   * Lo que de verdad te va a costar la unidad: el PONDERADO del reparto.
+   *
+   * Willy, 21/09: *«si necesito 10, A tiene stock suficiente a $8 y B lo tiene
+   * a $6 pero solo 6 unidades… ¿con qué precio de costo trabajo?»*. Con este.
+   *
+   * Hasta hoy el margen se calculaba sobre el más BARATO de la ronda, y en ese
+   * ejemplo eso son $6 — un precio al que no se pueden comprar las diez. El
+   * margen va sobre el costo (023), así que un costo que no se puede pagar es
+   * un margen que no se va a cobrar: la pantalla decía 60 % donde había 47 %.
+   *
+   * `null` cuando no hay reparto posible; entonces manda el más barato, que
+   * es lo que había.
+   */
+  costoPonderado = null,
 }: {
   productoId: string;
   codigo: string;
   descripcion: string;
   referencia: Referencia;
   ofertas: { proveedor: string; costoUsd: number }[];
+  costoPonderado?: number | null;
 }) {
   const [venta, setVenta] = React.useState(
     referencia.precioVenta === null ? "" : String(referencia.precioVenta),
@@ -78,9 +94,21 @@ export function AjustarVenta({
   const barata = ordenadas[0];
   const cara = ordenadas.length > 1 ? ordenadas[ordenadas.length - 1] : null;
 
-  // El costo con el que se calcula el margen: lo que costaría comprarlo HOY,
-  // no lo que costó la última vez. Es la cifra sobre la que se decide.
-  const costo = barata?.costoUsd ?? referencia.ultimoCosto;
+  /*
+    El costo con el que se calcula el margen: lo que costaría comprarlo HOY, no
+    lo que costó la última vez. Es la cifra sobre la que se decide.
+
+    Y «hoy» es el PONDERADO cuando hace falta repartir entre proveedores, no el
+    más barato de la lista. El más barato solo vale si tiene todas las que
+    hacen falta — que es justo lo que el módulo daba por hecho hasta el 21/09.
+  */
+  const costo = costoPonderado ?? barata?.costoUsd ?? referencia.ultimoCosto;
+
+  /** Si el reparto encarece respecto del más barato, hay que decir por qué. */
+  const encarece =
+    costoPonderado !== null &&
+    barata !== undefined &&
+    costoPonderado > barata.costoUsd + 0.0001;
   const ventaNum = venta.trim() === "" ? 0 : Number(venta);
   const margen = margenSi(costo, Number.isFinite(ventaNum) ? ventaNum : 0);
 
@@ -273,6 +301,19 @@ export function AjustarVenta({
                 {margen}% de margen
               </strong>
               <span className="text-[var(--fg-muted)]"> sobre el costo.</span>
+              {/*
+                Si el costo NO es el del más barato, se dice de dónde sale.
+
+                Sin esto, la pantalla enseña un margen calculado sobre $6.80
+                mientras al lado se ve un precio de $6.00 en verde, y lo único
+                que se puede pensar es que una de las dos cifras está mal.
+              */}
+              {encarece ? (
+                <span className="mt-0.5 block text-[var(--fg-muted)]">
+                  Sobre {formatearMoneda(costo ?? 0, "USD")}: al más barato no
+                  le alcanza y hay que completar con el siguiente.
+                </span>
+              ) : null}
             </>
           ) : (
             <span className="text-[var(--fg-muted)]">

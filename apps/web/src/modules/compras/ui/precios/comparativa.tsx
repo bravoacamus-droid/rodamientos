@@ -823,6 +823,15 @@ export function Comparativa({
                         )?.proveedor ?? "—",
                       costoUsd: c.costoUsd!,
                     }))}
+                  /*
+                    El costo REAL de esa fila, no el del más barato.
+
+                    Es la otra mitad de lo que preguntó Willy el 21/09: no
+                    basta con repartir la compra, hay que decidir el precio de
+                    venta sobre lo que de verdad va a costar. Se usa el
+                    elegido como cabeza del reparto, igual que en la compra.
+                  */
+                  costoPonderado={repartir(f, eleccion[f.item.item_id]).costoPonderado}
                 />
               ))}
           </div>
