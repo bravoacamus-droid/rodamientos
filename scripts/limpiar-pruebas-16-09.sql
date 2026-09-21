@@ -212,3 +212,48 @@ commit;
 --   delete from proveedor_productos pp
 --    using productos p
 --    where pp.producto_id = p.id and p.codigo = '6205-2RSH/C3';
+
+-- ###########################################################################
+-- 8 · La factura F001-00000002, del 21/09
+-- ###########################################################################
+--
+-- Es la prueba de que se puede emitir, y hubo que hacerla porque desde la 071
+-- NO se podía: `emitir_comprobante` tenía el insert descuadrado y moría antes
+-- de escribir nada (lo arregla la 091). Se emitió sobre COT1-000006, amparada
+-- por la guía T001-00000001, por USD 415.04 a 30 días.
+--
+-- Va en F001 a propósito: es la serie de PRUEBA. La real es F002, que va por
+-- 515 y no se ha tocado.
+--
+-- ---------------------------------------------------------------------------
+-- Esto NO se borra. Se anula.
+-- ---------------------------------------------------------------------------
+-- Un comprobante gasta correlativo fiscal, y un número que desaparece es
+-- exactamente lo que SUNAT pregunta en una fiscalización. Aunque F001 sea de
+-- prueba, la costumbre se mantiene: se anula con su motivo y se queda a la
+-- vista.
+--
+-- Por la RPC, no con un UPDATE: `anular_comprobante` exige rol gerencia y
+-- repone el stock que el comprobante hubiera descargado. Aquí no descargó
+-- ninguno —el stock sale con la guía, nunca con la factura— pero el dia que
+-- eso cambie, el UPDATE a mano dejaría el inventario descuadrado.
+--
+-- OJO: la guía T001-00000001 queda marcada como facturada, y COT1-000006 pasó
+-- de 'aprobada' a 'atendida'. Anular el comprobante NO deshace ninguna de las
+-- dos cosas.
+
+begin;
+
+select public.anular_comprobante(
+         c.id,
+         'Prueba de emisión del 21/09 en la serie de prueba. No se envió a SUNAT.')
+  from comprobantes c
+ where c.numero = 'F001-00000002'
+   and c.estado = 'emitido';
+
+commit;
+
+-- Y si se quiere devolver la cotización a 'aprobada' para volver a usarla:
+--
+--   update cotizaciones set estado = 'aprobada'
+--    where numero = 'COT1-000006' and estado = 'atendida';

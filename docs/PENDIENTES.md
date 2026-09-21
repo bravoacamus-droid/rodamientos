@@ -4508,6 +4508,114 @@ de Defontana.
 
 ---
 
+## §AN · 21/09 — La primera factura desde el 04/09, y por qué no salía
+
+Quedaba una sola cosa en «escrito pero SIN probar en pantalla» marcada como lo
+más urgente: **emitir un comprobante**. Se probó. Estaba rota por tres sitios a
+la vez, encadenados, y hubo que arreglar los tres para ver una factura.
+
+Vale la pena contarlo entero porque los tres fallos son del mismo tipo y
+ninguno lo veía una herramienta.
+
+### AN.1 · «Los datos no son válidos: Required»
+
+El primer intento no creó nada y no dijo por qué. Capturando el error de la
+Server Action salía ese mensaje, que no nombra el campo.
+
+Era `guias`. El 17/09 la 089 convirtió en regla lo que era costumbre —sin guía
+emitida no se factura— y el esquema de `emitir.ts` pasó a exigir la lista. La
+Server Action la mandaba. **El formulario no la ponía en el payload.**
+
+Es el patrón de siempre: la pieza existe, el cable no. Y con un agravante:
+lo introdujo el mismo cambio que el 17/09 se anotó como «sin probar».
+
+Arreglado poniendo `guias: opciones.guias` en el payload, y además dejando el
+esquema en `.default([])`: si algún día vuelve a faltar, el error que sale es
+el del negocio —«No se puede facturar sin una guía»— y no un «Required» que no
+se puede leer.
+
+### AN.2 · `emitir_comprobante` llevaba desde la 071 sin poder emitir
+
+Con el cable puesto, el error cambió a uno mucho peor:
+
+    column "estado" is of type estado_comprobante but expression is of type boolean
+
+La **071** añadió `mostrar_cuenta` parcheando la definición viva de la función.
+Puso la COLUMNA al final de la lista, detrás de `estado_sunat`, y el VALOR
+detrás de `observaciones` — que no es el último, porque después van los dos
+estados que la función pone a mano:
+
+    ..., vendedor_id, observaciones, estado, estado_sunat, mostrar_cuenta
+    ..., nullif(p_datos ->> 'observaciones',''),
+         coalesce((p_datos ->> 'mostrar_cuenta')::boolean, true),
+         'emitido', 'pendiente'
+
+Con eso `estado` recibía el booleano. La función no emitía mal: **no emitía**.
+La última factura del sistema era del 04/09, anterior a la 071.
+
+Lo arregla la **091**, moviendo el valor —y su comentario— al final.
+
+**Lo que hay que aprender de esto no es el descuadre, es el centinela.** La 071
+llevaba uno, y pasó: contaba que `mostrar_cuenta` apareciera dos veces en la
+definición. Aparecía. Una en las columnas y otra justo en el sitio equivocado.
+Un centinela que mira el texto de una función no distingue «está» de «está en
+su sitio».
+
+Es la tercera vez este mes: la 031 (`periodo` ambiguo), la 082
+(`buscar_productos` sin reemplazar) y esta.
+
+Así que el de la 091 **emite una factura de verdad** y la deshace. El runner
+mete cada migración en su transacción, y un bloque anidado de PL/pgSQL es un
+savepoint: dentro se emite en serio —correlativo incluido— y se sale por
+excepción, que es lo que lo borra todo. Las variables sobreviven, porque no son
+transaccionales, y son justo lo que hay que mirar. Diez líneas más.
+
+### AN.3 · La factura se creaba y su ficha daba error
+
+Tercer intento: la factura se emitió. Y la pantalla del comprobante dijo «No se
+pudo cargar». El detalle técnico:
+
+    Could not embed because more than one relationship was found for
+    'comprobantes' and 'guias_remision' (PGRST201)
+
+Desde la **084** hay dos caminos entre comprobante y guía: la columna vieja
+`guia_id` y la tabla `comprobante_guias`. La consulta pedía `guias_remision`
+sin decir por cuál, y PostgREST, ante dos, no elige ninguna: tumba la consulta
+entera. Es la misma trampa que ya está apuntada en CLAUDE.md para las columnas
+que no existen.
+
+Arreglado nombrando la clave: `guias_remision!comprobantes_guia_id_fkey`.
+
+### AN.4 · Y una cuarta, de las de siempre
+
+Con la ficha cargando, el número de la guía **no salía en ella**. Salía en el
+papel —`documento.tsx` lo imprime desde la 084— y en la pantalla no. Para saber
+qué guía ampara una factura había que imprimirla.
+
+Desde la 089 la guía es lo que justifica que la factura exista, así que es el
+dato que más merece estar a la vista. Añadida al bloque «Datos».
+
+### AN.5 · Lo que se probó, y lo que quedó
+
+Emitida **F001-00000002** sobre COT1-000006, amparada por T001-00000001, por
+USD 415.04 a 30 días. Comprobado en pantalla:
+
+- La ficha carga, y muestra la guía.
+- El correlativo fue del 1 al 2: el centinela de la 091 no gastó ninguno.
+- La factura llegó a **Cobranzas** con su saldo y su vencimiento (21/10).
+- SUNAT queda «en cola», que es lo correcto: falta el certificado.
+
+Va en `F001` porque es la serie de PRUEBA. **La real es `F002`, que va por 515
+y no se ha tocado** — y sigue sin ser la predeterminada, que es la decisión de
+numeración fiscal que tiene que tomar Luis.
+
+Apuntada en el bloque 8 de `limpiar-pruebas-16-09.sql`, que la **anula** en vez
+de borrarla: un correlativo que desaparece es lo que SUNAT pregunta en una
+fiscalización. Ojo con lo que anularla no deshace: la guía queda marcada como
+facturada y COT1-000006 pasó a «atendida».
+
+---
+
 ## §AM · 16/09 — El papel de la cotización, repasado por Willy
 
 Willy simuló una cotización de tres ítems —uno de importación a 15 días y dos

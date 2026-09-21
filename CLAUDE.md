@@ -99,6 +99,36 @@ importe. Los del 16/09, también.
 **Antes de construir algo, busca si ya está.** Construir la función y abrirle la
 puerta son dos trabajos, y solo el segundo se nota.
 
+### La variante cara: lo que cuesta dinero probar, nadie lo prueba
+
+El 21/09 se emitió la **primera factura desde el 04/09**, y aparecieron **tres
+fallos encadenados** en el mismo camino:
+
+1. La pantalla no mandaba `guias` en el payload, y el esquema lo exigía desde
+   la 089 → «Los datos no son válidos: Required».
+2. `emitir_comprobante` tenía el `insert` descuadrado desde la **071**: el
+   valor de `mostrar_cuenta` iba antes de `'emitido', 'pendiente'` y la
+   columna al final, así que `estado` recibía un booleano. **No emitía nada.**
+3. La ficha del comprobante pedía `guias_remision` sin decir por qué clave, y
+   desde la 084 hay dos caminos → PostgREST tumbaba la consulta (PGRST201).
+   La factura se creaba y su pantalla daba error.
+
+Ninguno lo veía `tsc`, ni el lint, ni los 1226 tests. Y ninguno se habría visto
+con un `grep`, que es lo que distingue esta variante de la de arriba: **las
+tres piezas estaban escritas y conectadas, y las tres estaban rotas.**
+
+Lo que las escondió no fue el diseño, fue el precio: **ejecutar esto gasta un
+correlativo fiscal**, así que durante seis días nadie lo llamó. Un centinela de
+migración que mira el *texto* de una función tampoco lo llamó — el de la 071
+comprobaba que `mostrar_cuenta` apareciera dos veces en la definición, y
+aparecía: una en las columnas y otra en el sitio equivocado.
+
+**La regla que sale de esto:** si una función es cara de probar, el centinela
+de su migración la **ejecuta**, y deshace lo que hizo. La 091 lo hace así —
+emite una factura de verdad dentro de un bloque anidado y sale por excepción,
+que es lo que la borra y devuelve el correlativo. Cuesta diez líneas más y es
+la diferencia entre «se aplicó» y «funciona».
+
 ### Los datos reales mandan sobre la lógica bonita
 
 Este catálogo entró de un Excel y está a medias. Cualquier regla que suponga
@@ -256,8 +286,8 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 **Documentación:**
 
 - `docs/PENDIENTES.md` — el diario del proyecto. Cada decisión, con su porqué y
-  la cita del cliente. **Empieza por §AJ** (las listas, 10/09) y **§AI**
-  (compras, 09/09).
+  la cita del cliente. **Empieza por §AN** (la facturación, 21/09), **§AJ**
+  (las listas, 10/09) y **§AI** (compras, 09/09).
 - `docs/PREGUNTAS-WILLY.md` — lo que se le manda, listo para copiar. Máximo
   cinco preguntas; **búscalas antes en sus archivos**, que ya ahorró cuatro de
   cinco.
@@ -312,9 +342,14 @@ toma Luis, no se cambia por iniciativa propia.
   y ahora es `150132` (San Juan de Lurigancho). Ojo: `150118` es
   Lurigancho/Chosica, otro distrito. La guía T001-00000001, ya emitida, lleva
   el origen viejo y se deja como está.
-- **Datos de prueba en la base del cliente** — `limpiar-pruebas.sql` sigue
-  sin correrse; lo tiene que hacer Luis. Hay rondas de precios, compras,
-  recepciones, una factura y su cobro. Y uno que no se limpia borrando filas:
+- **Datos de prueba en la base del cliente** — `limpiar-pruebas-16-09.sql`
+  sigue sin correrse; lo tiene que hacer Luis, y ya son **ocho bloques**. Hay
+  rondas de precios, compras, recepciones y dos facturas con su cobro — la
+  última, `F001-00000002` del 21/09 (bloque 8), que dejó además la guía
+  `T001-00000001` marcada como facturada y `COT1-000006` en «atendida»;
+  anular la factura no deshace ninguna de las dos. **El orden importa**: el
+  bloque 7 va antes de borrar la ronda CPR-26-00012. Y uno que no se limpia
+  borrando filas:
   al probar el 09/09 quedó registrado que **MARCO PERUANA vende el retén
   50X68X8TC a $ 1.40** — `proveedor_productos` se llena sola con cada
   respuesta (046) y eso no lo deshace borrar la respuesta.
@@ -383,11 +418,8 @@ Bloqueado por lo de siempre: **uno de los 97 clientes tiene correo.**
 
 ### Escrito pero SIN probar en pantalla
 
-- **Emitir un comprobante**, desde que la 089 exige guía (17/09). Es lo más
-  urgente de esta lista: la base pide `guias` en el payload y la Server Action
-  lo manda, pero esa llamada no se ha ejecutado — hacerlo gasta un correlativo
-  real. **Pruébalo en la serie `F001`, que es la de prueba, antes de dar la
-  facturación por buena.**
+- ~~Emitir un comprobante~~ — **PROBADO el 21/09**, y estaba roto por tres
+  sitios a la vez. Ver abajo.
 - Elegir una guía en el «+» de la factura. Solo hay dos guías en la base —una
   emitida y una en borrador—, así que ningún cliente tiene una segunda que
   ofrecer.
