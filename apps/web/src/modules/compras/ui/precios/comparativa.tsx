@@ -1331,11 +1331,29 @@ function ReferenciaDeFila({ referencia: ref }: { referencia: Referencia }) {
           <strong className="tabular-nums">{formatearMoneda(ref.precioVenta, "USD")}</strong>
         </span>
       ) : null}
-      {/* Quién lo dio más barato, que es la otra mitad de la pregunta: el
-          número solo no dice a quién volver a llamar. */}
+      {/*
+        Quién lo dio más barato ALGUNA VEZ, que es la otra mitad de la
+        pregunta: el número solo no dice a quién volver a llamar.
+
+        Y se dice que es de ANTES, no de esta ronda. Decía «mejor $2.00 ·
+        AUTOLAND» en una rejilla donde la columna de AUTOLAND enseña $8.00, y
+        eso se lee como que una de las dos cifras está mal. No lo está: el
+        $2.00 es de otra ronda, y `mejorConocido` busca lo más barato que
+        consta a propósito —lo que interesa saber es si hoy te están dando el
+        mejor precio que has tenido, no el mejor de esta semana—.
+
+        También se dice si ese precio se PAGÓ o solo se cotizó. Una factura
+        vale como argumento delante del proveedor; una promesa de hace tres
+        meses, menos.
+      */}
       {mejor ? (
         <span className="min-w-0 truncate text-[var(--fg-muted)]">
-          mejor {formatearMoneda(mejor.costoUsd, "USD")} · {mejor.proveedor}
+          antes {mejor.origen === "comprado" ? "lo pagaste" : "te lo dieron"} a{" "}
+          <strong className="tabular-nums text-[var(--fg)]">
+            {formatearMoneda(mejor.costoUsd, "USD")}
+          </strong>{" "}
+          · {mejor.proveedor}
+          {mejor.fecha ? ` · ${mejor.fecha.slice(8, 10)}/${mejor.fecha.slice(5, 7)}` : ""}
         </span>
       ) : null}
     </span>
