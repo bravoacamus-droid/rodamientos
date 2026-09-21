@@ -113,9 +113,14 @@ fallos encadenados** en el mismo camino:
    desde la 084 hay dos caminos → PostgREST tumbaba la consulta (PGRST201).
    La factura se creaba y su pantalla daba error.
 
-Ninguno lo veía `tsc`, ni el lint, ni los 1226 tests. Y ninguno se habría visto
-con un `grep`, que es lo que distingue esta variante de la de arriba: **las
-tres piezas estaban escritas y conectadas, y las tres estaban rotas.**
+Y una cuarta, ya de las de arriba: con la ficha cargando, **el número de la
+guía no salía en ella**. Lo imprimía el papel desde la 084 y la pantalla no,
+así que para saber qué guía ampara una factura había que imprimirla.
+
+Ninguno lo veía `tsc`, ni el lint, ni los 1226 tests. Y los tres primeros no se
+habrían visto con un `grep`, que es lo que distingue esta variante de la de
+arriba: **las tres piezas estaban escritas y conectadas, y las tres estaban
+rotas.**
 
 Lo que las escondió no fue el diseño, fue el precio: **ejecutar esto gasta un
 correlativo fiscal**, así que durante seis días nadie lo llamó. Un centinela de
@@ -332,9 +337,9 @@ Comprobado en `/configuracion/sunat` el 16/09:
 
 **El riesgo que sí es urgente, y no depende de SUNAT:** las predeterminadas
 siguen siendo `F001` y `FC01`, las de prueba. Emitir hoy una factura daría
-`F001-00000002` en vez de `F002-00000516`. Se arregla con el enlace «Usar por
-defecto» de la fila — pero es una decisión de numeración fiscal, así que la
-toma Luis, no se cambia por iniciativa propia.
+`F001-00000003` —la 2 se gastó probando el 21/09— en vez de `F002-00000516`.
+Se arregla con el enlace «Usar por defecto» de la fila — pero es una decisión
+de numeración fiscal, así que la toma Luis, no se cambia por iniciativa propia.
 
 ### Pendiente técnico
 
@@ -418,8 +423,8 @@ Bloqueado por lo de siempre: **uno de los 97 clientes tiene correo.**
 
 ### Escrito pero SIN probar en pantalla
 
-- ~~Emitir un comprobante~~ — **PROBADO el 21/09**, y estaba roto por tres
-  sitios a la vez. Ver abajo.
+- ~~Emitir un comprobante~~ — **PROBADO el 21/09** con `F001-00000002`, y
+  estaba roto por tres sitios a la vez. Ver §2 y §AN.
 - Elegir una guía en el «+» de la factura. Solo hay dos guías en la base —una
   emitida y una en borrador—, así que ningún cliente tiene una segunda que
   ofrecer.
