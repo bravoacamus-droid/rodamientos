@@ -186,9 +186,21 @@ export const NAVEGACION: readonly GrupoNav[] = [
       // empieza. Willy no abre el ERP para registrar una compra, la abre
       // para saber qué le falta.
       { etiqueta: "Por comprar", ruta: "/compras/por-comprar", icono: "porcomprar", roles: ["gerencia", "admin", "compras"] },
-      // Entre las dos, que es donde cae en el flujo: se ve qué falta, se
-      // pregunta el precio, y de ahí sale la compra.
-      { etiqueta: "Precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
+      /*
+        Entre las dos, que es donde cae en el flujo: se ve qué falta, se
+        pregunta el precio, y de ahí sale la compra.
+
+        Se llamaba «Precios» y el nombre engañaba. Luis, 21/09: *«yo lo haría
+        en una sola pantalla porque si no, mucho enredo»* — y esa pantalla es
+        justo esta: varios productos, varios proveedores, sus precios, y de
+        ahí salen las compras repartidas. Pero «Precios» suena a una tabla de
+        consulta, así que Willy entraba por «Compras», que es la de UN
+        proveedor, y acababa repitiéndola una vez por cada uno.
+
+        «Pedir precios» es su propio verbo —él dice «pedir precio»— y dice lo
+        que se hace ahí.
+      */
+      { etiqueta: "Pedir precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
       /*
         Proveedores vive aquí desde el 11/09, y no en Catálogo.

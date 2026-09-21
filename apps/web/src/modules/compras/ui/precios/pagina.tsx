@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
-import { MessageCircleQuestion } from "lucide-react";
+import { MessageCircleQuestion, Plus } from "lucide-react";
 
 import { rondas } from "../../api/comparador";
 
@@ -49,16 +49,29 @@ export default async function PaginaPrecios() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Precios de proveedores</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Pedir precios</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Lo que preguntaste, lo que te contestaron y quién sale mejor.
+            Varios productos y varios proveedores en una sola lista: apuntas lo
+            que te dijo cada uno y salen las compras ya repartidas.
           </p>
         </div>
+        {/*
+          Abre una ronda EN BLANCO, y esa es la novedad del 21/09.
+
+          Mandaba a «Por comprar», que es de donde salía la única ronda
+          posible: la de lo que falta de un pedido aprobado. Pero Willy
+          pregunta precios todos los días sin tener un pedido detrás, y eso era
+          justo lo que no se podía hacer aquí.
+
+          El camino de la bandeja no se pierde: sigue teniendo su propio botón
+          «Pedir precio» en cada fila.
+        */}
         <Link
-          href="/compras/por-comprar"
-          className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+          href="/compras/pedir-precio"
+          className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
         >
-          Pedir precios de lo que falta
+          <Plus className="size-[18px]" />
+          Pedir precios
         </Link>
       </div>
 
@@ -66,13 +79,20 @@ export default async function PaginaPrecios() {
         <EstadoVacio
           icono={<MessageCircleQuestion className="size-8" />}
           titulo="Todavía no has pedido ningún precio"
-          descripcion="Desde «Por comprar» eliges los productos, se genera el mensaje de WhatsApp para cada proveedor y aquí vas apuntando lo que te contesten."
+          /*
+            Decía dos cosas que ya no son verdad: que había que empezar desde
+            «Por comprar» —desde el 21/09 se puede empezar en blanco— y que se
+            generaba un mensaje de WhatsApp, que se quitó el 09/09 porque Willy
+            lo manda a su manera en diez segundos.
+          */
+          descripcion="Pon los productos y los proveedores a los que les vas a preguntar. Tú preguntas como siempre —WhatsApp, llamada— y aquí apuntas lo que te diga cada uno: el sistema compara y reparte la compra."
           accion={
             <Link
-              href="/compras/por-comprar"
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              href="/compras/pedir-precio"
+              className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
             >
-              Ir a «Por comprar»
+              <Plus className="size-[18px]" />
+              Pedir precios
             </Link>
           }
         />

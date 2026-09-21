@@ -226,7 +226,32 @@ export function ConstructorCompra({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Registrar compra</h1>
+          {/*
+            Se dice que es de UN proveedor, y dónde está la otra.
+
+            Luis, 21/09: *«si voy a registrar una compra puedo tener uno o
+            varios proveedores… no voy a hacer producto, compra, otro producto,
+            otro proveedor, otra compra; mareamos a Willy»*.
+
+            El diagnóstico era justo aunque la pieza ya existiera: la pantalla
+            de varios proveedores es «Pedir precios» —una lista de productos,
+            los proveedores que quieras, y de ahí salen las compras ya
+            repartidas—. Lo que fallaba es que ESTA no decía que era la de uno
+            solo, y es a la que se llega buscando «Compras» en el menú.
+
+            Así que lo dice, y lleva. Un aviso que explica y no ofrece camino
+            solo consigue que quien lo lee se sienta tonto.
+          */}
           <p className="text-sm text-[var(--fg-muted)]">
+            De <strong>un solo proveedor</strong>. Si vas a repartir la compra
+            entre varios,{" "}
+            <Link href="/compras/precios" className="text-brand-600 underline">
+              hazlo desde «Pedir precios»
+            </Link>
+            : ahí pones todos los productos y todos los proveedores, y salen las
+            compras repartidas.
+          </p>
+          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
             El stock no se mueve aquí. Se moverá cuando la mercadería llegue y se
             recepcione.
           </p>
