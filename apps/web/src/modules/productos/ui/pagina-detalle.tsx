@@ -7,7 +7,8 @@ import { proveedoresDeProducto } from "@/modules/proveedores";
 
 import { productoConDetalle } from "../api/consultas";
 import { AccionesFila } from "./acciones-fila";
-import { comprasDelProducto } from "../api/compras";
+import { comprasDelProducto, preciosPorProveedor } from "../api/compras";
+import { AQuienPreguntar } from "./a-quien-preguntar";
 import { ComprasAnteriores } from "./compras-anteriores";
 import { QuienLoVende } from "./quien-lo-vende";
 
@@ -25,11 +26,13 @@ export default async function PaginaDetalleProducto({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, quienVende, compras] = await Promise.all([
+  const [resultado, perfil, quienVende, compras, precios] = await Promise.all([
     productoConDetalle(id),
     perfilActual(),
     proveedoresDeProducto(id),
     comprasDelProducto(id),
+    // A cuánto te lo deja cada uno, juntando lo pagado y lo cotizado (21/09).
+    preciosPorProveedor(id),
   ]);
 
   if (!resultado.ok) {
@@ -217,6 +220,15 @@ export default async function PaginaDetalleProducto({
         {/* Debajo de «quién lo vende», que es su continuación: uno dice a
             quién se le PUEDE comprar y el otro a quién se le compró de
             verdad, cuándo y a cuánto. */}
+        {/*
+          Primero «a quién preguntarle» y debajo el diario.
+
+          El orden no es casual: la pregunta que se hace al abrir la ficha de
+          un producto que hay que reponer es a quién llamar, no qué pasó la
+          última vez. El diario se mira cuando hay una discusión, que es
+          mucho menos a menudo.
+        */}
+        <AQuienPreguntar precios={precios.ok ? precios.datos : []} />
         <ComprasAnteriores compras={compras.ok ? compras.datos : []} />
       </div>
     </div>
