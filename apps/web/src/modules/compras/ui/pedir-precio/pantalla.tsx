@@ -331,28 +331,26 @@ export function PedirPrecio({
       const { [productoId]: _fuera, ...resto } = prev;
       return resto;
     });
-    setDejarFuera((prev) => prev.filter((x) => x !== productoId));
   };
 
   const huerfanos = React.useMemo(() => sinNadie(items, seleccion), [items, seleccion]);
   const cuantos = cuantosProveedores(seleccion);
 
-  /**
-   * Los productos que se decidió dejar fuera a sabiendas.
-   *
-   * Luis, 09/09: *«en compras me deja anotar si no puse el proveedor los dos
-   * productos, otra cosa dejaría seguir»*. Y tenía razón: la ronda se abría
-   * igual y esos productos se caían en silencio —`aPayloadDeConsulta` los
-   * filtra— así que la consulta salía a medias sin que nadie se enterara.
-   *
-   * No se prohíbe del todo, porque a veces de verdad no hay a quién
-   * preguntarle. Lo que se prohíbe es que pase sin querer: hay que decirlo.
-   *
-   * Se guardan los ids y no un sí/no para que, si luego se desmarca a alguien
-   * y aparece un huérfano nuevo, vuelva a preguntar por ese.
-   */
-  const [dejarFuera, setDejarFuera] = React.useState<string[]>([]);
-  const sinDecidir = huerfanos.filter((h) => !dejarFuera.includes(h.producto_id));
+  /*
+    Aquí vivía `dejarFuera`: los productos que se decidía dejar fuera «a
+    sabiendas», con un botón de «seguir sin él».
+
+    Se va el 21/09. Luis, señalando ese aviso: *«esto qué, nada que ver; el
+    producto sí tiene que ir con proveedor, pues si no, cómo»*.
+
+    El problema que resolvía era real —la 09/09 arregló que los productos sin
+    proveedor se cayeran EN SILENCIO al guardar— pero la salida era falsa:
+    dejaba el producto en la lista, a la vista, y fuera de la ronda. Alguien
+    vuelve a la rejilla dos días después a buscar un precio que nunca se pidió.
+
+    Ahora las dos salidas son de verdad: le pones proveedor, o lo quitas. Y por
+    tanto no queda nada «sin decidir»: los huérfanos son los huérfanos.
+  */
   const entran = items.length - huerfanos.length;
 
   /** Marca o desmarca un proveedor. En «junto», en todos los productos. */
@@ -663,44 +661,53 @@ export function PedirPrecio({
         </section>
       )}
 
+      {/*
+        Un producto sin proveedor no tiene sitio en la ronda.
+
+        Luis, 21/09, señalando este bloque: *«esto qué, nada que ver; el
+        producto sí tiene que ir con proveedor, pues si no, cómo»*. Y es
+        exacto: una ronda es preguntar precios, y un producto al que no se le
+        pregunta a nadie no se está preguntando.
+
+        Antes había una salida llamada «No hay a quién preguntarle: seguir sin
+        él» que lo dejaba A LA VISTA en la lista pero FUERA de la ronda —
+        `aPayloadDeConsulta` lo filtra al guardar—. Lo peor de las dos cosas:
+        se ve, parece que entra, y no entra. Alguien vuelve a la rejilla dos
+        días después a buscar un precio que nunca se pidió.
+
+        Ahora las dos salidas son de verdad: le pones proveedor, o lo quitas.
+      */}
       {items.length > 0 && huerfanos.length > 0 ? (
-        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+        <div className="rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3">
           <p className="text-sm">
-            <strong>
+            <strong className="text-[var(--warn)]">
               {huerfanos.length === 1
-                ? "Un producto no se le va a preguntar a nadie"
-                : `${huerfanos.length} productos no se le van a preguntar a nadie`}
+                ? "Falta decir a quién le preguntas por "
+                : "Falta decir a quién le preguntas por "}
             </strong>
-            : <strong>{huerfanos.map((h) => h.codigo).join(", ")}</strong>.{" "}
-            {sinDecidir.length > 0
-              ? huerfanos.length === 1
-                ? "Márcale proveedor arriba, o búscalo con «Preguntarle a alguien más». Si no, no entra en la ronda y se queda sin precio."
-                : "Márcales proveedor arriba, o búscalos con «Preguntarle a alguien más». Si no, no entran en la ronda y se quedan sin precio."
-              : huerfanos.length === 1
-                ? "Queda fuera de la ronda. Se le puede pedir precio en otra."
-                : "Quedan fuera de la ronda. Se les puede pedir precio en otra."}
+            <strong>{huerfanos.map((h) => h.codigo).join(", ")}</strong>.{" "}
+            {huerfanos.length === 1
+              ? "Márcale un proveedor arriba, o búscalo con «Añadir proveedor». Si no hay a quién preguntarle, quítalo de la lista."
+              : "Márcales un proveedor arriba, o búscalos con «Añadir proveedor». Si no hay a quién preguntarles, quítalos de la lista."}
           </p>
 
-          {sinDecidir.length > 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-3"
-              onClick={() => setDejarFuera(huerfanos.map((h) => h.producto_id))}
-            >
-              No hay a quién preguntarle: seguir sin{" "}
-              {sinDecidir.length === 1 ? "él" : "ellos"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-3"
-              onClick={() => setDejarFuera([])}
-            >
-              {huerfanos.length === 1 ? "Mejor le busco proveedor" : "Mejor les busco proveedor"}
-            </Button>
-          )}
+          {/*
+            Quitar DE VERDAD, no «seguir sin».
+
+            Es la única otra salida honesta: si nadie lo vende, no hay ronda
+            que hacer con él. Y se puede volver a añadir con el buscador de
+            arriba en dos segundos, así que no se pierde nada.
+          */}
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3"
+            onClick={() => huerfanos.forEach((h) => quitar(h.producto_id))}
+          >
+            {huerfanos.length === 1
+              ? "Quitarlo de la lista"
+              : `Quitar los ${huerfanos.length} de la lista`}
+          </Button>
         </div>
       ) : null}
 
@@ -712,8 +719,8 @@ export function PedirPrecio({
           <p className="text-[var(--fg-muted)]">
             {cuantos === 0
               ? "Primero marca a quién le vas a preguntar."
-              : sinDecidir.length > 0
-                ? sinDecidir.length === 1
+              : huerfanos.length > 0
+                ? huerfanos.length === 1
                   ? "Resuelve antes lo de arriba: hay un producto sin nadie a quien preguntarle."
                   : "Resuelve antes lo de arriba: hay productos sin nadie a quien preguntarle."
                 : `Entran ${entran} ${entran === 1 ? "producto" : "productos"} y ${cuantos} ${cuantos === 1 ? "proveedor" : "proveedores"}. Tendrás dónde apuntar lo que te diga cada uno y ver quién sale más barato.`}
@@ -722,7 +729,7 @@ export function PedirPrecio({
         <Button
           type="button"
           onClick={guardarRonda}
-          disabled={abriendo || cuantos === 0 || sinDecidir.length > 0}
+          disabled={abriendo || cuantos === 0 || huerfanos.length > 0}
           className="gap-1.5"
         >
           <ClipboardList className="size-4" aria-hidden="true" />
