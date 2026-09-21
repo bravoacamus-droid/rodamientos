@@ -54,6 +54,8 @@ export function AjustarVenta({
    * es lo que había.
    */
   costoPonderado = null,
+  /** Si se enseña el código arriba. Falso cuando ya lo dice quien lo abre. */
+  conCabecera = true,
 }: {
   productoId: string;
   codigo: string;
@@ -61,6 +63,7 @@ export function AjustarVenta({
   referencia: Referencia;
   ofertas: { proveedor: string; costoUsd: number }[];
   costoPonderado?: number | null;
+  conCabecera?: boolean;
 }) {
   const [venta, setVenta] = React.useState(
     referencia.precioVenta === null ? "" : String(referencia.precioVenta),
@@ -152,13 +155,23 @@ export function AjustarVenta({
       que el código ya dice; y quien está aquí acaba de verla arriba en la
       rejilla. Al pasar por encima sale entera.
     */
-    <section className="card flex flex-col gap-3 p-4">
-      <div>
-        <span className="font-mono text-base font-semibold">{codigo}</span>
-        <p className="truncate text-sm text-[var(--fg-muted)]" title={descripcion}>
-          {descripcion}
-        </p>
-      </div>
+    <section className="flex flex-col gap-3">
+      {/*
+        La cabecera solo cuando esto va suelto.
+
+        Desde el 21/09 este panel cuelga de una línea plegable que ya dice el
+        código y la descripción justo encima, así que repetirlos era gastar dos
+        renglones en decir dónde estás cuando estás mirándolo. Se conserva la
+        prop por si vuelve a usarse suelto en otra pantalla.
+      */}
+      {conCabecera ? (
+        <div>
+          <span className="font-mono text-base font-semibold">{codigo}</span>
+          <p className="truncate text-sm text-[var(--fg-muted)]" title={descripcion}>
+            {descripcion}
+          </p>
+        </div>
+      ) : null}
 
       {/* Lo que te cuesta. Con dos o más, en dos colores. */}
       <div className="flex flex-wrap gap-2 [&>span]:py-1.5">

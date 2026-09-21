@@ -26,6 +26,7 @@ import {
 } from "../../dominio/comparador";
 import {
   faltaPreguntarle,
+  margenSi,
   mejorConocido,
   referenciaVacia,
   type ProveedorConocido,
@@ -113,6 +114,23 @@ export function Comparativa({
   );
 
   const [abierto, setAbierto] = React.useState<string | null>(null);
+
+  /*
+    Qué producto tiene desplegado su panel de precio de venta.
+
+    Luis, 21/09: *«es muy largo acá, creo que podemos rediseñarlo mejor»*. Y
+    con razón: cada producto traía una tarjeta con dos cuadros de color, dos
+    campos y un botón. Con uno ocupa media pantalla; con cinco, la rejilla
+    —que es lo que se vino a mirar— queda perdida arriba del todo.
+
+    Plegado se lee de un vistazo lo único que hace falta para decidir si hay
+    que tocarlo: qué te cuesta, a cuánto lo vendes y qué margen te queda. Se
+    despliega el que de verdad se quiera cambiar.
+
+    Uno solo abierto a la vez, y por eso es un id y no un Set: es una decisión
+    por producto, no una lista que se repasa.
+  */
+  const [ajustando, setAjustando] = React.useState<string | null>(null);
   const [enCurso, empezar] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
 
@@ -360,6 +378,79 @@ export function Comparativa({
 
   return (
     <div className="flex flex-col gap-5">
+      {/*
+        En qué acabó la ronda.
+
+        Luis, 09/09: *«cuando registro, esos enlaces ni yo los entiendo… en
+        cada orden voy a poder ver el total a pagar, ¿no? Hay que hacer mejor
+        eso»*.
+
+        Era «Ya salieron: CMP-26-00015, CMP-26-00016» en gris de 14 px. Los
+        números SÍ eran enlaces —solo que sin subrayado hasta pasarles el
+        ratón por encima, que es la definición de enlace que no se ve— y
+        aparte un correlativo suelto no dice nada: ni a quién le compraste ni
+        cuánto le debes. Justo lo que hay que saber al terminar.
+
+        Ahora es una tarjeta por compra, con el total delante y un botón de
+        verdad. Es el mismo patrón de siempre en este proyecto: la función
+        estaba, la puerta era una rendija.
+
+        Y va ARRIBA DEL TODO desde el 21/09. Estaba al final, después de la
+        rejilla y de todas las tarjetas de precio de venta, o sea a una
+        pantalla y media de scroll. Pero cuando una ronda ya se resolvió, esto
+        es lo único que se viene a ver: en qué acabó. Lo de arriba es cómo se
+        llegó, y eso se mira después o no se mira.
+      */}
+      {ronda.compras.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-base font-semibold">
+              {ronda.compras.length === 1
+                ? "La compra que salió de aquí"
+                : "Las compras que salieron de aquí"}
+            </h2>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Una por proveedor. Ahí se registra lo que llega y lo que se le
+              paga.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {ronda.compras.map((c) => (
+              <div key={c.id} className="card flex flex-col gap-2 p-4">
+                <span className="font-mono text-base font-semibold">
+                  {c.numero}
+                </span>
+                <span
+                  className="truncate text-sm text-[var(--fg-muted)]"
+                  title={c.proveedor}
+                >
+                  {c.proveedor}
+                </span>
+
+                {/* El total, que es lo que se preguntó: cuánto hay que
+                    pagarle a este. Grande, porque es la cifra. */}
+                <span className="flex items-baseline justify-between gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2">
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    Total a pagar
+                  </span>
+                  <strong className="text-lg tabular-nums">
+                    {formatearMoneda(c.total, "USD")}
+                  </strong>
+                </span>
+
+                <Button asChild variant="outline" className="mt-auto w-full gap-1.5">
+                  <Link href={`/compras/${c.id}`}>
+                    <PackageSearch className="size-4" aria-hidden="true" />
+                    Ver la compra
+                  </Link>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* -------------------------------------------------- Los proveedores */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {resumenes.map((r) => {
@@ -412,26 +503,44 @@ export function Comparativa({
                 </span>
               </div>
 
-              {/* «Tiene 0 de 2» al que no ha contestado es el mismo error
-                  que la celda: dice que no lo tiene cuando lo que pasa es
-                  que no ha dicho nada. */}
-              {r.estado !== "esperando" ? (
-                <p className="text-xs text-[var(--fg-muted)]">
-                  {`Tiene ${r.cubre} de ${ronda.items.length}`}
-                  {r.gana > 0 ? ` · gana ${r.gana}` : ""}
-                  {p.moneda === "PEN" ? ` · en soles a ${p.tipo_cambio ?? "?"}` : ""}
-                  {p.incluye_igv ? " · IGV incluido" : ""}
-                </p>
-              ) : null}
+              {/*
+                Una sola línea, y solo con lo que la rejilla NO dice.
 
-              {r.totalSiTodo !== null ? (
-                <p className="text-xs text-[var(--fg-subtle)]">
-                  Todo con él: {formatearMoneda(r.totalSiTodo, "USD")}
-                </p>
-              ) : null}
-              {comprado ? (
-                <p className="text-xs text-[var(--ok)]">Ya se le compró</p>
-              ) : null}
+                Luis, 21/09: *«es muy largo acá»*. Eran cuatro renglones por
+                tarjeta —«Tiene 1 de 1», «gana 1», «Todo con él: $2.00», «Ya
+                se le compró»— y con tres proveedores eso son doce líneas
+                encima de la rejilla, que es donde de verdad se compara. Lo de
+                «tiene» y «gana» ya se ve ahí abajo, producto por producto.
+
+                Lo que se queda es lo que NO está en la rejilla: la moneda y
+                el IGV con que contestó —porque cambian lo que significa su
+                precio—, lo que costaría llevárselo todo a él, y si ya se le
+                compró.
+
+                «Tiene 0 de 2» al que no ha contestado sigue sin decirse: es
+                el mismo error que la celda, dice que no lo tiene cuando lo
+                que pasa es que no ha dicho nada.
+              */}
+              {(() => {
+                const notas = [
+                  p.moneda === "PEN" ? `en soles a ${p.tipo_cambio ?? "?"}` : null,
+                  p.incluye_igv ? "IGV incluido" : null,
+                  r.totalSiTodo !== null
+                    ? `todo con él ${formatearMoneda(r.totalSiTodo, "USD")}`
+                    : null,
+                ].filter((x): x is string => x !== null);
+
+                return notas.length > 0 || comprado ? (
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    {notas.join(" · ")}
+                    {comprado ? (
+                      <span className="text-[var(--ok)]">
+                        {notas.length > 0 ? " · " : ""}ya se le compró
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null;
+              })()}
 
               {/* El texto cambia con el estado: la primera vez es «registrar»,
                   después es «corregir». No hay que pensar cuál toca. */}
@@ -877,10 +986,77 @@ export function Comparativa({
             Dos columnas y no tres: los campos llevan etiqueta y un tercio de
             pantalla las parte en dos líneas.
           */}
-          <div className="grid gap-3 xl:grid-cols-2">
+          <div className="card divide-y divide-[var(--border-soft)] p-0">
             {filas
               .filter((f) => f.celdas.some((c) => c.costoUsd !== null))
-              .map((f) => (
+              .map((f) => {
+                const ref =
+                  referencias[f.item.producto_id] ??
+                  referenciaVacia(f.item.producto_id);
+                const costo =
+                  repartir(f, eleccion[f.item.item_id]).costoPonderado ??
+                  ref.ultimoCosto;
+                const margen = margenSi(costo, ref.precioVenta);
+                const desplegado = ajustando === f.item.item_id;
+
+                return (
+                  <div key={f.item.item_id}>
+                    {/*
+                      La línea que se lee sin abrir nada.
+
+                      Tres cifras y en este orden: lo que cuesta, lo que se
+                      cobra y lo que queda. Es la cuenta que se hace de
+                      cabeza, y verla escrita evita abrir el panel cuando no
+                      hay nada que cambiar — que es casi siempre.
+                    */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAjustando(desplegado ? null : f.item.item_id)
+                      }
+                      aria-expanded={desplegado}
+                      className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-[var(--surface-2)]"
+                    >
+                      <span className="font-mono text-sm font-medium">
+                        {f.item.codigo}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--fg-muted)]">
+                        {f.item.descripcion}
+                      </span>
+                      <span className="text-sm text-[var(--fg-muted)]">
+                        te cuesta{" "}
+                        <strong className="tabular text-[var(--fg)]">
+                          {costo === null ? "—" : formatearMoneda(costo, "USD")}
+                        </strong>
+                      </span>
+                      <span className="text-sm text-[var(--fg-muted)]">
+                        vendes a{" "}
+                        <strong className="tabular text-[var(--fg)]">
+                          {ref.precioVenta === null
+                            ? "—"
+                            : formatearMoneda(ref.precioVenta, "USD")}
+                        </strong>
+                      </span>
+                      {/* El margen, que es lo que decide si hay que tocarlo.
+                          En ámbar por debajo del 12 %, igual que en el kit. */}
+                      <span
+                        className={`tabular text-sm font-semibold ${
+                          margen === null
+                            ? "text-[var(--fg-subtle)]"
+                            : margen < 12
+                              ? "text-[var(--warn)]"
+                              : "text-[var(--ok)]"
+                        }`}
+                      >
+                        {margen === null ? "sin margen" : `${margen}%`}
+                      </span>
+                      <span className="text-sm text-brand-600 underline">
+                        {desplegado ? "cerrar" : "cambiar"}
+                      </span>
+                    </button>
+
+                    {desplegado ? (
+                      <div className="border-t border-[var(--border-soft)] p-4">
                 <AjustarVenta
                   key={f.item.item_id}
                   productoId={f.item.producto_id}
@@ -908,8 +1084,13 @@ export function Comparativa({
                     elegido como cabeza del reparto, igual que en la compra.
                   */
                   costoPonderado={repartir(f, eleccion[f.item.item_id]).costoPonderado}
+                  conCabecera={false}
                 />
-              ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
           </div>
         </section>
       ) : null}
@@ -997,73 +1178,6 @@ export function Comparativa({
           />
         ) : null}
       </section>
-
-      {/*
-        En qué acabó la ronda.
-
-        Luis, 09/09: *«cuando registro, esos enlaces ni yo los entiendo… en
-        cada orden voy a poder ver el total a pagar, ¿no? Hay que hacer mejor
-        eso»*.
-
-        Era «Ya salieron: CMP-26-00015, CMP-26-00016» en gris de 14 px. Los
-        números SÍ eran enlaces —solo que sin subrayado hasta pasarles el
-        ratón por encima, que es la definición de enlace que no se ve— y
-        aparte un correlativo suelto no dice nada: ni a quién le compraste ni
-        cuánto le debes. Justo lo que hay que saber al terminar.
-
-        Ahora es una tarjeta por compra, con el total delante y un botón de
-        verdad. Es el mismo patrón de siempre en este proyecto: la función
-        estaba, la puerta era una rendija.
-      */}
-      {ronda.compras.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <div>
-            <h2 className="text-base font-semibold">
-              {ronda.compras.length === 1
-                ? "La compra que salió de aquí"
-                : "Las compras que salieron de aquí"}
-            </h2>
-            <p className="text-sm text-[var(--fg-muted)]">
-              Una por proveedor. Ahí se registra lo que llega y lo que se le
-              paga.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {ronda.compras.map((c) => (
-              <div key={c.id} className="card flex flex-col gap-2 p-4">
-                <span className="font-mono text-base font-semibold">
-                  {c.numero}
-                </span>
-                <span
-                  className="truncate text-sm text-[var(--fg-muted)]"
-                  title={c.proveedor}
-                >
-                  {c.proveedor}
-                </span>
-
-                {/* El total, que es lo que se preguntó: cuánto hay que
-                    pagarle a este. Grande, porque es la cifra. */}
-                <span className="flex items-baseline justify-between gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2">
-                  <span className="text-sm text-[var(--fg-muted)]">
-                    Total a pagar
-                  </span>
-                  <strong className="text-lg tabular-nums">
-                    {formatearMoneda(c.total, "USD")}
-                  </strong>
-                </span>
-
-                <Button asChild variant="outline" className="mt-auto w-full gap-1.5">
-                  <Link href={`/compras/${c.id}`}>
-                    <PackageSearch className="size-4" aria-hidden="true" />
-                    Ver la compra
-                  </Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       {aviso ? (
         <p
