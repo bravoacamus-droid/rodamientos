@@ -223,13 +223,41 @@ export function TablaPorComprar({
                     </td>
 
                     <td className="px-3 py-3 align-top">
+                      {/*
+                        «Pedir precio» PRIMERO, y en cada fila.
+
+                        Hasta el 21/09 la fila solo ofrecía «Comprar», y pedir
+                        precio estaba detrás de marcar una casilla — o sea, en
+                        una acción de lote que hay que descubrir. Pero el orden
+                        de Willy es al revés: primero pregunta a sus
+                        proveedores y después compra. Luis, 21/09: *«su otro
+                        proceso es preguntar a sus proveedores los precios,
+                        nomás por WhatsApp o llamada»*.
+
+                        Ofrecer solo «Comprar» empujaba a saltarse el paso que
+                        él siempre da, y a registrar la compra con el costo del
+                        año pasado. Los dos botones, y el de preguntar delante.
+
+                        La cantidad que viaja es `falta`: lo que de verdad hay
+                        que conseguir. En la ronda se puede subir —se pide
+                        precio por volumen— pero el punto de partida es el
+                        pendiente y no un 1 de relleno.
+                      */}
                       {enCamino ? null : (
-                        <Link
-                          href={enlaceCompra([f])}
-                          className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-                        >
-                          Comprar
-                        </Link>
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                          <Link
+                            href={enlacePedir([f])}
+                            className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                          >
+                            Pedir precio
+                          </Link>
+                          <Link
+                            href={enlaceCompra([f])}
+                            className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                          >
+                            Comprar
+                          </Link>
+                        </span>
                       )}
                     </td>
                   </tr>
