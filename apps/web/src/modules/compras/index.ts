@@ -24,12 +24,17 @@ export {
   costoParaCompra,
   eleccionPorDefecto,
   ganadorDe,
+  // El reparto entre proveedores (090). Se publica porque la ficha del
+  // producto y el tablero van a querer el ponderado, que es el costo real.
+  repartir,
   resumirComparativa,
   resumirProveedores,
   type Celda,
   type EstadoRespuesta,
   type FilaComparada,
   type Ganador,
+  type Reparto,
+  type Tramo,
   type ItemConsultado,
   type Moneda,
   type ProveedorConsultado,

@@ -163,6 +163,14 @@ const esquemaAnotar = z.object({
         costo_unitario: z.number().nonnegative().finite().nullable(),
         dias_entrega: z.number().int().min(0).max(999).nullable(),
         disponible: z.boolean(),
+        /*
+          Cuántas tiene (090). NULL = las que se le pidieron.
+
+          `positive` y no `nonnegative`: un 0 aquí sería una segunda forma de
+          decir «no lo tiene», que ya se dice con `disponible: false`. La base
+          lo vuelve a rechazar con `consulta_resp_cantidad_pos`.
+        */
+        cantidad_disponible: z.number().positive().finite().nullable().default(null),
         nota: z.string().max(300).nullable(),
       }),
     )

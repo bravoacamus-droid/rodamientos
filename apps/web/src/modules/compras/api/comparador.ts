@@ -205,7 +205,9 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
     if (idsProv.length > 0) {
       const { data, error: e } = await supabase
         .from("consulta_precio_respuestas")
-        .select("item_id, consulta_proveedor_id, costo_unitario, dias_entrega, disponible, nota")
+        .select(
+          "item_id, consulta_proveedor_id, costo_unitario, dias_entrega, disponible, cantidad_disponible, nota",
+        )
         .in("consulta_proveedor_id", idsProv);
       if (e) return fallo(e, "compras/rondaDetalle");
       respuestas = (data ?? []).map((r) => ({
@@ -214,6 +216,7 @@ export async function rondaDetalle(id: string): Promise<Resultado<RondaDetalle>>
         costo_unitario: r.costo_unitario === null ? null : Number(r.costo_unitario),
         dias_entrega: r.dias_entrega === null ? null : Number(r.dias_entrega),
         disponible: Boolean(r.disponible),
+        cantidad_disponible: r.cantidad_disponible ?? null,
         nota: (r.nota as string | null) ?? null,
       }));
     }

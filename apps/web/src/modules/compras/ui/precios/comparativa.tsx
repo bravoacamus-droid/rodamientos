@@ -16,6 +16,7 @@ import {
   ETIQUETA_RESPUESTA,
   compararTodo,
   comprasPropuestas,
+  repartir,
   eleccionFinal,
   estadoDeFila,
   resumirComparativa,
@@ -156,6 +157,16 @@ export function Comparativa({
 
   const propuestas = React.useMemo(
     () =>
+      /*
+        `aMano` va también: es lo que distingue «lo decidió una persona» de
+        «lo propuso el sistema».
+
+        Sin reparto era irrelevante —la elección bastaba— pero desde el 21/09
+        un producto se reparte entre varios proveedores por defecto, y eso solo
+        se debe hacer cuando NADIE lo ha movido. Si alguien eligió proveedor
+        para esa fila, se le compra todo a él: tendrá sus motivos, y el sistema
+        no los sabe.
+      */
       comprasPropuestas(filas, proveedores, eleccion).filter(
         (c) => !yaComprados.has(c.proveedor_id),
       ),
@@ -653,6 +664,54 @@ export function Comparativa({
                             proveedores.find((p) => p.consulta_proveedor_id === elegido)
                               ?.proveedor
                           }
+
+                          {/*
+                            El REPARTO, cuando al elegido no le alcanza.
+
+                            Willy, 21/09: *«no siempre todos cuentan con el
+                            stock solicitado, a veces tienen stock parcial y
+                            habría que completar con los demás. Al final el
+                            precio de compra sería el promedio ponderado de los
+                            mejores precios»*.
+
+                            Sin esto, la pantalla diría «se le compra a B» y el
+                            pedido saldría a dos proveedores: lo que se ve y lo
+                            que pasa tienen que ser lo mismo. Y el ponderado es
+                            el número con el que se decide el precio de venta,
+                            así que no puede quedarse dentro del cálculo.
+                          */}
+                          {(() => {
+                            const r = repartir(fila, elegido);
+                            if (r.tramos.length <= 1) return null;
+                            return (
+                              <span className="mt-1 block text-sm">
+                                {r.tramos.map((t) => (
+                                  <span
+                                    key={t.consulta_proveedor_id}
+                                    className="block text-[var(--fg-muted)]"
+                                  >
+                                    {t.cantidad} · {t.proveedor}{" "}
+                                    <span className="tabular">
+                                      {formatearMoneda(t.costoUsd, "USD")}
+                                    </span>
+                                  </span>
+                                ))}
+                                {r.costoPonderado !== null ? (
+                                  <span className="block font-medium text-[var(--fg)]">
+                                    te sale a{" "}
+                                    <span className="tabular">
+                                      {formatearMoneda(r.costoPonderado, "USD")}
+                                    </span>
+                                  </span>
+                                ) : null}
+                                {r.falta > 0 ? (
+                                  <span className="block font-medium text-[var(--warn)]">
+                                    faltan {r.falta}: nadie más tiene
+                                  </span>
+                                ) : null}
+                              </span>
+                            );
+                          })()}
                           {fila.ganador.ahorroUnitario !== null &&
                           elegido === fila.ganador.consulta_proveedor_id ? (
                             <span className="block text-xs text-[var(--fg-subtle)]">

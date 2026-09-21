@@ -137,6 +137,19 @@ export function PanelRespuesta({
               : String(propuestos),
         // Lo normal es que sí lo tenga: se destilda el que no.
         disponible: r?.disponible ?? true,
+        /*
+          Cuántas tiene. VACÍO por defecto, y vacío significa «las que pedí».
+
+          Willy, 21/09: *«no siempre todos cuentan con el stock solicitado, a
+          veces tienen stock parcial y habría que completar con los demás»*.
+          Pero lo normal sigue siendo que las tenga, así que obligar a
+          teclear la cantidad en cada línea sería cobrar a todos el precio de
+          un caso que pasa a veces.
+        */
+        cantidad:
+          r?.cantidad_disponible !== null && r?.cantidad_disponible !== undefined
+            ? String(r.cantidad_disponible)
+            : "",
         // Solo vive en esta pantalla: la base guarda «no disponible» y la
         // relación proveedor-producto se borra aparte, al guardar.
         yaNoVende: false,
@@ -152,7 +165,11 @@ export function PanelRespuesta({
   const tcNum = tc.trim() === "" ? null : Number(tc);
   const faltaTc = moneda === "PEN" && (tcNum === null || !Number.isFinite(tcNum) || tcNum <= 0);
 
-  function cambiar(itemId: string, campo: "costo" | "dias" | "nota", valor: string) {
+  function cambiar(
+    itemId: string,
+    campo: "costo" | "dias" | "nota" | "cantidad",
+    valor: string,
+  ) {
     setLineas((prev) =>
       prev.map((l) => (l.item_id === itemId ? { ...l, [campo]: valor } : l)),
     );
@@ -200,6 +217,15 @@ export function PanelRespuesta({
         costo_unitario: l.costo.trim() === "" ? null : Number(l.costo),
         dias_entrega: l.dias.trim() === "" ? null : Number(l.dias),
         disponible: l.disponible,
+        /*
+          Vacío viaja como NULL: «tiene las que pedí».
+
+          Y si dijo que NO lo tiene, la cantidad no se manda aunque quede algo
+          escrito: «no tiene» y «tiene 3» son respuestas distintas, y guardar
+          las dos deja una contradicción que el reparto tendría que adivinar.
+        */
+        cantidad_disponible:
+          !l.disponible || l.cantidad.trim() === "" ? null : Number(l.cantidad),
         nota: l.nota.trim() === "" ? null : l.nota.trim(),
       }));
 
@@ -481,6 +507,44 @@ export function PanelRespuesta({
                         <option value="no">No ahora</option>
                         <option value="nunca">Ya no lo vende</option>
                       </SelectNativo>
+                    </Campo>
+
+                    {/*
+                      Cuántas tiene — el hueco que faltaba en todo el módulo.
+
+                      Willy, 21/09: *«una cosa que no se ha tenido en cuenta en
+                      el registro de precios es el stock de cada proveedor. No
+                      siempre todos cuentan con el stock solicitado, a veces
+                      tienen stock parcial y habría que completar con los
+                      demás»*. Y remató el diagnóstico: *«se está considerando
+                      que todos tienen stock suficiente»*.
+
+                      Vacío = las que se le pidieron, que es lo normal. Por eso
+                      el placeholder dice las que se pidieron y no «0»: lo que
+                      se teclea aquí es la EXCEPCIÓN.
+
+                      Se apaga con «no lo tiene»: ahí la cantidad no significa
+                      nada y dejarla escribible invita a la contradicción.
+                    */}
+                    <Campo
+                      id={`cant-${item.item_id}`}
+                      label="¿Cuántas tiene?"
+                      ayuda={
+                        linea.disponible && linea.cantidad.trim() !== "" &&
+                        Number(linea.cantidad) < item.cantidad
+                          ? "Falta para completar: el resto sale del siguiente más barato."
+                          : "Si tiene las que pides, déjalo vacío."
+                      }
+                    >
+                      <Input
+                        id={`cant-${item.item_id}`}
+                        inputMode="decimal"
+                        className="text-right tabular-nums"
+                        value={linea.cantidad}
+                        disabled={!linea.disponible}
+                        placeholder={String(item.cantidad)}
+                        onChange={(e) => cambiar(item.item_id, "cantidad", e.target.value)}
+                      />
                     </Campo>
                   </div>
 

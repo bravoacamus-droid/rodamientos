@@ -103,6 +103,13 @@ export interface Respuesta {
   costo_unitario: number | null;
   dias_entrega: number | null;
   disponible: boolean;
+  /**
+   * Cuántas tiene. `null` = las que se le pidieron (090).
+   *
+   * Willy, 21/09: *«no siempre todos cuentan con el stock solicitado, a veces
+   * tienen stock parcial y habría que completar con los demás»*.
+   */
+  cantidad_disponible?: number | null;
   nota: string | null;
 }
 
@@ -176,6 +183,8 @@ export interface Celda {
   costoUsd: number | null;
   dias: number | null;
   disponible: boolean;
+  /** Cuántas tiene. `null` = las que se le pidieron (090). */
+  cantidadDisponible: number | null;
   nota: string | null;
 }
 
@@ -272,6 +281,7 @@ export function compararTodo(
         // El plazo de la cabecera se hereda: casi siempre dan uno para todo.
         dias: r?.dias_entrega ?? p.dias_entrega ?? null,
         disponible: r?.disponible ?? false,
+        cantidadDisponible: r?.cantidad_disponible ?? null,
         nota: r?.nota ?? null,
       };
     });
@@ -461,13 +471,35 @@ export interface CompraPropuesta {
 /**
  * Las compras que salen de la comparación.
  *
- * `eleccion` es item_id → consulta_proveedor_id. Lo que no esté ahí no se
- * compra: quien mira la pantalla puede dejar fuera una línea porque ya la
- * pidió, porque el precio no le convence o porque quiere esperar.
- *
  * Sale **una compra por proveedor**, que es como se pide de verdad. Los
  * importes van en la moneda de cada uno porque así se cuadran contra su
  * factura (044), y sin IGV porque la cabecera de la compra lo calcula aparte.
+ *
+ * ---------------------------------------------------------------------------
+ * Un producto puede ir a VARIOS proveedores
+ * ---------------------------------------------------------------------------
+ * Willy, 21/09: *«a veces tienen stock parcial y habría que completar con los
+ * demás»*. Así que lo normal ya no es «este producto se lo compro a este»,
+ * sino el reparto de `repartir()`: el más barato hasta donde llegue, y el
+ * resto al siguiente.
+ *
+ * Hasta hoy `eleccion` mandaba siempre y era item → UN proveedor, con lo que
+ * el caso de Willy no se podía ni expresar: se compraban las 10 al que solo
+ * tenía 6.
+ *
+ * ---------------------------------------------------------------------------
+ * `eleccion` sigue eligiendo: el reparto la COMPLETA
+ * ---------------------------------------------------------------------------
+ * El elegido va primero y se le compra todo lo que tenga; solo lo que no
+ * alcance pasa al siguiente más barato. Así una elección a mano se respeta
+ * —hay motivos que el sistema no sabe— y a la vez el pedido no llega corto.
+ *
+ * Si el elegido tiene de sobra, esto da exactamente lo de antes: una compra,
+ * todas las unidades. Por eso las rondas en las que nadie dijo cuántas tenía
+ * se comportan igual que siempre.
+ *
+ * Lo que no esté en `eleccion` NO se compra: se puede dejar una línea fuera
+ * porque ya se pidió o porque no convence el precio.
  */
 export function comprasPropuestas(
   filas: readonly FilaComparada[],
@@ -477,21 +509,23 @@ export function comprasPropuestas(
   const porId = new Map(proveedores.map((p) => [p.consulta_proveedor_id, p]));
   const compras = new Map<string, CompraPropuesta>();
 
-  for (const fila of filas) {
-    const elegido = eleccion[fila.item.item_id];
-    if (!elegido) continue;
+  /** Mete una cantidad de un producto en la compra de un proveedor. */
+  const anotar = (
+    cpId: string,
+    fila: FilaComparada,
+    cantidad: number,
+    costoMoneda: number | null,
+  ) => {
+    const proveedor = porId.get(cpId);
+    if (!proveedor || cantidad <= 0) return;
 
-    const proveedor = porId.get(elegido);
-    const celda = fila.celdas.find((c) => c.consulta_proveedor_id === elegido);
-    if (!proveedor || !celda || !celda.disponible) continue;
+    const costo = costoParaCompra(costoMoneda, proveedor.incluye_igv);
+    if (costo === null) return;
 
-    const costo = costoParaCompra(celda.costo, proveedor.incluye_igv);
-    if (costo === null) continue;
-
-    let compra = compras.get(elegido);
+    let compra = compras.get(cpId);
     if (!compra) {
       compra = {
-        consulta_proveedor_id: elegido,
+        consulta_proveedor_id: cpId,
         proveedor_id: proveedor.proveedor_id,
         proveedor: proveedor.proveedor,
         moneda: proveedor.moneda,
@@ -500,17 +534,64 @@ export function comprasPropuestas(
         lineas: [],
         subtotal: 0,
       };
-      compras.set(elegido, compra);
+      compras.set(cpId, compra);
     }
 
     compra.lineas.push({
       producto_id: fila.item.producto_id,
       codigo: fila.item.codigo,
       descripcion: fila.item.descripcion,
-      cantidad: fila.item.cantidad,
+      cantidad,
       costo_unitario: costo,
     });
-    compra.subtotal = dos(compra.subtotal + fila.item.cantidad * costo);
+    compra.subtotal = dos(compra.subtotal + cantidad * costo);
+  };
+
+  for (const fila of filas) {
+    const elegido = eleccion[fila.item.item_id];
+    if (!elegido) continue;
+
+    /*
+      El elegido tiene que poder venderlo. Si no, la fila no se compra.
+
+      Elegir a alguien que contestó «no lo tengo» no es una invitación a
+      comprárselo a otro: es una elección que ya no vale. Quitarlo y dejar que
+      el reparto buscara al siguiente cambiaría de proveedor sin decirlo — y
+      con el precio que sale en pantalla siendo el del elegido.
+
+      Esta guarda estaba antes del 21/09 y se perdió al meter el reparto. La
+      recuperan dos tests que empezaron a fallar: «no propone comprarle a quien
+      dijo que no lo tiene» y el de los soles sin tipo de cambio.
+    */
+    const suya = fila.celdas.find((c) => c.consulta_proveedor_id === elegido);
+    if (!suya || !suya.disponible) continue;
+    if (costoParaCompra(suya.costo, porId.get(elegido)?.incluye_igv ?? false) === null) continue;
+
+    /*
+      Lo que no se puede convertir a dólares no se puede repartir.
+
+      Una celda en soles sin tipo de cambio tiene `costoUsd` en null: no se
+      puede ordenar por precio, así que no puede entrar en un reparto que se
+      ordena por precio. Pero la COMPRA sí vale —el importe va en soles y no
+      necesita conversión—, y es lo que hace la 044.
+
+      Así que en ese caso se compra entera al elegido, como antes del 21/09.
+      Lo caza un test que ya existía; sin esta rama, un proveedor en soles sin
+      TC dejaba de poder comprarse.
+    */
+    if (suya.costoUsd === null) {
+      anotar(elegido, fila, fila.item.cantidad, suya.costo);
+      continue;
+    }
+
+    // El elegido primero; el resto solo completa lo que no alcance.
+    for (const tramo of repartir(fila, elegido).tramos) {
+      const celda = fila.celdas.find(
+        (c) => c.consulta_proveedor_id === tramo.consulta_proveedor_id,
+      );
+      if (!celda) continue;
+      anotar(tramo.consulta_proveedor_id, fila, tramo.cantidad, celda.costo);
+    }
   }
 
   return [...compras.values()].sort(
@@ -589,4 +670,132 @@ export function estadoDeFila(fila: FilaComparada): EstadoFila {
   if (preguntadas.length === 0) return "sin_preguntar";
   if (preguntadas.some((c) => !c.respondida)) return "esperando";
   return "nadie";
+}
+
+// ---------------------------------------------------------------------------
+// El reparto entre proveedores
+// ---------------------------------------------------------------------------
+
+/** Un tramo del reparto: a quién se le compran cuántas y a cuánto. */
+export interface Tramo {
+  consulta_proveedor_id: string;
+  proveedor: string;
+  cantidad: number;
+  costoUsd: number;
+  dias: number | null;
+}
+
+export interface Reparto {
+  tramos: Tramo[];
+  /** Lo que se consigue cubrir. Puede ser menos de lo que hace falta. */
+  cubierto: number;
+  /** Lo que falta por cubrir: nadie tiene tanto. */
+  falta: number;
+  /**
+   * El costo unitario PONDERADO de lo que se consigue.
+   *
+   * Es el número con el que hay que trabajar, y es lo que pidió Willy: *«al
+   * final el precio de compra sería el promedio ponderado de los mejores
+   * precios»*. `null` si no se cubre nada.
+   */
+  costoPonderado: number | null;
+}
+
+/**
+ * Repartir lo que hace falta entre los proveedores, del más barato al más caro.
+ *
+ * Willy, 21/09, por chat, y es el algoritmo tal como lo dictó:
+ *
+ *   *«se tomaría el 1er mejor precio con la cantidad que tiene; si falta,
+ *   entonces se promedia con el 2do mejor precio con la cantidad que tenga; si
+ *   falta, se incluye en el promedio el 3er mejor precio, y así
+ *   sucesivamente»*.
+ *
+ * Su ejemplo: hacen falta 10; B lo tiene a $6 pero solo 6 unidades, A lo tiene
+ * a $8 y le sobra. Sale 6 × $6 + 4 × $8 = $68 → **$6.80** la unidad.
+ *
+ * ---------------------------------------------------------------------------
+ * Por qué no basta con el ganador
+ * ---------------------------------------------------------------------------
+ * `ganadorDe` contesta «¿quién está más barato?», que es otra pregunta. Hasta
+ * hoy el comparador daba por hecho que el ganador tenía todo —Willy lo dijo
+ * así: *«se está considerando que todos tienen stock suficiente»*— y proponía
+ * comprar las 10 a $6. Ese precio no existe: a $6 solo hay 6.
+ *
+ * Y no es un decimal de más. El margen se calcula sobre el costo (023), así
+ * que un costo que no se puede pagar es un margen que no se va a cobrar.
+ *
+ * ---------------------------------------------------------------------------
+ * `null` en la cantidad significa «tiene las que hagan falta»
+ * ---------------------------------------------------------------------------
+ * Es lo que valen todas las respuestas anteriores al 090 y lo que se quiere
+ * cuando el proveedor no dice nada de stock. Tratarlo como 0 dejaría todas las
+ * rondas viejas sin ningún reparto posible.
+ */
+export function repartir(fila: FilaComparada, preferido?: string): Reparto {
+  const necesarias = fila.item.cantidad;
+
+  const ofertas = fila.celdas
+    .filter(
+      (c): c is Celda & { costoUsd: number } =>
+        c.disponible && c.costoUsd !== null && c.costoUsd >= 0,
+    )
+    .sort(
+      (a, b) =>
+        /*
+          El elegido va PRIMERO, si se eligió a alguien.
+
+          El reparto COMPLETA una decisión, no la sustituye. Si quien mira la
+          pantalla puso a un proveedor —porque le debe un favor, porque tiene
+          crédito con él, porque el barato tarda tres semanas—, se empieza por
+          él y solo se completa con los demás lo que no alcance. Es lo que dijo
+          Willy: *«se tomaría el 1er mejor precio con la cantidad que tiene; si
+          falta, entonces se promedia con el 2do»*. Lo que cambia con una
+          elección a mano es quién es «el primero».
+        */
+        Number(b.consulta_proveedor_id === preferido) -
+          Number(a.consulta_proveedor_id === preferido) ||
+        a.costoUsd - b.costoUsd ||
+        (a.dias ?? Number.MAX_SAFE_INTEGER) - (b.dias ?? Number.MAX_SAFE_INTEGER) ||
+        a.proveedor.localeCompare(b.proveedor),
+    );
+
+  const tramos: Tramo[] = [];
+  let pendiente = necesarias;
+  let importe = 0;
+
+  for (const o of ofertas) {
+    if (pendiente <= 0) break;
+    // Sin dato, tiene lo que haga falta. Con dato, lo que dijo.
+    const puede = o.cantidadDisponible === null ? pendiente : o.cantidadDisponible;
+    const toma = Math.min(puede, pendiente);
+    if (toma <= 0) continue;
+
+    tramos.push({
+      consulta_proveedor_id: o.consulta_proveedor_id,
+      proveedor: o.proveedor,
+      cantidad: dos(toma),
+      costoUsd: o.costoUsd,
+      dias: o.dias,
+    });
+    importe += toma * o.costoUsd;
+    pendiente -= toma;
+  }
+
+  const cubierto = dos(necesarias - Math.max(pendiente, 0));
+
+  return {
+    tramos,
+    cubierto,
+    falta: dos(Math.max(pendiente, 0)),
+    /*
+      El ponderado se calcula sobre lo CUBIERTO, no sobre lo que hacía falta.
+
+      Si hacen falta 10 y solo se consiguen 8, el costo de esas 8 es el de las
+      8. Dividir entre 10 daría un unitario más barato de lo que nadie te
+      vendió — y encima mejoraría cuanto menos consigas, que es al revés de la
+      realidad.
+    */
+    costoPonderado: cubierto > 0 ? cuatro(importe / cubierto) : null,
+  };
 }

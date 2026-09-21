@@ -106,10 +106,10 @@ update cotizaciones set estado = 'anulada'
 commit;
 
 -- ###########################################################################
--- 6 · La ronda de precios CPR-26-00011, del 21/09
+-- 6 · Las rondas de precios CPR-26-00011 y CPR-26-00012, del 21/09
 -- ###########################################################################
 --
--- Se creó para comprobar de punta a punta que una ronda se puede armar SIN
+-- La 00011 se creó para comprobar de punta a punta que una ronda se puede armar SIN
 -- cotización detrás — el cambio del 21/09—. Lleva un producto
 -- (`6205-2RSH/C3`) y un proveedor (MARCO PERUANA), y nadie contestó: no hay
 -- precios anotados.
@@ -126,7 +126,7 @@ commit;
 begin;
 
 delete from consultas_precio c
- where c.numero = 'CPR-26-00011'
+ where c.numero in ('CPR-26-00011', 'CPR-26-00012')
    -- Con alguna respuesta anotada NO se borra: alguien la estaría usando de
    -- verdad y este script es para limpiar pruebas, no trabajo.
    and not exists (
@@ -137,3 +137,23 @@ delete from consultas_precio c
    );
 
 commit;
+
+-- La CPR-26-00012 es la del reparto: 10 unidades del 6205-2RSH/C3, AUTOLAND a
+-- $8 con stock de sobra y MARCO PERUANA a $6 con solo 6. Sirvió para ver en
+-- pantalla el caso que Willy planteó por chat el 21/09 —6 × $6 + 4 × $8 =
+-- $6.80— y ESA SÍ tiene respuestas anotadas, así que el borrado de arriba la
+-- deja en pie a propósito.
+--
+-- Para llevársela también, hay que quitar antes sus respuestas. Va aparte
+-- porque borra trabajo anotado y eso no puede pasar por descuido:
+--
+--   delete from consulta_precio_respuestas r
+--    using consulta_precio_proveedores cp, consultas_precio c
+--    where r.consulta_proveedor_id = cp.id
+--      and cp.consulta_id = c.id
+--      and c.numero = 'CPR-26-00012';
+--   delete from consultas_precio where numero = 'CPR-26-00012';
+--
+-- OJO: eso NO deshace `proveedor_productos`. Al anotar esos precios quedó
+-- registrado que AUTOLAND vende el 6205-2RSH/C3 a $8 y MARCO PERUANA a $6.
+-- Es el mismo caso que el retén del 09/09, y se limpia a mano si molesta.

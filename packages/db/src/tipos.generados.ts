@@ -1370,6 +1370,7 @@ export type Database = {
       }
       consulta_precio_respuestas: {
         Row: {
+          cantidad_disponible: number | null
           consulta_proveedor_id: string
           costo_unitario: number | null
           dias_entrega: number | null
@@ -1379,6 +1380,7 @@ export type Database = {
           nota: string | null
         }
         Insert: {
+          cantidad_disponible?: number | null
           consulta_proveedor_id: string
           costo_unitario?: number | null
           dias_entrega?: number | null
@@ -1388,6 +1390,7 @@ export type Database = {
           nota?: string | null
         }
         Update: {
+          cantidad_disponible?: number | null
           consulta_proveedor_id?: string
           costo_unitario?: number | null
           dias_entrega?: number | null
@@ -3848,6 +3851,7 @@ export type Database = {
       v_comparativa_precios: {
         Row: {
           cantidad: number | null
+          cantidad_disponible: number | null
           codigo: string | null
           consulta: string | null
           consulta_estado:

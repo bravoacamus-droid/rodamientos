@@ -10,8 +10,10 @@ import {
   estadoDeFila,
   ganadorDe,
   resumirComparativa,
+  repartir,
   resumirProveedores,
   type Celda,
+  type FilaComparada,
   type ItemConsultado,
   type ProveedorConsultado,
   type Respuesta,
@@ -58,6 +60,9 @@ function celda(over: Partial<Celda> = {}): Celda {
     costoUsd: 10,
     dias: null,
     disponible: true,
+    // Sin dato: tiene las que se le pidieron, que es lo que valen todas las
+    // respuestas anteriores al 090.
+    cantidadDisponible: null,
     nota: null,
     ...over,
   };
@@ -578,5 +583,197 @@ describe("estadoDeFila", () => {
   it("si no se le preguntó a nadie, lo dice: es un descuido, no una respuesta", () => {
     const filas = compararTodo(items, proveedores, [], new Set<string>());
     expect(estadoDeFila(filas[0]!)).toBe("sin_preguntar");
+  });
+});
+
+/*
+  El reparto entre proveedores, con el ejemplo de Willy tal cual.
+
+  Willy, 21/09, por chat: *«si yo necesito comprar para atender 10 unidades de
+  un producto, el proveedor A tiene stock suficiente a $8 y el proveedor B lo
+  tiene a $6 pero solo cuenta con 6 unidades… ¿con qué precio de costo
+  trabajo?»* — y su propia respuesta: *«se tomaría el 1er mejor precio con la
+  cantidad que tiene; si falta, se promedia con el 2do mejor precio con la
+  cantidad que tenga; y así sucesivamente»*.
+*/
+describe("repartir", () => {
+  const fila = (celdas: Celda[], cantidad = 10): FilaComparada => ({
+    item: item({ cantidad }),
+    celdas,
+    ganador: ganadorDe(celdas),
+    totalGanador: null,
+  });
+
+  it("el caso de Willy: 6 a $6 y 4 a $8 dan $6.80", () => {
+    const r = repartir(
+      fila([
+        celda({ consulta_proveedor_id: "A", proveedor: "A", costoUsd: 8 }),
+        celda({
+          consulta_proveedor_id: "B",
+          proveedor: "B",
+          costoUsd: 6,
+          cantidadDisponible: 6,
+        }),
+      ]),
+    );
+
+    expect(r.tramos).toHaveLength(2);
+    // El más barato primero: es como lo dictó.
+    expect(r.tramos[0]).toMatchObject({ proveedor: "B", cantidad: 6, costoUsd: 6 });
+    expect(r.tramos[1]).toMatchObject({ proveedor: "A", cantidad: 4, costoUsd: 8 });
+    expect(r.cubierto).toBe(10);
+    expect(r.falta).toBe(0);
+    // (6×6 + 4×8) / 10 = 6.80
+    expect(r.costoPonderado).toBe(6.8);
+  });
+
+  it("si el más barato tiene de sobra, no entra nadie más", () => {
+    const r = repartir(
+      fila([
+        celda({ consulta_proveedor_id: "A", proveedor: "A", costoUsd: 8 }),
+        celda({ consulta_proveedor_id: "B", proveedor: "B", costoUsd: 6 }),
+      ]),
+    );
+    expect(r.tramos).toHaveLength(1);
+    expect(r.tramos[0]).toMatchObject({ proveedor: "B", cantidad: 10 });
+    expect(r.costoPonderado).toBe(6);
+  });
+
+  /**
+   * Sin este caso, las rondas anteriores al 090 se quedarían sin reparto:
+   * ninguna respuesta vieja tiene cantidad anotada.
+   */
+  it("sin cantidad anotada, se entiende «tiene las que pedí»", () => {
+    const r = repartir(fila([celda({ costoUsd: 7 })]));
+    expect(r.tramos[0]?.cantidad).toBe(10);
+    expect(r.falta).toBe(0);
+  });
+
+  it("entra un tercero cuando los dos primeros no llegan", () => {
+    const r = repartir(
+      fila([
+        celda({ consulta_proveedor_id: "A", proveedor: "A", costoUsd: 9, cantidadDisponible: 2 }),
+        celda({ consulta_proveedor_id: "B", proveedor: "B", costoUsd: 6, cantidadDisponible: 3 }),
+        celda({ consulta_proveedor_id: "C", proveedor: "C", costoUsd: 7, cantidadDisponible: 4 }),
+      ]),
+    );
+    expect(r.tramos.map((t) => t.proveedor)).toEqual(["B", "C", "A"]);
+    expect(r.tramos.map((t) => t.cantidad)).toEqual([3, 4, 2]);
+    expect(r.cubierto).toBe(9);
+    expect(r.falta).toBe(1);
+    // (3×6 + 4×7 + 2×9) / 9 = 64/9 = 7.1111
+    expect(r.costoPonderado).toBe(7.1111);
+  });
+
+  /**
+   * Es la parte que más fácil se hace mal: dividir entre lo que hacía falta
+   * daría un unitario más barato de lo que nadie te vendió, y mejoraría cuanto
+   * menos consigas.
+   */
+  it("el ponderado se calcula sobre lo cubierto, no sobre lo pedido", () => {
+    const r = repartir(
+      fila([celda({ consulta_proveedor_id: "A", proveedor: "A", costoUsd: 5, cantidadDisponible: 2 })]),
+    );
+    expect(r.cubierto).toBe(2);
+    expect(r.falta).toBe(8);
+    expect(r.costoPonderado).toBe(5);
+  });
+
+  it("un «no lo tiene» no entra en el reparto aunque sea el más barato", () => {
+    const r = repartir(
+      fila([
+        celda({ consulta_proveedor_id: "A", proveedor: "A", costoUsd: 8 }),
+        celda({ consulta_proveedor_id: "B", proveedor: "B", costoUsd: 1, disponible: false }),
+      ]),
+    );
+    expect(r.tramos.map((t) => t.proveedor)).toEqual(["A"]);
+    expect(r.costoPonderado).toBe(8);
+  });
+
+  it("sin ninguna oferta no hay reparto ni ponderado", () => {
+    const r = repartir(fila([celda({ costoUsd: null, respondida: false, disponible: false })]));
+    expect(r.tramos).toEqual([]);
+    expect(r.cubierto).toBe(0);
+    expect(r.falta).toBe(10);
+    expect(r.costoPonderado).toBeNull();
+  });
+});
+
+describe("comprasPropuestas con reparto", () => {
+  const prov = (id: string, nombre: string) =>
+    proveedor({ consulta_proveedor_id: id, proveedor_id: `p-${id}`, proveedor: nombre });
+
+  const filas = (): FilaComparada[] => {
+    const celdas = [
+      celda({ consulta_proveedor_id: "A", proveedor: "A", costo: 8, costoUsd: 8 }),
+      celda({
+        consulta_proveedor_id: "B",
+        proveedor: "B",
+        costo: 6,
+        costoUsd: 6,
+        cantidadDisponible: 6,
+      }),
+    ];
+    return [{ item: item({ cantidad: 10 }), celdas, ganador: ganadorDe(celdas), totalGanador: null }];
+  };
+
+  /**
+   * El caso de Willy entero: no basta con enseñar el ponderado, hay que
+   * COMPRARLO así. Si la propuesta siguiera pidiéndole 10 al que tiene 6, el
+   * número de la pantalla sería decorativo y el pedido llegaría corto.
+   */
+  it("reparte el producto entre los dos proveedores", () => {
+    const r = comprasPropuestas(filas(), [prov("A", "A"), prov("B", "B")], {
+      i1: "B",
+    });
+
+    expect(r).toHaveLength(2);
+    const b = r.find((c) => c.proveedor === "B");
+    const a = r.find((c) => c.proveedor === "A");
+    expect(b?.lineas[0]?.cantidad).toBe(6);
+    expect(a?.lineas[0]?.cantidad).toBe(4);
+    // 6 × 6 = 36 y 4 × 8 = 32.
+    expect(b?.subtotal).toBe(36);
+    expect(a?.subtotal).toBe(32);
+  });
+
+  /**
+   * El reparto COMPLETA la elección, no la sustituye. Si alguien elige a A
+   * —que tiene de sobra— se le compra todo a A aunque B esté más barato: hay
+   * motivos que el sistema no sabe.
+   */
+  it("al elegido con stock de sobra se le compra todo", () => {
+    const r = comprasPropuestas(filas(), [prov("A", "A"), prov("B", "B")], { i1: "A" });
+
+    expect(r).toHaveLength(1);
+    expect(r[0]?.proveedor).toBe("A");
+    expect(r[0]?.lineas[0]?.cantidad).toBe(10);
+  });
+
+  /**
+   * Y si al elegido no le alcanza, se completa con los demás en vez de dejar
+   * el pedido corto. Es el caso de Willy visto desde la otra punta.
+   */
+  it("si al elegido no le alcanza, el resto lo completan los demás", () => {
+    const r = comprasPropuestas(filas(), [prov("A", "A"), prov("B", "B")], { i1: "B" });
+
+    expect(r.find((c) => c.proveedor === "B")?.lineas[0]?.cantidad).toBe(6);
+    expect(r.find((c) => c.proveedor === "A")?.lineas[0]?.cantidad).toBe(4);
+  });
+
+  it("sin cantidades anotadas se comporta como siempre: todo al más barato", () => {
+    const celdas = [
+      celda({ consulta_proveedor_id: "A", proveedor: "A", costo: 8, costoUsd: 8 }),
+      celda({ consulta_proveedor_id: "B", proveedor: "B", costo: 6, costoUsd: 6 }),
+    ];
+    const r = comprasPropuestas(
+      [{ item: item({ cantidad: 10 }), celdas, ganador: ganadorDe(celdas), totalGanador: null }],
+      [prov("A", "A"), prov("B", "B")],
+      { i1: "B" },
+    );
+
+    expect(r).toHaveLength(1);
+    expect(r[0]?.proveedor).toBe("B");
+    expect(r[0]?.lineas[0]?.cantidad).toBe(10);
   });
 });
