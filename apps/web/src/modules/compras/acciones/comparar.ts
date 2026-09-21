@@ -43,7 +43,7 @@ const esquemaCrear = z.object({
     .array(
       z.object({
         producto_id: z.string().uuid(),
-        cantidad: z.number().positive().finite(),
+        cantidad: z.number().int("Las cantidades se piden enteras.").positive().finite(),
       }),
     )
     .min(1, "No hay ningún producto que preguntar.")
@@ -170,7 +170,13 @@ const esquemaAnotar = z.object({
           decir «no lo tiene», que ya se dice con `disponible: false`. La base
           lo vuelve a rechazar con `consulta_resp_cantidad_pos`.
         */
-        cantidad_disponible: z.number().positive().finite().nullable().default(null),
+        cantidad_disponible: z
+          .number()
+          .int("Las unidades que tiene se cuentan enteras.")
+          .positive()
+          .finite()
+          .nullable()
+          .default(null),
         nota: z.string().max(300).nullable(),
       }),
     )
@@ -257,7 +263,7 @@ const esquemaComprar = z.object({
           .array(
             z.object({
               producto_id: z.string().uuid(),
-              cantidad: z.number().positive().finite(),
+              cantidad: z.number().int("Las cantidades se piden enteras.").positive().finite(),
               costo_unitario: z.number().nonnegative().finite(),
             }),
           )

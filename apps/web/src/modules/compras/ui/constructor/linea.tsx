@@ -43,13 +43,29 @@ export function FilaCompra({
       </td>
 
       <td className="px-2 py-2">
+        {/*
+          ENTERA. No se compran 3,30 rodamientos.
+
+          Luis, 21/09: *«la cantidad tiene que ser siempre entero, yo no puedo
+          pedir cantidad 3.30, no, eso no»*. Admitía dos decimales desde
+          siempre, y con ellos un 3,3 tecleado sin querer se convertía en una
+          orden de compra que ningún proveedor sabe atender.
+
+          Se redondea al vuelo en vez de rechazar: quien teclea un decimal aquí
+          se equivocó de tecla, y un error que se corrige solo es mejor que uno
+          que hay que leer.
+        */}
         <Input
           type="number"
           min={0}
-          step="0.01"
+          step={1}
           value={linea.cantidad}
           onChange={(e) =>
-            despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
+            despachar({
+              tipo: "cantidad",
+              key: linea.key,
+              valor: Math.round(Number(e.target.value)),
+            })
           }
           className="w-24 text-right tabular"
           aria-label={`Cantidad a comprar de ${linea.codigo}`}

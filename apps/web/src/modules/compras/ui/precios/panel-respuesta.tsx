@@ -225,7 +225,10 @@ export function PanelRespuesta({
           las dos deja una contradicción que el reparto tendría que adivinar.
         */
         cantidad_disponible:
-          !l.disponible || l.cantidad.trim() === "" ? null : Number(l.cantidad),
+          !l.disponible || l.cantidad.trim() === ""
+            ? null
+            // Entera: nadie tiene 3,30 rodamientos en el estante (21/09).
+            : Math.round(Number(l.cantidad)),
         nota: l.nota.trim() === "" ? null : l.nota.trim(),
       }));
 
@@ -538,7 +541,7 @@ export function PanelRespuesta({
                     >
                       <Input
                         id={`cant-${item.item_id}`}
-                        inputMode="decimal"
+                        inputMode="numeric"
                         className="text-right tabular-nums"
                         value={linea.cantidad}
                         disabled={!linea.disponible}

@@ -382,20 +382,25 @@ export function ConstructorCompra({
                 />
               </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Llega el</span>
-                <Input
-                  type="date"
-                  value={estado.fechaEstimada}
-                  onChange={(e) =>
-                    despachar({
-                      tipo: "cabecera",
-                      campo: "fechaEstimada",
-                      valor: e.target.value,
-                    })
-                  }
-                />
-              </label>
+              {/*
+                Aquí iba «Llega el», y se quita.
+
+                Luis, 21/09: *«en compras, "llega el" no debería ir ahí, ya que
+                eso viene de las cotizaciones. Si el producto es de inmediato,
+                normal; si es de 15 días, va a aparecer; si es de 3 días,
+                igual. Ahora, si llega antes, no pasa nada»*.
+
+                Y tiene razón: la fecha que importa es la que se le PROMETIÓ al
+                cliente, y esa ya está — en el bloque «Para quién es», unas
+                filas más abajo, con su «prometido el…». Pedirla otra vez aquí
+                es hacer teclear a mano un dato que el sistema ya sabe, y
+                arriesgarse a que las dos versiones no coincidan.
+
+                La columna sigue en la base y la ficha la enseña cuando la hay:
+                las compras creadas desde una ronda ya la dejaban vacía, así
+                que esto no cambia nada de lo guardado. Lo que se va es la
+                obligación de inventarla.
+              */}
 
               <label className="flex items-end gap-2 pb-2">
                 <input

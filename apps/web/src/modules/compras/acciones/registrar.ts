@@ -30,7 +30,15 @@ const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const esquemaItem = z.object({
   producto_id: z.string().uuid(),
-  cantidad: z.number().positive().finite(),
+  /*
+    ENTERA. Luis, 21/09: *«la cantidad tiene que ser siempre entero, yo no
+    puedo pedir cantidad 3.30, no, eso no»*.
+
+    Va aquí además de en la pantalla porque toda Server Action es un endpoint
+    público: la pantalla ya redondea, pero a esto se llega por PostgREST sin
+    pasar por ninguna pantalla.
+  */
+  cantidad: z.number().int("Las cantidades se piden enteras.").positive().finite(),
   costo_unitario: z.number().nonnegative().finite(),
   unidad_codigo: z.string().min(1).max(10),
 });

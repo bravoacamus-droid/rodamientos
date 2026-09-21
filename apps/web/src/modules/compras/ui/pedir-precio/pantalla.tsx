@@ -683,12 +683,14 @@ function CampoCantidad({
 }) {
   return (
     <span className="flex shrink-0 items-center gap-1.5">
+      {/* Entera, como en la compra: se pregunta por lo que se va a pedir, y
+          no se piden 3,30 unidades (Luis, 21/09). */}
       <Input
         type="number"
         min={1}
-        step="any"
+        step={1}
         value={valor}
-        onChange={(e) => onCambiar(Number(e.target.value))}
+        onChange={(e) => onCambiar(Math.round(Number(e.target.value)))}
         className="h-9 w-20 text-right tabular"
         aria-label={`Cantidad de ${item.codigo}`}
       />
