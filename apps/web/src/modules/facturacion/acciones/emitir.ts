@@ -107,7 +107,18 @@ const esquema = z.object({
    * después con `vincular_guias_comprobante`, que comprueba que cada una sea
    * del MISMO cliente y no esté anulada. Ver el porqué en la 084.
    */
-  guias: z.array(z.string().uuid()).max(50),
+  /*
+    `default([])` aunque emitir SIN guía esté prohibido.
+
+    La prohibición vive abajo, con su frase: «Marca la guía de remisión que
+    ampara esta factura». Sin el default, un payload al que le falte el campo
+    muere aquí con «Los datos no son válidos: Required» — que no dice qué
+    falta ni a quién le falta, y fue justo lo que salió en pantalla al probar
+    la emisión el 21/09.
+
+    Una validación de forma nunca debería contestar por una regla de negocio.
+  */
+  guias: z.array(z.string().uuid()).max(50).default([]),
   /**
    * La orden de compra del cliente, tal como la manda él.
    *

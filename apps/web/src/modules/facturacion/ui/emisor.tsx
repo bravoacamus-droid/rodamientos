@@ -246,6 +246,19 @@ export function EmisorComprobante({
     cantidades,
     mostrar_cuenta: opciones.mostrarCuenta,
     retencion_aplica: opciones.retencion,
+    /*
+      Las guías que ampara. ESTE ERA EL CABLE QUE FALTABA.
+
+      El 17/09 se añadió la casilla, se añadió al esquema de la Server Action y
+      se añadió al payload de la RPC. Todo menos esto: el formulario nunca las
+      mandaba, así que `guias` llegaba ausente, Zod lo rechazaba por
+      «Required» y **no se podía emitir ninguna factura desde ese día**.
+
+      No se vio porque emitir gasta un correlativo de verdad y se dejó
+      apuntado como «escrito pero sin probar en pantalla». Es exactamente el
+      caso que esa lista existe para cazar, y tardó cuatro días.
+    */
+    guias: opciones.guias,
     // Nunca se manda lo que no se puede mandar: sin certificado la casilla
     // ni se marca, y aquí se vuelve a cortar por si el estado se quedó
     // marcado de antes de que la configuración cambiara.
