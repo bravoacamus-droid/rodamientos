@@ -148,6 +148,23 @@ pnpm db:tipos                # regenerar tipos tras migrar
 **No corras `aplicar-migraciones.mjs` sin argumento**: reaplica las 81 desde
 cero y la 005 falla por vistas dependientes.
 
+### El script NO lleva registro de lo aplicado
+
+Y eso ya mordió. El 21/09, «Traer datos» contestaba *«column reference
+"periodo" is ambiguous»* — el fallo exacto que arregló la **031**, cinco meses
+antes. La migración estaba escrita, probada y commiteada; a la base del cliente
+no había llegado nunca. Con ella caída, el botón de traer datos de RUC/DNI
+**no funcionaba en ninguna pantalla** —clientes, proveedores y ahora guías—
+porque la reserva de cuota va antes de salir a la red.
+
+Se arregló reaplicándola: `create or replace function` es idempotente y su
+centinela **ejecuta** la función, así que reaplicar una migración con centinela
+es barato y dice la verdad.
+
+**Queda la pregunta que no está contestada: ¿cuántas más faltan?** No hay forma
+de saberlo sin comprobarlo. Si tocas algo y se comporta como si su migración no
+existiera, esa es la primera hipótesis, no la última.
+
 ---
 
 ## 5 · Convenciones del código
