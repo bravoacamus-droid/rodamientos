@@ -104,3 +104,36 @@ update cotizaciones set estado = 'anulada'
    and estado = 'borrador';
 
 commit;
+
+-- ###########################################################################
+-- 6 · La ronda de precios CPR-26-00011, del 21/09
+-- ###########################################################################
+--
+-- Se creó para comprobar de punta a punta que una ronda se puede armar SIN
+-- cotización detrás — el cambio del 21/09—. Lleva un producto
+-- (`6205-2RSH/C3`) y un proveedor (MARCO PERUANA), y nadie contestó: no hay
+-- precios anotados.
+--
+-- Se borra entera en vez de anularse. Una cotización anulada se entiende
+-- mirando la lista; una ronda sin respuestas no dice nada a nadie y solo
+-- ensucia la bandeja de «esperando».
+--
+-- OJO: esto NO deshace `proveedor_productos`. Esa tabla se llena sola con
+-- cada respuesta (046) y aquí no hubo ninguna, así que en este caso no queda
+-- rastro — pero si alguien anota un precio antes de correr esto, el rastro sí
+-- se queda. Es el mismo caso que el retén de MARCO PERUANA del 09/09.
+
+begin;
+
+delete from consultas_precio c
+ where c.numero = 'CPR-26-00011'
+   -- Con alguna respuesta anotada NO se borra: alguien la estaría usando de
+   -- verdad y este script es para limpiar pruebas, no trabajo.
+   and not exists (
+     select 1
+     from consulta_precio_respuestas r
+     join consulta_precio_proveedores cp on cp.id = r.consulta_proveedor_id
+     where cp.consulta_id = c.id
+   );
+
+commit;
