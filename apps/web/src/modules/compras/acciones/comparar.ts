@@ -928,3 +928,97 @@ export async function quitarDeLaRonda(datosCrudos: unknown): Promise<ResultadoQu
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Cambiar cuántas se van a pedir
+// ---------------------------------------------------------------------------
+
+const esquemaCantidad = z.object({
+  consulta_id: z.string().uuid(),
+  item_id: z.string().uuid(),
+  cantidad: z.number().int("Las cantidades se piden enteras.").positive().finite().max(999999),
+});
+
+export type ResultadoCantidad = { ok: true } | { ok: false; error: string };
+
+/**
+ * Cambiar cuántas unidades se van a pedir de un producto de la ronda.
+ *
+ * Luis, 21/09, mirando la rejilla: *«aparte no puedo modificar las cantidades
+ * a pedir»*.
+ *
+ * Y hacía falta. La cantidad entraba al armar la ronda —lo que faltaba del
+ * pedido, o lo que se tecleó— y ahí se quedaba congelada. Pero es justo en la
+ * rejilla donde se decide de verdad: se ve el precio, se ve quién tiene
+ * cuántas, y ahí aparece el «pues llévame 20 que me lo deja a este precio».
+ * Sin poder tocarla había que tirar la ronda y rehacerla.
+ *
+ * Y no es solo el número que se pide: de él salen el reparto entre
+ * proveedores, el ponderado y los totales de cada compra propuesta. Cambiarlo
+ * aquí es cambiar la decisión entera, que es lo que se quiere.
+ *
+ * Solo en rondas ABIERTAS. Con la ronda cerrada ya salieron las compras, y
+ * cambiar la cantidad dejaría la rejilla diciendo una cosa y la orden otra.
+ */
+export async function cambiarCantidadDeLaRonda(
+  datosCrudos: unknown,
+): Promise<ResultadoCantidad> {
+  const quien = await quienEs();
+  if (quien.error) return { ok: false, error: quien.error };
+
+  let datos: z.infer<typeof esquemaCantidad>;
+  try {
+    datos = esquemaCantidad.parse(datosCrudos);
+  } catch (e) {
+    const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
+    return { ok: false, error: `Los datos no son válidos: ${detalle}` };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+
+    const { data: cab, error: eCab } = await supabase
+      .from("consultas_precio")
+      .select("estado")
+      .eq("id", datos.consulta_id)
+      .maybeSingle();
+    if (eCab) {
+      anotarFallo("compras/cambiarCantidadDeLaRonda", eCab, "/compras/precios");
+      return { ok: false, error: eCab.message };
+    }
+    if (!cab) return { ok: false, error: "Esa consulta de precios no existe." };
+    if (cab.estado !== "abierta") {
+      return {
+        ok: false,
+        error: "Esta consulta ya está cerrada: las cantidades no se pueden cambiar.",
+      };
+    }
+
+    /*
+      El `eq` del `consulta_id` no sobra aunque el item ya lo identifique.
+
+      Sin él, alguien con el id de un item de OTRA ronda —abierta o no— podría
+      cambiarle la cantidad pasando el id de una ronda suya que sí esté
+      abierta. Es un endpoint público: el candado se pone donde se usa.
+    */
+    const { error } = await supabase
+      .from("consulta_precio_items")
+      .update({ cantidad: datos.cantidad })
+      .eq("id", datos.item_id)
+      .eq("consulta_id", datos.consulta_id);
+
+    if (error) {
+      anotarFallo("compras/cambiarCantidadDeLaRonda", error, "/compras/precios");
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath(`/compras/precios/${datos.consulta_id}`);
+    return { ok: true };
+  } catch (e) {
+    anotarFallo("compras/cambiarCantidadDeLaRonda", e, "/compras/precios");
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo cambiar la cantidad.",
+    };
+  }
+}

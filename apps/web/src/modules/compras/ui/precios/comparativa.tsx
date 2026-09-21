@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, formatearMoneda } from "@rodatech/ui";
+import { Button, Input, formatearMoneda } from "@rodatech/ui";
 import {
   Check,
   ClipboardPen,
@@ -31,7 +31,12 @@ import {
   type ProveedorConocido,
   type Referencia,
 } from "../../dominio/referencia";
-import { anadirALaRonda, comprarDeLaRonda, quitarDeLaRonda } from "../../acciones/comparar";
+import {
+  anadirALaRonda,
+  cambiarCantidadDeLaRonda,
+  comprarDeLaRonda,
+  quitarDeLaRonda,
+} from "../../acciones/comparar";
 import { AnadirALaConsulta } from "./anadir-a-la-consulta";
 import { ConfirmarCompras } from "./confirmar-compras";
 import { QuitarDeLaConsulta } from "./quitar-de-la-consulta";
@@ -172,6 +177,40 @@ export function Comparativa({
       ),
     [filas, proveedores, eleccion, yaComprados],
   );
+
+  /*
+    Guardar la cantidad al SALIR del campo, no en cada tecla.
+
+    Escribir «20» pasa por «2», y guardar en cada pulsación mandaría una
+    consulta por dígito y dejaría el reparto parpadeando entre cifras que nadie
+    quiso. Al salir del campo —o con Enter— se guarda una vez.
+
+    Y se recarga del servidor en vez de tocar estado local: de esta cantidad
+    cuelgan el reparto, el ponderado y los totales de cada compra propuesta, y
+    todo eso se calcula a partir de la ronda. Dos fuentes para el mismo número
+    es cómo se acaba enseñando uno y comprando otro.
+  */
+  function cambiarCantidad(itemId: string, bruto: string) {
+    const cantidad = Math.round(Number(bruto));
+    if (!Number.isFinite(cantidad) || cantidad <= 0) return;
+
+    const fila = filas.find((f) => f.item.item_id === itemId);
+    if (fila && fila.item.cantidad === cantidad) return;
+
+    setAviso(null);
+    empezar(async () => {
+      const r = await cambiarCantidadDeLaRonda({
+        consulta_id: ronda.id,
+        item_id: itemId,
+        cantidad,
+      });
+      if (!r.ok) {
+        setAviso(r.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   function alternar(itemId: string, cpId: string) {
     setAMano((prev) => ({
@@ -559,8 +598,45 @@ export function Comparativa({
                         onAnadir={(provId) => anadir(fila.item.item_id, provId)}
                       />
                     </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
-                      {fila.item.cantidad}
+                    {/*
+                      La cantidad se puede CAMBIAR aquí.
+
+                      Luis, 21/09: *«aparte no puedo modificar las cantidades a
+                      pedir»*. Entraba al armar la ronda y se quedaba
+                      congelada, pero es justo en esta pantalla donde se decide
+                      de verdad: se ve el precio, se ve quién tiene cuántas, y
+                      ahí aparece el «pues llévame 20, que a ese precio me
+                      compensa». Antes había que tirar la ronda y rehacerla.
+
+                      Y no es solo el número: de él salen el reparto, el
+                      ponderado y los totales de cada compra. Cambiarlo aquí es
+                      cambiar la decisión entera.
+
+                      Con la ronda cerrada se enseña y no se toca: ya salieron
+                      las compras, y cambiarla dejaría la rejilla diciendo una
+                      cosa y la orden otra.
+                    */}
+                    <td className="px-3 py-2.5 text-right">
+                      {ronda.estado === "abierta" ? (
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          defaultValue={fila.item.cantidad}
+                          disabled={enCurso}
+                          onBlur={(e) => cambiarCantidad(fila.item.item_id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          className="h-9 w-20 text-right tabular"
+                          aria-label={`Cuántas ${fila.item.codigo} se piden`}
+                        />
+                      ) : (
+                        <span className="tabular-nums">{fila.item.cantidad}</span>
+                      )}
                     </td>
 
                     {fila.celdas.map((celda) => {
