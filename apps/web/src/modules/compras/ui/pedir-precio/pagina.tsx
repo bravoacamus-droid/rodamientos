@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EstadoError, EstadoVacio } from "@rodatech/ui";
+import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresParaPedir, proveedoresPorProducto } from "@/modules/proveedores";
+import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 
 import { precargaDeCompra } from "../../api/por-comprar";
 import { PedirPrecio } from "./pantalla";
@@ -42,38 +43,37 @@ export default async function PaginaPedirPrecio({
   const crudo = Array.isArray(sp.items) ? sp.items[0] : sp.items;
   const items = await precargaDeCompra(crudo);
 
-  if (items.length === 0) {
-    return (
-      <EstadoVacio
-        titulo="No hay nada que preguntar"
-        descripcion="Marca en la bandeja lo que te falta y vuelve; la lista llega sola."
-        accion={
-          <Link
-            href="/compras/por-comprar"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            Ir a «Por comprar»
-          </Link>
-        }
-      />
-    );
-  }
-
   /*
-    Dos consultas, no cuatro (09/09).
+    Llegar SIN lista ya no es un callejón: es el caso normal.
 
-    Se traían además las plantillas de mensaje, la razón social de la empresa y
-    la fecha, y todo eso era solo para RELLENAR el texto del WhatsApp que se
-    ofrecía escribir aquí. Ese bloque se fue, así que la pantalla vuelve a
-    pedir lo único que usa: quién vende esto y quién vende cada cosa.
+    Hasta el 21/09 esta pantalla solo abría con `?items=`, o sea solo viniendo
+    de la bandeja «Por comprar» — que se llena de cotizaciones aprobadas sin
+    stock. El efecto era que **sin cotización no había ronda de precios**, y
+    ese es justo el trabajo que Willy hace todos los días por su cuenta.
+
+    Luis, 21/09: *«su otro proceso es preguntar a sus proveedores los precios,
+    nomás por WhatsApp o llamada… y él va apuntando en un Excel»*. Y lo que
+    pidió son dos entradas: *«desde 0, registrar qué productos va a cotizar con
+    los proveedores»* o *«ya cotizó, ya tiene los precios»*.
+
+    No son dos pantallas: es esta, con los precios tecleados antes o después.
+    Así que si no llega lista, se abre vacía y se arma aquí.
   */
-  const [proveedores, porProducto] = await Promise.all([
-    proveedoresParaPedir(items.map((i) => i.producto.id)),
-    // Quién vende CADA uno. Es lo que permite mandarle a cada proveedor solo
-    // lo suyo cuando los productos no comparten proveedor, que en este
-    // catálogo es lo normal.
-    proveedoresPorProducto(items.map((i) => i.producto.id)),
-  ]);
+  const ids = items.map((i) => i.producto.id);
+
+  const [proveedores, porProducto] =
+    ids.length === 0
+      ? [
+          { ok: true as const, datos: [] as ProveedorParaPedir[] },
+          { ok: true as const, datos: {} as Record<string, ProveedorParaPedir[]> },
+        ]
+      : await Promise.all([
+          proveedoresParaPedir(ids),
+          // Quién vende CADA uno. Es lo que permite mandarle a cada proveedor
+          // solo lo suyo cuando los productos no comparten proveedor, que en
+          // este catálogo es lo normal.
+          proveedoresPorProducto(ids),
+        ]);
 
   return (
     <div className="flex flex-col gap-5">

@@ -23,7 +23,12 @@ import {
   type Modo,
   type Seleccion,
 } from "../../dominio/reparto-consulta";
+import { Trash2 } from "lucide-react";
+
 import { AnadirProveedor } from "./anadir";
+import { BuscadorCompra } from "../constructor/buscador";
+import { quienVende } from "../../acciones/quien-vende";
+import type { ProductoComprable } from "../../acciones/buscar";
 
 export type ItemPedido = ItemConsulta;
 
@@ -61,10 +66,11 @@ export type ItemPedido = ItemConsulta;
  * quién ibas a preguntar.
  */
 export function PedirPrecio({
-  items,
+  items: itemsIniciales,
   proveedores: sugeridos,
-  porProducto,
+  porProducto: porProductoInicial,
 }: {
+  /** Con lo que arranca. Puede venir VACÍO: la ronda se arma aquí (21/09). */
   items: ItemPedido[];
   /** Los que venden algo de la lista, con cuántos de ella cubren. */
   proveedores: ProveedorParaPedir[];
@@ -72,6 +78,24 @@ export function PedirPrecio({
   porProducto: Record<string, ProveedorParaPedir[]>;
 }) {
   const router = useRouter();
+
+  /*
+    Los productos son ESTADO, no una prop fija.
+
+    Hasta el 21/09 la lista llegaba entera desde la bandeja «Por comprar» y no
+    se podía tocar, así que sin una cotización aprobada detrás no había forma
+    de abrir una ronda. Y eso es justo lo que Willy hace todos los días:
+    preguntar precios por WhatsApp y apuntarlos en un Excel.
+
+    Ahora la lista se puede armar aquí, con el mismo buscador del registro de
+    compra. Lo que llega de la bandeja sigue llegando igual — es la semilla,
+    no la jaula.
+  */
+  const [items, setItems] = React.useState<ItemPedido[]>(itemsIniciales);
+
+  /** Quién vende cada producto. Crece al añadir, igual que la lista. */
+  const [porProducto, setPorProducto] =
+    React.useState<Record<string, ProveedorParaPedir[]>>(porProductoInicial);
 
   // La lista arranca en lo que el sistema sabe y crece con lo que se busque.
   // Sin esto la pantalla no arranca el primer día: `proveedor_productos` se
@@ -103,6 +127,7 @@ export function PedirPrecio({
   });
 
   const [abriendo, empezarRonda] = React.useTransition();
+  const [, consultarQuienVende] = React.useTransition();
   const [aviso, setAviso] = React.useState<string | null>(null);
 
   /**
@@ -130,6 +155,64 @@ export function PedirPrecio({
       [productoId]: Number.isFinite(valor) && valor > 0 ? valor : 1,
     }));
   };
+  /*
+    Añadir un producto a la ronda.
+
+    Al entrar se pregunta al servidor quién lo vende, y con eso se premarcan
+    sus proveedores — que es lo que el sistema aprendió de las compras (046) y
+    casi siempre es lo bueno. Si esa consulta falla no pasa nada: el producto
+    entra igual y los proveedores se marcan a mano.
+
+    Repetido suma cantidad en vez de crear otra línea, como en la cotización y
+    en el kit: dos filas del mismo código en una lista se leen como un error
+    de quien la escribió.
+  */
+  const agregar = (p: ProductoComprable) => {
+    const yaEsta = items.some((i) => i.producto_id === p.id);
+    if (yaEsta) {
+      setCantidades((prev) => ({ ...prev, [p.id]: (prev[p.id] ?? 1) + 1 }));
+      return;
+    }
+
+    setItems((xs) => [
+      ...xs,
+      {
+        producto_id: p.id,
+        codigo: p.codigo,
+        descripcion: p.descripcion,
+        marca: p.marca ?? null,
+        unidad: p.unidad ?? "NIU",
+        cantidad: 1,
+      },
+    ]);
+    setCantidades((prev) => ({ ...prev, [p.id]: 1 }));
+
+    consultarQuienVende(async () => {
+      const mapa = await quienVende([p.id]);
+      const suyos = mapa[p.id] ?? [];
+      if (suyos.length === 0) return;
+
+      setPorProducto((prev) => ({ ...prev, [p.id]: suyos }));
+      // Los que no estaban en la lista de arriba, para poder marcarlos.
+      setProveedores((prev) => {
+        const vistos = new Map(prev.map((x) => [x.id, x]));
+        for (const x of suyos) if (!vistos.has(x.id)) vistos.set(x.id, x);
+        return [...vistos.values()];
+      });
+      setSeleccion((prev) => ({ ...prev, [p.id]: suyos.map((x) => x.id) }));
+    });
+  };
+
+  /** Quitar un producto y todo lo que colgaba de él. */
+  const quitar = (productoId: string) => {
+    setItems((xs) => xs.filter((i) => i.producto_id !== productoId));
+    setSeleccion((prev) => {
+      const { [productoId]: _fuera, ...resto } = prev;
+      return resto;
+    });
+    setDejarFuera((prev) => prev.filter((x) => x !== productoId));
+  };
+
   const huerfanos = React.useMemo(() => sinNadie(items, seleccion), [items, seleccion]);
   const cuantos = cuantosProveedores(seleccion);
 
@@ -190,7 +273,16 @@ export function PedirPrecio({
           conCantidad,
           seleccion,
           proveedores,
-          `${items.length} ${items.length === 1 ? "producto" : "productos"} de la bandeja`,
+          /*
+            El título dice de DÓNDE salió la ronda.
+
+            Decía siempre «de la bandeja», y desde que se puede armar a mano
+            eso era falso la mitad de las veces. Sirve para reconocerla en el
+            listado meses después, así que tiene que ser verdad.
+          */
+          `${items.length} ${items.length === 1 ? "producto" : "productos"} ${
+            itemsIniciales.length > 0 ? "de la bandeja" : "preguntados a mano"
+          }`,
         ),
       );
       if (!r.ok) {
@@ -206,8 +298,38 @@ export function PedirPrecio({
 
   return (
     <div className="flex flex-col gap-5">
+      {/*
+        El buscador, ARRIBA DEL TODO y siempre.
+
+        Es la pieza que convierte esta pantalla en las dos que pidió Luis el
+        21/09: *«desde 0, registrar qué productos va a cotizar con los
+        proveedores»* y *«ya cotizó, solo quiere registrar quién le dio menos
+        precio»*. No son dos procesos — es este, con los precios tecleados
+        antes o después.
+
+        Es el MISMO buscador del registro de compra, no uno propio: el gesto de
+        teclear un código y dar a Enter ya está aprendido, y un segundo
+        buscador es un segundo sitio donde arreglar el día que cambie.
+
+        `ultimosCostos` va vacío a propósito: eso enseña lo que se le pagó a UN
+        proveedor concreto, y aquí todavía no hay proveedor — es justo lo que
+        se está preguntando.
+      */}
+      <section className="card p-4">
+        <h2 className="mb-1 text-sm font-semibold">
+          {items.length === 0 ? "¿Qué vas a preguntar?" : "Añadir a la lista"}
+        </h2>
+        <p className="mb-3 text-sm text-[var(--fg-muted)]">
+          {items.length === 0
+            ? "Busca los productos por los que vas a pedir precio. No hace falta que vengan de una cotización."
+            : "Busca otro producto si quieres preguntarlo en la misma ronda."}
+        </p>
+        <BuscadorCompra onElegir={agregar} ultimosCostos={{}} />
+      </section>
+
       {/* ------------------------------------------------------- Cómo se pide */}
-      {items.length > 1 ? (
+      {/* Con la lista vacía no hay nada que preguntar todavía (21/09). */}
+      {items.length === 0 ? null : items.length > 1 ? (
         <section className="card p-4">
           <h2 className="mb-1 text-sm font-semibold">¿Cómo lo preguntas?</h2>
           <p className="mb-3 text-xs text-[var(--fg-subtle)]">
@@ -252,7 +374,19 @@ export function PedirPrecio({
 
 
       {/* ------------------------------------------------ A quién, por producto */}
-      {modo === "separado" ? (
+      {/*
+        Con la lista VACÍA esto tampoco.
+
+        Al abrir la ronda desde cero decía «a cada uno le llega la lista
+        completa, con los 0 productos» y ofrecía «anotar la consulta a 0
+        proveedores». Se puede leer, pero no significa nada: son preguntas
+        sobre una lista que todavía no existe.
+
+        Ojo al leerlo: este bloque cuelga del MODO, no de cuántos productos
+        hay — son dos condicionales seguidos y es fácil confundirlos. Por eso
+        la guarda va en los dos.
+      */}
+      {items.length === 0 ? null : modo === "separado" ? (
         items.map((item) => (
           <section key={item.producto_id} className="card p-4">
             <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[var(--border-soft)] pb-2">
@@ -319,6 +453,17 @@ export function PedirPrecio({
                   valor={cantidades[item.producto_id] ?? item.cantidad}
                   onCambiar={(v) => ponerCantidad(item.producto_id, v)}
                 />
+                {/* Quitar. Con la lista armada a mano hace falta poder
+                    deshacer un código mal elegido sin empezar de cero. */}
+                <button
+                  type="button"
+                  onClick={() => quitar(item.producto_id)}
+                  aria-label={`Quitar ${item.codigo} de la ronda`}
+                  title="Quitar de la ronda"
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
               </li>
             ))}
           </ul>
@@ -347,7 +492,7 @@ export function PedirPrecio({
         </section>
       )}
 
-      {huerfanos.length > 0 ? (
+      {items.length > 0 && huerfanos.length > 0 ? (
         <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
           <p className="text-sm">
             <strong>
@@ -389,6 +534,7 @@ export function PedirPrecio({
       ) : null}
 
       {/* ----------------------------------------------------------- Guardar */}
+      {items.length === 0 ? null : (
       <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
         <div className="text-sm">
           <p className="font-medium">¿Vas a esperar respuesta?</p>
@@ -414,6 +560,7 @@ export function PedirPrecio({
             : `Anotar la consulta a ${cuantos} ${cuantos === 1 ? "proveedor" : "proveedores"}`}
         </Button>
       </section>
+      )}
 
       {aviso ? (
         <p
