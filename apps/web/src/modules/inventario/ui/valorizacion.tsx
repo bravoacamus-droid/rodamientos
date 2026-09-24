@@ -45,8 +45,74 @@ export async function TablaValorizacion() {
     porFamilia.set(f.familia, grupo);
   }
 
+  /* Los mismos subtotales que pinta la tabla, calculados una vez para poder
+     usarlos también en las tarjetas sin repetir la reducción. */
+  const porFamiliaConSub = [...porFamilia.entries()].map(([familia, grupo]) => ({
+    familia,
+    grupo,
+    sub: grupo.reduce(
+      (a, f) => ({
+        skus: a.skus + f.skus,
+        unidades: a.unidades + Number(f.unidades ?? 0),
+        costo: a.costo + Number(f.valor_costo ?? 0),
+        margen: a.margen + Number(f.margen_potencial ?? 0),
+      }),
+      { skus: 0, unidades: 0, costo: 0, margen: 0 },
+    ),
+  }));
+
   return (
-    <div className="scroll-x">
+    <>
+      {/*
+        EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 595.
+
+        Aquí la tabla es de DOS niveles —familia y debajo sus subfamilias—, y
+        eso en una tabla con scroll lateral se pierde enseguida: se arrastra a
+        la derecha y ya no se sabe de qué familia era la fila. Así que cada
+        familia es una tarjeta con su total arriba y sus subfamilias dentro.
+
+        «A venta» se queda solo en escritorio: es la columna que se compara con
+        el costo, y comparar dos cifras pide tenerlas en la misma línea.
+      */}
+      <div className="flex flex-col gap-2.5 md:hidden">
+        {porFamiliaConSub.map(({ familia, grupo, sub }) => (
+          <div key={familia} className="rounded-lg border border-[var(--border)] p-3">
+            <p className="font-medium">{familia}</p>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <span className="text-[var(--fg-muted)]">
+                {sub.skus} SKU · {sub.unidades.toLocaleString("es-PE")} uds.
+              </span>
+              <span>
+                <span className="text-[var(--fg-muted)]">A costo </span>
+                <Moneda valor={sub.costo} tamano="sm" enfasis="fuerte" />
+              </span>
+              <span>
+                <span className="text-[var(--fg-muted)]">Margen </span>
+                <Moneda valor={sub.margen} tamano="sm" />
+              </span>
+            </div>
+
+            <ul className="mt-2 divide-y divide-[var(--border-soft)] border-t border-[var(--border-soft)]">
+              {grupo.map((f) => (
+                <li
+                  key={f.subfamilia_id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 py-1.5 text-sm"
+                >
+                  <span className="min-w-0 text-[var(--fg-muted)]">{f.subfamilia}</span>
+                  <span className="flex items-baseline gap-3">
+                    <span className="tabular">
+                      {Number(f.unidades ?? 0).toLocaleString("es-PE")} uds.
+                    </span>
+                    <Moneda valor={f.valor_costo} tamano="sm" />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden scroll-x md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -129,6 +195,7 @@ export async function TablaValorizacion() {
           );
         })}
       </table>
-    </div>
+      </div>
+    </>
   );
 }

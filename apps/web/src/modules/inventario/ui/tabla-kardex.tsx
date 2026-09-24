@@ -55,7 +55,75 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
 
   return (
     <>
-      <div className="scroll-x">
+      {/*
+        EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 595 y no encoge,
+        porque la descripción del producto no se deja.
+
+        El kardex se consulta para responder «¿y esto de dónde salió?», así que
+        la tarjeta lleva el movimiento, la cantidad con su signo y el documento
+        que lo causó. Los costos —unitario y promedio— se quedan en la tabla de
+        escritorio: ahí no se miran de pie en el almacén, se analizan sentado.
+      */}
+      <div className="flex flex-col gap-2.5 md:hidden">
+        {filas.map((m) => {
+          const enlace = enlaceDeReferencia(m.referencia_tipo, m.referencia_id);
+          return (
+            <div key={m.id} className="rounded-lg border border-[var(--border)] p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <Link
+                  href={`/inventario/kardex?producto=${m.producto_id}`}
+                  className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                >
+                  {m.codigo}
+                </Link>
+                <span
+                  className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR[m.tipo]}`}
+                >
+                  {ETIQUETA_MOVIMIENTO[m.tipo]}
+                </span>
+              </div>
+
+              <p className="mt-1 text-sm">{m.descripcion}</p>
+
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+                {/* El signo delante: en una lista de movimientos, lo primero
+                    que se busca es si entró o salió. */}
+                <span className="tabular font-medium">
+                  {m.entrada > 0
+                    ? `+${Number(m.entrada).toLocaleString("es-PE")}`
+                    : `−${Number(m.salida).toLocaleString("es-PE")}`}
+                </span>
+                <span className="text-[var(--fg-muted)]">
+                  Quedan{" "}
+                  <span className="tabular font-medium text-[var(--fg)]">
+                    {Number(m.saldo_cantidad).toLocaleString("es-PE")}
+                  </span>
+                </span>
+                <span className="tabular text-[var(--fg-subtle)]">
+                  {m.fecha.slice(0, 10)}
+                </span>
+              </div>
+
+              {m.referencia_numero ? (
+                <p className="mt-1 text-sm">
+                  {enlace ? (
+                    <Link
+                      href={enlace}
+                      className="font-mono text-brand-600 hover:underline"
+                    >
+                      {m.referencia_numero}
+                    </Link>
+                  ) : (
+                    <span className="font-mono">{m.referencia_numero}</span>
+                  )}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden scroll-x md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">

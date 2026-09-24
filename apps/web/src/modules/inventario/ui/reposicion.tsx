@@ -56,7 +56,78 @@ export async function TablaReposicion() {
   }
 
   return (
-    <div className="scroll-x">
+    <>
+      {/*
+        EN MÓVIL, TARJETAS.
+
+        Medido a 390 px: la tabla pide 899 aun escondiendo tres columnas, y no
+        es culpa de las columnas — es la descripción del producto, que no se
+        deja encoger. Y esta pantalla se mira DENTRO del almacén, con el
+        teléfono en la mano, que es justo donde el scroll lateral estorba.
+
+        La tarjeta se queda con lo que hace falta ahí de pie: qué es, cuánto
+        hay, y cuánto pedir. El mínimo/máximo y el inmovilizado se quedan en la
+        tabla de escritorio, que es donde se analiza.
+      */}
+      <div className="flex flex-col gap-2.5 p-3 md:hidden">
+        {filas.map((f) => (
+          <div key={f.id} className="rounded-lg border border-[var(--border)] p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <Link
+                href={`/productos/${f.id}`}
+                className="font-mono text-sm font-medium text-brand-600 hover:underline"
+              >
+                {f.codigo}
+              </Link>
+              <span
+                className={`inline-block rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR[f.estado_stock]}`}
+              >
+                {ETIQUETA[f.estado_stock]}
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm">{f.descripcion}</p>
+            {f.marca ? (
+              <p className="text-sm text-[var(--fg-subtle)]">{f.marca}</p>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <span className="text-sm">
+                <span className="text-[var(--fg-muted)]">Hay </span>
+                <span className="tabular font-medium">
+                  {Number(f.stock ?? 0).toLocaleString("es-PE")}
+                </span>
+              </span>
+
+              {f.sugerido_comprar > 0 ? (
+                <span className="text-sm">
+                  <span className="text-[var(--fg-muted)]">Pedir </span>
+                  <span className="tabular font-medium">
+                    {Number(f.sugerido_comprar).toLocaleString("es-PE")}
+                  </span>
+                </span>
+              ) : null}
+
+              <span className="text-sm">
+                <span className="text-[var(--fg-muted)]">Dura </span>
+                {f.dias_cobertura === null ? (
+                  <span className="text-[var(--fg-subtle)]">sin consumo</span>
+                ) : (
+                  <span
+                    className={`tabular ${
+                      f.dias_cobertura <= 7 ? "font-medium text-[var(--danger)]" : ""
+                    }`}
+                  >
+                    {f.dias_cobertura} d
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden scroll-x md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -142,6 +213,7 @@ export async function TablaReposicion() {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

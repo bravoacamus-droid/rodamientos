@@ -410,8 +410,70 @@ async function BloqueTop({ rango }: { rango: Rango }) {
   }
 
   return (
-    <div className="scroll-x">
-      <table className="w-full text-xs">
+    <>
+      {/*
+        EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 704.
+
+        Un ranking se lee de arriba abajo, así que en el teléfono la tarjeta
+        deja el código y el margen en la primera línea —que es la comparación
+        que se viene a hacer— y debajo lo vendido y quién se lo lleva.
+      */}
+      <div className="flex flex-col gap-2.5 md:hidden">
+        {r.datos.map((p) => (
+          <div key={p.id} className="rounded-lg border border-[var(--border)] p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <Link
+                href={`/productos/${p.id}/trazabilidad`}
+                className="font-mono text-sm font-medium text-brand-600 hover:underline"
+              >
+                {p.codigo}
+              </Link>
+              <span
+                className={`tabular text-sm font-medium ${
+                  p.margenPct >= 20
+                    ? "text-[var(--ok)]"
+                    : p.margenPct < 12
+                      ? "text-[var(--warn)]"
+                      : ""
+                }`}
+              >
+                {p.margenPct} % de margen
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm">{p.descripcion}</p>
+
+            <p className="mt-2 text-sm text-[var(--fg-muted)]">
+              <span className="tabular font-medium text-[var(--fg)]">{p.unidades}</span>{" "}
+              uds. ·{" "}
+              <span className="tabular font-medium text-[var(--fg)]">
+                {p.venta.toFixed(2)}
+              </span>{" "}
+              vendido
+            </p>
+
+            {p.clientePrincipal ? (
+              <p className="mt-1 text-sm">
+                <span className="text-[var(--fg-muted)]">Se lo lleva </span>
+                {p.clientePrincipalId ? (
+                  <Link
+                    href={`/clientes/${p.clientePrincipalId}`}
+                    className="font-medium text-brand-600 hover:underline"
+                  >
+                    {p.clientePrincipal}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{p.clientePrincipal}</span>
+                )}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden scroll-x md:block">
+      {/* `text-sm`: era `text-xs` y un informe está para leerse. */}
+      <table className="w-full text-sm">
         <thead>
           <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
             <th className="py-1.5 pr-3 font-medium">Código</th>
@@ -480,7 +542,8 @@ async function BloqueTop({ rango }: { rango: Rango }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -506,8 +569,63 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
   }
 
   return (
-    <div className="scroll-x">
-      <table className="w-full text-xs">
+    <>
+      {/*
+        EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 490.
+
+        Lo que se viene a buscar aquí es quién dejó de aparecer, así que «sin
+        venir» sube a la primera línea junto al nombre — en la tabla es la
+        última columna, la primera que se pierde al arrastrar.
+      */}
+      <div className="flex flex-col gap-2.5 md:hidden">
+        {r.datos.map((c) => (
+          <div key={c.id} className="rounded-lg border border-[var(--border)] p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <Link
+                href={`/clientes/${c.id}`}
+                className="min-w-0 text-sm font-medium text-brand-600 hover:underline"
+              >
+                {c.cliente}
+              </Link>
+              <span
+                className={`tabular text-sm ${
+                  c.diasSinComprar > 90 ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"
+                }`}
+              >
+                {c.diasSinComprar} d sin venir
+              </span>
+            </div>
+
+            <p className="mt-2 text-sm text-[var(--fg-muted)]">
+              <span className="tabular font-medium text-[var(--fg)]">
+                {c.venta.toFixed(2)}
+              </span>{" "}
+              en {c.documentos} {c.documentos === 1 ? "documento" : "documentos"} ·{" "}
+              <span
+                className={`tabular font-medium ${
+                  c.margenPct >= 20
+                    ? "text-[var(--ok)]"
+                    : c.margenPct < 12
+                      ? "text-[var(--warn)]"
+                      : "text-[var(--fg)]"
+                }`}
+              >
+                {c.margenPct} %
+              </span>{" "}
+              de margen
+            </p>
+
+            <p className="mt-1 text-sm text-[var(--fg-subtle)]">
+              {c.diasEntreCompras === null
+                ? "Solo compró una vez"
+                : `Compra cada ${c.diasEntreCompras} días`}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden scroll-x md:block">
+      <table className="w-full text-sm">
         <thead>
           <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
             <th className="py-1.5 pr-3 font-medium">Cliente</th>
@@ -567,7 +685,8 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
