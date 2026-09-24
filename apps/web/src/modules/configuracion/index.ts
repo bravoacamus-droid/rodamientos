@@ -16,6 +16,7 @@
 export { default as PaginaConfigEmpresa } from "./ui/pagina-empresa";
 export { default as PaginaConfigSunat } from "./ui/pagina-sunat";
 export { default as PaginaConfigUsuarios } from "./ui/pagina-usuarios";
+export { default as PaginaConfigPermisos } from "./ui/pagina-permisos";
 
 // Las reglas de numeración las va a querer cualquier pantalla que enseñe el
 // próximo número de un documento antes de emitirlo.

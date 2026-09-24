@@ -4,6 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import type { PermisoGuardado } from "../dominio/permisos";
 import { ordenarSeries } from "../dominio/serie";
 import type {
   ConteosCatalogo,
@@ -218,5 +219,35 @@ export async function cuentasBancarias(): Promise<Resultado<CuentaBancaria[]>> {
     };
   } catch (e) {
     return fallo(e, "configuracion/cuentasBancarias");
+  }
+}
+
+/**
+ * La matriz de permisos, tal cual está guardada.
+ *
+ * La agrupa en áreas la pantalla, no esta consulta: aquí interesa traerlo todo
+ * —incluidas las tablas que ningún área reclama— para que `tablasSinArea()`
+ * pueda enseñarlas en vez de dejarlas invisibles.
+ */
+export async function permisosGuardados(): Promise<Resultado<PermisoGuardado[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("permisos_rol")
+      .select("tabla, rol, escribir")
+      .limit(500);
+
+    if (error) return fallo(error);
+
+    return {
+      ok: true,
+      datos: (data ?? []).map((p) => ({
+        tabla: String(p.tabla),
+        rol: String(p.rol) as Rol,
+        escribir: Boolean(p.escribir),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
   }
 }

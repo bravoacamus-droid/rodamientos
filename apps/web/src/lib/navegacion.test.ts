@@ -66,13 +66,17 @@ describe("el tablero y la configuración", () => {
     expect(TABLERO.ruta).toBe("/dashboard");
   });
 
-  it("la configuración solo la ve quien manda, en sus tres pantallas", () => {
+  it("la configuración solo la ve quien manda, en sus cuatro pantallas", () => {
     // Ahí se cambian el RUC, las series y los correlativos: con la lista mal,
     // un vendedor podría mover el número desde el que se factura.
     //
-    // Desde el 15/09 son tres pantallas y no una, así que la comprobación va
+    // Desde el 15/09 son varias pantallas y no una, así que la comprobación va
     // por cada una: el fallo que importa es que a UNA se le olvide la lista.
-    expect(CONFIGURACION.items.length).toBe(3);
+    //
+    // El número exacto se comprueba a propósito, aunque haya que tocarlo al
+    // añadir pantallas: es lo que obliga a decidir los roles de la nueva en
+    // vez de dejarla entrar sin lista. Cuatro desde el 24/09, con «Permisos».
+    expect(CONFIGURACION.items.length).toBe(4);
     for (const item of CONFIGURACION.items) {
       expect(item.roles).toEqual(["gerencia", "admin"]);
     }

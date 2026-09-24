@@ -111,6 +111,15 @@ export const CONFIGURACION: GrupoNav = {
       // Solo gerencia CAMBIA roles, pero admin necesita ver quién entra.
       roles: ["gerencia", "admin"],
     },
+    {
+      etiqueta: "Permisos",
+      ruta: "/configuracion/permisos",
+      icono: "usuarios",
+      // Misma regla que arriba: admin mira, gerencia cambia. Y va DESPUÉS de
+      // Usuarios porque se toca mucho menos: una cosa es el alta de alguien
+      // que entra hoy y otra es qué puede hacer su rol, que se decide una vez.
+      roles: ["gerencia", "admin"],
+    },
   ],
 };
 
