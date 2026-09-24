@@ -143,7 +143,7 @@ export function QueVende({
               placeholder="Busca el producto que te vende…"
             />
           </div>
-          <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+          <p className="mt-1 text-sm text-[var(--fg-subtle)]">
             Para lo que todavía no le has comprado. Lo comprado se anota solo.
           </p>
         </div>
@@ -187,7 +187,7 @@ export function QueVende({
                       {p.descripcion}
                     </span>
                     {p.notas ? (
-                      <span className="block text-xs text-[var(--fg-subtle)]">
+                      <span className="block text-sm text-[var(--fg-subtle)]">
                         {p.notas}
                       </span>
                     ) : null}
@@ -204,7 +204,7 @@ export function QueVende({
                       </Badge>
                     )}
                     {p.esHabitual ? (
-                      <span className="ml-1.5 text-xs text-[var(--fg-subtle)]">
+                      <span className="ml-1.5 text-sm text-[var(--fg-subtle)]">
                         es su proveedor habitual
                       </span>
                     ) : null}
@@ -231,7 +231,7 @@ export function QueVende({
                             dólares: es la única cifra con la que se puede
                             comparar contra otro proveedor. */}
                         {p.moneda && p.moneda !== "USD" && p.ultimoCostoUsd !== null ? (
-                          <span className="block text-xs text-[var(--fg-subtle)]">
+                          <span className="block text-sm text-[var(--fg-subtle)]">
                             <Moneda valor={p.ultimoCostoUsd} /> al cambio
                           </span>
                         ) : null}

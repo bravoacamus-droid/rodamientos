@@ -66,7 +66,7 @@ export default async function PaginaDetalleRecepcion({
               {r.numero}
             </h1>
             {r.anulada ? (
-              <span className="rounded-sm bg-[var(--danger-bg)] px-2 py-0.5 text-xs font-medium text-[var(--danger)]">
+              <span className="rounded-sm bg-[var(--danger-bg)] px-2 py-0.5 text-sm font-medium text-[var(--danger)]">
                 Anulada
               </span>
             ) : null}
@@ -147,7 +147,7 @@ export default async function PaginaDetalleRecepcion({
                   </td>
                   <td className="px-4 py-2.5 text-right tabular">
                     {l.cantidad.toLocaleString("es-PE")}
-                    <span className="ml-1 text-xs text-[var(--fg-subtle)]">
+                    <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                       {l.unidad}
                     </span>
                   </td>
@@ -219,11 +219,11 @@ function Dato({
 }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+      <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
         {etiqueta}
       </dt>
       <dd className="mt-0.5 text-sm">{valor}</dd>
-      {pie ? <p className="text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

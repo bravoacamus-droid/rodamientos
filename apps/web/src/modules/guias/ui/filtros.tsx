@@ -57,7 +57,7 @@ export function FiltrosGuiasBarra({
        estiraba al nombre más largo y empujaba las fechas a la fila de abajo. */
     <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
       <label className="flex flex-col gap-1 xl:col-span-2">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -77,7 +77,7 @@ export function FiltrosGuiasBarra({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Estado</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Estado</span>
         <SelectNativo
           value={params.get("estado") ?? ""}
           onChange={(e) => aplicar("estado", e.target.value)}
@@ -92,7 +92,7 @@ export function FiltrosGuiasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
           value={params.get("desde") ?? ""}
@@ -101,7 +101,7 @@ export function FiltrosGuiasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"
           value={params.get("hasta") ?? ""}

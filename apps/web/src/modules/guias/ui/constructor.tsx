@@ -394,7 +394,7 @@ export function ConstructorGuia({
                     }
                     placeholder="Dónde se descarga la mercadería"
                   />
-                  <span className="text-xs text-[var(--fg-subtle)]">
+                  <span className="text-sm text-[var(--fg-subtle)]">
                     Sale la del cliente, pero se entrega en obra más veces de las que se
                     entrega en la oficina fiscal.
                   </span>
@@ -444,13 +444,13 @@ export function ConstructorGuia({
                     falle el guardado con un error de restricción, se explica y
                     se pide. */}
                 {sinPeso ? (
-                  <p className="anim-entrada mt-2 rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-xs">
+                  <p className="anim-entrada mt-2 rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm">
                     Ninguno de estos productos tiene el peso registrado en el catálogo,
                     así que hay que declararlo aquí. Si lo registras en la ficha de cada
                     producto, la próxima vez sale solo.
                   </p>
                 ) : calculado > 0 ? (
-                  <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+                  <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                     Calculado del catálogo: {calculado.toFixed(3)} kg. Puedes cambiarlo si
                     la balanza dice otra cosa.
                   </p>
@@ -464,7 +464,7 @@ export function ConstructorGuia({
             <section className="anim-entrada card p-4">
               <div className="mb-3">
                 <h2 className="text-sm font-semibold">Transporte</h2>
-                <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+                <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
                   Se puede dejar a medias: hace falta para <strong>emitir</strong>, no
                   para guardar el borrador.
                 </p>
@@ -828,8 +828,8 @@ export function ConstructorGuia({
 
             {bloqueos.length > 0 ? (
               <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
-                <p className="mb-1 text-xs font-medium">Falta para guardar:</p>
-                <ul className="flex flex-col gap-0.5 text-xs text-[var(--fg-muted)]">
+                <p className="mb-1 text-sm font-medium">Falta para guardar:</p>
+                <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {bloqueos.map((b) => (
                     <li key={b.campo}>· {b.mensaje}</li>
                   ))}
@@ -841,10 +841,10 @@ export function ConstructorGuia({
                 no se puede guardar todavía, que es justo lo contrario. */}
             {soloEmision.length > 0 ? (
               <div className="rounded-sm border border-[var(--border-soft)] bg-[var(--surface-2)] p-2.5">
-                <p className="mb-1 text-xs font-medium">
+                <p className="mb-1 text-sm font-medium">
                   Y para emitirla después hará falta:
                 </p>
-                <ul className="flex flex-col gap-0.5 text-xs text-[var(--fg-muted)]">
+                <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {soloEmision.map((b, i) => (
                     <li key={`${b.campo}-${i}`}>· {b.mensaje}</li>
                   ))}
@@ -854,8 +854,8 @@ export function ConstructorGuia({
 
             {avisos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
-                <p className="mb-1 text-xs font-medium">Conviene mirar:</p>
-                <ul className="flex flex-col gap-1 text-xs">
+                <p className="mb-1 text-sm font-medium">Conviene mirar:</p>
+                <ul className="flex flex-col gap-1 text-sm">
                   {avisos.map((a, i) => (
                     <li key={`${a.key}-${i}`}>· {a.mensaje}</li>
                   ))}
@@ -864,7 +864,7 @@ export function ConstructorGuia({
             ) : null}
 
             {estado.lineas.length > 0 && bloqueos.length === 0 ? (
-              <p className="text-xs text-[var(--fg-muted)]">
+              <p className="text-sm text-[var(--fg-muted)]">
                 Se guarda como <strong>borrador</strong>. El stock no se mueve hasta que
                 la emitas desde su ficha.
               </p>

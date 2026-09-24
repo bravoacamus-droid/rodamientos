@@ -121,7 +121,57 @@ export default async function PaginaDetalleCompra({
         {/* ------------------------------------------------------ Líneas */}
         <section className="card p-4">
           <h2 className="mb-3 text-sm font-semibold">Qué se pidió</h2>
-          <div className="scroll-x">
+          {/*
+            EN MÓVIL, TARJETAS. Medido a 390 px: esta pantalla se salía —el
+            `main` pedía 588— y la tabla, 539.
+
+            Una línea de compra se lee para contestar «¿llegó ya?», así que la
+            tarjeta pone el pedido contra lo recibido en la misma línea y con
+            el color que ya usaba la tabla. El costo unitario con sus cuatro
+            decimales se queda en escritorio: se revisa sentado, no de pie.
+          */}
+          <div className="flex flex-col gap-2.5 md:hidden">
+            {c.lineas.map((l) => {
+              const completa = l.cantidad_recibida >= l.cantidad;
+              return (
+                <div key={l.id} className="rounded-lg border border-[var(--border)] p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <Link
+                      href={`/productos/${l.producto_id}`}
+                      className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    >
+                      {l.codigo}
+                    </Link>
+                    <span className="tabular text-sm font-medium">
+                      {l.importe.toFixed(2)}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-sm">{l.descripcion}</p>
+                  {l.marca ? (
+                    <p className="text-sm text-[var(--fg-subtle)]">{l.marca}</p>
+                  ) : null}
+
+                  <p className="mt-2 text-sm">
+                    <span className="text-[var(--fg-muted)]">Pedidas </span>
+                    <span className="tabular font-medium">
+                      {l.cantidad} {l.unidad}
+                    </span>
+                    <span className="text-[var(--fg-muted)]"> · llegaron </span>
+                    <span
+                      className={`tabular font-medium ${
+                        completa ? "text-[var(--ok)]" : "text-[var(--warn)]"
+                      }`}
+                    >
+                      {l.cantidad_recibida}
+                    </span>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="hidden scroll-x md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -145,7 +195,7 @@ export default async function PaginaDetalleCompra({
                         >
                           {l.codigo}
                         </Link>
-                        <span className="block text-xs text-[var(--fg-subtle)]">
+                        <span className="block text-sm text-[var(--fg-subtle)]">
                           {l.marca}
                         </span>
                       </td>
@@ -155,7 +205,7 @@ export default async function PaginaDetalleCompra({
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-right tabular">
-                        {l.cantidad} <span className="text-xs text-[var(--fg-subtle)]">{l.unidad}</span>
+                        {l.cantidad} <span className="text-sm text-[var(--fg-subtle)]">{l.unidad}</span>
                       </td>
                       <td
                         className={`py-2 pr-3 text-right tabular ${
@@ -266,7 +316,7 @@ export default async function PaginaDetalleCompra({
                     >
                       {r.numero}
                     </Link>
-                    <span className="tabular text-xs text-[var(--fg-muted)]">{r.fecha}</span>
+                    <span className="tabular text-sm text-[var(--fg-muted)]">{r.fecha}</span>
                   </li>
                 ))}
               </ul>
@@ -299,9 +349,9 @@ function Tarjeta({
           : "";
   return (
     <div className="card p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
       <p className={`mt-0.5 truncate text-lg font-semibold tabular ${color}`}>{valor}</p>
-      {pie ? <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

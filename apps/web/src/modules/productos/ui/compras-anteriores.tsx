@@ -84,7 +84,7 @@ export function ComprasAnteriores({ compras }: { compras: CompraDeProducto[] }) 
                         <span className="tabular font-medium">{dolar(c.costoUsd)}</span>
                         {v !== null ? (
                           <span
-                            className={`ml-2 text-xs tabular ${
+                            className={`ml-2 text-sm tabular ${
                               v > 0 ? "text-[var(--danger)]" : "text-[var(--ok)]"
                             }`}
                             title="Respecto de la compra anterior"

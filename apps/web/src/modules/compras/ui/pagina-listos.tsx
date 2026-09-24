@@ -110,7 +110,72 @@ export default async function PaginaListos({ searchParams }: Props) {
           <Pastillas activo={filtro} total={todos.length} cuenta={cuenta} />
 
           <div className="card overflow-hidden">
-            <div className="scroll-x">
+            {/*
+              EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 1247, la más
+              ancha de todo el ERP. Buena parte es la rejilla de acciones, que
+              son 312 px fijos para que los botones no salgan en escalera — en
+              una tarjeta ese problema no existe y van a lo ancho.
+
+              El orden lo manda lo que se viene a hacer aquí: despachar. Así
+              que arriba el pedido y para cuándo está prometido —con su
+              urgencia—, y abajo los dos botones, que es la acción.
+            */}
+            <div className="flex flex-col gap-2.5 p-3 md:hidden">
+              {visibles.map((p) => (
+                <div
+                  key={p.cotizacion_id}
+                  className="rounded-lg border border-[var(--border)] p-3"
+                >
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-mono text-sm font-semibold text-brand-700">
+                      {p.cotizacion}
+                    </span>
+                    <Moneda valor={p.total} tamano="sm" enfasis="fuerte" />
+                  </div>
+
+                  <p className="mt-1 text-sm">{p.cliente}</p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge
+                      tone={
+                        p.urgencia === "vencido"
+                          ? "danger"
+                          : p.urgencia === "hoy"
+                            ? "warning"
+                            : "neutral"
+                      }
+                      size="xs"
+                    >
+                      {ETIQUETA_URGENCIA[p.urgencia]}
+                    </Badge>
+                    <span className="text-sm text-[var(--fg-subtle)]">
+                      {formatearFecha(p.prometida)}
+                    </span>
+                    <EstadoDelPedido estado={p.estado} />
+                  </div>
+
+                  <p className="mt-1 text-sm text-[var(--fg-muted)]">
+                    {p.lineas} {p.lineas === 1 ? "línea" : "líneas"}
+                    {p.estado === "completo"
+                      ? ` · ${p.unidades} uds. listas`
+                      : ` · ${p.unidades} de ${p.pendientes} uds.`}
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Link
+                      href={`/cotizaciones/${p.cotizacion_id}`}
+                      className={`${SECUNDARIO} w-full justify-center`}
+                    >
+                      <IconoVer />
+                      Ver pedido
+                    </Link>
+                    <Siguiente pedido={p} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden scroll-x md:block">
               <table className="w-full text-sm">
                 <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                   <tr>

@@ -79,7 +79,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     {g.numero}
                   </Link>
                   {g.cotizacion_numero ? (
-                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                       {g.cotizacion_numero}
                     </span>
                   ) : null}
@@ -100,7 +100,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate font-medium">{g.cliente ?? "—"}</span>
                   {g.cliente_documento ? (
-                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                       {g.cliente_documento}
                     </span>
                   ) : null}
@@ -111,7 +111,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <td className="px-4 py-2.5 text-right tabular">{g.numero_bultos}</td>
                 <td className="px-4 py-2.5 text-right tabular">
                   {g.peso_bruto_kg.toFixed(3)}
-                  <span className="ml-1 text-xs text-[var(--fg-subtle)]">kg</span>
+                  <span className="ml-1 text-sm text-[var(--fg-subtle)]">kg</span>
                 </td>
                 <td className="px-4 py-2.5">
                   {/*
@@ -206,7 +206,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                   {g.numero}
                 </Link>
                 {g.cotizacion_numero ? (
-                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                     {g.cotizacion_numero}
                   </span>
                 ) : null}
@@ -222,7 +222,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
             <div>
               <p className="text-sm font-medium">{g.cliente ?? "—"}</p>
               {g.cliente_documento ? (
-                <p className="font-mono text-xs text-[var(--fg-subtle)]">
+                <p className="font-mono text-sm text-[var(--fg-subtle)]">
                   {g.cliente_documento}
                 </p>
               ) : null}
@@ -241,7 +241,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                   cortada en «AV. PLACIDO JIMENEZ NRO. 1051 COO. LAS PIRAMID…»
                   no dice a dónde va el camión, que es para lo que se mira. */}
               <div className="col-span-2 min-w-0">
-                <dt className="text-xs text-[var(--fg-subtle)]">Entrega</dt>
+                <dt className="text-sm text-[var(--fg-subtle)]">Entrega</dt>
                 <dd className="text-sm">{g.direccion_llegada ?? "—"}</dd>
               </div>
             </dl>
@@ -328,7 +328,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );
