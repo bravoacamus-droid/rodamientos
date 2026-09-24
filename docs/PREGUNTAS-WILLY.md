@@ -34,7 +34,114 @@ migración 064 solo lleva la estructura.
 
 ---
 
-## Lo que le sigue faltando · para el miércoles
+## 24/09 · LAS CINCO PARA ENTREGAR
+
+Estas cinco son las que separan el sistema de estar funcionando de verdad.
+Ordenadas como manda la regla: de la que le cuesta tres segundos a la que le
+cuesta trabajo.
+
+**Dos cosas que se comprobaron antes de escribirlas**, para no hacerle perder
+el tiempo:
+
+- **Ya tiene certificado digital.** Sus 515 facturas del histórico se emitieron
+  electrónicamente, así que no hay que pedirle que lo saque — hay que pedirle
+  el que usa. La pregunta cambia entera.
+- **No se le pregunta desde qué número va su factura.** Ya está dentro:
+  `F002-00000515` del 26/08, y `FC02` por 3. Preguntar lo que el sistema ya
+  sabe es justo lo que gasta las cinco preguntas.
+
+```
+Buenos días Willy 🙌
+Ya estamos en la recta final. Me quedan 5 cositas y con eso
+el sistema queda listo para trabajar de verdad.
+Las 2 primeras son de una palabra.
+
+1️⃣ ¿POR QUÉ NÚMERO VA SU GUÍA Y SU COTIZACIÓN?
+Sus FACTURAS ya están: el sistema tiene sus F002 hasta la
+515 del 26 de agosto, y sigue desde la 516 sin repetir
+ninguna. Sus notas de crédito FC02 igual.
+Me faltan solo esas dos: el último número de su GUÍA y el
+de su COTIZACIÓN, y sigo desde ahí.
+
+2️⃣ ¿A CUÁNTOS DÍAS VENDE AL CRÉDITO, NORMALMENTE?
+¿30, 45, 60?
+Sus 97 clientes están hoy en "crédito a 0 días", o sea que
+la factura le aparece vencida el mismo día que la emite.
+
+3️⃣ SU CERTIFICADO DIGITAL Y SU CLAVE SOL 🔐
+Esta es la que hace que sus facturas lleguen a SUNAT.
+
+Usted ya factura electrónicamente, así que esto ya lo tiene
+(se lo dio SUNAT o se lo maneja su contador). Necesito:
+
+• El archivo del certificado, el que termina en .pfx
+• La clave de ese archivo
+• Su usuario SOL secundario y su clave
+  (el secundario, no el principal — SUNAT no acepta el
+   principal para facturar)
+
+Hoy el sistema le emite la factura, se la imprime y le
+lleva la cobranza, pero NO la manda a SUNAT. Con esto sí.
+
+⚠️ Esto NO me lo mande por WhatsApp ni por correo. Se lo
+paso a Luis en una USB o por gestor de contraseñas
+cuando nos veamos. Son las llaves de su facturación.
+
+4️⃣ LOS TELÉFONOS DE SUS CLIENTES Y PROVEEDORES 📱
+De sus 97 clientes no tengo ni un teléfono, y solo uno
+tiene correo. De sus 97 proveedores, tampoco ninguno.
+
+Sin eso no le funcionan dos cosas que ya están hechas:
+• Mandarle la cotización al cliente por WhatsApp
+• Pedirle precio a 4 o 5 proveedores de una sola vez
+
+Si los tiene en un Excel, mándemelo y los subo todos juntos.
+Y si le da roche mandar los 97, mándeme los 15 o 20 con los
+que más trabaja y con eso arranco.
+
+5️⃣ EL CONTEO DE SU ALMACÉN 📦
+Esta es la que más trabajo le da, y le explico por qué se
+la pido así.
+
+Su archivo de ventas me dice todo lo que VENDIÓ estos dos
+años, pero no me dice qué TIENE hoy en el almacén. Y yo no
+me lo puedo inventar: si le pongo un número inventado, el
+sistema le va a mentir desde el primer día — le va a decir
+que tiene 10 de algo que no tiene, y usted lo va a vender.
+
+Por eso el stock está hoy en CERO a propósito.
+
+Lo que necesito es un conteo: código y cuántos tiene.
+En un Excel, en papel, o como le sea más cómodo.
+
+No tiene que ser todo de golpe. Podemos empezar por lo que
+más rota — sus rodamientos más vendidos — y el resto va
+entrando. Pero mientras no haya conteo, la parte de almacén
+del sistema no le sirve.
+
+Gracias Willy 🙌
+```
+
+**Cuando conteste**, apuntar la respuesta debajo de cada punto y marcar el
+encabezado como CONTESTADA.
+
+**La 3 y la 5 son las que bloquean la entrega.** La 3 porque sin certificado no
+se declara nada, y la 5 porque sin conteo el almacén no sirve. Las otras tres
+son importantes pero no paran el sistema.
+
+**Sobre la 3, ojo con el canal:** el mensaje dice explícitamente que no la
+mande por chat. Si la manda igual, hay que pedirle que cambie las claves
+después — un `.pfx` con su clave en un WhatsApp es la facturación entera de la
+empresa en manos de quien lea ese teléfono.
+
+---
+
+## Lo que le sigue faltando · para el miércoles · SUPERADA POR LA DEL 24/09
+
+> Las cuatro de aquí siguen sin contestar, y las tres que siguen vigentes
+> —guía y cotización, plazo de crédito, teléfonos— están recogidas en la tanda
+> de arriba. **Mandar la de arriba, no esta.** Se deja escrita porque enseña
+> cómo se le fueron pidiendo las cosas.
 
 ```
 Buenos días Willy. Con sus formatos ya quedó casi todo 🙌
@@ -165,6 +272,10 @@ No son de WhatsApp. Hay que enseñárselas funcionando:
   único no lo admite. Tres salidas en PENDIENTES §D.
 - **El maestro con precios y stock.** Merece su propia reunión: sin costos el
   tablero le sigue diciendo que gana el 100 % de lo que vende (§W).
+  **El conteo de almacén salió de aquí y subió a la tanda del 24/09** (pregunta
+  5): estaba apuntado como «tema de reunión» y en realidad es lo que deja el
+  módulo de almacén sin servir. Lo que se queda aquí es lo otro —los costos,
+  que son 32 de 793— porque eso sí se ve mejor en pantalla que por WhatsApp.
 
 Y sueltas, para cuando haya hueco: la columna P.M., el canal de las alertas,
 las 3 notas de crédito, si hay deuda viva de verdad, y sus correlativos de

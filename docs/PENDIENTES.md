@@ -4484,27 +4484,78 @@ de Defontana.
 
 ## 7 · Antes de entregar
 
+> **Revisado y medido contra la base el 24/09.** La versión anterior de esta
+> lista mandaba borrar clientes, proveedores y productos `[DEMO]` — **ya no
+> existen**: se fueron el 28/08 con la carga real (0 filas, comprobado). Un
+> checklist caduco hace perder el rato y, peor, tapa lo que sí falta.
+
+### 7.1 · Lo que NO es código, y es lo que de verdad bloquea
+
+- [ ] **El certificado digital (`.pfx`) y su clave**, y el **usuario SOL
+      secundario** con la suya. En la base: los cuatro campos vacíos.
+      Sin ellos el ERP emite y cobra, pero **no declara nada**.
+      Ojo al preguntarlo: Willy lleva 515 facturas emitidas electrónicamente,
+      así que ya tiene certificado. No hay que pedirle que lo saque, hay que
+      pedirle el que usa.
+- [ ] **El inventario inicial.** El stock está en **cero a propósito** (§9.3 de
+      HISTORIAL-VENTAS: el Excel de ventas no dice qué hay en el almacén y un
+      stock inventado hace mentir al ERP desde el primer día). Entra con un
+      cuadre físico. **Hasta entonces el módulo de almacén no sirve**, y esto
+      no estaba en primera línea de ninguna lista.
+- [ ] **`T002` y `CT02`**: desde qué número siguen la guía y la cotización.
+      Las de facturación ya están resueltas (`F002` va por 515, `FC02` por 3).
+- [ ] La homologación con SUNAT, y solo después pasar `beta` → `produccion`.
+
+### 7.2 · Lo que falta escribir
+
+- [ ] **El GRE — mandar las guías a SUNAT.** Es el único bloque de desarrollo
+      grande que queda. `emitirGuia` crea la guía y mueve stock, pero no hay
+      nada que la declare; cambió a REST con OAuth2 y hay que escribirlo.
+      No sirve de nada terminarlo antes de tener certificado con que probarlo.
+- [ ] **Mandar la cotización por correo** (§AK.8). No hay librería de correo ni
+      de PDF en el proyecto. Tres piezas y solo una es código: el envío, los
+      DNS del dominio (SPF/DKIM/DMARC) y el PDF — o mandar el enlace público,
+      que ya existe (072). Bloqueado además porque **1 de 97 clientes tiene
+      correo**.
+- [ ] Menor: los tres tamaños de `Badge` son `text-xs`, así que **las 83
+      pastillas del ERP están a 12,75 px**, incluidas las de estado de
+      documento. Va contra §1 de CLAUDE.md. Tocarlo afecta a todas las
+      pantallas, así que es decisión de Luis.
+
+### 7.3 · Datos que solo puede dar Willy
+
+- [ ] **Teléfonos: 0 de 97 clientes y 0 de 97 proveedores.** Es lo que deja sin
+      usar el WhatsApp de cotizaciones y el de pedir precios.
+- [ ] Plazo de crédito habitual — los 97 están a «0 días», o sea que la factura
+      nace vencida.
+- [ ] Plazo de entrega de un proveedor de Lima (dio 15 días exterior y 2-4
+      fabricación, no el local, que es el más frecuente y sale impreso).
+- [ ] **Costo en solo 32 de 793 productos.** Sin costo no hay margen, y el
+      tablero sigue diciendo que gana el 100 % de lo que vende.
+- [ ] Los 790 sin `tipo_id` y 384 en «SIN MARCA» (§9.4). Se arreglan en bloque
+      con un UPDATE cuando confirme cuáles son marcas de verdad.
+- [ ] Decidir si los 7 productos de ejemplo se quedan (son datos reales suyos).
+
+### 7.4 · El día de la entrega, en este orden
+
 - [ ] Rotar el token de Supabase y las llaves — están en texto plano en
-      `.env.local` y son de la cuenta del cliente
-- [ ] Borrar la variable `RODATECH_ATAJOS` de Vercel: mientras esté, cualquiera
-      con la URL entra con un clic
-- [ ] **Poner `SUNAT_ENCRYPTION_KEY` en Vercel y en CI**, la MISMA que en
-      local. Con otra llave, las credenciales guardadas no se pueden descifrar
-      y hay que volver a escribirlas a mano: no hay forma de recuperarlas.
-- [ ] Pasar el ambiente de facturación de `beta` a `produccion` — pero solo
-      cuando la homologación esté terminada. En beta lo emitido NO tiene valor
-      fiscal, que es lo correcto mientras se prueba.
-- [ ] Borrar los dos clientes de prueba marcados `[DEMO]`, y con ellos
-      COT1-000001 y F001-00000001. Ojo: el comprobante no movió stock (se emitió
-      sin marcar la salida de almacén), así que borrarlo no descuadra el kardex.
-- [ ] Borrar el proveedor `[DEMO] RODAMIENTOS DEL PACIFICO S.A.C.` y, con él,
-      la compra `CMP-26-00001` y la recepción `REC-26-00001` que se crearon
-      para probar el ciclo. **Ojo con el orden y con el stock**: la recepción
-      metió 10 unidades del 6205 y 4 del 7210 al kardex. Borrarla a mano
-      dejaría el stock mintiendo —es exactamente lo que pasó con el costo del
-      6205, ver R2—. Lo correcto es pasar un ajuste de inventario que las
-      saque, y solo después borrar los documentos.
-- [ ] Decidir si los 7 productos de ejemplo se quedan (son datos reales suyos)
+      `.env.local` y son de la cuenta del cliente. Por USB o gestor de
+      contraseñas, **nunca por chat ni correo**.
+- [ ] **`SUNAT_ENCRYPTION_KEY` en Vercel y en CI, la MISMA que en local.** Con
+      otra llave, las credenciales guardadas no se descifran y hay que volver a
+      escribirlas: no hay forma de recuperarlas.
+- [ ] Borrar `RODATECH_ATAJOS` de Vercel. Desde el 15/09 el olvido ya no abre
+      la puerta —en producción hace falta el valor `demo-publica`— pero la
+      variable se borra igual.
+- [ ] **`update perfiles set debe_cambiar_contrasena = true;`** Las seis cuentas
+      siguen con `RODATECH_DEV_PASSWORD`, la misma para todas. La 092 deja la
+      marca preparada; se voltea aquí, junto con el atajo, porque son el mismo
+      problema.
+- [ ] Poner `F002` y `FC02` por defecto. **Ya no depende de acordarse**: desde
+      la 093 el sistema se niega a emitir con una serie de pruebas en cuanto el
+      ambiente pasa a producción, y dice cuál usar.
+- [ ] Correr `scripts/limpiar-pruebas-16-09.sql` — **ocho bloques, y el orden
+      importa**: el 7 va antes de borrar la ronda CPR-26-00012.
 
 ---
 
