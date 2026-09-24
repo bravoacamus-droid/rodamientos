@@ -65,10 +65,53 @@ export function MatrizPermisos({
     }
   }
 
+  const casilla = (area: (typeof AREAS)[number], rol: Rol) => {
+    const estado = estadoDelArea(area, rol, guardados);
+    return (
+      <Casilla
+        estado={estado}
+        etiqueta={`${area.etiqueta} · ${ETIQUETA_ROL[rol]}`}
+        // Gerencia nunca, el propio rol tampoco: los dos casos acaban en
+        // «nadie puede devolvérmelo».
+        bloqueada={!puedeEditar || rol === "gerencia" || rol === rolPropio}
+        ocupada={enCurso === `${area.clave}:${rol}`}
+        onClick={() => alternar(area.clave, rol, estado)}
+      />
+    );
+  };
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="scroll-x">
-        <table className="w-full min-w-[42rem] text-sm">
+      {/*
+        EN MÓVIL, TARJETAS. EN ESCRITORIO, REJILLA.
+
+        Son 9 áreas por 6 roles. Metido en una tabla cabe en un portátil, pero
+        en un teléfono son 54 casillas con scroll horizontal: al llegar a la
+        columna de Cobranzas ya no se ve de qué fila era, que es la peor forma
+        posible de decidir un permiso. Así que en móvil cada área es una
+        tarjeta con sus seis roles debajo, y el nombre siempre encima.
+      */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {AREAS.map((area) => (
+          <div key={area.clave} className="rounded-lg border border-[var(--border)] p-3">
+            <p className="font-medium">{area.etiqueta}</p>
+            <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{area.ayuda}</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {ROLES.map((rol) => (
+                <div key={rol} className="flex flex-col gap-1">
+                  <span className="text-sm text-[var(--fg-subtle)]">
+                    {ETIQUETA_ROL[rol]}
+                  </span>
+                  {casilla(area, rol)}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-3 py-2 font-medium">Qué se puede tocar</th>
@@ -89,24 +132,11 @@ export function MatrizPermisos({
                   <p className="font-medium">{area.etiqueta}</p>
                   <p className="text-sm text-[var(--fg-muted)]">{area.ayuda}</p>
                 </td>
-                {ROLES.map((rol) => {
-                  const estado = estadoDelArea(area, rol, guardados);
-                  const esGerencia = rol === "gerencia";
-                  const id = `${area.clave}:${rol}`;
-                  return (
-                    <td key={rol} className="px-2 py-3 text-center">
-                      <Casilla
-                        estado={estado}
-                        etiqueta={`${area.etiqueta} · ${ETIQUETA_ROL[rol]}`}
-                        // Gerencia nunca, el propio rol tampoco: los dos casos
-                        // acaban en «nadie puede devolvérmelo».
-                        bloqueada={!puedeEditar || esGerencia || rol === rolPropio}
-                        ocupada={enCurso === id}
-                        onClick={() => alternar(area.clave, rol, estado)}
-                      />
-                    </td>
-                  );
-                })}
+                {ROLES.map((rol) => (
+                  <td key={rol} className="px-2 py-3 text-center">
+                    {casilla(area, rol)}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
@@ -147,7 +177,9 @@ function Casilla({
   onClick: () => void;
 }) {
   const comun =
-    "inline-flex h-9 min-w-[4.5rem] items-center justify-center gap-1.5 rounded-md border px-2 text-sm font-medium transition";
+    // h-10 en móvil: 38 px es poco para un dedo, y la recomendación son 44.
+    // En escritorio vuelve a h-9, que es la altura del resto de controles.
+    "inline-flex h-10 w-full min-w-[4.5rem] items-center justify-center gap-1.5 rounded-md border px-2 text-sm font-medium transition md:h-9 md:w-auto";
 
   if (bloqueada) {
     return (
