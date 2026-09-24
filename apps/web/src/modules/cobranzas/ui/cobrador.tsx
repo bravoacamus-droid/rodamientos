@@ -119,7 +119,7 @@ export function Cobrador({
         }
       }}
     >
-      <DialogTrigger className="inline-flex h-8 items-center rounded-sm bg-brand-600 px-2.5 text-xs font-medium text-white hover:bg-brand-700">
+      <DialogTrigger className="inline-flex h-10 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 md:h-8">
         Cobrar
       </DialogTrigger>
 

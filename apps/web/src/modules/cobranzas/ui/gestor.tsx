@@ -80,7 +80,7 @@ export function Gestor({
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
-      <DialogTrigger className="inline-flex h-8 items-center rounded-sm border border-[var(--border)] px-2.5 text-xs font-medium hover:bg-[var(--surface-2)]">
+      <DialogTrigger className="inline-flex h-10 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)] md:h-8">
         Anotar
       </DialogTrigger>
 

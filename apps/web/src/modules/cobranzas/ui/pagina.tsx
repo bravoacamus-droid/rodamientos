@@ -229,7 +229,65 @@ async function TablaCartera({
   }
 
   return (
-    <div className="scroll-x">
+    <>
+      {/*
+        EN MÓVIL, TARJETAS.
+
+        Medido el 24/09: esta tabla pide 790 px y un teléfono tiene 390. Con
+        `scroll-x` no se rompe, pero hay que arrastrar de lado para llegar al
+        saldo y al botón de cobrar — y esta es justo la pantalla que se mira
+        fuera del escritorio, cuando se está llamando a un cliente para
+        cobrarle. El número de la factura y el saldo tienen que verse juntos
+        y sin moverse.
+      */}
+      <div className="flex flex-col gap-3 md:hidden">
+        {r.datos.map((d) => (
+          <div key={d.id} className="rounded-lg border border-[var(--border)] p-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <Link
+                href={`/facturacion/${d.id}`}
+                className="font-mono text-sm font-medium text-brand-600 hover:underline"
+              >
+                {d.numero}
+              </Link>
+              <span className="tabular text-lg font-semibold">
+                {d.saldo.toFixed(2)}
+              </span>
+            </div>
+
+            <p className="mt-1 text-sm">{d.cliente}</p>
+            {d.orden_compra_cliente ? (
+              <p className="text-sm text-[var(--fg-subtle)]">
+                OC {d.orden_compra_cliente}
+              </p>
+            ) : null}
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="tabular text-sm text-[var(--fg-muted)]">
+                Vence {d.fecha_vencimiento ?? "—"}
+              </span>
+              <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
+                {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
+              </Badge>
+            </div>
+
+            {d.pagado > 0 ? (
+              <p className="mt-1 text-sm text-[var(--fg-subtle)]">
+                De {d.total.toFixed(2)}, ya pagó {d.pagado.toFixed(2)}
+              </p>
+            ) : null}
+
+            {puedeGestionar || puedeCobrar ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
+                {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -299,7 +357,8 @@ async function TablaCartera({
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
