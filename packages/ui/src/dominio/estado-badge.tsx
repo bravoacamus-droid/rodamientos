@@ -160,10 +160,15 @@ export interface EstadoBadgeProps {
   className?: string;
 }
 
+/*
+  `text-sm` en los tres: el tamaño gradúa el relleno, no la letra. Misma razón
+  que en `Badge` (24/09), y aquí pesa más todavía — esto es lo que dice si una
+  factura está emitida, pagada o anulada.
+*/
 const TAMANOS = {
-  xs: "px-1.5 py-0.5 text-xs gap-1",
-  sm: "px-2 py-0.5 text-xs gap-1.5",
-  md: "px-2.5 py-1 text-xs gap-1.5",
+  xs: "px-1.5 py-0.5 text-sm gap-1",
+  sm: "px-2 py-0.5 text-sm gap-1.5",
+  md: "px-2.5 py-1 text-sm gap-1.5",
 } as const;
 
 export function EstadoBadge({ estado, etiqueta, size = "sm", className }: EstadoBadgeProps) {

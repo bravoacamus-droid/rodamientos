@@ -192,7 +192,7 @@ function FilaSerie({
             la nada.
           */}
           {serie.es_prueba ? (
-            <Badge tone="warning" size="xs" className="ml-2 text-sm">
+            <Badge tone="warning" size="xs" className="ml-2">
               Pruebas
             </Badge>
           ) : null}

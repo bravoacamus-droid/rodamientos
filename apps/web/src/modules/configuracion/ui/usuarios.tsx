@@ -162,24 +162,16 @@ function BotonEstado({
   );
 }
 
-/*
-  Las pastillas van con `text-sm` encima del tamaño del componente.
-
-  Todos los tamaños de `Badge` son `text-xs` (12,75 px), y «Inactivo» es un
-  estado que hay que leer. Se sube aquí y no en el componente porque hay 83
-  pastillas en el ERP y cambiarlas todas de golpe es una decisión de Luis, no
-  un arreglo de paso. Queda apuntado.
-*/
 function Distintivos({ esUnoMismo, activo }: { esUnoMismo: boolean; activo: boolean }) {
   return (
     <>
       {esUnoMismo ? (
-        <Badge tone="brand" size="sm" className="ml-2 text-sm">
+        <Badge tone="brand" size="sm" className="ml-2">
           Tú
         </Badge>
       ) : null}
       {!activo ? (
-        <Badge tone="neutral" size="sm" className="ml-2 text-sm">
+        <Badge tone="neutral" size="sm" className="ml-2">
           Inactivo
         </Badge>
       ) : null}

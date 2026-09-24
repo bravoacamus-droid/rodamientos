@@ -174,7 +174,9 @@ function Enlace({
       {espera > 0 ? (
         <span
           className={cn(
-            "ml-auto min-w-6 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-bold tabular",
+            // `text-sm` como el resto de pastillas (24/09): este número dice
+            // cuántas cosas esperan, y es de lo primero que se mira al entrar.
+            "ml-auto min-w-6 shrink-0 rounded-full px-2 py-0.5 text-center text-sm font-bold tabular",
             activo ? "bg-white/25 text-white" : "bg-[var(--warn-bg)] text-[var(--warn)]",
           )}
           aria-label={`${espera} esperando`}

@@ -23,10 +23,24 @@ export const badgeVariants = cva(
         info: "bg-info-bg text-info border-transparent",
         solid: "bg-brand-600 text-white border-transparent",
       },
+      /*
+        LOS TRES TAMAÑOS SON `text-sm`. No es un descuido: el tamaño solo
+        gradúa el RELLENO, nunca la letra.
+
+        Los tres eran `text-xs` —12,75 px con la base de este proyecto— y eso
+        va contra la primera regla de CLAUDE.md: nada por debajo de 14 px en
+        algo que hay que leer. Y una pastilla es de lo que MÁS hay que leer:
+        dice si un documento está emitido o anulado, si una cuenta está
+        inactiva, si una serie es de pruebas. Willy no ve bien, y «una cifra
+        que no se lee y una cifra que no existe valen lo mismo».
+
+        Si hace falta que una pastilla ocupe menos, se le baja el relleno con
+        `size="xs"`. La letra no se toca (24/09).
+      */
       size: {
-        xs: "px-1.5 py-0.5 text-xs",
-        sm: "px-2 py-0.5 text-xs",
-        md: "px-2.5 py-1 text-xs",
+        xs: "px-1.5 py-0.5 text-sm",
+        sm: "px-2 py-0.5 text-sm",
+        md: "px-2.5 py-1 text-sm",
       },
     },
     defaultVariants: { tone: "neutral", size: "sm" },
