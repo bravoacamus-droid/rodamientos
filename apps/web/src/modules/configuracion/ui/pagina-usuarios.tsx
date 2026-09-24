@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { EstadoError, Skeleton } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { hayClaveAdmin } from "@rodatech/db/admin";
 
 import { usuarios } from "../api/consultas";
+import { AltaUsuario } from "./alta-usuario";
 import { CabeceraConfig } from "./cabecera";
 import { TablaUsuarios } from "./usuarios";
 
@@ -43,10 +45,23 @@ export default async function PaginaConfigUsuarios() {
         </p>
       ) : null}
 
+      {/*
+        El alta, ARRIBA y en su propia tarjeta.
+
+        Hasta el 24/09 esta pantalla decía «el alta se hace en Supabase Auth»,
+        o sea que para meter a alguien había que salir del ERP. Ahora se hace
+        aquí, y va delante de la tabla porque es la razón por la que se abre
+        esta pantalla cuando entra gente nueva.
+      */}
+      {esGerencia ? (
+        <section className="card p-4">
+          <AltaUsuario hayClave={hayClaveAdmin()} />
+        </section>
+      ) : null}
+
       <section className="card p-4">
         <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          El alta se hace en Supabase Auth y el perfil se crea solo. Aquí se
-          cambia el rol y se activa o desactiva.
+          Aquí se cambia el rol y se activa o desactiva a quien ya entra.
         </p>
         <Suspense fallback={<Skeleton className="h-48 w-full" />}>
           <BloqueUsuarios idPropio={perfil?.id ?? null} puedeEditar={esGerencia} />
