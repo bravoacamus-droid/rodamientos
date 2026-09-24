@@ -49,7 +49,7 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
         >
           <div className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
-              <code className="font-mono text-sm font-medium">{f.origen}</code>
+              <code className="break-words font-mono text-sm font-medium">{f.origen}</code>
               {f.veces > 1 ? (
                 <Badge tone="danger" size="xs">
                   {f.veces} veces
@@ -61,8 +61,13 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
                 </Badge>
               ) : null}
             </span>
-            <span className="mt-0.5 block text-sm">{f.mensaje}</span>
-            <span className="mt-0.5 block text-xs text-[var(--fg-subtle)]">
+            {/*
+              `break-words`: el mensaje de un fallo es una cadena larga y sin
+              espacios —un SQL, una URL, un id— y sin esto no envuelve: estira
+              la caja a 656 px dentro de una pantalla de 390. Medido el 24/09.
+            */}
+            <span className="mt-0.5 block break-words text-sm">{f.mensaje}</span>
+            <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
               {formatearFechaHora(f.ultima_vez)}
               {f.veces > 1 ? ` · la primera, ${formatearFechaHora(f.primera_vez)}` : ""}
               {f.ruta ? ` · en ${f.ruta}` : ""}

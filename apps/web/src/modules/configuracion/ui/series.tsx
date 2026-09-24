@@ -298,7 +298,7 @@ function FilaSerie({
               {avisos.map((a, i) => (
                 <li
                   key={i}
-                  className={`text-xs ${
+                  className={`text-sm ${
                     a.tono === "danger"
                       ? "text-[var(--danger)]"
                       : a.tono === "warning"
@@ -427,7 +427,7 @@ function DialogNuevaSerie() {
             </Campo>
 
             {formatoOk && Number(inicial) > 0 && Number(longitud) >= 4 ? (
-              <p className="text-xs text-[var(--fg-muted)]">
+              <p className="text-sm text-[var(--fg-muted)]">
                 El primer documento será{" "}
                 <span className="font-mono">
                   {`${serie}-${String(Number(inicial)).padStart(Number(longitud), "0")}`}

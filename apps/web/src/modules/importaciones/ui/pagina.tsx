@@ -128,33 +128,33 @@ async function Indicadores({
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">En camino</p>
+        <p className="text-sm text-[var(--fg-muted)]">En camino</p>
         <p className="mt-0.5 text-xl font-semibold">
           <CifraAnimada valor={s.enCamino} decimales={0} />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {s.enCamino === 0 ? "no hay nada fuera" : "pedidos sin llegar del todo"}
         </p>
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Atrasadas</p>
+        <p className="text-sm text-[var(--fg-muted)]">Atrasadas</p>
         <p
           className={`mt-0.5 text-xl font-semibold ${s.atrasadas > 0 ? "text-[var(--danger)]" : ""}`}
         >
           <CifraAnimada valor={s.atrasadas} decimales={0} />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {s.atrasadas === 0 ? "todo dentro de plazo" : "pasaron su fecha estimada"}
         </p>
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Dinero fuera</p>
+        <p className="text-sm text-[var(--fg-muted)]">Dinero fuera</p>
         <p className="mt-0.5 text-xl font-semibold">
           <CifraAnimada valor={s.valorEnCamino} decimales={2} prefijo="$ " />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {s.gastosEnCamino > 0
             ? `más ${dinero(s.gastosEnCamino)} en gastos`
             : "sin gastos anotados"}
@@ -256,13 +256,13 @@ function Fila({
       <td className="px-4 py-2.5">
         <Link
           href={`/compras/${compra.id}`}
-          className="font-mono text-xs font-medium text-brand-600 hover:underline"
+          className="font-mono text-sm font-medium text-brand-600 hover:underline"
         >
           {compra.numero}
         </Link>
-        <span className="block text-xs text-[var(--fg-subtle)] tabular">{compra.fecha}</span>
+        <span className="block text-sm text-[var(--fg-subtle)] tabular">{compra.fecha}</span>
         {compra.documento_proveedor ? (
-          <span className="block text-xs text-[var(--fg-subtle)]">
+          <span className="block text-sm text-[var(--fg-subtle)]">
             {compra.documento_proveedor}
           </span>
         ) : null}
@@ -275,7 +275,7 @@ function Fila({
         >
           {compra.proveedor}
         </Link>
-        <span className="block text-xs text-[var(--fg-subtle)]">
+        <span className="block text-sm text-[var(--fg-subtle)]">
           {compra.lineasRecibidas} de {compra.lineas}{" "}
           {compra.lineas === 1 ? "línea llegó" : "líneas llegaron"}
         </span>
@@ -288,7 +288,7 @@ function Fila({
           <span className="block text-[var(--fg-subtle)]">sin courier</span>
         )}
         {compra.tracking ? (
-          <span className="block font-mono text-xs text-[var(--fg-muted)]">
+          <span className="block font-mono text-sm text-[var(--fg-muted)]">
             {compra.tracking}
           </span>
         ) : null}
@@ -298,7 +298,7 @@ function Fila({
         <Badge tone={tonoTransito(estado)} size="xs">
           {ETIQUETA_TRANSITO[estado]}
         </Badge>
-        <span className="mt-0.5 block text-xs text-[var(--fg-subtle)]">
+        <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
           {atraso > 0
             ? `${atraso} ${atraso === 1 ? "día" : "días"} de retraso`
             : faltan !== null
@@ -313,7 +313,7 @@ function Fila({
 
       <td className="px-4 py-2.5 text-right tabular">
         {dinero(compra.subtotal)}
-        <span className="block text-xs text-[var(--fg-subtle)]">sin IGV</span>
+        <span className="block text-sm text-[var(--fg-subtle)]">sin IGV</span>
       </td>
 
       <td className="px-4 py-2.5">
@@ -330,7 +330,7 @@ function Fila({
         />
         {incidencia !== null && incidencia > 0 ? (
           <span
-            className={`mt-1 block text-xs ${incidencia >= 25 ? "text-[var(--warn)]" : "text-[var(--fg-subtle)]"}`}
+            className={`mt-1 block text-sm ${incidencia >= 25 ? "text-[var(--warn)]" : "text-[var(--fg-subtle)]"}`}
           >
             encarecen un {incidencia.toFixed(1)} %
           </span>

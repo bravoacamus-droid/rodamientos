@@ -89,7 +89,7 @@ export default async function PaginaBitacora({ searchParams }: Props) {
           busca algo concreto. */}
       <section className="card p-4">
         <h2 className="mb-1 text-sm font-semibold">Lo que se rompió</h2>
-        <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+        <p className="mb-3 text-sm text-[var(--fg-subtle)]">
           Errores de servidor sin revisar. Hasta ahora morían en la pantalla
           de quien los provocaba y nadie más se enteraba.
         </p>
@@ -109,7 +109,7 @@ export default async function PaginaBitacora({ searchParams }: Props) {
         </Suspense>
       </section>
 
-      <p className="text-xs text-[var(--fg-subtle)]">
+      <p className="text-sm text-[var(--fg-subtle)]">
         Se apunta lo que cambia <strong>dinero, stock o permisos</strong>, y de
         eso solo los campos que importan: cambiar la dirección de un cliente no
         entra, cambiarle la línea de crédito sí. Un registro que lo apunta todo
@@ -166,7 +166,51 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
 
   return (
     <>
-      <div className="scroll-x">
+      {/*
+        EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 517 y aquí ni
+        siquiera la contiene el scroll — se sale del `main`, que era el único
+        caso de toda la revisión donde la página se rompía de verdad.
+
+        Una bitácora se lee como una lista de frases —«fulano hizo tal cosa,
+        entonces»—, así que la tarjeta la escribe en ese orden y deja la fecha
+        al final, que es el dato que menos se busca y el que más ancho ocupa.
+      */}
+      <ul className="flex flex-col gap-2.5 md:hidden">
+        {filas.map((m) => {
+          const href = enlaceDe(m.entidad, m.entidad_id);
+          return (
+            <li key={m.id} className="rounded-lg border border-[var(--border)] p-3">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <Badge tone={TONO_ACCION[m.accion] ?? "neutral"} size="sm">
+                  {ETIQUETA_ACCION[m.accion] ?? m.accion}
+                </Badge>
+                {href ? (
+                  <Link href={href} className="text-sm text-brand-600 hover:underline">
+                    {ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}
+                  </Link>
+                ) : (
+                  <span className="text-sm">{ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}</span>
+                )}
+              </div>
+
+              {describir(m.descripcion) ? (
+                <p className="mt-1.5 text-sm text-[var(--fg-muted)]">
+                  {describir(m.descripcion)}
+                </p>
+              ) : null}
+
+              <p className="mt-1.5 text-sm text-[var(--fg-subtle)]">
+                <span className="font-medium text-[var(--fg-muted)]">
+                  {m.usuario_nombre}
+                </span>{" "}
+                · <span className="tabular">{formatearFechaHora(m.creado_en)}</span>
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="hidden scroll-x md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">

@@ -40,7 +40,7 @@ export function FiltrosBarra({
   return (
     <div className="mb-3 grid gap-3 px-4 sm:grid-cols-2 lg:grid-cols-4">
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Qué</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Qué</span>
         <SelectNativo
           value={params.get("entidad") ?? ""}
           onChange={(e) => aplicar("entidad", e.target.value)}
@@ -55,7 +55,7 @@ export function FiltrosBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Quién</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Quién</span>
         <SelectNativo
           value={params.get("usuario") ?? ""}
           onChange={(e) => aplicar("usuario", e.target.value)}
@@ -70,7 +70,7 @@ export function FiltrosBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
           value={params.get("desde") ?? ""}
@@ -79,7 +79,7 @@ export function FiltrosBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"
           value={params.get("hasta") ?? ""}

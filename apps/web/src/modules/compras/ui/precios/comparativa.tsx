@@ -491,7 +491,7 @@ export function Comparativa({
                   {r.proveedor}
                 </span>
                 <span
-                  className={`shrink-0 text-xs ${
+                  className={`shrink-0 text-sm ${
                     r.estado === "esperando"
                       ? "text-[var(--warn)]"
                       : r.estado === "respondio"
@@ -828,7 +828,10 @@ export function Comparativa({
                             </button>
                           )}
                           {celda.dias !== null && celda.costoUsd !== null ? (
-                            <span className="block text-[10px] text-[var(--fg-subtle)]">
+                            /* 10 px era el texto más pequeño de todo el ERP, y
+                               dice en cuántos días entrega ese proveedor: es
+                               media decisión de compra. */
+                            <span className="block text-sm text-[var(--fg-subtle)]">
                               {celda.dias} d
                             </span>
                           ) : null}
@@ -899,7 +902,7 @@ export function Comparativa({
                           })()}
                           {fila.ganador.ahorroUnitario !== null &&
                           elegido === fila.ganador.consulta_proveedor_id ? (
-                            <span className="block text-xs text-[var(--fg-subtle)]">
+                            <span className="block text-sm text-[var(--fg-subtle)]">
                               {formatearMoneda(
                                 fila.ganador.ahorroUnitario * fila.item.cantidad,
                                 "USD",
@@ -931,7 +934,7 @@ export function Comparativa({
                             const demas = (suyo - fila.ganador.costoUsd) * fila.item.cantidad;
                             if (demas <= 0) return null;
                             return (
-                              <span className="block text-xs font-medium text-[var(--warn)]">
+                              <span className="block text-sm font-medium text-[var(--warn)]">
                                 {formatearMoneda(demas, "USD")} más que{" "}
                                 {fila.ganador.proveedor}
                               </span>
