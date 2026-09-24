@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, usuarioActual } from "@rodatech/db/servidor";
+import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 
 import { mensajeDeError } from "@/lib/errores";
 
@@ -142,6 +143,35 @@ export async function cambiarMiContrasena(
     const { error } = await supabase.auth.updateUser({ password: nueva });
     if (error) return { ok: false, error: mensajeDeError(error) };
 
+    /*
+      Y aquí se apaga la marca de la 092, que es lo que deja salir de la
+      pantalla de «cambia tu contraseña» y ver el ERP.
+
+      Va con `clienteAdmin` y no con la sesión a propósito: el trigger
+      `tg_perfil_contrasena` prohíbe que una sesión de empleado la apague, y
+      es lo que impide quitársela con un PATCH sin tocar la contraseña. El
+      único que puede es el servidor, y solo aquí — después de que Supabase
+      Auth haya confirmado el cambio.
+
+      Si no hay clave de servicio no se aborta: la contraseña YA cambió, y
+      devolver error haría creer que no. Se avisa, que es lo honesto.
+    */
+    if (hayClaveAdmin()) {
+      const { error: errorMarca } = await clienteAdmin()
+        .from("perfiles")
+        .update({ debe_cambiar_contrasena: false })
+        .eq("id", usuario.id);
+
+      if (errorMarca) {
+        return {
+          ok: true,
+          mensaje:
+            "Contraseña cambiada, pero el sistema sigue pidiéndotela. Avisa a soporte.",
+        };
+      }
+    }
+
+    revalidatePath("/", "layout");
     return { ok: true, mensaje: "Contraseña cambiada." };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };

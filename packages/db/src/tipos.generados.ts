@@ -2812,6 +2812,7 @@ export type Database = {
           actualizado_en: string
           cargo: string | null
           creado_en: string
+          debe_cambiar_contrasena: boolean
           email: string | null
           id: string
           nombre: string
@@ -2824,6 +2825,7 @@ export type Database = {
           actualizado_en?: string
           cargo?: string | null
           creado_en?: string
+          debe_cambiar_contrasena?: boolean
           email?: string | null
           id: string
           nombre: string
@@ -2836,6 +2838,7 @@ export type Database = {
           actualizado_en?: string
           cargo?: string | null
           creado_en?: string
+          debe_cambiar_contrasena?: boolean
           email?: string | null
           id?: string
           nombre?: string

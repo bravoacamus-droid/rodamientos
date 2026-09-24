@@ -70,7 +70,9 @@ export const perfilActual = cache(async () => {
   const supabase = await clienteServidor();
   const { data } = await supabase
     .from("perfiles")
-    .select("id, nombre, email, rol, activo, cargo")
+    // `debe_cambiar_contrasena` lo lee el layout del ERP para cerrarle el paso
+    // a quien todavía usa la contraseña con la que se creó su cuenta (092).
+    .select("id, nombre, email, rol, activo, cargo, debe_cambiar_contrasena")
     .eq("id", usuario.id)
     .maybeSingle();
 

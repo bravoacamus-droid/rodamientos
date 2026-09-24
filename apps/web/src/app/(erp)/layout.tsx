@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
@@ -16,6 +17,27 @@ export default async function LayoutErp({
   // usuario existe en Auth pero aún no tiene fila en `perfiles`; en ese caso
   // se muestra el menú mínimo en vez de romper.
   const perfil = await perfilActual().catch(() => null);
+
+  /*
+    LA CONTRASEÑA DEL PRIMER DÍA, antes que nada.
+
+    Luis, 24/09: «lo primero q le aparezca […] antes de q vean todo pues le
+    salga q tiene q cambiar su contraseña antes de tocar cualquier cosa». Por
+    eso va en el layout y no en cada página: cubre los ~40 módulos de golpe, y
+    el que se añada mañana nace cubierto.
+
+    `/cambiar-contrasena` vive FUERA de este grupo de rutas a propósito. Si
+    colgara de aquí, el redirect se llamaría a sí mismo y el navegador se
+    quedaría dando vueltas; y además la idea es que no vea el ERP, ni el menú.
+
+    Esto es una puerta de uso, no una frontera de seguridad: quien llega aquí
+    ya tiene credenciales y sesión. Lo que protege de verdad es que la
+    contraseña inicial sea distinta para cada uno (092).
+  */
+  if (perfil?.debe_cambiar_contrasena) {
+    redirect("/cambiar-contrasena");
+  }
+
   const grupos = menuPara(perfil?.rol ?? null);
 
   // Cuántas cosas esperan, para la pastilla del menú. Nunca lanza: si falla,
