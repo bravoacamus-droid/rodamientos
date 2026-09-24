@@ -78,10 +78,39 @@ export function TablaSeries({
   series: SerieDocumento[];
   puedeEditar: boolean;
 }) {
+  /*
+    Las de ensayo que HOY son las que se usarían al emitir. Es la lista que
+    hay que cambiar antes de facturar de verdad, y por eso se calcula y se
+    enseña arriba en vez de dejarla repartida por la tabla.
+  */
+  const pruebasPorDefecto = series.filter(
+    (s) => s.es_prueba && s.predeterminada && s.activo,
+  );
+
   return (
     <div className="flex flex-col gap-3">
+      {pruebasPorDefecto.length > 0 ? (
+        <div className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+          <p className="text-sm font-medium">
+            Ahora mismo se emitiría con series de pruebas
+          </p>
+          <p className="mt-1 text-sm">
+            {pruebasPorDefecto.map((s) => s.serie).join(", ")} —{" "}
+            <strong>está bien mientras estemos probando</strong>: así los
+            ensayos no gastan números del talonario de verdad.
+          </p>
+          <p className="mt-2 text-sm text-[var(--fg-muted)]">
+            Antes de facturar en serio hay que poner por defecto la serie que
+            continúa la numeración. No hace falta acordarse: al pasar a
+            producción el sistema se niega a emitir con estas y dice cuál usar.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-[var(--fg-subtle)]">
+        {/* `text-sm`: esto explica cómo funciona el correlativo, y es de lo
+            que más falta hace leer de toda la pantalla. */}
+        <p className="text-sm text-[var(--fg-subtle)]">
           «Desde» es el número en el que se quedó el sistema anterior. «Va por»
           es el último que se emitió aquí. El próximo documento se lleva el
           mayor de los dos, más uno — los correlativos nunca retroceden.
@@ -154,6 +183,17 @@ function FilaSerie({
           {!serie.activo ? (
             <Badge tone="neutral" size="xs" className="ml-2">
               Inactiva
+            </Badge>
+          ) : null}
+          {/*
+            Se dice cuáles son de ensayo, porque desde la 093 cambia lo que el
+            sistema deja hacer con ellas: en producción se niega a emitir. Sin
+            enseñarlo, el día que alguien ponga producción el error saldría de
+            la nada.
+          */}
+          {serie.es_prueba ? (
+            <Badge tone="warning" size="xs" className="ml-2 text-sm">
+              Pruebas
             </Badge>
           ) : null}
         </td>

@@ -135,6 +135,8 @@ export interface SerieDocumento {
   longitud: number;
   predeterminada: boolean;
   activo: boolean;
+  /** Serie de ensayo: en producción el sistema se niega a emitir con ella (093). */
+  es_prueba: boolean;
   descripcion: string | null;
 }
 

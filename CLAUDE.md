@@ -335,11 +335,33 @@ Comprobado en `/configuracion/sunat` el 16/09:
 | `T002` guía | **no existe** | — |
 | `CT02` cotización | **no existe** | — |
 
-**El riesgo que sí es urgente, y no depende de SUNAT:** las predeterminadas
-siguen siendo `F001` y `FC01`, las de prueba. Emitir hoy una factura daría
-`F001-00000003` —la 2 se gastó probando el 21/09— en vez de `F002-00000516`.
-Se arregla con el enlace «Usar por defecto» de la fila — pero es una decisión
-de numeración fiscal, así que la toma Luis, no se cambia por iniciativa propia.
+**Que las predeterminadas sean `F001` y `FC01` está BIEN, y es deliberado**
+(24/09). Durante meses esto estuvo apuntado aquí como «el riesgo urgente», con
+la idea de poner `F002` por defecto cuanto antes. **Era al revés.**
+
+`F002` lleva **515 facturas de verdad** —de 09/2024 a 08/2026, 37 clientes, con
+su detalle—, cargadas del Excel de Willy el 28/08 (`docs/HISTORIAL-VENTAS.md`).
+O sea que con `F002` por defecto, **cada prueba se come un número de su libro**:
+la 516, la 517… y un hueco en el correlativo es exactamente lo que SUNAT
+pregunta. Las pruebas tienen que gastar números de mentira, que es lo que son
+`F001` y `FC01`.
+
+Ojo con el recuerdo contrario, que es fácil de tener: sí hubo datos `[DEMO]`
+—2 clientes, 7 productos, 3 comprobantes— y se borraron el 28/08 al entrar los
+reales. Lo de demo son las series de la **007**, cuyo comentario ya las llama
+«marcadores».
+
+**Y desde la 093 el cambio ya no depende de que nadie se acuerde.** Las siete
+series marcador llevan `es_prueba`, y `siguiente_correlativo` —el cuello de
+botella de las tres emisiones: cotización, guía y comprobante— **se niega a
+emitir con una de ellas cuando `config_sunat.ambiente` es `produccion`**, y
+dice cuál usar. Mientras siga en `beta` no estorba. El cambio de
+predeterminada lo sigue haciendo Luis, pero ahora el sistema se lo exige antes
+de dejarle facturar en serio.
+
+Consecuencia que conviene saber: **`T001` también está marcada**, así que pasar
+a producción bloqueará las guías hasta que exista `T002` — que es justo lo que
+sigue bloqueado en Willy. No es un fallo, es el aviso llegando a tiempo.
 
 ### Pendiente técnico
 

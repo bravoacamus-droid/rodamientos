@@ -3501,6 +3501,7 @@ export type Database = {
           correlativo_inicial: number
           creado_en: string
           descripcion: string | null
+          es_prueba: boolean
           id: string
           longitud: number
           predeterminada: boolean
@@ -3513,6 +3514,7 @@ export type Database = {
           correlativo_inicial?: number
           creado_en?: string
           descripcion?: string | null
+          es_prueba?: boolean
           id?: string
           longitud?: number
           predeterminada?: boolean
@@ -3525,6 +3527,7 @@ export type Database = {
           correlativo_inicial?: number
           creado_en?: string
           descripcion?: string | null
+          es_prueba?: boolean
           id?: string
           longitud?: number
           predeterminada?: boolean

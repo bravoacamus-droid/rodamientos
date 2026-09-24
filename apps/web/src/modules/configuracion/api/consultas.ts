@@ -82,7 +82,7 @@ export async function series(): Promise<Resultado<SerieDocumento[]>> {
       .from("series_documento")
       .select(
         `id, tipo, serie, correlativo_inicial, correlativo_actual, longitud,
-         predeterminada, activo, descripcion`,
+         predeterminada, activo, es_prueba, descripcion`,
       )
       .limit(100);
 
@@ -100,6 +100,7 @@ export async function series(): Promise<Resultado<SerieDocumento[]>> {
           longitud: Number(s.longitud ?? 8),
           predeterminada: Boolean(s.predeterminada),
           activo: Boolean(s.activo),
+          es_prueba: Boolean(s.es_prueba),
           descripcion: (s.descripcion as string | null) ?? null,
         })),
       ),

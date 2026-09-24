@@ -20,6 +20,7 @@ function serie(campos: Partial<SerieDocumento> = {}): SerieDocumento {
     correlativo_actual: 0,
     longitud: 8,
     predeterminada: true,
+    es_prueba: false,
     activo: true,
     descripcion: null,
     ...campos,
