@@ -7,6 +7,7 @@ import {
   DollarSign,
   MoreVertical,
   Pencil,
+  Plus,
   RotateCcw,
   Trash2,
 } from "lucide-react";
@@ -226,6 +227,8 @@ export function FormularioKit({
 
   const suma = lineas.reduce((t, l) => t + netoDe(l) * l.cantidad, 0);
   const sumaCosto = lineas.reduce((t, l) => t + l.costo * l.cantidad, 0);
+  /** Piezas sin costo cargado: hacen que el costo del kit salga corto. */
+  const sinCosto = lineas.filter((l) => !(l.costo > 0));
 
   /*
     Piezas que quedaron por debajo de su precio mínimo de venta.
@@ -299,7 +302,35 @@ export function FormularioKit({
     (l) => (l.cantidad > 0 ? Math.floor(l.stock / l.cantidad) : 0) > armable,
   );
 
+  /*
+    La pieza recién añadida, para enseñarla.
+
+    Luis, 25/09, probándolo dentro del modal de la cotización: *«como que no
+    pude ni añadir más ítem al kit»*. Sí se añadía: entraba al FINAL de la
+    lista, fuera de la vista, y el desplegable se cerraba sin que cambiara nada
+    delante. Parecía que no había pasado nada. Ahora se baja hasta ella y se
+    resalta un momento.
+  */
+  const [recien, setRecien] = React.useState<string | null>(null);
+  const listaRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!recien) return;
+    // Solo mueve la vista; no toca el estado del que depende.
+    // Está dos veces —tarjeta y fila de tabla—, y una la oculta el CSS.
+    const visible = [
+      ...(listaRef.current?.querySelectorAll<HTMLElement>(`[data-pieza="${recien}"]`) ?? []),
+    ].find((e) => e.offsetParent !== null);
+    visible?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [recien]);
+
   function agregar(p: ProductoParaCotizar) {
+    const ya = lineas.some((l) => l.producto_id === p.id);
+    toast.success(
+      ya ? `${p.codigo}: una unidad más en el kit.` : `${p.codigo} añadido al kit.`,
+    );
+    setRecien(p.id);
+    window.setTimeout(() => setRecien((r) => (r === p.id ? null : r)), 2500);
     setLineas((ls) => {
       const ya = ls.find((l) => l.producto_id === p.id);
       // Repetir un producto suma cantidad en vez de crear otra línea: la clave
@@ -402,6 +433,34 @@ export function FormularioKit({
    * solo para la tabla y la tarjeta del teléfono: el `type="button"` de abajo
    * ya costó un disgusto y no conviene que exista en dos sitios.
    */
+  /**
+   * Quitar una pieza, A LA VISTA.
+   *
+   * Luis, 25/09: *«no pude […] eliminar ítem del kit»*. Solo estaba dentro del
+   * «⋮», y un botón que hay que ir a buscar a un menú no existe para quien no
+   * sabe que está ahí. Se queda también en el menú: quien ya lo buscaba allí
+   * lo sigue encontrando.
+   *
+   * En la tarjeta, con la palabra; en la fila de la tabla, solo el icono con
+   * su nombre para el lector de pantalla — la columna es estrecha.
+   */
+  function botonQuitar(l: Linea, conTexto: boolean) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setLineas((ls) => ls.filter((x) => x.producto_id !== l.producto_id))}
+        aria-label={`Quitar ${l.codigo} del kit`}
+        title={`Quitar ${l.codigo} del kit`}
+        className="h-9 shrink-0 text-sm"
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+        {conTexto ? "Quitar" : null}
+      </Button>
+    );
+  }
+
   function menuDe(l: Linea) {
     return (
       <DropdownMenu>
@@ -546,8 +605,17 @@ export function FormularioKit({
           </label>
         </div>
 
-        <BuscadorLineas onElegir={agregar} />
+        {/* Con su título: «Buscar por código…» a secas no decía que esto es
+            por donde se AÑADE una pieza (Luis, 25/09). */}
+        <div className="flex flex-col gap-1.5">
+          <span className="flex items-center gap-1.5 text-sm font-medium">
+            <Plus className="size-4" aria-hidden="true" />
+            Añadir un producto al kit
+          </span>
+          <BuscadorLineas onElegir={agregar} />
+        </div>
 
+        <div ref={listaRef}>
         {lineas.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
             Busca un producto arriba para empezar a armar el kit.
@@ -579,13 +647,19 @@ export function FormularioKit({
               return (
                 <li
                   key={l.producto_id}
-                  className="rounded-md border border-[var(--border)] p-3"
+                  data-pieza={l.producto_id}
+                  className={`rounded-md border p-3 transition-colors ${
+                    recien === l.producto_id
+                      ? "border-brand-500 bg-brand-50 dark:bg-brand-950/40"
+                      : "border-[var(--border)]"
+                  }`}
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <p className="font-mono text-sm font-semibold">{l.codigo}</p>
                       <p className="text-sm">{l.descripcion}</p>
                     </div>
+                    {botonQuitar(l, true)}
                     {menuDe(l)}
                   </div>
 
@@ -731,7 +805,11 @@ export function FormularioKit({
                   // «¿por qué solo puedo armar 3?».
                   const frena = algunaFrena && alcanza === armable;
                   return (
-                    <tr key={l.producto_id}>
+                    <tr
+                      key={l.producto_id}
+                      data-pieza={l.producto_id}
+                      className={recien === l.producto_id ? "bg-brand-50 dark:bg-brand-950/40" : ""}
+                    >
                       <td className="whitespace-nowrap font-medium">{l.codigo}</td>
                       <td className="text-sm">{l.descripcion}</td>
                       <td className="w-24">
@@ -896,7 +974,12 @@ export function FormularioKit({
                         </td>
                       ) : null}
 
-                      <td className="text-right">{menuDe(l)}</td>
+                      <td className="text-right">
+                        <span className="inline-flex items-center gap-1.5">
+                          {botonQuitar(l, false)}
+                          {menuDe(l)}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -906,6 +989,7 @@ export function FormularioKit({
           </div>
           </>
         )}
+        </div>
       </section>
 
       {/* ------------------------------------------------------ Precio */}
@@ -937,6 +1021,17 @@ export function FormularioKit({
                 >
                   {(((Number(precio) - sumaCosto) / sumaCosto) * 100).toFixed(1)}%
                 </span>
+              </span>
+            ) : null}
+            {/* Una pieza sin costo no suma nada al costo, y el margen sale de
+                más sin que se note: con el 6205 sin costo, un kit al 45 %
+                pasó a decir 63,6 % (25/09). Casi todo el catálogo entró sin
+                costo, así que esto va a pasar a menudo. */}
+            {sinCosto.length > 0 && lineas.length > 0 ? (
+              <span className="mt-1 text-sm text-[var(--warn)]">
+                {sinCosto.length === 1
+                  ? `${sinCosto[0]?.codigo} no tiene costo: el costo real es mayor y el margen, menor.`
+                  : `${sinCosto.length} piezas sin costo: el costo real es mayor y el margen, menor.`}
               </span>
             ) : null}
           </div>

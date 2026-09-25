@@ -280,6 +280,18 @@ function VistaKit({
             <span className="text-[var(--fg-muted)]"> a {dolar(linea.valorUnitario)}</span>
           </p>
         ) : null}
+        {/* Una pieza sin costo no suma al costo y el margen sale de más: con
+            el 6205 sin costo, 45 % pasó a decir 63,6 % (25/09). */}
+        {kit.componentes.some((c) => !(c.costo > 0)) ? (
+          <p className="text-[var(--warn)] sm:col-span-2">
+            {(() => {
+              const sin = kit.componentes.filter((c) => !(c.costo > 0));
+              return sin.length === 1
+                ? `${sin[0]?.codigo} no tiene costo: el costo real es mayor y el margen, menor.`
+                : `${sin.length} piezas sin costo: el costo real es mayor y el margen, menor.`;
+            })()}
+          </p>
+        ) : null}
         {/* Si en esta cotización va a otro precio, se dice: es la diferencia
             entre lo que vale el kit y lo que se negoció aquí (Willy, 8:25). */}
         {negociado ? (
