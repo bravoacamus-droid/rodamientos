@@ -4110,6 +4110,7 @@ export type Database = {
         Row: {
           cantidad: number | null
           codigo: string | null
+          compra_id: string | null
           costo_anterior_usd: number | null
           costo_moneda: number | null
           costo_usd: number | null
@@ -4145,6 +4146,13 @@ export type Database = {
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
             referencedColumns: ["id"]
           },
           {

@@ -205,7 +205,7 @@ export async function detalleCompra(
         `id, numero, fecha, fecha_estimada, proveedor_id, tipo,
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
-         motivo_anulacion, creado_en, consulta_precio_id, via_importacion,
+         motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda,
          gastos_importacion_detalle:gastos_importacion(concepto, monto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento),
@@ -268,6 +268,8 @@ export async function detalleCompra(
         gastos_importacion: Number(c.gastos_importacion ?? 0),
         // 095. Null en local y en las importaciones de antes de la 095.
         via_importacion: (c.via_importacion as "aerea" | "maritima" | null) ?? null,
+        // 042. La moneda de la FACTURA del proveedor; USD si no consta.
+        moneda: (c.moneda as "USD" | "PEN" | null) ?? "USD",
         // El detalle, en el orden en que pesa: lo caro arriba.
         gastos: ((c.gastos_importacion_detalle as { concepto: string; monto: number }[] | null) ?? [])
           .map((g) => ({ concepto: String(g.concepto), monto: Number(g.monto ?? 0) }))

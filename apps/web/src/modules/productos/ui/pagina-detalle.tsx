@@ -229,7 +229,11 @@ export default async function PaginaDetalleProducto({
           mucho menos a menudo.
         */}
         <AQuienPreguntar precios={precios.ok ? precios.datos : []} />
-        <ComprasAnteriores compras={compras.ok ? compras.datos : []} />
+        <ComprasAnteriores
+          compras={compras.ok ? compras.datos : []}
+          productoId={p.id}
+          puedeComprar={puedeEditar}
+        />
       </div>
     </div>
   );

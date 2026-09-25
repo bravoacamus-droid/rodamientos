@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RotateCcw } from "lucide-react";
 import { Badge } from "@rodatech/ui";
 
 import type { CompraDeProducto } from "../api/compras";
@@ -38,7 +39,32 @@ function variacion(actual: number, anterior: number | null): number | null {
   return Math.round(pct * 10) / 10;
 }
 
-export function ComprasAnteriores({ compras }: { compras: CompraDeProducto[] }) {
+/**
+ * A dónde lleva «volver a comprar» desde una fila.
+ *
+ * Con compra detrás, `?desde=` trae su modalidad y su courier; el `?items=`
+ * limita la compra nueva a ESTE producto —no a todo lo que vino en aquel
+ * envío—, y por eso los gastos de aquella vez no se rellenan (eran de todo el
+ * envío). Sin compra —una recepción suelta—, al menos el proveedor y el
+ * producto.
+ */
+function enlaceVolverAComprar(c: CompraDeProducto, productoId: string): string | null {
+  const items = `items=${productoId}:${c.cantidad}`;
+  if (c.compraId) return `/compras/nueva?desde=${c.compraId}&${items}`;
+  if (c.proveedorId) return `/compras/nueva?proveedor=${c.proveedorId}&${items}`;
+  return null;
+}
+
+export function ComprasAnteriores({
+  compras,
+  productoId,
+  puedeComprar = false,
+}: {
+  compras: CompraDeProducto[];
+  productoId: string;
+  /** Un botón que lleva a «no tienes permiso» es peor que no tenerlo. */
+  puedeComprar?: boolean;
+}) {
   return (
     <section className="card p-4">
       <h2 className="mb-1 text-base font-semibold">A quién se le compró</h2>
@@ -62,7 +88,8 @@ export function ComprasAnteriores({ compras }: { compras: CompraDeProducto[] }) 
                   <th className="py-2 pr-3 text-right font-medium">Cant.</th>
                   <th className="py-2 pr-3 text-right font-medium">Costo</th>
                   <th className="py-2 pr-3 font-medium">Factura</th>
-                  <th className="py-2 font-medium">Recepción</th>
+                  <th className="py-2 pr-3 font-medium">Recepción</th>
+                  {puedeComprar ? <th className="py-2 font-medium" /> : null}
                 </tr>
               </thead>
               <tbody>
@@ -107,6 +134,24 @@ export function ComprasAnteriores({ compras }: { compras: CompraDeProducto[] }) 
                           {c.documento}
                         </Link>
                       </td>
+                      {puedeComprar ? (
+                        <td className="whitespace-nowrap py-2 pl-3 text-right">
+                          {(() => {
+                            const href = enlaceVolverAComprar(c, productoId);
+                            return href ? (
+                              /* Con su palabra y su borde: es la acción de la
+                                 fila, no un enlace más entre números. */
+                              <Link
+                                href={href}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                              >
+                                <RotateCcw className="size-4" aria-hidden />
+                                Volver a comprar
+                              </Link>
+                            ) : null;
+                          })()}
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}

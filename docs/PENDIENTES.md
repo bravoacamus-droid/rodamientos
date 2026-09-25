@@ -4518,7 +4518,9 @@ de Defontana.
 - [x] **Los gastos se cobraban DOS VECES en recepciones parciales** — 25/09
       (094). Lo había arreglado la 022 y la 042 lo deshizo al reescribir la
       función. Latente: no había ninguna compra con recepciones parciales.
-- [ ] **Botón «volver a comprar»** sobre una compra anterior (§AO.5).
+- [x] ~~Botón «volver a comprar»~~ — 25/09 (096). Desde la ficha de la
+      compra (la repite entera) y desde «A quién se le compró» del producto
+      (solo ese producto, y sin los gastos de aquel envío, que eran de todo).
 - [ ] **Imprimir el detalle de un kit** (§AO.1).
 - [ ] **DECIDIR con Willy**: ¿el precio de costo es el promedio ponderado o la
       última compra? Dijo las dos cosas (§AO.3). El sistema hace la primera.

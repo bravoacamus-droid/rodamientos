@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
-import { Scale } from "lucide-react";
+import { RotateCcw, Scale } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleCompra } from "../api/consultas";
@@ -81,13 +81,33 @@ export default async function PaginaDetalleCompra({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {c.estado !== "anulada" && falta.length > 0 ? (
             <Link
               href={`/recepciones/nueva?compra=${c.id}`}
               className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
             >
               Recibir mercadería
+            </Link>
+          ) : null}
+          {/*
+            «Volver a comprar» (§AO.5). Willy, 24/09: «se me acabó el stock y
+            quiero comprar lo mismo una segunda vez… pero no sé a quién le he
+            comprado… ni a qué precio… ni cuánto me han cobrado por el envío».
+
+            Abre una compra NUEVA con todo esto propuesto: proveedor, productos,
+            cantidades, modalidad, courier y gastos. Solo para quien puede
+            comprar —un botón que lleva a «no tienes permiso» es peor que no
+            tener botón— y también en una anulada: que se anulara no quita
+            que se quiera volver a pedir lo mismo.
+          */}
+          {puedeAnular ? (
+            <Link
+              href={`/compras/nueva?desde=${c.id}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              <RotateCcw className="size-4" aria-hidden />
+              Volver a comprar
             </Link>
           ) : null}
           {puedeAnular && c.estado !== "anulada" ? (

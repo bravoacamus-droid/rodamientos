@@ -24,6 +24,9 @@ import { fallo } from "@/lib/errores";
 
 export interface CompraDeProducto {
   recepcionId: string;
+  /** De qué compra salió (096). Null en una recepción suelta, sin compra. */
+  compraId: string | null;
+  proveedorId: string | null;
   /** El número de la recepción nuestra, para poder abrirla. */
   documento: string;
   fecha: string;
@@ -46,7 +49,7 @@ export async function comprasDelProducto(
     const { data, error } = await supabase
       .from("v_precios_compra")
       .select(
-        "recepcion_id, documento, fecha, proveedor, cantidad, costo_usd, costo_anterior_usd, factura_proveedor, guia_proveedor",
+        "recepcion_id, documento, fecha, proveedor, proveedor_id, compra_id, cantidad, costo_usd, costo_anterior_usd, factura_proveedor, guia_proveedor",
       )
       .eq("producto_id", productoId)
       // La más reciente primero: es la que dice a cuánto está hoy.
@@ -59,6 +62,8 @@ export async function comprasDelProducto(
       ok: true,
       datos: (data ?? []).map((f) => ({
         recepcionId: String(f.recepcion_id),
+        compraId: (f.compra_id as string | null) ?? null,
+        proveedorId: (f.proveedor_id as string | null) ?? null,
         documento: String(f.documento ?? ""),
         fecha: String(f.fecha),
         proveedor: (f.proveedor as string | null) ?? null,

@@ -7,7 +7,9 @@ import {
   estadoInicial,
   importeLinea,
   reducir,
+  aplicarPlantilla,
   totalesDe,
+  type PlantillaCompra,
   type EstadoCompra,
   type ProductoParaComprar,
 } from "./constructor";
@@ -486,5 +488,82 @@ describe("de dónde dice que salió el costo", () => {
       ultimo_costo: 2.5,
     };
     expect(construir({ tipo: "agregar", producto: soloFicha }).lineas[0]?.costoDelKardex).toBe(false);
+  });
+});
+
+describe("volver a comprar (aplicarPlantilla)", () => {
+  const aerea: PlantillaCompra = {
+    numero: "CMP-26-00006",
+    modalidad: "aerea",
+    courier: "DHL",
+    gastos: [
+      { concepto: "Courier", monto: 40 },
+      { concepto: "Desaduanaje", monto: 20 },
+    ],
+    entera: true,
+    afectoIgv: false,
+    moneda: "USD",
+  };
+
+  /*
+    Se vio probándolo el 25/09: la CMP-26-00006 se registró sin IGV, y al
+    repetirla la casilla salía marcada y el resumen sumaba 43.20 de un impuesto
+    que aquel proveedor no cobra.
+  */
+  it("trae si la factura llevaba IGV", () => {
+    const e = aplicarPlantilla(construir(), aerea);
+    expect(e.afectoIgv).toBe(false);
+  });
+
+  it("trae la moneda pero NO el tipo de cambio: ese es el de aquel día", () => {
+    const e = aplicarPlantilla(construir(), { ...aerea, moneda: "PEN" });
+    expect(e.moneda).toBe("PEN");
+    expect(e.tipoCambio).toBe(0);
+  });
+
+  it("trae la vía, el courier y los gastos de aquella compra", () => {
+    const e = aplicarPlantilla(construir(), aerea);
+    expect(e.tipo).toBe("importacion");
+    expect(e.via).toBe("aerea");
+    expect(e.courier).toBe("DHL");
+    expect(totalesDe(e).gastos).toBe(60);
+  });
+
+  it("NO copia el tracking: es de aquel envío", () => {
+    const e = aplicarPlantilla(
+      construir({ tipo: "cabecera", campo: "tracking", valor: "viejo" }),
+      aerea,
+    );
+    // El tracking de partida no lo pone la plantilla; y la plantilla no trae.
+    expect(aplicarPlantilla(construir(), aerea).tracking).toBe("");
+    expect(e.tracking).toBe("viejo");
+  });
+
+  /*
+    El courier de una importación de cinco productos no es el de uno solo.
+    Traerlo entero a una compra de un producto inflaría su costo.
+  */
+  it("si se repite UN producto, los gastos no se rellenan", () => {
+    const e = aplicarPlantilla(construir(), { ...aerea, entera: false });
+    expect(e.via).toBe("aerea");
+    expect(e.courier).toBe("DHL");
+    expect(totalesDe(e).gastos).toBe(0);
+    // Quedan las propuestas vacías de la modalidad, para rellenar a mano.
+    expect(e.gastos.map((g) => g.concepto)).toEqual(["Courier", "Desaduanaje"]);
+  });
+
+  it("una local repetida no se inventa courier", () => {
+    const e = aplicarPlantilla(construir(), {
+      numero: "CMP-26-00005",
+      modalidad: "local",
+      courier: "DHL",
+      gastos: [{ concepto: "Transporte", monto: 10 }],
+      entera: true,
+      afectoIgv: true,
+      moneda: "USD",
+    });
+    expect(e.tipo).toBe("local");
+    expect(e.courier).toBe("");
+    expect(totalesDe(e).gastos).toBe(10);
   });
 });

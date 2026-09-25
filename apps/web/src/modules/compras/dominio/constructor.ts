@@ -622,3 +622,80 @@ export function aPayload(estado: EstadoCompra) {
     })),
   };
 }
+
+/**
+ * Lo que se trae de una compra anterior al «volver a comprar» (§AO.5).
+ *
+ * Willy, 24/09: *«no sé a quién le he comprado… mucho menos sé a qué precio…
+ * y tampoco sé cuánto me han cobrado por el envío; entonces tengo que volver a
+ * llamarlos»*.
+ *
+ * El proveedor y los productos llegan por el camino que ya existía desde la
+ * bandeja «Por comprar» (`?proveedor=` e `?items=`), y el PRECIO lo pone solo
+ * el constructor al fijar el proveedor: pide lo que ese proveedor cobró la
+ * última vez (`costosDelProveedor`). Esto trae lo que faltaba: por dónde vino,
+ * con qué courier, y cuánto costó traerlo.
+ */
+export interface PlantillaCompra {
+  /** La compra de la que sale, para decirlo en pantalla. */
+  numero: string;
+  modalidad: Modalidad;
+  courier: string | null;
+  /** Los gastos de aquella compra, tal como se registraron. */
+  gastos: { concepto: string; monto: number }[];
+  /**
+   * Si aquella factura llevaba IGV, y en qué moneda venía.
+   *
+   * Se vio al probarlo el 25/09: la aérea de la CMP-26-00006 se registró sin
+   * IGV, y al repetirla la casilla salía marcada — el resumen enseñaba 43.20
+   * de un impuesto que aquel proveedor no cobra. Lo que un proveedor pone en
+   * su factura es de lo más estable que hay de una compra a la siguiente.
+   *
+   * El tipo de cambio NO se trae: es el de aquel día. Queda en blanco y el
+   * constructor pide el de hoy antes de dejar guardar.
+   */
+  afectoIgv: boolean;
+  moneda: Moneda;
+  /**
+   * Si se repite la compra ENTERA o solo un producto de ella.
+   *
+   * Importa por los gastos: el courier de una importación de cinco productos
+   * no es el courier de uno solo. Traerlo entero a una compra de un producto
+   * inflaría su costo. Por eso, en ese caso, los gastos se enseñan como
+   * referencia y no se rellenan.
+   */
+  entera: boolean;
+}
+
+/**
+ * Aplica la plantilla sobre un estado recién creado.
+ *
+ * NO se copian el tracking ni la factura: son de aquel envío, y repetirlos
+ * dejaría dos compras con el mismo número de seguimiento. La fecha tampoco:
+ * es la de hoy.
+ */
+export function aplicarPlantilla(estado: EstadoCompra, p: PlantillaCompra): EstadoCompra {
+  let e = reducir(estado, { tipo: "modalidad", valor: p.modalidad });
+  e = reducir(e, { tipo: "afectoIgv", valor: p.afectoIgv });
+  // La moneda por la acción y no a mano: así se limpia el tipo de cambio.
+  e = reducir(e, { tipo: "moneda", valor: p.moneda });
+
+  if (p.modalidad !== "local" && p.courier) {
+    e = { ...e, courier: p.courier };
+  }
+
+  const conDinero = p.gastos.filter((g) => g.monto > 0 && g.concepto.trim() !== "");
+  if (p.entera && conDinero.length > 0) {
+    e = {
+      ...e,
+      gastos: conDinero.map((g, i) => ({
+        key: `g${e.proximoGasto + i}`,
+        concepto: g.concepto,
+        monto: montoValido(g.monto),
+      })),
+      proximoGasto: e.proximoGasto + conDinero.length,
+    };
+  }
+
+  return e;
+}

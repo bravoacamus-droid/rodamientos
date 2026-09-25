@@ -5,7 +5,9 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresParaPedir } from "@/modules/proveedores";
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
-import { couriersUsados } from "../api/consultas";
+import { couriersUsados, detalleCompra } from "../api/consultas";
+import type { PlantillaCompra } from "../dominio/constructor";
+import { modalidadDe } from "../dominio/gastos";
 
 import { paraQuienEs, precargaDeCompra } from "../api/por-comprar";
 import { ConstructorCompra } from "./constructor";
@@ -48,7 +50,57 @@ export default async function PaginaNuevaCompra({
 
   const sp = searchParams ? await searchParams : {};
   const items = Array.isArray(sp.items) ? sp.items[0] : sp.items;
-  const precarga = await precargaDeCompra(items);
+
+  /*
+    «VOLVER A COMPRAR» (§AO.5): `?desde=<compra>`.
+
+    Willy, 24/09: «no sé a quién le he comprado… mucho menos a qué precio… y
+    tampoco sé cuánto me han cobrado por el envío». Todo eso está en la compra
+    anterior, así que se lee de ahí:
+
+      · Sin `?items`: se repite la compra ENTERA —sus productos y cantidades,
+        su proveedor, su modalidad, su courier y sus gastos—.
+      · Con `?items`: se repite solo ese producto (viene de la ficha del
+        producto), con la modalidad y el courier de aquella compra pero SIN
+        sus gastos, que eran de todo el envío.
+
+    El precio no hace falta traerlo: al fijar el proveedor, el constructor ya
+    pide lo que ese proveedor cobró la última vez.
+
+    El id se valida antes de consultar: llega de la barra de direcciones.
+  */
+  const desdeId = Array.isArray(sp.desde) ? sp.desde[0] : sp.desde;
+  const anterior =
+    desdeId && /^[0-9a-f-]{36}$/i.test(desdeId) ? await detalleCompra(desdeId) : null;
+  const compraAnterior = anterior?.ok ? anterior.datos : null;
+
+  const precarga = await precargaDeCompra(
+    items ??
+      (compraAnterior
+        ? compraAnterior.lineas.map((l) => `${l.producto_id}:${l.cantidad}`).join(",")
+        : undefined),
+  );
+
+  const plantilla: PlantillaCompra | null = compraAnterior
+    ? {
+        numero: compraAnterior.numero,
+        modalidad: modalidadDe(compraAnterior.tipo, compraAnterior.via_importacion ?? "aerea"),
+        courier: compraAnterior.courier,
+        // Las compras de antes de la 095 guardaron el total, no el detalle:
+        // se trae como un gasto con ese total, que es lo que se sabe.
+        gastos:
+          compraAnterior.gastos.length > 0
+            ? compraAnterior.gastos
+            : compraAnterior.gastos_importacion > 0
+              ? [{ concepto: "Gastos", monto: compraAnterior.gastos_importacion }]
+              : [],
+        entera: !items,
+        // El IGV no se guarda como casilla: se deduce del importe. Con
+        // mercadería y sin IGV, aquella factura no era afecta.
+        afectoIgv: !(compraAnterior.subtotal > 0 && compraAnterior.igv === 0),
+        moneda: compraAnterior.moneda,
+      }
+    : null;
 
   // Cuando la compra viene de la bandeja, dos cosas que el sistema ya sabe
   // y que antes había que averiguar a mano: a QUIÉN comprárselo y para
@@ -70,7 +122,10 @@ export default async function PaginaNuevaCompra({
   // Y el que ya viene elegido desde la bandeja, si viene: allí se repartió
   // lo marcado entre los proveedores que lo venden, y cada botón trae el
   // suyo. Volver a elegirlo aquí sería preguntar dos veces lo mismo.
-  const pedido = Array.isArray(sp.proveedor) ? sp.proveedor[0] : sp.proveedor;
+  // Al volver a comprar, el proveedor de aquella compra si no se pide otro.
+  const pedido =
+    (Array.isArray(sp.proveedor) ? sp.proveedor[0] : sp.proveedor) ??
+    compraAnterior?.proveedor_id;
   const aPedir = [...new Set([...mejores.map((m) => m.id), ...(pedido ? [pedido] : [])])];
   const fichas = await proveedoresPorId(aPedir);
   const candidatos = mejores.flatMap((m) => {
@@ -132,6 +187,7 @@ export default async function PaginaNuevaCompra({
       candidatos={candidatos}
       esperan={esperan}
       couriers={couriers}
+      plantilla={plantilla}
       elegido={
         pedido && fichas.ok
           ? (fichas.datos.find((f) => f.id === pedido) ?? null)

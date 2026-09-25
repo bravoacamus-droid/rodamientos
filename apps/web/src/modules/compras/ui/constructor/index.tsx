@@ -21,6 +21,8 @@ import { avisosDeCantidad, type QuienEsperaProducto } from "../../dominio/listos
 import { registrarCompra, type ResultadoCompra } from "../../acciones/registrar";
 import {
   aPayload,
+  aplicarPlantilla,
+  type PlantillaCompra,
   avisos as calcularAvisos,
   bloqueos as calcularBloqueos,
   estadoInicial,
@@ -60,9 +62,12 @@ export function ConstructorCompra({
   esperan = [],
   elegido = null,
   couriers = [...COURIERS_DE_SIEMPRE],
+  plantilla = null,
 }: {
   /** Los de siempre y los ya usados, para el desplegable (095). */
   couriers?: string[];
+  /** Al «volver a comprar»: lo que se trae de la compra anterior (§AO.5). */
+  plantilla?: PlantillaCompra | null;
   /**
    * Los últimos a los que se compró. NO es el maestro: desde la 033 el
    * selector busca contra el servidor, así que la página ya no manda la lista
@@ -110,10 +115,14 @@ export function ConstructorCompra({
     const base = elegido
       ? reducir(estadoInicial(hoy), { tipo: "cabecera", campo: "proveedorId", valor: elegido.id })
       : estadoInicial(hoy);
-    const conLineas = precarga.reduce(
+    const conLineas0 = precarga.reduce(
       (e, i) => reducir(e, { tipo: "agregar", producto: i.producto, cantidad: i.cantidad }),
       base,
     );
+    // «Volver a comprar» (§AO.5): la modalidad, el courier y los gastos de
+    // aquella compra. Los precios los pone el efecto de abajo al fijar el
+    // proveedor, con lo que ese proveedor cobró la última vez.
+    const conLineas = plantilla ? aplicarPlantilla(conLineas0, plantilla) : conLineas0;
     // El porqué viaja con la compra, no solo en la pantalla: las
     // observaciones se ven en la ficha y es lo que lee quien recibe.
     // Editable, como todo lo que se propone.
@@ -304,6 +313,43 @@ export function ConstructorCompra({
           </Button>
         </div>
       </header>
+
+      {/*
+        «Volver a comprar»: se dice de dónde sale todo y qué hay que mirar.
+
+        Todo lo de abajo es PROPUESTO, y no puede parecer otra cosa: el precio
+        es lo que ese proveedor cobró la última vez, y los gastos son los de
+        aquel envío. Guardar sin mirar sería registrar una compra con los
+        números de otra.
+      */}
+      {plantilla ? (
+        <div className="rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-3 text-sm">
+          <p className="font-medium">
+            Volviendo a comprar lo de la {plantilla.numero}
+          </p>
+          <p className="mt-1 text-[var(--fg-muted)]">
+            Proveedor, productos, cantidades y {ETIQUETA_MODALIDAD[plantilla.modalidad].toLowerCase()}
+            {plantilla.courier && plantilla.modalidad !== "local" ? ` con ${plantilla.courier}` : ""}{" "}
+            vienen de aquella compra. Los precios son lo que ese proveedor cobró la
+            última vez.{" "}
+            {plantilla.entera
+              ? "Los gastos son los de aquel envío: revísalos, que el flete cambia."
+              : "Los gastos de aquel envío eran de toda la compra y no se traen."}
+          </p>
+          {/* Cuando solo se repite un producto, los gastos de aquella vez se
+              enseñan como dato —es justo lo que Willy no sabía (§AO.5)— pero
+              no se rellenan: eran de todo el envío. */}
+          {!plantilla.entera && plantilla.gastos.length > 0 ? (
+            <p className="mt-1 text-[var(--fg-muted)]">
+              Para saberlo: aquella vez los gastos fueron{" "}
+              {plantilla.gastos
+                .map((g) => `${g.concepto.toLowerCase()} $ ${g.monto.toFixed(2)}`)
+                .join(", ")}
+              .
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {resultado && !resultado.ok ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">

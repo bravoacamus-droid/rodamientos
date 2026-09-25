@@ -99,6 +99,8 @@ export interface CompraDetalle {
   gastos_importacion: number;
   /** Por dónde vino, si es importación (095). Null en local y en las viejas. */
   via_importacion: "aerea" | "maritima" | null;
+  /** La moneda de la factura del proveedor (042). */
+  moneda: "USD" | "PEN";
   /** El detalle de los gastos, de más caro a más barato. Vacío si no se detalló. */
   gastos: { concepto: string; monto: number }[];
   comprador: string | null;
