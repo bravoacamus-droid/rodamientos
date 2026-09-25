@@ -538,6 +538,7 @@ export type Database = {
           tipo_cambio: number | null
           total: number
           tracking: string | null
+          via_importacion: string | null
         }
         Insert: {
           actualizado_en?: string
@@ -563,6 +564,7 @@ export type Database = {
           tipo_cambio?: number | null
           total?: number
           tracking?: string | null
+          via_importacion?: string | null
         }
         Update: {
           actualizado_en?: string
@@ -588,6 +590,7 @@ export type Database = {
           tipo_cambio?: number | null
           total?: number
           tracking?: string | null
+          via_importacion?: string | null
         }
         Relationships: [
           {

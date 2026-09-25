@@ -58,6 +58,29 @@ const esquema = z.object({
   moneda: z.enum(["USD", "PEN"]).default("USD"),
   tipo_cambio: z.number().positive().finite().nullable().default(null),
   gastos_importacion: z.number().nonnegative().finite(),
+  /*
+    095. La vía solo si es importación; la base la descarta en una local y
+    además tiene un check que la rechaza fuera de «aerea» y «maritima».
+    `.default` para que un cliente viejo que no la mande no se caiga con un
+    «Required» —que es exactamente cómo se rompió la emisión de facturas el
+    17/09 (§AN.1)—.
+  */
+  via_importacion: z.enum(["aerea", "maritima"]).nullable().default(null),
+  /*
+    El DETALLE de gastos (095). Cada monto positivo y con concepto: la base
+    ignora los ceros, pero un negativo es un error que se para aquí con un
+    mensaje legible en vez de en la RPC con uno técnico. Veinte filas sobran
+    —la marítima propone siete—.
+  */
+  gastos: z
+    .array(
+      z.object({
+        concepto: z.string().trim().min(1, "Un gasto no tiene concepto.").max(80),
+        monto: z.number().positive("Un gasto tiene que ser mayor que cero.").finite(),
+      }),
+    )
+    .max(20, "Son demasiados gastos para una compra.")
+    .default([]),
   tracking: z.string().max(80).nullable(),
   courier: z.string().max(60).nullable(),
   observaciones: z.string().max(2000).nullable(),

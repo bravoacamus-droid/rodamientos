@@ -8,6 +8,7 @@ import { detalleCompra } from "../api/consultas";
 import { quienEsperaEstos } from "../api/por-comprar";
 import { AnularCompra } from "./anular";
 import { ParaQuienEs } from "./para-quien";
+import { ETIQUETA_MODALIDAD } from "../dominio/gastos";
 
 /**
  * Ficha de una compra.
@@ -63,7 +64,16 @@ export default async function PaginaDetalleCompra({
               {c.numero}
             </h1>
             <EstadoBadge estado={c.estado} size="md" />
-            {c.tipo === "importacion" ? <Badge tone="neutral">Importación</Badge> : null}
+            {/* Con su vía desde la 095. Las importaciones de antes no la
+                guardaban y siguen diciendo «Importación» a secas: es lo que se
+                sabe de ellas, y no se inventa. */}
+            {c.tipo === "importacion" ? (
+              <Badge tone="neutral">
+                {c.via_importacion
+                  ? ETIQUETA_MODALIDAD[c.via_importacion]
+                  : "Importación"}
+              </Badge>
+            ) : null}
           </div>
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
             {c.proveedor ?? "—"}
@@ -252,20 +262,57 @@ export default async function PaginaDetalleCompra({
               <Dato etiqueta="Guía" valor={c.guia_proveedor ?? "—"} />
               {c.tipo === "importacion" ? (
                 <>
-                  <Dato etiqueta="Courier" valor={c.courier ?? "—"} />
-                  <Dato etiqueta="Tracking" valor={c.tracking ?? "—"} />
                   <Dato
-                    etiqueta="Gastos"
-                    valor={
-                      c.gastos_importacion > 0
-                        ? `$ ${c.gastos_importacion.toFixed(2)}`
-                        : "—"
-                    }
+                    etiqueta={c.via_importacion === "maritima" ? "Naviera o agente" : "Courier"}
+                    valor={c.courier ?? "—"}
+                  />
+                  <Dato
+                    etiqueta={c.via_importacion === "maritima" ? "BL o contenedor" : "Tracking"}
+                    valor={c.tracking ?? "—"}
                   />
                 </>
               ) : null}
               <Dato etiqueta="Registró" valor={c.comprador ?? "—"} />
             </dl>
+
+            {/*
+              LOS GASTOS, DESGLOSADOS, en las tres modalidades (095).
+
+              Antes era una línea «Gastos: $ 485» y solo en importación. Es
+              justo lo que Willy no quería perder (§AO.5): *«no sé a quién le
+              he comprado… ni a qué precio… y tampoco sé cuánto me han cobrado
+              por el envío; entonces tengo que volver a llamarlos»*. Con el
+              desglose a la vista, la próxima vez que importe lo mismo ya sabe
+              qué le cobraron y por qué.
+            */}
+            {c.gastos_importacion > 0 ? (
+              <div className="mt-4 border-t border-[var(--border-soft)] pt-3">
+                <h3 className="mb-2 text-sm font-semibold">Gastos</h3>
+                {c.gastos.length > 0 ? (
+                  <ul className="flex flex-col gap-1.5 text-sm">
+                    {c.gastos.map((g, i) => (
+                      <li key={`${g.concepto}-${i}`} className="flex justify-between gap-3">
+                        <span className="text-[var(--fg-muted)]">{g.concepto}</span>
+                        <span className="tabular">$ {g.monto.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  // Compras de antes de la 095: se guardó el total, no el
+                  // detalle. Se dice, en vez de dejar un hueco.
+                  <p className="text-sm text-[var(--fg-subtle)]">
+                    Se registró el total, sin desglose.
+                  </p>
+                )}
+                <div className="mt-2 flex justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm font-semibold">
+                  <span>Total de gastos</span>
+                  <span className="tabular">$ {c.gastos_importacion.toFixed(2)}</span>
+                </div>
+                <p className="mt-1 text-sm text-[var(--fg-subtle)]">
+                  Repartidos sobre el costo de cada producto al recibir.
+                </p>
+              </div>
+            ) : null}
 
             {/*
               La vuelta a la ronda de precios.

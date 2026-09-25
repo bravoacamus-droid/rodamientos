@@ -42,6 +42,23 @@ const P7210: ProductoParaComprar = {
   stock_minimo: 4,
 };
 
+/**
+ * Pone dinero en el gasto de ese concepto; si no está entre los propuestos,
+ * lo añade. Busca por concepto y no por clave para que los tests no dependan
+ * del orden en que se proponen los gastos.
+ */
+function conGasto(estado: EstadoCompra, concepto: string, monto: number): EstadoCompra {
+  let e = estado;
+  let g = e.gastos.find((x) => x.concepto === concepto);
+  if (!g) {
+    e = reducir(e, { tipo: "gastoAgregar", concepto });
+    g = e.gastos[e.gastos.length - 1];
+  }
+  return reducir(e, { tipo: "gastoMonto", key: g!.key, valor: monto });
+}
+
+const redondear = (n: number) => Math.round(n * 100) / 100;
+
 /** Atajo: aplica una lista de acciones sobre el estado inicial. */
 function construir(...acciones: Parameters<typeof reducir>[1][]): EstadoCompra {
   return acciones.reduce(reducir, estadoInicial(FECHA));
@@ -71,12 +88,15 @@ describe("totalesDe", () => {
    * subtotal 170.32 · igv 0 · total 170.32 para estas mismas dos líneas.
    */
   it("una importación sin IGV suma solo los importes", () => {
-    const estado = construir(
-      { tipo: "tipoCompra", valor: "importacion" },
-      { tipo: "afectoIgv", valor: false },
-      { tipo: "gastos", valor: 25 },
-      { tipo: "agregar", producto: P6205, cantidad: 10 },
-      { tipo: "agregar", producto: P7210, cantidad: 4 },
+    const estado = conGasto(
+      construir(
+        { tipo: "modalidad", valor: "aerea" },
+        { tipo: "afectoIgv", valor: false },
+        { tipo: "agregar", producto: P6205, cantidad: 10 },
+        { tipo: "agregar", producto: P7210, cantidad: 4 },
+      ),
+      "Courier",
+      25,
     );
 
     const t = totalesDe(estado);
@@ -105,16 +125,42 @@ describe("totalesDe", () => {
     expect(t.total).toBe(200.98);
   });
 
-  it("una compra local ignora los gastos aunque el estado los tuviera", () => {
-    const estado = construir(
-      { tipo: "tipoCompra", valor: "importacion" },
-      { tipo: "gastos", valor: 40 },
-      { tipo: "agregar", producto: P6205, cantidad: 10 },
-      { tipo: "tipoCompra", valor: "local" },
+  /*
+    LA REGLA CAMBIÓ EL 25/09, y a propósito. Hasta entonces «una compra local
+    ignora los gastos» era verdad y este test lo fijaba. Willy, 24/09 (§AO.4):
+    *«a la compra local se le puede poner un gasto de transporte también,
+    porque es un gasto al final»*. Si alguien vuelve a poner la regla vieja,
+    el transporte de las compras de Lima deja de entrar al costo.
+  */
+  it("una compra local SÍ cuenta su transporte", () => {
+    const estado = conGasto(
+      construir({ tipo: "agregar", producto: P6205, cantidad: 10 }),
+      "Transporte",
+      15,
     );
 
-    expect(totalesDe(estado).gastos).toBe(0);
-    expect(estado.gastosImportacion).toBe(0);
+    expect(estado.tipo).toBe("local");
+    expect(totalesDe(estado).gastos).toBe(15);
+    expect(totalesDe(estado).costoEnAlmacen).toBe(redondear(10 * 3.26 + 15));
+  });
+
+  it("cambiar de modalidad NO borra un gasto que alguien escribió", () => {
+    // Se teclea el courier en aérea, y luego se decide que era local.
+    const aerea = conGasto(construir({ tipo: "modalidad", valor: "aerea" }), "Courier", 40);
+    const local = reducir(aerea, { tipo: "modalidad", valor: "local" });
+
+    // El dinero sigue ahí, a la vista, para quitarlo a mano si sobra. Borrarlo
+    // en silencio sería sacar 40 del costo sin que nadie se entere.
+    expect(totalesDe(local).gastos).toBe(40);
+    expect(local.gastos.some((g) => g.concepto === "Courier")).toBe(true);
+  });
+
+  it("cambiar de modalidad SIN dinero escrito trae los gastos de la nueva", () => {
+    const e = construir({ tipo: "modalidad", valor: "maritima" });
+    const conceptos = e.gastos.map((g) => g.concepto);
+    expect(conceptos).toContain("Flete marítimo");
+    expect(conceptos).toContain("Levante");
+    expect(conceptos).not.toContain("Transporte");
   });
 
   it("sin líneas todo vale cero", () => {
@@ -268,20 +314,42 @@ describe("aPayload", () => {
     ]);
   });
 
-  it("una compra local no arrastra los campos de importación", () => {
+  it("una compra local no arrastra vía, courier ni tracking", () => {
     const estado = construir(
       { tipo: "cabecera", campo: "proveedorId", valor: "33333333-3333-3333-3333-333333333333" },
-      { tipo: "tipoCompra", valor: "importacion" },
-      { tipo: "gastos", valor: 25 },
+      { tipo: "modalidad", valor: "aerea" },
       { tipo: "cabecera", campo: "courier", valor: "DHL" },
+      { tipo: "cabecera", campo: "tracking", valor: "7712345678" },
       { tipo: "agregar", producto: P6205 },
-      { tipo: "tipoCompra", valor: "local" },
+      { tipo: "modalidad", valor: "local" },
     );
     const payload = aPayload(estado);
 
-    expect(payload.gastos_importacion).toBe(0);
+    expect(payload.tipo).toBe("local");
+    expect(payload.via_importacion).toBeNull();
     expect(payload.courier).toBeNull();
     expect(payload.tracking).toBeNull();
+  });
+
+  it("la marítima viaja con su vía y solo los gastos con dinero", () => {
+    let estado = construir(
+      { tipo: "cabecera", campo: "proveedorId", valor: "33333333-3333-3333-3333-333333333333" },
+      { tipo: "modalidad", valor: "maritima" },
+      { tipo: "agregar", producto: P6205 },
+    );
+    estado = conGasto(estado, "Flete marítimo", 100);
+    estado = conGasto(estado, "Derechos de aduana", 50);
+    const payload = aPayload(estado);
+
+    expect(payload.tipo).toBe("importacion");
+    expect(payload.via_importacion).toBe("maritima");
+    // Las otras cinco propuestas siguen en pantalla vacías, y NO viajan: un
+    // gasto de cero en la ficha diría que se pagó y salió gratis.
+    expect(payload.gastos).toEqual([
+      { concepto: "Flete marítimo", monto: 100 },
+      { concepto: "Derechos de aduana", monto: 50 },
+    ]);
+    expect(payload.gastos_importacion).toBe(150);
   });
 
   it("los textos en blanco viajan como null, no como cadena vacía", () => {

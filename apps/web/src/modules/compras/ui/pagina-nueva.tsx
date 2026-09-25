@@ -5,6 +5,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresParaPedir } from "@/modules/proveedores";
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
+import { couriersUsados } from "../api/consultas";
 
 import { paraQuienEs, precargaDeCompra } from "../api/por-comprar";
 import { ConstructorCompra } from "./constructor";
@@ -54,9 +55,10 @@ export default async function PaginaNuevaCompra({
   // QUIÉN es. Se piden solo si hay líneas: sin ellas no hay nada que
   // proponer, y serían dos consultas para nada.
   const ids = precarga.map((p) => p.producto.id);
-  const [quienesVenden, esperan] = await Promise.all([
+  const [quienesVenden, esperan, couriers] = await Promise.all([
     ids.length > 0 ? proveedoresParaPedir(ids) : Promise.resolve(null),
     ids.length > 0 ? paraQuienEs(ids) : Promise.resolve([]),
+    couriersUsados(),
   ]);
 
   // Tres como mucho: una fila de botones para elegir, no otra lista que
@@ -129,6 +131,7 @@ export default async function PaginaNuevaCompra({
       precarga={precarga}
       candidatos={candidatos}
       esperan={esperan}
+      couriers={couriers}
       elegido={
         pedido && fichas.ok
           ? (fichas.datos.find((f) => f.id === pedido) ?? null)

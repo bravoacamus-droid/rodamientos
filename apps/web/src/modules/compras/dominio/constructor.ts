@@ -1,6 +1,16 @@
 import { IGV, importeExacto, redondear2, redondear4 } from "@rodatech/config";
 
 import type { TipoCompra } from "./tipos";
+import {
+  CONCEPTOS_SUGERIDOS,
+  gastosParaEnviar,
+  hayGastosEscritos,
+  tipoYVia,
+  totalGastos,
+  type GastoEditable,
+  type Modalidad,
+  type ViaImportacion,
+} from "./gastos";
 
 /** Las dos monedas que admite `compras.moneda` (042). */
 export type Moneda = "USD" | "PEN";
@@ -120,7 +130,23 @@ export interface EstadoCompra {
    * queremos que pase.
    */
   tipoCambio: number;
-  gastosImportacion: number;
+  /**
+   * Por dónde vino, si es importación (095). Se guarda aunque la compra sea
+   * local para que volver a «importación» recuerde la que se había elegido;
+   * al enviar, en local no viaja.
+   */
+  via: ViaImportacion;
+  /**
+   * Los gastos, DETALLADOS (§AO.4). Antes era un solo número y solo en
+   * importación; ahora son filas —concepto y monto— en las tres
+   * modalidades, porque la compra local también tiene su transporte.
+   *
+   * Todos entran al costo: la base los suma (022) y la recepción los
+   * prorratea sobre el valor de la compra (094).
+   */
+  gastos: GastoEditable[];
+  /** Contador propio de los gastos, para no mover las claves de las líneas. */
+  proximoGasto: number;
   tracking: string;
   courier: string;
   observaciones: string;
@@ -141,10 +167,14 @@ export type CampoCabecera =
 export type Accion =
   | { tipo: "cabecera"; campo: CampoCabecera; valor: string | null }
   | { tipo: "tipoCompra"; valor: TipoCompra }
+  | { tipo: "modalidad"; valor: Modalidad }
+  | { tipo: "gastoAgregar"; concepto?: string }
+  | { tipo: "gastoQuitar"; key: string }
+  | { tipo: "gastoConcepto"; key: string; valor: string }
+  | { tipo: "gastoMonto"; key: string; valor: number }
   | { tipo: "moneda"; valor: Moneda }
   | { tipo: "tipoCambio"; valor: number }
   | { tipo: "afectoIgv"; valor: boolean }
-  | { tipo: "gastos"; valor: number }
   | { tipo: "agregar"; producto: ProductoParaComprar; cantidad?: number }
   | { tipo: "quitar"; key: string }
   | { tipo: "cantidad"; key: string; valor: number }
@@ -171,12 +201,53 @@ export function estadoInicial(fecha: string): EstadoCompra {
     // campo que el resto del sistema lee como dólares.
     moneda: "USD",
     tipoCambio: 0,
-    gastosImportacion: 0,
+    via: "aerea",
+    // Nace con los gastos propuestos de una compra local —el transporte—
+    // vacíos. Así se ve dónde va el gasto sin que haya que buscarlo.
+    ...gastosPropuestos("local", 1),
     tracking: "",
     courier: "",
     observaciones: "",
     lineas: [],
     proximaKey: 1,
+  };
+}
+
+/** Las filas vacías que se proponen para una modalidad, con sus claves. */
+function gastosPropuestos(
+  m: Modalidad,
+  desde: number,
+): { gastos: GastoEditable[]; proximoGasto: number } {
+  const conceptos = CONCEPTOS_SUGERIDOS[m];
+  return {
+    gastos: conceptos.map((concepto, i) => ({ key: `g${desde + i}`, concepto, monto: 0 })),
+    proximoGasto: desde + conceptos.length,
+  };
+}
+
+function cambiarModalidad(estado: EstadoCompra, m: Modalidad): EstadoCompra {
+  const { tipo, via } = tipoYVia(m);
+
+  /*
+    Los gastos propuestos se cambian por los de la nueva modalidad SOLO si
+    nadie ha escrito dinero todavía. Si hay un monto puesto, se quedan como
+    están: borrar en silencio un gasto que alguien tecleó —porque cambió de
+    opinión sobre la vía— es perder dinero del costo sin que nadie se entere.
+    Lo que sobre, se quita a mano.
+  */
+  const gastos = hayGastosEscritos(estado.gastos)
+    ? { gastos: estado.gastos, proximoGasto: estado.proximoGasto }
+    : gastosPropuestos(m, estado.proximoGasto);
+
+  return {
+    ...estado,
+    tipo,
+    via: via ?? estado.via,
+    ...gastos,
+    // Al pasar a local se sueltan los campos que solo tienen sentido en una
+    // importación. Dejarlos puestos guarda un tracking de DHL en una compra a
+    // un proveedor de Lima, y eso ensucia el histórico para siempre.
+    ...(tipo === "local" ? { tracking: "", courier: "" } : {}),
   };
 }
 
@@ -204,21 +275,42 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
     case "cabecera":
       return { ...estado, [accion.campo]: accion.valor } as EstadoCompra;
 
-    case "tipoCompra": {
-      // Al pasar a local se sueltan los campos que solo tienen sentido en una
-      // importación. Dejarlos puestos guarda un tracking de DHL en una compra
-      // a un proveedor de Lima, y eso ensucia el histórico para siempre.
-      if (accion.valor === "local") {
-        return {
-          ...estado,
-          tipo: "local",
-          gastosImportacion: 0,
-          tracking: "",
-          courier: "",
-        };
-      }
-      return { ...estado, tipo: "importacion" };
-    }
+    case "tipoCompra":
+      // Se conserva por compatibilidad: «importación» a secas recupera la vía
+      // que se tenía elegida.
+      return cambiarModalidad(estado, accion.valor === "local" ? "local" : estado.via);
+
+    case "modalidad":
+      return cambiarModalidad(estado, accion.valor);
+
+    case "gastoAgregar":
+      return {
+        ...estado,
+        gastos: [
+          ...estado.gastos,
+          { key: `g${estado.proximoGasto}`, concepto: accion.concepto ?? "", monto: 0 },
+        ],
+        proximoGasto: estado.proximoGasto + 1,
+      };
+
+    case "gastoQuitar":
+      return { ...estado, gastos: estado.gastos.filter((g) => g.key !== accion.key) };
+
+    case "gastoConcepto":
+      return {
+        ...estado,
+        gastos: estado.gastos.map((g) =>
+          g.key === accion.key ? { ...g, concepto: accion.valor.slice(0, 80) } : g,
+        ),
+      };
+
+    case "gastoMonto":
+      return {
+        ...estado,
+        gastos: estado.gastos.map((g) =>
+          g.key === accion.key ? { ...g, monto: montoValido(accion.valor) } : g,
+        ),
+      };
 
     case "moneda":
       return {
@@ -243,9 +335,6 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
 
     case "afectoIgv":
       return { ...estado, afectoIgv: accion.valor };
-
-    case "gastos":
-      return { ...estado, gastosImportacion: montoValido(accion.valor) };
 
     case "agregar": {
       const cantidad = cantidadValida(accion.cantidad ?? 1);
@@ -397,7 +486,9 @@ export function totalesDe(estado: EstadoCompra): TotalesCompra {
     estado.lineas.reduce((a, l) => a + importeLinea(l), 0),
   );
   const igv = estado.afectoIgv ? redondear2(subtotal * IGV) : 0;
-  const gastos = estado.tipo === "importacion" ? estado.gastosImportacion : 0;
+  // En las TRES modalidades desde el 25/09: el transporte de una compra local
+  // también es costo (§AO.4). Antes solo contaban en importación.
+  const gastos = totalGastos(estado.gastos);
 
   return {
     subtotal,
@@ -508,9 +599,15 @@ export function aPayload(estado: EstadoCompra) {
     // En dólares no se manda: la base exige que sea null y la RPC lo
     // limpiaría igual, pero mandarlo sugeriría que significa algo.
     tipo_cambio: estado.moneda === "USD" ? null : estado.tipoCambio || null,
-    // Los campos de importación NO viajan en una compra local, aunque el
-    // estado los tuviera de antes de cambiar el tipo.
-    gastos_importacion: esImportacion ? estado.gastosImportacion : 0,
+    // La vía solo en importación (095). La base la descartaría igual en una
+    // local, pero mandarla sugeriría que significa algo.
+    via_importacion: esImportacion ? estado.via : null,
+    // El DETALLE, que es lo que manda: la base lo suma (022). El total se
+    // manda también por si alguien llama a la RPC vieja, y coincide.
+    gastos: gastosParaEnviar(estado.gastos),
+    gastos_importacion: totalGastos(estado.gastos),
+    // Tracking y courier NO viajan en una compra local, aunque el estado los
+    // tuviera de antes de cambiar la modalidad.
     tracking: esImportacion ? estado.tracking.trim() || null : null,
     courier: esImportacion ? estado.courier.trim() || null : null,
     observaciones: estado.observaciones.trim() || null,

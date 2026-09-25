@@ -4,6 +4,8 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import { COURIERS_DE_SIEMPRE } from "../dominio/gastos";
+
 import type {
   CompraDetalle,
   CompraLista,
@@ -203,7 +205,8 @@ export async function detalleCompra(
         `id, numero, fecha, fecha_estimada, proveedor_id, tipo,
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
-         motivo_anulacion, creado_en, consulta_precio_id,
+         motivo_anulacion, creado_en, consulta_precio_id, via_importacion,
+         gastos_importacion_detalle:gastos_importacion(concepto, monto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento),
          perfiles(nombre),
@@ -263,6 +266,12 @@ export async function detalleCompra(
         igv: Number(c.igv ?? 0),
         total: Number(c.total ?? 0),
         gastos_importacion: Number(c.gastos_importacion ?? 0),
+        // 095. Null en local y en las importaciones de antes de la 095.
+        via_importacion: (c.via_importacion as "aerea" | "maritima" | null) ?? null,
+        // El detalle, en el orden en que pesa: lo caro arriba.
+        gastos: ((c.gastos_importacion_detalle as { concepto: string; monto: number }[] | null) ?? [])
+          .map((g) => ({ concepto: String(g.concepto), monto: Number(g.monto ?? 0) }))
+          .sort((a, b) => b.monto - a.monto),
         comprador: c.perfiles?.nombre ?? null,
         observaciones: (c.observaciones as string | null) ?? null,
         /*
@@ -376,4 +385,44 @@ function numeroDe(v: unknown): string {
   const uno = Array.isArray(v) ? v[0] : v;
   const numero = (uno as { numero?: unknown } | null)?.numero;
   return typeof numero === "string" ? numero : "—";
+}
+
+/**
+ * Los couriers para el desplegable: los de siempre y los que ya se usaron.
+ *
+ * Willy (§AO.4) lo pidió como dato maestro, *«con una barra desplegable o lo
+ * busque»*. En vez de una tabla con su pantalla de mantenimiento —otra pieza
+ * que nadie abriría—, la lista sale de las compras ya registradas: el primero
+ * que escriba «Aeropost» lo deja en la lista para la siguiente vez.
+ *
+ * Nunca falla hacia arriba: si la consulta no sale, quedan los de siempre y
+ * el campo sigue dejando escribir. Un desplegable vacío no justifica romper
+ * el registro de una compra.
+ */
+export async function couriersUsados(): Promise<string[]> {
+  const deSiempre = [...COURIERS_DE_SIEMPRE];
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("compras")
+      .select("courier")
+      .not("courier", "is", null)
+      .order("fecha", { ascending: false })
+      .limit(300);
+
+    const usados = (data ?? [])
+      .map((r) => String(r.courier ?? "").trim())
+      .filter(Boolean);
+
+    // Sin repetir, respetando cómo se escribió la primera vez: «dhl» y «DHL»
+    // son el mismo courier y no tienen por qué salir dos veces.
+    const vistos = new Map<string, string>();
+    for (const c of [...deSiempre, ...usados]) {
+      const clave = c.toLocaleLowerCase("es");
+      if (!vistos.has(clave)) vistos.set(clave, c);
+    }
+    return [...vistos.values()];
+  } catch {
+    return deSiempre;
+  }
 }

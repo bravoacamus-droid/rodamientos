@@ -160,3 +160,23 @@ end $$;
 --     delete from cotizacion_items where cotizacion_id in
 --       (select id from cotizaciones where numero = 'COT1-000001');
 --     delete from cotizaciones where numero = 'COT1-000001';
+
+-- ###########################################################################
+-- Y LAS TRES MODALIDADES DEL REDISEÑO (095), EL MISMO 25/09
+-- ###########################################################################
+--   CMP-26-00004 · marítima · AUTOLAND · 20 H414249/10 a 130.00
+--                  flete 300 + aduana 120 + almacenaje 40 + levante 25 = 485
+--                  Maersk, BL MAEU240917001 → REC-26-00004 · unidad a 154.25
+--   CMP-26-00005 · local · MARCO PERUANA · 50 B-42 a 5.00
+--                  + 10 de transporte → REC-26-00005 · unidad a 5.20
+--   CMP-26-00006 · aérea · AUTOLAND · 10 UCF209D1 a 24.00
+--                  courier 40 + desaduanaje 20, DHL → REC-26-00006 · unidad a 30.00
+--
+-- Se deshacen igual que las de arriba, anulándolas por la RPC:
+--
+--     select public.anular_compra(id, 'Prueba de las tres modalidades (25/09).')
+--       from compras where numero in ('CMP-26-00004','CMP-26-00005','CMP-26-00006');
+--
+-- Ojo: «Maersk» queda en el desplegable de couriers mientras exista la
+-- CMP-26-00004, porque la lista sale de las compras registradas. Al anularla
+-- NO se va —anular no borra la fila—; si molesta, se borra la compra.

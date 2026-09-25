@@ -33,6 +33,14 @@ import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import { BuscadorCompra } from "./buscador";
 import { FilaCompra } from "./linea";
 import { BloqueMoneda } from "./moneda";
+import { GastosDeCompra } from "./gastos";
+import {
+  COURIERS_DE_SIEMPRE,
+  ETIQUETA_MODALIDAD,
+  MODALIDADES,
+  modalidadDe,
+  type Modalidad,
+} from "../../dominio/gastos";
 
 /**
  * Registro de una compra.
@@ -51,7 +59,10 @@ export function ConstructorCompra({
   candidatos = [],
   esperan = [],
   elegido = null,
+  couriers = [...COURIERS_DE_SIEMPRE],
 }: {
+  /** Los de siempre y los ya usados, para el desplegable (095). */
+  couriers?: string[];
   /**
    * Los últimos a los que se compró. NO es el maestro: desde la 033 el
    * selector busca contra el servidor, así que la página ya no manda la lista
@@ -218,6 +229,7 @@ export function ConstructorCompra({
   );
 
   const esImportacion = estado.tipo === "importacion";
+  const modalidad = modalidadDe(estado.tipo, estado.via);
 
   return (
     <form action={guardar} className="flex flex-col gap-5">
@@ -363,19 +375,24 @@ export function ConstructorCompra({
 
               </div>
 
+              {/*
+                Tres modalidades en un solo selector, aunque la base guarde dos
+                cosas —tipo y vía—. Quien registra piensa «esto vino por
+                avión», no «importación, vía aérea» (§AO.4, 095).
+              */}
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Tipo</span>
+                <span className="text-sm font-medium">Cómo llegó</span>
                 <SelectNativo
-                  value={estado.tipo}
+                  value={modalidad}
                   onChange={(e) =>
-                    despachar({
-                      tipo: "tipoCompra",
-                      valor: e.target.value as "local" | "importacion",
-                    })
+                    despachar({ tipo: "modalidad", valor: e.target.value as Modalidad })
                   }
                 >
-                  <option value="local">Local</option>
-                  <option value="importacion">Importación</option>
+                  {MODALIDADES.map((m) => (
+                    <option key={m} value={m}>
+                      {ETIQUETA_MODALIDAD[m]}
+                    </option>
+                  ))}
                 </SelectNativo>
               </label>
 
@@ -456,48 +473,62 @@ export function ConstructorCompra({
                 tracking de DHL en una compra a un proveedor de Lima ensucia el
                 histórico para siempre. */}
             {esImportacion ? (
-              <div className="mt-3 grid gap-3 border-t border-[var(--border-soft)] pt-3 sm:grid-cols-3">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Gastos de importación</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={estado.gastosImportacion}
-                    onChange={(e) =>
-                      despachar({ tipo: "gastos", valor: Number(e.target.value) })
-                    }
-                    className="tabular"
-                  />
-                  <span className="text-xs text-[var(--fg-subtle)]">
-                    Courier y despacho. Se reparten sobre el costo al recibir.
-                  </span>
-                </label>
+              <div className="mt-3 grid gap-3 border-t border-[var(--border-soft)] pt-3 sm:grid-cols-2">
+                {/*
+                  El courier se ELIGE, no se teclea. Willy (§AO.4): «este
+                  courier lo puedo registrar en un dato maestro, porque esto
+                  es selecciones, con una barra desplegable o lo busque».
 
+                  Es un `datalist`: propone los de siempre y los que ya se han
+                  usado en compras anteriores, y deja escribir uno nuevo. Así
+                  la lista crece sola con el uso y no hace falta una pantalla
+                  aparte para mantenerla —que sería justo la pieza sin camino
+                  de siempre—.
+                */}
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Courier</span>
+                  <span className="text-sm font-medium">
+                    {modalidad === "maritima" ? "Naviera o agente de carga" : "Courier"}
+                  </span>
                   <Input
+                    list="couriers-conocidos"
                     value={estado.courier}
                     onChange={(e) =>
                       despachar({ tipo: "cabecera", campo: "courier", valor: e.target.value })
                     }
-                    placeholder="DHL"
+                    placeholder={modalidad === "maritima" ? "Elige o escribe" : "DHL"}
                   />
+                  <datalist id="couriers-conocidos">
+                    {couriers.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </label>
 
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Tracking</span>
+                  {/* El número cambia de nombre con la vía: en aéreo es la guía
+                      aérea o tracking; en marítimo, el BL o el contenedor. */}
+                  <span className="text-sm font-medium">
+                    {modalidad === "maritima" ? "N.° de BL o contenedor" : "Tracking o guía aérea"}
+                  </span>
                   <Input
                     value={estado.tracking}
                     onChange={(e) =>
                       despachar({ tipo: "cabecera", campo: "tracking", valor: e.target.value })
                     }
-                    placeholder="Número de seguimiento"
+                    placeholder={modalidad === "maritima" ? "MAEU123456789" : "Número de seguimiento"}
                   />
                 </label>
               </div>
             ) : null}
           </section>
+
+          {/* --------------------------------------------------- Gastos */}
+          <GastosDeCompra
+            modalidad={modalidad}
+            gastos={estado.gastos}
+            moneda={estado.moneda}
+            despachar={despachar}
+          />
 
           {/* --------------------------------------------------- Líneas */}
           <section className="card p-4">
@@ -655,7 +686,9 @@ export function ConstructorCompra({
               />
               <Fila etiqueta="Total" valor={`$ ${totales.total.toFixed(2)}`} fuerte />
 
-              {esImportacion && totales.gastos > 0 ? (
+              {/* En las tres modalidades desde el 25/09: el transporte de una
+                  compra local también es costo (§AO.4). */}
+              {totales.gastos > 0 ? (
                 <>
                   <div className="my-1 border-t border-[var(--border-soft)]" />
                   <Fila etiqueta="Gastos" valor={`$ ${totales.gastos.toFixed(2)}`} />
