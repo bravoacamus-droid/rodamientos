@@ -183,7 +183,7 @@ export function HojaDeConteo({
         <h2 className="mb-3 text-sm font-semibold">Qué vas a contar</h2>
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex min-w-44 flex-col gap-1">
-            <span className="text-xs font-medium text-[var(--fg-muted)]">Familia</span>
+            <span className="text-sm font-medium text-[var(--fg-muted)]">Familia</span>
             <SelectNativo value={familia} onChange={(e) => setFamilia(e.target.value)}>
               <option value="">Todas</option>
               {familias.map((f) => (
@@ -195,7 +195,7 @@ export function HojaDeConteo({
           </label>
 
           <label className="flex min-w-44 flex-col gap-1">
-            <span className="text-xs font-medium text-[var(--fg-muted)]">Marca</span>
+            <span className="text-sm font-medium text-[var(--fg-muted)]">Marca</span>
             <SelectNativo value={marca} onChange={(e) => setMarca(e.target.value)}>
               <option value="">Todas</option>
               {marcas.map((m) => (

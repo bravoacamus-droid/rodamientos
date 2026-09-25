@@ -55,7 +55,7 @@ export function FiltrosCarteraBarra() {
   return (
     <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
       <label className="flex min-w-56 flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -65,7 +65,7 @@ export function FiltrosCarteraBarra() {
       </label>
 
       <label className="flex min-w-44 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Antigüedad</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Antigüedad</span>
         <SelectNativo
           value={params.get("tramo") ?? ""}
           onChange={(e) => aplicar("tramo", e.target.value)}

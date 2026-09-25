@@ -70,11 +70,16 @@ export function GastosDeCompra({
       ) : (
         <ul className="flex flex-col gap-2">
           {gastos.map((g) => (
+            // En el teléfono, el concepto va solo en su fila y el monto debajo:
+            // en una fila de tres no quedaban ni 120 px para el nombre, y
+            // «Derechos de aduana» salía como «Derechos de a». Cada gasto va
+            // en su recuadro para que se vea qué monto es de qué concepto.
             <li
               key={g.key}
-              className="grid grid-cols-[1fr_8rem_auto] items-center gap-2"
+              className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-md border border-[var(--border-soft)] p-2 sm:grid-cols-[1fr_8rem_auto] sm:border-0 sm:p-0"
             >
               <Input
+                className="col-span-2 sm:col-span-1"
                 value={g.concepto}
                 onChange={(e) =>
                   despachar({ tipo: "gastoConcepto", key: g.key, valor: e.target.value })

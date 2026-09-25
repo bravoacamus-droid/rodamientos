@@ -33,7 +33,7 @@ import {
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import { BuscadorCompra } from "./buscador";
-import { FilaCompra } from "./linea";
+import { FilaCompra, TarjetaCompra } from "./linea";
 import { BloqueMoneda } from "./moneda";
 import { GastosDeCompra } from "./gastos";
 import {
@@ -373,7 +373,7 @@ export function ConstructorCompra({
                     invitarían a cambiarlo sin motivo. */}
                 {!proveedor && candidatos.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2 pb-1">
-                    <span className="text-xs text-[var(--fg-subtle)]">
+                    <span className="text-sm text-[var(--fg-subtle)]">
                       Ya te han vendido esto:
                     </span>
                     {candidatos.map((c) => (
@@ -414,7 +414,7 @@ export function ConstructorCompra({
                   hoy={hoy}
                 />
                 {proveedor ? null : (
-                  <span className="text-xs text-[var(--fg-subtle)]">
+                  <span className="text-sm text-[var(--fg-subtle)]">
                     Es lo primero: los precios que se enseñan son los suyos.
                   </span>
                 )}
@@ -577,7 +577,7 @@ export function ConstructorCompra({
           />
 
           {/* --------------------------------------------------- Líneas */}
-          <section className="card p-4">
+          <section className="card @container p-4">
             <div className="mb-3">
               <BuscadorCompra
                 onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
@@ -591,6 +591,26 @@ export function ConstructorCompra({
                 marca o parte de la descripción.
               </p>
             ) : (
+              <>
+              {/*
+                Tarjetas o tabla según el ancho de ESTA columna, no de la
+                pantalla (`@container`). La tabla pide unos 800 px, y al lado
+                va el resumen: medido el 25/09, el hueco era de 550 px con una
+                pantalla de 1280 y de 870 con la de Willy, de 1600. Con un
+                `md:` la tabla salía en los dos y había que deslizarla de lado
+                para llegar al costo — también en su propio monitor.
+              */}
+              <ul className="flex flex-col gap-2.5 @3xl:hidden">
+                {estado.lineas.map((l) => (
+                  <TarjetaCompra
+                    key={l.key}
+                    linea={l}
+                    ultimoCosto={ultimosCostos[l.productoId]}
+                    despachar={despachar}
+                  />
+                ))}
+              </ul>
+              <div className="hidden @3xl:block">
               <TableContenedor>
                 <Table>
                   <THead>
@@ -617,6 +637,8 @@ export function ConstructorCompra({
                   </TBody>
                 </Table>
               </TableContenedor>
+              </div>
+              </>
             )}
           </section>
 
@@ -654,7 +676,7 @@ export function ConstructorCompra({
                   );
                 })}
               </ul>
-              <p className="mt-2 text-xs text-[var(--fg-muted)]">
+              <p className="mt-2 text-sm text-[var(--fg-muted)]">
                 Ya descontado lo que hay en almacén. Puedes comprar de más para
                 stock; esto solo avisa de lo que falta.
               </p>
@@ -671,7 +693,7 @@ export function ConstructorCompra({
           {esperan.length > 0 ? (
             <section className="card p-4">
               <h2 className="text-sm font-semibold">Para quién es</h2>
-              <p className="mb-2 text-xs text-[var(--fg-subtle)]">
+              <p className="mb-2 text-sm text-[var(--fg-subtle)]">
                 Ya está confirmado por estos clientes. Se anota en las
                 observaciones para que quien reciba la mercadería lo sepa.
               </p>
@@ -681,14 +703,14 @@ export function ConstructorCompra({
                     <strong>{e.cliente}</strong>
                     <Link
                       href={`/cotizaciones/${e.cotizacion_id}`}
-                      className="font-mono text-xs text-brand-600 hover:underline"
+                      className="font-mono text-sm text-brand-600 hover:underline"
                     >
                       {e.cotizacion}
                     </Link>
-                    <span className="text-xs text-[var(--fg-muted)]">
+                    <span className="text-sm text-[var(--fg-muted)]">
                       {e.codigos.join(", ")}
                     </span>
-                    <span className="ml-auto text-xs text-[var(--fg-subtle)]">
+                    <span className="ml-auto text-sm text-[var(--fg-subtle)]">
                       prometido {formatearFecha(e.prometida)}
                     </span>
                   </li>
@@ -751,8 +773,8 @@ export function ConstructorCompra({
 
             {bloqueos.length > 0 ? (
               <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
-                <p className="mb-1 text-xs font-medium">Falta para poder guardar:</p>
-                <ul className="flex flex-col gap-0.5 text-xs text-[var(--fg-muted)]">
+                <p className="mb-1 text-sm font-medium">Falta para poder guardar:</p>
+                <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {bloqueos.map((b) => (
                     <li key={b.campo}>· {b.mensaje}</li>
                   ))}
@@ -765,8 +787,8 @@ export function ConstructorCompra({
                 día que de verdad pasan. */}
             {avisos.length > 0 ? (
               <div className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
-                <p className="mb-1 text-xs font-medium">Conviene mirar:</p>
-                <ul className="flex flex-col gap-1 text-xs">
+                <p className="mb-1 text-sm font-medium">Conviene mirar:</p>
+                <ul className="flex flex-col gap-1 text-sm">
                   {avisos.map((a, i) => (
                     <li key={`${a.key}-${i}`}>
                       <strong className="font-mono">{a.codigo}</strong> · {a.mensaje}

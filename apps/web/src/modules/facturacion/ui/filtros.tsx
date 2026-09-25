@@ -63,7 +63,7 @@ export function FiltrosFacturacionBarra({
     */
     <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
       <label className="flex flex-col gap-1 xl:col-span-2">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -81,7 +81,7 @@ export function FiltrosFacturacionBarra({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Tipo</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}
           onChange={(e) => aplicar("tipo", e.target.value)}
@@ -96,7 +96,7 @@ export function FiltrosFacturacionBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">SUNAT</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">SUNAT</span>
         <SelectNativo
           value={params.get("sunat") ?? ""}
           onChange={(e) => aplicar("sunat", e.target.value)}
@@ -111,7 +111,7 @@ export function FiltrosFacturacionBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
           value={params.get("desde") ?? ""}
@@ -120,7 +120,7 @@ export function FiltrosFacturacionBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"
           value={params.get("hasta") ?? ""}

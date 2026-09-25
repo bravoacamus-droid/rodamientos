@@ -58,7 +58,7 @@ export function FiltrosComprasBarra({
   return (
     <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
       <label className="flex min-w-56 flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -68,7 +68,7 @@ export function FiltrosComprasBarra({
       </label>
 
       <label className="flex min-w-48 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Proveedor</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Proveedor</span>
         <SelectNativo
           value={params.get("proveedor") ?? ""}
           onChange={(e) => aplicar("proveedor", e.target.value)}
@@ -83,7 +83,7 @@ export function FiltrosComprasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Estado</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Estado</span>
         <SelectNativo
           value={params.get("estado") ?? ""}
           onChange={(e) => aplicar("estado", e.target.value)}
@@ -98,7 +98,7 @@ export function FiltrosComprasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Tipo</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}
           onChange={(e) => aplicar("tipo", e.target.value)}
@@ -110,7 +110,7 @@ export function FiltrosComprasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
           value={params.get("desde") ?? ""}
@@ -119,7 +119,7 @@ export function FiltrosComprasBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"
           value={params.get("hasta") ?? ""}

@@ -74,10 +74,15 @@ commit;
 -- Un kit es un producto con `es_kit`, así que se archiva como cualquier otro;
 -- sus componentes se van solos por el `on delete cascade` solo si se BORRA la
 -- fila, y no se borra: archivar deja el rastro y lo saca del cotizador.
+--
+-- Añadido el 25/09: hay un segundo, `ZZ-KIT-PRUEBA1` («Kit prueba
+-- descripcion», con un MB-26 dentro). Salió al buscar «ZZ-KIT» en la
+-- cotización; no lo nombraba ningún guion.
 
 begin;
 
-update productos set archivado = true where codigo = 'ZZ-KIT-PRUEBA';
+update productos set archivado = true
+ where codigo in ('ZZ-KIT-PRUEBA', 'ZZ-KIT-PRUEBA1');
 
 commit;
 

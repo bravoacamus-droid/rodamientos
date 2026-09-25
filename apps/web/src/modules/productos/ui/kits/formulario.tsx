@@ -289,6 +289,16 @@ export function FormularioKit({
           ...lineas.map((l) => (l.cantidad > 0 ? Math.floor(l.stock / l.cantidad) : 0)),
         );
 
+  /*
+    Una pieza «frena» al kit si alcanza para menos que alguna otra. Si todas
+    alcanzan lo mismo —lo normal con el almacén en cero— ninguna frena, y
+    marcarlas todas decía «es la que limita» de cada una, que no responde a
+    nada.
+  */
+  const algunaFrena = lineas.some(
+    (l) => (l.cantidad > 0 ? Math.floor(l.stock / l.cantidad) : 0) > armable,
+  );
+
   function agregar(p: ProductoParaCotizar) {
     setLineas((ls) => {
       const ya = ls.find((l) => l.producto_id === p.id);
@@ -374,8 +384,81 @@ export function FormularioKit({
     });
   }
 
+  /** Cambia una pieza del kit. La usan la tabla y las tarjetas del teléfono. */
+  function cambiar(id: string, parche: Partial<Linea>) {
+    setLineas((ls) => ls.map((x) => (x.producto_id === id ? { ...x, ...parche } : x)));
+  }
+
+  /**
+   * El mismo menú «⋮» de la línea de cotización.
+   *
+   * Luis, 17/09: *«aquí tampoco hay los puntos, así como cotización, para que
+   * edite, ver stock, precio; falta eso para que puedan tener control total»*.
+   * Y tiene razón por dónde se decide: armando un kit es cuando uno se entera
+   * de que a una pieza le falta el costo, o de que su descripción está mal —
+   * no visitando el catálogo.
+   *
+   * Los diálogos son los MISMOS del cotizador, no copias. Y el menú es uno
+   * solo para la tabla y la tarjeta del teléfono: el `type="button"` de abajo
+   * ya costó un disgusto y no conviene que exista en dos sitios.
+   */
+  function menuDe(l: Linea) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          /*
+            `type="button"` NO es decorativo aquí.
+
+            Este menú vive DENTRO del `<form>` del kit, y un `<button>` sin type
+            dentro de un formulario es un botón de ENVÍO. Sin esto, abrir el
+            menú guardaba el kit.
+
+            En la cotización no se notaba porque allí el submit está
+            deshabilitado mientras falten datos.
+          */
+          type="button"
+          title={`Opciones de ${l.codigo}`}
+          aria-label={`Opciones de ${l.codigo}`}
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+        >
+          <MoreVertical className="size-[18px]" aria-hidden="true" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-60">
+          <DropdownMenuItem onSelect={() => setEditando(l.producto_id)}>
+            <Pencil />
+            Editar artículo
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onSelect={() => setViendo(l.producto_id)}>
+            <DollarSign />
+            Ver precios
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => setViendo(l.producto_id)}>
+            <Boxes />
+            Ver stock
+            <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">{l.stock}</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem
+            destructivo
+            onSelect={() => setLineas((ls) => ls.filter((x) => x.producto_id !== l.producto_id))}
+          >
+            <Trash2 />
+            Quitar del kit
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
-    <form onSubmit={enviar} className={`flex flex-col gap-5 ${enModal ? "" : "p-6"}`}>
+    <form onSubmit={enviar} className={`flex flex-col gap-5 ${enModal ? "" : "sm:p-6"}`}>
       {/* En el modal el título lo pone el propio diálogo. */}
       {enModal ? null : (
         <header>
@@ -425,7 +508,7 @@ export function FormularioKit({
       </section>
 
       {/* --------------------------------------------------- Contenido */}
-      <section className="card p-4">
+      <section className="card @container p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">Qué lleva dentro</h2>
@@ -470,6 +553,154 @@ export function FormularioKit({
             Busca un producto arriba para empezar a armar el kit.
           </p>
         ) : (
+          <>
+          {/*
+            Una tarjeta por pieza cuando la tabla no cabe.
+
+            La tabla pide 850 px, y 944 con el descuento encendido: con menos,
+            la cantidad y el precio —lo único que se teclea— quedaban fuera, a
+            la derecha, y había que deslizarla de lado para llegar. Luis,
+            25/09: *«cualquier módulo, cambio, tiene que ser 100 % responsivo,
+            buen diseño y que todo cuadre»*.
+
+            Se decide por el ancho de ESTA sección (`@container`), no de la
+            pantalla, porque el formulario vive en dos sitios: su página y el
+            modal de la cotización, que a igual pantalla es más estrecho. El
+            corte (`@4xl`, 952 px) es el de la tabla con descuento.
+
+            Los mismos datos que la fila, en el mismo orden de lectura: qué es,
+            lo que se teclea, lo que resulta.
+          */}
+          <ul className="flex flex-col gap-2.5 @4xl:hidden">
+            {lineas.map((l) => {
+              const alcanza = l.cantidad > 0 ? Math.floor(l.stock / l.cantidad) : 0;
+              const frena = algunaFrena && alcanza === armable;
+              const compartido = otros[l.producto_id] ?? [];
+              return (
+                <li
+                  key={l.producto_id}
+                  className="rounded-md border border-[var(--border)] p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-sm font-semibold">{l.codigo}</p>
+                      <p className="text-sm">{l.descripcion}</p>
+                    </div>
+                    {menuDe(l)}
+                  </div>
+
+                  <div
+                    className={`mt-3 grid gap-3 ${conDescuento ? "grid-cols-3" : "grid-cols-2"}`}
+                  >
+                    <label className="flex min-w-0 flex-col gap-1">
+                      <span className="text-sm font-medium">Cant. ({l.unidad})</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0.01}
+                        step="any"
+                        value={l.cantidad}
+                        onChange={(e) =>
+                          cambiar(l.producto_id, { cantidad: Number(e.target.value) || 0 })
+                        }
+                        className="text-right tabular"
+                      />
+                    </label>
+                    <label className="flex min-w-0 flex-col gap-1">
+                      <span className="text-sm font-medium">Valor unit.</span>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="0.01"
+                        value={l.precioVenta}
+                        onChange={(e) =>
+                          cambiar(l.producto_id, { precioVenta: Number(e.target.value) || 0 })
+                        }
+                        className="text-right tabular"
+                      />
+                    </label>
+                    {conDescuento ? (
+                      <label className="flex min-w-0 flex-col gap-1">
+                        <span className="text-sm font-medium">Desc. %</span>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          max={100}
+                          step="0.01"
+                          value={l.descuentoPct}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            cambiar(l.producto_id, {
+                              descuentoPct: Math.min(100, Math.max(0, v)),
+                            });
+                          }}
+                          className="text-right tabular"
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+
+                  {/* Aquí sí cabe la frase entera: en la tabla no, y por eso
+                      allí es solo la flecha y el número. */}
+                  {l.precioVenta !== l.precioLista ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => cambiar(l.producto_id, { precioVenta: l.precioLista })}
+                      className="mt-2 text-sm"
+                    >
+                      <RotateCcw className="size-4" aria-hidden="true" />
+                      Volver al de lista: {dolar(l.precioLista)}
+                    </Button>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1 border-t border-[var(--border-soft)] pt-2 text-sm">
+                    <p>
+                      <span className="text-[var(--fg-muted)]">Stock </span>
+                      <span className="tabular">{l.stock}</span>
+                      <span className="text-[var(--fg-muted)]"> · alcanza para </span>
+                      <span
+                        className={`tabular ${frena ? "font-semibold text-[var(--warn)]" : ""}`}
+                      >
+                        {alcanza}
+                      </span>
+                    </p>
+                    <p className="text-right">
+                      <span className="text-[var(--fg-muted)]">Importe </span>
+                      <span className="tabular font-semibold">
+                        {dolar(netoDe(l) * l.cantidad)}
+                      </span>
+                      {conDescuento && l.descuentoPct > 0 ? (
+                        <span className="ml-1.5 text-[var(--fg-muted)] line-through">
+                          {dolar(l.precioVenta * l.cantidad)}
+                        </span>
+                      ) : null}
+                    </p>
+                  </div>
+                  {frena ? (
+                    <p className="mt-1 text-sm text-[var(--warn)]">
+                      Es la que limita cuántos kits se pueden armar.
+                    </p>
+                  ) : null}
+                  {compartido.length > 0 ? (
+                    <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-[var(--fg-muted)]">
+                      También en
+                      {compartido.map((k) => (
+                        <Badge key={k.id} tone="neutral" size="xs">
+                          {k.codigo}
+                        </Badge>
+                      ))}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden @4xl:block">
           <TableContenedor>
             <Table>
               <THead>
@@ -498,7 +729,7 @@ export function FormularioKit({
                     l.cantidad > 0 ? Math.floor(l.stock / l.cantidad) : 0;
                   // El que frena al kit entero se marca: es la respuesta a
                   // «¿por qué solo puedo armar 3?».
-                  const frena = alcanza === armable && lineas.length > 1;
+                  const frena = algunaFrena && alcanza === armable;
                   return (
                     <tr key={l.producto_id}>
                       <td className="whitespace-nowrap font-medium">{l.codigo}</td>
@@ -665,89 +896,15 @@ export function FormularioKit({
                         </td>
                       ) : null}
 
-                      {/*
-                        El mismo menú «⋮» de la línea de cotización.
-
-                        Luis, 17/09: *«aquí tampoco hay los puntos, así como
-                        cotización, para que edite, ver stock, precio; falta
-                        eso para que puedan tener control total»*. Y tiene
-                        razón por dónde se decide: armando un kit es cuando uno
-                        se entera de que a una pieza le falta el costo, o de
-                        que su descripción está mal — no visitando el catálogo.
-
-                        Los diálogos son los MISMOS del cotizador, no copias.
-                      */}
-                      <td className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            /*
-                              `type="button"` NO es decorativo aquí.
-
-                              Este menú vive DENTRO del `<form>` del kit, y un
-                              `<button>` sin type dentro de un formulario es
-                              un botón de ENVÍO. Sin esto, abrir el menú
-                              guardaba el kit.
-
-                              En la cotización no se notaba porque allí el
-                              submit está deshabilitado mientras falten datos.
-                            */
-                            type="button"
-                            title={`Opciones de ${l.codigo}`}
-                            aria-label={`Opciones de ${l.codigo}`}
-                            className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-                          >
-                            <MoreVertical className="size-[18px]" aria-hidden="true" />
-                          </DropdownMenuTrigger>
-
-                          <DropdownMenuContent align="end" className="w-60">
-                            <DropdownMenuItem
-                              onSelect={() => setEditando(l.producto_id)}
-                            >
-                              <Pencil />
-                              Editar artículo
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator />
-
-                            <DropdownMenuItem
-                              onSelect={() => setViendo(l.producto_id)}
-                            >
-                              <DollarSign />
-                              Ver precios
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              onSelect={() => setViendo(l.producto_id)}
-                            >
-                              <Boxes />
-                              Ver stock
-                              <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
-                                {l.stock}
-                              </span>
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator />
-
-                            <DropdownMenuItem
-                              destructivo
-                              onSelect={() =>
-                                setLineas((ls) =>
-                                  ls.filter((x) => x.producto_id !== l.producto_id),
-                                )
-                              }
-                            >
-                              <Trash2 />
-                              Quitar del kit
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
+                      <td className="text-right">{menuDe(l)}</td>
                     </tr>
                   );
                 })}
               </TBody>
             </Table>
           </TableContenedor>
+          </div>
+          </>
         )}
       </section>
 
@@ -885,12 +1042,14 @@ export function FormularioKit({
         </div>
       </section>
 
-      {/* La barra al pie, como en la cotización (Luis, 16/09). */}
+      {/* La barra al pie, como en la cotización (Luis, 16/09). Los márgenes
+          negativos anulan el relleno de quien la rodea: en el teléfono es el
+          de la página (p-3), desde `sm` el del formulario (p-6). */}
       <div
         className={
           enModal
             ? "sticky bottom-0 border-t border-[var(--border)] bg-[var(--surface)] py-3"
-            : "sticky bottom-0 -mx-6 -mb-6 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 elev-2"
+            : "sticky bottom-0 -mx-3 -mb-3 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-3 elev-2 sm:-mx-6 sm:-mb-6 sm:px-6"
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">

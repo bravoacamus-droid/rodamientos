@@ -58,7 +58,7 @@ export function FiltrosBandejaBarra() {
   return (
     <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
       <label className="flex min-w-56 flex-1 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Buscar</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
@@ -68,7 +68,7 @@ export function FiltrosBandejaBarra() {
       </label>
 
       <label className="flex min-w-40 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">A quién le toca</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">A quién le toca</span>
         <SelectNativo
           value={params.get("familia") ?? ""}
           onChange={(e) => aplicar("familia", e.target.value)}
@@ -83,7 +83,7 @@ export function FiltrosBandejaBarra() {
       </label>
 
       <label className="flex min-w-36 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Gravedad</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Gravedad</span>
         <SelectNativo
           value={params.get("severidad") ?? ""}
           onChange={(e) => aplicar("severidad", e.target.value)}
@@ -98,7 +98,7 @@ export function FiltrosBandejaBarra() {
       </label>
 
       <label className="flex min-w-48 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Tipo</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}
           onChange={(e) => aplicar("tipo", e.target.value)}

@@ -150,33 +150,38 @@ export function BuscadorProveedores({
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{elegido.razon_social}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--fg-muted)]">
-              <span className="tabular">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-[var(--fg-muted)]">
+              {/* El «·» va DENTRO del dato que le sigue: suelto, en un
+                  teléfono se quedaba solo en su propia línea. */}
+              <span className="whitespace-nowrap tabular">
                 {elegido.numero_documento
                   ? `${elegido.tipo_documento} ${elegido.numero_documento}`
                   : elegido.codigo}
               </span>
-              <span aria-hidden="true">·</span>
-              <span>{resumenPago(elegido)}</span>
+              <span>
+                <span aria-hidden="true">· </span>
+                {resumenPago(elegido)}
+              </span>
               {elegido.tipo === "importacion" ? (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>Importación</span>
-                </>
+                <span>
+                  <span aria-hidden="true">· </span>
+                  Importación
+                </span>
               ) : null}
             </p>
             {marcas ? (
-              <p className="mt-0.5 truncate text-xs text-[var(--fg-subtle)]">{marcas}</p>
+              <p className="mt-0.5 truncate text-sm text-[var(--fg-subtle)]">{marcas}</p>
             ) : null}
             {aviso ? (
-              <p className="mt-1 text-xs font-medium text-[var(--danger)]">{aviso}</p>
+              <p className="mt-1 text-sm font-medium text-[var(--danger)]">{aviso}</p>
             ) : null}
           </div>
 
           <Button
             type="button"
-            variant="ghost"
-            size="xs"
+            variant="outline"
+            size="sm"
+            className="shrink-0 text-sm"
             onClick={() => {
               onQuitar();
               // El foco vuelve a la caja: quitar proveedor es casi siempre el
@@ -271,7 +276,7 @@ export function BuscadorProveedores({
                   : `Ningún proveedor coincide con «${q}».`}
               </p>
               {q.length >= 2 ? (
-                <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+                <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                   {buscandoDocumento
                     ? "Dalo de alta con el botón de la derecha: el RUC ya va puesto."
                     : "Prueba con el RUC, con la marca que te trae, o con menos palabras del nombre."}
@@ -321,7 +326,7 @@ export function BuscadorProveedores({
                       ),
                     )}
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-[var(--fg-muted)]">
                     <span className="tabular">
                       {p.numero_documento ? (
                         resaltar(p.numero_documento, digitosDe(q)).map((t, i) =>
@@ -344,7 +349,7 @@ export function BuscadorProveedores({
                     <span>{resumenPago(p)}</span>
                   </p>
                   {marcas ? (
-                    <p className="mt-0.5 truncate text-xs text-[var(--fg-subtle)]">
+                    <p className="mt-0.5 truncate text-sm text-[var(--fg-subtle)]">
                       {/* La marca se resalta igual que el nombre: si la fila
                           salió PORQUE se buscó una marca, hay que ver cuál. */}
                       {resaltar(marcas, q).map((t, i) =>
@@ -362,7 +367,7 @@ export function BuscadorProveedores({
                     </p>
                   ) : null}
                   {impedimento ? (
-                    <p className="mt-0.5 text-xs font-medium text-[var(--danger)]">
+                    <p className="mt-0.5 text-sm font-medium text-[var(--danger)]">
                       {impedimento}
                     </p>
                   ) : null}

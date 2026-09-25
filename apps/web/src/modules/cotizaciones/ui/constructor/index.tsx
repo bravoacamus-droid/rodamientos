@@ -177,7 +177,7 @@ export function Constructor({
   );
 
   return (
-    <form action={guardar} className="flex flex-col gap-5 p-6">
+    <form action={guardar} className="flex flex-col gap-5 sm:p-6">
       <input
         type="hidden"
         name="cotizacion"
@@ -593,7 +593,7 @@ export function Constructor({
         pulsar. La tarjeta de «Totales» lo explica —valor de venta, IGV,
         margen—; esto solo recuerda la cifra que se está por firmar.
       */}
-      <div className="sticky bottom-0 -mx-6 -mb-6 mt-1 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 elev-2">
+      <div className="sticky bottom-0 -mx-3 -mb-3 mt-1 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-3 elev-2 sm:-mx-6 sm:-mb-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-2">
             <span className="text-sm text-[var(--fg-muted)]">
@@ -609,7 +609,11 @@ export function Constructor({
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* En el teléfono, el aviso en su propio renglón y los dos botones a
+              lo ancho: en una fila con ellos, «Faltan 2 cosas para poder
+              guardar» salía partido en cinco renglones y el botón de guardar
+              tocaba el borde. */}
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             {/*
               Lo que falta, junto al botón que no se puede pulsar.
 
@@ -618,7 +622,7 @@ export function Constructor({
               se lee como que la pantalla está rota.
             */}
             {bloqueos.length > 0 ? (
-              <span className="text-sm font-medium text-[var(--warn)]">
+              <span className="w-full text-sm font-medium text-[var(--warn)] sm:w-auto">
                 {bloqueos.length === 1 && bloqueos[0]
                   ? bloqueos[0].mensaje
                   : `Faltan ${bloqueos.length} cosas para poder guardar`}
@@ -628,13 +632,18 @@ export function Constructor({
             <Button
               type="button"
               variant="outline"
+              className="flex-1 sm:flex-none"
               onClick={() =>
                 router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones")
               }
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
+            <Button
+              type="submit"
+              className="flex-1 sm:flex-none"
+              disabled={bloqueos.length > 0 || guardando}
+            >
               {guardando
                 ? "Guardando…"
                 : editando

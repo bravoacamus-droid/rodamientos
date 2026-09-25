@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Badge, Input } from "@rodatech/ui";
+import { Plus } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 
@@ -157,10 +158,7 @@ export function BuscadorLineas({
                   }}
                   className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-                    fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
+                  <Plus className="size-4 shrink-0" aria-hidden="true" />
                   Crear «{termino.trim()}» en el catálogo
                 </button>
               ) : (
@@ -186,20 +184,30 @@ export function BuscadorLineas({
               // 48 px de alto y el resaltado ocupando la fila entera. Antes
               // era una línea delgada donde había que acertar con el ratón:
               // fallar el clic parecía que la búsqueda no funcionaba.
-              className={`flex min-h-12 w-full items-center gap-3 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
+              //
+              // En el teléfono, dos renglones: arriba código, stock y precio;
+              // abajo marca y descripción. En una sola fila con los anchos del
+              // escritorio solo cabían el código y la marca, y la descripción
+              // y el precio quedaban tras una barra de desplazamiento — o sea,
+              // se elegía a ciegas. Desde `sm`, `contents` deshace el envoltorio
+              // y vuelve la fila de siempre.
+              className={`flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 sm:flex-nowrap ${
                 i === resaltado
                   ? "bg-brand-50 dark:bg-brand-950"
                   : "hover:bg-[var(--surface-2)]"
               }`}
             >
-              <span className="w-40 shrink-0 font-mono text-[0.8rem] font-semibold">
+              <span className="shrink-0 font-mono text-[0.8rem] font-semibold sm:w-40">
                 {p.codigo}
               </span>
-              <span className="w-14 shrink-0 text-xs text-[var(--fg-muted)]">
-                {p.marca}
+              <span className="order-last flex min-w-0 basis-full gap-2 sm:order-none sm:contents">
+                <span className="shrink-0 text-sm text-[var(--fg-muted)] sm:w-14">
+                  {p.marca}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm">{p.descripcion}</span>
               </span>
-              <span className="flex-1 truncate text-sm">{p.descripcion}</span>
               <Badge
+                className="ml-auto sm:ml-0"
                 tone={
                   p.estado_stock === "sin_stock"
                     ? "danger"

@@ -210,7 +210,7 @@ export function PanelGastos({
                   </label>
 
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-[var(--fg-muted)]">Monto</span>
+                    <span className="text-sm font-medium text-[var(--fg-muted)]">Monto</span>
                     <Input
                       value={monto}
                       onChange={(e) => setMonto(e.target.value)}

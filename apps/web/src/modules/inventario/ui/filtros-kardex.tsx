@@ -58,7 +58,7 @@ export function FiltrosKardexBarra({
           aquí solo se enseña cuál está puesto y cómo quitarlo. */}
       {productoActivo ? (
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-[var(--fg-muted)]">Producto</span>
+          <span className="text-sm font-medium text-[var(--fg-muted)]">Producto</span>
           <button
             type="button"
             onClick={() => aplicar("producto", "")}
@@ -72,7 +72,7 @@ export function FiltrosKardexBarra({
       ) : null}
 
       <label className="flex min-w-40 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Movimiento</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Movimiento</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}
           onChange={(e) => aplicar("tipo", e.target.value)}
@@ -87,7 +87,7 @@ export function FiltrosKardexBarra({
       </label>
 
       <label className="flex min-w-40 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Origen</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Origen</span>
         <SelectNativo
           value={params.get("referencia") ?? ""}
           onChange={(e) => aplicar("referencia", e.target.value)}
@@ -102,7 +102,7 @@ export function FiltrosKardexBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Desde</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
           value={params.get("desde") ?? ""}
@@ -111,7 +111,7 @@ export function FiltrosKardexBarra({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">Hasta</span>
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"
           value={params.get("hasta") ?? ""}

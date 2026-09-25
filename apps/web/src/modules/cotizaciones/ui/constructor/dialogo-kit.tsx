@@ -173,7 +173,27 @@ function VistaKit({
 
   return (
     <div className={`flex flex-col gap-4 ${refrescando ? "opacity-60" : ""}`}>
-      <div className="scroll-x">
+      {/* En el teléfono, una pieza por renglón con la cuenta a la vista: en la
+          tabla, el precio y el subtotal quedaban fuera del modal, a la
+          derecha, y eran justo lo que se abre esto para mirar. */}
+      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+        {kit.componentes.map((c) => (
+          <li key={c.producto_id} className="py-2 text-sm">
+            <p className="font-mono font-semibold">{c.codigo}</p>
+            <p>{c.descripcion}</p>
+            {c.marca ? <p className="text-[var(--fg-subtle)]">{c.marca}</p> : null}
+            <p className="mt-1 flex items-baseline justify-between gap-3">
+              <span className="tabular text-[var(--fg-muted)]">
+                {c.cantidad} × {dolar(c.precioNeto)}
+                {c.descuentoPct > 0 ? ` (−${c.descuentoPct}%)` : ""}
+              </span>
+              <span className="tabular font-medium">{dolar(c.precioNeto * c.cantidad)}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+
+      <div className="scroll-x hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">

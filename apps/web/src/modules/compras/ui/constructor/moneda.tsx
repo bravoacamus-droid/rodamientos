@@ -91,7 +91,7 @@ export function BloqueMoneda({
               </option>
             ))}
           </SelectNativo>
-          <span className="text-xs text-[var(--fg-muted)]">
+          <span className="text-sm text-[var(--fg-muted)]">
             La del papel que tienes delante, no la del sistema.
           </span>
         </label>
@@ -127,7 +127,7 @@ export function BloqueMoneda({
                 {buscando ? "…" : "SUNAT"}
               </Button>
             </div>
-            <span className="text-xs text-[var(--fg-muted)]">
+            <span className="text-sm text-[var(--fg-muted)]">
               Soles por dólar el día de la compra.
             </span>
           </label>
@@ -135,7 +135,7 @@ export function BloqueMoneda({
       </div>
 
       {aviso ? (
-        <p role="status" className="text-xs text-[var(--fg-muted)]">
+        <p role="status" className="text-sm text-[var(--fg-muted)]">
           {aviso}
         </p>
       ) : null}
@@ -153,7 +153,7 @@ export function BloqueMoneda({
       ) : null}
 
       {enSoles && tipoCambio > 0 ? (
-        <p className="text-xs text-[var(--fg-muted)]">
+        <p className="text-sm text-[var(--fg-muted)]">
           Los montos de esta compra se escriben en{" "}
           <strong>{SIMBOLO_MONEDA[moneda]}</strong> y se cuadran contra la
           factura. Al recibir la mercadería entran al inventario en dólares, a{" "}
