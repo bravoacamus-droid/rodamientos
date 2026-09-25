@@ -114,6 +114,30 @@ export async function guardarProducto(
   try {
     const supabase = await clienteServidor();
 
+    /*
+      Un KIT no se edita por aquí. Luis, 25/09: *«editar un kit no es como
+      editar un producto»*. Se edita en su editor —`guardarKit`—, que es el
+      que sabe de sus piezas. Por aquí, además, se le pisarían el costo y el
+      peso de producto suelto, que en un kit no significan nada.
+
+      Las pantallas ya no mandan un kit a este camino (la ficha redirige y la
+      cotización ofrece «Editar kit»); esto es la puerta, porque una Server
+      Action es un endpoint público.
+    */
+    if (id) {
+      const { data: actual } = await supabase
+        .from("productos")
+        .select("es_kit")
+        .eq("id", id)
+        .maybeSingle();
+      if (actual?.es_kit) {
+        return {
+          ok: false,
+          error: "Es un kit: se edita desde Kits, donde se ve lo que lleva dentro.",
+        };
+      }
+    }
+
     // La jerarquía tiene FKs COMPUESTAS: no basta con que existan los tres
     // ids, tienen que encajar entre sí. Se comprueba antes para poder decir
     // cuál no cuadra, en vez de dejar que salte la restricción.

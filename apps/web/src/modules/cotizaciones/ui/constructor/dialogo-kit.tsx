@@ -54,11 +54,14 @@ const dolar = (n: number) =>
  */
 export function DialogoKit({
   linea,
+  modoInicial = "ver",
   puedeEditarKit,
   onCerrar,
   onKitGuardado,
 }: {
   linea: LineaConstructor;
+  /** «Editar kit» del menú abre directo en el editor; lo demás, viendo. */
+  modoInicial?: "ver" | "editar";
   /** Gerencia, admin y compras: los mismos que `guardarKit` deja pasar. */
   puedeEditarKit: boolean;
   onCerrar: () => void;
@@ -67,7 +70,11 @@ export function DialogoKit({
     anterior: { codigo: string; descripcion: string },
   ) => void;
 }) {
-  const [modo, setModo] = React.useState<"ver" | "editar">("ver");
+  // Editar solo si de verdad puede: el menú ya no lo ofrece a quien no, pero
+  // el modo no debe depender de que el menú acierte.
+  const [modo, setModo] = React.useState<"ver" | "editar">(
+    modoInicial === "editar" && puedeEditarKit ? "editar" : "ver",
+  );
   const [kit, setKit] = React.useState<KitDetalle | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [refrescando, empezar] = React.useTransition();
@@ -108,7 +115,15 @@ export function DialogoKit({
 
   return (
     <Dialog open onOpenChange={(v) => (v ? null : onCerrar())}>
-      <DialogContent ancho={modo === "editar" ? "max-w-4xl" : "max-w-2xl"}>
+      {/* La cabecera FIJA y solo el cuerpo se desplaza. El molde desplaza el
+          diálogo entero, y editando un kit —que es largo— el título y la X
+          de cerrar se iban hacia arriba: a media edición no se sabía qué kit
+          se estaba cambiando ni por dónde salir. La barra de guardar del
+          editor es `sticky` y se queda pegada abajo del cuerpo. */}
+      <DialogContent
+        ancho={modo === "editar" ? "max-w-4xl" : "max-w-2xl"}
+        className="flex flex-col overflow-y-hidden"
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-5" aria-hidden />
@@ -117,7 +132,11 @@ export function DialogoKit({
           <DialogDescription>{kit?.descripcion ?? linea.descripcion}</DialogDescription>
         </DialogHeader>
 
-        <DialogBody className="flex flex-col gap-4">
+        <DialogBody
+          className={`flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto ${
+            modo === "editar" ? "pb-0" : ""
+          }`}
+        >
           {error ? (
             <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
               {error}
@@ -239,6 +258,28 @@ function VistaKit({
           <span className="text-[var(--fg-muted)]">Con el stock de hoy se arman </span>
           <span className="tabular font-semibold">{kit.armable}</span>
         </p>
+        {/* Lo que «Ver precios» enseña de un producto, pero del kit: su costo
+            es la suma de sus piezas, no el de su ficha (que es cero). El
+            margen, sobre el costo (023). */}
+        <p>
+          <span className="text-[var(--fg-muted)]">Te cuesta </span>
+          <span className="tabular font-semibold">
+            {kit.sumaCosto > 0 ? dolar(kit.sumaCosto) : "sin costo en sus piezas"}
+          </span>
+        </p>
+        {kit.sumaCosto > 0 ? (
+          <p>
+            <span className="text-[var(--fg-muted)]">Margen </span>
+            <span
+              className={`tabular font-semibold ${
+                linea.valorUnitario < kit.sumaCosto ? "text-[var(--danger)]" : "text-[var(--ok)]"
+              }`}
+            >
+              {(((linea.valorUnitario - kit.sumaCosto) / kit.sumaCosto) * 100).toFixed(1)} %
+            </span>
+            <span className="text-[var(--fg-muted)]"> a {dolar(linea.valorUnitario)}</span>
+          </p>
+        ) : null}
         {/* Si en esta cotización va a otro precio, se dice: es la diferencia
             entre lo que vale el kit y lo que se negoció aquí (Willy, 8:25). */}
         {negociado ? (

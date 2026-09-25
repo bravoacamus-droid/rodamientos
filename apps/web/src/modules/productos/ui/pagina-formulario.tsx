@@ -1,9 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { catalogosParaProducto, productoPorId } from "../api/consultas";
+import { esKit } from "../api/kits";
 import { FormularioProducto } from "./formulario";
 
 /**
@@ -33,6 +34,8 @@ export default async function PaginaFormularioProducto({
   }
 
   const id = params ? (await params).id : null;
+  // Un kit no se edita con el formulario de producto (Luis, 25/09).
+  if (id && (await esKit(id))) redirect(`/productos/kits/${id}`);
 
   const [catalogos, producto] = await Promise.all([
     catalogosParaProducto(),

@@ -238,3 +238,26 @@ export async function kitPorId(id: string): Promise<Resultado<KitDetalle | null>
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer el kit." };
   }
 }
+
+/**
+ * ¿Este producto es un kit?
+ *
+ * Para que la ficha y el formulario de PRODUCTO manden al editor de kits.
+ * Luis, 25/09: *«editar un kit no es como editar un producto»*. Un kit en el
+ * formulario de producto enseña peso, ubicación y un costo en cero —el suyo
+ * es la suma de sus piezas— y no deja tocar lo único que importa: qué lleva
+ * dentro.
+ */
+export async function esKit(id: string): Promise<boolean> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("productos")
+      .select("es_kit")
+      .eq("id", id)
+      .maybeSingle();
+    return Boolean(data?.es_kit);
+  } catch {
+    return false;
+  }
+}

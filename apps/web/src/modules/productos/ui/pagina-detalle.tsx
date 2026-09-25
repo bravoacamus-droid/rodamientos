@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Badge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresDeProducto } from "@/modules/proveedores";
 
 import { productoConDetalle } from "../api/consultas";
+import { esKit } from "../api/kits";
 import { AccionesFila } from "./acciones-fila";
 import { comprasDelProducto, preciosPorProveedor } from "../api/compras";
 import { AQuienPreguntar } from "./a-quien-preguntar";
@@ -26,6 +27,9 @@ export default async function PaginaDetalleProducto({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  // Un kit tiene su propia ficha: la de kits, que es donde se ve y se cambia
+  // lo que lleva dentro. Desde el listado del catálogo se llegaba aquí.
+  if (await esKit(id)) redirect(`/productos/kits/${id}`);
   const [resultado, perfil, quienVende, compras, precios] = await Promise.all([
     productoConDetalle(id),
     perfilActual(),

@@ -101,10 +101,15 @@ export function FilaLinea({
 }) {
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
   const [editando, setEditando] = useState(false);
-  /** El kit, visto y editado sin salir de la cotización (25/09). */
-  const [viendoKit, setViendoKit] = useState(false);
+  /** El kit, visto o editado sin salir de la cotización (25/09). */
+  const [viendoKit, setViendoKit] = useState<false | "ver" | "editar">(false);
   /** El diálogo de precios y stock (17/09). */
   const [viendo, setViendo] = useState(false);
+
+  // Un kit se trata como kit, no como producto (Luis, 25/09).
+  const esKit = Boolean(linea.esKit && linea.productoId);
+  const abrirKit = (modo: "ver" | "editar") => setViendoKit(modo);
+  const verPreciosYStock = () => (esKit ? setViendoKit("ver") : setViendo(true));
   const [sustitutos, setSustitutos] = useState<Sustituto[]>([]);
   const [historial, setHistorial] = useState<VentaAnterior[]>([]);
   const [cargando, iniciar] = useTransition();
@@ -487,22 +492,36 @@ export function FilaLinea({
                 encontró: tenía «Editar artículo», que cambia la copia impresa
                 de la línea, no lo que el kit lleva dentro.
               */}
-              {linea.esKit && linea.productoId ? (
+              {/*
+                Y SIN «Editar artículo». Luis, 25/09: *«editar un kit no es
+                como editar un producto»*. Ese diálogo es el de la ficha de
+                producto —marca, familia, costo—, y en un kit no deja tocar lo
+                único que importa: qué lleva dentro. «Editar kit» abre el
+                editor de kits, en el mismo modal.
+              */}
+              {esKit ? (
                 <>
                   <DropdownMenuItem
-                    onSelect={() => requestAnimationFrame(() => setViendoKit(true))}
+                    onSelect={() => requestAnimationFrame(() => abrirKit("ver"))}
                   >
                     <Package />
                     Ver kit
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {puedeEditarKit ? (
+                    <DropdownMenuItem
+                      onSelect={() => requestAnimationFrame(() => abrirKit("editar"))}
+                    >
+                      <Pencil />
+                      Editar kit
+                    </DropdownMenuItem>
+                  ) : null}
                 </>
-              ) : null}
-
-              <DropdownMenuItem onSelect={() => setEditando(true)}>
-                <Pencil />
-                Editar artículo
-              </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onSelect={() => setEditando(true)}>
+                  <Pencil />
+                  Editar artículo
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuSeparator />
 
@@ -522,12 +541,15 @@ export function FilaLinea({
                 los precios como un ojito, y ver a cuánto lo compró, a cuánto
                 le costó y a cuánto lo está vendiendo»*.
               */}
-              <DropdownMenuItem onSelect={() => requestAnimationFrame(() => setViendo(true))}>
+              {/* En un kit, los dos abren el modal del kit: su costo es la
+                  suma de sus piezas y su stock, cuántos se pueden armar. El
+                  de producto diría costo cero y stock cero. */}
+              <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
                 <DollarSign />
                 Ver precios
               </DropdownMenuItem>
 
-              <DropdownMenuItem onSelect={() => requestAnimationFrame(() => setViendo(true))}>
+              <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
                 <Boxes />
                 Ver stock
                 {/* El número, ya en el menú: muchas veces es lo único que se
@@ -545,13 +567,17 @@ export function FilaLinea({
                 lo quita de las manos. Se deja cerrar antes con un
                 `requestAnimationFrame`.
               */}
-              <DropdownMenuItem
-                disabled={!linea.productoId}
-                onSelect={() => requestAnimationFrame(abrirSustitutos)}
-              >
-                <ArrowLeftRight />
-                Ver alternativas
-              </DropdownMenuItem>
+              {/* Las alternativas son equivalencias de rodamiento (mismo
+                  núcleo ISO, otra marca): un kit no tiene. */}
+              {esKit ? null : (
+                <DropdownMenuItem
+                  disabled={!linea.productoId}
+                  onSelect={() => requestAnimationFrame(abrirSustitutos)}
+                >
+                  <ArrowLeftRight />
+                  Ver alternativas
+                </DropdownMenuItem>
+              )}
 
               <DropdownMenuItem
                 disabled={!linea.productoId}
@@ -642,6 +668,7 @@ export function FilaLinea({
       {viendoKit ? (
         <DialogoKit
           linea={linea}
+          modoInicial={viendoKit}
           puedeEditarKit={puedeEditarKit}
           onCerrar={() => setViendoKit(false)}
           onKitGuardado={(producto, anterior) =>
