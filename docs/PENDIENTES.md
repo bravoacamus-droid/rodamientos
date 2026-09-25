@@ -4508,15 +4508,16 @@ de Defontana.
 
 ### 7.1b · Lo que pidió Willy el 24/09 (§AO)
 
-- [ ] **Compras en tres tipos**: local, importación aérea e importación
-      marítima. El enum tiene dos. Es el bloque grande.
-- [ ] **Gasto de transporte en la compra local** — hoy los gastos solo se
-      piden si es importación.
-- [ ] **Gastos itemizados para lo marítimo** — aduanas, ajuste de valor,
-      almacenaje, levante, traslado. La tabla `gastos_importacion` ya los
-      aguanta; la pantalla solo pide UN número.
-- [ ] **Courier como maestro con desplegable**, no texto libre.
-- [ ] **Desaduanaje aéreo** con sitio propio.
+- [x] ~~Compras en tres modalidades~~ — 25/09 (095). Tres en pantalla, dos
+      tipos en la base: la vía cuelga de la importación.
+- [x] ~~Gasto de transporte en la compra local~~ — 25/09.
+- [x] ~~Gastos itemizados para lo marítimo~~ — 25/09. Y en las tres.
+- [x] ~~Courier como desplegable~~ — 25/09. Un `datalist` que aprende de las
+      compras ya registradas, no una tabla con su pantalla de mantenimiento.
+- [x] ~~Desaduanaje aéreo con sitio propio~~ — 25/09.
+- [x] **Los gastos se cobraban DOS VECES en recepciones parciales** — 25/09
+      (094). Lo había arreglado la 022 y la 042 lo deshizo al reescribir la
+      función. Latente: no había ninguna compra con recepciones parciales.
 - [ ] **Botón «volver a comprar»** sobre una compra anterior (§AO.5).
 - [ ] **Imprimir el detalle de un kit** (§AO.1).
 - [ ] **DECIDIR con Willy**: ¿el precio de costo es el promedio ponderado o la
