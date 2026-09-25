@@ -68,6 +68,16 @@ export interface LineaCompraEditable {
    * decisión no se pisa sola.
    */
   costoPropuesto: boolean;
+  /**
+   * De dónde salió el costo propuesto: del KARDEX o de la FICHA.
+   *
+   * Desde el 25/09 el costo cae a `ultimo_costo` cuando el producto nunca
+   * entró al almacén, y eso pasa en casi todo el catálogo. Los dos números se
+   * escriben igual y valen cosas distintas: uno es lo que de verdad se pagó,
+   * el otro lo que alguien anotó. Decir «del promedio» cuando viene de la
+   * ficha es peor que no decir nada.
+   */
+  costoDelKardex: boolean;
   /** Costo promedio del maestro, para comparar contra lo que se está pagando. */
   costoAnterior: number;
   /** Saldo en almacén ahora mismo. */
@@ -287,6 +297,7 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
             // despiste en una compra registrada a coste nulo.
             costoUnitario: costo,
             costoPropuesto: true,
+            costoDelKardex: (accion.producto.costo_promedio ?? 0) > 0,
             costoAnterior: costo,
             stockActual: accion.producto.stock ?? 0,
             stockMinimo: accion.producto.stock_minimo ?? 0,

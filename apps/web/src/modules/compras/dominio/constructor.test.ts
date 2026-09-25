@@ -398,3 +398,25 @@ describe("el costo que se propone al agregar", () => {
     expect(l?.costoPropuesto).toBe(true);
   });
 });
+
+describe("de dónde dice que salió el costo", () => {
+  /*
+    «Promedio» y «ficha» son dos números distintos que se escriben igual.
+    Llamar «promedio» a lo que salió de la ficha es peor que no decir nada:
+    uno es lo que de verdad se pagó, el otro lo que alguien anotó.
+  */
+  it("con kardex, lo marca como del kardex", () => {
+    const e = construir({ tipo: "agregar", producto: P6205 });
+    expect(e.lineas[0]?.costoDelKardex).toBe(true);
+  });
+
+  it("sin kardex, NO lo marca: el número vino de la ficha", () => {
+    const soloFicha: ProductoParaComprar = {
+      ...P6205,
+      id: "44444444-4444-4444-4444-444444444444",
+      costo_promedio: 0,
+      ultimo_costo: 2.5,
+    };
+    expect(construir({ tipo: "agregar", producto: soloFicha }).lineas[0]?.costoDelKardex).toBe(false);
+  });
+});

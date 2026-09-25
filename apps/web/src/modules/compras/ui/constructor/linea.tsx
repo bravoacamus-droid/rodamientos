@@ -97,8 +97,16 @@ export function FilaCompra({
             {ultimoCosto.numero}: {ultimoCosto.costo.toFixed(4)}
           </span>
         ) : linea.costoAnterior > 0 ? (
-          <span className="mt-0.5 block text-right text-xs text-[var(--fg-subtle)] tabular">
-            {linea.costoPropuesto ? "del " : ""}promedio {linea.costoAnterior.toFixed(4)}
+          <span className="mt-0.5 block text-right text-sm text-[var(--fg-subtle)] tabular">
+            {/*
+              «promedio» y «ficha» no son lo mismo y no se pueden llamar igual.
+              El primero es lo que de verdad se pagó, que mantiene el kardex;
+              el segundo lo que alguien anotó en el maestro, que es lo único
+              que hay mientras el producto no haya entrado nunca al almacén —
+              o sea, en casi todo el catálogo.
+            */}
+            {linea.costoPropuesto ? (linea.costoDelKardex ? "del " : "de la ") : ""}
+            {linea.costoDelKardex ? "promedio" : "ficha"} {linea.costoAnterior.toFixed(4)}
           </span>
         ) : null}
       </td>
