@@ -38,8 +38,10 @@ export interface ProductoParaComprar {
   marca: string | null;
   unidad?: string;
   stock?: number;
-  /** Costo promedio vigente. Sirve de referencia y de valor por defecto. */
+  /** Costo promedio del KARDEX. Vale 0 si el producto nunca entró al almacén. */
   costo_promedio?: number;
+  /** `productos.ultimo_costo`: lo que dice la FICHA que costó. El respaldo. */
+  ultimo_costo?: number;
   /** Punto de reposición, para avisar si se está comprando de menos. */
   stock_minimo?: number;
 }
@@ -250,7 +252,24 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
         }));
       }
 
-      const costo = accion.producto.costo_promedio ?? 0;
+      /*
+        El del KARDEX manda; el de la FICHA es el respaldo.
+
+        Willy, 24/09 (18:00), registrando una compra: *«tendría que jalarme
+        aquí el precio y el costo, no me lo estás jalando, pero debería
+        jalarme aquí los 2.50 que hemos puesto anteriormente»*. Y tenía razón:
+        había escrito 2.50 en el «P.C. — costo» de la ficha —que se guarda en
+        `ultimo_costo`— y aquí solo se leía `costo_promedio`, que vale 0 en los
+        793 productos que entraron del Excel sin una sola recepción. O sea, en
+        casi todos.
+
+        Es exactamente la misma caída que ya hace la cotización
+        (`cotizaciones/dominio/constructor.ts`), y por el mismo motivo: un cero
+        propuesto no es «no sé cuánto cuesta», es una compra a coste nulo
+        esperando a que alguien le dé a guardar sin mirar.
+      */
+      const costo =
+        accion.producto.costo_promedio || accion.producto.ultimo_costo || 0;
       return {
         ...estado,
         lineas: [

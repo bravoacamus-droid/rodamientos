@@ -291,8 +291,9 @@ Módulos: `cotizaciones`, `compras`, `guias`, `facturacion`, `recepciones`,
 **Documentación:**
 
 - `docs/PENDIENTES.md` — el diario del proyecto. Cada decisión, con su porqué y
-  la cita del cliente. **Empieza por §AN** (la facturación, 21/09), **§AJ**
-  (las listas, 10/09) y **§AI** (compras, 09/09).
+  la cita del cliente. **Empieza por §AO** (la reunión del 24/09 y el rediseño
+  de compras que sale de ella), **§AN** (la facturación, 21/09) y **§AJ** (las
+  listas, 10/09).
 - `docs/PREGUNTAS-WILLY.md` — lo que se le manda, listo para copiar. Máximo
   cinco preguntas; **búscalas antes en sus archivos**, que ya ahorró cuatro de
   cinco.

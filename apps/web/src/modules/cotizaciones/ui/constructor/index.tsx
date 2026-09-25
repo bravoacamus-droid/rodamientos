@@ -419,10 +419,55 @@ export function Constructor({
             </div>
 
             {estado.lineas.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
-                Busca un producto arriba para empezar. Puedes teclear el código,
-                el del fabricante o parte de la descripción.
-              </p>
+              /*
+                LA TABLA SE ENSEÑA VACÍA, CON SU FILA EN BLANCO.
+
+                Willy, 24/09 (42:18): *«abajo como que no, falta algo donde
+                dice producto… se supone que debería haber un cuadro ahí que
+                diga número de ítem, código, descripción, precio unitario»*. Y
+                el porqué, que es lo que manda: *«yo lo puedo entender porque
+                tú me estás explicando a mí, pero luego cuando yo lo comparta a
+                alguien se va a perder ahí, no va a saber dónde cotizo»*.
+
+                Antes había un párrafo que decía «busca un producto arriba».
+                Explicaba lo mismo, pero explicar dónde va a aparecer algo no
+                es lo mismo que enseñar el sitio: la tabla con sus encabezados
+                y un renglón vacío dice a la vez QUÉ se va a pedir y DÓNDE va a
+                salir, sin que nadie tenga que leer nada.
+              */
+              <TableContenedor>
+                <Table>
+                  <THead>
+                    <tr>
+                      <th className="w-8 text-left">#</th>
+                      <th className="text-left">Código</th>
+                      <th className="text-left">Marca</th>
+                      <th className="text-left">Descripción</th>
+                      <th className="text-right">Cant.</th>
+                      <th className="text-left">U.M.</th>
+                      <th className="text-left">Entrega</th>
+                      <th className="text-right">Valor unit.</th>
+                      {estado.mostrarDescuento ? (
+                        <th className="text-right">Dscto. %</th>
+                      ) : null}
+                      <th className="text-right">Importe</th>
+                      <th className="text-right">Acciones</th>
+                    </tr>
+                  </THead>
+                  <tbody>
+                    <tr className="text-[var(--fg-subtle)]">
+                      <td className="py-3">1</td>
+                      {/* El aviso va en la celda del código porque es la
+                          primera que se rellena: ahí es donde hay que mirar. */}
+                      <td colSpan={estado.mostrarDescuento ? 10 : 9} className="py-3">
+                        Busca un producto arriba —por código, por el del
+                        fabricante o por parte de la descripción— y aparecerá
+                        en esta línea.
+                      </td>
+                    </tr>
+                  </tbody>
+                </Table>
+              </TableContenedor>
             ) : (
               <TableContenedor>
                 <Table>

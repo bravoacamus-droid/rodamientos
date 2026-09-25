@@ -362,3 +362,39 @@ describe("proponer los costos del proveedor", () => {
     expect(construir({ tipo: "costosDelProveedor", costos: COSTOS }).lineas).toEqual([]);
   });
 });
+
+describe("el costo que se propone al agregar", () => {
+  /*
+    Willy, 24/09 (18:00), registrando una compra: «tendría que jalarme aquí el
+    precio y el costo, no me lo estás jalando, pero debería jalarme aquí los
+    2.50 que hemos puesto anteriormente».
+
+    Había escrito 2.50 en el «P.C. — costo» de la ficha, que se guarda en
+    `ultimo_costo`, y aquí solo se leía `costo_promedio`. En los 793 productos
+    que entraron del Excel sin recepciones —o sea, en casi todos— eso es cero.
+  */
+  const sinKardex: ProductoParaComprar = {
+    ...P6205,
+    id: "33333333-3333-3333-3333-333333333333",
+    costo_promedio: 0,
+    ultimo_costo: 2.5,
+  };
+
+  it("sin kardex, propone lo que dice la ficha", () => {
+    const e = construir({ tipo: "agregar", producto: sinKardex });
+    expect(e.lineas[0]?.costoUnitario).toBe(2.5);
+    expect(e.lineas[0]?.costoAnterior).toBe(2.5);
+  });
+
+  it("con kardex, el kardex manda sobre la ficha", () => {
+    const conAmbos: ProductoParaComprar = { ...sinKardex, costo_promedio: 3.26 };
+    expect(construir({ tipo: "agregar", producto: conAmbos }).lineas[0]?.costoUnitario).toBe(3.26);
+  });
+
+  it("sin ninguno de los dos, cero y marcado como propuesto", () => {
+    const pelado: ProductoParaComprar = { ...sinKardex, costo_promedio: 0, ultimo_costo: 0 };
+    const l = construir({ tipo: "agregar", producto: pelado }).lineas[0];
+    expect(l?.costoUnitario).toBe(0);
+    expect(l?.costoPropuesto).toBe(true);
+  });
+});

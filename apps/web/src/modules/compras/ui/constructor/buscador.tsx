@@ -160,8 +160,11 @@ export function BuscadorCompra({
                       </span>
                     </>
                   ) : (
+                    /* Mismo respaldo que la línea que se va a crear: sin
+                       kardex, lo que dice la ficha. Enseñar 0.00 aquí y luego
+                       rellenar 2.50 abajo sería peor que no enseñar nada. */
                     <span className="tabular text-[var(--fg-muted)]">
-                      ${(p.costo_promedio ?? 0).toFixed(2)}
+                      ${(p.costo_promedio || p.ultimo_costo || 0).toFixed(2)}
                     </span>
                   )}
                 </span>

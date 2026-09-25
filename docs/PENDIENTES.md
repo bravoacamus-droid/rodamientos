@@ -4506,6 +4506,24 @@ de Defontana.
       Las de facturación ya están resueltas (`F002` va por 515, `FC02` por 3).
 - [ ] La homologación con SUNAT, y solo después pasar `beta` → `produccion`.
 
+### 7.1b · Lo que pidió Willy el 24/09 (§AO)
+
+- [ ] **Compras en tres tipos**: local, importación aérea e importación
+      marítima. El enum tiene dos. Es el bloque grande.
+- [ ] **Gasto de transporte en la compra local** — hoy los gastos solo se
+      piden si es importación.
+- [ ] **Gastos itemizados para lo marítimo** — aduanas, ajuste de valor,
+      almacenaje, levante, traslado. La tabla `gastos_importacion` ya los
+      aguanta; la pantalla solo pide UN número.
+- [ ] **Courier como maestro con desplegable**, no texto libre.
+- [ ] **Desaduanaje aéreo** con sitio propio.
+- [ ] **Botón «volver a comprar»** sobre una compra anterior (§AO.5).
+- [ ] **Imprimir el detalle de un kit** (§AO.1).
+- [ ] **DECIDIR con Willy**: ¿el precio de costo es el promedio ponderado o la
+      última compra? Dijo las dos cosas (§AO.3). El sistema hace la primera.
+- [x] ~~El costo no se jalaba al registrar una compra~~ — 25/09 (§AO.2).
+- [x] ~~La cotización no enseñaba la tabla de ítems vacía~~ — 25/09 (§AO.6).
+
 ### 7.2 · Lo que falta escribir
 
 - [ ] **El GRE — mandar las guías a SUNAT.** Es el único bloque de desarrollo
@@ -4556,6 +4574,164 @@ de Defontana.
       ambiente pasa a producción, y dice cuál usar.
 - [ ] Correr `scripts/limpiar-pruebas-16-09.sql` — **ocho bloques, y el orden
       importa**: el 7 va antes de borrar la ronda CPR-26-00012.
+
+---
+
+## §AO · 24/09 — Reunión con Willy: kits aprobados y el rediseño de compras
+
+44 minutos. Willy repasó los kits, se peleó con el precio de costo y pidió
+partir compras en tres. Lo que sigue sale de la grabación, no del resumen
+automático — **el resumen se queda corto en un sitio y se pasa en otro**, y
+eso importa porque es lo que se lee cuando ya nadie recuerda la reunión.
+
+### AO.1 · Kits: APROBADOS, sin cambios
+
+*«Hasta ahí estamos excelentes»* (9:21). Repasó el flujo entero: crear el kit
+como producto con su código y descripción, añadirle productos con descuento,
+buscarlo en la cotización por código o descripción, y que el precio sea
+editable dentro de la cotización sin tocar el kit maestro.
+
+Una sola cosa quedó sin contestar, y es un pedido de verdad: **imprimir el
+detalle de un kit**. *«Si quiere imprimir el detallado, ¿cómo sería? […] puede
+que me lo pidan detallado en algunos casos»* (3:29). Hoy el módulo de kits no
+tiene impresión de ninguna clase.
+
+### AO.2 · El costo no se jalaba — ARREGLADO el 25/09
+
+Minuto 18, registrando una compra: *«tendría que jalarme aquí el precio y el
+costo, no me lo estás jalando, pero debería jalarme aquí los 2.50 que hemos
+puesto anteriormente»*.
+
+Tenía razón. La ficha del producto guarda su «P.C. — costo» en
+`ultimo_costo`, y el constructor de compras solo leía `costo_promedio`, que
+vale 0 en los 793 productos que entraron del Excel sin una sola recepción. O
+sea, en casi todos.
+
+**Y el dato ya llegaba**: la 083 añadió `ultimo_costo` a `buscar_productos` el
+17/09. El constructor de compras nunca lo leyó. La cotización sí hacía la
+caída (`costo_promedio || ultimo_costo`) desde siempre. Van treinta y tantos.
+
+### AO.3 · Promedio ponderado o última compra · SIN DECIDIR
+
+**Willy dijo las dos cosas, con cuatro minutos de diferencia.**
+
+- 16:10 — *«lo ideal sería el promedio ponderado, un prorrateo»*, explicándolo
+  con su ejemplo: tenía 4 a un precio, compra 10 a otro, y quiere saber con
+  qué costo cotizar.
+- 20:32 — *«ese 2.40 se pasaría acá, el precio de costo cambiaría […] con el
+  nuevo proveedor, último proveedor»*, y a la repregunta *«o sea que salga el
+  precio del último proveedor»* contestó *«claro pues»*.
+
+El resumen automático solo recogió la segunda. **El sistema hoy hace la
+primera**: `registrar_movimientos` mantiene el promedio ponderado del kardex y
+la cotización lo usa.
+
+No son matices: son dos números distintos y cambian el margen de cada
+cotización. **Hay que preguntárselo con las dos cifras delante**, no elegir
+por él.
+
+### AO.4 · Compras en tres tipos
+
+*«Son tres: local, importación aérea y marítima»* (30:19). Cada uno captura
+cosas distintas:
+
+| | Qué paga | Qué hay que registrar |
+|---|---|---|
+| **Local** | factura del proveedor | + **gasto de transporte**: *«se le puede poner un gasto de transporte también, porque es un gasto al final»* |
+| **Aérea** | todo junto a su proveedor (FOB + courier) | courier, tracking, y el **desaduanaje que DHL cobra aparte** |
+| **Marítima** | FOB + courier + una lista larga | aduanas, ajuste de valor, almacenaje, levante, traslado. *«Cuando es marítimo hay un montón de cositas»* |
+
+Sobre el aéreo conviene tener claro cómo funciona, porque cambia el modelo:
+**Willy no le paga al courier.** *«Yo no pago el courier, yo pago a mi
+proveedor; ellos me ponen el costo unitario de cada ítem, el costo total y el
+gasto de courier, todo eso suma un monto, yo le deposito a mi proveedor y él
+hace el pago al courier»* (26:00). Por eso en aéreo es un solo gasto, y el
+único añadido es el desaduanaje.
+
+**Lo que YA existe, y es más de lo que parece:**
+
+- `compras.tracking` y `compras.courier`, columnas desde la **002**, aceptadas
+  por la RPC desde la **016** y **ya presentes en el formulario**.
+- `gastos_importacion`, tabla con concepto libre: aguanta los gastos
+  marítimos tal cual, sin tocar el esquema.
+- El **prorrateo de los gastos sobre el costo al recibir**, que es lo que
+  contesta el *«cuál es mi costo real puesto acá»*.
+
+**Lo que falta de verdad:**
+
+1. El enum `tipo_compra` tiene dos valores (`local`, `importacion`); hay que
+   partir importación en aérea y marítima.
+2. Los gastos solo se piden si es importación. En local no hay dónde poner el
+   transporte.
+3. **Al registrar la compra se pide UN número de gastos.** La tabla aguanta
+   muchos, pero la pantalla no los ofrece: para lo marítimo hace falta la
+   lista itemizada donde hoy hay una casilla. Es el patrón de siempre.
+4. El courier es texto libre. Willy lo pidió como maestro: *«este courier lo
+   puedo registrar en un dato maestro porque esto es selecciones, con una
+   barra desplegable o lo busque»*.
+5. El desaduanaje aéreo no tiene sitio propio.
+
+### AO.5 · Volver a comprar
+
+Es el porqué de todo lo anterior, y conviene que quede escrito con sus
+palabras (32:51):
+
+> *«Si es de importación yo necesito tener registrados todos los datos porque
+> a veces vuelvo a necesitar lo mismo en una siguiente vez. Se me acabó el
+> stock y quiero comprar lo mismo una segunda vez… pero no sé a quién le he
+> comprado porque tengo tres proveedores de importación vía aérea. Mucho menos
+> sé a qué precio le he comprado y tampoco sé cuánto me han cobrado por el
+> envío. Entonces tengo que volver a llamarlos.»*
+
+Y lo mismo en local: *«uno va a comprarle primero al que le ha comprado antes;
+si mantiene el precio y el stock, bacán, vuelves a comprarle»*.
+
+Lo que pidió es un **botón de volver a comprar** sobre una compra anterior,
+que la repita con su proveedor y sus precios. Hoy existen «a quién
+preguntarle» y «compras anteriores» en la ficha del producto, pero no el
+atajo desde la compra.
+
+### AO.6 · La tabla de la cotización — ARREGLADO el 25/09
+
+*«Abajo como que no, falta algo donde dice producto… se supone que debería
+haber un cuadro ahí que diga número de ítem, código, descripción, precio
+unitario»* (42:18). Y el porqué, que es lo que manda:
+
+> *«Yo lo puedo entender porque tú me estás explicando a mí, pero luego cuando
+> yo lo comparta a alguien se va a perder ahí, no va a saber dónde cotizo.»*
+
+Había un párrafo que decía «busca un producto arriba». Explicaba lo mismo,
+pero explicar dónde va a aparecer algo no es enseñar el sitio. Ahora la tabla
+sale con sus encabezados y un renglón en blanco.
+
+### AO.7 · El aviso de precio mínimo funciona, y no se nota
+
+Willy lo pidió —*«lo que sí debe aparecer en cotización es que no baje de lo
+mínimo»*— y en la demo salió. `avisosDeVenta` lo hace desde hace tiempo, y
+avisa sin bloquear, que es lo correcto.
+
+**Pero 790 productos entraron del Excel sin precio mínimo**, así que hoy no
+avisa de casi nada. Willy lo va a dar por roto la primera vez que lo pruebe
+con un producto suyo. Eso se arregla con datos, no con código, y conviene
+decírselo antes de que lo descubra.
+
+### AO.8 · Lo que tiene que mandar Willy
+
+- Las facturas y guías de sus compras y ventas recientes, incluidas las
+  compras de ese mismo día (*«hoy día he comprado algunos sites… estoy
+  reponiendo»*).
+- **La lista de productos con su stock actual.** Ya terminó su maestro:
+  *«ya tengo mi lista de productos, ya terminé mi maestro de productos; ahora
+  el siguiente paso es colocarle el stock»* (39:24).
+
+Sobre esto último, ojo: **la plantilla de carga ya existe** en
+`/productos/cargar` y ya trae columna `stock`. No hay que construir nada; hay
+que mandársela.
+
+Y su reparo, que es razonable: *«hasta el día que se ponga en marcha el
+sistema va a variar el stock»* (40:42). Por eso el cuadre de inventario
+(`/inventario/ajuste`) existe y es donde se corrige lo que se mueva entre la
+carga y el arranque.
 
 ---
 
