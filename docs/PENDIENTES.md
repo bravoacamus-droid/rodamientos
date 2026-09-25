@@ -4527,6 +4527,13 @@ de Defontana.
       «Editar kit» sin salir de la cotización.
 - [ ] **DECIDIR con Willy**: ¿el precio de costo es el promedio ponderado o la
       última compra? Dijo las dos cosas (§AO.3). El sistema hace la primera.
+      El mensaje, con un ejemplo de sus números, está en PREGUNTAS-WILLY
+      («25/09 · LA DEL COSTO»).
+- [ ] Lo que tiene que MANDAR (§AO.8): facturas y guías recientes, y el
+      stock. Para el stock ya existe la plantilla; la pregunta 5 del 24/09
+      se la ofrece desde el 25/09.
+- [ ] Precio mínimo: el aviso funciona, pero casi ningún producto lo tiene
+      (§AO.7). Es de datos: decírselo antes de que lo dé por roto.
 - [x] ~~El costo no se jalaba al registrar una compra~~ — 25/09 (§AO.2).
 - [x] ~~La cotización no enseñaba la tabla de ítems vacía~~ — 25/09 (§AO.6).
 
@@ -4541,10 +4548,12 @@ de Defontana.
       DNS del dominio (SPF/DKIM/DMARC) y el PDF — o mandar el enlace público,
       que ya existe (072). Bloqueado además porque **1 de 97 clientes tiene
       correo**.
-- [ ] Menor: los tres tamaños de `Badge` son `text-xs`, así que **las 83
-      pastillas del ERP están a 12,75 px**, incluidas las de estado de
-      documento. Va contra §1 de CLAUDE.md. Tocarlo afecta a todas las
-      pantallas, así que es decisión de Luis.
+- [x] ~~Las 83 pastillas del ERP a 12,75 px~~ — 24/09. Los tres tamaños de
+      `Badge` son ya `text-sm`; el tamaño solo gradúa el relleno.
+- [ ] **La tabla de líneas de la COTIZACIÓN se desliza de lado a 1280 px o
+      menos** (pide 1002 px; medido el 25/09). A 1600 —la pantalla de Willy—
+      cabe. Compras y kits ya pasan a tarjetas cuando no cabe (`@container`);
+      la cotización es trabajo aparte por todo lo que lleva la línea.
 
 ### 7.3 · Datos que solo puede dar Willy
 

@@ -113,6 +113,9 @@ Por eso el stock está hoy en CERO a propósito.
 
 Lo que necesito es un conteo: código y cuántos tiene.
 En un Excel, en papel, o como le sea más cómodo.
+Si prefiere, le mando una plantilla en Excel con sus
+productos ya puestos: solo llena la columna de stock y
+el sistema la carga sola.
 
 No tiene que ser todo de golpe. Podemos empezar por lo que
 más rota — sus rodamientos más vendidos — y el resto va
@@ -124,6 +127,35 @@ Gracias Willy 🙌
 
 **Cuando conteste**, apuntar la respuesta debajo de cada punto y marcar el
 encabezado como CONTESTADA.
+
+### 25/09 · LA DEL COSTO — aparte, cuando conteste las cinco
+
+No entra en las cinco, que ya están completas, pero es lo único de la
+reunión del 24/09 que no se puede cerrar sin él (§AO.3): dijo las dos cosas.
+Mejor enseñársela en pantalla que por chat; si va por chat, este es el texto.
+El ejemplo sale de la compra de prueba del 25/09 (KR52PPA).
+
+```
+Willy, una sola decisión sobre el COSTO 💰
+
+Cuando compra el mismo producto a precios distintos, ¿con
+cuál quiere que el sistema calcule su margen?
+
+Ejemplo con un rodamiento que se vende a $46: lo que tiene
+en almacén le costó en promedio $39, y la última compra
+fue a $42.
+
+A) EL PROMEDIO de lo que tiene en almacén → $39
+   Su margen sale 17.9 %
+B) EL DE LA ÚLTIMA COMPRA → $42
+   Su margen sale 9.5 %
+
+La A es lo que de verdad le costó lo que tiene guardado.
+La B le avisa antes de que los precios nuevos le coman
+el margen.
+
+Hoy el sistema hace la A. ¿La dejamos así o la cambiamos?
+```
 
 **La 3 y la 5 son las que bloquean la entrega.** La 3 porque sin certificado no
 se declara nada, y la 5 porque sin conteo el almacén no sirve. Las otras tres
