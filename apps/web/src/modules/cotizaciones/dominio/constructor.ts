@@ -532,7 +532,9 @@ export function revisionDe(linea: LineaConstructor): RevisionPiso {
 }
 
 export interface Bloqueo {
-  campo: "cliente" | "lineas" | "piso";
+  /** `costo` desde el 25/09: vender bajo costo no es lo mismo que bajar del
+   *  piso, y puede pasar con el piso respetado (ver `avisosDeCosto`). */
+  campo: "cliente" | "lineas" | "piso" | "costo";
   mensaje: string;
 }
 
@@ -611,6 +613,56 @@ export function avisosDeVenta(estado: EstadoConstructor): Bloqueo[] {
         bajas.length === 1
           ? `${codigos} va por debajo de su precio mínimo de venta.`
           : `${bajas.length} líneas van por debajo de su precio mínimo de venta: ${codigos}.`,
+    },
+  ];
+}
+
+/**
+ * Líneas que se están vendiendo POR DEBAJO DEL COSTO.
+ *
+ * El piso no basta, y se comprobó con números el 25/09. El UCF208D1 tenía el
+ * mínimo en 29.53, calculado cuando costaba 28.12. Entró una importación y el
+ * costo real subió a 30.00 — pero **el mínimo se quedó donde estaba**. La
+ * pantalla decía que 29.53 era correcto, el botón «dejar en el mínimo» llevaba
+ * ahí de un clic, y esa venta pierde 0.47 por unidad.
+ *
+ * Es estructural, no un caso raro: `precio_minimo` es un número que alguien
+ * escribió un día, y el costo se mueve solo con cada compra, con el tipo de
+ * cambio y con los gastos de importación. En cuanto el costo pasa al piso, el
+ * piso deja de proteger sin avisar a nadie.
+ *
+ * Willy, del maestro (21/08): *«es el precio mínimo que se puede vender […]
+ * porque si no no es rentable»*. Esto es lo que hace que esa frase siga siendo
+ * verdad cuando el costo cambia.
+ *
+ * Se mira el precio NETO, ya con el descuento, por lo mismo que el piso:
+ * descontar un 30 % sobre un precio que cubre el costo es la forma exacta de
+ * vender perdiendo sin darse cuenta.
+ *
+ * Los productos sin costo cargado no se juzgan: 790 entraron del Excel sin él,
+ * y un cero no significa «es gratis», significa «no se sabe».
+ */
+export function lineasBajoCosto(estado: EstadoConstructor): LineaConstructor[] {
+  return estado.lineas.filter((l) => {
+    if (l.costoUnitario <= 0) return false;
+    const neto = redondear4(l.valorUnitario * (1 - l.descuentoPct / 100));
+    return neto < l.costoUnitario;
+  });
+}
+
+/** El aviso de vender bajo costo, con el mismo formato que los demás. */
+export function avisosDeCosto(estado: EstadoConstructor): Bloqueo[] {
+  const bajas = lineasBajoCosto(estado);
+  if (bajas.length === 0) return [];
+
+  const codigos = bajas.map((l) => l.codigo).join(", ");
+  return [
+    {
+      campo: "costo",
+      mensaje:
+        bajas.length === 1
+          ? `${codigos} se está vendiendo POR DEBAJO DE SU COSTO. Esa línea pierde dinero.`
+          : `${bajas.length} líneas se están vendiendo por debajo de su costo: ${codigos}. Esas líneas pierden dinero.`,
     },
   ];
 }

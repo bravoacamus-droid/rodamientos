@@ -13,6 +13,7 @@ import {
 import type { ClienteOpcion } from "../../dominio/cliente";
 import {
   aPayload,
+  avisosDeCosto,
   avisosDeVenta,
   bloqueos as calcularBloqueos,
   ENTREGAS,
@@ -159,7 +160,14 @@ export function Constructor({
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
   // Lo que conviene mirar y NO impide guardar (17/09): hoy, el precio mínimo.
-  const avisos = useMemo(() => avisosDeVenta(estado), [estado]);
+  /* Dos avisos distintos y los dos hacen falta: el piso es la regla comercial
+     de Willy, y el costo es la aritmética. Desde el 25/09 se sabe que el piso
+     puede quedarse por debajo del costo cuando entra una compra más cara, y
+     entonces el primero da el visto bueno a una venta que pierde dinero. */
+  const avisos = useMemo(
+    () => [...avisosDeVenta(estado), ...avisosDeCosto(estado)],
+    [estado],
+  );
 
   return (
     <form action={guardar} className="flex flex-col gap-5 p-6">

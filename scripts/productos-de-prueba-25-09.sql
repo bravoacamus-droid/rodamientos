@@ -135,3 +135,28 @@ end $$;
 --                               else 0 end,
 --            atributos      = atributos - 'prueba_25_09'
 --      where (atributos ->> 'prueba_25_09')::boolean is true;
+
+-- ###########################################################################
+-- LO QUE SE CREÓ PROBANDO, EL 25/09
+-- ###########################################################################
+-- Prueba completa del ciclo de compras, pedida por Luis. Todo con los diez
+-- productos de arriba. Va aquí y no en otro guion porque sin estos productos
+-- no existirían.
+--
+--   CMP-26-00001 · local · AUTOLAND · 10 KR52PPA a 36.00      → REC-26-00001
+--   CMP-26-00002 · local · MARCO PERUANA · 10 KR52PPA a 42.00 → REC-26-00002
+--   CMP-26-00003 · importación · AUTOLAND · 10 UCF208D1 a 25.00
+--                  + 50.00 de gastos, DHL, tracking 7712345678 → REC-26-00003
+--   COT1-000001  · ACEROS CHILCA · 1 UCF208D1 a 29.53
+--
+-- Stock que dejaron: KR52PPA 20 uds (valorizado 780), UCF208D1 10 (300).
+--
+-- Para deshacerlo: las compras se ANULAN por la RPC, que repone el stock y
+-- deja el motivo escrito. Borrarlas a mano dejaría el kardex mintiendo.
+--
+--     select public.anular_compra(id, 'Prueba del ciclo de compras (25/09).')
+--       from compras where numero in ('CMP-26-00001','CMP-26-00002','CMP-26-00003');
+--
+--     delete from cotizacion_items where cotizacion_id in
+--       (select id from cotizaciones where numero = 'COT1-000001');
+--     delete from cotizaciones where numero = 'COT1-000001';

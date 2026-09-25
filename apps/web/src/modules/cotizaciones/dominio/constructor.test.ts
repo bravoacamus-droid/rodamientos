@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   aPayload,
+  avisosDeCosto,
   avisosDeVenta,
   bloqueos,
   estadoInicial,
@@ -534,5 +535,45 @@ describe("la marca de la línea · el caso del retén (Willy, 16/09)", () => {
       valor: "NQK",
     });
     expect(aPayload(e).items[0]!.marca).toBe("NQK");
+  });
+});
+
+describe("avisosDeCosto", () => {
+  /*
+    Comprobado con números reales el 25/09. El UCF208D1 tenía el mínimo en
+    29.53, puesto cuando costaba 28.12. Entró una importación, el costo subió a
+    30.00 y el mínimo se quedó donde estaba: la pantalla daba por buena una
+    venta que pierde 0.47 por unidad, y el botón «dejar en el mínimo» llevaba
+    ahí de un clic.
+  */
+  const caro = { ...P6209, id: "c1", precio_venta: 29.53, costo_promedio: 30, precio_minimo: 29.53 };
+
+  it("avisa cuando el precio queda bajo el costo AUNQUE respete el piso", () => {
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: caro });
+    // El piso está contento: 29.53 no baja de 29.53.
+    expect(avisosDeVenta(e)).toEqual([]);
+    // Y sin embargo pierde dinero.
+    expect(avisosDeCosto(e)).toHaveLength(1);
+    expect(avisosDeCosto(e)[0]?.mensaje).toMatch(/POR DEBAJO DE SU COSTO/);
+  });
+
+  it("el descuento también cuenta: se mira el precio neto", () => {
+    const sano = { ...P6209, id: "c2", precio_venta: 40, costo_promedio: 30, precio_minimo: 0 };
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: sano });
+    expect(avisosDeCosto(e)).toEqual([]);
+    // 40 con 30 % de descuento son 28, por debajo de los 30 que cuesta.
+    const conDscto = reducir(e, { tipo: "descuento", key: "l1", valor: 30 });
+    expect(avisosDeCosto(conDscto)).toHaveLength(1);
+  });
+
+  it("un producto SIN costo no se juzga: cero no es gratis, es no se sabe", () => {
+    const sinCosto = { ...P6209, id: "c3", precio_venta: 5, costo_promedio: 0, ultimo_costo: 0, precio_minimo: 0 };
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: sinCosto });
+    expect(avisosDeCosto(e)).toEqual([]);
+  });
+
+  it("vender por encima del costo no avisa nada", () => {
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: P6209 });
+    expect(avisosDeCosto(e)).toEqual([]);
   });
 });
