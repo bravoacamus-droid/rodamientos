@@ -26,6 +26,7 @@ import {
   DollarSign,
   History,
   MoreVertical,
+  Package,
   Pencil,
   SquareArrowOutUpRight,
   Trash2,
@@ -51,6 +52,7 @@ import {
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
 import { EditarArticulo } from "./editar-articulo";
 import { PreciosYStock } from "./precios-y-stock";
+import { DialogoKit } from "./dialogo-kit";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import {
@@ -86,6 +88,7 @@ export function FilaLinea({
   clienteId,
   mostrarDescuento,
   despachar,
+  puedeEditarKit = false,
 }: {
   linea: LineaConstructor;
   indice: number;
@@ -93,9 +96,13 @@ export function FilaLinea({
   clienteId: string | null;
   mostrarDescuento: boolean;
   despachar: (a: Accion) => void;
+  /** Gerencia, admin y compras: los que pueden cambiar un kit (25/09). */
+  puedeEditarKit?: boolean;
 }) {
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
   const [editando, setEditando] = useState(false);
+  /** El kit, visto y editado sin salir de la cotización (25/09). */
+  const [viendoKit, setViendoKit] = useState(false);
   /** El diálogo de precios y stock (17/09). */
   const [viendo, setViendo] = useState(false);
   const [sustitutos, setSustitutos] = useState<Sustituto[]>([]);
@@ -470,6 +477,28 @@ export function FilaLinea({
                 —sin `productoId`— igual que en las del catálogo: lo que se
                 edita es la copia impresa, y esa la tienen las dos.
               */}
+              {/*
+                Un KIT, lo primero: ver lo que lleva, y cambiarlo ahí mismo.
+
+                Luis, 25/09: *«solo si es un kit, en los tres puntos ver
+                detalle de kit […] un nuevo modal ahí mismo, así es dinámico en
+                la misma cotización, para no regresar a la otra ventana»*. Y es
+                lo que Willy buscó en la reunión del 24/09 (8:09) y no
+                encontró: tenía «Editar artículo», que cambia la copia impresa
+                de la línea, no lo que el kit lleva dentro.
+              */}
+              {linea.esKit && linea.productoId ? (
+                <>
+                  <DropdownMenuItem
+                    onSelect={() => requestAnimationFrame(() => setViendoKit(true))}
+                  >
+                    <Package />
+                    Ver kit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+
               <DropdownMenuItem onSelect={() => setEditando(true)}>
                 <Pencil />
                 Editar artículo
@@ -607,6 +636,18 @@ export function FilaLinea({
       */}
       {viendo ? (
         <PreciosYStock linea={linea} onCerrar={() => setViendo(false)} />
+      ) : null}
+
+      {/* Montado solo al abrirse, por lo mismo que los demás. */}
+      {viendoKit ? (
+        <DialogoKit
+          linea={linea}
+          puedeEditarKit={puedeEditarKit}
+          onCerrar={() => setViendoKit(false)}
+          onKitGuardado={(producto, anterior) =>
+            despachar({ tipo: "refrescarKit", key: linea.key, producto, anterior })
+          }
+        />
       ) : null}
 
       {editando ? (

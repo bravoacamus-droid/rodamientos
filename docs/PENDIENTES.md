@@ -4521,7 +4521,10 @@ de Defontana.
 - [x] ~~Botón «volver a comprar»~~ — 25/09 (096). Desde la ficha de la
       compra (la repite entera) y desde «A quién se le compró» del producto
       (solo ese producto, y sin los gastos de aquel envío, que eran de todo).
-- [ ] **Imprimir el detalle de un kit** (§AO.1).
+- [x] ~~Imprimir el detalle de un kit~~ — reemplazado el 25/09 por lo que
+      pidió Luis: *«no imprimir; en la cotización, en los tres puntos, ver
+      detalle de kit, y editarlo en un modal ahí mismo»*. Hecho: «Ver kit» y
+      «Editar kit» sin salir de la cotización.
 - [ ] **DECIDIR con Willy**: ¿el precio de costo es el promedio ponderado o la
       última compra? Dijo las dos cosas (§AO.3). El sistema hace la primera.
 - [x] ~~El costo no se jalaba al registrar una compra~~ — 25/09 (§AO.2).

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { kitPorId, type KitDetalle } from "../api/kits";
 
 /**
  * Los KITS: varios productos que se cotizan y se facturan como uno.
@@ -253,4 +254,32 @@ export async function otrosKitsDe(
     // del que dependa guardar.
     return {};
   }
+}
+
+/**
+ * Lee un kit para enseñarlo DESDE LA COTIZACIÓN (25/09).
+ *
+ * Luis: *«en cotización, cuando agregue un kit, en los tres puntos ver
+ * detalle de kit […] así es dinámico en la misma cotización, para no regresar
+ * a la otra ventana, todo ahí en vivo»*. El modal está en una pantalla de
+ * cliente y la lectura (`kitPorId`) es de servidor, así que hace falta esta
+ * puerta.
+ *
+ * LEER lo puede cualquiera con sesión —quien cotiza tiene que poder ver qué
+ * lleva el kit que vende—; EDITAR sigue siendo cosa de quien mantiene el
+ * catálogo, y eso lo decide `guardarKit` con su propia guardia.
+ */
+export async function leerKit(
+  id: string,
+): Promise<{ ok: true; datos: KitDetalle } | { ok: false; error: string }> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!z.string().uuid().safeParse(id).success) {
+    return { ok: false, error: "Ese kit no es válido." };
+  }
+
+  const r = await kitPorId(id);
+  if (!r.ok) return r;
+  if (!r.datos) return { ok: false, error: "Ese kit ya no existe." };
+  return { ok: true, datos: r.datos };
 }

@@ -87,6 +87,9 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
   return {
     key: l.producto_id,
     productoId: l.producto_id,
+    // Una pieza de un kit nunca es un kit: lo impide `kit_solo_lleva_piezas`
+    // (085), porque un kit dentro de otro haría el stock infinito de calcular.
+    esKit: false,
     codigo: l.codigo,
     marca: l.marca,
     descripcion: l.descripcion,
@@ -119,7 +122,27 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
  * propio: es el gesto que Willy ya tiene aprendido —teclear el código y dar a
  * Enter— y el que sabe crear un producto que no existe sin salir de aquí.
  */
-export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
+export function FormularioKit({
+  kit,
+  alGuardar,
+  alCancelar,
+  enModal = false,
+}: {
+  kit: KitDetalle | null;
+  /**
+   * Dentro de un modal (25/09): en vez de navegar al listado al guardar, se
+   * avisa a quien lo abrió. Luis: *«es un nuevo modal ahí mismo, así es
+   * dinámico en la misma cotización para no regresar a la otra ventana»*.
+   *
+   * Es EL MISMO editor, no una copia. Copiarlo al modal daría dos formas de
+   * editar un kit que con el tiempo dejarían de hacer lo mismo — que es como
+   * salieron los 47 px contra 40 de §AM.13.
+   */
+  alGuardar?: (r: { id: string; codigo: string }) => void;
+  alCancelar?: () => void;
+  /** Sin la cabecera de página ni los márgenes que suponen una página. */
+  enModal?: boolean;
+}) {
   const router = useRouter();
   const [guardando, empezar] = React.useTransition();
 
@@ -342,22 +365,29 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
         return;
       }
       toast.success(`${r.codigo} guardado.`);
+      if (alGuardar) {
+        alGuardar({ id: r.id, codigo: r.codigo });
+        return;
+      }
       router.push("/productos/kits");
       router.refresh();
     });
   }
 
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-5 p-6">
-      <header>
-        <h1 className="text-xl font-semibold">
-          {kit ? `Editar ${kit.codigo}` : "Nuevo kit"}
-        </h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Junta varios productos bajo un código y un precio. El cliente lo pide
-          por ese código y en la cotización sale como un solo ítem.
-        </p>
-      </header>
+    <form onSubmit={enviar} className={`flex flex-col gap-5 ${enModal ? "" : "p-6"}`}>
+      {/* En el modal el título lo pone el propio diálogo. */}
+      {enModal ? null : (
+        <header>
+          <h1 className="text-xl font-semibold">
+            {kit ? `Editar ${kit.codigo}` : "Nuevo kit"}
+          </h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Junta varios productos bajo un código y un precio. El cliente lo pide
+            por ese código y en la cotización sale como un solo ítem.
+          </p>
+        </header>
+      )}
 
       <section className="card p-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -856,14 +886,24 @@ export function FormularioKit({ kit }: { kit: KitDetalle | null }) {
       </section>
 
       {/* La barra al pie, como en la cotización (Luis, 16/09). */}
-      <div className="sticky bottom-0 -mx-6 -mb-6 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 elev-2">
+      <div
+        className={
+          enModal
+            ? "sticky bottom-0 border-t border-[var(--border)] bg-[var(--surface)] py-3"
+            : "sticky bottom-0 -mx-6 -mb-6 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-3 elev-2"
+        }
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-sm">
             <span className="text-[var(--fg-muted)]">Con el stock de hoy se pueden armar </span>
             <strong className="tabular">{armable}</strong>
           </span>
           <span className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => (alCancelar ? alCancelar() : router.back())}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={!listo || guardando}>

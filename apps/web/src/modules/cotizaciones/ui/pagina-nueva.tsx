@@ -1,4 +1,5 @@
 import { EstadoError } from "@rodatech/ui";
+import { perfilActual } from "@rodatech/db/servidor";
 
 import { clientesParaCotizar } from "../api/consultas";
 import { Constructor } from "./constructor";
@@ -27,7 +28,14 @@ export default async function PaginaNuevaCotizacion({
   const sp = await searchParams;
   const cliente = typeof sp.cliente === "string" ? sp.cliente : null;
 
-  const resultado = await clientesParaCotizar(cliente);
+  const [resultado, perfil] = await Promise.all([
+    clientesParaCotizar(cliente),
+    perfilActual(),
+  ]);
+  // Los mismos roles que `guardarKit` (25/09): a quien no puede cambiar un kit
+  // no se le ofrece el botón.
+  const puedeEditarKit =
+    !!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol);
   if (!resultado.ok) {
     return (
       <div className="p-6">
@@ -44,6 +52,7 @@ export default async function PaginaNuevaCotizacion({
       sugeridos={resultado.datos.sugeridos}
       clienteInicial={resultado.datos.inicial}
       hoy={new Date().toISOString().slice(0, 10)}
+      puedeEditarKit={puedeEditarKit}
     />
   );
 }

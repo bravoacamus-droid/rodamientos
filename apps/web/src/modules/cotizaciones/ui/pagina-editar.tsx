@@ -120,6 +120,9 @@ export default async function PaginaEditarCotizacion({
     lineas: lineas.map((l, i) => ({
       key: `k${i + 1}`,
       productoId: l.producto_id,
+      // La consulta ya lo traía para imprimir el contenido del kit (085);
+      // aquí hace falta para ofrecer verlo y editarlo desde la línea.
+      esKit: Boolean(l.productos?.es_kit),
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
@@ -164,6 +167,10 @@ export default async function PaginaEditarCotizacion({
       {compras.length > 0 ? <AvisoDeCompras compras={compras} /> : null}
       <Constructor
       sugeridos={[]}
+      // Los mismos roles que `guardarKit` (25/09).
+      puedeEditarKit={
+        !!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)
+      }
       hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
         new Date(),
       )}

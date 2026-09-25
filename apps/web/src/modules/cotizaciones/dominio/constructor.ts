@@ -34,6 +34,12 @@ export interface ProductoParaCotizar {
    * haya entrado nunca al almacén — el caso de casi todo el catálogo.
    */
   ultimo_costo?: number;
+  /**
+   * Es un KIT (085). `buscar_productos` lo devuelve desde la 085 y hasta el
+   * 25/09 no lo leía nadie aquí — así que la cotización no podía distinguir
+   * un kit de un rodamiento, ni ofrecer ver lo que lleva dentro.
+   */
+  es_kit?: boolean;
 }
 
 import { entregaDelDocumento, type Disponibilidad } from "./disponibilidad";
@@ -84,6 +90,12 @@ export interface LineaConstructor {
   disponibilidad: Disponibilidad;
   /** Plazo propio de la línea. Null = el habitual de su tipo. */
   diasEntrega: number | null;
+  /**
+   * La línea es un KIT. Luis, 25/09: *«recuerda que un kit no es un
+   * producto»* — en la cotización ocupa una línea como cualquier otro, pero
+   * lleva cosas dentro que hay que poder ver y cambiar sin salir de aquí.
+   */
+  esKit: boolean;
 }
 
 export interface EstadoConstructor {
@@ -213,6 +225,17 @@ export type Accion =
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
   | { tipo: "diasEntrega"; key: string; valor: number | null }
   | { tipo: "sustituir"; key: string; producto: ProductoParaCotizar }
+  /**
+   * El kit se editó desde la cotización y hay que traer sus datos nuevos.
+   * `anterior` es cómo estaba el kit antes de editarlo, para saber si la
+   * línea lo seguía o alguien la había cambiado a mano (ver el caso).
+   */
+  | {
+      tipo: "refrescarKit";
+      key: string;
+      producto: ProductoParaCotizar;
+      anterior: { codigo: string; descripcion: string };
+    }
   | { tipo: "mover"; key: string; direccion: -1 | 1 }
   | { tipo: "cargar"; estado: EstadoConstructor };
 
@@ -276,6 +299,7 @@ function desdeProducto(
   return {
     key,
     productoId: producto.id,
+    esKit: Boolean(producto.es_kit),
     codigo: producto.codigo,
     // C2 (14:54): la marca va en columna propia, no embebida en la descripción.
     marca: producto.marca,
@@ -487,6 +511,45 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
       return mapear(estado, accion.key, (l) =>
         desdeProducto(accion.producto, l.key, l.cantidad),
       );
+    }
+
+    case "refrescarKit": {
+      /*
+        El kit se editó desde la cotización (25/09) y la línea tiene que
+        enterarse — pero sin perder lo que se negoció.
+
+        Willy, 24/09 (8:25): el precio del kit *«puede variar»* y se cambia
+        en la cotización, y eso vale solo para esa cotización. Así que la
+        regla es la de siempre en este proyecto: lo PROPUESTO se actualiza,
+        lo TECLEADO se queda.
+
+          · El precio sigue al kit solo si la línea todavía estaba en el de
+            lista. Si alguien ya lo había bajado a mano, eso se respeta: es
+            una decisión, y una decisión no se pisa sola.
+          · Código y descripción siguen al kit solo si la línea no se había
+            editado con «Editar artículo» — esa copia es lo que se imprime.
+          · Costo, piso, mercado y stock se actualizan siempre: son datos de
+            referencia, no algo que se pacte con el cliente.
+          · Cantidad, descuento y plazo no se tocan: son de esta cotización.
+      */
+      const p = accion.producto;
+      return mapear(estado, accion.key, (l) => {
+        const precioIntacto = l.valorUnitario === l.precioLista;
+        const textoIntacto =
+          l.codigo === accion.anterior.codigo && l.descripcion === accion.anterior.descripcion;
+        return {
+          ...l,
+          codigo: textoIntacto ? p.codigo : l.codigo,
+          descripcion: textoIntacto ? p.descripcion : l.descripcion,
+          precioLista: p.precio_venta,
+          valorUnitario: precioIntacto ? p.precio_venta : l.valorUnitario,
+          costoUnitario: p.costo_promedio || p.ultimo_costo || 0,
+          costoDelKardex: (p.costo_promedio ?? 0) > 0,
+          precioMinimo: p.precio_minimo ?? 0,
+          precioMercado: p.precio_mercado ?? 0,
+          stock: p.stock ?? 0,
+        };
+      });
     }
 
     case "mover": {

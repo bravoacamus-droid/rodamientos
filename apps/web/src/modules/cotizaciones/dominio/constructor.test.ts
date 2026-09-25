@@ -577,3 +577,71 @@ describe("avisosDeCosto", () => {
     expect(avisosDeCosto(e)).toEqual([]);
   });
 });
+
+describe("refrescarKit", () => {
+  /*
+    El kit se edita desde la cotización (25/09). Willy (8:25): el precio del
+    kit en la cotización se puede cambiar y vale solo para ella. Lo propuesto
+    se actualiza; lo tecleado se queda.
+  */
+  const KIT = {
+    ...P6209,
+    id: "kit1",
+    codigo: "KIT-MOTOR",
+    descripcion: "KIT MOTORREDUCTOR",
+    marca: null,
+    precio_venta: 100,
+    costo_promedio: 0,
+    ultimo_costo: 70,
+    precio_minimo: 80,
+    es_kit: true,
+  };
+  const nuevo = {
+    ...KIT,
+    codigo: "KIT-MOTOR-2",
+    descripcion: "KIT MOTORREDUCTOR COMPLETO",
+    precio_venta: 130,
+    ultimo_costo: 90,
+    precio_minimo: 100,
+  };
+  const anterior = { codigo: "KIT-MOTOR", descripcion: "KIT MOTORREDUCTOR" };
+
+  it("la línea sabe que es un kit", () => {
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: KIT });
+    expect(e.lineas[0]?.esKit).toBe(true);
+  });
+
+  it("si nadie tocó el precio, sigue al kit", () => {
+    const e = correr(
+      estadoInicial("cli"),
+      { tipo: "agregar", producto: KIT },
+      { tipo: "refrescarKit", key: "l1", producto: nuevo, anterior },
+    );
+    expect(e.lineas[0]?.valorUnitario).toBe(130);
+    expect(e.lineas[0]?.codigo).toBe("KIT-MOTOR-2");
+    expect(e.lineas[0]?.costoUnitario).toBe(90);
+  });
+
+  it("si alguien bajó el precio a mano, NO se pisa", () => {
+    const e = correr(
+      estadoInicial("cli"),
+      { tipo: "agregar", producto: KIT },
+      { tipo: "precio", key: "l1", valor: 95 },
+      { tipo: "refrescarKit", key: "l1", producto: nuevo, anterior },
+    );
+    expect(e.lineas[0]?.valorUnitario).toBe(95);
+    // Pero el de lista sí sabe el nuevo: el modal de precios lo enseña.
+    expect(e.lineas[0]?.precioLista).toBe(130);
+  });
+
+  it("no toca cantidad ni descuento: son de esta cotización", () => {
+    const e = correr(
+      estadoInicial("cli"),
+      { tipo: "agregar", producto: KIT, cantidad: 3 },
+      { tipo: "descuento", key: "l1", valor: 5 },
+      { tipo: "refrescarKit", key: "l1", producto: nuevo, anterior },
+    );
+    expect(e.lineas[0]?.cantidad).toBe(3);
+    expect(e.lineas[0]?.descuentoPct).toBe(5);
+  });
+});

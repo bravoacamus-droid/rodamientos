@@ -51,7 +51,14 @@ export function Constructor({
   clienteInicial = null,
   hoy,
   editando = null,
+  puedeEditarKit = false,
 }: {
+  /**
+   * Si quien cotiza puede cambiar un kit desde aquí (25/09). Gerencia, admin
+   * y compras, que son los que `guardarKit` deja pasar: a un vendedor se le
+   * enseña el kit pero no se le ofrece un botón que la base rechazaría.
+   */
+  puedeEditarKit?: boolean;
   /** Los últimos cotizados, para que el buscador ofrezca algo sin teclear. */
   sugeridos: ClienteOpcion[];
   /** El cliente de `?cliente=…`, ya resuelto por el servidor. */
@@ -511,6 +518,7 @@ export function Constructor({
                         clienteId={estado.clienteId}
                         mostrarDescuento={estado.mostrarDescuento}
                         despachar={despachar}
+                        puedeEditarKit={puedeEditarKit}
                       />
                     ))}
                   </TBody>
