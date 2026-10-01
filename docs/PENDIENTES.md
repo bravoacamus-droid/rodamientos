@@ -4644,16 +4644,35 @@ siguen valiendo; el reparto se decide cuando haya un pedido real.
 
 ### AP.5 · Lo que hay que hacer, en orden
 
-- [ ] **Cada gasto dice cómo se reparte: por peso o por valor.** Courier/flete
-      → peso; desaduanaje y aduanas → valor, por defecto, y se puede cambiar.
-      Columna en `gastos_importacion` y `recepcionar_mercaderia` reparte cada
-      gasto por su base. Si alguna pieza no tiene peso, avisa y la reparte por
-      valor, en vez de regalarle el flete.
-- [ ] **«Añadir gasto» en la ficha de una compra registrada**, que lleve al
-      gasto de `/importaciones` (o lo reutilice ahí mismo).
-- [ ] **Cargar el peso de los 29 productos de su hoja** (SQL directo, no
-      migración: son datos del cliente).
+- [x] ~~Cada gasto dice cómo se reparte: por peso o por valor~~ — 01/10
+      (097). Si alguna pieza no tiene peso, todo va por valor y se avisa.
+- [x] ~~«Añadir gasto» en la ficha de una compra registrada~~ — 01/10, con el
+      aviso del desaduanaje en las aéreas.
+- [x] ~~Cargar el peso de los productos de su hoja~~ — 01/10. **12 de 29**:
+      los otros 17 no están en el catálogo (`scripts/pesos-de-willy-01-10.sql`).
 - [ ] El simulador de importación (AP.3), cuando lo pida.
+
+### AP.6 · Probado en pantalla el 01/10, y lo que salió
+
+Con su propio pedido —6 × 6312-2Z/C3 a 9.432 y 2 × NKIB5902-XL a 3.7728,
+courier 106.39—: «$106.39 ÷ 10.48 kg = $10.15 por kilo» y «Puesto en Lima»
+**26.99 y 4.29**, igual que su hoja. Con 30 de desaduanaje por valor, 31.40 y
+6.06 en la compra, en la ficha y en la vista previa de la recepción.
+
+**Lo que no veían ni tsc ni los 1287 tests:** la compra se GUARDABA sin reparto
+ni pesos. El esquema zod de `registrarCompra` no los declaraba, y `z.object`
+**quita en silencio lo que no conoce**. La pantalla calculaba bien, la base
+calculaba bien, y el dato se perdía en medio. Es una variante nueva de «la
+pieza existe, el camino no»: el camino existía y tenía un filtro. **Al añadir
+un campo al payload de una Server Action, añádelo a su esquema.**
+
+También: la vista previa de la recepción repartía sobre el valor de la
+ENTREGA y la base, desde la 094, sobre el de la compra — en recepciones
+parciales no coincidían, y un test fijaba el número equivocado.
+
+Compras de prueba: CMP-26-00007 y CMP-26-00008, **anuladas** (sin recepción,
+no movieron stock). No se confirmó una recepción real: el centinela de la 097
+ya ejecuta `recepcionar_mercaderia` con estos casos.
 
 ---
 

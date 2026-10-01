@@ -216,7 +216,7 @@ export function SelectorReparto({
     <span
       role="group"
       aria-label={`Cómo se reparte ${concepto || "este gasto"}`}
-      className="inline-flex shrink-0 overflow-hidden rounded-md border border-[var(--border)]"
+      className="inline-flex w-fit shrink-0 self-start overflow-hidden rounded-md border border-[var(--border)]"
     >
       {(["peso", "valor"] as const).map((r) => (
         <button

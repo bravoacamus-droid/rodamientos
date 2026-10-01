@@ -58,6 +58,7 @@ export function GastosFicha({
   porKg,
   kilos,
   faltanPesos,
+  anulada = false,
 }: {
   compraId: string;
   gastos: GastoFicha[];
@@ -73,6 +74,8 @@ export function GastosFicha({
   kilos: number;
   /** Hay gastos por kilo pero algún producto no tiene peso. */
   faltanPesos: boolean;
+  /** Anulada: sus gastos no van a ningún costo. */
+  anulada?: boolean;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
@@ -139,7 +142,13 @@ export function GastosFicha({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">Gastos</h3>
         {editable && puedeTocar ? (
-          <Button type="button" variant="outline" size="sm" onClick={() => abrir("Desaduanaje")}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-sm"
+            onClick={() => abrir("Desaduanaje")}
+          >
             <Plus className="size-4" aria-hidden />
             Añadir gasto
           </Button>
@@ -158,7 +167,7 @@ export function GastosFicha({
           <Button
             type="button"
             size="sm"
-            className="mt-2"
+            className="mt-2 text-sm"
             onClick={() => abrir("Desaduanaje")}
           >
             <Plus className="size-4" aria-hidden />
@@ -230,9 +239,12 @@ export function GastosFicha({
 
       {hayAlgo ? (
         <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-          {editable
-            ? "Entran al costo de cada producto al recibir."
-            : "Ya entraron al costo de cada producto al recibir."}
+          {/* Lo que pasa de verdad con ellos, según cómo está la compra. */}
+          {anulada
+            ? "La compra está anulada: estos gastos no entran a ningún costo."
+            : editable
+              ? "Entran al costo de cada producto al recibir."
+              : "Ya entraron al costo de lo recibido; lo que falta llegar los lleva igual."}
         </p>
       ) : null}
 

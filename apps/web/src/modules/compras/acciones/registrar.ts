@@ -41,6 +41,14 @@ const esquemaItem = z.object({
   cantidad: z.number().int("Las cantidades se piden enteras.").positive().finite(),
   costo_unitario: z.number().nonnegative().finite(),
   unidad_codigo: z.string().min(1).max(10),
+  /*
+    097. Peso por unidad, en kg. SIN esto zod lo descartaba en silencio —un
+    `z.object` quita lo que no conoce— y la compra llegaba a la base sin
+    pesos: probado en pantalla el 01/10, el costo puesto salió 25.08 en vez de
+    los 26.99 del Excel de Willy. Con `.default(0)` un cliente viejo no se cae.
+    El tope es generoso: no hay rodamiento de cinco toneladas.
+  */
+  peso_kg: z.number().nonnegative().finite().max(5000).default(0),
 });
 
 const esquema = z.object({
@@ -77,6 +85,9 @@ const esquema = z.object({
       z.object({
         concepto: z.string().trim().min(1, "Un gasto no tiene concepto.").max(80),
         monto: z.number().positive("Un gasto tiene que ser mayor que cero.").finite(),
+        // 097. Lo mismo que el peso: sin declararlo aquí, se perdía y todo
+        // gasto llegaba «por valor».
+        reparto: z.enum(["valor", "peso"]).default("valor"),
       }),
     )
     .max(20, "Son demasiados gastos para una compra.")

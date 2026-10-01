@@ -401,6 +401,7 @@ export default async function PaginaDetalleCompra({
                 porKg={costeo.porKg}
                 kilos={costeo.kilos}
                 faltanPesos={costeo.faltaPeso.length > 0}
+                anulada={c.estado === "anulada"}
               />
             ) : null}
 

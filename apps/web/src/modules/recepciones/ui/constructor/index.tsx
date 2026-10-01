@@ -227,7 +227,7 @@ export function ConstructorRecepcion({
               <div className="flex h-control-md items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3">
                 <span className="truncate text-sm">{compraElegida.proveedor}</span>
               </div>
-              <span className="text-xs text-[var(--fg-subtle)]">
+              <span className="text-sm text-[var(--fg-subtle)]">
                 Lo manda la compra {compraElegida.numero}.
               </span>
             </div>
@@ -248,7 +248,7 @@ export function ConstructorRecepcion({
                 hoy={hoy}
               />
               {sugeridos.length === 0 && proveedor === null ? (
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="text-sm text-[var(--fg-subtle)]">
                   Todavía no hay proveedores. Crea el primero con «Nuevo».
                 </span>
               ) : null}
@@ -410,7 +410,7 @@ export function ConstructorRecepcion({
                   {conGastos ? (
                     <th className="text-right">
                       Con gastos
-                      <span className="block text-xs font-normal text-[var(--fg-subtle)]">
+                      <span className="block text-sm font-normal text-[var(--fg-subtle)]">
                         al kardex
                       </span>
                     </th>
@@ -483,7 +483,7 @@ export function ConstructorRecepcion({
                     <dt>Valor al almacén</dt>
                     <dd className="tabular">${costeo.totalFinal.toFixed(2)}</dd>
                   </div>
-                  <p className="text-xs text-[var(--fg-subtle)]">
+                  <p className="text-sm text-[var(--fg-subtle)]">
                     Factor {costeo.factor} sobre cada costo. Es lo que va al
                     kardex, no lo que se le paga al proveedor.
                   </p>
@@ -494,7 +494,7 @@ export function ConstructorRecepcion({
             {/* Motivos, no un booleano: un botón deshabilitado sin explicación
                 es de las cosas que más se odian de un ERP. */}
             {bloqueos.length > 0 ? (
-              <ul className="flex flex-col gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2 text-xs text-[var(--fg-muted)]">
+              <ul className="flex flex-col gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2 text-sm text-[var(--fg-muted)]">
                 {bloqueos.map((b) => (
                   <li key={b.campo}>· {b.mensaje}</li>
                 ))}
@@ -502,7 +502,7 @@ export function ConstructorRecepcion({
             ) : null}
 
             {avisos.length > 0 ? (
-              <ul className="flex flex-col gap-1 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-xs text-[var(--warn)]">
+              <ul className="flex flex-col gap-1 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
                 {avisos.map((a, i) => (
                   <li key={`${a.key}-${i}`}>
                     <span className="font-mono font-medium">{a.codigo}</span>{" "}
@@ -521,13 +521,13 @@ export function ConstructorRecepcion({
                 después es el precio de venta, no si se recibe. */}
             {impactos.length > 0 ? (
               <div className="flex flex-col gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+                <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
                   Qué pasa con el precio
                 </p>
                 {impactos.map((x) => (
                   <div
                     key={x.key}
-                    className={`rounded-md border p-2.5 text-xs ${
+                    className={`rounded-md border p-2.5 text-sm ${
                       x.impacto.gravedad === "grave"
                         ? "border-[var(--danger)] bg-[var(--danger-bg)]"
                         : "border-[var(--border)] bg-[var(--surface-2)]"
@@ -542,7 +542,7 @@ export function ConstructorRecepcion({
                     ) : null}
                   </div>
                 ))}
-                <p className="text-xs text-[var(--fg-subtle)]">
+                <p className="text-sm text-[var(--fg-subtle)]">
                   Esto no impide recibir: la factura ya está firmada y el costo
                   es el que es. Lo que hay que decidir después es el{" "}
                   <strong>precio de venta</strong>.
