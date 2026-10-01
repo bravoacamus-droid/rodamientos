@@ -7,6 +7,8 @@
  * en 004_funciones.sql, «el único camino por el que entra stock».
  */
 
+import type { RepartoCompra } from "./costeo";
+
 /** Una fila del listado de recepciones. */
 export interface RecepcionLista {
   id: string;
@@ -128,4 +130,6 @@ export interface CompraPendiente {
   /** Soles por dólar. Null en las compras en dólares. */
   tipo_cambio: number | null;
   lineas: LineaPendiente[];
+  /** Cómo se reparten sus gastos: por valor de la compra y por kilo (097). */
+  reparto: RepartoCompra;
 }

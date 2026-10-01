@@ -1,4 +1,10 @@
-import { costearRecepcion, redondear2, redondear4, type CosteoRecepcion } from "./costeo";
+import {
+  costearRecepcion,
+  redondear2,
+  redondear4,
+  type CosteoRecepcion,
+  type RepartoCompra,
+} from "./costeo";
 import type { CompraPendiente } from "./tipos";
 
 /**
@@ -58,6 +64,8 @@ export interface EstadoRecepcion {
    * prorrateo.
    */
   gastosImportacion: number;
+  /** Las bases del reparto, de la compra enlazada (094, 097). */
+  reparto: RepartoCompra | null;
   lineas: LineaRecibida[];
   proximaKey: number;
 }
@@ -100,6 +108,7 @@ export function estadoInicial(fecha: string): EstadoRecepcion {
     facturaProveedor: "",
     observaciones: "",
     gastosImportacion: 0,
+    reparto: null,
     lineas: [],
     proximaKey: 1,
   };
@@ -197,6 +206,7 @@ export function reducir(estado: EstadoRecepcion, accion: Accion): EstadoRecepcio
         compraId: accion.compra.id,
         proveedorId: accion.compra.proveedor_id,
         gastosImportacion: accion.compra.gastos_importacion,
+        reparto: accion.compra.reparto,
         lineas: pendientes.map((l, i) => ({
           key: `c${estado.proximaKey + i}`,
           productoId: l.producto_id,
@@ -246,6 +256,7 @@ export function reducir(estado: EstadoRecepcion, accion: Accion): EstadoRecepcio
         ...estado,
         compraId: null,
         gastosImportacion: 0,
+        reparto: null,
         lineas: estado.lineas.map((l) => ({ ...l, pendiente: null })),
       };
 
@@ -263,8 +274,10 @@ export function costeoDe(estado: EstadoRecepcion): CosteoRecepcion {
     estado.lineas.map((l) => ({
       cantidad: l.cantidad,
       costoUnitario: l.costoUnitario,
+      pesoKg: estado.reparto?.pesos[l.productoId] ?? 0,
     })),
     estado.gastosImportacion,
+    estado.reparto,
   );
 }
 

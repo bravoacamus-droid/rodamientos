@@ -76,6 +76,8 @@ export interface LineaCompra {
   cantidad_recibida: number;
   costo_unitario: number;
   importe: number;
+  /** Peso por unidad con el que se compró (097). 0 si no se escribió. */
+  peso_kg: number;
 }
 
 /** La ficha completa. */
@@ -101,8 +103,11 @@ export interface CompraDetalle {
   via_importacion: "aerea" | "maritima" | null;
   /** La moneda de la factura del proveedor (042). */
   moneda: "USD" | "PEN";
-  /** El detalle de los gastos, de más caro a más barato. Vacío si no se detalló. */
-  gastos: { concepto: string; monto: number }[];
+  /**
+   * El detalle de los gastos, de más caro a más barato. Vacío si no se
+   * detalló. Con su reparto desde la 097.
+   */
+  gastos: { id: string; concepto: string; monto: number; reparto: "valor" | "peso" }[];
   comprador: string | null;
   observaciones: string | null;
   /**

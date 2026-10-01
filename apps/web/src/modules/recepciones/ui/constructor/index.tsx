@@ -341,10 +341,17 @@ export function ConstructorRecepcion({
               </label>
 
               {compraElegida ? (
-                <p className="text-xs text-[var(--fg-muted)]">
+                <p className="text-sm text-[var(--fg-muted)]">
                   Se han precargado las líneas que faltaban por llegar.
+                  {/* Cómo se reparten, dicho como se hace (097). */}
                   {compraElegida.gastos_importacion > 0
-                    ? ` La compra trae ${compraElegida.gastos_importacion.toFixed(2)} de gastos, que se reparten por valor.`
+                    ? ` La compra trae ${compraElegida.gastos_importacion.toFixed(2)} de gastos${
+                        compraElegida.reparto.porKg > 0
+                          ? `: ${(compraElegida.gastos_importacion - compraElegida.reparto.gastosPorValor).toFixed(2)} por kilo (${compraElegida.reparto.porKg.toFixed(2)} el kilo) y ${compraElegida.reparto.gastosPorValor.toFixed(2)} por valor.`
+                          : compraElegida.reparto.faltaPeso
+                            ? ", que se reparten por valor porque a algún producto le falta el peso."
+                            : ", que se reparten por valor."
+                      }`
                     : ""}
                 </p>
               ) : null}

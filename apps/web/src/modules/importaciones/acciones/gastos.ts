@@ -5,6 +5,7 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { mensajeDeError } from "@/lib/errores";
+import { repartoSugerido } from "@/modules/compras/dominio/gastos";
 
 import { gastosDe } from "../api/consultas";
 
@@ -41,6 +42,9 @@ const esquema = z.object({
   monto: z.number().positive("El monto tiene que ser mayor que cero").finite(),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida"),
   documento: z.string().trim().max(60).nullable(),
+  // 097. Opcional: si no llega, el que corresponde al concepto (courier y
+  // flete por kilo; lo demás por valor). La base solo admite estos dos.
+  reparto: z.enum(["valor", "peso"]).optional(),
 });
 
 async function exigirPermiso(): Promise<string | null> {
@@ -72,6 +76,7 @@ export async function agregarGasto(entrada: {
   monto: number;
   fecha: string;
   documento: string | null;
+  reparto?: "valor" | "peso";
 }): Promise<ResultadoGasto> {
   const problema = await exigirPermiso();
   if (problema) return { ok: false, error: problema };
@@ -89,6 +94,7 @@ export async function agregarGasto(entrada: {
       monto: datos.data.monto,
       fecha: datos.data.fecha,
       documento: datos.data.documento,
+      reparto: datos.data.reparto ?? repartoSugerido(datos.data.concepto),
     });
 
     if (error) return { ok: false, error: traducir(error) };

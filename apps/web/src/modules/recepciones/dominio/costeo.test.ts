@@ -5,6 +5,7 @@ import {
   costearRecepcion,
   factorGastos,
   redondear6,
+  repartoDeCompra,
 } from "./costeo";
 
 /**
@@ -131,5 +132,68 @@ describe("redondeo a 6 decimales", () => {
     // dejaría en 1.000000.
     expect(redondear6(1.0000005)).toBe(1.000001);
     expect(redondear6(1.3006975462)).toBe(1.300698);
+  });
+});
+
+/*
+  097 · Por kilo y por valor. Los mismos números que el centinela de la
+  migración, que los comprueba ejecutando `recepcionar_mercaderia` en la
+  base: si esto y aquello se separan, salta uno de los dos.
+*/
+describe("reparto de la compra (097)", () => {
+  const lineas = [
+    { producto_id: "a", cantidad: 1, costo_unitario: 10, peso_kg: 1 },
+    { producto_id: "b", cantidad: 1, costo_unitario: 10, peso_kg: 0.1 },
+  ];
+
+  it("courier por kilo y desaduanaje por valor: 22 y 13", () => {
+    const r = repartoDeCompra(
+      lineas,
+      [
+        { monto: 11, reparto: "peso" },
+        { monto: 4, reparto: "valor" },
+      ],
+      15,
+    );
+    expect(r.porKg).toBe(10);
+    expect(r.gastosPorValor).toBe(4);
+
+    const c = costearRecepcion(
+      [
+        { cantidad: 1, costoUnitario: 10, pesoKg: r.pesos.a },
+        { cantidad: 1, costoUnitario: 10, pesoKg: r.pesos.b },
+      ],
+      15,
+      r,
+    );
+    expect(c.lineas.map((l) => l.costoFinal)).toEqual([22, 13]);
+  });
+
+  it("con una pieza sin peso, todo por valor: 15 y 15", () => {
+    const r = repartoDeCompra(
+      [lineas[0]!, { producto_id: "c", cantidad: 1, costo_unitario: 10, peso_kg: 0 }],
+      [{ monto: 10, reparto: "peso" }],
+      10,
+    );
+    expect(r.faltaPeso).toBe(true);
+    expect(r.porKg).toBe(0);
+    expect(r.gastosPorValor).toBe(10);
+
+    const c = costearRecepcion(
+      [
+        { cantidad: 1, costoUnitario: 10, pesoKg: 1 },
+        { cantidad: 1, costoUnitario: 10, pesoKg: 0 },
+      ],
+      10,
+      r,
+    );
+    expect(c.lineas.map((l) => l.costoFinal)).toEqual([15, 15]);
+  });
+
+  it("una compra vieja, sin detalle, reparte su total por valor", () => {
+    const r = repartoDeCompra(lineas, [], 15);
+    expect(r.porKg).toBe(0);
+    expect(r.gastosPorValor).toBe(15);
+    expect(r.base).toBe(20);
   });
 });

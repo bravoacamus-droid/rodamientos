@@ -313,6 +313,8 @@ describe("aPayload", () => {
       "cantidad",
       "costo_unitario",
       "unidad_codigo",
+      // 097: el peso viaja; es un dato físico, no dinero.
+      "peso_kg",
     ]);
   });
 
@@ -348,8 +350,8 @@ describe("aPayload", () => {
     // Las otras cinco propuestas siguen en pantalla vacías, y NO viajan: un
     // gasto de cero en la ficha diría que se pagó y salió gratis.
     expect(payload.gastos).toEqual([
-      { concepto: "Flete marítimo", monto: 100 },
-      { concepto: "Derechos de aduana", monto: 50 },
+      { concepto: "Flete marítimo", monto: 100, reparto: "peso" },
+      { concepto: "Derechos de aduana", monto: 50, reparto: "valor" },
     ]);
     expect(payload.gastos_importacion).toBe(150);
   });
@@ -565,5 +567,41 @@ describe("volver a comprar (aplicarPlantilla)", () => {
     expect(e.tipo).toBe("local");
     expect(e.courier).toBe("");
     expect(totalesDe(e).gastos).toBe(10);
+  });
+});
+
+describe("peso y reparto (097)", () => {
+  it("la línea nace con el peso de la ficha, y se puede escribir", () => {
+    let e = construir({ tipo: "agregar", producto: { ...P6205, peso_kg: 0.12 } });
+    expect(e.lineas[0]!.pesoKg).toBe(0.12);
+    e = reducir(e, { tipo: "peso", key: e.lineas[0]!.key, valor: 0.00454 });
+    // Tres decimales, los de `productos.peso_kg`.
+    expect(e.lineas[0]!.pesoKg).toBe(0.005);
+    expect(aPayload(e).items[0]!.peso_kg).toBe(0.005);
+  });
+
+  it("un peso negativo o vacío es cero", () => {
+    let e = construir({ tipo: "agregar", producto: P6205 });
+    e = reducir(e, { tipo: "peso", key: e.lineas[0]!.key, valor: -3 });
+    expect(e.lineas[0]!.pesoKg).toBe(0);
+  });
+
+  it("la aérea propone el courier por kilo y el desaduanaje por valor", () => {
+    const e = construir({ tipo: "modalidad", valor: "aerea" });
+    expect(e.gastos.map((g) => [g.concepto, g.reparto])).toEqual([
+      ["Courier", "peso"],
+      ["Desaduanaje", "valor"],
+    ]);
+  });
+
+  it("lo propuesto sigue al concepto; lo elegido a mano se queda", () => {
+    let e = construir({ tipo: "gastoAgregar" });
+    const k = e.gastos.at(-1)!.key;
+    e = reducir(e, { tipo: "gastoConcepto", key: k, valor: "Flete aéreo" });
+    expect(e.gastos.at(-1)!.reparto).toBe("peso");
+
+    e = reducir(e, { tipo: "gastoReparto", key: k, valor: "valor" });
+    e = reducir(e, { tipo: "gastoConcepto", key: k, valor: "Flete aéreo DHL" });
+    expect(e.gastos.at(-1)!.reparto).toBe("valor");
   });
 });

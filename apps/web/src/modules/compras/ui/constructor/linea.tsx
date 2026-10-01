@@ -10,6 +10,20 @@ import {
 } from "../../dominio/constructor";
 
 /**
+ * Lo que la línea necesita saber de la compra entera (097): si se pide el
+ * peso —hay gastos «por kilo» o es aérea—, cuánto va a costar puesta en
+ * almacén, y si le falta el peso para repartir el courier.
+ */
+export interface ExtrasLinea {
+  mostrarPeso: boolean;
+  /** Costo por unidad con los gastos, o null si no hay gastos. */
+  puesto: number | null;
+  /** «Puesto en Lima» en una importación; «Con gastos» en una local. */
+  etiquetaPuesto: string;
+  sinPeso: boolean;
+}
+
+/**
  * Una línea del registro de compra.
  *
  * Lo que se teclea es cantidad y costo. Lo demás se enseña para que el
@@ -20,11 +34,13 @@ import {
 export function FilaCompra({
   linea,
   ultimoCosto,
+  extras,
   despachar,
 }: {
   linea: LineaCompraEditable;
   /** Lo que ESTE proveedor cobró la última vez por este producto. */
   ultimoCosto: { costo: number; numero: string } | undefined;
+  extras: ExtrasLinea;
   despachar: (a: Accion) => void;
 }) {
   const stockResultante = linea.stockActual + linea.cantidad;
@@ -79,6 +95,12 @@ export function FilaCompra({
 
       <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
 
+      {extras.mostrarPeso ? (
+        <td className="px-2 py-2">
+          <CampoPeso linea={linea} sinPeso={extras.sinPeso} despachar={despachar} />
+        </td>
+      ) : null}
+
       <td className="px-2 py-2">
         <Input
           type="number"
@@ -96,6 +118,17 @@ export function FilaCompra({
 
       <td className="px-2 py-2 text-right tabular text-sm font-medium">
         {importeLinea(linea).toFixed(2)}
+        {/* El costo puesto, debajo del importe y no en otra columna: la tabla
+            ya va justa de ancho, y es la cifra que se mira junto a esa. */}
+        {extras.puesto !== null ? (
+          <span className="mt-0.5 block whitespace-nowrap font-normal text-[var(--fg-muted)]">
+            {extras.etiquetaPuesto}{" "}
+            <span className="font-semibold text-brand-700 dark:text-brand-300">
+              {extras.puesto.toFixed(2)}
+            </span>{" "}
+            c/u
+          </span>
+        ) : null}
       </td>
 
       <td className="px-2 py-2 text-right text-sm tabular">
@@ -142,10 +175,12 @@ export function FilaCompra({
 export function TarjetaCompra({
   linea,
   ultimoCosto,
+  extras,
   despachar,
 }: {
   linea: LineaCompraEditable;
   ultimoCosto: { costo: number; numero: string } | undefined;
+  extras: ExtrasLinea;
   despachar: (a: Accion) => void;
 }) {
   const stockResultante = linea.stockActual + linea.cantidad;
@@ -208,6 +243,12 @@ export function TarjetaCompra({
           />
           <ReferenciaCosto linea={linea} ultimoCosto={ultimoCosto} />
         </label>
+        {extras.mostrarPeso ? (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Peso por unidad (kg)</span>
+            <CampoPeso linea={linea} sinPeso={extras.sinPeso} despachar={despachar} ancho />
+          </label>
+        ) : null}
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm">
@@ -226,6 +267,15 @@ export function TarjetaCompra({
           <span className="tabular font-semibold">{importeLinea(linea).toFixed(2)}</span>
         </p>
       </div>
+      {extras.puesto !== null ? (
+        <p className="mt-1 text-right text-sm">
+          <span className="text-[var(--fg-muted)]">{extras.etiquetaPuesto} </span>
+          <span className="tabular font-semibold text-brand-700 dark:text-brand-300">
+            {extras.puesto.toFixed(2)}
+          </span>
+          <span className="text-[var(--fg-muted)]"> c/u</span>
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -271,4 +321,51 @@ function ReferenciaCosto({
     );
   }
   return null;
+}
+
+/**
+ * El peso por unidad, en kg (097).
+ *
+ * Con él se reparte el courier, como en el Excel de Willy (§AP). Se propone el
+ * de la ficha y lo que se escriba aquí queda apuntado en el producto al
+ * guardar: ninguno de los 794 tenía peso, y así cada compra aérea va llenando
+ * el catálogo.
+ *
+ * Si hay gastos por kilo y falta, el campo se marca en ámbar con su porqué:
+ * mientras falte, TODO se reparte por valor.
+ */
+function CampoPeso({
+  linea,
+  sinPeso,
+  despachar,
+  ancho = false,
+}: {
+  linea: LineaCompraEditable;
+  sinPeso: boolean;
+  despachar: (a: Accion) => void;
+  ancho?: boolean;
+}) {
+  return (
+    <span className="flex flex-col gap-0.5">
+      <Input
+        type="number"
+        inputMode="decimal"
+        min={0}
+        step="0.001"
+        value={linea.pesoKg > 0 ? linea.pesoKg : ""}
+        placeholder="0.000"
+        onChange={(e) =>
+          despachar({ tipo: "peso", key: linea.key, valor: Number(e.target.value) })
+        }
+        className={`${ancho ? "" : "w-24 "}text-right tabular ${
+          sinPeso ? "border-[var(--warn)] bg-[var(--warn-bg)]" : ""
+        }`}
+        aria-label={`Peso por unidad de ${linea.codigo}, en kilos`}
+        aria-invalid={sinPeso || undefined}
+      />
+      {sinPeso ? (
+        <span className="text-sm font-medium text-[var(--warn)]">Falta el peso</span>
+      ) : null}
+    </span>
+  );
 }

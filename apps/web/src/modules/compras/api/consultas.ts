@@ -27,6 +27,8 @@ interface ProductoAnidado {
   codigo: string;
   descripcion: string;
   unidad_codigo: string;
+  /** 097. Solo lo pide la ficha. */
+  peso_kg?: number | null;
   marcas: { nombre: string } | null;
 }
 
@@ -38,6 +40,8 @@ interface ItemCrudo {
   costo_unitario: number;
   unidad_codigo: string;
   importe: number | null;
+  /** 097. Solo lo pide la ficha. */
+  peso_kg?: number | null;
   productos: ProductoAnidado | null;
 }
 
@@ -206,14 +210,14 @@ export async function detalleCompra(
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
          motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda,
-         gastos_importacion_detalle:gastos_importacion(concepto, monto),
+         gastos_importacion_detalle:gastos_importacion(id, concepto, monto, reparto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento),
          perfiles(nombre),
          compra_items(
            id, producto_id, cantidad, cantidad_recibida, costo_unitario,
-           unidad_codigo, importe,
-           productos(codigo, descripcion, unidad_codigo, marcas(nombre))
+           unidad_codigo, importe, peso_kg,
+           productos(codigo, descripcion, unidad_codigo, peso_kg, marcas(nombre))
          ),
          recepciones(id, numero, fecha)`,
       )
@@ -244,6 +248,9 @@ export async function detalleCompra(
       // recalcula. Recalcularla aquí sería abrir la puerta a que la ficha y la
       // base digan cosas distintas.
       importe: dos(Number(i.importe ?? 0)),
+      // 097: con el que se compró y, si no se escribió, el de la ficha — lo
+      // mismo que hace `recepcionar_mercaderia` al repartir por kilo.
+      peso_kg: Number(i.peso_kg ?? 0) || Number(i.productos?.peso_kg ?? 0),
     }));
 
     return {
@@ -271,8 +278,19 @@ export async function detalleCompra(
         // 042. La moneda de la FACTURA del proveedor; USD si no consta.
         moneda: (c.moneda as "USD" | "PEN" | null) ?? "USD",
         // El detalle, en el orden en que pesa: lo caro arriba.
-        gastos: ((c.gastos_importacion_detalle as { concepto: string; monto: number }[] | null) ?? [])
-          .map((g) => ({ concepto: String(g.concepto), monto: Number(g.monto ?? 0) }))
+        gastos: (
+          (c.gastos_importacion_detalle as
+            | { id: string; concepto: string; monto: number; reparto: string | null }[]
+            | null) ?? []
+        )
+          .map((g) => ({
+            id: String(g.id),
+            concepto: String(g.concepto),
+            monto: Number(g.monto ?? 0),
+            // 097. Las de antes no lo tenían: por valor, que es como se
+            // repartieron.
+            reparto: (g.reparto === "peso" ? "peso" : "valor") as "peso" | "valor",
+          }))
           .sort((a, b) => b.monto - a.monto),
         comprador: c.perfiles?.nombre ?? null,
         observaciones: (c.observaciones as string | null) ?? null,

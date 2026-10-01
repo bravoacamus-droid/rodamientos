@@ -50,7 +50,29 @@ export async function buscarParaComprar(
       p_solo_con_stock: false,
     });
     if (error) return { ok: false, error: error.message };
-    return { ok: true, datos: (data ?? []) as unknown as ProductoComprable[] };
+    const datos = (data ?? []) as unknown as ProductoComprable[];
+
+    /*
+      El PESO, en una segunda lectura (097).
+
+      Una importación aérea reparte el courier por kilo —es como lo calcula
+      Willy (§AP)—, así que la compra necesita el peso de cada producto. Se
+      pide aquí y no en `buscar_productos` porque cambiar lo que devuelve esa
+      función obliga a borrarla y recrearla, y la usan cotizaciones, compras y
+      kits. Una consulta más por los ≤ 20 resultados no se nota.
+    */
+    if (datos.length > 0) {
+      const { data: pesos } = await supabase
+        .from("productos")
+        .select("id, peso_kg")
+        .in(
+          "id",
+          datos.map((p) => p.id),
+        );
+      const porId = new Map((pesos ?? []).map((p) => [p.id, Number(p.peso_kg) || 0]));
+      for (const p of datos) p.peso_kg = porId.get(p.id) ?? 0;
+    }
+    return { ok: true, datos };
   } catch (e) {
     return {
       ok: false,

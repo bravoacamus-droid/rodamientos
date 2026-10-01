@@ -239,7 +239,7 @@ export async function precargaDeCompra(
     // lado de la cantidad. Sin él escribiría «0 → 12», que es una cifra falsa
     // justo en la pantalla donde se decide cuánto pedir.
     .select(
-      "id, codigo, descripcion, unidad_codigo, costo_promedio, stock_minimo, marcas(nombre), stock(cantidad)",
+      "id, codigo, descripcion, unidad_codigo, costo_promedio, ultimo_costo, peso_kg, stock_minimo, marcas(nombre), stock(cantidad)",
     )
     .in("id", [...pedidas.keys()]);
 
@@ -252,6 +252,8 @@ export async function precargaDeCompra(
       descripcion: string;
       unidad_codigo: string;
       costo_promedio: number | string;
+      ultimo_costo: number | string;
+      peso_kg: number | string;
       stock_minimo: number | string;
       marcas: { nombre: string } | null;
       stock: { cantidad: number | string } | { cantidad: number | string }[] | null;
@@ -276,6 +278,10 @@ export async function precargaDeCompra(
           Array.isArray(p.stock) ? p.stock[0]?.cantidad : p.stock?.cantidad,
         ),
         costo_promedio: num(p.costo_promedio),
+        // El respaldo del costo (25/09) y el peso para el courier (097): sin
+        // ellos, «volver a comprar» proponía costo cero y peso cero.
+        ultimo_costo: num(p.ultimo_costo),
+        peso_kg: num(p.peso_kg),
         stock_minimo: num(p.stock_minimo),
       },
       cantidad,

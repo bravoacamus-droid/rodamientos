@@ -11,6 +11,7 @@ import {
   type ProductoParaRecibir,
 } from "./constructor";
 import type { CompraPendiente } from "./tipos";
+import { repartoDeCompra } from "./costeo";
 
 const FECHA = "2026-08-24";
 
@@ -41,6 +42,21 @@ function correr(
 ): EstadoRecepcion {
   return acciones.reduce(reducir, inicial);
 }
+
+/** La compra de ejemplo con su reparto, calculado como en la consulta real (097). */
+const conReparto = (c: Omit<CompraPendiente, "reparto">): CompraPendiente => ({
+  ...c,
+  reparto: repartoDeCompra(
+    c.lineas.map((l) => ({
+      producto_id: l.producto_id,
+      cantidad: l.cantidad,
+      costo_unitario: l.costo_unitario,
+      peso_kg: 0,
+    })),
+    [],
+    c.gastos_importacion,
+  ),
+});
 
 describe("agregar líneas", () => {
   it("propone el costo promedio vigente, no cero", () => {
@@ -110,7 +126,7 @@ describe("agregar líneas", () => {
 });
 
 describe("recepción contra una compra", () => {
-  const COMPRA: CompraPendiente = {
+  const COMPRA = conReparto({
     id: "33333333-3333-4333-8333-333333333333",
     numero: "OC-000012",
     fecha: "2026-08-20",
@@ -141,7 +157,7 @@ describe("recepción contra una compra", () => {
         costo_unitario: 12.635,
       },
     ],
-  };
+  });
 
   it("precarga solo lo que falta por llegar", () => {
     // Recibir en dos veces es lo normal. Volver a proponer lo ya recibido es
@@ -158,10 +174,10 @@ describe("recepción contra una compra", () => {
   });
 
   it("descarta las líneas ya recibidas del todo", () => {
-    const completa: CompraPendiente = {
+    const completa = conReparto({
       ...COMPRA,
       lineas: COMPRA.lineas.map((l) => ({ ...l, cantidad_recibida: l.cantidad })),
-    };
+    });
     const e = reducir(estadoInicial(FECHA), { tipo: "cargarCompra", compra: completa });
 
     expect(e.lineas).toHaveLength(0);
@@ -192,10 +208,19 @@ describe("recepción contra una compra", () => {
     const e = reducir(estadoInicial(FECHA), { tipo: "cargarCompra", compra: COMPRA });
     const c = costeoDe(e);
 
-    // 10 x 3.26 + 4 x 12.635 = 83.14, y 25 de gastos dan factor 1.300698.
-    expect(c.base).toBe(83.14);
-    expect(c.factor).toBe(1.300698);
-    expect(c.totalFinal).toBe(108.14);
+    /*
+      La base es la COMPRA ENTERA, como en la base de datos desde la 094:
+      10 × 3.26 + 6 × 12.635 = 108.41 — no lo de esta entrega (las 4
+      chumaceras que faltan), que es lo que esta prueba fijaba antes y
+      repartía los 25 de gastos sobre 83.14. Con esa base la pantalla decía
+      una cosa y el kardex otra.
+
+      25 de gastos ÷ 108.41 → factor 1.230606. Esta entrega se lleva 19.17
+      de los 25; el resto ya fue con las 2 chumaceras recibidas antes.
+    */
+    expect(c.base).toBe(108.41);
+    expect(c.factor).toBe(1.230606);
+    expect(c.totalFinal).toBe(102.31);
   });
 });
 
@@ -280,7 +305,7 @@ describe("avisos", () => {
   });
 
   it("avisa si llega más de lo que la compra esperaba, sin bloquear", () => {
-    const compra: CompraPendiente = {
+    const compra = conReparto({
       id: "33333333-3333-4333-8333-333333333333",
       numero: "OC-000012",
       fecha: "2026-08-20",
@@ -301,7 +326,7 @@ describe("avisos", () => {
           costo_unitario: 3.26,
         },
       ],
-    };
+    });
     const e = correr(
       estadoInicial(FECHA),
       { tipo: "cargarCompra", compra },
@@ -361,7 +386,7 @@ describe("payload", () => {
 });
 
 describe("datosDeAlmacen", () => {
-  const compra: CompraPendiente = {
+  const compra = conReparto({
     id: "55555555-5555-4555-8555-555555555555",
     numero: "CMP-26-00008",
     proveedor_id: "66666666-6666-4666-8666-666666666666",
@@ -382,7 +407,7 @@ describe("datosDeAlmacen", () => {
         costo_unitario: 6.78,
       },
     ],
-  };
+  });
 
   it("la línea que viene de una compra entra SIN saldo ni costo anterior", () => {
     // Antes se ponía el costo de la propia compra como «anterior», así que la

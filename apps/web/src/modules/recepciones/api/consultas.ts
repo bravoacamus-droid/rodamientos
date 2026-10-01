@@ -3,6 +3,7 @@ import "server-only";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
+import { repartoDeCompra } from "../dominio/costeo";
 
 import type {
   CompraPendiente,
@@ -263,9 +264,10 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
       .select(
         `id, numero, fecha, proveedor_id, gastos_importacion, moneda, tipo_cambio,
          proveedores(razon_social),
+         gastos_importacion_detalle:gastos_importacion(monto, reparto),
          compra_items(
-           producto_id, cantidad, cantidad_recibida, costo_unitario, unidad_codigo,
-           productos(codigo, descripcion, unidad_codigo, marcas(nombre))
+           producto_id, cantidad, cantidad_recibida, costo_unitario, unidad_codigo, peso_kg,
+           productos(codigo, descripcion, unidad_codigo, peso_kg, marcas(nombre))
          )`,
       )
       .in("estado", ["registrada", "recibida_parcial"])
@@ -277,13 +279,15 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
     const crudas = (data ?? []) as unknown as Array<
       Record<string, unknown> & {
         proveedores: { razon_social: string } | null;
+        gastos_importacion_detalle: { monto: number; reparto: string | null }[] | null;
         compra_items: Array<{
           producto_id: string;
           cantidad: number;
           cantidad_recibida: number;
           costo_unitario: number;
           unidad_codigo: string;
-          productos: ProductoAnidado | null;
+          peso_kg: number | null;
+          productos: (ProductoAnidado & { peso_kg?: number | null }) | null;
         }> | null;
       }
     >;
@@ -307,6 +311,21 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
         cantidad_recibida: Number(i.cantidad_recibida ?? 0),
         costo_unitario: Number(i.costo_unitario ?? 0),
       })),
+      // 097: las bases del reparto, con la misma cuenta que la base de datos.
+      // El peso, el de la compra o, si no se escribió, el de la ficha.
+      reparto: repartoDeCompra(
+        (c.compra_items ?? []).map((i) => ({
+          producto_id: i.producto_id,
+          cantidad: Number(i.cantidad ?? 0),
+          costo_unitario: Number(i.costo_unitario ?? 0),
+          peso_kg: Number(i.peso_kg ?? 0) || Number(i.productos?.peso_kg ?? 0),
+        })),
+        (c.gastos_importacion_detalle ?? []).map((g) => ({
+          monto: Number(g.monto ?? 0),
+          reparto: g.reparto === "peso" ? ("peso" as const) : ("valor" as const),
+        })),
+        Number(c.gastos_importacion ?? 0),
+      ),
     }));
 
     // Una compra en la que ya llegó todo no tiene por qué aparecer aunque su

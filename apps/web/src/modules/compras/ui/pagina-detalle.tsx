@@ -7,8 +7,9 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { detalleCompra } from "../api/consultas";
 import { quienEsperaEstos } from "../api/por-comprar";
 import { AnularCompra } from "./anular";
+import { GastosFicha } from "./gastos-ficha";
 import { ParaQuienEs } from "./para-quien";
-import { ETIQUETA_MODALIDAD } from "../dominio/gastos";
+import { ETIQUETA_MODALIDAD, costeoEstimado } from "../dominio/gastos";
 
 /**
  * Ficha de una compra.
@@ -51,6 +52,38 @@ export default async function PaginaDetalleCompra({
   const recibido = c.lineas.reduce((a, l) => a + l.cantidad_recibida, 0);
   const pedido = c.lineas.reduce((a, l) => a + l.cantidad, 0);
   const falta = c.lineas.filter((l) => l.cantidad_recibida < l.cantidad);
+
+  /*
+    El costo PUESTO de cada producto (097): la columna «PU LIMA» del Excel de
+    Willy. Con la misma cuenta que la recepción —`costeoEstimado` es su
+    réplica—, así que lo que dice la ficha es lo que entra al kardex.
+  */
+  const costeo = costeoEstimado(
+    c.lineas.map((l) => ({
+      key: l.id,
+      cantidad: l.cantidad,
+      costoUnitario: l.costo_unitario,
+      pesoKg: l.peso_kg,
+    })),
+    c.gastos.map((g) => ({ key: g.id, concepto: g.concepto, monto: g.monto, reparto: g.reparto })),
+  );
+  // Compras viejas: el total sin detalle se repartía por valor.
+  const factorViejo =
+    c.gastos.length === 0 && c.gastos_importacion > 0 && c.subtotal > 0
+      ? 1 + c.gastos_importacion / c.subtotal
+      : null;
+  const puestoDe = (l: (typeof c.lineas)[number]): number | null =>
+    c.gastos_importacion <= 0
+      ? null
+      : factorViejo !== null
+        ? Math.round(l.costo_unitario * factorViejo * 1e4) / 1e4
+        : (costeo.porLinea[l.id] ?? null);
+  const mostrarPeso = c.lineas.some((l) => l.peso_kg > 0) || c.via_importacion === "aerea";
+  const etiquetaPuesto = c.tipo === "importacion" ? "Puesto en Lima" : "Con gastos";
+
+  // Los gastos se tocan mientras no haya entrado mercadería: la base los
+  // congela en cuanto se recibe (022).
+  const editableGastos = c.estado === "registrada";
 
   return (
     <div className="flex flex-col gap-5">
@@ -196,6 +229,29 @@ export default async function PaginaDetalleCompra({
                       {l.cantidad_recibida}
                     </span>
                   </p>
+                  {mostrarPeso || puestoDe(l) !== null ? (
+                    <p className="mt-1 flex flex-wrap justify-between gap-x-3 text-sm">
+                      {mostrarPeso ? (
+                        <span>
+                          <span className="text-[var(--fg-muted)]">Peso </span>
+                          <span className="tabular">
+                            {l.peso_kg > 0 ? `${l.peso_kg} kg` : "sin peso"}
+                          </span>
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      {puestoDe(l) !== null ? (
+                        <span>
+                          <span className="text-[var(--fg-muted)]">{etiquetaPuesto} </span>
+                          <span className="tabular font-semibold text-brand-700 dark:text-brand-300">
+                            {puestoDe(l)!.toFixed(2)}
+                          </span>
+                          <span className="text-[var(--fg-muted)]"> c/u</span>
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : null}
                 </div>
               );
             })}
@@ -209,8 +265,14 @@ export default async function PaginaDetalleCompra({
                   <th className="py-2 pr-3 font-medium">Descripción</th>
                   <th className="py-2 pr-3 text-right font-medium">Pedido</th>
                   <th className="py-2 pr-3 text-right font-medium">Recibido</th>
+                  {mostrarPeso ? (
+                    <th className="py-2 pr-3 text-right font-medium">Peso kg</th>
+                  ) : null}
                   <th className="py-2 pr-3 text-right font-medium">Costo</th>
-                  <th className="py-2 text-right font-medium">Importe</th>
+                  <th className="py-2 pr-3 text-right font-medium">Importe</th>
+                  {c.gastos_importacion > 0 ? (
+                    <th className="py-2 text-right font-medium">{etiquetaPuesto}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -244,12 +306,26 @@ export default async function PaginaDetalleCompra({
                       >
                         {l.cantidad_recibida}
                       </td>
+                      {mostrarPeso ? (
+                        <td className="py-2 pr-3 text-right tabular">
+                          {l.peso_kg > 0 ? (
+                            l.peso_kg
+                          ) : (
+                            <span className="text-[var(--warn)]">sin peso</span>
+                          )}
+                        </td>
+                      ) : null}
                       <td className="py-2 pr-3 text-right tabular">
                         {l.costo_unitario.toFixed(4)}
                       </td>
-                      <td className="py-2 text-right tabular font-medium">
+                      <td className="py-2 pr-3 text-right tabular font-medium">
                         {l.importe.toFixed(2)}
                       </td>
+                      {c.gastos_importacion > 0 ? (
+                        <td className="py-2 text-right tabular font-semibold text-brand-700 dark:text-brand-300">
+                          {puestoDe(l)?.toFixed(2) ?? "—"}
+                        </td>
+                      ) : null}
                     </tr>
                   );
                 })}
@@ -305,33 +381,27 @@ export default async function PaginaDetalleCompra({
               desglose a la vista, la próxima vez que importe lo mismo ya sabe
               qué le cobraron y por qué.
             */}
-            {c.gastos_importacion > 0 ? (
-              <div className="mt-4 border-t border-[var(--border-soft)] pt-3">
-                <h3 className="mb-2 text-sm font-semibold">Gastos</h3>
-                {c.gastos.length > 0 ? (
-                  <ul className="flex flex-col gap-1.5 text-sm">
-                    {c.gastos.map((g, i) => (
-                      <li key={`${g.concepto}-${i}`} className="flex justify-between gap-3">
-                        <span className="text-[var(--fg-muted)]">{g.concepto}</span>
-                        <span className="tabular">$ {g.monto.toFixed(2)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  // Compras de antes de la 095: se guardó el total, no el
-                  // detalle. Se dice, en vez de dejar un hueco.
-                  <p className="text-sm text-[var(--fg-subtle)]">
-                    Se registró el total, sin desglose.
-                  </p>
-                )}
-                <div className="mt-2 flex justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm font-semibold">
-                  <span>Total de gastos</span>
-                  <span className="tabular">$ {c.gastos_importacion.toFixed(2)}</span>
-                </div>
-                <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-                  Repartidos sobre el costo de cada producto al recibir.
-                </p>
-              </div>
+            {/*
+              Y desde la 097, con su reparto, la cuenta del $/kg y la puerta
+              para añadir lo que llega después —el desaduanaje— mientras la
+              compra siga sin recibir. Se enseña también sin gastos si todavía
+              se pueden añadir: un bloque vacío con su botón es el camino.
+            */}
+            {c.gastos_importacion > 0 || (editableGastos && puedeAnular) ? (
+              <GastosFicha
+                compraId={c.id}
+                gastos={c.gastos}
+                total={c.gastos_importacion}
+                editable={editableGastos}
+                puedeTocar={puedeAnular}
+                pedirDesaduanaje={
+                  c.via_importacion === "aerea" &&
+                  !c.gastos.some((g) => /desaduan|aduana/i.test(g.concepto))
+                }
+                porKg={costeo.porKg}
+                kilos={costeo.kilos}
+                faltanPesos={costeo.faltaPeso.length > 0}
+              />
             ) : null}
 
             {/*

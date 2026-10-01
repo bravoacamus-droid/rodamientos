@@ -450,6 +450,7 @@ export type Database = {
           id: string
           importe: number | null
           orden: number
+          peso_kg: number
           producto_id: string
           unidad_codigo: string
         }
@@ -461,6 +462,7 @@ export type Database = {
           id?: string
           importe?: number | null
           orden?: number
+          peso_kg?: number
           producto_id: string
           unidad_codigo?: string
         }
@@ -472,6 +474,7 @@ export type Database = {
           id?: string
           importe?: number | null
           orden?: number
+          peso_kg?: number
           producto_id?: string
           unidad_codigo?: string
         }
@@ -2047,6 +2050,7 @@ export type Database = {
           fecha: string
           id: string
           monto: number
+          reparto: string
         }
         Insert: {
           compra_id: string
@@ -2056,6 +2060,7 @@ export type Database = {
           fecha?: string
           id?: string
           monto: number
+          reparto?: string
         }
         Update: {
           compra_id?: string
@@ -2065,6 +2070,7 @@ export type Database = {
           fecha?: string
           id?: string
           monto?: number
+          reparto?: string
         }
         Relationships: [
           {

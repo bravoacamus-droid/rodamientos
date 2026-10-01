@@ -5,10 +5,12 @@ import {
   CONCEPTOS_SUGERIDOS,
   gastosParaEnviar,
   hayGastosEscritos,
+  repartoSugerido,
   tipoYVia,
   totalGastos,
   type GastoEditable,
   type Modalidad,
+  type Reparto,
   type ViaImportacion,
 } from "./gastos";
 
@@ -54,6 +56,8 @@ export interface ProductoParaComprar {
   ultimo_costo?: number;
   /** Punto de reposición, para avisar si se está comprando de menos. */
   stock_minimo?: number;
+  /** `productos.peso_kg`, por unidad. Reparte el courier (097). */
+  peso_kg?: number;
 }
 
 export interface LineaCompraEditable {
@@ -93,6 +97,12 @@ export interface LineaCompraEditable {
   /** Saldo en almacén ahora mismo. */
   stockActual: number;
   stockMinimo: number;
+  /**
+   * Peso por unidad, en kg (097). Se propone el de la ficha y se puede
+   * escribir: con él se reparte el courier, como en el Excel de Willy (§AP).
+   * Lo que se escriba aquí queda apuntado en el producto al guardar.
+   */
+  pesoKg: number;
 }
 
 export interface EstadoCompra {
@@ -172,6 +182,8 @@ export type Accion =
   | { tipo: "gastoQuitar"; key: string }
   | { tipo: "gastoConcepto"; key: string; valor: string }
   | { tipo: "gastoMonto"; key: string; valor: number }
+  | { tipo: "gastoReparto"; key: string; valor: Reparto }
+  | { tipo: "peso"; key: string; valor: number }
   | { tipo: "moneda"; valor: Moneda }
   | { tipo: "tipoCambio"; valor: number }
   | { tipo: "afectoIgv"; valor: boolean }
@@ -220,7 +232,12 @@ function gastosPropuestos(
 ): { gastos: GastoEditable[]; proximoGasto: number } {
   const conceptos = CONCEPTOS_SUGERIDOS[m];
   return {
-    gastos: conceptos.map((concepto, i) => ({ key: `g${desde + i}`, concepto, monto: 0 })),
+    gastos: conceptos.map((concepto, i) => ({
+      key: `g${desde + i}`,
+      concepto,
+      monto: 0,
+      reparto: repartoSugerido(concepto),
+    })),
     proximoGasto: desde + conceptos.length,
   };
 }
@@ -288,7 +305,12 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
         ...estado,
         gastos: [
           ...estado.gastos,
-          { key: `g${estado.proximoGasto}`, concepto: accion.concepto ?? "", monto: 0 },
+          {
+            key: `g${estado.proximoGasto}`,
+            concepto: accion.concepto ?? "",
+            monto: 0,
+            reparto: repartoSugerido(accion.concepto ?? ""),
+          },
         ],
         proximoGasto: estado.proximoGasto + 1,
       };
@@ -299,10 +321,33 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
     case "gastoConcepto":
       return {
         ...estado,
+        gastos: estado.gastos.map((g) => {
+          if (g.key !== accion.key) return g;
+          const concepto = accion.valor.slice(0, 80);
+          // Lo propuesto sigue al concepto («Flete» → por kilo); lo elegido
+          // a mano se queda.
+          return { ...g, concepto, reparto: g.repartoAMano ? g.reparto : repartoSugerido(concepto) };
+        }),
+      };
+
+    case "gastoReparto":
+      return {
+        ...estado,
         gastos: estado.gastos.map((g) =>
-          g.key === accion.key ? { ...g, concepto: accion.valor.slice(0, 80) } : g,
+          g.key === accion.key ? { ...g, reparto: accion.valor, repartoAMano: true } : g,
         ),
       };
+
+    case "peso":
+      return mapear(estado, accion.key, (l) => ({
+        ...l,
+        // Tres decimales: los de `productos.peso_kg`. Un rodamiento de 5 g
+        // pesa 0.005 kg y se escribe así.
+        pesoKg:
+          Number.isFinite(accion.valor) && accion.valor > 0
+            ? Math.round(accion.valor * 1000) / 1000
+            : 0,
+      }));
 
     case "gastoMonto":
       return {
@@ -390,6 +435,7 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
             costoAnterior: costo,
             stockActual: accion.producto.stock ?? 0,
             stockMinimo: accion.producto.stock_minimo ?? 0,
+            pesoKg: accion.producto.peso_kg ?? 0,
           },
         ],
         proximaKey: estado.proximaKey + 1,
@@ -616,6 +662,9 @@ export function aPayload(estado: EstadoCompra) {
       cantidad: l.cantidad,
       costo_unitario: l.costoUnitario,
       unidad_codigo: l.unidad,
+      // Por unidad (097). La base lo usa para repartir el courier y lo apunta
+      // en el producto si se escribió.
+      peso_kg: l.pesoKg > 0 ? l.pesoKg : 0,
       // OJO: el dinero NO se manda. `crear_compra()` lo calcula desde los
       // ítems, sumando la columna generada `importe`. Aceptar un total de
       // quien llama sería dejar que el navegador decidiera cuánto se debe.
@@ -642,7 +691,7 @@ export interface PlantillaCompra {
   modalidad: Modalidad;
   courier: string | null;
   /** Los gastos de aquella compra, tal como se registraron. */
-  gastos: { concepto: string; monto: number }[];
+  gastos: { concepto: string; monto: number; reparto?: Reparto }[];
   /**
    * Si aquella factura llevaba IGV, y en qué moneda venía.
    *
@@ -692,6 +741,9 @@ export function aplicarPlantilla(estado: EstadoCompra, p: PlantillaCompra): Esta
         key: `g${e.proximoGasto + i}`,
         concepto: g.concepto,
         monto: montoValido(g.monto),
+        // El de aquella compra, si se guardó (097); si no, el propuesto.
+        reparto: g.reparto ?? repartoSugerido(g.concepto),
+        repartoAMano: g.reparto !== undefined,
       })),
       proximoGasto: e.proximoGasto + conDinero.length,
     };
