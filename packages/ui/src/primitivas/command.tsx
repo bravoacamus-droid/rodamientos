@@ -74,7 +74,7 @@ export function CommandList({
 }
 
 export function CommandEmpty(props: React.ComponentPropsWithRef<typeof CommandPrimitive.Empty>) {
-  return <CommandPrimitive.Empty className="px-3 py-8 text-center text-xs text-muted" {...props} />;
+  return <CommandPrimitive.Empty className="px-3 py-8 text-center text-sm text-muted" {...props} />;
 }
 
 export function CommandGroup({

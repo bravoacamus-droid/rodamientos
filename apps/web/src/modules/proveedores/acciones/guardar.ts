@@ -72,6 +72,12 @@ const esquema = z.object({
     (v) => v === null || /^\d{6}$/.test(v),
     "El ubigeo debe tener 6 dígitos. Elígelo de la lista.",
   ),
+  // Los tres nombres del distrito, como los devolvió SUNAT. Viajan para que
+  // `asegurar_ubigeo` (036) dé de alta el distrito que falte, igual que en
+  // clientes. No se guardan en `proveedores`: viven en `ubigeo`.
+  ubigeo_departamento: opcional(80, "El departamento"),
+  ubigeo_provincia: opcional(80, "La provincia"),
+  ubigeo_distrito: opcional(80, "El distrito"),
   contacto: opcional(120, "El contacto"),
   email: opcional(160, "El correo").refine(
     (v) => v === null || z.string().email().safeParse(v).success,
@@ -142,16 +148,20 @@ export async function guardarProveedor(
   // provincia rellenaba un ubigeo que aquí no existe y el alta moría con un
   // 23503 que el usuario no puso ni puede arreglar.
   //
-  // Se descarta el desconocido y se guarda igual: la dirección, que es el dato
-  // que se usa, se conserva.
-  let ubigeo = datos.ubigeo_codigo;
-  if (ubigeo) {
-    const { data: existe } = await supabase
-      .from("ubigeo")
-      .select("codigo")
-      .eq("codigo", ubigeo)
-      .maybeSingle();
-    if (!existe) ubigeo = null;
+  // Hasta el 01/10 aquí se DESCARTABA el desconocido. Clientes dejó de hacerlo
+  // en la 036 y proveedores se quedó atrás: el distrito que trajo SUNAT se
+  // perdía en silencio. Ahora se da de alta con `asegurar_ubigeo`, con los
+  // tres nombres que trajo la misma consulta. Si viene un código suelto, sin
+  // nombres —escrito a mano—, la función solo lo acepta si ya existe.
+  let ubigeo: string | null = null;
+  if (datos.ubigeo_codigo) {
+    const { data: codigo } = await supabase.rpc("asegurar_ubigeo", {
+      p_codigo: datos.ubigeo_codigo,
+      p_departamento: datos.ubigeo_departamento ?? "",
+      p_provincia: datos.ubigeo_provincia ?? "",
+      p_distrito: datos.ubigeo_distrito ?? "",
+    });
+    ubigeo = (codigo as string | null) ?? null;
   }
 
   const campos = {

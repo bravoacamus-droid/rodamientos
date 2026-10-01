@@ -19,8 +19,20 @@ export interface OpcionCombobox {
   etiqueta: string;
   /** Segunda línea, más pequeña. Por ejemplo el RUC bajo el nombre. */
   detalle?: string;
+  /**
+   * Palabras con las que también se encuentra, sin enseñarlas. Por ejemplo
+   * el nombre de un país en inglés, que es como viene en las proformas:
+   * «Germany» encuentra «Alemania».
+   */
+  claves?: string;
   deshabilitada?: boolean;
 }
+
+/**
+ * Sin tildes, para que «japon» encuentre «Japón». cmdk ya ignora mayúsculas,
+ * no los acentos — y nadie teclea tildes en un buscador.
+ */
+const sinTildes = (s: string) => s.normalize("NFD").replace(/\p{Mn}/gu, "");
 
 export interface ComboboxProps {
   id: string;
@@ -93,7 +105,18 @@ export function Combobox({
       </div>
 
       <PopoverContent className="w-[var(--radix-popover-trigger-width)]">
-        <Command>
+        {/* Filtro propio: sin tildes ni mayúsculas en LOS DOS lados, y lo que
+            empieza por lo tecleado, arriba. «jap» → Japón primero. */}
+        <Command
+          filter={(texto, busqueda) => {
+            const q = sinTildes(busqueda).toLowerCase().trim();
+            if (q === "") return 1;
+            const t = sinTildes(texto).toLowerCase();
+            if (t.startsWith(q)) return 1;
+            if (t.includes(` ${q}`)) return 0.8;
+            return t.includes(q) ? 0.5 : 0;
+          }}
+        >
           <CommandInput placeholder={placeholderBusqueda} />
           <CommandList>
             <CommandEmpty>{textoVacio}</CommandEmpty>
@@ -101,7 +124,7 @@ export function Combobox({
               {opciones.map((o) => (
                 <CommandItem
                   key={o.valor}
-                  value={`${o.etiqueta} ${o.detalle ?? ""}`}
+                  value={sinTildes(`${o.etiqueta} ${o.detalle ?? ""} ${o.claves ?? ""}`)}
                   disabled={o.deshabilitada}
                   onSelect={() => {
                     onCambio(o.valor === valor ? null : o.valor);
@@ -114,7 +137,9 @@ export function Combobox({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{o.etiqueta}</span>
-                    {o.detalle && <span className="block truncate text-xs text-subtle">{o.detalle}</span>}
+                    {/* text-sm: es lo que distingue dos opciones parecidas (el
+                        RUC bajo el nombre), y se lee (CLAUDE.md §1). */}
+                    {o.detalle && <span className="block truncate text-sm text-subtle">{o.detalle}</span>}
                   </span>
                 </CommandItem>
               ))}

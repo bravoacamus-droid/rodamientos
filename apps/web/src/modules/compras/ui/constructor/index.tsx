@@ -428,6 +428,18 @@ export function ConstructorCompra({
                   onElegir={(p) => {
                     setProveedor(p);
                     despachar({ tipo: "cabecera", campo: "proveedorId", valor: p.id });
+                    /*
+                      Un proveedor de importación propone la importación (01/10).
+                      Visto en pantalla: elegir a uno de Japón dejaba la compra
+                      en «local» y con IGV, que es justo lo que no lleva la
+                      factura de un proveedor de fuera. Se propone «aérea» —la
+                      más frecuente— solo si sigue en «local»: si alguien ya
+                      eligió marítima, eso manda.
+                    */
+                    if (p.tipo === "importacion" && estado.tipo === "local") {
+                      despachar({ tipo: "modalidad", valor: "aerea" });
+                      despachar({ tipo: "afectoIgv", valor: false });
+                    }
                   }}
                   onQuitar={() => {
                     setProveedor(null);

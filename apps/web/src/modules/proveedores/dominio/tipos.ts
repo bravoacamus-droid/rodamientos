@@ -87,6 +87,13 @@ export interface ProveedorEditable {
   pais: string;
   direccion: string | null;
   ubigeo_codigo: string | null;
+  /**
+   * Los nombres del distrito, solo cuando los trajo SUNAT (01/10). Viajan
+   * para que el guardado dé de alta el distrito que falte; no se guardan aquí.
+   */
+  ubigeo_departamento?: string | null;
+  ubigeo_provincia?: string | null;
+  ubigeo_distrito?: string | null;
   contacto: string | null;
   email: string | null;
   telefono: string | null;

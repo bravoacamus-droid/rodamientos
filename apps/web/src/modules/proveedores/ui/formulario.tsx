@@ -126,6 +126,11 @@ export function FormularioProveedor({
         razon_social: r.datos.razon_social,
         direccion: r.datos.direccion ?? d.direccion,
         ubigeo_codigo: r.datos.ubigeo_codigo ?? d.ubigeo_codigo,
+        // Los nombres, para que el guardado dé de alta el distrito si falta
+        // (01/10). Sin ellos el distrito que trajo SUNAT se perdía.
+        ubigeo_departamento: r.datos.ubigeo_departamento,
+        ubigeo_provincia: r.datos.ubigeo_provincia,
+        ubigeo_distrito: r.datos.ubigeo_distrito,
       }));
       if (r.datos.condicion === "NO HABIDO") {
         setAviso("SUNAT lo marca como NO HABIDO. Su factura de compra es observable.");
