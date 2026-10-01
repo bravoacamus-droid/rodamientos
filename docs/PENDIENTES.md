@@ -4592,6 +4592,71 @@ de Defontana.
 
 ---
 
+## §AP · 01/10 — Su Excel de importación aérea, y lo que el ERP calcula mal
+
+Willy mandó `documentosrodamiento/analisis compra importacion aerea.xlsx` (un
+pedido real: 29 rodamientos para 6 clientes) y contestó seis preguntas por
+WhatsApp. Las respuestas, textuales, en PREGUNTAS-WILLY («01/10»).
+
+### AP.1 · El flete aéreo se reparte por PESO, y el ERP lo hace por valor
+
+Su fórmula: `PU Lima = FOB + ($ DHL ÷ kg totales) × peso unitario`. DHL cobra
+por kilo, así que tiene razón. El ERP reparte TODO gasto por valor
+(`recepcionar_mercaderia`, base `cantidad × costo`, 094). Con su propio pedido:
+
+| Producto | FOB | Peso | Willy | ERP hoy |
+|---|---|---|---|---|
+| 6312 2Z/C3 | 9.43 | 1.73 kg | **26.99** | 19.75 (−27 %) |
+| NKIB 5902 XL | 3.77 | 0.05 kg | **4.29** | 7.90 |
+| HK 1012 | 0.39 | 0.005 kg | **0.44** | 0.82 |
+
+Un rodamiento pesado sale más barato de lo que costó y uno liviano casi al
+doble. **El margen y el precio mínimo salen mal en los dos.**
+
+Hace falta el peso de cada producto, y casi ningún producto lo tiene. Su hoja
+trae 29.
+
+### AP.2 · El desaduanaje llega DESPUÉS, y no hay camino para añadirlo
+
+*«Ese gasto no lo puedo saber antes, solo cuando llega al país la carga»*.
+Depende del FOB y del peso.
+
+La pieza existe: `/importaciones` deja añadir gastos a una compra mientras
+siga en «registrada» —o sea, antes de recibir, que es justo cuando llega el
+desaduanaje—, y la base lo recalcula (022). **Pero la ficha de la compra no
+lleva ahí.** Otra vez la pieza sin camino.
+
+### AP.3 · Lo que la hoja hace y el ERP no: decidir ANTES de comprar
+
+La hoja es un simulador: cantidad de referencia → precio FOB y peso → costo
+puesto en Lima con el $/kg que le cotiza el proveedor → margen contra el
+precio de un proveedor de Lima (P.M) → decide la cantidad final. La «f»
+(veces al año que lo piden sus clientes) le dice cuánto pedir.
+
+El ERP registra la compra cuando ya está hecha. Es un módulo nuevo; no es
+urgente frente a AP.1 y AP.2.
+
+### AP.4 · Marítima: se deja como está hasta mediados de 2027
+
+*«Tendría que analizarlo luego, con tiempo […] mi próximo pedido marítimo
+calculo sería a mediados del próximo año»*. Los gastos detallados de la 095
+siguen valiendo; el reparto se decide cuando haya un pedido real.
+
+### AP.5 · Lo que hay que hacer, en orden
+
+- [ ] **Cada gasto dice cómo se reparte: por peso o por valor.** Courier/flete
+      → peso; desaduanaje y aduanas → valor, por defecto, y se puede cambiar.
+      Columna en `gastos_importacion` y `recepcionar_mercaderia` reparte cada
+      gasto por su base. Si alguna pieza no tiene peso, avisa y la reparte por
+      valor, en vez de regalarle el flete.
+- [ ] **«Añadir gasto» en la ficha de una compra registrada**, que lleve al
+      gasto de `/importaciones` (o lo reutilice ahí mismo).
+- [ ] **Cargar el peso de los 29 productos de su hoja** (SQL directo, no
+      migración: son datos del cliente).
+- [ ] El simulador de importación (AP.3), cuando lo pida.
+
+---
+
 ## §AO · 24/09 — Reunión con Willy: kits aprobados y el rediseño de compras
 
 44 minutos. Willy repasó los kits, se peleó con el precio de costo y pidió

@@ -83,7 +83,31 @@ PD: en la celda del "W. REAL" del pedido la fórmula dice
 101 en vez de 1.1, por si la usa más adelante 😉
 ```
 
-**Cuando conteste**, apuntar cada respuesta debajo y marcar CONTESTADA.
+### CONTESTADA el 01/10 (por WhatsApp, textual)
+
+1. **«f»** — *«es la frecuencia de compra del producto por parte de mis
+   clientes, en número de veces al año, en base a eso decido cantidades»*.
+2. **P.M** — *«es precio de mercado en base a un proveedor en particular»*.
+3. **CANT. Ref / PEDIDO** — *«cant. referencia es la cantidad inicial que pido
+   cotizar, luego en función de los precios y gastos de envío decido la
+   cantidad final que es el PEDIDO»*.
+4. **DHL y desaduanaje** — *«el costo de envío de DHL no incluye el
+   desaduanaje, el desaduanaje es un gasto adicional que me confirman acá
+   cuando arriba mi pedido a aduanas, lo determinan en función al valor de la
+   factura (fob) y también al peso, ese gasto no lo puedo saber antes, solo
+   cuando llega al país la carga»*.
+5. **El $/kg** — *«el costo de DHL que me cotiza mi proveedor en origen lo
+   divido entre el peso total calculado y me sale un factor $/kg, eso me sirve
+   para determinar los precios unitarios de cada ítem acá en Lima aprox. ya
+   que faltaría incluir el gasto de desaduanaje, pero con eso ya tengo una idea
+   y puedo establecer el margen de utilidad que tendría vs el PM»*.
+6. **Marítima** — *«es muy diferente, entran más variables […] el agente de
+   aduana me cotiza puede ser FOB, CIF, EXW […] según el incoterm se presentan
+   otros gastos […] tendría que analizarlo luego, con tiempo ya que tampoco es
+   muy frecuente, mi próximo pedido marítimo calculo sería a mediados del
+   próximo año»*.
+
+Lo que sale de esto, en PENDIENTES §AP.
 
 ---
 
