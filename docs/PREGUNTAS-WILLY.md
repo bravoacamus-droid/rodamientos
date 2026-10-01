@@ -34,6 +34,59 @@ migración 064 solo lleva la estructura.
 
 ---
 
+## 01/10 · SU EXCEL DE IMPORTACIÓN AÉREA · antes de la reunión
+
+Willy mandó `documentosrodamiento/analisis compra importacion aerea.xlsx`: un
+pedido real de 29 rodamientos para 6 clientes, con el costo puesto en Lima
+(`FOB + 10.15 × peso`) contra el precio de un proveedor de Lima.
+
+**Lo que importa para el ERP:** reparte el flete aéreo por PESO, y el ERP lo
+reparte por VALOR. Con su pedido, un 6312 2Z/C3 (1.73 kg) le cuesta $26.99 y
+el ERP diría $19.75; un HK 1012 (5 g), $0.44 contra $0.82. La 5 y la 6 deciden
+cómo se corrige. Y la 2: la hoja es un simulador de «¿importo o compro en
+Lima?», que el ERP no tiene.
+
+```
+Hola Willy, buenas 🙌
+Ya revisé su Excel de la importación aérea, está muy claro.
+Antes de la reunión, para llegar entendiendo todo, le hago
+6 preguntitas cortas. Me puede responder por aquí nomás:
+
+1️⃣ La columna "f" (la que tiene números del 1 al 11),
+¿qué significa?
+
+2️⃣ "P.M" y "PROV.": ¿P.M es el precio al que le vende ese
+producto un proveedor de Lima (Sudameris, Omnitec, etc.)?
+¿Y la columna "%" es cuántas veces más barato le sale
+importarlo?
+
+3️⃣ "CANT. Ref" y "CANT. PEDIDO": ¿la Ref es lo que le
+cotizó el proveedor de afuera y el Pedido lo que compró
+de verdad?
+
+4️⃣ Los $1039 de DHL, ¿ya incluyen el desaduanaje y los
+impuestos, o eso lo paga aparte?
+
+5️⃣ Usted reparte el DHL por kilo ($10.15 por kilo).
+¿DHL le cobra por el peso real, o por el peso de la caja
+(volumen)? Lo pregunto porque vi que en una parte le suma
+un 10% al peso.
+
+6️⃣ Cuando la importación es MARÍTIMA, ¿también reparte los
+gastos por kilo, o ahí lo hace por el valor de cada
+producto?
+
+Con eso ya preparo el sistema para que le calcule el costo
+puesto en Lima igualito que en su Excel 👍
+
+PD: en la celda del "W. REAL" del pedido la fórmula dice
+101 en vez de 1.1, por si la usa más adelante 😉
+```
+
+**Cuando conteste**, apuntar cada respuesta debajo y marcar CONTESTADA.
+
+---
+
 ## 24/09 · LAS CINCO PARA ENTREGAR
 
 Estas cinco son las que separan el sistema de estar funcionando de verdad.
