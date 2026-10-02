@@ -4,13 +4,26 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, toast } from "@rodatech/ui";
-import { Check, Download, FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  Check,
+  Download,
+  FileSpreadsheet,
+  Pencil,
+  Plus,
+  Scale,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
 
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 
 import { guardarAnalisis, propuestasAnalisis } from "../../acciones/analisis";
-import { exportarAnalisisExcel, leerExcelAnalisis, productoPorCodigo } from "../../acciones/analisis-hoja";
+import {
+  exportarAnalisisExcel,
+  leerExcelAnalisis,
+  productoPorCodigo,
+} from "../../acciones/analisis-hoja";
 import { tipoCambioDelDia } from "../../acciones/tipo-cambio";
 import {
   aPayload,
@@ -33,6 +46,32 @@ const kg = (n: number, dec = 2) =>
 const pct = (n: number) => `${Math.round(n * 100)} %`;
 const soles = (n: number) =>
   `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * El asterisco rojo de lo que se ESCRIBE a mano.
+ *
+ * Willy, 02/10: *«quiero que me marques con un asterisco rojo todos los que son
+ * datos de ingreso […] para saber qué es lo que yo debo ingresar y qué es lo
+ * que me va a dar el sistema»*, porque *«eso lo puede encargar a otra
+ * persona»*. Lo que no lleva asterisco lo calcula el sistema.
+ */
+function Ingreso() {
+  return (
+    <span className="ml-0.5 font-bold text-[var(--danger)]" title="Lo escribes tú">
+      *<span className="sr-only"> (lo escribes tú)</span>
+    </span>
+  );
+}
+
+/** La leyenda del asterisco, donde empieza cada bloque que se rellena. */
+function LeyendaIngreso() {
+  return (
+    <p className="text-sm text-[var(--fg-muted)]">
+      <span className="font-bold text-[var(--danger)]">*</span> Lo escribes tú. Lo demás lo calcula
+      el sistema.
+    </p>
+  );
+}
 
 /** Color del margen: rojo si pierde, ámbar si es poco, verde si conviene. */
 const tonoMargen = (m: number | null) =>
@@ -59,9 +98,17 @@ export function ConstructorAnalisis({
   hoy,
   sugeridos,
   inicial,
+  modo = "editar",
 }: {
   hoy: string;
   sugeridos: ProveedorOpcion[];
+  /**
+   * «ver» es la ficha de un análisis guardado, para LEERLO: números en vez de
+   * casillas, y los botones de Editar, Excel y Registrar la compra. Luis,
+   * 02/10: *«no podemos ver los detalles después de guardar»*. Al guardar se
+   * vuelve aquí. «editar» es la hoja para escribir.
+   */
+  modo?: "ver" | "editar";
   inicial: {
     id: string;
     numero: string;
@@ -85,9 +132,9 @@ export function ConstructorAnalisis({
   const [enfocar, setEnfocar] = React.useState<string | null>(null);
   React.useEffect(() => {
     if (!enfocar) return;
-    const campo = [...document.querySelectorAll<HTMLInputElement>(`[data-codigo-de="${enfocar}"]`)].find(
-      (e) => e.offsetParent !== null,
-    );
+    const campo = [
+      ...document.querySelectorAll<HTMLInputElement>(`[data-codigo-de="${enfocar}"]`),
+    ].find((e) => e.offsetParent !== null);
     campo?.focus();
     setEnfocar(null);
   }, [enfocar]);
@@ -99,7 +146,8 @@ export function ConstructorAnalisis({
     inicial?.proveedor ?? null,
   );
   const [guardando, guardar] = React.useTransition();
-  const soloLectura = Boolean(inicial?.comprado);
+  const comprado = Boolean(inicial?.comprado);
+  const soloLectura = comprado || (inicial !== null && modo === "ver");
 
   // Lo guardado, para saber si hay cambios sin guardar antes de comprar.
   const [guardado, setGuardado] = React.useState(() =>
@@ -148,7 +196,12 @@ export function ConstructorAnalisis({
     let vigente = true;
     void propuestasAnalisis(estado.proveedorId, claveProductos.split(","), inicial?.id).then(
       (p) => {
-        if (vigente) despachar({ tipo: "propuestas", frecuencias: p.frecuencias, fobs: p.fobs });
+        if (vigente)
+          despachar({
+            tipo: "propuestas",
+            frecuencias: p.frecuencias,
+            fobs: p.fobs,
+          });
       },
     );
     return () => {
@@ -167,8 +220,9 @@ export function ConstructorAnalisis({
       }
       toast.success(`${r.numero} guardado.`);
       setGuardado(JSON.stringify(aPayload(estado, r.id)));
-      if (!inicial) router.replace(`/compras/analisis/${r.id}`);
-      else router.refresh();
+      // A la ficha, a verlo guardado (y `refresh` para que la lea de nuevo).
+      router.replace(`/compras/analisis/${r.id}`);
+      router.refresh();
     });
   };
 
@@ -194,14 +248,53 @@ export function ConstructorAnalisis({
             ← Análisis de importación
           </Link>
           <h1 className="mt-1 text-xl font-semibold">
-            {inicial ? `Análisis ${inicial.numero}` : "Nuevo análisis de importación"}
+            {!inicial
+              ? "Nuevo análisis de importación"
+              : soloLectura
+                ? `Análisis ${inicial.numero}`
+                : `Editando el análisis ${inicial.numero}`}
           </h1>
           <p className="text-sm text-[var(--fg-muted)]">
             Antes de comprar: cuánto te cuesta cada producto puesto en Lima y cuánto ganas.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DescargarExcel estado={estado} numero={inicial?.numero ?? null} proveedor={proveedor?.razon_social ?? null} />
+          {inicial && soloLectura ? (
+            <>
+              {/* Lo guardado, armado en el servidor: lo mismo que desde la lista. */}
+              <a
+                href={`/compras/analisis/${inicial.id}/excel`}
+                download
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+              >
+                <Download className="size-4" aria-hidden />
+                Descargar en Excel
+              </a>
+              {comprado ? null : (
+                <Link
+                  href={`/compras/analisis/${inicial.id}/editar`}
+                  className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+                >
+                  <Pencil className="size-4" aria-hidden />
+                  Editar
+                </Link>
+              )}
+            </>
+          ) : (
+            <DescargarExcel
+              estado={estado}
+              numero={inicial?.numero ?? null}
+              proveedor={proveedor?.razon_social ?? null}
+            />
+          )}
+          {inicial && !soloLectura ? (
+            <Link
+              href={`/compras/analisis/${inicial.id}`}
+              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              {sinGuardar ? "Salir sin guardar" : "Volver"}
+            </Link>
+          ) : null}
           {soloLectura ? null : (
             <Button type="button" onClick={enviar} disabled={guardando || bloqueos.length > 0}>
               {guardando ? "Guardando…" : sinGuardar ? "Guardar análisis" : "Guardado"}
@@ -222,7 +315,10 @@ export function ConstructorAnalisis({
 
       {/* ----------------------------------------------- La proforma */}
       <section className="card p-4">
-        <h2 className="mb-3 text-base font-semibold">La proforma del proveedor</h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-base font-semibold">La proforma del proveedor</h2>
+          <LeyendaIngreso />
+        </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="flex flex-col gap-1 md:col-span-2">
             {/* El buscador trae su propia etiqueta «Proveedor»; en lectura
@@ -239,21 +335,38 @@ export function ConstructorAnalisis({
                 elegido={proveedor}
                 onElegir={(p) => {
                   setProveedor(p);
-                  despachar({ tipo: "cabecera", campo: "proveedorId", valor: p.id });
+                  despachar({
+                    tipo: "cabecera",
+                    campo: "proveedorId",
+                    valor: p.id,
+                  });
                 }}
                 onQuitar={() => {
                   setProveedor(null);
-                  despachar({ tipo: "cabecera", campo: "proveedorId", valor: null });
+                  despachar({
+                    tipo: "cabecera",
+                    campo: "proveedorId",
+                    valor: null,
+                  });
                 }}
                 hoy={hoy}
               />
             )}
           </div>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">N.° de la proforma</span>
+            <span className="text-sm font-medium">
+              N.° de la proforma
+              <Ingreso />
+            </span>
             <Input
               value={estado.referencia}
-              onChange={(e) => despachar({ tipo: "cabecera", campo: "referencia", valor: e.target.value.slice(0, 80) })}
+              onChange={(e) =>
+                despachar({
+                  tipo: "cabecera",
+                  campo: "referencia",
+                  valor: e.target.value.slice(0, 80),
+                })
+              }
               placeholder="FT250730TA"
               disabled={soloLectura}
             />
@@ -263,12 +376,20 @@ export function ConstructorAnalisis({
             <Input
               type="date"
               value={estado.fecha}
-              onChange={(e) => despachar({ tipo: "cabecera", campo: "fecha", valor: e.target.value })}
+              onChange={(e) =>
+                despachar({
+                  tipo: "cabecera",
+                  campo: "fecha",
+                  valor: e.target.value,
+                })
+              }
               disabled={soloLectura}
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Costo de envío (DHL) $</span>
+            <span className="text-sm font-medium">
+              Costo de envío (DHL) $<Ingreso />
+            </span>
             <CampoNumero
               valor={estado.costoEnvio}
               onNumero={(n) => despachar({ tipo: "cabecera", campo: "costoEnvio", valor: n })}
@@ -276,38 +397,60 @@ export function ConstructorAnalisis({
               className="text-right tabular"
               disabled={soloLectura}
             />
-            <span className="text-sm text-[var(--fg-muted)]">El de toda la carga, como viene en la proforma.</span>
+            <span className="text-sm text-[var(--fg-muted)]">
+              El de toda la carga, como viene en la proforma.
+            </span>
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">
-              Peso que dice el proveedor{" "}
-              <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
+              Peso que dice el proveedor
+              <Ingreso /> <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
             </span>
             <CampoNumero
               valor={estado.pesoDeclarado}
-              onNumero={(n) => despachar({ tipo: "cabecera", campo: "pesoDeclarado", valor: n })}
+              onNumero={(n) =>
+                despachar({
+                  tipo: "cabecera",
+                  campo: "pesoDeclarado",
+                  valor: n,
+                })
+              }
               placeholder="kg"
               className="text-right tabular"
               disabled={soloLectura}
             />
-            <span className="text-sm text-[var(--fg-muted)]">Para comprobar que la carga pesa lo que cobra.</span>
+            <span className="text-sm text-[var(--fg-muted)]">
+              Para comprobar que la carga pesa lo que cobra.
+            </span>
           </label>
           {/* Willy, 02/10: la K es *«precios en origen + gastos de envío +
               gastos de desaduanaje»* contra el mercado (101). */}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Desaduanaje estimado S/</span>
+            <span className="text-sm font-medium">
+              Desaduanaje estimado S/
+              <Ingreso />
+            </span>
             <CampoNumero
               valor={estado.desaduanajeSoles}
-              onNumero={(n) => despachar({ tipo: "cabecera", campo: "desaduanajeSoles", valor: n })}
+              onNumero={(n) =>
+                despachar({
+                  tipo: "cabecera",
+                  campo: "desaduanajeSoles",
+                  valor: n,
+                })
+              }
               placeholder="750.00"
               className="text-right tabular"
               disabled={soloLectura}
             />
-            <span className="text-sm text-[var(--fg-muted)]">Agente, almacén y tasas. Entra en la K.</span>
+            <span className="text-sm text-[var(--fg-muted)]">
+              Agente, almacén y tasas. Entra en la K.
+            </span>
           </label>
           <div className="flex flex-col gap-1">
             <label htmlFor="ana-tc" className="text-sm font-medium">
               Tipo de cambio
+              <Ingreso />
             </label>
             <div className="flex gap-2">
               <CampoNumero
@@ -324,7 +467,9 @@ export function ConstructorAnalisis({
                 </Button>
               )}
             </div>
-            <span className={`text-sm ${c.faltaTipoCambio ? "text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}>
+            <span
+              className={`text-sm ${c.faltaTipoCambio ? "text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
+            >
               {c.faltaTipoCambio
                 ? "Sin tipo de cambio, el desaduanaje no se suma."
                 : (tcAviso ?? "Soles por dólar, para pasar el desaduanaje a dólares.")}
@@ -339,15 +484,25 @@ export function ConstructorAnalisis({
       {/* ------------------------------------------------- Productos */}
       <section className="card @container p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">Productos de la proforma</h2>
+          <div>
+            <h2 className="text-base font-semibold">Productos de la proforma</h2>
+            <LeyendaIngreso />
+          </div>
           {soloLectura ? null : (
             <div className="flex flex-wrap gap-2">
               {estado.lineas.some((l) => !enBlanco(l)) ? (
-                <Button type="button" variant="outline" onClick={() => despachar({ tipo: "pedirLoCotizado" })}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => despachar({ tipo: "pedirLoCotizado" })}
+                >
                   Pedir todo lo cotizado
                 </Button>
               ) : null}
-              <CargarExcel hayLineas={estado.lineas.filter((l) => !enBlanco(l)).length} despachar={despachar} />
+              <CargarExcel
+                hayLineas={estado.lineas.filter((l) => !enBlanco(l)).length}
+                despachar={despachar}
+              />
             </div>
           )}
         </div>
@@ -390,9 +545,12 @@ export function ConstructorAnalisis({
         {c.sinPeso.length > 0 && estado.lineas.length > 0 ? (
           <p className="mb-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
             <strong>
-              {c.sinPeso.length === 1 ? "Un producto sin peso" : `${c.sinPeso.length} productos sin peso`}
+              {c.sinPeso.length === 1
+                ? "Un producto sin peso"
+                : `${c.sinPeso.length} productos sin peso`}
             </strong>
-            : con ellos la carga pesa menos de lo real y el $/kg sale de más. Escribe el peso de cada uno.
+            : con ellos la carga pesa menos de lo real y el $/kg sale de más. Escribe el peso de
+            cada uno.
           </p>
         ) : null}
 
@@ -424,7 +582,12 @@ export function ConstructorAnalisis({
         )}
 
         {soloLectura ? null : (
-          <Button type="button" variant="outline" className="mt-3 w-full border-dashed sm:w-auto" onClick={agregarFila}>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 w-full border-dashed sm:w-auto"
+            onClick={agregarFila}
+          >
             <Plus className="size-4" aria-hidden />
             Añadir fila
           </Button>
@@ -439,7 +602,13 @@ export function ConstructorAnalisis({
           <span className="text-sm font-medium">Notas</span>
           <textarea
             value={estado.notas}
-            onChange={(e) => despachar({ tipo: "cabecera", campo: "notas", valor: e.target.value.slice(0, 2000) })}
+            onChange={(e) =>
+              despachar({
+                tipo: "cabecera",
+                campo: "notas",
+                valor: e.target.value.slice(0, 2000),
+              })
+            }
             rows={2}
             disabled={soloLectura}
             placeholder="Lo que convenga recordar de esta proforma."
@@ -447,7 +616,7 @@ export function ConstructorAnalisis({
           />
         </label>
 
-        {soloLectura ? null : (
+        {comprado ? null : (
           <div className="flex flex-col gap-2 border-t border-[var(--border-soft)] pt-4">
             <h2 className="text-base font-semibold">¿Ya lo tienes decidido?</h2>
             <p className="text-sm text-[var(--fg-muted)]">
@@ -457,22 +626,36 @@ export function ConstructorAnalisis({
             {sinCatalogo.length > 0 ? (
               <div className="flex flex-col gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm sm:flex-row sm:items-center">
                 <p className="min-w-0 flex-1">
-                  <strong>Estos no están en el catálogo</strong> y no pueden ir en la compra hasta que
-                  los des de alta:{" "}
+                  <strong>Estos no están en el catálogo</strong> y no pueden ir en la compra hasta
+                  que los des de alta:{" "}
                   <span className="font-mono">{sinCatalogo.map((l) => l.codigo).join(" · ")}</span>.
                 </p>
                 {/* Aquí mismo y todos a la vez: el enlace a «Nuevo producto»
                     sacaba de la pantalla y, sin guardar, se perdía lo escrito. */}
-                <AltaEnBloque
-                  lineas={estado.lineas.filter((l) => !enBlanco(l) && !l.productoId)}
-                  onCreado={(key, producto) => despachar({ tipo: "enlazar", key, producto })}
-                />
+                {/* Al VER no se cambia nada: el alta enlaza filas y eso hay
+                    que guardarlo, así que se hace editando. */}
+                {soloLectura && inicial ? (
+                  <Link
+                    href={`/compras/analisis/${inicial.id}/editar`}
+                    className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                    Editar para darlos de alta
+                  </Link>
+                ) : (
+                  <AltaEnBloque
+                    lineas={estado.lineas.filter((l) => !enBlanco(l) && !l.productoId)}
+                    onCreado={(key, producto) => despachar({ tipo: "enlazar", key, producto })}
+                  />
+                )}
               </div>
             ) : null}
             {bloqueos.length > 0 ? (
               <p className="text-sm text-[var(--fg-muted)]">{bloqueos.join(" ")}</p>
             ) : sinGuardar ? (
-              <p className="text-sm text-[var(--warn)]">Guarda el análisis antes de registrar la compra.</p>
+              <p className="text-sm text-[var(--warn)]">
+                Guarda el análisis antes de registrar la compra.
+              </p>
             ) : null}
             <div>
               {inicial && !sinGuardar && aComprar.length > 0 ? (
@@ -523,6 +706,15 @@ function CampoNumero({
 }) {
   const fuera = valor === null || valor === 0 ? "" : String(valor);
   const [texto, setTexto] = React.useState<string | null>(null);
+  // Al leer, el número tal cual: una casilla gris deshabilitada parece algo
+  // que no funciona. Se conserva el ancho (w-*) y la alineación de la columna.
+  if (resto.disabled) {
+    return (
+      <span className={`block py-2 ${resto.className ?? ""} border-0 bg-transparent`}>
+        {fuera === "" ? <span className="text-[var(--fg-muted)]">—</span> : fuera}
+      </span>
+    );
+  }
   return (
     <Input
       type="text"
@@ -602,7 +794,9 @@ function DescargarExcel({
       }
       const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
       const url = URL.createObjectURL(
-        new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        new Blob([bytes], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
       );
       const a = document.createElement("a");
       a.href = url;
@@ -612,7 +806,12 @@ function DescargarExcel({
     });
 
   return (
-    <Button type="button" variant="outline" onClick={descargar} disabled={armando || lineas.length === 0}>
+    <Button
+      type="button"
+      variant="outline"
+      onClick={descargar}
+      disabled={armando || lineas.length === 0}
+    >
       <Download className="size-4" aria-hidden />
       {armando ? "Armando el Excel…" : "Descargar en Excel"}
     </Button>
@@ -646,9 +845,7 @@ function BarraK({ c }: { c: ReturnType<typeof calcular> }) {
       </span>
       <span className="ml-auto flex items-baseline gap-2">
         <span className="text-base font-semibold">K</span>
-        <span
-          className={`tabular text-2xl font-bold ${tonoMargen(c.margen)}`}
-        >
+        <span className={`tabular text-2xl font-bold ${tonoMargen(c.margen)}`}>
           {c.rinde !== null ? c.rinde.toFixed(2) : "—"}
         </span>
         {c.margen !== null ? (
@@ -662,8 +859,18 @@ function BarraK({ c }: { c: ReturnType<typeof calcular> }) {
 }
 
 function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: EstadoAnalisis }) {
-  const filas: { etiqueta: string; ayuda?: string; ref: string; ped: string; fuerte?: boolean }[] = [
-    { etiqueta: "TOT. FOB $", ref: dolar(c.fobRef), ped: dolar(c.fobPedido, 3) },
+  const filas: {
+    etiqueta: string;
+    ayuda?: string;
+    ref: string;
+    ped: string;
+    fuerte?: boolean;
+  }[] = [
+    {
+      etiqueta: "TOT. FOB $",
+      ref: dolar(c.fobRef),
+      ped: dolar(c.fobPedido, 3),
+    },
     {
       etiqueta: "DHL $",
       ayuda: "Lo que pides: su parte por peso",
@@ -694,8 +901,17 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
       ref: dolar(c.totalMercadoRef),
       ped: dolar(c.totalMercado),
     },
-    { etiqueta: "W. TOT (kg)", ref: kg(c.pesoRef, 3), ped: kg(c.pesoPedido, 3) },
-    { etiqueta: "W. REAL (kg)", ayuda: "El peso más un 10 %", ref: kg(c.pesoRealRef), ped: kg(c.pesoRealPedido) },
+    {
+      etiqueta: "W. TOT (kg)",
+      ref: kg(c.pesoRef, 3),
+      ped: kg(c.pesoPedido, 3),
+    },
+    {
+      etiqueta: "W. REAL (kg)",
+      ayuda: "El peso más un 10 %",
+      ref: kg(c.pesoRealRef),
+      ped: kg(c.pesoRealPedido),
+    },
     {
       etiqueta: "$ / kg",
       ayuda: "(DHL + desaduanaje) ÷ peso",
@@ -724,7 +940,8 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
             a la vista, paso por paso. */}
         {c.desaduanaje > 0 ? (
           <p className="tabular text-base">
-            <span className="text-[var(--fg-muted)]">Desaduanaje</span> {soles(estado.desaduanajeSoles)}
+            <span className="text-[var(--fg-muted)]">Desaduanaje</span>{" "}
+            {soles(estado.desaduanajeSoles)}
             <span className="px-2 text-[var(--fg-muted)]">÷</span>
             {estado.tipoCambio}
             <span className="px-2 text-[var(--fg-muted)]">=</span>
@@ -785,7 +1002,9 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
         {c.difPeso !== null ? (
           <p
             className={`text-sm ${
-              Math.abs(c.difPeso) > estado.pesoDeclarado * 0.05 ? "text-[var(--warn)]" : "text-[var(--ok)]"
+              Math.abs(c.difPeso) > estado.pesoDeclarado * 0.05
+                ? "text-[var(--warn)]"
+                : "text-[var(--ok)]"
             }`}
           >
             El proveedor dice {kg(estado.pesoDeclarado)}; tus pesos suman {kg(c.pesoRef)}
@@ -818,7 +1037,9 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
                     <span className="block font-normal text-[var(--fg-muted)]">{f.ayuda}</span>
                   ) : null}
                 </th>
-                <td className={`tabular px-2 py-2 text-right align-top ${f.fuerte ? "font-semibold" : ""}`}>
+                <td
+                  className={`tabular px-2 py-2 text-right align-top ${f.fuerte ? "font-semibold" : ""}`}
+                >
                   {f.ref}
                 </td>
                 <td
@@ -842,7 +1063,6 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
     </section>
   );
 }
-
 
 /**
  * El código y la marca de una fila, escritos a mano como en su hoja.
@@ -885,7 +1105,14 @@ function CeldaCodigo({
       <div className="flex gap-1">
         <Input
           value={l.codigo}
-          onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "codigo", valor: e.target.value.slice(0, 80) })}
+          onChange={(e) =>
+            despachar({
+              tipo: "texto",
+              key: l.key,
+              campo: "codigo",
+              valor: e.target.value.slice(0, 80),
+            })
+          }
           onBlur={comprobar}
           placeholder="Código"
           data-codigo-de={l.key}
@@ -894,7 +1121,14 @@ function CeldaCodigo({
         />
         <Input
           value={l.marca}
-          onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "marca", valor: e.target.value.slice(0, 60) })}
+          onChange={(e) =>
+            despachar({
+              tipo: "texto",
+              key: l.key,
+              campo: "marca",
+              valor: e.target.value.slice(0, 60),
+            })
+          }
           onBlur={comprobar}
           placeholder="Marca"
           aria-label={`Marca de ${l.codigo || "este producto"}`}
@@ -904,7 +1138,10 @@ function CeldaCodigo({
       {enBlanco(l) ? null : buscando ? (
         <span className="text-sm text-[var(--fg-muted)]">Buscando en el catálogo…</span>
       ) : l.productoId ? (
-        <span className="flex max-w-60 items-center gap-1 text-sm text-[var(--ok)]" title={l.descripcion}>
+        <span
+          className="flex max-w-60 items-center gap-1 text-sm text-[var(--ok)]"
+          title={l.descripcion}
+        >
           <Check className="size-4 shrink-0" aria-hidden />
           <span className="truncate">{l.descripcion || "En el catálogo"}</span>
         </span>
@@ -930,11 +1167,15 @@ type Despachar = React.Dispatch<Parameters<typeof reducir>[1]>;
 const num = "text-right tabular";
 /** Con los decimales de su hoja: 3 en los pesos y en el $PARC, 2 en el resto. */
 const cifra = (n: number, dec = 2) =>
-  n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  n.toLocaleString("es-PE", {
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
+  });
 
 /** Su «%»: precio de mercado ÷ PU Lima. 2.53 es «vendo a 2.53 veces lo que me cuesta». */
 function Rinde({ r }: { r: LineaCalculada }) {
-  if (r.rinde === null || r.margen === null) return <span className="text-[var(--fg-muted)]">—</span>;
+  if (r.rinde === null || r.margen === null)
+    return <span className="text-[var(--fg-muted)]">—</span>;
   return (
     <span className={`font-semibold ${tonoMargen(r.margen)}`}>
       {r.rinde.toFixed(2)}
@@ -964,7 +1205,11 @@ function CargarExcel({ hayLineas, despachar }: { hayLineas: number; despachar: D
         setAvisos(r.problemas ?? []);
         return;
       }
-      despachar({ tipo: "cargarHoja", lineas: r.lineas, costoEnvio: r.costoEnvio });
+      despachar({
+        tipo: "cargarHoja",
+        lineas: r.lineas,
+        costoEnvio: r.costoEnvio,
+      });
       setAvisos(r.problemas);
       const fuera = r.lineas.length - r.enCatalogo;
       toast.success(
@@ -1070,7 +1315,9 @@ function Tabla({
     if (t.tagName !== "INPUT" || !celda || fila?.parentElement?.tagName !== "TBODY") return;
     e.preventDefault();
     const col = celda.cellIndex;
-    const abajo = (fila.nextElementSibling as HTMLTableRowElement | null)?.cells[col]?.querySelector("input");
+    const abajo = (fila.nextElementSibling as HTMLTableRowElement | null)?.cells[
+      col
+    ]?.querySelector("input");
     if (abajo) {
       abajo.focus();
       abajo.select();
@@ -1082,7 +1329,11 @@ function Tabla({
 
   return (
     <div className="scroll-x">
-      <table ref={tabla} onKeyDown={alPulsar} className="w-full border-separate border-spacing-0 text-sm">
+      <table
+        ref={tabla}
+        onKeyDown={alPulsar}
+        className="w-full border-separate border-spacing-0 text-sm"
+      >
         <thead>
           <tr className="text-sm font-semibold">
             <th className={`${fijo} px-2 py-1.5`} />
@@ -1101,24 +1352,49 @@ function Tabla({
             <th />
           </tr>
           <tr className="text-left text-[var(--fg-muted)] [&>th]:border-b [&>th]:border-[var(--border)]">
-            <th className={`${th} ${fijo}`}>CÓDIGO · MARCA</th>
-            <th className={th}>CLIENTE</th>
-            <th className={`${th} text-right`} title="Veces al año que lo piden tus clientes">
-              f
+            <th className={`${th} ${fijo}`}>
+              CÓDIGO · MARCA
+              <Ingreso />
             </th>
-            <th className={`${th} text-right`}>CANT. Ref</th>
-            <th className={`${th} text-right`}>FOB $</th>
+            <th className={th}>
+              CLIENTE
+              <Ingreso />
+            </th>
+            <th className={`${th} text-right`} title="Veces al año que lo piden tus clientes">
+              f<Ingreso />
+            </th>
+            <th className={`${th} text-right`}>
+              CANT. Ref
+              <Ingreso />
+            </th>
+            <th className={`${th} text-right`}>
+              FOB $<Ingreso />
+            </th>
             <th className={`${th} text-right`}>PARC. $</th>
-            <th className={`${th} text-right`}>PESO U (kg)</th>
+            <th className={`${th} text-right`}>
+              PESO U (kg)
+              <Ingreso />
+            </th>
             <th className={`${th} text-right`}>PESO PARC.</th>
-            <th className={`${th} ${amarillo} text-right`}>CANT. PEDIDO</th>
+            <th className={`${th} ${amarillo} text-right`}>
+              CANT. PEDIDO
+              <Ingreso />
+            </th>
             <th className={`${th} ${amarillo} text-right`}>$ PARC</th>
             <th className={`${th} ${amarillo} text-right`}>PESO PED.</th>
-            <th className={`${th} ${azul} text-right`} title="FOB + DHL + desaduanaje, por unidad">PU LIMA $</th>
+            <th className={`${th} ${azul} text-right`} title="FOB + DHL + desaduanaje, por unidad">
+              PU LIMA $
+            </th>
             <th className={`${th} ${azul} text-right`}>TOT. $</th>
-            <th className={`${th} ${verde} text-right`}>P.M</th>
+            <th className={`${th} ${verde} text-right`}>
+              P.M
+              <Ingreso />
+            </th>
             <th className={`${th} ${verde} text-right`}>TOT. PM</th>
-            <th className={`${th} ${verde}`}>PROV.</th>
+            <th className={`${th} ${verde}`}>
+              PROV.
+              <Ingreso />
+            </th>
             <th className={`${th} ${verde} text-right`} title="Precio de mercado ÷ PU Lima">
               %
             </th>
@@ -1136,24 +1412,46 @@ function Tabla({
                   <CeldaCodigo l={l} despachar={despachar} soloLectura={soloLectura} />
                 </td>
                 <td className={td}>
-                  <Input
-                    value={l.cliente}
-                    onChange={(e) =>
-                      despachar({ tipo: "texto", key: l.key, campo: "cliente", valor: e.target.value })
-                    }
-                    disabled={soloLectura}
-                    className="w-28"
-                    aria-label={`Cliente para el que se trae ${l.codigo}`}
+                  {soloLectura ? (
+                    <span className="block py-2">
+                      {l.cliente || <span className="text-[var(--fg-muted)]">—</span>}
+                    </span>
+                  ) : (
+                    <Input
+                      value={l.cliente}
+                      onChange={(e) =>
+                        despachar({
+                          tipo: "texto",
+                          key: l.key,
+                          campo: "cliente",
+                          valor: e.target.value,
+                        })
+                      }
+                      className="w-28"
+                      aria-label={`Cliente para el que se trae ${l.codigo}`}
+                    />
+                  )}
+                </td>
+                <td className={td}>
+                  <CampoNumero
+                    {...editar(l, "frecuencia")}
+                    className={`w-14 ${num}`}
+                    aria-label={`Veces al año que piden ${l.codigo}`}
                   />
                 </td>
                 <td className={td}>
-                  <CampoNumero {...editar(l, "frecuencia")} className={`w-14 ${num}`} aria-label={`Veces al año que piden ${l.codigo}`} />
+                  <CampoNumero
+                    {...editar(l, "cantidadRef")}
+                    className={`w-16 ${num}`}
+                    aria-label={`Cantidad cotizada de ${l.codigo}`}
+                  />
                 </td>
                 <td className={td}>
-                  <CampoNumero {...editar(l, "cantidadRef")} className={`w-16 ${num}`} aria-label={`Cantidad cotizada de ${l.codigo}`} />
-                </td>
-                <td className={td}>
-                  <CampoNumero {...editar(l, "precioFob")} className={`w-24 ${num}`} aria-label={`Precio FOB de ${l.codigo}`} />
+                  <CampoNumero
+                    {...editar(l, "precioFob")}
+                    className={`w-24 ${num}`}
+                    aria-label={`Precio FOB de ${l.codigo}`}
+                  />
                   {l.fobAnterior ? (
                     <span className="mt-0.5 block whitespace-nowrap text-right text-[var(--fg-subtle)]">
                       {l.fobAnterior.numero}: {l.fobAnterior.precio}
@@ -1170,26 +1468,46 @@ function Tabla({
                 </td>
                 <td className={calc}>{cifra(r.pesoRef, 3)}</td>
                 <td className={`${td} ${amarillo}`}>
-                  <CampoNumero {...editar(l, "cantidadPedido")} className={`w-16 ${num} border-[var(--warn)]`} aria-label={`Cantidad a pedir de ${l.codigo}`} />
+                  <CampoNumero
+                    {...editar(l, "cantidadPedido")}
+                    className={`w-16 ${num} border-[var(--warn)]`}
+                    aria-label={`Cantidad a pedir de ${l.codigo}`}
+                  />
                 </td>
                 <td className={`${calc} ${amarillo}`}>{cifra(r.parcialPedido, 3)}</td>
                 <td className={`${calc} ${amarillo}`}>{cifra(r.pesoPedido, 3)}</td>
-                <td className={`${calc} ${azul} font-semibold`}>{r.puLima > 0 ? cifra(r.puLima) : "—"}</td>
+                <td className={`${calc} ${azul} font-semibold`}>
+                  {r.puLima > 0 ? cifra(r.puLima) : "—"}
+                </td>
                 <td className={`${calc} ${azul}`}>{cifra(r.totalLima)}</td>
                 <td className={`${td} ${verde}`}>
-                  <CampoNumero {...editar(l, "precioMercado")} className={`w-24 ${num}`} aria-label={`Precio de mercado de ${l.codigo}`} />
+                  <CampoNumero
+                    {...editar(l, "precioMercado")}
+                    className={`w-24 ${num}`}
+                    aria-label={`Precio de mercado de ${l.codigo}`}
+                  />
                 </td>
                 <td className={`${calc} ${verde}`}>{cifra(r.totalMercado)}</td>
                 <td className={`${td} ${verde}`}>
-                  <Input
-                    value={l.proveedorMercado}
-                    onChange={(e) =>
-                      despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })
-                    }
-                    disabled={soloLectura}
-                    className="w-28"
-                    aria-label={`De quién es el precio de mercado de ${l.codigo}`}
-                  />
+                  {soloLectura ? (
+                    <span className="block py-2">
+                      {l.proveedorMercado || <span className="text-[var(--fg-muted)]">—</span>}
+                    </span>
+                  ) : (
+                    <Input
+                      value={l.proveedorMercado}
+                      onChange={(e) =>
+                        despachar({
+                          tipo: "texto",
+                          key: l.key,
+                          campo: "proveedorMercado",
+                          valor: e.target.value,
+                        })
+                      }
+                      className="w-28"
+                      aria-label={`De quién es el precio de mercado de ${l.codigo}`}
+                    />
+                  )}
                 </td>
                 <td className={`${calc} ${verde}`}>
                   <Rinde r={r} />
@@ -1232,7 +1550,9 @@ function Tabla({
             <td className={verde} />
             <td className={`${num} ${verde}`}>{cifra(calculo.totalMercado)}</td>
             <td className={`${verde} text-right`}>K</td>
-            <td className={`${num} ${verde}`}>{calculo.rinde !== null ? calculo.rinde.toFixed(2) : "—"}</td>
+            <td className={`${num} ${verde}`}>
+              {calculo.rinde !== null ? calculo.rinde.toFixed(2) : "—"}
+            </td>
             <td />
           </tr>
         </tfoot>
@@ -1254,9 +1574,13 @@ function Tarjeta({
   despachar: Despachar;
   soloLectura: boolean;
 }) {
+  // Todo lo que se pone con `campo` se escribe a mano: lleva el asterisco.
   const campo = (etiqueta: string, nodo: React.ReactNode, fondo = "") => (
     <label className={`flex min-w-0 flex-col gap-1 rounded-md p-1.5 ${fondo}`}>
-      <span className="text-sm font-medium">{etiqueta}</span>
+      <span className="text-sm font-medium">
+        {etiqueta}
+        <Ingreso />
+      </span>
       {nodo}
     </label>
   );
@@ -1292,7 +1616,14 @@ function Tarjeta({
           "Cliente",
           <Input
             value={l.cliente}
-            onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "cliente", valor: e.target.value })}
+            onChange={(e) =>
+              despachar({
+                tipo: "texto",
+                key: l.key,
+                campo: "cliente",
+                valor: e.target.value,
+              })
+            }
             disabled={soloLectura}
           />,
         )}
@@ -1308,16 +1639,28 @@ function Tarjeta({
         )}
         {campo(
           "CANT. PEDIDO",
-          <CampoNumero {...editar(l, "cantidadPedido")} className={`${num} border-[var(--warn)]`} />,
+          <CampoNumero
+            {...editar(l, "cantidadPedido")}
+            className={`${num} border-[var(--warn)]`}
+          />,
           "bg-[var(--warn-bg)]",
         )}
-        {campo("P.M (mercado)", <CampoNumero {...editar(l, "precioMercado")} className={num} />, "bg-[var(--ok-bg)]")}
+        {campo(
+          "P.M (mercado)",
+          <CampoNumero {...editar(l, "precioMercado")} className={num} />,
+          "bg-[var(--ok-bg)]",
+        )}
         {campo(
           "PROV.",
           <Input
             value={l.proveedorMercado}
             onChange={(e) =>
-              despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })
+              despachar({
+                tipo: "texto",
+                key: l.key,
+                campo: "proveedorMercado",
+                valor: e.target.value,
+              })
             }
             disabled={soloLectura}
           />,

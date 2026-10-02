@@ -49,10 +49,29 @@ export interface DatosExcelAnalisis {
 
 /** Sus títulos, literales (fila 1 de su hoja). */
 export const TITULOS_HOJA = [
-  "CLIENTE", "f", "CODIGO", "MARCA", "CANT.Ref", "Price FOB $", "PARC.$", "PESO U(Kg.)",
-  "PESO PARC.", "CANT. PEDIDO", "$PARC", "PESO PED.(Kg)", "PU LIMA $", "TOT. $", "P.M",
-  "TOT. PM", "PROV.", "%",
+  "CLIENTE",
+  "f",
+  "CODIGO",
+  "MARCA",
+  "CANT.Ref",
+  "Price FOB $",
+  "PARC.$",
+  "PESO U(Kg.)",
+  "PESO PARC.",
+  "CANT. PEDIDO",
+  "$PARC",
+  "PESO PED.(Kg)",
+  "PU LIMA $",
+  "TOT. $",
+  "P.M",
+  "TOT. PM",
+  "PROV.",
+  "%",
 ] as const;
+
+/** Lo que se escribe a mano: CLIENTE, f, CODIGO, MARCA, CANT.Ref, FOB, PESO U, CANT. PEDIDO, P.M y PROV. */
+export const COLUMNAS_DE_INGRESO = ["A", "B", "C", "D", "E", "F", "H", "J", "O", "Q"] as const;
+const ROJO = "FFC00000";
 
 // Los colores de su hoja: amarillo lo que pide, verde el mercado.
 const AMARILLO = "FFFFF2CC";
@@ -64,7 +83,9 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
   wb.creator = "Rodatech ERP";
-  const ws = wb.addWorksheet("Análisis", { views: [{ state: "frozen", ySplit: 1, xSplit: 3 }] });
+  const ws = wb.addWorksheet("Análisis", {
+    views: [{ state: "frozen", ySplit: 1, xSplit: 3 }],
+  });
 
   const n = d.lineas.length;
   const primera = 2;
@@ -96,8 +117,27 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   ws.addRow([...TITULOS_HOJA]);
   const titulos = ws.getRow(1);
   titulos.font = { bold: true };
-  titulos.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  titulos.alignment = {
+    vertical: "middle",
+    horizontal: "center",
+    wrapText: true,
+  };
   titulos.height = 30;
+
+  /*
+    El asterisco rojo en lo que se ESCRIBE (Willy, 02/10: *«márcame con un
+    asterisco rojo todos los que son datos de ingreso»*): las columnas de
+    entrada; las demás las calcula la hoja.
+  */
+  for (const col of COLUMNAS_DE_INGRESO) {
+    const celda = titulos.getCell(col);
+    celda.value = {
+      richText: [
+        { text: String(celda.value) },
+        { text: " *", font: { bold: true, color: { argb: ROJO } } },
+      ],
+    };
+  }
 
   // ------------------------------------------------------------ productos
   d.lineas.forEach((l, i) => {
@@ -156,7 +196,13 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
     { formula: `IF(${reparto}>0,${porKg}*F${F.wTot}*E${F.dhl}/${reparto},0)` },
     "Lo que pides: su parte por peso",
   );
-  fila(F.desSoles, "DESADUANAJE S/", d.desaduanajeSoles, { formula: `E${F.desSoles}` }, "Estimado, en soles");
+  fila(
+    F.desSoles,
+    "DESADUANAJE S/",
+    d.desaduanajeSoles,
+    { formula: `E${F.desSoles}` },
+    "Estimado, en soles",
+  );
   fila(F.tc, "TIPO DE CAMBIO", d.tipoCambio || null, { formula: `E${F.tc}` });
   fila(
     F.des,
@@ -173,9 +219,20 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
     { formula: `N${filaTotal}` },
     "FOB + DHL + desaduanaje",
   );
-  fila(F.pm, "TOT. PM $", { formula: `SUMPRODUCT(${rango("E")},${rango("O")})` }, { formula: `P${filaTotal}` });
+  fila(
+    F.pm,
+    "TOT. PM $",
+    { formula: `SUMPRODUCT(${rango("E")},${rango("O")})` },
+    { formula: `P${filaTotal}` },
+  );
   fila(F.wTot, "W. TOT (Kg)", { formula: `I${filaTotal}` }, { formula: `L${filaTotal}` });
-  fila(F.wReal, "W. REAL (Kg)", { formula: `1.1*E${F.wTot}` }, { formula: `1.1*F${F.wTot}` }, "El peso más un 10 %");
+  fila(
+    F.wReal,
+    "W. REAL (Kg)",
+    { formula: `1.1*E${F.wTot}` },
+    { formula: `1.1*F${F.wTot}` },
+    "El peso más un 10 %",
+  );
   // Willy, 02/10: «DHL + desaduanaje ÷ peso total, cortado a 2 decimales».
   // Sin desaduanaje, su 10.15 (1039 ÷ 102.3054 = 10.1559).
   fila(
@@ -208,6 +265,23 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   }
   for (let r = info; r <= info + 3; r++) ws.getCell(`D${r}`).font = { bold: true };
 
+  // Las tres celdas del bloque que se escriben, con su asterisco, y la leyenda.
+  for (const r of [F.dhl, F.desSoles, F.tc]) {
+    const celda = ws.getCell(`D${r}`);
+    celda.value = {
+      richText: [
+        { text: String(celda.value), font: { bold: true } },
+        { text: " *", font: { bold: true, color: { argb: ROJO } } },
+      ],
+    };
+  }
+  ws.getCell(`D${info + 5}`).value = {
+    richText: [
+      { text: "* ", font: { bold: true, color: { argb: ROJO } } },
+      { text: "Lo escribe usted. Lo demás lo calcula la hoja." },
+    ],
+  };
+
   // ------------------------------------------------------------- formato
   const anchos = [14, 5, 18, 9, 9, 12, 11, 11, 11, 11, 11, 12, 11, 12, 10, 12, 14, 8];
   anchos.forEach((w, i) => (ws.getColumn(i + 1).width = w));
@@ -238,7 +312,11 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
 
   const pintar = (col: string, desde: number, hasta: number, color: string) => {
     for (let r = desde; r <= hasta; r++) {
-      ws.getCell(`${col}${r}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: color } };
+      ws.getCell(`${col}${r}`).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: color },
+      };
     }
   };
   for (const col of ["A", "B", "C", "D", "E", "F", "G", "H", "I"]) pintar(col, 1, 1, GRIS);
@@ -250,12 +328,22 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   const borde = { style: "thin" as const, color: { argb: "FFBFBFBF" } };
   for (let r = 1; r <= filaTotal; r++) {
     for (let c = 1; c <= 18; c++) {
-      ws.getRow(r).getCell(c).border = { top: borde, left: borde, bottom: borde, right: borde };
+      ws.getRow(r).getCell(c).border = {
+        top: borde,
+        left: borde,
+        bottom: borde,
+        right: borde,
+      };
     }
   }
   for (let r = F.cabecera; r <= F.k; r++) {
     for (const col of ["D", "E", "F"]) {
-      ws.getCell(`${col}${r}`).border = { top: borde, left: borde, bottom: borde, right: borde };
+      ws.getCell(`${col}${r}`).border = {
+        top: borde,
+        left: borde,
+        bottom: borde,
+        right: borde,
+      };
     }
   }
 

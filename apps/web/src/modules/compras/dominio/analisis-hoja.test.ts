@@ -95,3 +95,13 @@ describe("números como los escribe una persona", () => {
     expect(numeroDeTexto(t)).toBe(n);
   });
 });
+
+describe("los títulos con asterisco del Excel que exporta el ERP", () => {
+  it("se reconocen igual", () => {
+    const r = leerHojaAnalisis([
+      ["CLIENTE *", "CODIGO *", "CANT.Ref *", "Price FOB $ *", "PESO U(Kg.) *", "CANT. PEDIDO *"],
+      ["ACME", "A1", "3", "2.5", "1", "2"],
+    ]);
+    expect(r.filas[0]).toMatchObject({ cliente: "ACME", codigo: "A1", cantidadRef: 3, precioFob: 2.5, pesoKg: 1, cantidadPedido: 2 });
+  });
+});

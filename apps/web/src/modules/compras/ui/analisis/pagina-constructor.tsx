@@ -11,10 +11,13 @@ import { ConstructorAnalisis } from "./constructor";
 const ROLES = ["gerencia", "admin", "compras"];
 
 /** Nuevo análisis (sin `params`) o uno guardado (con `id`). */
-export default async function PaginaConstructorAnalisis({
+async function construir({
   params,
+  modo = "ver",
 }: {
   params?: Promise<{ id: string }>;
+  /** Uno guardado se abre para VER; `/editar` lo abre para escribir. */
+  modo?: "ver" | "editar";
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
@@ -78,6 +81,7 @@ export default async function PaginaConstructorAnalisis({
   return (
     <ConstructorAnalisis
       hoy={hoy}
+      modo={modo}
       sugeridos={sugeridos.ok ? sugeridos.datos : []}
       inicial={{
         id: a.id,
@@ -91,4 +95,14 @@ export default async function PaginaConstructorAnalisis({
       }}
     />
   );
+}
+
+/** Nuevo (sin `params`) o uno guardado, para VER. */
+export default async function PaginaConstructorAnalisis({ params }: { params?: Promise<{ id: string }> }) {
+  return construir({ params, modo: "ver" });
+}
+
+/** `/compras/analisis/[id]/editar`: el mismo análisis, para escribir. */
+export async function PaginaEditarAnalisis({ params }: { params: Promise<{ id: string }> }) {
+  return construir({ params, modo: "editar" });
 }

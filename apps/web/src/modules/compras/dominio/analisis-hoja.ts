@@ -45,7 +45,9 @@ const normal = (t: string) =>
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toUpperCase()
-    .replace(/[\s.()]/g, "");
+    // El «*» también: el Excel que exporta el ERP marca así lo que se escribe
+    // a mano («CODIGO *»), y tiene que poder volver a subirse.
+    .replace(/[\s.()*]/g, "");
 
 type Campo = Exclude<keyof FilaHoja, "fila">;
 

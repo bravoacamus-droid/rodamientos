@@ -4762,6 +4762,36 @@ no era de esto: el servidor de desarrollo llevaba desde las 09:17 con 5 GB de
 memoria y ya no respondía. Se reinició. Si vuelve a salir tras horas de
 cambios, es eso: parar y volver a `pnpm dev`.
 
+### AQ.1g · 02/10, reunión de la tarde — leerlo guardado, y el asterisco rojo
+
+Willy: *«quiero que me marques con un asterisco rojo todos los que son datos
+de ingreso […] para saber qué es lo que yo debo ingresar y qué es lo que me va
+a dar el sistema»*, porque *«eso lo puede encargar a otra persona»*. Luis:
+*«no podemos ver los detalles después de guardar, poder descargar el excel»*.
+
+- **Asterisco rojo** en cada dato que se escribe —cabecera, títulos de la
+  tabla, etiquetas de la tarjeta de móvil— con la leyenda «Lo escribes tú. Lo
+  demás lo calcula el sistema». Y en el Excel exportado, en los títulos de las
+  columnas de entrada y en DHL, desaduanaje y tipo de cambio. El lector de
+  «Traer de un Excel» ignora el «*»: lo exportado se vuelve a subir.
+- **Ficha y edición separadas.** `/compras/analisis/[id]` es para LEER
+  (números, no casillas) con «Descargar en Excel» y «Editar»;
+  `/compras/analisis/[id]/editar` es la hoja. Al guardar se vuelve a la ficha.
+- **`/compras/analisis/[id]/excel`**: el análisis guardado como su hoja,
+  armado en el servidor (sesión, rol y RLS). Es lo que permite el Excel desde
+  la lista.
+- **La lista**: costo total, valor a mercado y **la K en color** («gana 218 %»)
+  calculados con la misma función que la pantalla; botones «Ver» y «Excel»;
+  paginada de 20 en 20; tarjetas en móvil.
+
+Probado en pantalla con el ANA-26-00001 de la reunión, solo leyendo: la lista
+da K 3.18 (lo mismo que se vio en la reunión), el Excel baja (200) y uno que no
+existe da 404; la ficha no tiene ni una casilla; la edición, 30.
+
+Dos cosas de la reunión que quedan dichas y no cambian código: el W. REAL es
+el peso más un **5 a 10 %** por el embalaje (se deja en 10 %), y **DHL cobra
+mínimo 20 kg** (~$150) aunque la carga pese menos.
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).

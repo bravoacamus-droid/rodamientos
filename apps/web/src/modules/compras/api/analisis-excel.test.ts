@@ -14,8 +14,30 @@ const DATOS: DatosExcelAnalisis = {
   desaduanajeSoles: 750,
   tipoCambio: 3.75,
   lineas: [
-    { cliente: "ACME", frecuencia: 4, codigo: "ABC 123", marca: "SKF", cantidadRef: 6, precioFob: 3.144, pesoKg: 0.617, cantidadPedido: 6, precioMercado: 23.78, proveedorMercado: "OMNI" },
-    { cliente: "", frecuencia: null, codigo: "XYZ-9", marca: "", cantidadRef: 20, precioFob: 0.393, pesoKg: 0.00454, cantidadPedido: 10, precioMercado: 0, proveedorMercado: "" },
+    {
+      cliente: "ACME",
+      frecuencia: 4,
+      codigo: "ABC 123",
+      marca: "SKF",
+      cantidadRef: 6,
+      precioFob: 3.144,
+      pesoKg: 0.617,
+      cantidadPedido: 6,
+      precioMercado: 23.78,
+      proveedorMercado: "OMNI",
+    },
+    {
+      cliente: "",
+      frecuencia: null,
+      codigo: "XYZ-9",
+      marca: "",
+      cantidadRef: 20,
+      precioFob: 0.393,
+      pesoKg: 0.00454,
+      cantidadPedido: 10,
+      precioMercado: 0,
+      proveedorMercado: "",
+    },
   ],
 };
 
@@ -28,16 +50,23 @@ async function abrir(d: DatosExcelAnalisis) {
 
 /** Busca la fila del bloque de abajo por su etiqueta en la columna D. */
 function filaDe(ws: Awaited<ReturnType<typeof abrir>>, etiqueta: string): number {
-  for (let r = 1; r <= ws.rowCount; r++) if (ws.getCell(`D${r}`).value === etiqueta) return r;
+  for (let r = 1; r <= ws.rowCount; r++) {
+    const v = ws.getCell(`D${r}`).value as { richText?: { text: string }[] } | string | null;
+    const t = typeof v === "object" && v?.richText ? v.richText.map((x) => x.text).join("") : v;
+    if (t === etiqueta || t === `${etiqueta} *`) return r;
+  }
   throw new Error(`no está «${etiqueta}»`);
 }
 
 const formula = (v: unknown) => (v as { formula?: string } | null)?.formula ?? null;
 
 describe("el análisis, a su hoja de Excel", () => {
-  it("lleva sus títulos, literales y en su orden", async () => {
+  it("lleva sus títulos, literales y en su orden (con « *» en los que se escriben)", async () => {
     const ws = await abrir(DATOS);
-    expect((ws.getRow(1).values as unknown[]).slice(1)).toEqual([...TITULOS_HOJA]);
+    const textos = (ws.getRow(1).values as unknown[])
+      .slice(1)
+      .map((v) => (v as { richText?: { text: string }[] }).richText?.map((t) => t.text).join("") ?? v);
+    expect(textos.map((t) => String(t).replace(/ \*$/, ""))).toEqual([...TITULOS_HOJA]);
   });
 
   it("las filas llevan los datos y FÓRMULAS, no números pegados", async () => {
@@ -56,7 +85,9 @@ describe("el análisis, a su hoja de Excel", () => {
     expect(formula(ws.getCell("M2").value)).toBe(`F2+$E$${kg}*H2`);
     const dhl = filaDe(ws, "DHL $");
     const wTot = filaDe(ws, "W. TOT (Kg)");
-    expect(formula(ws.getCell(`E${kg}`).value)).toBe(`IF(E${wTot}>0,ROUNDDOWN((E${dhl}+E${filaDe(ws, "DESADUANAJE $")})/E${wTot},2),0)`);
+    expect(formula(ws.getCell(`E${kg}`).value)).toBe(
+      `IF(E${wTot}>0,ROUNDDOWN((E${dhl}+E${filaDe(ws, "DESADUANAJE $")})/E${wTot},2),0)`,
+    );
   });
 
   it("la K lleva el desaduanaje: TOT. PM ÷ costo total", async () => {
@@ -80,10 +111,41 @@ describe("el análisis, a su hoja de Excel", () => {
     for (let i = 0; i < matriz.length; i++) matriz[i] ??= [];
     const r = leerHojaAnalisis(matriz);
     expect(r.costoEnvio).toBe(500);
-    expect(r.filas.map((f) => [f.codigo, f.cantidadRef, f.precioFob, f.pesoKg, f.cantidadPedido])).toEqual([
+    expect(
+      r.filas.map((f) => [f.codigo, f.cantidadRef, f.precioFob, f.pesoKg, f.cantidadPedido]),
+    ).toEqual([
       ["ABC 123", 6, 3.144, 0.617, 6],
       ["XYZ-9", 20, 0.393, 0.00454, 10],
     ]);
-    expect(r.filas[0]).toMatchObject({ cliente: "ACME", frecuencia: 4, precioMercado: 23.78, proveedorMercado: "OMNI" });
+    expect(r.filas[0]).toMatchObject({
+      cliente: "ACME",
+      frecuencia: 4,
+      precioMercado: 23.78,
+      proveedorMercado: "OMNI",
+    });
+  });
+});
+
+describe("el asterisco rojo de lo que se escribe (Willy, 02/10)", () => {
+  const texto = (v: unknown) =>
+    (v as { richText?: { text: string }[] } | null)?.richText?.map((t) => t.text).join("") ??
+    String(v);
+
+  it("las columnas de entrada llevan « *» y las calculadas no", async () => {
+    const ws = await abrir(DATOS);
+    expect(texto(ws.getCell("F1").value)).toBe("Price FOB $ *");
+    expect(texto(ws.getCell("J1").value)).toBe("CANT. PEDIDO *");
+    expect(texto(ws.getCell("M1").value)).toBe("PU LIMA $");
+    expect(texto(ws.getCell("G1").value)).toBe("PARC.$");
+  });
+
+  it("el DHL, el desaduanaje y el tipo de cambio también, y hay leyenda", async () => {
+    const ws = await abrir(DATOS);
+    const etiquetas: string[] = [];
+    ws.eachRow((fila) => etiquetas.push(texto(fila.getCell("D").value)));
+    expect(etiquetas).toEqual(
+      expect.arrayContaining(["DHL $ *", "DESADUANAJE S/ *", "TIPO DE CAMBIO *"]),
+    );
+    expect(etiquetas.some((e) => e.startsWith("* Lo escribe usted"))).toBe(true);
   });
 });

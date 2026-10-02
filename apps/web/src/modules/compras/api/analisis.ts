@@ -4,6 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import { calcular } from "../dominio/analisis";
 import type { Resultado } from "./consultas";
 
 /** Una fila del listado de análisis. */
@@ -18,7 +19,19 @@ export interface AnalisisLista {
   compra_numero: string | null;
   lineas: number;
   costo_envio: number;
+  /**
+   * Lo que se lee de un vistazo en la lista, calculado con la MISMA función
+   * que la pantalla (`calcular`): costo total y valor a mercado de lo que se
+   * pide, y la K. Luis, 02/10: *«que se entienda con colores […] ayudar al
+   * cliente»* — en la lista solo se veía el número y el proveedor.
+   */
+  costo_total: number;
+  total_mercado: number;
+  k: number | null;
 }
+
+/** Análisis por página: son pocos al mes, pero la lista no puede crecer sin fin. */
+export const ANALISIS_POR_PAGINA = 20;
 
 /** Un análisis entero, para editarlo o convertirlo en compra. */
 export interface AnalisisDetalle {
@@ -53,21 +66,34 @@ export interface AnalisisDetalle {
 
 const n = (v: unknown) => Number(v ?? 0) || 0;
 
-export async function listarAnalisis(): Promise<Resultado<AnalisisLista[]>> {
+export async function listarAnalisis(
+  pagina = 1,
+): Promise<Resultado<{ filas: AnalisisLista[]; total: number; pagina: number; paginas: number }>> {
+  const p = Number.isFinite(pagina) && pagina >= 1 ? Math.floor(pagina) : 1;
+  const desde = (p - 1) * ANALISIS_POR_PAGINA;
   try {
     const supabase = await clienteServidor();
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from("analisis_importacion")
       .select(
         `id, numero, fecha, referencia, estado, compra_id, costo_envio,
+         peso_declarado, desaduanaje_soles, tipo_cambio,
          proveedores(razon_social),
          compra:compras(numero),
-         analisis_importacion_items(count)`,
+         analisis_importacion_items(cantidad_ref, cantidad_pedido, precio_fob, peso_kg, precio_mercado)`,
+        { count: "exact" },
       )
       .order("creado_en", { ascending: false })
-      .limit(100);
+      .range(desde, desde + ANALISIS_POR_PAGINA - 1);
     if (error) return fallo(error, "compras/listarAnalisis");
 
+    type Item = {
+      cantidad_ref: number;
+      cantidad_pedido: number;
+      precio_fob: number;
+      peso_kg: number;
+      precio_mercado: number;
+    };
     type Fila = {
       id: string;
       numero: string;
@@ -76,24 +102,60 @@ export async function listarAnalisis(): Promise<Resultado<AnalisisLista[]>> {
       estado: string;
       compra_id: string | null;
       costo_envio: number;
+      peso_declarado: number | null;
+      desaduanaje_soles: number | null;
+      tipo_cambio: number | null;
       proveedores: { razon_social: string } | null;
       compra: { numero: string } | null;
-      analisis_importacion_items: { count: number }[];
+      analisis_importacion_items: Item[];
     };
+    const total = count ?? 0;
     return {
       ok: true,
-      datos: ((data ?? []) as unknown as Fila[]).map((f) => ({
-        id: f.id,
-        numero: f.numero,
-        fecha: f.fecha,
-        proveedor: f.proveedores?.razon_social ?? "—",
-        referencia: f.referencia,
-        estado: f.estado === "comprado" ? "comprado" : "borrador",
-        compra_id: f.compra_id,
-        compra_numero: f.compra?.numero ?? null,
-        lineas: f.analisis_importacion_items?.[0]?.count ?? 0,
-        costo_envio: n(f.costo_envio),
-      })),
+      datos: {
+        total,
+        pagina: p,
+        paginas: Math.max(1, Math.ceil(total / ANALISIS_POR_PAGINA)),
+        filas: ((data ?? []) as unknown as Fila[]).map((f) => {
+          const items = f.analisis_importacion_items ?? [];
+          const c = calcular({
+            costoEnvio: n(f.costo_envio),
+            pesoDeclarado: n(f.peso_declarado),
+            desaduanajeSoles: n(f.desaduanaje_soles),
+            tipoCambio: n(f.tipo_cambio),
+            lineas: items.map((i, k) => ({
+              key: String(k),
+              productoId: null,
+              codigo: "x",
+              marca: "",
+              descripcion: "",
+              cliente: "",
+              proveedorMercado: "",
+              frecuencia: null,
+              cantidadRef: n(i.cantidad_ref),
+              cantidadPedido: n(i.cantidad_pedido),
+              precioFob: n(i.precio_fob),
+              pesoKg: n(i.peso_kg),
+              precioMercado: n(i.precio_mercado),
+            })),
+          });
+          return {
+            id: f.id,
+            numero: f.numero,
+            fecha: f.fecha,
+            proveedor: f.proveedores?.razon_social ?? "—",
+            referencia: f.referencia,
+            estado: f.estado === "comprado" ? "comprado" : "borrador",
+            compra_id: f.compra_id,
+            compra_numero: f.compra?.numero ?? null,
+            lineas: items.length,
+            costo_envio: n(f.costo_envio),
+            costo_total: c.costoTotal,
+            total_mercado: c.totalMercado,
+            k: c.rinde,
+          } satisfies AnalisisLista;
+        }),
+      },
     };
   } catch (e) {
     return fallo(e, "compras/listarAnalisis");
