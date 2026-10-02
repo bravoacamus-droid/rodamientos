@@ -79,7 +79,10 @@ export default async function PaginaDetalleCompra({
       : factorViejo !== null
         ? Math.round(l.costo_unitario * factorViejo * 1e4) / 1e4
         : (costeo.porLinea[l.id] ?? null);
-  const mostrarPeso = c.lineas.some((l) => l.peso_kg > 0) || c.via_importacion === "aerea";
+  // Solo si hay pesos: la compra ya no los pide (02/10) y una columna de
+  // «sin peso» en cada fila sería un aviso de algo que nadie tiene que hacer.
+  const mostrarPeso = c.lineas.some((l) => l.peso_kg > 0);
+  const todasConPeso = c.lineas.length > 0 && c.lineas.every((l) => l.peso_kg > 0);
   const etiquetaPuesto = c.tipo === "importacion" ? "Puesto en Lima" : "Con gastos";
 
   // Los gastos se tocan mientras no haya entrado mercadería: la base los
@@ -401,6 +404,7 @@ export default async function PaginaDetalleCompra({
                 }
                 porKg={costeo.porKg}
                 kilos={costeo.kilos}
+                conPesos={todasConPeso}
                 faltanPesos={costeo.faltaPeso.length > 0}
                 anulada={c.estado === "anulada"}
               />

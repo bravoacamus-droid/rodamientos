@@ -202,3 +202,24 @@ export function costeoEstimado(
 export function hayGastosEscritos(gastos: readonly GastoEditable[]): boolean {
   return gastos.some((g) => g.monto > 0);
 }
+
+/**
+ * El reparto que de verdad vale en ESTA compra.
+ *
+ * Willy, 02/10, registrando la compra: *«en la compra no va peso […] precios
+ * nomás»*. Su papel de compra —la proforma de FORUN— trae artículo, marca,
+ * cantidad, precio, el DHL y el total: ningún peso. Así que la compra no los
+ * pide, y un gasto «por kilo» sin pesos se guardaría diciendo algo que no
+ * pasó (la base lo reparte por valor igual, regla de la 097).
+ *
+ * La excepción es la compra que sale de un ANÁLISIS: ahí los pesos vienen
+ * escritos en todas las líneas, y el courier se reparte por kilo como en el
+ * análisis, para que el costo puesto coincida con el PU LIMA que se analizó.
+ */
+export function gastosSegunPesos<G extends { reparto: Reparto }>(
+  lineas: readonly { pesoKg: number }[],
+  gastos: readonly G[],
+): G[] {
+  const todasConPeso = lineas.length > 0 && lineas.every((l) => l.pesoKg > 0);
+  return todasConPeso ? [...gastos] : gastos.map((g) => ({ ...g, reparto: "valor" as const }));
+}

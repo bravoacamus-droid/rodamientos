@@ -349,8 +349,10 @@ describe("aPayload", () => {
     expect(payload.via_importacion).toBe("maritima");
     // Las otras cinco propuestas siguen en pantalla vacías, y NO viajan: un
     // gasto de cero en la ficha diría que se pagó y salió gratis.
+    // El flete va POR VALOR: la compra no lleva pesos (Willy, 02/10), y «por
+    // kilo» sin pesos se guardaría diciendo algo que no pasó.
     expect(payload.gastos).toEqual([
-      { concepto: "Flete marítimo", monto: 100, reparto: "peso" },
+      { concepto: "Flete marítimo", monto: 100, reparto: "valor" },
       { concepto: "Derechos de aduana", monto: 50, reparto: "valor" },
     ]);
     expect(payload.gastos_importacion).toBe(150);

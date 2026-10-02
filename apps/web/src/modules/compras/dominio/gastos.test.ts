@@ -7,6 +7,7 @@ import {
   MODALIDADES,
   costeoEstimado,
   gastosParaEnviar,
+  gastosSegunPesos,
   modalidadDe,
   repartoSugerido,
   tipoYVia,
@@ -169,5 +170,28 @@ describe("costeoEstimado (097): la cuenta del Excel de Willy", () => {
   it("sin gastos, el costo es el de la factura", () => {
     const c = costeoEstimado([l("a", 3, 7.5, 0)], []);
     expect(c.porLinea.a).toBe(7.5);
+  });
+});
+
+describe("gastosSegunPesos — la compra no lleva peso (Willy, 02/10)", () => {
+  const dhl = g("DHL", 1039, "d", "peso");
+  const aduana = g("Desaduanaje", 200, "a", "valor");
+
+  it("sin pesos, todo por valor: el «por kilo» no se guarda", () => {
+    const r = gastosSegunPesos([{ pesoKg: 0 }, { pesoKg: 0 }], [dhl, aduana]);
+    expect(r.map((x) => x.reparto)).toEqual(["valor", "valor"]);
+  });
+
+  it("si falta el peso de UNA línea, también por valor", () => {
+    expect(gastosSegunPesos([{ pesoKg: 1.2 }, { pesoKg: 0 }], [dhl])[0]!.reparto).toBe("valor");
+  });
+
+  it("de un análisis, con todos los pesos, el courier sigue por kilo", () => {
+    const r = gastosSegunPesos([{ pesoKg: 1.2 }, { pesoKg: 0.5 }], [dhl, aduana]);
+    expect(r.map((x) => x.reparto)).toEqual(["peso", "valor"]);
+  });
+
+  it("no toca el resto del gasto", () => {
+    expect(gastosSegunPesos([{ pesoKg: 0 }], [dhl])[0]).toMatchObject({ key: "d", concepto: "DHL", monto: 1039 });
   });
 });

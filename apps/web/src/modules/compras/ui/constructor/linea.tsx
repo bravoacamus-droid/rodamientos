@@ -10,17 +10,19 @@ import {
 } from "../../dominio/constructor";
 
 /**
- * Lo que la línea necesita saber de la compra entera (097): si se pide el
- * peso —hay gastos «por kilo» o es aérea—, cuánto va a costar puesta en
- * almacén, y si le falta el peso para repartir el courier.
+ * Lo que la línea necesita saber de la compra entera (097): cuánto va a costar
+ * puesta en almacén.
+ *
+ * Aquí se pedía también el peso por unidad, para repartir el courier por
+ * kilo. Se quitó el 02/10: Willy, *«en la compra no va peso […] precios
+ * nomás»*. El peso y el reparto por kilo viven en el ANÁLISIS de importación,
+ * que es donde él decide; una compra que sale de un análisis los trae hechos.
  */
 export interface ExtrasLinea {
-  mostrarPeso: boolean;
   /** Costo por unidad con los gastos, o null si no hay gastos. */
   puesto: number | null;
   /** «Puesto en Lima» en una importación; «Con gastos» en una local. */
   etiquetaPuesto: string;
-  sinPeso: boolean;
 }
 
 /**
@@ -94,12 +96,6 @@ export function FilaCompra({
       </td>
 
       <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
-
-      {extras.mostrarPeso ? (
-        <td className="px-2 py-2">
-          <CampoPeso linea={linea} sinPeso={extras.sinPeso} despachar={despachar} />
-        </td>
-      ) : null}
 
       <td className="px-2 py-2">
         <Input
@@ -243,12 +239,6 @@ export function TarjetaCompra({
           />
           <ReferenciaCosto linea={linea} ultimoCosto={ultimoCosto} />
         </label>
-        {extras.mostrarPeso ? (
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Peso por unidad (kg)</span>
-            <CampoPeso linea={linea} sinPeso={extras.sinPeso} despachar={despachar} ancho />
-          </label>
-        ) : null}
       </div>
 
       <div className="mt-3 flex items-end justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm">
@@ -321,51 +311,4 @@ function ReferenciaCosto({
     );
   }
   return null;
-}
-
-/**
- * El peso por unidad, en kg (097).
- *
- * Con él se reparte el courier, como en el Excel de Willy (§AP). Se propone el
- * de la ficha y lo que se escriba aquí queda apuntado en el producto al
- * guardar: ninguno de los 794 tenía peso, y así cada compra aérea va llenando
- * el catálogo.
- *
- * Si hay gastos por kilo y falta, el campo se marca en ámbar con su porqué:
- * mientras falte, TODO se reparte por valor.
- */
-function CampoPeso({
-  linea,
-  sinPeso,
-  despachar,
-  ancho = false,
-}: {
-  linea: LineaCompraEditable;
-  sinPeso: boolean;
-  despachar: (a: Accion) => void;
-  ancho?: boolean;
-}) {
-  return (
-    <span className="flex flex-col gap-0.5">
-      <Input
-        type="number"
-        inputMode="decimal"
-        min={0}
-        step="0.001"
-        value={linea.pesoKg > 0 ? linea.pesoKg : ""}
-        placeholder="0.000"
-        onChange={(e) =>
-          despachar({ tipo: "peso", key: linea.key, valor: Number(e.target.value) })
-        }
-        className={`${ancho ? "" : "w-24 "}text-right tabular ${
-          sinPeso ? "border-[var(--warn)] bg-[var(--warn-bg)]" : ""
-        }`}
-        aria-label={`Peso por unidad de ${linea.codigo}, en kilos`}
-        aria-invalid={sinPeso || undefined}
-      />
-      {sinPeso ? (
-        <span className="text-sm font-medium text-[var(--warn)]">Falta el peso</span>
-      ) : null}
-    </span>
-  );
 }

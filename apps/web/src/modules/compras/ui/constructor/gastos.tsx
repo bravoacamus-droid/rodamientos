@@ -117,11 +117,6 @@ export function GastosDeCompra({
                 aria-label={`Monto de ${g.concepto || "este gasto"}`}
               />
               <span className="col-span-2 flex items-center gap-2 sm:col-span-1">
-                <SelectorReparto
-                  valor={g.reparto}
-                  concepto={g.concepto}
-                  onCambiar={(r) => despachar({ tipo: "gastoReparto", key: g.key, valor: r })}
-                />
                 {/* Un botón que parece botón, con su icono. */}
                 <Button
                   type="button"

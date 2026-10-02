@@ -58,6 +58,7 @@ export function GastosFicha({
   porKg,
   kilos,
   faltanPesos,
+  conPesos,
   anulada = false,
 }: {
   compraId: string;
@@ -74,6 +75,11 @@ export function GastosFicha({
   kilos: number;
   /** Hay gastos por kilo pero algún producto no tiene peso. */
   faltanPesos: boolean;
+  /**
+   * Todas las líneas tienen peso (la compra salió de un análisis). Solo
+   * entonces se ofrece repartir «por kilo»: la compra no pide pesos (02/10).
+   */
+  conPesos: boolean;
   /** Anulada: sus gastos no van a ningún costo. */
   anulada?: boolean;
 }) {
@@ -91,7 +97,7 @@ export function GastosFicha({
     setConcepto(c);
     setMonto("");
     setDocumento("");
-    setReparto(repartoSugerido(c));
+    setReparto(conPesos ? repartoSugerido(c) : "valor");
     setRepartoAMano(false);
     setAbierto(true);
   };
@@ -264,7 +270,7 @@ export function GastosFicha({
                 onChange={(e) => {
                   setConcepto(e.target.value);
                   // Lo propuesto sigue al concepto; lo elegido se queda.
-                  if (!repartoAMano) setReparto(repartoSugerido(e.target.value));
+                  if (!repartoAMano && conPesos) setReparto(repartoSugerido(e.target.value));
                 }}
                 list="conceptos-gasto"
                 autoFocus
@@ -303,6 +309,7 @@ export function GastosFicha({
               </label>
             </div>
 
+            {conPesos ? (
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">Cómo se reparte</span>
               <SelectorReparto
@@ -319,6 +326,11 @@ export function GastosFicha({
                   : "Según lo que vale cada producto, como los impuestos."}
               </span>
             </div>
+            ) : (
+              <p className="text-sm text-[var(--fg-muted)]">
+                Se reparte según lo que vale cada producto.
+              </p>
+            )}
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setAbierto(false)}>

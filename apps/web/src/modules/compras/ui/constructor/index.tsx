@@ -41,6 +41,7 @@ import {
   ETIQUETA_MODALIDAD,
   MODALIDADES,
   costeoEstimado,
+  gastosSegunPesos,
   modalidadDe,
   type Modalidad,
 } from "../../dominio/gastos";
@@ -246,21 +247,15 @@ export function ConstructorCompra({
     columna «PU LIMA» del Excel de Willy, hecha mientras se registra: así ve
     su margen antes de guardar, que es para lo que hace la hoja.
   */
+  // Con el reparto que de verdad vale: sin pesos, todo por valor (02/10).
   const costeo = useMemo(
-    () => costeoEstimado(estado.lineas, estado.gastos),
+    () => costeoEstimado(estado.lineas, gastosSegunPesos(estado.lineas, estado.gastos)),
     [estado.lineas, estado.gastos],
   );
-  // El peso se pide en aérea siempre —es donde el courier va por kilo— y en
-  // cualquier otra si alguien puso un gasto por kilo.
-  const mostrarPeso =
-    modalidad === "aerea" || estado.gastos.some((g) => g.reparto === "peso" && g.monto > 0);
   const extrasDe = (key: string): ExtrasLinea => ({
-    mostrarPeso,
     puesto: totales.gastos > 0 ? (costeo.porLinea[key] ?? null) : null,
     etiquetaPuesto: esImportacion ? "Puesto en Lima" : "Con gastos",
-    sinPeso: costeo.faltaPeso.includes(key),
   });
-  const lineasSinPeso = estado.lineas.filter((l) => costeo.faltaPeso.includes(l.key));
 
   return (
     <form action={guardar} className="flex flex-col gap-5">
@@ -630,37 +625,6 @@ export function ConstructorCompra({
               />
             </div>
 
-            {/*
-              Falta el peso de algún producto y hay gastos por kilo.
-
-              Se dice ANTES de guardar, con los códigos y qué pasa si no se
-              arregla. No bloquea: guardar sin pesos es legítimo —se reparte
-              por valor, como siempre—, pero es justo lo que el Excel de Willy
-              hace distinto, y tiene que poder verlo.
-            */}
-            {lineasSinPeso.length > 0 ? (
-              <div
-                role="status"
-                className="mb-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm"
-              >
-                <p className="font-semibold">
-                  Falta el peso de{" "}
-                  {lineasSinPeso.length === 1
-                    ? lineasSinPeso[0]?.codigo
-                    : `${lineasSinPeso.length} productos`}
-                </p>
-                <p className="mt-0.5">
-                  Escríbelo en cada uno (en kilos, por unidad) para repartir el courier por kilo,
-                  como en tu Excel. Mientras falte, todos los gastos se reparten por valor.
-                </p>
-                {lineasSinPeso.length > 1 ? (
-                  <p className="mt-1 font-mono">
-                    {lineasSinPeso.map((l) => l.codigo).join(" · ")}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
             {estado.lineas.length === 0 ? (
               <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
                 Busca un producto arriba para empezar. Puedes teclear el código, la
@@ -676,11 +640,7 @@ export function ConstructorCompra({
                 `md:` la tabla salía en los dos y había que deslizarla de lado
                 para llegar al costo — también en su propio monitor.
               */}
-              {/* Con la columna del peso la tabla pide ~100 px más: el corte
-                  sube a `@4xl` para no volver a cortarla. */}
-              <ul
-                className={`flex flex-col gap-2.5 ${mostrarPeso ? "@4xl:hidden" : "@3xl:hidden"}`}
-              >
+              <ul className="flex flex-col gap-2.5 @3xl:hidden">
                 {estado.lineas.map((l) => (
                   <TarjetaCompra
                     key={l.key}
@@ -691,7 +651,7 @@ export function ConstructorCompra({
                   />
                 ))}
               </ul>
-              <div className={mostrarPeso ? "hidden @4xl:block" : "hidden @3xl:block"}>
+              <div className="hidden @3xl:block">
               <TableContenedor>
                 <Table>
                   <THead>
@@ -700,7 +660,6 @@ export function ConstructorCompra({
                       <th className="text-left">Descripción</th>
                       <th className="text-right">Cant.</th>
                       <th className="text-left">U.M.</th>
-                      {mostrarPeso ? <th className="text-right">Peso (kg)</th> : null}
                       <th className="text-right">Costo unit.</th>
                       <th className="text-right">Importe</th>
                       <th className="text-right">Stock</th>

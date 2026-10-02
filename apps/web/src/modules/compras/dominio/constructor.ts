@@ -4,6 +4,7 @@ import type { TipoCompra } from "./tipos";
 import {
   CONCEPTOS_SUGERIDOS,
   gastosParaEnviar,
+  gastosSegunPesos,
   hayGastosEscritos,
   repartoSugerido,
   tipoYVia,
@@ -652,7 +653,8 @@ export function aPayload(estado: EstadoCompra) {
     via_importacion: esImportacion ? estado.via : null,
     // El DETALLE, que es lo que manda: la base lo suma (022). El total se
     // manda también por si alguien llama a la RPC vieja, y coincide.
-    gastos: gastosParaEnviar(estado.gastos),
+    // Sin pesos, nada «por kilo» (Willy, 02/10: la compra no lleva peso).
+    gastos: gastosParaEnviar(gastosSegunPesos(estado.lineas, estado.gastos)),
     gastos_importacion: totalGastos(estado.gastos),
     // Tracking y courier NO viajan en una compra local, aunque el estado los
     // tuviera de antes de cambiar la modalidad.
