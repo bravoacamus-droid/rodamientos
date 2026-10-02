@@ -33,6 +33,15 @@ import type { ContactoCliente } from "@/modules/clientes/dominio/tipos";
  * hacía falta un pasillo. Lo escrito a mano se imprime igual; lo que pierde es
  * el enlace, o sea la pregunta «¿qué le hemos cotizado a esta persona?».
  */
+
+/**
+ * Los dos botones de debajo del campo, con borde. Eran texto azul que solo
+ * se subrayaba al pasar el ratón: en el teléfono no hay ratón, y para Willy
+ * no parecían botones (revisión por módulos del 02/10).
+ */
+const BOTON_PEQUENO =
+  "inline-flex min-h-8 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+
 export function SelectorContacto({
   clienteId,
   cliente,
@@ -74,7 +83,23 @@ export function SelectorContacto({
         setLista(gente);
         // Si el cliente no tiene ninguno, la caja de texto directamente: un
         // desplegable vacío no explica nada.
-        setAMano(gente.length === 0);
+        /*
+          Y si la cotización ya trae un nombre escrito a mano, se enseña ESE.
+
+          Revisión por módulos del 02/10, al editar la COT1-000001: el papel
+          decía «Atención: Prueba nomnbre» y aquí el desplegable ponía «Sin
+          destinatario», porque solo mira el id. Si el nombre coincide con
+          uno de la lista, se enlaza a él; si no, va la caja de texto con lo
+          escrito.
+        */
+        const yaEscrito = contactoId === null && contacto.trim() !== "";
+        const mismo = yaEscrito
+          ? gente.find(
+              (g) => g.nombre.trim().toLowerCase() === contacto.trim().toLowerCase(),
+            )
+          : undefined;
+        if (mismo) onElegir(mismo.id, mismo.nombre);
+        setAMano(gente.length === 0 || (yaEscrito && !mismo));
         // Y se propone el principal, que es a quien se le manda casi siempre.
         // Solo si no hay nada elegido todavía —al volver de un borrador ya
         // viene puesto y pisarlo sería perder lo que la persona decidió—.
@@ -137,7 +162,7 @@ export function SelectorContacto({
         </SelectNativo>
       )}
 
-      <span className="flex flex-wrap items-center gap-x-2 text-sm text-[var(--fg-subtle)]">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-[var(--fg-subtle)]">
         {cargando
           ? "Cargando sus contactos…"
           : sinCliente
@@ -145,7 +170,7 @@ export function SelectorContacto({
             : aMano && lista.length > 0 ? (
                 <button
                   type="button"
-                  className="text-brand-600 hover:underline"
+                  className={BOTON_PEQUENO}
                   onClick={() => {
                     setAMano(false);
                     onElegir(null, "");
@@ -175,7 +200,7 @@ export function SelectorContacto({
           <button
             type="button"
             onClick={() => setDandoDeAlta(true)}
-            className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+            className={BOTON_PEQUENO}
           >
             <UserPlus className="size-3.5" aria-hidden="true" />
             {contacto.trim() && contactoId === null

@@ -79,6 +79,16 @@ export function BuscadorLineas({
   };
 
   const teclas = (e: React.KeyboardEvent) => {
+    /*
+      Enter en esta caja NUNCA envía el formulario.
+
+      Revisión por módulos del 02/10: con la lista todavía cerrada —la
+      búsqueda tarda un segundo— el Enter caía al `<form>` y, con cliente y
+      una línea puestas, GUARDABA la cotización entera. Se teclea «6309» y
+      Enter, que es justo como se trabaja aquí. Así se crearon sin querer la
+      COT1-000002 y la COT1-000003.
+    */
+    if (e.key === "Enter") e.preventDefault();
     if (!abierto || resultados.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -102,7 +112,10 @@ export function BuscadorLineas({
         onChange={(e) => setTermino(e.target.value)}
         onFocus={() => resultados.length > 0 && setAbierto(true)}
         onKeyDown={teclas}
-        placeholder="Buscar por código, código de fabricante o descripción…"
+        // Corto: el largo («…código de fabricante o descripción») salía
+        // cortado a 390 px. El del fabricante también se encuentra; lo dice
+        // el texto de la sección (revisión por módulos del 02/10).
+        placeholder="Buscar por código o descripción…"
         aria-label="Buscar producto"
         autoComplete="off"
       />
@@ -204,7 +217,12 @@ export function BuscadorLineas({
                 <span className="shrink-0 text-sm text-[var(--fg-muted)] sm:w-14">
                   {p.marca}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm">{p.descripcion}</span>
+                {/* Dos renglones en el teléfono antes de cortar: la descripción es
+                    por lo que se elige entre cuatro 6205 (revisión por
+                    módulos del 02/10). */}
+                <span className="line-clamp-2 min-w-0 flex-1 text-sm sm:line-clamp-none sm:truncate">
+                  {p.descripcion}
+                </span>
               </span>
               <Badge
                 className="ml-auto sm:ml-0"
@@ -217,9 +235,11 @@ export function BuscadorLineas({
                 }
                 size="xs"
               >
-                {p.stock ?? 0}
+                {/* Con la palabra: un «0» rojo suelto no decía de qué era
+                    (revisión por módulos del 02/10). */}
+                stock {p.stock ?? 0}
               </Badge>
-              <span className="w-20 shrink-0 text-right tabular text-sm">
+              <span className="shrink-0 whitespace-nowrap text-right tabular text-sm sm:w-20">
                 ${p.precio_venta.toFixed(2)}
               </span>
             </button>

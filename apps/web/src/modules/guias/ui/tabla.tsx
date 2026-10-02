@@ -54,10 +54,17 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
     );
   }
 
+  /*
+    Tabla o tarjetas según el ancho de la LISTA (`@container`), no de la
+    pantalla. Revisión por módulos del 02/10: con `md`, a 820 con el menú
+    abierto las ocho columnas entraban en 500 px y «Ver» e «Imprimir»
+    quedaban tras la barra de desplazamiento. Es el mismo arreglo que la
+    lista de cotizaciones.
+  */
   return (
-    <>
+    <div className="@container">
       {/* ------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden md:block">
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -83,7 +90,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
-                <td className="px-4 py-2.5">
+                <td className="whitespace-nowrap px-4 py-2.5">
                   <Link
                     href={`/guias/${g.id}`}
                     className="font-mono text-sm font-medium text-brand-600 hover:underline"
@@ -200,7 +207,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
         Con cuatro datos y dos botones dentro, una raya de un píxel ya no
         alcanza para decir dónde acaba una guía y empieza la siguiente.
       */}
-      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
         {filas.map((g, i) => (
           <li
             key={g.id}
@@ -288,7 +295,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }
 

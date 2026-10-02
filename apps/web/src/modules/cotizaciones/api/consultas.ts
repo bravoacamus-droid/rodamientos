@@ -52,7 +52,7 @@ export async function listarCotizaciones(
       .from("cotizaciones")
       .select(
         `id, numero, fecha, fecha_vencimiento, cliente_id,
-         orden_compra_cliente, subtotal, igv, total, margen_pct, estado,
+         orden_compra_cliente, subtotal, igv, total, costo_total, margen_pct, estado,
          clientes!inner(razon_social, numero_documento),
          perfiles!cotizaciones_vendedor_id_fkey(nombre),
          cotizacion_items(count)`,
@@ -106,6 +106,7 @@ export async function listarCotizaciones(
       subtotal: Number(c.subtotal ?? 0),
       igv: Number(c.igv ?? 0),
       total: Number(c.total ?? 0),
+      costo_total: Number(c.costo_total ?? 0),
       margen_pct: Number(c.margen_pct ?? 0),
       estado: c.estado as CotizacionLista["estado"],
       vendedor: c.perfiles?.nombre ?? null,

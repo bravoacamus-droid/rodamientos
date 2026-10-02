@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
 
 import {
@@ -177,7 +178,29 @@ export function Constructor({
   );
 
   return (
-    <form action={guardar} className="flex flex-col gap-5 sm:p-6">
+    <form
+      action={guardar}
+      className="flex flex-col gap-5 sm:p-6"
+      /*
+        Enter en un campo no guarda la cotización: se guarda con el botón.
+
+        Revisión por módulos del 02/10. Con cliente y una línea puestas, un
+        Enter en la cantidad, el precio o el buscador de productos la
+        GUARDABA —el envío implícito del navegador— y gastaba un número de la
+        serie. Al teclear precios el Enter sale solo, y aquí guardar a medias
+        no es inocuo: cada guardado es un correlativo.
+      */
+      onKeyDown={(e) => {
+        // `contains`: los diálogos van en un portal y React les pasa el
+        // evento igual; su Enter es suyo y no se toca.
+        if (
+          e.key === "Enter" &&
+          e.target instanceof HTMLInputElement &&
+          e.currentTarget.contains(e.target)
+        )
+          e.preventDefault();
+      }}
+    >
       <input
         type="hidden"
         name="cotizacion"
@@ -291,10 +314,15 @@ export function Constructor({
             </div>
 
             <details className="group mt-3 border-t border-[var(--border-soft)] pt-3">
-              <summary className="cursor-pointer list-none text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]">
-                <span className="inline-block transition-transform group-open:rotate-90">
-                  ›
-                </span>{" "}
+              {/* Con borde y la flecha de lucide. Era texto gris con un «›»
+                  tipográfico: no parecía algo que se pudiera pulsar, y ahí
+                  dentro están la orden de compra y las condiciones
+                  (revisión por módulos del 02/10). */}
+              <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] [&::-webkit-details-marker]:hidden">
+                <ChevronRight
+                  className="size-4 shrink-0 transition-transform group-open:rotate-90"
+                  aria-hidden="true"
+                />
                 Más datos del documento
               </summary>
 
@@ -335,9 +363,10 @@ export function Constructor({
                   {entregaMiente ? (
                     <span className="text-sm font-medium text-[var(--warn)]">
                       Dice inmediato y hay líneas que tardan. Lo que cuadra:{" "}
+                      {/* Con borde, no subrayado (revisión por módulos del 02/10). */}
                       <button
                         type="button"
-                        className="underline"
+                        className="mt-1 inline-flex min-h-8 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm font-medium text-[var(--fg)] hover:bg-[var(--surface-2)]"
                         onClick={() => {
                           despachar({
                             tipo: "cabecera",
@@ -394,9 +423,16 @@ export function Constructor({
             `@container`: tarjetas o tabla según el ancho de ESTA sección, no
             de la pantalla, como el registro de compra. Revisión de diseño del
             02/10: en el teléfono esta tabla se desplazaba de lado (390 px:
-            319 → 867). El corte es `@3xl` (48 rem, 816 px con la base de
-            17 px), el mismo de compras: más arriba se habría pasado a
-            tarjetas en un portátil de 1280, que hoy ve la tabla.
+            319 → 867).
+
+            El corte es `@5xl` (64 rem, 1088 px con la base de 17 px), y no
+            el `@3xl` de compras. Revisión por módulos del 02/10: esta tabla
+            tiene once columnas y cuatro campos, y con valores normales pide
+            ~1160 px. A 1280 con el menú abierto la sección mide 870, así que
+            se desplazaba y «Importe» y «Más opciones» quedaban fuera. Por
+            debajo del corte salen las tarjetas, que a ese ancho ponen los
+            cuatro campos en una fila; en la pantalla de Willy (1600) sigue
+            la tabla.
           */}
           <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
             {/*
@@ -464,7 +500,7 @@ export function Constructor({
                 con la forma de la tarjeta que va a aparecer: los nombres de
                 lo que se va a pedir, y dónde.
               */}
-              <div className="rounded-md border border-dashed border-[var(--border-strong)] p-3 text-sm text-[var(--fg-subtle)] @3xl:hidden">
+              <div className="rounded-md border border-dashed border-[var(--border-strong)] p-3 text-sm text-[var(--fg-subtle)] @5xl:hidden">
                 <p className="text-[var(--fg-muted)]">
                   1. Busca un producto arriba —por código, por el del
                   fabricante o por parte de la descripción— y aparecerá aquí.
@@ -474,7 +510,7 @@ export function Constructor({
                   Importe
                 </p>
               </div>
-              <div className="hidden @3xl:block">
+              <div className="hidden @5xl:block">
               <TableContenedor>
                 <Table>
                   <THead>
@@ -512,7 +548,7 @@ export function Constructor({
               </>
             ) : (
               <>
-              <ul className="flex flex-col gap-2.5 @3xl:hidden">
+              <ul className="flex flex-col gap-2.5 @5xl:hidden">
                 {estado.lineas.map((l, i) => (
                   <TarjetaLinea
                     key={l.key}
@@ -526,7 +562,7 @@ export function Constructor({
                   />
                 ))}
               </ul>
-              <div className="hidden @3xl:block">
+              <div className="hidden @5xl:block">
               <TableContenedor>
                 <Table>
                   <THead>

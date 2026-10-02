@@ -122,7 +122,7 @@ export function AccionesCotizacion({
   const viva = enCurso || estado === "aprobada";
 
   return (
-    <div className="flex flex-col items-stretch gap-2 sm:items-end print:hidden">
+    <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end print:hidden">
       <DialogoEnviar
         abierto={pidiendoContacto}
         clienteId={cliente.id}
@@ -152,7 +152,12 @@ export function AccionesCotizacion({
         corrigiendo={estado === "aprobada"}
       />
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      {/*
+        En el teléfono, una rejilla de dos columnas a lo ancho. Revisión por
+        módulos del 02/10: alineados a la derecha salían en tres renglones
+        desiguales —uno solo, dos, y uno con los tres puntos colgando—.
+      */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
         {/*
           Editar, mientras el cliente no la haya aceptado.
 
@@ -306,10 +311,13 @@ export function AccionesCotizacion({
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            aria-label="Más acciones"
-            className="flex size-11 items-center justify-center rounded-md border border-[var(--border)] text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:size-9"
+            // Con su palabra, como el de cada línea del constructor: tres
+            // puntos solos no dicen que ahí están Clonar y Anular (revisión
+            // por módulos del 02/10).
+            className="inline-flex h-control-md items-center justify-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
           >
             <EllipsisVertical className="size-4" aria-hidden="true" />
+            Más opciones
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-56">

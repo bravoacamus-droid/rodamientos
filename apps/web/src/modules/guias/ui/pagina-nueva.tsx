@@ -68,7 +68,7 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
         accion={
           <Link
             href="/cotizaciones"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            className="inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
           >
             Ver cotizaciones
           </Link>

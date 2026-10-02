@@ -13,6 +13,7 @@ import {
 import type { LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import { importeLinea } from "../../dominio/totales";
+import { unidadLegible } from "../../dominio/unidades";
 
 const dolar = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
@@ -94,7 +95,7 @@ export function PreciosYStock({
 
             <div className="mt-1 flex flex-wrap items-baseline justify-between gap-2 text-sm text-[var(--fg-muted)]">
               <span>
-                {linea.cantidad} {linea.unidad}
+                {linea.cantidad} {unidadLegible(linea.unidad)}
                 {linea.descuentoPct > 0
                   ? ` · ${linea.descuentoPct}% de descuento sobre ${dolar(linea.valorUnitario)}`
                   : ""}
@@ -107,7 +108,11 @@ export function PreciosYStock({
                 <span className="text-sm">
                   Margen sobre el costo
                   <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
-                    Ganas {dolar(neto - linea.costoUnitario)} en cada uno.
+                    {/* Con la ganancia negativa decía «Ganas -USD 13.50», que
+                        se lee al revés (revisión por módulos del 02/10). */}
+                    {neto >= linea.costoUnitario
+                      ? `Ganas ${dolar(neto - linea.costoUnitario)} en cada uno.`
+                      : `Pierdes ${dolar(linea.costoUnitario - neto)} en cada uno.`}
                   </span>
                 </span>
                 <span
@@ -157,7 +162,7 @@ export function PreciosYStock({
               />
               <Referencia
                 etiqueta="Precio mínimo de venta"
-                ayuda="El piso que tiene puesto en su ficha."
+                ayuda="El que tiene puesto en su ficha. Por debajo, se avisa."
                 valor={linea.precioMinimo}
                 alerta={linea.precioMinimo > 0 && neto < linea.precioMinimo}
               />

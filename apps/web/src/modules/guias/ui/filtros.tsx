@@ -54,9 +54,16 @@ export function FiltrosGuiasBarra({
 
   return (
     /* Rejilla y no `flex-wrap`: con anchos libres, el filtro de cliente se
-       estiraba al nombre más largo y empujaba las fechas a la fila de abajo. */
-    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
-      <label className="flex flex-col gap-1 xl:col-span-2">
+       estiraba al nombre más largo y empujaba las fechas a la fila de abajo.
+
+       Y por el ancho de la tarjeta (`@container`), no de la pantalla.
+       Revisión por módulos del 02/10: a 1280 con el menú abierto entraban
+       las siete columnas en 920 px y las fechas se cortaban en «dd/mm/yy»;
+       en el teléfono, cinco campos uno debajo de otro empujaban la lista
+       fuera de la primera pantalla. Ahora «Desde» y «Hasta» van juntas. */
+    <div className="@container">
+    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-4 @6xl:grid-cols-7">
+      <label className="col-span-2 flex flex-col gap-1">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
@@ -68,7 +75,7 @@ export function FiltrosGuiasBarra({
 
       {/* El mismo buscador que en facturación: se teclea y va listando, en
           vez de un desplegable con la cartera entera dentro. */}
-      <div className="xl:col-span-2">
+      <div className="col-span-2">
         <FiltroCliente
           valor={params.get("cliente")}
           nombre={nombreCliente}
@@ -76,7 +83,7 @@ export function FiltrosGuiasBarra({
         />
       </div>
 
-      <label className="flex flex-col gap-1">
+      <label className="col-span-2 flex flex-col gap-1 @3xl:col-span-1">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Estado</span>
         <SelectNativo
           value={params.get("estado") ?? ""}
@@ -108,6 +115,7 @@ export function FiltrosGuiasBarra({
           onChange={(e) => aplicar("hasta", e.target.value)}
         />
       </label>
+    </div>
     </div>
   );
 }

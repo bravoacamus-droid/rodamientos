@@ -3,6 +3,7 @@ import { montoEnLetras } from "@rodatech/sunat";
 
 import { textoEntrega, type Disponibilidad } from "./disponibilidad";
 import { importeLinea, redondear2 } from "./totales";
+import { unidadLegible } from "./unidades";
 
 /**
  * La cotización lista para el papel.
@@ -145,14 +146,6 @@ export interface CotizacionImpresa {
   enLetras: string;
 }
 
-/** Nombre legible de la unidad de medida. */
-const UNIDADES: Record<string, string> = {
-  NIU: "UND",
-  MTR: "MTR",
-  BX: "CAJA",
-  SET: "JUEGO",
-  ZZ: "SERV",
-};
 
 /**
  * Suma días a una fecha AAAA-MM-DD.
@@ -208,7 +201,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     // C3: fuera el código (y la marca) de la descripción.
     descripcion: limpiarDescripcion(l.descripcion, l.codigo, l.marca),
     cantidad: l.cantidad,
-    unidad: UNIDADES[l.unidad] ?? l.unidad,
+    unidad: unidadLegible(l.unidad),
     valorUnitario: l.valorUnitario,
     descuentoPct: l.descuentoPct,
     importe: importeLinea({

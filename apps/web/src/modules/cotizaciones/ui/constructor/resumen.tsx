@@ -77,7 +77,9 @@ export function ResumenConstructor({
               {/* Se dice «sobre el costo» aquí, y solo aquí, porque es la
                   pantalla donde se negocia: leer un 20 % como si fuera sobre
                   la venta cambia lo que el vendedor está dispuesto a ceder. */}
-              <span className="text-sm text-[var(--fg-muted)]">Margen s/ costo</span>
+              {/* Entero: «s/» era una abreviatura que hay que saber leer
+                  (revisión por módulos del 02/10). */}
+              <span className="text-sm text-[var(--fg-muted)]">Margen sobre el costo</span>
               <span
                 className={`tabular text-sm font-semibold ${
                   totales.margenPct < 12
@@ -91,8 +93,10 @@ export function ResumenConstructor({
               </span>
             </div>
             <div className="mt-0.5 flex items-baseline justify-between">
+              {/* Con su nombre: la cifra iba sola y no decía que era la
+                  ganancia (revisión por módulos del 02/10). */}
               <span className="text-sm text-[var(--fg-muted)]">
-                {dolar(totales.subtotal - totales.costoTotal)}
+                ganancia {dolar(totales.subtotal - totales.costoTotal)}
               </span>
               <span className="text-sm text-[var(--fg-muted)]">
                 costo {dolar(totales.costoTotal)}

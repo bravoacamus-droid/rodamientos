@@ -183,7 +183,9 @@ export function ConstructorGuia({
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* --------------------------------------------- Qué se despacha */}
-          <section className="card p-4">
+          {/* `@container`: las líneas van en tarjetas cuando la tabla no cabe
+              (revisión por módulos del 02/10). */}
+          <section className="card @container p-4">
             {/*
               Si se vino DESDE una cotización, no se pregunta cuál.
 
@@ -244,7 +246,71 @@ export function ConstructorGuia({
             ) : null}
 
             {estado.lineas.length > 0 ? (
-              <div className="scroll-x anim-entrada mt-4 border-t border-[var(--border-soft)] pt-4">
+              <>
+              {/*
+                En el teléfono, una tarjeta por línea.
+
+                Revisión por módulos del 02/10: a 390 px la tabla de seis
+                columnas se desplazaba de lado y «Sale ahora» —el único campo
+                que se teclea— quedaba fuera de la vista; la descripción,
+                además, salía cortada con puntos suspensivos.
+              */}
+              <ul className="anim-entrada mt-4 flex flex-col gap-2.5 border-t border-[var(--border-soft)] pt-4 @2xl:hidden">
+                {estado.lineas.map((l) => {
+                  const falta = l.cantidad > 0 && l.stock < l.cantidad;
+                  return (
+                    <li key={l.key} className="rounded-md border border-[var(--border)] p-3">
+                      <p className="whitespace-nowrap font-mono text-sm font-semibold">{l.codigo}</p>
+                      <p className="text-sm">{l.descripcion}</p>
+                      <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <dt className="text-[var(--fg-muted)]">Pedido</dt>
+                          <dd className="tabular">{l.pedido}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[var(--fg-muted)]">Ya salió</dt>
+                          <dd className="tabular">{l.despachado || "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[var(--fg-muted)]">Hay</dt>
+                          <dd
+                            className={`tabular ${falta ? "font-semibold text-[var(--warn)]" : ""}`}
+                          >
+                            {l.stock}
+                          </dd>
+                        </div>
+                      </dl>
+                      <label className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">Sale ahora</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={l.pedido - l.despachado}
+                          step="0.01"
+                          value={l.cantidad}
+                          onChange={(e) =>
+                            despachar({
+                              tipo: "cantidad",
+                              key: l.key,
+                              valor: Number(e.target.value),
+                            })
+                          }
+                          className="w-28 text-right tabular"
+                        />
+                      </label>
+                      {/* El aviso con palabras: en la tabla va en el `title`,
+                          y en un teléfono no hay ratón que lo enseñe. */}
+                      {falta ? (
+                        <p className="mt-1 text-sm font-medium text-[var(--warn)]">
+                          Salen {l.cantidad} y hay {l.stock}. Se puede emitir igual: el
+                          saldo quedará en negativo.
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="scroll-x anim-entrada mt-4 hidden border-t border-[var(--border-soft)] pt-4 @2xl:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -330,6 +396,7 @@ export function ConstructorGuia({
                   </tbody>
                 </table>
               </div>
+              </>
             ) : null}
           </section>
 

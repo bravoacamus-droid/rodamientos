@@ -17,6 +17,7 @@ import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { YaFacturado } from "./detalle/ya-facturado";
 import { VistaPreviaDocumento } from "./detalle/vista-previa";
+import { unidadLegible } from "../dominio/unidades";
 import { Volver } from "@/componentes/volver";
 
 /**
@@ -297,9 +298,15 @@ export default async function PaginaDetalleCotizacion({
             }
           />
           <Resumen
-            etiqueta="Orden de cliente"
-            valor={cabecera.orden_compra_cliente ?? "—"}
-            detalle="O/C"
+            // Sin «O/C» ni una raya sola: dicho con palabras (revisión por
+            // módulos del 02/10).
+            etiqueta="Orden de compra del cliente"
+            valor={cabecera.orden_compra_cliente ?? "Sin orden"}
+            detalle={
+              cabecera.orden_compra_cliente
+                ? "la que mandó el cliente"
+                : "todavía no la han mandado"
+            }
           />
           <Resumen
             etiqueta="Validez"
@@ -320,7 +327,10 @@ export default async function PaginaDetalleCotizacion({
             }
             detalle={
               cabecera.costo_total > 0
-                ? `${dolar(cabecera.subtotal - cabecera.costo_total)} de utilidad`
+                ? cabecera.subtotal >= cabecera.costo_total
+                  ? `${dolar(cabecera.subtotal - cabecera.costo_total)} de utilidad`
+                  : // «-USD 0.47 de utilidad» se lee al revés (02/10).
+                    `pierde ${dolar(cabecera.costo_total - cabecera.subtotal)}`
                 : "sin costo cargado"
             }
             tono={
@@ -354,7 +364,11 @@ export default async function PaginaDetalleCotizacion({
         <YaFacturado comprobantes={facturas} />
 
         {/* --------------------------------------------------- Productos */}
-        <section className="card overflow-hidden">
+        {/* `@container`: tabla o tarjetas según el ancho de la tarjeta y no
+            de la pantalla. Con `md`, a 820 con el menú abierto salía la
+            tabla en 500 px y el importe quedaba fuera (revisión por módulos
+            del 02/10). */}
+        <section className="card @container overflow-hidden">
           <header className="border-b border-[var(--border-soft)] px-4 py-3">
             <h2 className="text-base font-semibold">Productos</h2>
             <p className="text-sm text-[var(--fg-muted)]">
@@ -378,7 +392,7 @@ export default async function PaginaDetalleCotizacion({
             se puede partir en tarjetas sin romper nada. Era la decisión que
             quedó abierta en §AH.9 del diario.
           */}
-          <div className="scroll-x hidden md:block">
+          <div className="scroll-x hidden @2xl:block">
             <table className="w-full text-sm">
               <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                 <tr>
@@ -392,7 +406,7 @@ export default async function PaginaDetalleCotizacion({
                   {cabecera.estado === "aprobada" ? (
                     <th className="px-3 py-2.5 font-medium">Almacén</th>
                   ) : null}
-                  <th className="px-3 py-2.5 text-right font-medium">P. unitario</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Valor unitario</th>
                   <th className="px-4 py-2.5 text-right font-medium">Importe</th>
                 </tr>
               </thead>
@@ -410,7 +424,7 @@ export default async function PaginaDetalleCotizacion({
                     <td className="px-3 py-2.5">{l.descripcion}</td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
                       {l.cantidad}{" "}
-                      <span className="text-[var(--fg-subtle)]">{l.unidad_codigo}</span>
+                      <span className="text-[var(--fg-subtle)]">{unidadLegible(l.unidad_codigo)}</span>
                     </td>
 
                     {/*
@@ -433,6 +447,14 @@ export default async function PaginaDetalleCotizacion({
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
                       {dolar(l.valor_unitario)}
+                      {/* Sin esto, cantidad × valor no daba el importe de al
+                          lado y no se veía por qué (revisión por módulos del
+                          02/10). */}
+                      {l.descuento_pct > 0 ? (
+                        <span className="block text-sm text-[var(--fg-muted)]">
+                          − {l.descuento_pct}% de descuento
+                        </span>
+                      ) : null}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right tabular font-medium">
                       {dolar(
@@ -446,7 +468,7 @@ export default async function PaginaDetalleCotizacion({
           </div>
 
           {/* --------------------------------------------------------- Móvil */}
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @2xl:hidden">
             {lineas.map((l) => (
               <li key={l.id} className="flex flex-col gap-2 px-4 py-3">
                 <div className="flex items-baseline justify-between gap-2">
@@ -471,8 +493,12 @@ export default async function PaginaDetalleCotizacion({
                     dos columnas separadas y aquí no hay cabecera que las
                     explique, así que se escribe la multiplicación. */}
                 <p className="text-sm text-[var(--fg-muted)]">
-                  <span className="tabular">{l.cantidad}</span> {l.unidad_codigo} ×{" "}
+                  <span className="tabular">{l.cantidad}</span> {unidadLegible(l.unidad_codigo)} ×{" "}
                   <span className="tabular">{dolar(l.valor_unitario)}</span>
+                  {/* Con el descuento, o la cuenta no da el importe de arriba. */}
+                  {l.descuento_pct > 0 ? (
+                    <span className="tabular"> − {l.descuento_pct}%</span>
+                  ) : null}
                 </p>
 
                 {cabecera.estado === "aprobada" ? (

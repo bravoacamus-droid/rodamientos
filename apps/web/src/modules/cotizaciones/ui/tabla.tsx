@@ -90,10 +90,16 @@ export async function TablaCotizaciones({
   const vencida = (c: CotizacionLista) =>
     c.estado === "enviada" && c.fecha_vencimiento < hoy;
 
+  /*
+    Tabla o tarjetas según el ancho de la LISTA, no de la pantalla.
+    Revisión por módulos del 02/10: con `md`, a 820 con el menú abierto
+    salía la tabla en 500 px; la columna fija de acciones tapaba al cliente
+    y el número se partía en «COT1-» y «000001».
+  */
   return (
-    <>
+    <div className="@container">
       {/* --------------------------------------------------- Escritorio */}
-      <div className="scroll-x hidden md:block">
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -103,7 +109,7 @@ export async function TablaCotizaciones({
               <th className="py-2.5 pl-3 pr-4 font-medium">Número</th>
               <th className="px-4 py-2.5 font-medium">Fecha</th>
               <th className="px-4 py-2.5 font-medium">Cliente</th>
-              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">O/C</th>
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Orden de compra</th>
               <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Ítems
               </th>
@@ -126,7 +132,7 @@ export async function TablaCotizaciones({
                   />
                 </td>
 
-                <td className="py-2.5 pl-3 pr-4">
+                <td className="whitespace-nowrap py-2.5 pl-3 pr-4">
                   <Link
                     href={`/cotizaciones/${c.id}`}
                     className="font-mono text-sm font-semibold text-brand-700 group-hover:underline"
@@ -168,7 +174,7 @@ export async function TablaCotizaciones({
                 </td>
 
                 <td className="px-4 py-2.5 text-right">
-                  <Margen valor={c.margen_pct} />
+                  <Margen valor={c.margen_pct} costo={c.costo_total} />
                 </td>
 
                 <td className="px-4 py-2.5">
@@ -227,7 +233,7 @@ export async function TablaCotizaciones({
       </div>
 
       {/* --------------------------------------------------------- Móvil */}
-      <ul className="flex flex-col gap-2 px-3 py-1 md:hidden">
+      <ul className="flex flex-col gap-2 px-3 py-1 @3xl:hidden">
         {filas.map((c) => (
           <li key={c.id} className="flex overflow-hidden rounded-md border border-[var(--border)]">
             <span
@@ -266,7 +272,7 @@ export async function TablaCotizaciones({
                   <span className="font-medium text-[var(--warn)]">vencida</span>
                 ) : null}
                 <span className="ml-auto">
-                  <Margen valor={c.margen_pct} />
+                  <Margen valor={c.margen_pct} costo={c.costo_total} />
                 </span>
               </div>
 
@@ -290,7 +296,7 @@ export async function TablaCotizaciones({
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -358,8 +364,16 @@ function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
  * nada, y entre 10 y 15 conviene mirarla. Sin costo cargado se pone una raya,
  * no un cero: «no se sabe» y «cero» no son lo mismo.
  */
-function Margen({ valor }: { valor: number }) {
-  if (valor <= 0) {
+function Margen({ valor, costo }: { valor: number; costo: number }) {
+  /*
+    La raya, solo cuando NO HAY COSTO. Decidirlo por el margen fallaba por
+    los dos lados (revisión por módulos del 02/10): una cotización sin costo
+    sale de la base con 100 % —la venta entera como ganancia— y se pintaba
+    en verde; y una que vende POR DEBAJO del costo, con margen negativo,
+    salía con la raya de «no se sabe». La COT1-000001, a −1.6 %, se veía
+    igual que una sin datos.
+  */
+  if (costo <= 0) {
     return <span className="tabular text-[var(--fg-subtle)]">—</span>;
   }
   // Los cortes son sobre el COSTO (023): 12 y 20 son el equivalente de los

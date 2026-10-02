@@ -16,7 +16,7 @@ import {
   Input,
   SelectNativo,
 } from "@rodatech/ui";
-import { AlertTriangle, Download, Info, UserPlus } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, Info, UserPlus } from "lucide-react";
 
 import { buscarPorDocumento } from "@/modules/clientes/acciones/consultar";
 import { guardarCliente } from "@/modules/clientes/acciones/guardar";
@@ -272,8 +272,11 @@ export function ClienteRapido({
           `type="button"` es obligatorio: el constructor entero es un `<form>`,
           y un botón sin tipo dentro de un formulario envía. */}
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
+        {/* En el teléfono decía solo el icono: un botón sin palabra
+            (revisión por módulos del 02/10). «Nuevo» cabe junto al campo. */}
+        <Button type="button" variant="outline" aria-label="Cliente nuevo">
           <UserPlus aria-hidden="true" />
+          <span className="sm:hidden">Nuevo</span>
           <span className="hidden sm:inline">Cliente nuevo</span>
         </Button>
       </DialogTrigger>
@@ -294,7 +297,10 @@ export function ClienteRapido({
               Identificación
             </h3>
 
-            <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-2">
+            {/* Uno debajo del otro en el teléfono: en fila, el número se
+                quedaba en 70 px —«20131…»— al lado de «Traer» (revisión por
+                módulos del 02/10). */}
+            <div className="grid gap-2 sm:grid-cols-[7.5rem_minmax(0,1fr)]">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Documento</span>
                 <SelectNativo
@@ -369,10 +375,13 @@ export function ClienteRapido({
             termina con un maestro lleno de «SIN DATO».
           */}
           <details className="group border-t border-[var(--border-soft)] pt-4">
-            <summary className="cursor-pointer list-none text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]">
-              <span className="inline-block transition-transform group-open:rotate-90">
-                ›
-              </span>{" "}
+            {/* Con borde y la flecha de lucide, como «Más datos del documento»
+                (revisión por módulos del 02/10). */}
+            <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] [&::-webkit-details-marker]:hidden">
+              <ChevronRight
+                className="size-4 shrink-0 transition-transform group-open:rotate-90"
+                aria-hidden="true"
+              />
               Contacto <span className="text-[var(--fg-subtle)]">(opcional)</span>
             </summary>
 

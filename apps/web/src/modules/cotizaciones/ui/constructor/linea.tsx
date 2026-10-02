@@ -63,6 +63,7 @@ import {
   type Disponibilidad,
 } from "../../dominio/disponibilidad";
 import { importeLinea } from "../../dominio/totales";
+import { unidadLegible } from "../../dominio/unidades";
 
 /**
  * Una línea de la cotización.
@@ -285,7 +286,16 @@ export function FilaLinea({
               : `Solo hay ${linea.stock} para prometer entrega inmediata`
           }
         >
-          {sinNada ? "sin stock" : `solo ${linea.stock}`}
+          {/* En la tarjeta cabe la frase, y hace falta: «sin stock» ya
+              sale junto al código, y repetido aquí no decía que el
+              problema es la promesa (revisión por módulos del 02/10). */}
+          {vista === "tarjeta"
+            ? sinNada
+              ? "No hay stock para entrega inmediata"
+              : `Solo hay ${linea.stock} para entrega inmediata`
+            : sinNada
+              ? "sin stock"
+              : `solo ${linea.stock}`}
         </span>
       ) : null}
     </>
@@ -305,13 +315,15 @@ export function FilaLinea({
         aria-label={`Valor unitario de ${linea.codigo}`}
       />
       {linea.valorUnitario !== linea.precioLista ? (
+        /* Con borde: era un enlace gris subrayado, que es justo lo que
+           Willy no ve como botón (revisión por módulos del 02/10). */
         <button
           type="button"
           onClick={() => despachar({ tipo: "volverALista", key: linea.key })}
-          className="mt-0.5 block text-sm text-[var(--fg-muted)] underline"
-          title={`Lista: ${dolar(linea.precioLista)}`}
+          className="mt-1 inline-flex min-h-8 items-center self-start rounded-md py-0.5 text-left leading-tight border border-[var(--border)] bg-[var(--surface)] px-2 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+          title={`Precio de lista: ${dolar(linea.precioLista)}`}
         >
-          volver a {dolar(linea.precioLista)}
+          Volver a {dolar(linea.precioLista)}
         </button>
       ) : null}
     </>
@@ -670,28 +682,30 @@ export function FilaLinea({
             : "border-[var(--danger)] bg-[var(--danger-bg)]"
         }`}
       >
+        {/* Junto al menú, solo el código y el stock; la descripción va
+            DEBAJO y a todo lo ancho. Revisión por módulos del 02/10: al lado
+            del botón le quedaban 150 px, y una faja de 200 caracteres salía
+            en quince renglones de dos palabras. */}
         <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="flex flex-wrap items-baseline gap-x-2">
-              <span className="tabular text-sm text-[var(--fg-muted)]">
-                {indice + 1}.
-              </span>
-              <span className="font-semibold">{linea.codigo}</span>
-              {textoStock}
-            </p>
-            <p className="text-sm">{linea.descripcion}</p>
-            <p className="text-sm">
-              {linea.marca ?? (
-                <span className="text-[var(--fg-subtle)]">sin marca</span>
-              )}
-            </p>
-          </div>
+          <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+            <span className="tabular text-sm text-[var(--fg-muted)]">
+              {indice + 1}.
+            </span>
+            <span className="whitespace-nowrap font-semibold">{linea.codigo}</span>
+            {textoStock}
+          </p>
           <div className="shrink-0">{menuOpciones(true)}</div>
         </div>
+        <p className="mt-1 text-sm">{linea.descripcion}</p>
+        <p className="text-sm">
+          {linea.marca ?? (
+            <span className="text-[var(--fg-subtle)]">sin marca</span>
+          )}
+        </p>
 
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 @2xl:grid-cols-4">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Cantidad ({linea.unidad})</span>
+            <span className="text-sm font-medium">Cantidad ({unidadLegible(linea.unidad)})</span>
             {campoCantidad}
           </label>
           <label className="flex flex-col gap-1">
@@ -720,29 +734,34 @@ export function FilaLinea({
           <span className="tabular text-base font-semibold">{dolar(importe)}</span>
         </div>
 
-        <div className="mt-2 flex flex-wrap gap-2 [&>*]:flex-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
-            disabled={indice === 0}
-            aria-label={`Subir ${linea.codigo}`}
-          >
-            <ChevronUp className="size-4" aria-hidden />
-            Subir
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
-            disabled={indice === total - 1}
-            aria-label={`Bajar ${linea.codigo}`}
-          >
-            <ChevronDown className="size-4" aria-hidden />
-            Bajar
-          </Button>
+        {/* «Subir» en la primera y «Bajar» en la última no se pintan
+            apagados: se quitan. Un botón gris que no responde se lee como
+            roto (revisión por módulos del 02/10). */}
+        <div className="mt-2 flex flex-wrap gap-2 [&>*]:flex-1 @2xl:justify-end @2xl:[&>*]:flex-none">
+          {indice > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
+              aria-label={`Subir ${linea.codigo}`}
+            >
+              <ChevronUp className="size-4" aria-hidden />
+              Subir
+            </Button>
+          ) : null}
+          {indice < total - 1 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
+              aria-label={`Bajar ${linea.codigo}`}
+            >
+              <ChevronDown className="size-4" aria-hidden />
+              Bajar
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -872,7 +891,7 @@ export function FilaLinea({
           {campoCantidad}
         </td>
 
-        <td className="text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
+        <td className="text-sm text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</td>
 
         {/*
           Cuándo se puede entregar (040).
@@ -999,7 +1018,69 @@ function PanelSustitutos({
     es lo que hay en el prototipo de Luis.
   */
   return (
-    <div className="scroll-x">
+    <>
+    {/*
+      En el teléfono, una tarjeta por alternativa. Revisión por módulos del
+      02/10: a 390 px la tabla se desplazaba de lado y «Usar esta» —lo único
+      que se viene a pulsar— quedaba fuera de la vista.
+    */}
+    <ul className="flex flex-col gap-2 sm:hidden">
+      {sustitutos.map((s) => (
+        <li
+          key={s.id}
+          className={`rounded-md border p-3 ${
+            s.mejor_oferta
+              ? "border-[var(--ok)] bg-[var(--ok-bg)]"
+              : "border-[var(--border)]"
+          }`}
+        >
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="whitespace-nowrap font-semibold">{s.codigo}</span>
+            <span className="whitespace-nowrap tabular font-semibold">
+              {dolar(s.precio_venta)}
+            </span>
+          </div>
+          <p className="text-sm">{s.descripcion}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="text-[var(--fg-muted)]">{s.marca}</span>
+            {(s.stock ?? 0) > 0 ? (
+              <span className="tabular">stock {s.stock}</span>
+            ) : (
+              <span className="font-medium text-[var(--danger)]">Sin stock</span>
+            )}
+            {s.diferencia_pct !== 0 ? (
+              <span
+                className={`tabular ${
+                  s.diferencia_pct < 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"
+                }`}
+              >
+                {s.diferencia_pct > 0 ? "+" : ""}
+                {s.diferencia_pct}% de precio
+              </span>
+            ) : null}
+            {s.origen === "equivalencia" ? (
+              <Badge tone="neutral" size="xs">
+                {ETIQUETA_ORIGEN[s.origen]}
+              </Badge>
+            ) : null}
+            {s.mejor_oferta ? (
+              <Badge tone="success" size="xs">la que conviene</Badge>
+            ) : null}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={() => onElegir(s)}
+          >
+            <SquareArrowOutUpRight className="size-4 shrink-0" aria-hidden />
+            Usar esta
+          </Button>
+        </li>
+      ))}
+    </ul>
+    <div className="scroll-x hidden sm:block">
       <table className="w-full text-sm">
         <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
           <tr>
@@ -1098,6 +1179,7 @@ function PanelSustitutos({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -1129,25 +1211,37 @@ function PanelHistorial({
     <div>
       <div className="flex flex-col gap-0.5 text-sm">
         {ventas.map((v, i) => (
+          /* En el teléfono la fila se parte en dos renglones —fecha,
+             documento y precio arriba; el cliente entero debajo—. Con los
+             anchos fijos del escritorio, a 390 px el cliente quedaba en
+             cero (revisión por módulos del 02/10). */
           <div
             key={`${v.documento}-${i}`}
-            className={`flex items-center gap-3 rounded-sm px-1.5 py-1 ${
+            className={`flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-sm px-1.5 py-1.5 sm:flex-nowrap sm:py-1 ${
               v.mismo_cliente ? "bg-[var(--info-bg)]" : ""
             }`}
           >
-            <span className="w-24 shrink-0 tabular text-sm text-[var(--fg-muted)]">
+            <span className="shrink-0 tabular text-sm text-[var(--fg-muted)] sm:w-24">
               {v.fecha}
             </span>
-            <span className="w-28 shrink-0 text-sm">{v.documento}</span>
-            <span className="flex-1 truncate text-sm">{v.cliente}</span>
+            <span className="shrink-0 whitespace-nowrap text-sm sm:w-28">{v.documento}</span>
+            <span className="order-last basis-full text-sm sm:order-none sm:basis-auto sm:flex-1 sm:truncate">
+              {v.cliente}
+            </span>
             {v.mismo_cliente ? (
               <Badge tone="info" size="xs">
                 este cliente
               </Badge>
             ) : null}
-            <span className="w-16 text-right tabular text-sm">×{v.cantidad}</span>
-            <span className="w-20 text-right tabular font-medium">
-              {dolar(v.valor_unitario)}
+            {/* Cantidad y precio juntos: sueltos, el precio caía solo al
+                renglón siguiente. */}
+            <span className="ml-auto flex shrink-0 items-baseline gap-3 sm:ml-0">
+              <span className="whitespace-nowrap text-right tabular text-sm sm:w-16">
+                ×{v.cantidad}
+              </span>
+              <span className="whitespace-nowrap text-right tabular font-medium sm:w-20">
+                {dolar(v.valor_unitario)}
+              </span>
             </span>
           </div>
         ))}
@@ -1160,13 +1254,10 @@ function PanelHistorial({
         escondida: el botón prometería algo que no existe.
       */}
       {ventas.length >= pedidas && pedidas < 25 ? (
-        <button
-          type="button"
-          onClick={onVerMas}
-          className="mt-1.5 text-sm text-brand-600 underline"
-        >
+        /* Un botón con borde, no un enlace (revisión por módulos del 02/10). */
+        <Button type="button" variant="outline" size="sm" className="mt-2" onClick={onVerMas}>
           Ver más ventas
-        </button>
+        </Button>
       ) : null}
     </div>
   );

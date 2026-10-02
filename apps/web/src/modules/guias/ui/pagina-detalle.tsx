@@ -6,6 +6,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { detalleGuia } from "../api/consultas";
 import { ETIQUETA_ESTADO, ETIQUETA_MODALIDAD } from "../dominio/tipos";
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { AnularGuia } from "./anular-guia";
 import { EmitirGuia } from "./emitir-guia";
 import { Volver } from "@/componentes/volver";
@@ -70,7 +71,10 @@ export default async function PaginaDetalleGuia({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 no-print">
+        {/* `flex-wrap`: sin él, en el teléfono los cinco botones iban en
+            una fila que se salía de la pantalla (revisión por módulos del
+            02/10). */}
+        <div className="flex flex-wrap items-center gap-2 no-print">
           {/*
             Descargar e imprimir, los dos con icono y a 36 px.
 
@@ -111,7 +115,7 @@ export default async function PaginaDetalleGuia({
           {puedeEmitir && g.estado === "borrador" ? (
             <Link
               href={`/guias/${g.id}/editar`}
-              className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className="inline-flex h-9 items-center rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
             >
               Corregir
             </Link>
@@ -193,15 +197,15 @@ export default async function PaginaDetalleGuia({
                         {l.codigo}
                       </Link>
                     </td>
-                    <td className="max-w-xs py-2 pr-3">
-                      <span className="block truncate" title={l.descripcion}>
-                        {l.descripcion}
-                      </span>
+                    <td className="py-2 pr-3">
+                      {/* Entera: con tres columnas no hay con quién competir, y
+                          cortada no se distinguía un rodamiento de otro. */}
+                      <span className="block">{l.descripcion}</span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
                       {l.cantidad}{" "}
                       <span className="text-sm text-[var(--fg-subtle)]">
-                        {l.unidad}
+                        {unidadLegible(l.unidad)}
                       </span>
                     </td>
                   </tr>
@@ -223,7 +227,7 @@ export default async function PaginaDetalleGuia({
                   </Link>
                   <span className="shrink-0 tabular text-sm font-medium">
                     {l.cantidad}{" "}
-                    <span className="text-[var(--fg-subtle)]">{l.unidad}</span>
+                    <span className="text-[var(--fg-subtle)]">{unidadLegible(l.unidad)}</span>
                   </span>
                 </div>
                 {/* Sin `truncate`: en la tabla la descripción compite con dos

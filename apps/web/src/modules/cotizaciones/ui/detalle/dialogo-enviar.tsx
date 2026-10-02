@@ -147,7 +147,9 @@ export function DialogoEnviar({
         <DialogHeader>
           <DialogTitle>Enviar {datos.numero}</DialogTitle>
           <DialogDescription>
-            A {cliente}. Lo que escribas se guarda en su ficha, así que la
+            {/* Sin el punto final de «S.A.C.», que con el de la frase
+                salían dos (revisión por módulos del 02/10). */}
+            A {cliente.replace(/\.$/, "")}. Lo que escribas se guarda en su ficha, así que la
             próxima vez ya sale puesto.
           </DialogDescription>
         </DialogHeader>

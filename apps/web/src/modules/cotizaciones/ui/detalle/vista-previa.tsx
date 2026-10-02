@@ -82,7 +82,11 @@ export function VistaPreviaDocumento({
             </Button>
           </DialogHeader>
           <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-4">
-            <div className="overflow-hidden rounded-md bg-white elev-2">{children}</div>
+            {/* `overflow-x-auto` y no `hidden`: en el teléfono la hoja es más
+                ancha que el diálogo y se cortaba la razón social y la
+                dirección de la empresa. Se desliza; la hoja no se toca
+                (revisión por módulos del 02/10). */}
+            <div className="overflow-x-auto rounded-md bg-white elev-2">{children}</div>
           </DialogBody>
         </DialogContent>
       </Dialog>

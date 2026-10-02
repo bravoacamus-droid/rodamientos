@@ -27,6 +27,8 @@ export interface CotizacionLista {
   subtotal: number;
   igv: number;
   total: number;
+  /** Para saber si el margen se puede calcular: sin costo, no se sabe. */
+  costo_total: number;
   margen_pct: number;
   estado: EstadoCotizacion;
   vendedor: string | null;

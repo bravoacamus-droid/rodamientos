@@ -20,6 +20,7 @@ import { Check, RotateCcw, X } from "lucide-react";
 
 import { aprobar, corregirConfirmado } from "../../acciones/gestionar";
 import { importeLinea } from "../../dominio/totales";
+import { unidadLegible } from "../../dominio/unidades";
 
 /**
  * «¿Qué te confirmó el cliente?»
@@ -252,7 +253,7 @@ export function DialogoConfirmar({
                           aria-label={`Cantidad confirmada de ${l.codigo}`}
                         />
                         <span className="whitespace-nowrap text-sm text-[var(--fg-muted)]">
-                          de {l.cantidad} {l.unidad}
+                          de {l.cantidad} {unidadLegible(l.unidad)}
                         </span>
                       </div>
 

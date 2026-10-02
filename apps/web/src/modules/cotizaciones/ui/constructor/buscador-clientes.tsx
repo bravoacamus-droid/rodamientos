@@ -300,7 +300,7 @@ export function BuscadorClientes({
                 // 48 px de alto y el resaltado ocupando la fila entera, igual
                 // que en el buscador de productos: fallar el clic parecía que
                 // la búsqueda no funcionaba.
-                className={`flex min-h-12 w-full items-center gap-3 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
+                className={`flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 sm:flex-nowrap ${
                   impedimento !== null
                     ? "cursor-not-allowed opacity-60"
                     : activo
@@ -343,7 +343,7 @@ export function BuscadorClientes({
                       )}
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span>{resumenCredito(c)}</span>
+                    <span className="whitespace-nowrap">{resumenCredito(c)}</span>
                   </p>
                   {impedimento ? (
                     <p className="mt-0.5 text-sm font-medium text-[var(--danger)]">
@@ -352,7 +352,11 @@ export function BuscadorClientes({
                   ) : null}
                 </div>
 
-                <div className="shrink-0 text-right">
+                {/* En el teléfono, debajo y a lo ancho. Revisión por módulos del
+                    02/10: a 390 px esta columna le dejaba al nombre 90 px —
+                    «ACEROS CH…»— y partía el RUC y el crédito en cuatro
+                    renglones. El nombre es lo que se busca; esto, un dato. */}
+                <div className="order-last flex basis-full flex-wrap items-center gap-x-2 sm:order-none sm:block sm:basis-auto sm:shrink-0 sm:text-right">
                   <span className="block text-sm text-[var(--fg-muted)]">
                     {ultimaVez(c.ultima_cotizacion, hoy)}
                   </span>
