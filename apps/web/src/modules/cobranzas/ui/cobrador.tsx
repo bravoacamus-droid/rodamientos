@@ -14,9 +14,13 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
+  Moneda,
   SelectNativo,
   Textarea,
+  buttonVariants,
+  formatearFecha,
 } from "@rodatech/ui";
+import { HandCoins } from "lucide-react";
 
 import { registrarCobro, type ResultadoCobro } from "../acciones/cobrar";
 import { cuotasDelComprobante } from "../acciones/gestionar";
@@ -119,7 +123,11 @@ export function Cobrador({
         }
       }}
     >
-      <DialogTrigger className="inline-flex h-10 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 md:h-8">
+      {/* De 32 px en escritorio pasaba a 38, como el resto de botones, y con
+          su icono: es la acción principal de la fila (revisión por módulos
+          del 02/10). */}
+      <DialogTrigger className={buttonVariants({ variant: "primary" })}>
+        <HandCoins aria-hidden="true" />
         Cobrar
       </DialogTrigger>
 
@@ -128,7 +136,9 @@ export function Cobrador({
           <DialogTitle>Cobrar {documento.numero}</DialogTitle>
           <DialogDescription>
             {documento.cliente} · saldo{" "}
-            <strong>$ {documento.saldo.toFixed(2)}</strong>
+            <strong>
+              <Moneda valor={documento.saldo} tamano="sm" className="text-inherit" />
+            </strong>
             {documento.dias_vencido > 0
               ? ` · vencido hace ${documento.dias_vencido} días`
               : ""}
@@ -141,7 +151,10 @@ export function Cobrador({
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="cobro" value={payload} />
 
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-2">
+            {/* De dos en dos solo si caben: a 390 px la fecha se quedaba en
+                un tercio del diálogo y se cortaba (revisión por módulos del
+                02/10). */}
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">
                   Importe <span className="text-[var(--danger)]">*</span>
@@ -155,15 +168,19 @@ export function Cobrador({
                   className="tabular"
                   autoFocus
                 />
-                {/* Atajo para el caso normal: el cliente paga lo que debe. */}
+                {/* Atajo para el caso normal: el cliente paga lo que debe. Un
+                    botón con borde y no un enlace subrayado: Willy tiene que
+                    ver que se pulsa (CLAUDE.md §1). */}
                 {!salda ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => setMonto(documento.saldo)}
-                    className="self-start text-sm text-brand-600 underline underline-offset-2"
+                    className="self-start"
                   >
-                    Cobrar el saldo completo
-                  </button>
+                    Poner el saldo completo
+                  </Button>
                 ) : (
                   <span className="text-sm text-[var(--ok)]">
                     Queda saldado.
@@ -172,7 +189,7 @@ export function Cobrador({
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Medio</span>
+                <span className="text-sm font-medium">Forma de pago</span>
                 <SelectNativo
                   value={medio}
                   onChange={(e) => setMedio(e.target.value as MedioPago)}
@@ -186,7 +203,7 @@ export function Cobrador({
               </label>
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-2">
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:gap-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Fecha</span>
                 <Input
@@ -211,7 +228,7 @@ export function Cobrador({
               <Textarea
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                rows={2}
+                rows={3}
               />
             </label>
 
@@ -225,16 +242,16 @@ export function Cobrador({
                     <li key={r.cuota.id} className="flex justify-between gap-2">
                       <span className="text-[var(--fg-muted)]">
                         Cuota {r.cuota.numero} · vence{" "}
-                        {r.cuota.fecha_vencimiento}
+                        {formatearFecha(r.cuota.fecha_vencimiento)}
                       </span>
                       <span className="tabular">
-                        {r.aplica > 0 ? `+${r.aplica.toFixed(2)}` : "—"}
+                        {r.aplica > 0 ? `+$\u00a0${r.aplica.toFixed(2)}` : "—"}
                         <span
                           className={`ml-2 ${r.quedaSaldo === 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"}`}
                         >
                           {r.quedaSaldo === 0
                             ? "saldada"
-                            : `quedan ${r.quedaSaldo.toFixed(2)}`}
+                            : `quedan $\u00a0${r.quedaSaldo.toFixed(2)}`}
                         </span>
                       </span>
                     </li>
@@ -279,7 +296,7 @@ export function Cobrador({
               Cancelar
             </Button>
             <Button type="submit" disabled={bloqueos.length > 0 || cobrando}>
-              {cobrando ? "Registrando…" : `Registrar $ ${monto.toFixed(2)}`}
+              {cobrando ? "Registrando…" : `Registrar $\u00a0${monto.toFixed(2)}`}
             </Button>
           </DialogFooter>
         </form>

@@ -57,20 +57,31 @@ export default async function PaginaImprimirComprobante({
   return (
     <div className="flex flex-col gap-3">
       {/* Lo único que no es el documento, y por eso lleva `no-print`. */}
-      <div className="flex items-center justify-between gap-3 no-print">
+      {/*
+        Con `flex-wrap`: a 390 px «Volver» se partía en dos líneas y
+        «Imprimir» se salía por la derecha, empujando la página 40 px
+        (revisión por módulos del 02/10). Ahora, si no cabe, baja.
+      */}
+      <div className="flex flex-wrap items-start justify-between gap-3 no-print">
         <Volver href={`/facturacion/${c.id}`}>Volver al comprobante</Volver>
-        {c.estado === "anulado" ? (
-          <span className="text-sm font-medium text-[var(--danger)]">
-            Este comprobante está ANULADO. No debería imprimirse para entregar.
-          </span>
-        ) : null}
 
         {/* Quien llega a la hoja viene a sacarla, y hasta hoy tenía que
             acordarse de Ctrl+P. Es el mismo componente que la guía. */}
         <BotonesDocumento auto={auto} />
       </div>
 
-      <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">
+      {/* El aviso de anulado, en su propia franja y no apretado entre los
+          botones, donde se partía en cinco líneas. */}
+      {c.estado === "anulado" ? (
+        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm font-medium text-[var(--danger)] no-print">
+          Este comprobante está ANULADO. No debería imprimirse para entregar.
+        </p>
+      ) : null}
+
+      {/* `overflow-x-auto` y no `hidden`: en el teléfono la hoja es más ancha
+          que la pantalla, y con `hidden` se cortaba el correo y la tabla sin
+          forma de verlos. Así se desliza. En el papel no cambia nada. */}
+      <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
         <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
       </div>
     </div>

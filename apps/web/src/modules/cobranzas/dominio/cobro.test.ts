@@ -61,7 +61,7 @@ describe("bloqueosPago", () => {
 
   it("no se cobra más que el saldo", () => {
     const lista = bloqueosPago(DOC, 600, HOY);
-    expect(lista[0]!.mensaje).toContain("sobre un saldo de 528.99");
+    expect(lista[0]!.mensaje).toContain("sobre un saldo de $\u00a0528.99");
   });
 
   /**

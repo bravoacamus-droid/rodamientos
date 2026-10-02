@@ -14,9 +14,12 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
+  Moneda,
   SelectNativo,
   Textarea,
+  buttonVariants,
 } from "@rodatech/ui";
+import { MessageSquareText } from "lucide-react";
 
 import { registrarGestion, type ResultadoGestion } from "../acciones/gestionar";
 import {
@@ -80,15 +83,20 @@ export function Gestor({
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
-      <DialogTrigger className="inline-flex h-10 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)] md:h-8">
-        Anotar
+      {/* «Anotar» a secas no decía qué: es apuntar lo que se habló con el
+          cliente. Y 38 px en escritorio, como «Cobrar» a su lado (revisión
+          por módulos del 02/10). */}
+      <DialogTrigger className={buttonVariants({ variant: "outline" })}>
+        <MessageSquareText aria-hidden="true" />
+        Anotar llamada
       </DialogTrigger>
 
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Gestión sobre {documento.numero}</DialogTitle>
           <DialogDescription>
-            {documento.cliente} · deben $ {documento.saldo.toFixed(2)}
+            {documento.cliente} · deben{" "}
+            <Moneda valor={documento.saldo} tamano="sm" className="text-inherit" />
             {documento.dias_vencido > 0
               ? ` desde hace ${documento.dias_vencido} días`
               : ""}
@@ -100,7 +108,9 @@ export function Gestor({
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="gestion" value={payload} />
 
-            <div className="grid grid-cols-2 gap-2">
+            {/* Uno debajo de otro en el teléfono: a media columna, la ayuda
+                de la fecha se partía en siete líneas. */}
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Canal</span>
                 <SelectNativo

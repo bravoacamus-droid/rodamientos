@@ -5,9 +5,13 @@ import {
   CifraAnimada,
   EstadoError,
   EstadoVacio,
+  Moneda,
   Skeleton,
+  formatearFecha,
 } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+
+import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 
 import {
   cartera,
@@ -17,7 +21,12 @@ import {
   ultimosPagos,
 } from "../api/consultas";
 import { etiquetaAtraso, tonoTramo } from "../dominio/cobro";
-import { ETIQUETA_CANAL, ETIQUETA_MEDIO, type FiltrosCartera } from "../dominio/tipos";
+import {
+  ETIQUETA_CANAL,
+  ETIQUETA_MEDIO,
+  type DocumentoPorCobrar,
+  type FiltrosCartera,
+} from "../dominio/tipos";
 import { Cobrador } from "./cobrador";
 import { FiltrosCarteraBarra } from "./filtros";
 import { Gestor } from "./gestor";
@@ -55,7 +64,12 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
     new Date(),
   );
 
-  const perfil = await perfilActual();
+  // El nombre del cliente filtrado, para que el filtro lo enseñe en vez de
+  // un id. Una fila, como en facturación.
+  const [perfil, cliente] = await Promise.all([
+    perfilActual(),
+    filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
+  ]);
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeCobrar =
     rol !== null && ["gerencia", "admin", "ventas", "cobranzas"].includes(rol);
@@ -79,8 +93,10 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
         <Indicadores />
       </Suspense>
 
-      <section className="card pt-4">
-        <FiltrosCarteraBarra />
+      {/* `@container`: tarjetas o tabla según el ancho de esta caja, no de la
+          pantalla (revisión por módulos del 02/10). */}
+      <section className="card @container pt-4">
+        <FiltrosCarteraBarra nombreCliente={cliente?.ok ? cliente.nombre : null} />
         <Suspense
           key={JSON.stringify(filtros)}
           fallback={<Skeleton className="h-96 w-full" />}
@@ -130,7 +146,7 @@ async function Compromisos({ hoy }: { hoy: string }) {
         {r.datos.map((g) => (
           <li key={g.id} className="flex flex-wrap items-baseline gap-x-2">
             <span className="tabular text-sm text-[var(--fg-muted)]">
-              {g.compromiso_fecha}
+              {formatearFecha(g.compromiso_fecha)}
             </span>
             <span>{g.nota}</span>
             {g.comprobante_numero ? (
@@ -181,9 +197,14 @@ async function Indicadores() {
           {peor ? peor.cliente : "—"}
         </p>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {peor
-            ? `$ ${peor.saldo.toFixed(2)}${peor.diasMasAntiguo > 0 ? ` · ${peor.diasMasAntiguo} días` : ""}`
-            : "no hay nada que cobrar"}
+          {peor ? (
+            <>
+              <Moneda valor={peor.saldo} tamano="sm" className="text-inherit" />
+              {peor.diasMasAntiguo > 0 ? ` · ${peor.diasMasAntiguo} días de atraso` : ""}
+            </>
+          ) : (
+            "no hay nada que cobrar"
+          )}
         </p>
       </div>
     </div>
@@ -216,18 +237,60 @@ async function TablaCartera({
     const filtrando = Boolean(
       filtros.q || filtros.cliente || filtros.tramo || filtros.vencido,
     );
+    const soloCliente =
+      Boolean(filtros.cliente) && !filtros.q && !filtros.tramo && !filtros.vencido;
     return (
       <EstadoVacio
-        titulo={filtrando ? "Nada coincide con el filtro" : "No hay nada por cobrar"}
+        // Desde la ficha del cliente se llega con `?cliente=` y nada más: ahí
+        // «Nada coincide con el filtro» no contesta lo que se vino a
+        // preguntar (revisión por módulos del 02/10).
+        titulo={
+          soloCliente
+            ? "Este cliente no debe nada"
+            : filtrando
+              ? "Nada coincide con el filtro"
+              : "No hay nada por cobrar"
+        }
         descripcion={
           filtrando
-            ? "Prueba con menos filtros."
+            ? soloCliente
+              ? "Todo lo que se le facturó está cobrado."
+              : "Prueba con menos filtros."
             : "Todo lo facturado está cobrado. Cuando se emita una factura al crédito, aparecerá aquí."
         }
       />
     );
   }
 
+  return (
+    <CarteraVista
+      datos={r.datos}
+      hoy={hoy}
+      puedeCobrar={puedeCobrar}
+      puedeGestionar={puedeGestionar}
+    />
+  );
+}
+
+/**
+ * La cartera ya leída: tarjetas o tabla.
+ *
+ * Aparte de la lectura, para poder pintarla con datos de muestra: hoy la
+ * cartera real está vacía —las 482 facturas cargadas están cobradas— y así
+ * se revisaron las tarjetas, la tabla y los dos diálogos el 02/10 (revisión
+ * por módulos), con una página provisional que ya no existe.
+ */
+export function CarteraVista({
+  datos,
+  hoy,
+  puedeCobrar,
+  puedeGestionar,
+}: {
+  datos: DocumentoPorCobrar[];
+  hoy: string;
+  puedeCobrar: boolean;
+  puedeGestionar: boolean;
+}) {
   return (
     <>
       {/*
@@ -240,8 +303,8 @@ async function TablaCartera({
         cobrarle. El número de la factura y el saldo tienen que verse juntos
         y sin moverse.
       */}
-      <div className="flex flex-col gap-3 md:hidden">
-        {r.datos.map((d) => (
+      <div className="grid gap-3 p-3 pt-0 @3xl:hidden @xl:grid-cols-2">
+        {datos.map((d) => (
           <div key={d.id} className="rounded-lg border border-[var(--border)] p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link
@@ -250,9 +313,9 @@ async function TablaCartera({
               >
                 {d.numero}
               </Link>
-              <span className="tabular text-lg font-semibold">
-                {d.saldo.toFixed(2)}
-              </span>
+              {/* Con su «$»: era «1250.00» a secas, la única cifra del
+                  ERP sin moneda (revisión por módulos del 02/10). */}
+              <Moneda valor={d.saldo} className="text-lg font-semibold" />
             </div>
 
             <p className="mt-1 text-sm">{d.cliente}</p>
@@ -264,7 +327,7 @@ async function TablaCartera({
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <span className="tabular text-sm text-[var(--fg-muted)]">
-                Vence {d.fecha_vencimiento ?? "—"}
+                Vence {formatearFecha(d.fecha_vencimiento)}
               </span>
               <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
                 {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
@@ -273,7 +336,8 @@ async function TablaCartera({
 
             {d.pagado > 0 ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-                De {d.total.toFixed(2)}, ya pagó {d.pagado.toFixed(2)}
+                De <Moneda valor={d.total} tamano="sm" className="text-inherit" />, ya
+                pagó <Moneda valor={d.pagado} tamano="sm" className="text-inherit" />
               </p>
             ) : null}
 
@@ -287,68 +351,76 @@ async function TablaCartera({
         ))}
       </div>
 
-      <div className="hidden md:block">
+      {/*
+        Revisión por módulos del 02/10, con datos de muestra a 1280 px: la
+        tabla pedía más que la caja y «Anotar» y «Cobrar» quedaban FUERA, el
+        número se partía en «F002-» y «00000516» y el cliente se cortaba en
+        «MECA…». Ahora el total va debajo del saldo («de $ …»), el cliente
+        parte línea en vez de cortarse, y los dos botones van uno sobre otro
+        en una columna fija a la derecha.
+      */}
+      <div className="scroll-x hidden @3xl:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-            <th className="px-4 py-2.5 font-medium">Documento</th>
-            <th className="px-4 py-2.5 font-medium">Cliente</th>
-            <th className="px-4 py-2.5 font-medium">Vencimiento</th>
-            <th className="px-4 py-2.5 text-right font-medium">Total</th>
-            <th className="px-4 py-2.5 text-right font-medium">Saldo</th>
-            <th className="px-4 py-2.5 font-medium" />
+            <th className="px-3 py-2.5 font-medium">Documento</th>
+            <th className="px-3 py-2.5 font-medium">Cliente</th>
+            <th className="px-3 py-2.5 font-medium">Vencimiento</th>
+            <th className="px-3 py-2.5 text-right font-medium">Saldo</th>
+            <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
-          {r.datos.map((d, i) => (
+          {datos.map((d, i) => (
             <tr
               key={d.id}
-              className="anim-entrada border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)]"
+              className="anim-entrada group/fila border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)]"
               style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
             >
-              <td className="px-4 py-2.5">
+              <td className="px-3 py-2.5">
                 <Link
                   href={`/facturacion/${d.id}`}
-                  className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                  className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
                 >
                   {d.numero}
                 </Link>
                 {d.orden_compra_cliente ? (
-                  <span className="block text-sm text-[var(--fg-subtle)]">
+                  <span className="block max-w-48 break-words text-sm text-[var(--fg-subtle)]">
                     OC {d.orden_compra_cliente}
                   </span>
                 ) : null}
               </td>
 
-              <td className="max-w-xs px-4 py-2.5">
-                <span className="block truncate">{d.cliente}</span>
+              <td className="px-3 py-2.5">
+                <span className="block">{d.cliente}</span>
                 <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                   {d.documento ?? ""}
                 </span>
               </td>
 
-              <td className="whitespace-nowrap px-4 py-2.5">
-                <span className="tabular block">{d.fecha_vencimiento ?? "—"}</span>
+              <td className="whitespace-nowrap px-3 py-2.5">
+                <span className="tabular block">{formatearFecha(d.fecha_vencimiento)}</span>
                 <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
                   {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
                 </Badge>
               </td>
 
-              <td className="px-4 py-2.5 text-right tabular text-[var(--fg-muted)]">
-                {d.total.toFixed(2)}
-              </td>
-
-              <td className="px-4 py-2.5 text-right tabular font-medium">
-                {d.saldo.toFixed(2)}
+              <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                <Moneda valor={d.saldo} className="text-base font-semibold" />
+                <span className="block text-sm text-[var(--fg-subtle)]">
+                  de <Moneda valor={d.total} tamano="sm" className="text-inherit" />
+                </span>
                 {d.pagado > 0 ? (
-                  <span className="block text-sm font-normal text-[var(--fg-subtle)]">
-                    pagado {d.pagado.toFixed(2)}
+                  <span className="block text-sm text-[var(--fg-subtle)]">
+                    ya pagó <Moneda valor={d.pagado} tamano="sm" className="text-inherit" />
                   </span>
                 ) : null}
               </td>
 
-              <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                <div className="flex justify-end gap-1.5">
+              <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
+                <div className="flex flex-col items-stretch gap-1.5 [&>*]:justify-center">
                   {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
                   {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
                 </div>
@@ -395,8 +467,10 @@ async function ListaPagos() {
             </span>
           </div>
           <div className="text-right">
-            <span className="tabular font-medium">$ {p.monto.toFixed(2)}</span>
-            <span className="ml-2 tabular text-sm text-[var(--fg-subtle)]">{p.fecha}</span>
+            <Moneda valor={p.monto} tamano="sm" enfasis="fuerte" />
+            <span className="ml-2 tabular text-sm text-[var(--fg-subtle)]">
+              {formatearFecha(p.fecha)}
+            </span>
           </div>
         </li>
       ))}
@@ -437,7 +511,7 @@ async function ListaGestiones() {
               ) : null}
             </span>
             <span className="tabular text-sm text-[var(--fg-subtle)]">
-              {g.fecha.slice(0, 10)}
+              {formatearFecha(g.fecha.slice(0, 10))}
             </span>
           </div>
           {g.resultado ? <p className="mt-0.5">{g.resultado}</p> : null}
@@ -446,7 +520,7 @@ async function ListaGestiones() {
           ) : null}
           {g.compromiso_fecha ? (
             <p className="mt-0.5 text-sm font-medium text-[var(--warn)]">
-              Prometió pagar el {g.compromiso_fecha}
+              Prometió pagar el {formatearFecha(g.compromiso_fecha)}
             </p>
           ) : null}
         </li>

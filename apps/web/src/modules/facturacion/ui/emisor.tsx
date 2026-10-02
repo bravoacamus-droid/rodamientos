@@ -3,8 +3,16 @@
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { importeConDescuento } from "@rodatech/config";
-import { Badge, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
+import { abreviaturaUnidad, importeConDescuento } from "@rodatech/config";
+import {
+  Badge,
+  Button,
+  Input,
+  Moneda,
+  SelectNativo,
+  Textarea,
+  formatearFecha,
+} from "@rodatech/ui";
 
 import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
@@ -134,6 +142,14 @@ export function EmisorComprobante({
    * entregan 4 ahora y 2 cuando llegue la compra.
    */
   const [cantidades, setCantidades] = useState<number[]>([]);
+
+  /** Con techo en lo pendiente (047) y suelo en cero. Lo usan la tarjeta y la fila. */
+  const cambiarCantidad = (i: number, n: number, tope: number) =>
+    setCantidades((previas) =>
+      previas.map((c, j) =>
+        j === i ? Math.min(Math.max(Number.isFinite(n) ? n : 0, 0), tope) : c,
+      ),
+    );
 
   const [resultado, emitir, emitiendo] = useActionState<ResultadoEmision | null, FormData>(
     async (previo, formData) => {
@@ -377,7 +393,9 @@ export function EmisorComprobante({
                     <option value="factura">Factura</option>
                     <option value="boleta">Boleta</option>
                   </SelectNativo>
-                  <span className="font-mono text-sm text-[var(--fg-subtle)]">{serie}</span>
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    Serie <strong className="font-mono font-semibold text-[var(--fg)]">{serie}</strong>
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-1">
@@ -405,30 +423,36 @@ export function EmisorComprobante({
                   </SelectNativo>
                 </label>
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Días</span>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={365}
-                    value={dias}
-                    disabled={condicion === "contado"}
-                    onChange={(e) => setDias(Number(e.target.value))}
-                    className="tabular"
-                  />
-                  {vencimiento ? (
-                    <span className="text-sm text-[var(--fg-subtle)]">
-                      vence {vencimiento}
-                    </span>
-                  ) : null}
-                </label>
+                {/*
+                  Los días, solo al crédito. Al contado era una casilla gris
+                  deshabilitada con un 0 —de las que «parecían rotas», Luis
+                  02/10—; ahora no sale (revisión por módulos del 02/10).
+                */}
+                {condicion === "credito" ? (
+                  <label className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Días de crédito</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={365}
+                      value={dias}
+                      onChange={(e) => setDias(Number(e.target.value))}
+                      className="tabular"
+                    />
+                    {vencimiento ? (
+                      <span className="text-sm text-[var(--fg-muted)]">
+                        vence {formatearFecha(vencimiento)}
+                      </span>
+                    ) : null}
+                  </label>
+                ) : null}
               </div>
             ) : null}
           </section>
 
           {/* --------------------------------------------------- Líneas */}
           {cot ? (
-            <section className="anim-entrada card p-4">
+            <section className="anim-entrada card @container p-4">
               <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-sm font-semibold">
                   Qué se factura
@@ -442,16 +466,63 @@ export function EmisorComprobante({
               </div>
 
               {/* Los importes NO se pueden tocar: son los que el cliente aprobó.
-                  Cambiarlos aquí sería tener dos verdades sobre la misma venta. */}
-              <div className="scroll-x">
+                  Cambiarlos aquí sería tener dos verdades sobre la misma venta.
+
+                  Tarjetas o tabla según el ancho de ESTA caja (`@container`
+                  en la sección). Revisión por módulos del 02/10: era una
+                  tabla de seis columnas a cualquier ancho, y a 390 px solo se
+                  veían el código y media descripción —la cantidad que se
+                  edita y el importe quedaban fuera—; a 1280, con el resumen
+                  al lado, el importe también. Ahora el código va encima de la
+                  descripción y el descuento debajo del valor unitario. */}
+              <ul className="flex flex-col divide-y divide-[var(--border-soft)] @lg:hidden">
+                {cot.lineas.map((l, i) => (
+                  <li key={`${l.producto_id}-${i}`} className="flex flex-col gap-2 py-3">
+                    <div>
+                      <span className="block break-all font-mono text-sm font-semibold">
+                        {l.codigo}
+                      </span>
+                      <span className="block text-sm text-[var(--fg-muted)]">
+                        {l.descripcion}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <span className="mb-1 block text-sm text-[var(--fg-muted)]">
+                          Cantidad a facturar
+                        </span>
+                        <CantidadLinea
+                          linea={l}
+                          valor={cantidades[i] ?? l.cantidad}
+                          onCambiar={(n) => cambiarCantidad(i, n, l.cantidad)}
+                        />
+                      </div>
+                      <div className="text-right text-sm">
+                        <span className="block text-[var(--fg-muted)]">
+                          × <span className="tabular">{l.valor_unitario.toFixed(4)}</span>
+                          {l.descuento_pct > 0 ? ` −${l.descuento_pct}%` : ""}
+                        </span>
+                        <Moneda
+                          valor={importeConDescuento(
+                            cantidades[i] ?? l.cantidad,
+                            l.valor_unitario,
+                            l.descuento_pct,
+                          )}
+                          className="text-base font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="scroll-x hidden @lg:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-                      <th className="py-2 pr-3 font-medium">Código</th>
-                      <th className="py-2 pr-3 font-medium">Descripción</th>
+                      <th className="py-2 pr-3 font-medium">Producto</th>
                       <th className="py-2 pr-3 text-right font-medium">Cant.</th>
                       <th className="py-2 pr-3 text-right font-medium">V. unit.</th>
-                      <th className="py-2 pr-3 text-right font-medium">Dscto.</th>
                       <th className="py-2 text-right font-medium">Importe</th>
                     </tr>
                   </thead>
@@ -459,82 +530,41 @@ export function EmisorComprobante({
                     {cot.lineas.map((l, i) => (
                       <tr
                         key={`${l.producto_id}-${i}`}
-                        className="anim-entrada border-b border-[var(--border-soft)] last:border-0"
+                        className="anim-entrada border-b border-[var(--border-soft)] align-top last:border-0"
                         style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
                       >
-                        <td className="py-2 pr-3 font-mono text-sm">{l.codigo}</td>
-                        <td className="max-w-xs py-2 pr-3">
-                          <span className="block truncate" title={l.descripcion}>
-                            {l.descripcion}
-                          </span>
+                        <td className="py-2 pr-3">
+                          <span className="block font-mono text-sm font-semibold">{l.codigo}</span>
+                          <span className="block text-[var(--fg-muted)]">{l.descripcion}</span>
                         </td>
-                        <td className="py-2 pr-3 text-right tabular">
-                          {/* Editable, con techo en lo pendiente (047). Es el
-                              caso de Willy: el cliente confirmó 6, hay 4, se
-                              le entregan 4 ahora y 2 cuando llegue la compra.
-                              El servidor lo vuelve a recortar; esto es para
-                              poder hacerlo, no para que sea seguro. */}
-                          <Input
-                            type="number"
-                            min={0}
-                            max={l.cantidad}
-                            step="0.01"
-                            numerico
-                            className="h-9 w-24 text-right"
-                            value={cantidades[i] ?? l.cantidad}
-                            onChange={(e) => {
-                              const n = Number(e.target.value);
-                              setCantidades((previas) =>
-                                previas.map((c, j) =>
-                                  j === i
-                                    ? Math.min(Math.max(Number.isFinite(n) ? n : 0, 0), l.cantidad)
-                                    : c,
-                                ),
-                              );
-                            }}
-                            aria-label={`Cantidad a facturar de ${l.codigo}`}
+                        <td className="py-2 pr-3 text-right">
+                          <CantidadLinea
+                            linea={l}
+                            valor={cantidades[i] ?? l.cantidad}
+                            onCambiar={(n) => cambiarCantidad(i, n, l.cantidad)}
                           />
-                          <span className="ml-1 text-sm text-[var(--fg-subtle)]">
-                            {l.unidad}
-                          </span>
-                          <span className="block text-sm text-[var(--fg-subtle)]">
-                            {(cantidades[i] ?? l.cantidad) < l.cantidad
-                              ? `quedarían ${l.cantidad - (cantidades[i] ?? l.cantidad)} sin facturar`
-                              : l.cantidad !== l.cantidad_cotizada
-                                ? `de ${l.cantidad_cotizada} cotizadas` +
-                                  (l.cantidad_atendida > 0
-                                    ? ` · ${l.cantidad_atendida} ya facturadas`
-                                    : "")
-                                : `${l.cantidad} pendientes`}
-                          </span>
-                          {/*
-                              Aquí iba «en almacén hay N», y se quita con la
-                              casilla que lo encendía.
-
-                              Solo salía cuando la mercadería iba a salir con
-                              ESTA factura, y desde el 17/09 eso no pasa nunca:
-                              sin guía no se factura, así que el stock ya se
-                              movió antes. El aviso de falta de stock está
-                              donde ahora corresponde —al preparar la guía, que
-                              es donde se decide qué sale— y repetirlo aquí
-                              sería avisar de algo que ya ocurrió.
-                          */}
                         </td>
-                        <td className="py-2 pr-3 text-right tabular">
+                        <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
                           {l.valor_unitario.toFixed(4)}
+                          {l.descuento_pct > 0 ? (
+                            <span className="block text-sm text-[var(--fg-subtle)]">
+                              −{l.descuento_pct}%
+                            </span>
+                          ) : null}
                         </td>
-                        <td className="py-2 pr-3 text-right tabular">
-                          {l.descuento_pct > 0 ? `${l.descuento_pct}%` : "—"}
-                        </td>
-                        <td className="py-2 text-right tabular font-medium">
+                        <td className="py-2 text-right">
                           {/* Sobre la cantidad que se está emitiendo, no sobre
                               `l.importe`: si no, la suma de la columna no
                               cuadraría con el total de abajo. */}
-                          {importeConDescuento(
-                            cantidades[i] ?? l.cantidad,
-                            l.valor_unitario,
-                            l.descuento_pct,
-                          ).toFixed(2)}
+                          <Moneda
+                            valor={importeConDescuento(
+                              cantidades[i] ?? l.cantidad,
+                              l.valor_unitario,
+                              l.descuento_pct,
+                            )}
+                            tamano="sm"
+                            enfasis="fuerte"
+                          />
                         </td>
                       </tr>
                     ))}
@@ -600,25 +630,28 @@ export function EmisorComprobante({
             <h2 className="text-sm font-semibold">Resumen</h2>
 
             <dl className="flex flex-col gap-1.5 text-sm">
-              <Fila etiqueta="Gravada" valor={`$ ${totales.gravada.toFixed(2)}`} />
+              <Fila etiqueta="Gravada" valor={`$\u00a0${totales.gravada.toFixed(2)}`} />
               {totales.descuento > 0 ? (
-                <Fila etiqueta="Descuento" valor={`− $ ${totales.descuento.toFixed(2)}`} />
+                <Fila etiqueta="Descuento" valor={`−\u00a0$\u00a0${totales.descuento.toFixed(2)}`} />
               ) : null}
-              <Fila etiqueta="IGV (18 %)" valor={`$ ${totales.igv.toFixed(2)}`} />
-              <Fila etiqueta="Total" valor={`$ ${totales.total.toFixed(2)}`} fuerte />
+              <Fila etiqueta="IGV (18 %)" valor={`$\u00a0${totales.igv.toFixed(2)}`} />
+              <Fila etiqueta="Total" valor={`$\u00a0${totales.total.toFixed(2)}`} fuerte />
             </dl>
 
             {cuotas.length > 0 ? (
               <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
                 {/* SUNAT exige el cronograma desde 2022: sin él, un comprobante
                     al crédito se rechaza con el error 3251. */}
-                <p className="mb-1 text-sm font-medium">Cronograma para SUNAT</p>
+                {/* «Cuotas de pago» y no «Cronograma para SUNAT»: Willy lee
+                    qué es, no para quién (revisión por módulos del 02/10). */}
+                <p className="mb-1 text-sm font-medium">Cuotas de pago</p>
                 <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {cuotas.map((q) => (
                     <li key={q.numero} className="flex justify-between gap-2">
                       <span>Cuota {q.numero}</span>
                       <span className="tabular">
-                        {q.monto.toFixed(2)} · {q.vencimiento}
+                        <Moneda valor={q.monto} tamano="sm" className="text-inherit" /> · vence{" "}
+                        {formatearFecha(q.vencimiento)}
                       </span>
                     </li>
                   ))}
@@ -745,6 +778,57 @@ export function EmisorComprobante({
         </aside>
       </div>
     </form>
+  );
+}
+
+/**
+ * La cantidad editable de una línea, con su unidad y lo que queda.
+ *
+ * Editable, con techo en lo pendiente (047). Es el caso de Willy: el cliente
+ * confirmó 6, hay 4, se le entregan 4 ahora y 2 cuando llegue la compra. El
+ * servidor lo vuelve a recortar; esto es para poder hacerlo, no para que sea
+ * seguro.
+ *
+ * La unidad, abreviada como en el resto del ERP: aquí salía el código de
+ * SUNAT, «NIU», que Willy no tiene por qué saber que es «unidad» (revisión
+ * por módulos del 02/10).
+ */
+function CantidadLinea({
+  linea: l,
+  valor,
+  onCambiar,
+}: {
+  linea: CotizacionFacturable["lineas"][number];
+  valor: number;
+  onCambiar: (n: number) => void;
+}) {
+  const nota =
+    valor < l.cantidad
+      ? `quedarían ${l.cantidad - valor} sin facturar`
+      : l.cantidad !== l.cantidad_cotizada
+        ? `de ${l.cantidad_cotizada} cotizadas` +
+          (l.cantidad_atendida > 0 ? ` · ${l.cantidad_atendida} ya facturadas` : "")
+        : null;
+  return (
+    <div className="inline-flex flex-col items-end gap-0.5">
+      <span className="inline-flex items-center gap-1.5">
+        <Input
+          type="number"
+          min={0}
+          max={l.cantidad}
+          step="0.01"
+          numerico
+          className="w-24 text-right"
+          value={valor}
+          onChange={(e) => onCambiar(Number(e.target.value))}
+          aria-label={`Cantidad a facturar de ${l.codigo}`}
+        />
+        <span className="text-sm text-[var(--fg-muted)]">{abreviaturaUnidad(l.unidad)}</span>
+      </span>
+      {/* Solo cuando dice algo: «1 pendientes» debajo de cada línea entera
+          era ruido, y además mal concordado. */}
+      {nota ? <span className="text-sm text-[var(--fg-muted)]">{nota}</span> : null}
+    </div>
   );
 }
 

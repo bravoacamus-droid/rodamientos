@@ -154,7 +154,7 @@ export function bloqueosNota(
     if (esMotivoTotal(motivo) && Math.abs(monto - disponible) > 0.01) {
       lista.push({
         campo: "monto",
-        mensaje: `Con este motivo la nota va por el total pendiente de acreditar (${disponible.toFixed(2)}), no por una parte.`,
+        mensaje: `Con este motivo la nota va por el total pendiente de acreditar ($\u00a0${disponible.toFixed(2)}), no por una parte.`,
       });
     }
 
@@ -163,8 +163,8 @@ export function bloqueosNota(
         campo: "monto",
         mensaje:
           yaAcreditado > 0
-            ? `Ya se acreditaron ${yaAcreditado.toFixed(2)} de este documento: quedan ${disponible.toFixed(2)}.`
-            : `El importe supera el total del documento (${documento.total.toFixed(2)}).`,
+            ? `Ya se acreditaron $\u00a0${yaAcreditado.toFixed(2)} de este documento: quedan $\u00a0${disponible.toFixed(2)}.`
+            : `El importe supera el total del documento ($\u00a0${documento.total.toFixed(2)}).`,
       });
     }
   }
@@ -199,7 +199,7 @@ export function avisosNota(
   if (tipoNota === "nota_credito" && documento.pagado > 0) {
     lista.push({
       clave: "ya-cobrado",
-      mensaje: `Este documento ya tiene ${documento.pagado.toFixed(2)} cobrados. La nota reduce la deuda, no devuelve el dinero: eso se gestiona aparte.`,
+      mensaje: `Este documento ya tiene $\u00a0${documento.pagado.toFixed(2)} cobrados. La nota reduce la deuda, no devuelve el dinero: eso se gestiona aparte.`,
     });
   }
 
@@ -219,7 +219,7 @@ export function avisosNota(
   ) {
     lista.push({
       clave: "detraccion",
-      mensaje: `El documento tiene detracción (${documento.detraccion_monto.toFixed(2)}). Al anularlo hay que revisar el depósito si ya se hizo.`,
+      mensaje: `El documento tiene detracción ($\u00a0${documento.detraccion_monto.toFixed(2)}). Al anularlo hay que revisar el depósito si ya se hizo.`,
     });
   }
 

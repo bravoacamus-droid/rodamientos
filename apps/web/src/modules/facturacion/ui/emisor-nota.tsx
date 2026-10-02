@@ -14,8 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
+  Moneda,
   SelectNativo,
   Textarea,
+  buttonVariants,
+  cn,
 } from "@rodatech/ui";
 
 import { emitirNota, type ResultadoNota } from "../acciones/nota";
@@ -84,6 +87,7 @@ export function EmisorNota({
   const disponible = Math.round((documento.total - yaAcreditado) * 100) / 100;
   const delTipo = motivos.filter((m) => m.tipo === tipo);
   const total = esMotivoTotal(motivo);
+  const importeFijo = total || esCorreccionSinImporte(motivo);
 
   // Con un motivo total el importe no se elige: es el pendiente de acreditar.
   React.useEffect(() => {
@@ -123,7 +127,9 @@ export function EmisorNota({
         if (v) setFecha(hoy);
       }}
     >
-      <DialogTrigger className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]">
+      {/* El mismo botón que «Imprimir» a su lado (revisión por módulos del
+          02/10): eran dos bordes y dos radios distintos en la misma fila. */}
+      <DialogTrigger className={cn(buttonVariants({ variant: "outline" }), "px-3")}>
         Emitir nota
       </DialogTrigger>
 
@@ -131,10 +137,13 @@ export function EmisorNota({
         <DialogHeader>
           <DialogTitle>Nota sobre {documento.numero}</DialogTitle>
           <DialogDescription>
-            {documento.cliente} · total {documento.total.toFixed(2)}
-            {yaAcreditado > 0
-              ? ` · ya acreditados ${yaAcreditado.toFixed(2)}, quedan ${disponible.toFixed(2)}`
-              : ""}
+            {documento.cliente} · total <Dolares valor={documento.total} />
+            {yaAcreditado > 0 ? (
+              <>
+                {" "}· ya acreditados <Dolares valor={yaAcreditado} />, quedan{" "}
+                <Dolares valor={disponible} />
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -143,7 +152,10 @@ export function EmisorNota({
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="nota" value={payload} />
 
-            <div className="grid grid-cols-2 gap-2">
+            {/* Uno debajo de otro en el teléfono: a 390 px el desplegable se
+                cortaba en «Nota de crédito» y no se leía qué hace cada una
+                (revisión por módulos del 02/10). */}
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Tipo</span>
                 <SelectNativo
@@ -158,8 +170,9 @@ export function EmisorNota({
                   <option value="nota_credito">Nota de crédito — reduce</option>
                   <option value="nota_debito">Nota de débito — aumenta</option>
                 </SelectNativo>
-                <span className="font-mono text-sm text-[var(--fg-subtle)]">
-                  Se emitirá en {serie}
+                <span className="text-sm text-[var(--fg-muted)]">
+                  Se emitirá con la serie{" "}
+                  <strong className="font-mono font-semibold text-[var(--fg)]">{serie}</strong>
                 </span>
               </label>
 
@@ -191,27 +204,38 @@ export function EmisorNota({
               </SelectNativo>
             </label>
 
-            <div className="grid grid-cols-2 gap-2">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Importe con IGV{" "}
-                  <span className="text-[var(--danger)]">*</span>
-                </span>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={monto}
-                  disabled={total || esCorreccionSinImporte(motivo)}
-                  onChange={(e) => setMonto(Number(e.target.value))}
-                  className="tabular"
-                />
-                {total ? (
-                  <span className="text-sm text-[var(--fg-subtle)]">
-                    Con este motivo va por el total pendiente.
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-2">
+              {/*
+                Con un motivo total el importe no se elige, y en vez de una
+                casilla gris deshabilitada —que parece rota— se escribe la
+                cifra con su porqué (revisión por módulos del 02/10).
+              */}
+              {importeFijo ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Importe con IGV</span>
+                  <Dolares valor={monto} className="text-lg font-semibold" />
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    {total
+                      ? "Con este motivo va por el total pendiente."
+                      : "Con este motivo se copia el documento entero."}
                   </span>
-                ) : null}
-              </label>
+                </div>
+              ) : (
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">
+                    Importe con IGV{" "}
+                    <span className="text-[var(--danger)]">*</span>
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={monto}
+                    onChange={(e) => setMonto(Number(e.target.value))}
+                    className="tabular"
+                  />
+                </label>
+              )}
 
               {/* El total real puede desviarse un céntimo del importe tecleado:
                 la base tiene cuatro decimales y el IGV se calcula sobre ella
@@ -220,14 +244,16 @@ export function EmisorNota({
               {monto > 0 && Math.abs(totalReal - monto) >= 0.01 ? (
                 <div className="anim-entrada self-end rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2 text-sm">
                   Saldrá por{" "}
-                  <strong className="tabular">{totalReal.toFixed(2)}</strong>,
-                  no {monto.toFixed(2)}: el IGV se calcula sobre la base
-                  redondeada.
+                  <strong>
+                    <Dolares valor={totalReal} />
+                  </strong>
+                  , no <Dolares valor={monto} />: el IGV se calcula sobre la
+                  base redondeada.
                 </div>
               ) : null}
             </div>
 
-            {!total && !esCorreccionSinImporte(motivo) ? (
+            {!importeFijo ? (
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Concepto</span>
                 <Input
@@ -253,7 +279,7 @@ export function EmisorNota({
               <Textarea
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
-                rows={2}
+                rows={3}
               />
             </label>
 
@@ -313,4 +339,15 @@ export function EmisorNota({
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Una cifra en dólares dentro de una frase, con su «$».
+ *
+ * Revisión por módulos del 02/10: el diálogo decía «total 2098.48» y «ya
+ * acreditados 300.00», sin moneda. `Moneda` además no parte el signo de la
+ * cifra. Hereda el color de la frase en la que va.
+ */
+function Dolares({ valor, className = "" }: { valor: number; className?: string }) {
+  return <Moneda valor={valor} tamano="sm" className={`text-inherit ${className}`} />;
 }

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Info, Plus, Settings } from "lucide-react";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
@@ -80,11 +80,14 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
           que crea algo— con una segunda pista aquí, porque en esta pantalla
           hay dos botones juntos y uno de ellos no se toca casi nunca.
         */}
-        <div className="flex items-center gap-2">
+        {/* Con `buttonVariants`, los mismos 40 px y el mismo radio que
+            «Volver» y que los botones de la ficha (revisión por módulos del
+            02/10): había tres alturas y dos radios entre lista y ficha. */}
+        <div className="flex flex-wrap items-center gap-2">
           {esGerencia ? (
             <Link
               href="/configuracion/sunat"
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className={cn(buttonVariants({ variant: "outline" }), "px-3")}
             >
               <Settings className="size-4" aria-hidden="true" />
               Configuración
@@ -93,7 +96,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
           {puedeFacturar ? (
             <Link
               href="/facturacion/nueva"
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={cn(buttonVariants({ variant: "primary" }), "px-3")}
             >
               <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
               Emitir comprobante
@@ -151,7 +154,9 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <section className="card pt-4">
+      {/* `@container`: la tabla y los filtros se deciden por el ancho de esta
+          caja, no de la pantalla (revisión por módulos del 02/10). */}
+      <section className="card @container pt-4">
         <FiltrosFacturacionBarra
           nombreCliente={cliente?.ok ? cliente.nombre : null}
         />

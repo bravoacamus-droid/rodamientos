@@ -61,8 +61,15 @@ export function FiltrosFacturacionBarra({
       fila de abajo. En rejilla, cada filtro ocupa lo que le toca y la fila no
       depende de los datos.
     */
-    <div className="grid gap-3 px-4 pb-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-      <label className="flex flex-col gap-1 xl:col-span-2">
+    /*
+      Y por el ancho de LA CAJA (`@container` en la sección), no de la
+      pantalla (revisión por módulos del 02/10). En el teléfono, de dos en
+      dos: uno debajo de otro eran siete campos y una pantalla entera antes
+      del primer comprobante. Con la caja ancha, dos filas: lo que se teclea
+      arriba y los desplegables y fechas debajo, todos del mismo ancho.
+    */
+    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-10">
+      <label className="col-span-2 flex flex-col gap-1 @3xl:col-span-5">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
@@ -72,7 +79,7 @@ export function FiltrosFacturacionBarra({
         />
       </label>
 
-      <div className="xl:col-span-2">
+      <div className="col-span-2 @3xl:col-span-5">
         <FiltroCliente
           valor={params.get("cliente")}
           nombre={nombreCliente}
@@ -80,7 +87,7 @@ export function FiltrosFacturacionBarra({
         />
       </div>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 @3xl:col-span-2">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}
@@ -95,7 +102,29 @@ export function FiltrosFacturacionBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex flex-col gap-1">
+      {/*
+        El estado del cobro.
+
+        La página leía `?estado=` y la consulta lo filtraba desde siempre, pero
+        no había desplegable que lo escribiera: para ver las anuladas había
+        que recorrer las 518 (revisión por módulos del 02/10). «Vencido» no
+        se ofrece: ese estado no lo pone nadie, y lo vencido se cobra desde
+        Cobranzas.
+      */}
+      <label className="flex flex-col gap-1 @3xl:col-span-2">
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Cobro</span>
+        <SelectNativo
+          value={params.get("estado") ?? ""}
+          onChange={(e) => aplicar("estado", e.target.value)}
+        >
+          <option value="">Todos</option>
+          <option value="emitido">Por cobrar</option>
+          <option value="pagado">Cobrado</option>
+          <option value="anulado">Anulado</option>
+        </SelectNativo>
+      </label>
+
+      <label className="col-span-2 flex flex-col gap-1 @3xl:col-span-2">
         <span className="text-sm font-medium text-[var(--fg-muted)]">SUNAT</span>
         <SelectNativo
           value={params.get("sunat") ?? ""}
@@ -110,7 +139,7 @@ export function FiltrosFacturacionBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 @3xl:col-span-2">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
         <Input
           type="date"
@@ -119,7 +148,7 @@ export function FiltrosFacturacionBarra({
         />
       </label>
 
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-1 @3xl:col-span-2">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
         <Input
           type="date"

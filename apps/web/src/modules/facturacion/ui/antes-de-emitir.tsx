@@ -50,6 +50,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  buttonVariants,
+  cn,
+  formatearFecha,
 } from "@rodatech/ui";
 
 import { buscarGuiasDelCliente } from "../acciones/cargar";
@@ -361,7 +364,7 @@ export function AntesDeEmitir({
                     className="size-4 shrink-0 accent-brand-600"
                   />
                   <span className="font-medium">{g.numero}</span>
-                  <span className="text-[var(--fg-muted)]">{g.fecha}</span>
+                  <span className="text-[var(--fg-muted)]">{formatearFecha(g.fecha)}</span>
                 </label>
               );
             })}
@@ -428,17 +431,30 @@ export function AntesDeEmitir({
         }
       />
 
+      {/*
+        Sin certificado, una nota y no una casilla gris deshabilitada: Luis,
+        mirando el teléfono el 02/10, dijo de unas así que «parecían rotas».
+        No hay nada que elegir, solo algo que saber (revisión por módulos del
+        02/10).
+      */}
+      {!puedeEnviar ? (
+        <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+          <span className="font-medium">No se manda a SUNAT al emitir.</span>{" "}
+          <span className="text-[var(--fg-muted)]">
+            Falta el certificado y las credenciales SOL. Se emite igual y queda
+            pendiente: se envía después desde su ficha.
+          </span>
+        </p>
+      ) : null}
+
+      {puedeEnviar ? (
       <Casilla
-        marcada={opciones.enviarSunat && puedeEnviar}
-        deshabilitada={!puedeEnviar}
+        marcada={opciones.enviarSunat}
         onCambiar={(v) => onCambiar({ ...opciones, enviarSunat: v })}
         titulo="Mandarlo a SUNAT al emitir"
-        detalle={
-          puedeEnviar
-            ? "Si no lo marcas, queda emitido y pendiente: se manda después desde su ficha."
-            : "Falta el certificado y las credenciales SOL. Se emite igual y queda pendiente de envío."
-        }
+        detalle="Si no lo marcas, queda emitido y pendiente: se manda después desde su ficha."
       />
+      ) : null}
 
       <Button type="button" variant="outline" onClick={() => setViendo(true)}>
         <IconoOjo />
@@ -648,7 +664,7 @@ function BuscadorDeGuias({
             className="flex min-h-9 items-center gap-2.5 rounded-sm px-2 text-left text-sm transition-colors enabled:hover:bg-[var(--surface-2)] disabled:opacity-60"
           >
             <span className="font-medium">{g.numero}</span>
-            <span className="text-[var(--fg-muted)]">{g.fecha}</span>
+            <span className="text-[var(--fg-muted)]">{formatearFecha(g.fecha)}</span>
             {g.cotizacion ? (
               <span className="text-[var(--fg-muted)]">· {g.cotizacion}</span>
             ) : null}
@@ -659,16 +675,18 @@ function BuscadorDeGuias({
         ))}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-3">
+      {/* Dos botones con borde y no dos enlaces subrayados: Willy tiene que
+          ver que se pulsan (CLAUDE.md §1; revisión por módulos del 02/10). */}
+      <div className="mt-3 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => {
             setAbierto(false);
             setTexto("");
           }}
-          className="text-sm text-[var(--fg-muted)] underline hover:text-[var(--fg)]"
+          className={buttonVariants({ variant: "outline", size: "md" })}
         >
-          Cerrar
+          Cerrar la búsqueda
         </button>
         {/*
           «O una nueva», que es la otra mitad de lo que pidió Luis.
@@ -680,7 +698,10 @@ function BuscadorDeGuias({
         */}
         <Link
           href={`/guias/nueva?cotizacion=${cotizacionId}`}
-          className="text-sm text-brand-600 underline"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "md" }),
+            "h-auto min-h-[2.375rem] whitespace-normal py-2 text-center",
+          )}
         >
           ¿No está? Preparar una guía nueva (sales de aquí)
         </Link>

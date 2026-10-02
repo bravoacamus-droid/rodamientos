@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Download, Printer } from "lucide-react";
-import { Badge, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
+import {
+  Badge,
+  EstadoBadge,
+  EstadoError,
+  Moneda,
+  buttonVariants,
+  cn,
+  formatearFecha,
+} from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
@@ -82,24 +90,28 @@ export default async function PaginaDetalleComprobante({
         </div>
 
         <div className="flex flex-col items-end gap-2 no-print">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/*
               Descargar e imprimir, iguales que en la guía y la cotización.
 
               Los dos van a la hoja con `auto=1`, que abre la ventana de
               imprimir sola. Descargar en azul porque con una factura lo
               primero que se hace es mandársela al cliente.
+
+              Los tres con `buttonVariants` (revisión por módulos del 02/10):
+              «Imprimir» llevaba el borde fuerte y «Emitir nota» el suave, y
+              al lado parecían de dos familias distintas.
             */}
             <Link
               href={`/facturacion/${c.id}/imprimir?auto=1`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              className={cn(buttonVariants({ variant: "primary" }), "px-3")}
             >
               <IconoDescargar />
               Descargar
             </Link>
             <Link
               href={`/facturacion/${c.id}/imprimir?auto=1`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              className={cn(buttonVariants({ variant: "outline" }), "px-3")}
             >
               <IconoImprimir />
               Imprimir
@@ -119,16 +131,41 @@ export default async function PaginaDetalleComprobante({
       </header>
 
       {/* --------------------------------------------------------- Cifras */}
+      {/*
+        Las cifras, en 18 px y con su color.
+
+        `Moneda` pone su propio tamaño y color, así que el `text-lg` y el
+        verde/ámbar de la tarjeta no le llegaban: el saldo salía en negro de
+        14 px tanto si estaba cobrado como si no. Ahora se le pasan a ella
+        (revisión por módulos del 02/10). Y una anulada no tiene saldo: decía
+        «$ 1,018.17 · pagado 0.00», que se lee como una deuda viva.
+      */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Gravada" valor={<Moneda valor={c.op_gravada} />} />
-        <Tarjeta etiqueta="IGV" valor={<Moneda valor={c.igv} enfasis="suave" />} />
-        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} />} />
+        <Tarjeta etiqueta="Gravada" valor={<Moneda valor={c.op_gravada} tamano="lg" className="text-lg" />} />
         <Tarjeta
-          etiqueta="Saldo"
-          valor={<Moneda valor={c.saldo} />}
-          pie={c.saldo <= 0 ? "cobrado" : `pagado ${c.pagado.toFixed(2)}`}
-          tono={c.saldo <= 0 ? "ok" : "aviso"}
+          etiqueta="IGV"
+          valor={<Moneda valor={c.igv} tamano="lg" enfasis="suave" className="text-lg" />}
         />
+        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} tamano="lg" className="text-lg" />} />
+        {c.estado === "anulado" ? (
+          <Tarjeta
+            etiqueta="Saldo"
+            valor={<span className="text-[var(--fg-muted)]">No se cobra</span>}
+            pie="El comprobante está anulado."
+          />
+        ) : (
+          <Tarjeta
+            etiqueta="Saldo"
+            valor={
+              <Moneda
+                valor={c.saldo}
+                tamano="lg"
+                className={`text-lg ${c.saldo <= 0 ? "text-ok" : "text-warn"}`}
+              />
+            }
+            pie={c.saldo <= 0 ? "Cobrado" : <>Pagado <Moneda valor={c.pagado} tamano="sm" enfasis="suave" /></>}
+          />
+        )}
       </div>
 
       {c.total_letras ? (
@@ -138,27 +175,43 @@ export default async function PaginaDetalleComprobante({
         </p>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/*
+        `min-w-0` en las dos columnas: un hijo de rejilla no baja de lo que
+        mide su contenido, y a 820 px la tabla del detalle empujaba la página
+        201 px de lado (revisión por módulos del 02/10).
+      */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
-        <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Detalle</h2>
+        <section className="card @container min-w-0 p-4">
+          <h2 className="mb-3 text-sm font-semibold">
+            Detalle
+            <span className="ml-1.5 font-normal text-[var(--fg-muted)]">
+              · {c.lineas.length} {c.lineas.length === 1 ? "línea" : "líneas"}
+            </span>
+          </h2>
           {/*
-            La tabla, solo de `md` para arriba.
+            La tabla, solo cuando la CAJA pasa de 32 rem (`@lg`: 544 px con
+            la letra de 17 px de esta casa).
 
             Cinco columnas en 414 px se leen arrastrando, y para cruzar el
             código con su importe hay que ir y volver. Luis, 11/09: *«las
             tablas de información de los productos, ponerlos como card»*.
 
+            Revisión por módulos del 02/10: el corte era `md` de la PANTALLA,
+            y a 1280 la caja mide 625 px: la tabla salía y se cortaba en
+            «V. U…», con el importe fuera. Ahora se mide la caja, y el código
+            va encima de la descripción en la misma celda —como en la
+            tarjeta—, que es lo que hace que quepan las cifras.
+
             El comprobante impreso —el que vale— vive en
             `/facturacion/[id]/imprimir` y no se toca: ahí sigue siendo una
             tabla porque es el papel que se le entrega al cliente.
           */}
-          <div className="scroll-x hidden md:block">
+          <div className="scroll-x hidden @lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-                  <th className="py-2 pr-3 font-medium">Código</th>
-                  <th className="py-2 pr-3 font-medium">Descripción</th>
+                  <th className="py-2 pr-3 font-medium">Producto</th>
                   <th className="py-2 pr-3 text-right font-medium">Cant.</th>
                   <th className="py-2 pr-3 text-right font-medium">V. unit.</th>
                   <th className="py-2 text-right font-medium">Importe</th>
@@ -168,33 +221,20 @@ export default async function PaginaDetalleComprobante({
                 {c.lineas.map((l, i) => (
                   <tr
                     key={l.id}
-                    className="anim-entrada border-b border-[var(--border-soft)] last:border-0"
+                    className="anim-entrada border-b border-[var(--border-soft)] align-top last:border-0"
                     style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
                   >
                     <td className="py-2 pr-3">
-                      {l.producto_id ? (
-                        <Link
-                          href={`/productos/${l.producto_id}`}
-                          className="font-mono text-sm font-medium text-brand-600 hover:underline"
-                        >
-                          {l.codigo}
-                        </Link>
-                      ) : (
-                        <span className="font-mono text-sm">{l.codigo}</span>
-                      )}
+                      <CodigoLinea id={l.producto_id} codigo={l.codigo} />
+                      <span className="block text-[var(--fg-muted)]">{l.descripcion}</span>
                     </td>
-                    <td className="max-w-xs py-2 pr-3">
-                      <span className="block truncate" title={l.descripcion}>
-                        {l.descripcion}
-                      </span>
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular">
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
                       {l.cantidad}{" "}
                       <span className="text-sm text-[var(--fg-subtle)]">
                         {abreviaturaUnidad(l.unidad)}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 text-right tabular">
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
                       {l.valor_unitario.toFixed(4)}
                       {l.descuento_pct > 0 ? (
                         <span className="block text-sm text-[var(--fg-subtle)]">
@@ -202,8 +242,8 @@ export default async function PaginaDetalleComprobante({
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-2 text-right tabular font-medium">
-                      {l.importe.toFixed(2)}
+                    <td className="py-2 text-right">
+                      <Moneda valor={l.importe} tamano="sm" enfasis="fuerte" />
                     </td>
                   </tr>
                 ))}
@@ -212,23 +252,17 @@ export default async function PaginaDetalleComprobante({
           </div>
 
           {/* --------------------------------------------------- Móvil */}
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @lg:hidden">
             {c.lineas.map((l) => (
               <li key={l.id} className="flex flex-col gap-1 py-2.5">
                 <div className="flex items-baseline justify-between gap-2">
-                  {l.producto_id ? (
-                    <Link
-                      href={`/productos/${l.producto_id}`}
-                      className="font-mono text-sm font-semibold text-brand-600"
-                    >
-                      {l.codigo}
-                    </Link>
-                  ) : (
-                    <span className="font-mono text-sm font-semibold">{l.codigo}</span>
-                  )}
-                  <span className="shrink-0 tabular text-sm font-medium">
-                    {l.importe.toFixed(2)}
-                  </span>
+                  <CodigoLinea id={l.producto_id} codigo={l.codigo} />
+                  <Moneda
+                    valor={l.importe}
+                    tamano="sm"
+                    enfasis="fuerte"
+                    className="shrink-0"
+                  />
                 </div>
 
                 <p className="text-sm text-[var(--fg-muted)]">{l.descripcion}</p>
@@ -256,7 +290,22 @@ export default async function PaginaDetalleComprobante({
           <section className="card p-4 no-print">
             <h2 className="mb-3 text-sm font-semibold">SUNAT</h2>
 
-            {c.estado_sunat === "aceptado" ? (
+            {/*
+              Una anulada o dada de baja no se envía. Aquí caía en el aviso
+              «está emitido pero no se ha enviado… se envía desde aquí», que
+              sobre un documento dado de baja es justo lo contrario de lo que
+              hay que hacer (revisión por módulos del 02/10, F002-00000016).
+            */}
+            {c.estado === "anulado" ||
+            c.estado_sunat === "baja_aceptada" ||
+            c.estado_sunat === "baja_solicitada" ? (
+              <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
+                <p className="font-medium">{ETIQUETA_SUNAT[c.estado_sunat]}.</p>
+                <p className="mt-0.5 text-[var(--fg-muted)]">
+                  Este comprobante está anulado: no se envía a SUNAT ni se cobra.
+                </p>
+              </div>
+            ) : c.estado_sunat === "aceptado" ? (
               <div className="rounded-sm border border-[var(--ok)] bg-[var(--surface-2)] p-2.5 text-sm">
                 <p className="font-medium">Aceptado.</p>
                 {c.sunat_enviado_en ? (
@@ -293,13 +342,25 @@ export default async function PaginaDetalleComprobante({
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Datos</h2>
             <dl className="flex flex-col gap-2 text-sm">
-              <Dato etiqueta="Emisión" valor={c.fecha_emision} />
+              {/* Fechas como en el papel (20/07/2026), y el vencimiento en su
+                  propia línea: a 390 px «vence 2026-07-20» se partía en
+                  «2026-07-» y «20» (revisión por módulos del 02/10). */}
+              <Dato etiqueta="Emisión" valor={formatearFecha(c.fecha_emision)} />
               <Dato
                 etiqueta="Pago"
                 valor={
-                  c.condicion_pago === "credito"
-                    ? `A ${c.dias_credito} días · vence ${c.fecha_vencimiento ?? "—"}`
-                    : "Al contado"
+                  c.condicion_pago === "credito" ? (
+                    <>
+                      Crédito a {c.dias_credito} {c.dias_credito === 1 ? "día" : "días"}
+                      {c.fecha_vencimiento ? (
+                        <span className="block whitespace-nowrap">
+                          vence {formatearFecha(c.fecha_vencimiento)}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    "Al contado"
+                  )
                 }
               />
               <Dato etiqueta="Cotización" valor={c.cotizacion_numero ?? "—"} />
@@ -324,12 +385,13 @@ export default async function PaginaDetalleComprobante({
             {c.detraccion_aplica ? (
               <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
                 <p className="font-medium">
-                  Detracción {c.detraccion_porcentaje}% · $
-                  {c.detraccion_monto.toFixed(2)}
+                  Detracción {c.detraccion_porcentaje}% ·{" "}
+                  <Moneda valor={c.detraccion_monto} tamano="sm" />
                 </p>
                 <p className="mt-0.5 text-[var(--fg-muted)]">
-                  El cliente paga {(c.total - c.detraccion_monto).toFixed(2)} y deposita
-                  el resto en la cuenta de detracciones.
+                  El cliente paga{" "}
+                  <Moneda valor={c.total - c.detraccion_monto} tamano="sm" enfasis="suave" /> y
+                  deposita el resto en la cuenta de detracciones.
                 </p>
               </div>
             ) : null}
@@ -350,36 +412,45 @@ function Tarjeta({
   etiqueta,
   valor,
   pie,
-  tono,
 }: {
   etiqueta: string;
   valor: React.ReactNode;
-  pie?: string;
-  tono?: "ok" | "aviso" | "malo";
+  pie?: React.ReactNode;
 }) {
-  const color =
-    tono === "malo"
-      ? "text-[var(--danger)]"
-      : tono === "aviso"
-        ? "text-[var(--warn)]"
-        : tono === "ok"
-          ? "text-[var(--ok)]"
-          : "";
   return (
     <div className="card anim-entrada p-3">
       <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className={`mt-0.5 truncate text-lg font-semibold tabular ${color}`}>{valor}</p>
+      <p className="mt-0.5 truncate text-lg font-semibold tabular">{valor}</p>
       {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }
 
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
     <div className="flex gap-3">
       <dt className="w-32 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
+  );
+}
+
+/**
+ * El código de la línea: enlace a la ficha si viene del catálogo.
+ *
+ * Partido por cualquier carácter si no cabe: hay códigos como
+ * «35X58X10-HMSA10RG» que, sin espacios, empujaban la tarjeta de lado.
+ */
+function CodigoLinea({ id, codigo }: { id: string | null; codigo: string }) {
+  return id ? (
+    <Link
+      href={`/productos/${id}`}
+      className="min-w-0 break-all font-mono text-sm font-semibold text-brand-600 hover:underline"
+    >
+      {codigo}
+    </Link>
+  ) : (
+    <span className="min-w-0 break-all font-mono text-sm font-semibold">{codigo}</span>
   );
 }
 

@@ -55,7 +55,7 @@ export function bloqueosPago(
   } else if (monto > redondear2(documento.saldo + 0.01)) {
     lista.push({
       campo: "monto",
-      mensaje: `Son ${monto.toFixed(2)} sobre un saldo de ${documento.saldo.toFixed(2)}. Si el cliente pagó de más, regístralo en el documento que corresponda.`,
+      mensaje: `Son $\u00a0${monto.toFixed(2)} sobre un saldo de $\u00a0${documento.saldo.toFixed(2)}. Si el cliente pagó de más, regístralo en el documento que corresponda.`,
     });
   }
 
@@ -108,7 +108,7 @@ export function avisosPago(
   ) {
     lista.push({
       clave: "parece-detraccion",
-      mensaje: `Este importe coincide con la detracción del documento (${documento.detraccion_monto.toFixed(2)}). ¿No será eso?`,
+      mensaje: `Este importe coincide con la detracción del documento ($\u00a0${documento.detraccion_monto.toFixed(2)}). ¿No será eso?`,
     });
   }
 
@@ -119,7 +119,7 @@ export function avisosPago(
   ) {
     lista.push({
       clave: "parcial",
-      mensaje: `Pago parcial: quedarían ${redondear2(documento.saldo - monto).toFixed(2)} por cobrar.`,
+      mensaje: `Pago parcial: quedarían $\u00a0${redondear2(documento.saldo - monto).toFixed(2)} por cobrar.`,
     });
   }
 
