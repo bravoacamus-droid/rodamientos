@@ -263,6 +263,156 @@ export type Database = {
         }
         Relationships: []
       }
+      analisis_importacion: {
+        Row: {
+          actualizado_en: string
+          compra_id: string | null
+          costo_envio: number
+          creado_en: string
+          creado_por: string | null
+          estado: string
+          fecha: string
+          id: string
+          notas: string | null
+          numero: string
+          peso_declarado: number | null
+          proveedor_id: string
+          referencia: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          compra_id?: string | null
+          costo_envio?: number
+          creado_en?: string
+          creado_por?: string | null
+          estado?: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          numero?: string
+          peso_declarado?: number | null
+          proveedor_id: string
+          referencia?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          compra_id?: string | null
+          costo_envio?: number
+          creado_en?: string
+          creado_por?: string | null
+          estado?: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          numero?: string
+          peso_declarado?: number | null
+          proveedor_id?: string
+          referencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analisis_importacion_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analisis_importacion_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analisis_importacion_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      analisis_importacion_items: {
+        Row: {
+          analisis_id: string
+          cantidad_pedido: number
+          cantidad_ref: number
+          codigo: string
+          descripcion: string | null
+          frecuencia: number | null
+          id: string
+          marca: string | null
+          orden: number
+          peso_kg: number
+          precio_fob: number
+          precio_mercado: number
+          producto_id: string | null
+          proveedor_mercado: string | null
+        }
+        Insert: {
+          analisis_id: string
+          cantidad_pedido?: number
+          cantidad_ref?: number
+          codigo: string
+          descripcion?: string | null
+          frecuencia?: number | null
+          id?: string
+          marca?: string | null
+          orden?: number
+          peso_kg?: number
+          precio_fob?: number
+          precio_mercado?: number
+          producto_id?: string | null
+          proveedor_mercado?: string | null
+        }
+        Update: {
+          analisis_id?: string
+          cantidad_pedido?: number
+          cantidad_ref?: number
+          codigo?: string
+          descripcion?: string | null
+          frecuencia?: number | null
+          id?: string
+          marca?: string | null
+          orden?: number
+          peso_kg?: number
+          precio_fob?: number
+          precio_mercado?: number
+          producto_id?: string | null
+          proveedor_mercado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analisis_importacion_items_analisis_id_fkey"
+            columns: ["analisis_id"]
+            isOneToOne: false
+            referencedRelation: "analisis_importacion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analisis_importacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analisis_importacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analisis_importacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_contactos: {
         Row: {
           activo: boolean
@@ -435,6 +585,57 @@ export type Database = {
           {
             foreignKeyName: "clientes_vendedor_id_fkey"
             columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compra_adjuntos: {
+        Row: {
+          compra_id: string
+          creado_en: string
+          id: string
+          mime: string | null
+          nombre: string
+          ruta: string
+          subido_por: string | null
+          tamano_bytes: number | null
+          tipo: string
+        }
+        Insert: {
+          compra_id: string
+          creado_en?: string
+          id?: string
+          mime?: string | null
+          nombre: string
+          ruta: string
+          subido_por?: string | null
+          tamano_bytes?: number | null
+          tipo?: string
+        }
+        Update: {
+          compra_id?: string
+          creado_en?: string
+          id?: string
+          mime?: string | null
+          nombre?: string
+          ruta?: string
+          subido_por?: string | null
+          tamano_bytes?: number | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compra_adjuntos_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_adjuntos_subido_por_fkey"
+            columns: ["subido_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
@@ -4705,8 +4906,16 @@ export type Database = {
       emitir_guia: { Args: { p_id: string }; Returns: Json }
       es_gerencia: { Args: never; Returns: boolean }
       escribe_una_funcion: { Args: never; Returns: boolean }
+      frecuencia_de_venta: {
+        Args: { p_productos: string[] }
+        Returns: {
+          producto_id: string
+          veces: number
+        }[]
+      }
       generar_alertas: { Args: never; Returns: Json }
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      guardar_analisis: { Args: { p_datos: Json }; Returns: Json }
       guia_esta_facturada: { Args: { p_guia: string }; Returns: boolean }
       historial_precio_producto: {
         Args: { p_cliente?: string; p_limit?: number; p_producto: string }

@@ -162,6 +162,8 @@ export interface EstadoCompra {
   observaciones: string;
   lineas: LineaCompraEditable[];
   proximaKey: number;
+  /** El análisis de importación del que sale esta compra, si sale de uno (098). */
+  analisisId?: string | null;
 }
 
 export type CampoCabecera =
@@ -657,6 +659,8 @@ export function aPayload(estado: EstadoCompra) {
     tracking: esImportacion ? estado.tracking.trim() || null : null,
     courier: esImportacion ? estado.courier.trim() || null : null,
     observaciones: estado.observaciones.trim() || null,
+    // 098: para marcar el análisis como comprado. La base no lo lee.
+    analisis_id: estado.analisisId ?? null,
     items: estado.lineas.map((l) => ({
       producto_id: l.productoId,
       cantidad: l.cantidad,
@@ -714,6 +718,20 @@ export interface PlantillaCompra {
    * referencia y no se rellenan.
    */
   entera: boolean;
+  /**
+   * De dónde viene: de otra compra («volver a comprar») o de un análisis de
+   * importación (098). Cambia lo que dice el aviso de arriba.
+   */
+  origen?: "compra" | "analisis";
+  /**
+   * Costos ESCRITOS, por producto: el FOB del análisis. Entran como decididos
+   * (no propuestos) para que el «último costo de este proveedor» no los pise.
+   */
+  costos?: Readonly<Record<string, number>>;
+  /** Pesos por unidad, por producto. */
+  pesos?: Readonly<Record<string, number>>;
+  /** El análisis del que sale, para marcarlo como comprado al guardar. */
+  analisisId?: string;
 }
 
 /**
@@ -748,6 +766,25 @@ export function aplicarPlantilla(estado: EstadoCompra, p: PlantillaCompra): Esta
       proximoGasto: e.proximoGasto + conDinero.length,
     };
   }
+
+  // Del análisis (098): el FOB como costo decidido y el peso de cada uno.
+  if (p.costos || p.pesos) {
+    e = {
+      ...e,
+      lineas: e.lineas.map((l) => {
+        const costo = p.costos?.[l.productoId];
+        const peso = p.pesos?.[l.productoId];
+        return {
+          ...l,
+          ...(costo !== undefined
+            ? { costoUnitario: costoValido(costo), costoPropuesto: false }
+            : {}),
+          ...(peso !== undefined && peso > 0 ? { pesoKg: Math.round(peso * 1e4) / 1e4 } : {}),
+        };
+      }),
+    };
+  }
+  if (p.analisisId) e = { ...e, analisisId: p.analisisId };
 
   return e;
 }

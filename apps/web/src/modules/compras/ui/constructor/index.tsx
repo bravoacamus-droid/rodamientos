@@ -344,7 +344,17 @@ export function ConstructorCompra({
         aquel envío. Guardar sin mirar sería registrar una compra con los
         números de otra.
       */}
-      {plantilla ? (
+      {plantilla?.origen === "analisis" ? (
+        // Desde el análisis de importación (098): lo decidido allí.
+        <div className="rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-3 text-sm">
+          <p className="font-medium">Registrando la compra del análisis {plantilla.numero}</p>
+          <p className="mt-1 text-[var(--fg-muted)]">
+            El proveedor, las cantidades que decidiste pedir, los precios FOB y los pesos vienen
+            del análisis. El courier es el envío de lo que pides, repartido por kilo. Pon el
+            número de la proforma confirmada, y el desaduanaje cuando llegue.
+          </p>
+        </div>
+      ) : plantilla ? (
         <div className="rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-3 text-sm">
           <p className="font-medium">
             Volviendo a comprar lo de la {plantilla.numero}

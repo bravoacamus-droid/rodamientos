@@ -5,7 +5,9 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresParaPedir } from "@/modules/proveedores";
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
+import { analisisPorId } from "../api/analisis";
 import { couriersUsados, detalleCompra } from "../api/consultas";
+import { calcular } from "../dominio/analisis";
 import type { PlantillaCompra } from "../dominio/constructor";
 import { modalidadDe } from "../dominio/gastos";
 
@@ -74,14 +76,79 @@ export default async function PaginaNuevaCompra({
     desdeId && /^[0-9a-f-]{36}$/i.test(desdeId) ? await detalleCompra(desdeId) : null;
   const compraAnterior = anterior?.ok ? anterior.datos : null;
 
+  /*
+    DESDE UN ANÁLISIS DE IMPORTACIÓN (098, §AQ): `?analisis=<id>`.
+
+    Willy, 01/10: primero el análisis para definir el pedido final, *«y aparte
+    también debe existir un módulo para registrar el pedido, una vez que se
+    confirma»*. Esto es ese paso: el proveedor, las cantidades que decidió,
+    el FOB como costo, los pesos, y el envío de lo pedido como «Courier» por
+    kilo. Las líneas que no están en el catálogo no pueden ir: la pantalla del
+    análisis ya lo avisa antes del botón.
+
+    Un análisis ya comprado no vuelve a convertirse: se ignora.
+  */
+  const analisisId = Array.isArray(sp.analisis) ? sp.analisis[0] : sp.analisis;
+  const deAnalisis =
+    analisisId && /^[0-9a-f-]{36}$/i.test(analisisId) ? await analisisPorId(analisisId) : null;
+  const analisis =
+    deAnalisis?.ok && deAnalisis.datos?.estado === "borrador" ? deAnalisis.datos : null;
+  const lineasAnalisis = analisis
+    ? analisis.items.filter((i) => i.producto_id && i.cantidad_pedido > 0)
+    : [];
+
   const precarga = await precargaDeCompra(
     items ??
-      (compraAnterior
-        ? compraAnterior.lineas.map((l) => `${l.producto_id}:${l.cantidad}`).join(",")
-        : undefined),
+      (analisis
+        ? lineasAnalisis.map((i) => `${i.producto_id}:${i.cantidad_pedido}`).join(",")
+        : compraAnterior
+          ? compraAnterior.lineas.map((l) => `${l.producto_id}:${l.cantidad}`).join(",")
+          : undefined),
   );
 
-  const plantilla: PlantillaCompra | null = compraAnterior
+  const plantillaAnalisis: PlantillaCompra | null = analisis
+    ? (() => {
+        // El $/kg es el de TODA la carga cotizada; el envío es el de lo que
+        // va en esta compra.
+        const c = calcular({
+          lineas: analisis.items.map((i, n) => ({
+            key: `a${n}`,
+            productoId: i.producto_id,
+            codigo: i.codigo,
+            marca: i.marca ?? "",
+            descripcion: "",
+            cantidadRef: i.cantidad_ref,
+            cantidadPedido: i.cantidad_pedido,
+            precioFob: i.precio_fob,
+            pesoKg: i.peso_kg,
+            precioMercado: i.precio_mercado,
+            proveedorMercado: "",
+            frecuencia: null,
+          })),
+          costoEnvio: analisis.costo_envio,
+          pesoDeclarado: 0,
+        });
+        const envio =
+          Math.round(lineasAnalisis.reduce((a, i) => a + i.cantidad_pedido * i.peso_kg, 0) * c.porKg * 100) /
+          100;
+        return {
+          numero: analisis.numero,
+          origen: "analisis" as const,
+          modalidad: "aerea" as const,
+          courier: null,
+          gastos: envio > 0 ? [{ concepto: "Courier", monto: envio, reparto: "peso" as const }] : [],
+          entera: true,
+          // Una proforma de fuera no lleva IGV peruano.
+          afectoIgv: false,
+          moneda: "USD" as const,
+          costos: Object.fromEntries(lineasAnalisis.map((i) => [i.producto_id!, i.precio_fob])),
+          pesos: Object.fromEntries(lineasAnalisis.map((i) => [i.producto_id!, i.peso_kg])),
+          analisisId: analisis.id,
+        };
+      })()
+    : null;
+
+  const plantilla: PlantillaCompra | null = plantillaAnalisis ?? (compraAnterior
     ? {
         numero: compraAnterior.numero,
         modalidad: modalidadDe(compraAnterior.tipo, compraAnterior.via_importacion ?? "aerea"),
@@ -100,7 +167,7 @@ export default async function PaginaNuevaCompra({
         afectoIgv: !(compraAnterior.subtotal > 0 && compraAnterior.igv === 0),
         moneda: compraAnterior.moneda,
       }
-    : null;
+    : null);
 
   // Cuando la compra viene de la bandeja, dos cosas que el sistema ya sabe
   // y que antes había que averiguar a mano: a QUIÉN comprárselo y para
@@ -125,6 +192,7 @@ export default async function PaginaNuevaCompra({
   // Al volver a comprar, el proveedor de aquella compra si no se pide otro.
   const pedido =
     (Array.isArray(sp.proveedor) ? sp.proveedor[0] : sp.proveedor) ??
+    analisis?.proveedor_id ??
     compraAnterior?.proveedor_id;
   const aPedir = [...new Set([...mejores.map((m) => m.id), ...(pedido ? [pedido] : [])])];
   const fichas = await proveedoresPorId(aPedir);

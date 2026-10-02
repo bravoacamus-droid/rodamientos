@@ -605,3 +605,34 @@ describe("peso y reparto (097)", () => {
     expect(e.gastos.at(-1)!.reparto).toBe("valor");
   });
 });
+
+describe("desde un análisis de importación (098)", () => {
+  const plantilla: PlantillaCompra = {
+    numero: "ANA-26-00001",
+    origen: "analisis",
+    modalidad: "aerea",
+    courier: null,
+    gastos: [{ concepto: "Courier", monto: 106.39, reparto: "peso" }],
+    entera: true,
+    afectoIgv: false,
+    moneda: "USD",
+    costos: { [P6205.id]: 9.432 },
+    pesos: { [P6205.id]: 1.73 },
+    analisisId: "44444444-4444-4444-8444-444444444444",
+  };
+
+  it("el FOB entra como costo DECIDIDO: el último costo del proveedor no lo pisa", () => {
+    let e = aplicarPlantilla(construir({ tipo: "agregar", producto: P6205, cantidad: 6 }), plantilla);
+    expect(e.lineas[0]).toMatchObject({ costoUnitario: 9.432, costoPropuesto: false, pesoKg: 1.73 });
+    e = reducir(e, { tipo: "costosDelProveedor", costos: { [P6205.id]: 12 } });
+    expect(e.lineas[0]!.costoUnitario).toBe(9.432);
+  });
+
+  it("viaja el análisis para marcarlo comprado, y el courier por kilo", () => {
+    const e = aplicarPlantilla(construir({ tipo: "agregar", producto: P6205, cantidad: 6 }), plantilla);
+    const p = aPayload(e);
+    expect(p.analisis_id).toBe("44444444-4444-4444-8444-444444444444");
+    expect(p.gastos).toEqual([{ concepto: "Courier", monto: 106.39, reparto: "peso" }]);
+    expect(p.afecto_igv).toBe(false);
+  });
+});

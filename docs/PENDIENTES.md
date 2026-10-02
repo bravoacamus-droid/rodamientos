@@ -4592,6 +4592,53 @@ de Defontana.
 
 ---
 
+## §AQ · 01/10 (reunión) — El Excel era el ANÁLISIS antes de comprar
+
+La reunión del 01/10 corrigió la lectura de §AP: el Excel no es la compra,
+es lo de antes. Willy: *«registro de compra… yo te he hablado de un análisis
+de compra… lo que yo digo que el sistema me haga es el análisis de compra, y
+me registre los precios que me están cotizando»*. Dos etapas:
+
+1. **Análisis** (nuevo, 098): con la proforma del proveedor de fuera —cantidad
+   a cotizar, FOB y el DHL de toda la carga— más los pesos que pone él, sale
+   el $/kg, el PU Lima, el margen contra su precio de mercado, y decide la
+   cantidad final *«en función del margen […] y de la frecuencia F»*.
+2. **Registro**: la compra que ya existía, con la proforma confirmada en PDF
+   (099).
+
+Lo de §AP (el flete por kilo en la compra, 097) sigue valiendo: es la misma
+cuenta cuando la compra se hace de verdad.
+
+### AQ.1 · Hecho el 02/10
+
+- [x] **Compras → Análisis de importación** (`/compras/analisis`, 098). Un
+      proveedor por análisis (*«el trato es con un solo proveedor»*); líneas
+      del catálogo o códigos que aún no están; la «f» propuesta con sus
+      facturas del último año; el último FOB que ese proveedor cotizó, como
+      historial (*«para no volver a pedir»*). Sus columnas con los colores de
+      su hoja: verde el mercado, amarillo lo que pide.
+- [x] **«Registrar la compra»** desde el análisis: proveedor, cantidades
+      finales, FOB como costo (no lo pisa el último costo del proveedor),
+      pesos, Courier por kilo, aérea y sin IGV. El análisis queda «comprado».
+- [x] **El PDF de la proforma en la compra** (099): «Documentos» en la ficha.
+- [x] Proveedor del extranjero y datos de SUNAT en el alta (78efe6e).
+
+Probado en pantalla con su proforma real (FT250730TA): $10.15/kg, PU Lima
+26.99 y 4.29, Courier $106.39 en la compra, el PDF subido y quitado. Datos de
+prueba borrados (ANA-26-00001 y la CMP-26-00009, anulada).
+
+### AQ.2 · Lo que queda
+
+- [ ] **Pegar desde Excel** la lista de la proforma: con 29 líneas, teclear
+      cada una es lo que más cuesta. Lo más útil que le falta.
+- [ ] Dar de alta en bloque los códigos que no están en el catálogo (de su
+      proforma real, 17 de 29): hoy hay que hacerlo uno a uno antes de comprar.
+- [ ] El desaduanaje estimado en el análisis (*«como 700, 800 soles»*): hoy
+      se dice que no está y se anota en la compra cuando llega.
+- [ ] Reunión de seguimiento con Willy (la pidió).
+
+---
+
 ## §AP · 01/10 — Su Excel de importación aérea, y lo que el ERP calcula mal
 
 Willy mandó `documentosrodamiento/analisis compra importacion aerea.xlsx` (un

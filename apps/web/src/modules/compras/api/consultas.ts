@@ -219,7 +219,8 @@ export async function detalleCompra(
            unidad_codigo, importe, peso_kg,
            productos(codigo, descripcion, unidad_codigo, peso_kg, marcas(nombre))
          ),
-         recepciones(id, numero, fecha)`,
+         recepciones(id, numero, fecha),
+         documentos:compra_adjuntos(id, tipo, nombre, creado_en)`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -232,6 +233,7 @@ export async function detalleCompra(
       perfiles: { nombre: string } | null;
       compra_items: ItemCrudo[] | null;
       recepciones: { id: string; numero: string; fecha: string }[] | null;
+      documentos: { id: string; tipo: string; nombre: string; creado_en: string }[] | null;
     };
 
     const lineas: LineaCompra[] = (c.compra_items ?? []).map((i) => ({
@@ -313,6 +315,15 @@ export async function detalleCompra(
         creado_en: String(c.creado_en),
         lineas,
         recepciones: c.recepciones ?? [],
+        // 099: la proforma confirmada y demás, de la más nueva a la más vieja.
+        documentos: [...(c.documentos ?? [])]
+          .sort((a, b) => b.creado_en.localeCompare(a.creado_en))
+          .map((d) => ({
+            id: d.id,
+            tipo: (d.tipo === "factura" || d.tipo === "otro" ? d.tipo : "proforma") as "proforma" | "factura" | "otro",
+            nombre: d.nombre,
+            creado_en: d.creado_en,
+          })),
       },
     };
   } catch (e) {

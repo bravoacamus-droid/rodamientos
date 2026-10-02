@@ -92,6 +92,8 @@ const esquema = z.object({
     )
     .max(20, "Son demasiados gastos para una compra.")
     .default([]),
+  // 098: el análisis de importación del que sale, para marcarlo comprado.
+  analisis_id: z.string().uuid().nullable().default(null),
   tracking: z.string().max(80).nullable(),
   courier: z.string().max(60).nullable(),
   observaciones: z.string().max(2000).nullable(),
@@ -174,6 +176,21 @@ export async function registrarCompra(
       igv: number;
       total: number;
     };
+
+    /*
+      El análisis del que sale queda «comprado» y enlazado (098). Solo si
+      seguía en borrador: dos compras desde el mismo análisis no lo reescriben.
+      Si falla, la compra ya está hecha y es lo que importa: el análisis se
+      queda en borrador, que es mentira menor que perder la compra.
+    */
+    if (datos.analisis_id) {
+      await supabase
+        .from("analisis_importacion")
+        .update({ estado: "comprado", compra_id: r.id, actualizado_en: new Date().toISOString() })
+        .eq("id", datos.analisis_id)
+        .eq("estado", "borrador");
+      revalidatePath("/compras/analisis");
+    }
 
     revalidatePath("/compras");
     // La recepción precarga las compras pendientes: acaba de haber una más.

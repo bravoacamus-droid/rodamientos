@@ -210,6 +210,13 @@ export const NAVEGACION: readonly GrupoNav[] = [
         que se hace ahí.
       */
       { etiqueta: "Pedir precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
+      /*
+        Lo que Willy hace en Excel antes de comprar fuera (098, §AQ): la
+        proforma, el $/kg, el precio puesto en Lima contra el mercado, y cuánto
+        pedir. Junto a «Pedir precios» porque es su equivalente de importación:
+        decidir qué comprar antes de registrar la compra.
+      */
+      { etiqueta: "Análisis de importación", ruta: "/compras/analisis", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
       { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
       /*
         Proveedores vive aquí desde el 11/09, y no en Catálogo.

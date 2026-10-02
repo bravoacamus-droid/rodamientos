@@ -12,6 +12,8 @@ export { default as PaginaListos } from "./ui/pagina-listos";
 export { default as PaginaPedirPrecio } from "./ui/pedir-precio/pagina";
 export { default as PaginaPrecios } from "./ui/precios/pagina";
 export { default as PaginaComparativa } from "./ui/precios/pagina-detalle";
+export { default as PaginaAnalisis } from "./ui/analisis/pagina";
+export { default as PaginaConstructorAnalisis } from "./ui/analisis/pagina-constructor";
 
 // El comparador. Se publica la cuenta y no la pantalla: el tablero va a
 // querer «cuántas consultas están esperando respuesta», y la ficha de

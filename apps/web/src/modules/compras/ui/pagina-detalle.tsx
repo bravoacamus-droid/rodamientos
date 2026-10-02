@@ -7,6 +7,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { detalleCompra } from "../api/consultas";
 import { quienEsperaEstos } from "../api/por-comprar";
 import { AnularCompra } from "./anular";
+import { DocumentosCompra } from "./documentos";
 import { GastosFicha } from "./gastos-ficha";
 import { ParaQuienEs } from "./para-quien";
 import { ETIQUETA_MODALIDAD, costeoEstimado } from "../dominio/gastos";
@@ -436,6 +437,13 @@ export default async function PaginaDetalleCompra({
               </p>
             ) : null}
           </section>
+
+          {/* La proforma confirmada, en PDF (099, §AQ). */}
+          <DocumentosCompra
+            compraId={c.id}
+            documentos={c.documentos}
+            puedeTocar={puedeAnular && c.estado !== "anulada"}
+          />
 
           <section className="card p-4">
             <h2 className="mb-1 text-sm font-semibold">Recepciones</h2>

@@ -124,6 +124,8 @@ export interface CompraDetalle {
   lineas: LineaCompra[];
   /** Recepciones que han consumido esta compra. */
   recepciones: { id: string; numero: string; fecha: string }[];
+  /** Los documentos subidos: la proforma confirmada, la factura… (099). */
+  documentos: { id: string; tipo: "proforma" | "factura" | "otro"; nombre: string; creado_en: string }[];
 }
 
 /** Filtros del listado. Viajan en los search params, así que todo es texto. */
