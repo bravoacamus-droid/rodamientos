@@ -4739,10 +4739,33 @@ parte —$139.68 de los $217.14—, y la K del pedido no carga el trámite enter
 Es lo mismo que ya pasaba con el DHL en su hoja, y está preguntado (si al pedir
 menos el DHL cambia).
 
+### AQ.1f · 02/10 — dar de alta los que faltan, todos a la vez
+
+Luis: *«si tiene 5 productos, ¿cómo se puede dar de alta 5 productos al mismo
+tiempo?»*. Antes había un enlace a «Nuevo producto» que **sacaba de la
+pantalla** —y con el análisis sin guardar, se perdía lo escrito—.
+
+«Darlos de alta aquí (N)» abre un diálogo: familia, sub-familia y unidad
+**una vez para todos**; por fila, código, marca —elegida sola si la de la
+proforma ya existe— y descripción, propuesta como las del catálogo
+(«6311-2Z/C3 RODAMIENTO RIGIDO DE BOLAS»). Cada alta pasa por
+`crearProductoRapido`, la de cotizaciones: un solo camino al maestro. La fila
+queda enlazada en el análisis sin salir. Un código repetido falla en su fila y
+no tumba a las demás.
+
+Probado en pantalla con ZZ-PRUEBA-A1 (SKF, elegida sola) y ZZ-PRUEBA-A2 (INA):
+los dos creados y enlazados; **borrados después** (sin stock, movimientos ni
+referencias).
+
+**El error «Jest worker encountered 2 child process exceptions»** que vio Luis
+no era de esto: el servidor de desarrollo llevaba desde las 09:17 con 5 GB de
+memoria y ya no respondía. Se reinició. Si vuelve a salir tras horas de
+cambios, es eso: parar y volver a `pnpm dev`.
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).
-- [ ] Dar de alta en bloque los códigos que no están en el catálogo (de su
+- [x] ~~Dar de alta en bloque los códigos que no están en el catálogo~~ (AQ.1f) (de su
       proforma real, 17 de 29): hoy hay que hacerlo uno a uno antes de comprar.
 - [ ] El desaduanaje estimado en el análisis (*«como 700, 800 soles»*): hoy
       se dice que no está y se anota en la compra cuando llega.

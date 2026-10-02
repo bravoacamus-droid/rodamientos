@@ -24,6 +24,7 @@ import {
   type LineaCalculada,
 } from "../../dominio/analisis";
 import { BuscadorCompra } from "../constructor/buscador";
+import { AltaEnBloque } from "./alta-en-bloque";
 
 const dolar = (n: number, dec = 2) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
@@ -454,14 +455,19 @@ export function ConstructorAnalisis({
               cantidades que pides, los precios FOB, los pesos y el envío por kilo.
             </p>
             {sinCatalogo.length > 0 ? (
-              <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
-                <strong>Estos no están en el catálogo</strong> y no pueden ir en la compra hasta que
-                los des de alta:{" "}
-                <span className="font-mono">{sinCatalogo.map((l) => l.codigo).join(" · ")}</span>.{" "}
-                <Link href="/productos/nuevo" className="font-medium underline">
-                  Dar de alta un producto
-                </Link>
-              </p>
+              <div className="flex flex-col gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm sm:flex-row sm:items-center">
+                <p className="min-w-0 flex-1">
+                  <strong>Estos no están en el catálogo</strong> y no pueden ir en la compra hasta que
+                  los des de alta:{" "}
+                  <span className="font-mono">{sinCatalogo.map((l) => l.codigo).join(" · ")}</span>.
+                </p>
+                {/* Aquí mismo y todos a la vez: el enlace a «Nuevo producto»
+                    sacaba de la pantalla y, sin guardar, se perdía lo escrito. */}
+                <AltaEnBloque
+                  lineas={estado.lineas.filter((l) => !enBlanco(l) && !l.productoId)}
+                  onCreado={(key, producto) => despachar({ tipo: "enlazar", key, producto })}
+                />
+              </div>
             ) : null}
             {bloqueos.length > 0 ? (
               <p className="text-sm text-[var(--fg-muted)]">{bloqueos.join(" ")}</p>
