@@ -13,12 +13,14 @@ import {
   Textarea,
   THead,
   formatearFecha,
+  toast,
 } from "@rodatech/ui";
 
 import { costosDelProveedor } from "../../acciones/costos";
 import { quienEsperaAhora } from "../../acciones/esperando";
 import { avisosDeCantidad, type QuienEsperaProducto } from "../../dominio/listos";
 import { registrarCompra, type ResultadoCompra } from "../../acciones/registrar";
+import { subirDocumentoCompra } from "../../acciones/adjuntos";
 import {
   aPayload,
   aplicarPlantilla,
@@ -36,6 +38,7 @@ import { BuscadorCompra } from "./buscador";
 import { FilaCompra, TarjetaCompra, type ExtrasLinea } from "./linea";
 import { BloqueMoneda } from "./moneda";
 import { GastosDeCompra } from "./gastos";
+import { FacturaArchivo } from "./factura-archivo";
 import {
   COURIERS_DE_SIEMPRE,
   ETIQUETA_MODALIDAD,
@@ -154,10 +157,33 @@ export function ConstructorCompra({
   >({});
   const [, cargarCostos] = useTransition();
 
+  // La factura del proveedor (PDF o foto), hasta que exista la compra.
+  const [factura, setFactura] = useState<File | null>(null);
+
   const [resultado, guardar, guardando] = useActionState<ResultadoCompra | null, FormData>(
     async (previo, formData) => {
       const r = await registrarCompra(previo, formData);
-      if (r.ok) router.push(`/compras/${r.id}`);
+      if (r.ok) {
+        /*
+          La factura, a la compra recién creada. Si falla, la compra YA está
+          guardada: se dice, y se sube desde la ficha, que tiene su botón. No
+          se deshace una compra por un archivo.
+        */
+        if (factura) {
+          const datos = new FormData();
+          datos.set("compra_id", r.id);
+          datos.set("tipo", "factura");
+          datos.set("archivo", factura);
+          const subida = await subirDocumentoCompra(datos).catch(() => ({
+            ok: false as const,
+            error: "No se pudo enviar el archivo.",
+          }));
+          if (!subida.ok) {
+            toast.error(`La compra se guardó, pero la factura no se subió: ${subida.error} Súbela desde la ficha.`);
+          }
+        }
+        router.push(`/compras/${r.id}`);
+      }
       return r;
     },
     null,
@@ -495,7 +521,7 @@ export function ConstructorCompra({
 
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Factura del proveedor</span>
+                <span className="text-sm font-medium">N.° de la factura del proveedor</span>
                 <Input
                   value={estado.documentoProveedor}
                   onChange={(e) =>
@@ -508,6 +534,8 @@ export function ConstructorCompra({
                   placeholder="F001-1234"
                 />
               </label>
+
+              <FacturaArchivo archivo={factura} onCambiar={setFactura} />
 
               {/*
                 Aquí iba «Llega el», y se quita.

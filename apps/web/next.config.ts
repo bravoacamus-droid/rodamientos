@@ -92,6 +92,14 @@ const nextConfig: NextConfig = {
 
   experimental: {
     /**
+     * El tope de lo que se manda a una Server Action. El de serie es 1 MB, y
+     * con él NO se podía subir una foto de celular (2-5 MB) a una compra ni a
+     * un proveedor: los documentos aceptan hasta 10 MB (099) y el 1 MB los
+     * cortaba antes de llegar. Visto el 02/10 al poner la factura en el
+     * registro de compra. 11 MB: los 10 del archivo y el resto del formulario.
+     */
+    serverActions: { bodySizeLimit: "11mb" },
+    /**
      * `@rodatech/ui` es lo importante de esta lista: sin él, importar tres
      * componentes desde el barrel arrastra Radix, cmdk, TanStack Table y
      * react-day-picker enteros. Con él, el login pasó de 280 kB a lo que
