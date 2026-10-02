@@ -13,6 +13,7 @@ import { AQuienPreguntar } from "./a-quien-preguntar";
 import { ComprasAnteriores } from "./compras-anteriores";
 import { QuienLoVende } from "./quien-lo-vende";
 import { Volver } from "@/componentes/volver";
+import { UNIDADES, abreviaturaUnidad } from "@rodatech/config";
 
 /**
  * Ficha de un producto.
@@ -78,16 +79,19 @@ export default async function PaginaDetalleProducto({
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{p.descripcion}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* En el teléfono la fila ocupa el ancho entero y el botón de la
+            historia se estira: con su texto largo se partía en dos líneas
+            dentro de 36 px de alto (revisión por módulos del 02/10). */}
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           {/* Va antes que «Editar» y con el estilo destacado a propósito:
               responde la pregunta que Willy hace a diario —«a quién se lo
               compré y a cuánto lo cocticé»— y hasta ahora se contestaba
               rebuscando en WhatsApp (26/08, 34:06). */}
           <Link
             href={`/productos/${p.id}/trazabilidad`}
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            className="inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 sm:flex-none"
           >
-            Ver su historia (compras y ventas)
+            Ver compras y ventas
           </Link>
           {puedeEditar ? (
             <Link
@@ -105,6 +109,7 @@ export default async function PaginaDetalleProducto({
             archivado={p.archivado}
             puedeEditar={puedeEditar}
             puedeAjustarStock={puedeAjustarStock}
+            enFicha
           />
         </div>
       </header>
@@ -119,7 +124,8 @@ export default async function PaginaDetalleProducto({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tarjeta
           etiqueta="Stock"
-          valor={`${p.stock.toLocaleString("es-PE")} ${p.unidad}`}
+          // «und» y no «NIU»: el código de SUNAT en pantalla es jerga.
+          valor={`${p.stock.toLocaleString("es-PE")} ${abreviaturaUnidad(p.unidad)}`}
           tono={p.stock <= 0 ? "malo" : bajoMinimo ? "aviso" : "ok"}
           pie={p.stock_minimo > 0 ? `mínimo ${p.stock_minimo}` : "sin mínimo definido"}
         />
@@ -128,8 +134,10 @@ export default async function PaginaDetalleProducto({
           valor={<Moneda valor={p.precio_venta} />}
           pie={
             [
-              p.precio_minimo > 0 ? `mínimo ${p.precio_minimo.toFixed(2)}` : "sin mínimo",
-              p.precio_mercado > 0 ? `mercado ${p.precio_mercado.toFixed(2)}` : null,
+              // Con su signo pegado por un espacio que no se parte: «mínimo
+              // 40.23» a secas no decía en qué moneda (revisión del 02/10).
+              p.precio_minimo > 0 ? `mínimo $ ${p.precio_minimo.toFixed(2)}` : "sin mínimo",
+              p.precio_mercado > 0 ? `mercado $ ${p.precio_mercado.toFixed(2)}` : null,
             ]
               .filter(Boolean)
               .join(" · ")
@@ -138,7 +146,7 @@ export default async function PaginaDetalleProducto({
         <Tarjeta
           etiqueta="Costo promedio"
           valor={<Moneda valor={p.costo_promedio} enfasis="suave" />}
-          pie={p.ultimo_costo > 0 ? `última compra ${p.ultimo_costo.toFixed(2)}` : "sin compras registradas"}
+          pie={p.ultimo_costo > 0 ? `última compra $ ${p.ultimo_costo.toFixed(2)}` : "sin compras registradas"}
         />
         <Tarjeta
           etiqueta="Margen"
@@ -152,15 +160,28 @@ export default async function PaginaDetalleProducto({
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* `grid-cols-1` explícito: sin él la columna implícita se mide por su
+          contenido, y las tablas de proveedores la estiraban más allá del
+          teléfono — las tarjetas salían cortadas por la derecha, a 390 y a
+          820 (revisión por módulos del 02/10). */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ------------------------------------------------ Clasificación */}
         <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Clasificación</h2>
+          <h2 className="mb-3 text-base font-semibold">Clasificación</h2>
           <dl className="flex flex-col gap-2 text-sm">
             <Dato etiqueta="Familia" valor={p.familia} />
             <Dato etiqueta="Sub-familia" valor={p.subfamilia} />
-            <Dato etiqueta="Descripción (tipo)" valor={p.tipo ?? "—"} />
-            <Dato etiqueta="Unidad" valor={p.unidad} />
+            {/* Sin tipo no se enseña la fila: un «—» bajo «Descripción
+                (tipo)» parecía un dato que faltaba por llenar, y la
+                descripción ya está en la cabecera. */}
+            {p.tipo ? <Dato etiqueta="Tipo" valor={p.tipo} /> : null}
+            <Dato
+              etiqueta="Unidad"
+              valor={
+                UNIDADES.find((u) => u.codigo === p.unidad)?.etiqueta ??
+                abreviaturaUnidad(p.unidad)
+              }
+            />
             <Dato etiqueta="Código alterno" valor={p.codigo_fabricante ?? "—"} />
             <Dato etiqueta="Ubicación" valor={p.ubicacion ?? "—"} />
             <Dato
@@ -173,7 +194,7 @@ export default async function PaginaDetalleProducto({
 
         {/* -------------------------------------------------- Equivalentes */}
         <section className="card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Equivalentes de otras marcas</h2>
+          <h2 className="mb-1 text-base font-semibold">Equivalentes de otras marcas</h2>
           {p.designacion_base ? (
             <p className="mb-3 text-sm text-[var(--fg-muted)]">
               Medida detectada en el código: <strong>{p.designacion_base}</strong>. Es
@@ -181,7 +202,8 @@ export default async function PaginaDetalleProducto({
             </p>
           ) : (
             <p className="mb-3 text-sm text-[var(--fg-muted)]">
-              De este código no se pudo deducir una medida ISO.
+              De este código no se pudo sacar la medida, así que sus
+              equivalentes no salen solos.
             </p>
           )}
 
@@ -273,7 +295,7 @@ function Tarjeta({
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div className="flex gap-3">
-      <dt className="w-40 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
+      <dt className="w-36 shrink-0 text-[var(--fg-muted)] sm:w-40">{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
   );

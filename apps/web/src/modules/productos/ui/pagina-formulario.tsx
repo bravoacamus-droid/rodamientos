@@ -26,7 +26,7 @@ export default async function PaginaFormularioProducto({
     return (
       <div className="p-6">
         <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          Tu rol no puede tocar el maestro de productos. Lo mantienen Compras o
+          Tu usuario no puede crear ni cambiar productos. Lo mantienen Compras o
           Gerencia.
         </div>
       </div>
@@ -64,16 +64,24 @@ export default async function PaginaFormularioProducto({
   const p = producto?.ok ? producto.datos : undefined;
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    // Sin `p-6`: el marco del ERP ya pone el margen, y sumado al suyo el
+    // formulario quedaba 24 px más estrecho que la ficha en el teléfono.
+    // Al editar, «Volver» lleva a la ficha de la que se vino, no al listado
+    // (revisión por módulos del 02/10).
+    <div className="flex flex-col gap-5">
       <header>
-        <Volver href="/productos">Volver a productos</Volver>
+        {p ? (
+          <Volver href={`/productos/${p.id}`}>Volver al producto</Volver>
+        ) : (
+          <Volver href="/productos">Volver a productos</Volver>
+        )}
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {p ? p.codigo : "Nuevo producto"}
+          {p ? `Editar ${p.codigo}` : "Nuevo producto"}
         </h1>
         <p className="text-sm text-[var(--fg-muted)]">
           {p
             ? "Los cambios de precio afectan a las cotizaciones NUEVAS; las ya emitidas conservan lo que se pactó."
-            : "El alta va por el maestro, no desde la cotización: así el catálogo no se llena de duplicados."}
+            : "Los productos se crean aquí y no desde la cotización: así el catálogo no se llena de repetidos."}
         </p>
         {p?.designacion_base ? (
           <p className="mt-1 text-sm text-[var(--fg-muted)]">

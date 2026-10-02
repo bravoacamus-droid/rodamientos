@@ -26,7 +26,7 @@ export function QuienLoVende({
 }) {
   return (
     <section className="card p-4">
-      <h2 className="mb-1 text-sm font-semibold">Quién lo vende</h2>
+      <h2 className="mb-1 text-base font-semibold">Quién lo vende</h2>
 
       {proveedores.length === 0 ? (
         <p className="text-sm text-[var(--fg-muted)]">

@@ -22,7 +22,7 @@ import {
   type ProductoBase,
   type Sustituto,
 } from "../dominio/tipos";
-import { BotonDeclarar, BotonQuitar } from "./acciones";
+import { BotonDeclarar, BotonQuitar, DeclararOtro } from "./acciones";
 import { SelectorProducto } from "./selector";
 
 interface Props {
@@ -80,11 +80,26 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
       </section>
 
       {productoId === null ? (
-        <section className="card p-4">
-          <EstadoVacio
-            titulo="Busca un producto para empezar"
-            descripcion="Se puede buscar por código, por código de fabricante, por marca o por descripción."
-          />
+        // El estado vacío dice para qué sirve la pantalla y cómo se usa: con
+        // cero equivalencias marcadas, «busca un producto» a secas no
+        // explicaba qué iba a pasar después (revisión por módulos del 02/10).
+        <section className="card p-4 sm:p-6">
+          <h2 className="text-base font-semibold">Cómo se usa</h2>
+          <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm">
+            <li>
+              Busca arriba el producto que te piden, por código, marca o
+              descripción.
+            </li>
+            <li>
+              Salen los de otras marcas con la <strong>misma medida</strong>,
+              con su precio y su stock.
+            </li>
+            <li>
+              Si sabes que otro sirve y no sale, búscalo allí mismo y pulsa{" "}
+              <strong>Marcar como equivalente</strong>. Desde entonces saldrá
+              el primero, aquí y al cotizar.
+            </li>
+          </ol>
         </section>
       ) : (
         <Suspense key={productoId} fallback={<Skeleton className="h-96 w-full" />}>
@@ -111,8 +126,8 @@ async function Contador() {
   return (
     <p className="mt-3 text-sm text-[var(--fg-subtle)]">
       {r.datos.pares === 0
-        ? "Todavía no hay ninguna equivalencia declarada: lo que salga abajo será todo deducido del código."
-        : `${r.datos.pares} ${r.datos.pares === 1 ? "equivalencia declarada" : "equivalencias declaradas"} sobre ${r.datos.productos} productos.`}
+        ? "Todavía no se ha marcado ninguna a mano: lo que salga será por la medida del código."
+        : `${r.datos.pares} ${r.datos.pares === 1 ? "equivalencia marcada" : "equivalencias marcadas"} a mano, entre ${r.datos.productos} productos.`}
     </p>
   );
 }
@@ -170,7 +185,7 @@ async function Cross({
             descripcion={
               base.datos.designacion_base
                 ? "No hay otro producto con esta medida, ni del mismo tipo en un precio parecido."
-                : "Este producto no tiene designación base, así que la búsqueda por medida no puede hacer nada. Se puede declarar una equivalencia a mano."
+                : "De este código no se pudo sacar la medida, así que no salen equivalentes solos. Si conoces uno, márcalo aquí abajo."
             }
           />
         </section>
@@ -207,9 +222,15 @@ async function Cross({
         ))
       )}
 
+      {puedeDeclarar ? (
+        <section className="card p-4">
+          <DeclararOtro productoId={productoId} />
+        </section>
+      ) : null}
+
       {declaradas.ok && declaradas.datos.length > 0 ? (
         <section className="card p-4">
-          <h2 className="mb-2 text-sm font-semibold">Declaradas a mano</h2>
+          <h2 className="mb-2 text-base font-semibold">Marcadas a mano</h2>
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {declaradas.datos.map((d) => (
               <li
@@ -275,7 +296,7 @@ function Cabecera({
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {producto.stock > 0 ? `${producto.stock} en stock` : "sin stock"} ·
           {" "}
-          $ {producto.precio_venta.toFixed(2)} · {contarPorOrigen(sustitutos)}
+          {`$ ${producto.precio_venta.toFixed(2)}`} · {contarPorOrigen(sustitutos)}
         </p>
       </div>
     </div>
@@ -297,10 +318,13 @@ function Fila({
 }) {
   return (
     <li
-      className="anim-entrada flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-soft)] px-4 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-2)]"
+      // En el teléfono, apilado: con el botón al lado, el texto se quedaba en
+      // 60 px y la descripción salía como «62…» y el resumen una palabra por
+      // renglón (revisión por módulos del 02/10).
+      className="anim-entrada flex flex-col gap-2 border-b border-[var(--border-soft)] px-4 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-2)] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
       style={{ animationDelay: `${Math.min(indice, 6) * 24}ms` }}
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 sm:flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2">
           <Link
             href={`/equivalencias?producto=${sustituto.id}`}
@@ -320,8 +344,10 @@ function Fila({
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
-        <span className="tabular text-sm">$ {sustituto.precio_venta.toFixed(2)}</span>
+      <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
+        <span className="whitespace-nowrap tabular text-sm font-medium">
+          {`$ ${sustituto.precio_venta.toFixed(2)}`}
+        </span>
         {puedeDeclarar && sustituto.origen !== "equivalencia" && !yaDeclarado ? (
           <BotonDeclarar
             productoId={productoId}

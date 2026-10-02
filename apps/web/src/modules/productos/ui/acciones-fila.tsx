@@ -45,6 +45,12 @@ export interface AccionesFilaProps {
   archivado: boolean;
   puedeEditar: boolean;
   puedeAjustarStock: boolean;
+  /**
+   * En la ficha ya se está viendo el producto y «Editar» es un botón al lado:
+   * repetirlos en el menú era decir lo mismo dos veces (revisión por módulos
+   * del 02/10).
+   */
+  enFicha?: boolean;
 }
 
 export function AccionesFila({
@@ -55,6 +61,7 @@ export function AccionesFila({
   archivado,
   puedeEditar,
   puedeAjustarStock,
+  enFicha = false,
 }: AccionesFilaProps) {
   const router = useRouter();
   const [dialogo, setDialogo] = React.useState<
@@ -66,17 +73,22 @@ export function AccionesFila({
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Acciones de ${codigo}`}
-          className="flex size-9 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+          // Con borde, como el menú de las piezas del kit: los tres puntos
+          // sueltos en gris no parecían un botón (revisión por módulos del
+          // 02/10).
+          className="flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onSelect={() => router.push(`/productos/${id}`)}>
-            Ver producto
-          </DropdownMenuItem>
+          {enFicha ? null : (
+            <DropdownMenuItem onSelect={() => router.push(`/productos/${id}`)}>
+              Ver producto
+            </DropdownMenuItem>
+          )}
 
-          {puedeEditar ? (
+          {puedeEditar && !enFicha ? (
             <DropdownMenuItem
               onSelect={() => router.push(`/productos/${id}/editar`)}
             >

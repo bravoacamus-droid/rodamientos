@@ -28,7 +28,7 @@ export async function ResumenProductos() {
       <KpiCard
         etiqueta="Productos activos"
         valor={r.total.toLocaleString("es-PE")}
-        detalle="sin contar archivados"
+        detalle="sin contar los dados de baja"
       />
       <KpiCard
         etiqueta="Sin stock"

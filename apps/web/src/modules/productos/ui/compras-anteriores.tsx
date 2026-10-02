@@ -79,7 +79,60 @@ export function ComprasAnteriores({
           <p className="mb-3 text-sm text-[var(--fg-muted)]">
             Lo que de verdad entró y se pagó, no lo que cotizaron.
           </p>
-          <div className="scroll-x">
+          {/* Siete columnas no caben en un teléfono ni en media pantalla: el
+              costo y «Volver a comprar» quedaban fuera, a la derecha. Por
+              debajo de @3xl, una tarjeta por compra (revisión por módulos del
+              02/10). */}
+          <div className="@container">
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @3xl:hidden">
+            {compras.map((c) => {
+              const v = variacion(c.costoUsd, c.costoAnteriorUsd);
+              const href = puedeComprar ? enlaceVolverAComprar(c, productoId) : null;
+              return (
+                <li key={c.recepcionId + c.documento} className="flex flex-col gap-1.5 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 font-medium">{c.proveedor ?? "—"}</span>
+                    <span className="shrink-0 whitespace-nowrap">
+                      <span className="tabular font-medium">{dolar(c.costoUsd)}</span>
+                      {v !== null ? (
+                        <span
+                          className={`ml-2 text-sm tabular ${
+                            v > 0 ? "text-[var(--danger)]" : "text-[var(--ok)]"
+                          }`}
+                        >
+                          {v > 0 ? "+" : ""}
+                          {v}%
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    <span className="tabular">{c.fecha}</span> · {c.cantidad}{" "}
+                    {c.cantidad === 1 ? "unidad" : "unidades"} · factura{" "}
+                    {c.facturaProveedor ?? "sin apuntar"}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/recepciones/${c.recepcionId}`}
+                      className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                    >
+                      Ver recepción {c.documento}
+                    </Link>
+                    {href ? (
+                      <Link
+                        href={href}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                      >
+                        <RotateCcw className="size-4" aria-hidden />
+                        Volver a comprar
+                      </Link>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="scroll-x hidden @3xl:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -157,6 +210,7 @@ export function ComprasAnteriores({
                 })}
               </tbody>
             </table>
+          </div>
           </div>
 
           {/*

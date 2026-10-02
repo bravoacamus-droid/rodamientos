@@ -6,7 +6,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Combobox } from "@rodatech/ui";
+import { Combobox, campoBase } from "@rodatech/ui";
+import { X } from "lucide-react";
 
 import type { Opcion } from "../dominio/tipos";
 
@@ -151,12 +152,15 @@ export function FiltrosProductosBarra({
       />
 
       {hayFiltros ? (
+        // Con borde: era un texto subrayado en gris, y en esta casa un botón
+        // tiene que parecer un botón (revisión por módulos del 02/10).
         <button
           type="button"
           onClick={() => iniciarTransicion(() => router.replace(ruta, { scroll: false }))}
-          className="h-9 rounded-sm px-2 text-sm text-[var(--fg-muted)] underline hover:text-[var(--fg)]"
+          className="inline-flex h-control-md items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
         >
-          Limpiar
+          <X className="size-4" aria-hidden />
+          Quitar filtros
         </button>
       ) : null}
 
@@ -167,7 +171,9 @@ export function FiltrosProductosBarra({
           onChange={(e) => aplicar("archivados", e.target.checked ? "1" : "")}
           className="size-4 accent-[var(--ring)]"
         />
-        Incluir archivados
+        {/* «De baja», como dice la etiqueta de cada producto: «archivados»
+            era otra palabra para lo mismo. */}
+        Incluir los dados de baja
       </label>
     </div>
   );
@@ -215,8 +221,11 @@ function BuscadorConRetardo({
         type="search"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
-        placeholder="Código, código de fabricante o descripción…"
-        className="h-9 w-full min-w-0 flex-1 rounded-sm border sm:min-w-64 border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--fg)] placeholder:text-[var(--fg-subtle)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+        // Más corto: el largo salía cortado en el teléfono («…descripció»).
+        // Y `campoBase`, que es el borde y la altura de los tres buscadores de
+        // al lado (revisión por módulos del 02/10).
+        placeholder="Buscar por código o descripción…"
+        className={`${campoBase} h-control-md min-w-0 flex-1 px-3 text-sm sm:min-w-64`}
       />
     </>
   );

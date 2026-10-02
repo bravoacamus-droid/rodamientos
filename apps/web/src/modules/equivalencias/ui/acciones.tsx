@@ -34,6 +34,7 @@ import {
   ETIQUETA_CLASE,
   type ClaseEquivalencia,
 } from "../dominio/tipos";
+import { SelectorProducto } from "./selector";
 
 function useAccion() {
   const router = useRouter();
@@ -80,8 +81,93 @@ export function BotonDeclarar({
   codigoEquivalente: string;
   claseSugerida?: ClaseEquivalencia;
 }) {
-  const { ocupado, correr } = useAccion();
   const [abierto, setAbierto] = React.useState(false);
+
+  return (
+    <DialogoDeclarar
+      abierto={abierto}
+      setAbierto={setAbierto}
+      productoId={productoId}
+      equivalenteId={equivalenteId}
+      codigoEquivalente={codigoEquivalente}
+      claseSugerida={claseSugerida}
+      disparador={
+        // «Marcar como equivalente» y no «Declarar», que es palabra nuestra
+        // (revisión por módulos del 02/10).
+        <Button variant="outline" size="sm">
+          <Link2 />
+          Marcar como equivalente
+        </Button>
+      }
+    />
+  );
+}
+
+/**
+ * Marcar como equivalente un producto CUALQUIERA del catálogo.
+ *
+ * Revisión por módulos del 02/10: la pantalla decía «se puede declarar una
+ * equivalencia a mano» cuando no salía ningún equivalente… y no había por
+ * dónde. Solo se podía marcar uno de los que la base ya proponía por la
+ * medida, que es justo el caso en que menos falta hace. `SelectorProducto`
+ * tenía su `onElegir` desde el principio y nadie se lo pasaba.
+ *
+ * Se busca el otro producto, y al elegirlo se abre el mismo diálogo de la
+ * fila.
+ */
+export function DeclararOtro({ productoId }: { productoId: string }) {
+  const [elegido, setElegido] = React.useState<{ id: string; codigo: string } | null>(null);
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium">
+        ¿Conoces uno que no sale aquí? Búscalo y márcalo como equivalente
+      </span>
+      <div className="max-w-xl">
+        <SelectorProducto
+          id="buscador-equivalente-otro"
+          excluir={productoId}
+          placeholder="Buscar el otro producto…"
+          onElegir={(p) => setElegido({ id: p.id, codigo: p.sku })}
+        />
+      </div>
+      {elegido ? (
+        <DialogoDeclarar
+          // Uno nuevo por producto elegido: la clase y la nota no se arrastran
+          // de un intento al siguiente.
+          key={elegido.id}
+          abierto
+          setAbierto={(v) => {
+            if (!v) setElegido(null);
+          }}
+          productoId={productoId}
+          equivalenteId={elegido.id}
+          codigoEquivalente={elegido.codigo}
+          claseSugerida="sustituto"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function DialogoDeclarar({
+  abierto,
+  setAbierto,
+  productoId,
+  equivalenteId,
+  codigoEquivalente,
+  claseSugerida,
+  disparador,
+}: {
+  abierto: boolean;
+  setAbierto: (v: boolean) => void;
+  productoId: string;
+  equivalenteId: string;
+  codigoEquivalente: string;
+  claseSugerida: ClaseEquivalencia;
+  disparador?: React.ReactNode;
+}) {
+  const { ocupado, correr } = useAccion();
   const [clase, setClase] = React.useState<ClaseEquivalencia>(claseSugerida);
   const [nota, setNota] = React.useState("");
 
@@ -91,20 +177,16 @@ export function BotonDeclarar({
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Link2 />
-          Declarar
-        </Button>
-      </DialogTrigger>
+      {disparador ? <DialogTrigger asChild>{disparador}</DialogTrigger> : null}
 
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Declarar equivalencia</DialogTitle>
+          <DialogTitle>Marcar como equivalente</DialogTitle>
+          {/* Sin «peldaño» ni «cascada», que eran palabras del código. */}
           <DialogDescription>
-            Con <span className="font-mono">{codigoEquivalente}</span>. Queda
-            guardada en los dos sentidos y sube al primer peldaño de la cascada:
-            desde ahora sale antes que cualquier coincidencia deducida.
+            Con <span className="font-mono">{codigoEquivalente}</span>. Vale en
+            los dos sentidos, y desde ahora sale el primero cuando se busquen
+            equivalentes de cualquiera de los dos.
           </DialogDescription>
         </DialogHeader>
         <DialogBody>
@@ -140,7 +222,7 @@ export function BotonDeclarar({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={() => setAbierto(false)}>
+          <Button variant="outline" size="sm" onClick={() => setAbierto(false)}>
             Cancelar
           </Button>
           <Button
@@ -161,7 +243,7 @@ export function BotonDeclarar({
               }
             }}
           >
-            {ocupado ? "Guardando…" : "Declarar"}
+            {ocupado ? "Guardando…" : "Guardar"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -180,8 +262,9 @@ export function BotonQuitar({
   const { ocupado, correr } = useAccion();
 
   return (
+    // Con borde: en «ghost» era un texto suelto junto a la fecha (02/10).
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={ocupado}
       title="Quitar la equivalencia"

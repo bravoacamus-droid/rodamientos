@@ -28,6 +28,9 @@ import {
   THead,
   toast,
 } from "@rodatech/ui";
+import { abreviaturaUnidad } from "@rodatech/config";
+
+import { Volver } from "@/componentes/volver";
 
 /*
   Por RUTA y no desde `@/modules/cotizaciones`.
@@ -521,7 +524,10 @@ export function FormularioKit({
       {/* En el modal el título lo pone el propio diálogo. */}
       {enModal ? null : (
         <header>
-          <h1 className="text-xl font-semibold">
+          {/* La ficha de un kit ES este formulario, y no tenía camino de
+              vuelta a la lista de kits (revisión por módulos del 02/10). */}
+          <Volver href="/productos/kits">Volver a kits</Volver>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
             {kit ? `Editar ${kit.codigo}` : "Nuevo kit"}
           </h1>
           <p className="text-sm text-[var(--fg-muted)]">
@@ -663,11 +669,18 @@ export function FormularioKit({
                     {menuDe(l)}
                   </div>
 
+                  {/* `justify-between` en cada etiqueta: con el descuento son
+                      tres columnas y «Cantidad (und)» ocupa dos renglones, así
+                      que su caja bajaba y no cuadraba con las otras dos
+                      (revisión por módulos del 02/10). */}
                   <div
                     className={`mt-3 grid gap-3 ${conDescuento ? "grid-cols-3" : "grid-cols-2"}`}
                   >
-                    <label className="flex min-w-0 flex-col gap-1">
-                      <span className="text-sm font-medium">Cant. ({l.unidad})</span>
+                    <label className="flex min-w-0 flex-col justify-between gap-1">
+                      {/* «und» y no «NIU», que es el código de SUNAT. */}
+                      <span className="text-sm font-medium">
+                        Cantidad ({abreviaturaUnidad(l.unidad)})
+                      </span>
                       <Input
                         type="number"
                         inputMode="decimal"
@@ -680,7 +693,7 @@ export function FormularioKit({
                         className="text-right tabular"
                       />
                     </label>
-                    <label className="flex min-w-0 flex-col gap-1">
+                    <label className="flex min-w-0 flex-col justify-between gap-1">
                       <span className="text-sm font-medium">Valor unit.</span>
                       <Input
                         type="number"
@@ -695,7 +708,7 @@ export function FormularioKit({
                       />
                     </label>
                     {conDescuento ? (
-                      <label className="flex min-w-0 flex-col gap-1">
+                      <label className="flex min-w-0 flex-col justify-between gap-1">
                         <span className="text-sm font-medium">Desc. %</span>
                         <Input
                           type="number"
@@ -831,7 +844,7 @@ export function FormularioKit({
                           aria-label={`Cuántos ${l.codigo} lleva el kit`}
                         />
                       </td>
-                      <td className="text-sm text-[var(--fg-muted)]">{l.unidad}</td>
+                      <td className="text-sm text-[var(--fg-muted)]">{abreviaturaUnidad(l.unidad)}</td>
 
                       {/*
                         El precio de la pieza DENTRO del kit, editable.

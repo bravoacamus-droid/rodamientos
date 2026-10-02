@@ -236,6 +236,16 @@ export function FormularioProducto({
     f.subfamilia_id !== "" &&
     !pisoAlto;
 
+  // Lo que falta para poder guardar, dicho con palabras. El botón apagado sin
+  // explicación parecía roto (revisión por módulos del 02/10).
+  const faltan = [
+    f.codigo.trim() === "" ? "el código" : null,
+    f.marca_id === "" ? "la marca" : null,
+    f.familia_id === "" ? "la familia" : null,
+    f.subfamilia_id === "" ? "la sub-familia" : null,
+    f.descripcion.trim() === "" ? "la descripción" : null,
+  ].filter((x): x is string => x !== null);
+
   const errorDe = (campo: string) =>
     resultado && !resultado.ok && resultado.campo === campo ? resultado.error : undefined;
 
@@ -481,12 +491,16 @@ export function FormularioProducto({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-base font-semibold">Precios</h2>
           <span className="text-sm text-[var(--fg-muted)]">
-            En dólares y sin IGV — como los trabaja Willy.
+            En dólares y sin IGV.
           </span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Campo id="ultimo_costo" label="P.C. — costo" ayuda="Lo que te cuesta comprarlo.">
+          {/* Las etiquetas, con todas sus letras: «P.C.», «P.V.» y «P.M.» eran
+              las siglas de la plantilla de Excel y no se leen solas. El
+              mínimo se llama como en el resto del ERP, «precio mínimo de
+              venta» (revisión por módulos del 02/10). */}
+          <Campo id="ultimo_costo" label="Costo" ayuda="Lo que te cuesta comprarlo.">
             <Input
               id="ultimo_costo"
               type="number"
@@ -501,8 +515,10 @@ export function FormularioProducto({
 
           <Campo
             id="precio_venta"
-            label="P.V. — venta"
-            ayuda={pvManual ? "Escrito a mano." : "Calculado: costo × 1.20."}
+            label="Precio de venta"
+            ayuda={
+              pvManual ? "Escrito a mano." : "Se calcula solo: costo × 1.20. Puedes cambiarlo."
+            }
           >
             <Input
               id="precio_venta"
@@ -510,7 +526,9 @@ export function FormularioProducto({
               step="0.01"
               min={0}
               numerico
-              className={`${ALTO} ${pvManual ? "" : "bg-[var(--surface-2)]"}`}
+              // Sin fondo gris: lo hacía parecer bloqueado y se puede escribir
+              // encima. Que es un cálculo ya lo dice la ayuda (02/10).
+              className={ALTO}
               value={f.precio_venta}
               onChange={(e) => {
                 setPvManual(true);
@@ -521,7 +539,7 @@ export function FormularioProducto({
 
           <Campo
             id="precio_minimo"
-            label="P.M. — mínimo"
+            label="Precio mínimo de venta"
             error={pisoAlto ? "El mínimo no puede superar al de venta." : errorDe("precio_minimo")}
             ayuda="Lo más barato que aceptas venderlo: por debajo el cotizador no deja."
           >
@@ -652,7 +670,7 @@ export function FormularioProducto({
         <Campo
           id="proveedor_id"
           label="Proveedor habitual"
-          ayuda="A quién se le pide normalmente. A quién se le compró de verdad lo dice la trazabilidad."
+          ayuda="A quién se le pide normalmente. A quién se le compró de verdad sale en «Ver compras y ventas», en la ficha."
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Combobox
@@ -697,6 +715,12 @@ export function FormularioProducto({
           </p>
         ) : null}
       </section>
+
+      {faltan.length > 0 ? (
+        <p className="text-sm text-[var(--fg-muted)] sm:text-right">
+          Para guardar falta {faltan.join(", ").replace(/, ([^,]*)$/, " y $1")}.
+        </p>
+      ) : null}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Button

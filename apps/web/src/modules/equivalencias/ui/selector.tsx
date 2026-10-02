@@ -21,11 +21,14 @@ export function SelectorProducto({
   placeholder,
   /** Qué hacer con el elegido. Por defecto, cambiar el producto de la pantalla. */
   onElegir,
+  /** Puede haber dos buscadores en la misma página: cada uno con su id. */
+  id = "buscador-equivalencias",
 }: {
   excluir?: string;
   autoFocus?: boolean;
   placeholder?: string;
   onElegir?: (producto: ProductoBuscado) => void;
+  id?: string;
 }) {
   const router = useRouter();
 
@@ -46,7 +49,7 @@ export function SelectorProducto({
 
   return (
     <BuscadorProductos
-      id="buscador-equivalencias"
+      id={id}
       buscar={buscar}
       onSeleccionar={elegir}
       excluirIds={excluir ? [excluir] : undefined}

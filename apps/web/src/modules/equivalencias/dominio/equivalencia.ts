@@ -99,8 +99,10 @@ export function resumenSustituto(s: Sustituto): string {
   const partes = [s.marca];
 
   if (s.diferencia_pct !== 0) {
-    const signo = s.diferencia_pct > 0 ? "+" : "";
-    partes.push(`${signo}${s.diferencia_pct.toFixed(1)} %`);
+    // Dicho con palabras: «+16.2 %» a secas no decía respecto de qué, ni si
+    // era bueno o malo (revisión por módulos del 02/10).
+    const cuanto = Math.abs(s.diferencia_pct).toFixed(1);
+    partes.push(`${cuanto} % ${s.diferencia_pct > 0 ? "más caro" : "más barato"}`);
   } else {
     partes.push("mismo precio");
   }

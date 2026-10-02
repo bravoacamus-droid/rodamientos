@@ -97,10 +97,10 @@ export async function PaginaKits({
   const hayMas = desde + porPagina < filtrados.length;
 
   return (
-    <div className="flex flex-col gap-5 p-6">
+    <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Kits</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Kits</h1>
           <p className="text-sm text-[var(--fg-muted)]">
             Varios productos que se cotizan y se facturan como uno solo, con un
             precio total.
@@ -121,7 +121,7 @@ export async function PaginaKits({
         <KpiCard
           etiqueta="Kits activos"
           valor={activos.length.toLocaleString("es-PE")}
-          detalle="sin contar archivados"
+          detalle="sin contar los dados de baja"
         />
         <KpiCard
           etiqueta="Sin material"
@@ -152,17 +152,20 @@ export async function PaginaKits({
         <div className="card @container overflow-hidden">
           {/*
             Revisión de diseño del 02/10: en el teléfono esta tabla se
-            desplazaba de lado (390 px: 302 → 924). Por debajo de `@4xl`
-            (56 rem, 952 px con la base de 17 px) cada kit es una tarjeta con
+            desplazaba de lado (390 px: 302 → 924). Por debajo de `@5xl`
+            (64 rem, 1088 px con la base de 17 px) cada kit es una tarjeta con
             lo mismo apilado y los dos botones a lo ancho. Se mide ESTA caja
-            (`@container`), no la pantalla.
+            (`@container`), no la pantalla. Era `@4xl`, y en la revisión por
+            módulos del 02/10, a 1280 con el menú abierto, la tabla pasaba
+            por poco y «Editar» quedaba cortado por la derecha; con las
+            tarjetas de dos en dos ya no hace falta apurarla.
           */}
-          <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
+          <ul className="grid grid-cols-1 gap-2.5 p-3 @xl:grid-cols-2 @5xl:hidden">
             {enPagina.map((k) => (
               <TarjetaKit key={k.id} kit={k} />
             ))}
           </ul>
-          <div className="hidden @4xl:block">
+          <div className="hidden @5xl:block">
           <TableContenedor>
             <Table>
               <THead>
@@ -170,7 +173,7 @@ export async function PaginaKits({
                   <th className="text-left">Código</th>
                   <th className="text-left">Descripción</th>
                   <th className="text-right">Se arman</th>
-                  <th className="text-left">Lo frena</th>
+                  <th className="text-left">Pieza que limita</th>
                   <th className="text-right">Piezas</th>
                   <th className="text-right">Precio</th>
                   <th className="text-right">Acciones</th>
@@ -348,7 +351,7 @@ function TarjetaKit({ kit: k }: { kit: KitDetalle }) {
             ocupa un renglón para no decir nada. */}
         {loFrena ? (
           <div className="min-w-0">
-            <dt className="text-[var(--fg-subtle)]">Lo frena</dt>
+            <dt className="text-[var(--fg-subtle)]">Pieza que limita</dt>
             <dd className="truncate font-mono">{loFrena}</dd>
           </div>
         ) : null}

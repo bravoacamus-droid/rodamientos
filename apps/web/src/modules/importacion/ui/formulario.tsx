@@ -7,15 +7,22 @@
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@rodatech/ui";
+import { FileUp } from "lucide-react";
 
 import { analizar, confirmar } from "../acciones/importar";
 import type { ResultadoAnalisis, ResumenImportacion } from "../dominio/tipos";
 import { Resumen } from "./resumen";
 
-function BotonEnviar({ children }: { children: React.ReactNode }) {
+function BotonEnviar({
+  children,
+  deshabilitado = false,
+}: {
+  children: React.ReactNode;
+  deshabilitado?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
+    <Button type="submit" disabled={pending || deshabilitado}>
       {pending ? "Procesando…" : children}
     </Button>
   );
@@ -58,23 +65,47 @@ export function FormularioImportacion() {
   return (
     <div className="flex flex-col gap-5">
       <form action={accionAnalizar} className="flex flex-col gap-3">
-        <label className="flex flex-col gap-1.5">
+        {/*
+          El campo de archivo nativo lo dibuja el navegador, y en el suyo
+          decía «Choose File · No file chosen», en inglés (revisión por
+          módulos del 02/10). Se esconde a la vista —sigue ahí para el
+          formulario y el lector de pantalla— y lo que se ve es un botón
+          con su palabra y, al lado, el nombre del archivo elegido.
+        */}
+        <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">Archivo de la plantilla</span>
-          <input
-            ref={inputRef}
-            type="file"
-            name="archivo"
-            accept=".xlsx"
-            required
-            onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
-            className="rounded-sm border border-[var(--border)] bg-[var(--surface)] p-2 text-sm file:mr-3 file:rounded-sm file:border-0 file:bg-brand-600 file:px-3 file:py-1.5 file:text-white"
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <label
+              htmlFor="archivo-plantilla"
+              className="inline-flex h-control-md cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--ring)]"
+            >
+              <FileUp className="size-4" aria-hidden />
+              Elegir archivo
+              <input
+                id="archivo-plantilla"
+                ref={inputRef}
+                type="file"
+                name="archivo"
+                accept=".xlsx"
+                required
+                onChange={(e) => setNombreArchivo(e.target.files?.[0]?.name ?? null)}
+                className="sr-only"
+              />
+            </label>
+            <span
+              className={`min-w-0 break-all text-sm ${
+                nombreArchivo ? "font-medium" : "text-[var(--fg-muted)]"
+              }`}
+            >
+              {nombreArchivo ?? "Todavía no has elegido ninguno."}
+            </span>
+          </div>
           <span className="text-sm text-[var(--fg-muted)]">
             Solo .xlsx, hasta 5 MB. No se guarda nada hasta que confirmes.
           </span>
-        </label>
+        </div>
         <div>
-          <BotonEnviar>Revisar archivo</BotonEnviar>
+          <BotonEnviar deshabilitado={!nombreArchivo}>Revisar archivo</BotonEnviar>
         </div>
       </form>
 
@@ -104,7 +135,7 @@ export function FormularioImportacion() {
           />
 
           {analisis.resumen.nuevos + analisis.resumen.actualizados > 0 ? (
-            <form action={accionConfirmar} className="flex items-center gap-3">
+            <form action={accionConfirmar} className="flex flex-wrap items-center gap-3">
               {/* Las filas viajan de vuelta para no obligar a subir otra vez.
                   La acción las revalida enteras antes de tocar la base. */}
               <input type="hidden" name="filas" value={JSON.stringify(analisis.filas)} />

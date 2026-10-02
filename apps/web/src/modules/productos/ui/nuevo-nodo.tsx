@@ -70,23 +70,32 @@ export function NuevoNodo({
     }
   };
 
+  /*
+    Revisión por módulos del 02/10: era un enlace azul de 12 px de icono, sin
+    borde, y apagado se quedaba en un texto gris que parecía roto. Ahora es un
+    botón con su borde, y cuando todavía no se puede usar se dice por qué en
+    vez de enseñar un botón muerto.
+  */
   if (!abierto) {
+    if (deshabilitado) {
+      return ayudaDeshabilitado ? (
+        <p className="mt-1.5 text-sm text-[var(--fg-subtle)]">{ayudaDeshabilitado}</p>
+      ) : null;
+    }
     return (
       <button
         type="button"
-        disabled={deshabilitado}
-        title={deshabilitado ? ayudaDeshabilitado : `Crear una ${etiqueta} nueva`}
         onClick={() => setAbierto(true)}
-        className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline disabled:cursor-not-allowed disabled:text-[var(--fg-subtle)] disabled:no-underline"
+        className="mt-1.5 inline-flex h-9 items-center gap-1.5 self-start rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
       >
-        <Plus className="size-3" />
+        <Plus className="size-4" aria-hidden />
         Nueva {etiqueta}
       </button>
     );
   }
 
   return (
-    <div className="mt-1 flex items-center gap-1">
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
       <Input
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
@@ -107,7 +116,7 @@ export function NuevoNodo({
             setTexto("");
           }
         }}
-        className="h-control-sm"
+        className="h-control-sm min-w-0 flex-1 basis-40"
       />
       <Button
         type="button"
@@ -117,17 +126,18 @@ export function NuevoNodo({
       >
         {ocupado ? "…" : "Crear"}
       </Button>
+      {/* Con su palabra: una «X» suelta no parece un botón (02/10). */}
       <Button
         type="button"
-        variant="ghost"
-        size="icon-sm"
-        aria-label="Cancelar"
+        variant="outline"
+        size="sm"
         onClick={() => {
           setAbierto(false);
           setTexto("");
         }}
       >
-        <X />
+        <X aria-hidden />
+        Cancelar
       </Button>
     </div>
   );

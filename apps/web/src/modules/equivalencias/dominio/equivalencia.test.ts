@@ -92,11 +92,11 @@ describe("agruparPorOrigen", () => {
 
 describe("resumenSustituto", () => {
   it("escribe el signo también cuando es más caro", () => {
-    expect(resumenSustituto(sustituto({ diferencia_pct: 12.5 }))).toContain("+12.5 %");
+    expect(resumenSustituto(sustituto({ diferencia_pct: 12.5 }))).toContain("12.5 % más caro");
   });
 
   it("el menos ya lo trae el número", () => {
-    expect(resumenSustituto(sustituto({ diferencia_pct: -8 }))).toContain("-8.0 %");
+    expect(resumenSustituto(sustituto({ diferencia_pct: -8 }))).toContain("8.0 % más barato");
   });
 
   it("dice «mismo precio» en lugar de «0 %»", () => {
@@ -116,7 +116,7 @@ describe("contarPorOrigen", () => {
       sustituto({ origen: "mismo_basico", prioridad: 2 }),
     ]);
 
-    expect(texto).toBe("1 declarada · 2 misma medida");
+    expect(texto).toBe("1 marcada a mano · 2 misma medida");
   });
 
   it("sin alternativas lo dice", () => {

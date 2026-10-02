@@ -23,7 +23,12 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
-const dinero = (n: number) => `$ ${n.toFixed(2)}`;
+// Espacio que no se parte entre el signo y la cifra: en el teléfono salía
+// «$» al final de una línea y «36.00» en la siguiente (revisión por módulos
+// del 02/10).
+// Con separador de miles: «$ 1103.52» se leía peor que «$ 1,103.52».
+const dinero = (n: number) =>
+  `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * Trazabilidad de un producto.
@@ -94,7 +99,7 @@ async function Cabecera({ id }: { id: string }) {
       <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{p.descripcion}</p>
       <p className="mt-1 text-sm text-[var(--fg-subtle)]">
         {p.stock > 0 ? `${p.stock} en stock` : "sin stock"} · costo promedio{" "}
-        {dinero(p.costo_promedio)} · lista {dinero(p.precio_venta)}
+        {dinero(p.costo_promedio)} · venta {dinero(p.precio_venta)}
         {p.precio_minimo > 0 ? ` · mínimo ${dinero(p.precio_minimo)}` : ""}
       </p>
     </div>
@@ -314,7 +319,7 @@ async function Historia({ id }: { id: string }) {
         </section>
       </div>
 
-      <section className="card overflow-hidden">
+      <section className="card @container overflow-hidden">
         <header className="border-b border-[var(--border-soft)] px-4 py-3">
           <h2 className="text-sm font-semibold">Todo lo que ha pasado</h2>
           <p className="text-sm text-[var(--fg-subtle)]">
@@ -367,7 +372,7 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
 
   return (
     <li
-      className={`anim-entrada flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-l-2 border-[var(--border-soft)] px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-2)] ${
+      className={`anim-entrada grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-b @2xl:flex @2xl:flex-wrap border-l-2 border-[var(--border-soft)] px-4 py-2.5 text-sm transition-colors hover:bg-[var(--surface-2)] ${
         esCompra ? "border-l-brand-400" : "border-l-[var(--ok)]"
       }`}
       style={{ animationDelay: `${Math.min(indice, 6) * 24}ms` }}
@@ -376,11 +381,18 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
         {ETIQUETA_EVENTO[evento.evento]}
       </Badge>
 
-      <div className="min-w-0 flex-1">
+      {/*
+        En el teléfono, tres columnas dejaban al texto del medio 150 px y el
+        número de documento se partía en dos («CMP-26-» / «00001»), con la
+        explicación en una palabra por línea. Ahora la etiqueta y el precio
+        van arriba y el texto debajo, a lo ancho; con la caja desde `@2xl` vuelve a ser una
+        fila (revisión por módulos del 02/10).
+      */}
+      <div className="order-last col-span-2 min-w-0 @2xl:order-none @2xl:flex-1">
         {ruta ? (
           <Link
             href={ruta}
-            className="font-mono text-sm font-medium text-brand-600 hover:underline"
+            className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
           >
             {evento.documento}
           </Link>
@@ -392,7 +404,7 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
         </span>
         {evento.referencia ? (
           <span className="ml-2 text-sm text-[var(--fg-subtle)]">
-            {esCompra ? "doc." : "OC"} {evento.referencia}
+            {esCompra ? "documento" : "orden del cliente"} {evento.referencia}
           </span>
         ) : null}
         <span
@@ -403,10 +415,16 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
         </span>
       </div>
 
-      <div className="shrink-0 text-right">
-        <span className="tabular text-sm font-medium">{dinero(evento.unitario)}</span>
+      {/* Se deja encoger: si no cabe al lado de la etiqueta, parte entre
+          «cantidad» y «total», nunca dentro de una cifra. */}
+      <div className="ml-auto min-w-0 text-right">
+        <span className="whitespace-nowrap tabular text-sm font-medium">
+          {dinero(evento.unitario)}
+        </span>
+        {/* «10 × · $ 360.00» no se leía: ahora dice qué es cada número. */}
         <span className="block text-sm text-[var(--fg-subtle)] tabular">
-          {evento.cantidad} × · {dinero(evento.importe)}
+          <span className="whitespace-nowrap">cantidad {evento.cantidad}</span> ·{" "}
+          <span className="whitespace-nowrap">total {dinero(evento.importe)}</span>
         </span>
       </div>
     </li>

@@ -60,7 +60,9 @@ export default async function PaginaProductos({ searchParams }: Props) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Maestro del catálogo: código, marca y jerarquía de tres niveles.
+            {/* Sin «maestro» ni «jerarquía de tres niveles», que eran palabras
+                nuestras (revisión por módulos del 02/10). */}
+            Todos los productos que vendes, con su stock y su precio.
           </p>
         </div>
 

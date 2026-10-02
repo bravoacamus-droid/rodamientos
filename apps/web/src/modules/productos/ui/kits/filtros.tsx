@@ -73,7 +73,9 @@ export function FiltrosKits({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-0 flex-1 sm:max-w-sm">
+      {/* Su propia fila hasta `xl`: a 820, con el menú abierto, los tres
+          botones la dejaban en 140 px y se leía «Buscar por c» (02/10). */}
+      <div className="relative min-w-0 basis-full xl:max-w-sm xl:flex-1 xl:basis-auto">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
           aria-hidden="true"
@@ -94,7 +96,10 @@ export function FiltrosKits({
         Son dos opciones: un desplegable obligaría a abrirlo para saber cuáles
         hay. Y se ven cuál está activo sin leer.
       */}
-      <div className="flex gap-1">
+      {/* Revisión por módulos del 02/10: `min-h-control-md` no existe como
+          utilidad (solo `h-control-md`), así que estos botones medían 24 px;
+          y sin `flex-wrap` «Falta material» se salía por la derecha a 390. */}
+      <div className="flex flex-wrap gap-1">
         <BotonEstado activo={!estado} onClick={() => aplicar("estado", "")}>
           Todos
         </BotonEstado>
@@ -112,7 +117,7 @@ export function FiltrosKits({
         </BotonEstado>
       </div>
 
-      <label className="flex min-h-control-md cursor-pointer items-center gap-2 rounded-md px-2 text-sm hover:bg-[var(--surface-2)]">
+      <label className="flex h-control-md cursor-pointer items-center gap-2 rounded-md px-2 text-sm hover:bg-[var(--surface-2)]">
         <input
           type="checkbox"
           checked={archivados}
@@ -129,10 +134,11 @@ export function FiltrosKits({
             setTexto("");
             iniciar(() => router.replace(ruta));
           }}
-          className="inline-flex min-h-control-md items-center gap-1 rounded-md px-2 text-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+          // Con borde, como el de productos: un texto gris no parece botón.
+          className="inline-flex h-control-md items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
         >
-          <X className="size-4" />
-          Limpiar
+          <X className="size-4" aria-hidden />
+          Quitar filtros
         </button>
       ) : null}
     </div>
@@ -153,7 +159,7 @@ function BotonEstado({
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`min-h-control-md whitespace-nowrap rounded-md border px-3 text-sm transition-colors ${
+      className={`h-control-md whitespace-nowrap rounded-md border px-3 text-sm transition-colors ${
         activo
           ? "border-brand-600 bg-brand-600 font-medium text-white"
           : "border-[var(--border)] hover:bg-[var(--surface-2)]"

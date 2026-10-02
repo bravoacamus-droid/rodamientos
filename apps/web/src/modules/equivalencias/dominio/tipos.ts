@@ -51,7 +51,9 @@ export const AYUDA_CLASE: Record<ClaseEquivalencia, string> = {
 };
 
 export const ETIQUETA_ORIGEN: Record<OrigenSustituto, string> = {
-  equivalencia: "Declarada",
+  // «Marcada a mano» y no «Declarada», que era palabra nuestra: es lo que
+  // hace el botón «Marcar como equivalente» (revisión por módulos del 02/10).
+  equivalencia: "Marcada a mano",
   mismo_basico: "Misma medida",
 };
 
@@ -61,9 +63,9 @@ export const ETIQUETA_ORIGEN: Record<OrigenSustituto, string> = {
  * que decide si se despacha o se llama al cliente.
  */
 export const EXPLICACION_ORIGEN: Record<OrigenSustituto, string> = {
-  equivalencia: "Alguien de la casa declaró que sirve.",
+  equivalencia: "Alguien de la casa marcó que sirve.",
   mismo_basico:
-    "Mismo código básico: el núcleo ISO fija el diámetro interior, el exterior y la altura, así que entra en el mismo eje. Cambia el sellado o el juego.",
+    "Mismo código básico: tiene el mismo diámetro interior, exterior y altura, así que entra en el mismo eje. Cambia el sellado o el juego.",
 };
 
 /** Una fila de `sustitutos_de()`. */

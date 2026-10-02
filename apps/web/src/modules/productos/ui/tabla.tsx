@@ -22,7 +22,7 @@ import { abreviaturaUnidad } from "@rodatech/config";
  *   · Al final de cada fila hay un menú de acciones.
  *
  * Y en móvil NO es una tabla. Ocho columnas en un teléfono no se leen ni con
- * scroll horizontal, así que por debajo de `md` cada producto es una tarjeta
+ * scroll horizontal, así que con la caja por debajo de `@3xl` cada producto es una tarjeta
  * con lo mismo pero apilado. Es el mismo dato y el mismo menú, no una versión
  * recortada.
  */
@@ -67,22 +67,43 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
   const permisos = { puedeEditar, puedeAjustarStock };
 
   return (
-    <>
-      {/* ------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden md:block">
-        <table className="w-full text-sm">
+    <div className="@container">
+      {/*
+        Escritorio.
+
+        Revisión por módulos del 02/10: con el menú abierto, a 1280 la tabla
+        no cabía en su caja y «Precio venta» y «Estado» quedaban fuera, a la
+        derecha, detrás de un desplazamiento lateral que nadie ve; y a 820 se
+        enseñaba la tabla en 500 px, con la descripción cortada a la mitad.
+
+        Ahora decide la CAJA (`@container`) y no la pantalla: por debajo de
+        `@3xl` van las tarjetas. Y la tabla es `table-fixed`: cada columna
+        tiene su ancho y la descripción se queda con lo que sobra, cortada con
+        «…» y entera al pasar el ratón. El estado va debajo del stock, que es
+        de lo que habla, en vez de ocupar una columna propia.
+      */}
+      <div className="scroll-x hidden @3xl:block">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-44" />
+            <col className="w-28" />
+            <col />
+            <col className="w-32" />
+            <col className="hidden w-32 2xl:table-column" />
+            <col className="w-32" />
+            <col className="w-14" />
+          </colgroup>
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-              <th className="px-4 py-2.5 font-medium">Código</th>
-              <th className="px-4 py-2.5 font-medium">Marca</th>
-              <th className="px-4 py-2.5 font-medium">Descripción</th>
-              <th className="px-4 py-2.5 text-right font-medium">Stock</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
+              <th className="px-3 py-2.5 font-medium">Código</th>
+              <th className="px-3 py-2.5 font-medium">Marca</th>
+              <th className="px-3 py-2.5 font-medium">Descripción</th>
+              <th className="px-3 py-2.5 text-right font-medium">Stock</th>
+              <th className="hidden px-3 py-2.5 text-right font-medium 2xl:table-cell">
                 Costo prom.
               </th>
-              <th className="px-4 py-2.5 text-right font-medium">Precio venta</th>
-              <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] w-12 px-2 py-2.5">
+              <th className="px-3 py-2.5 text-right font-medium">Precio venta</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-2 py-2.5">
                 <span className="sr-only">Acciones</span>
               </th>
             </tr>
@@ -95,41 +116,44 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                   p.archivado ? "opacity-60" : ""
                 }`}
               >
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-2.5">
                   <Link
                     href={`/productos/${p.id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="break-all font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {p.codigo}
                   </Link>
+                  {/* Debajo y no al lado: al lado ensanchaba la columna. */}
                   {p.codigo_fabricante ? (
-                    <span className="ml-2 font-mono text-sm text-[var(--fg-subtle)]">
+                    <span className="block break-all font-mono text-sm text-[var(--fg-subtle)]">
                       {p.codigo_fabricante}
                     </span>
                   ) : null}
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5">{p.marca}</td>
-                <td className="max-w-md px-4 py-2.5">
+                <td className="break-words px-3 py-2.5">{p.marca}</td>
+                <td className="px-3 py-2.5" title={p.descripcion}>
                   <span className="block truncate">{p.descripcion}</span>
                   <span className="block truncate text-sm text-[var(--fg-subtle)]">
                     {p.subfamilia}
                     {p.tipo ? ` · ${p.tipo}` : ""}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-right tabular">
-                  {p.stock.toLocaleString("es-PE")}
-                  <span className="ml-1 text-sm text-[var(--fg-subtle)]">
-                    {abreviaturaUnidad(p.unidad)}
+                <td className="px-3 py-2.5 text-right">
+                  <span className="whitespace-nowrap tabular">
+                    {p.stock.toLocaleString("es-PE")}
+                    <span className="ml-1 text-sm text-[var(--fg-subtle)]">
+                      {abreviaturaUnidad(p.unidad)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block">
+                    <Estado p={p} />
                   </span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
+                <td className="hidden px-3 py-2.5 text-right 2xl:table-cell">
                   <Moneda valor={p.costo_promedio} tamano="sm" enfasis="suave" />
                 </td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="whitespace-nowrap px-3 py-2.5 text-right">
                   <Moneda valor={p.precio_venta} tamano="sm" />
-                </td>
-                <td className="px-4 py-2.5">
-                  <Estado p={p} />
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
                   <AccionesFila
@@ -159,7 +183,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
         El costo promedio NO baja al teléfono: es el único dato de esta lista
         que no se enseña fuera de la oficina.
       */}
-      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
         {filas.map((p) => (
           <li
             key={p.id}
@@ -247,7 +271,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }
 
