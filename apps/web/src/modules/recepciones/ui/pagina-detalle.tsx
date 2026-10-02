@@ -117,8 +117,71 @@ export default async function PaginaDetalleRecepcion({
         />
       </section>
 
-      <section className="card">
-        <div className="scroll-x">
+      <section className="card @container">
+        {/*
+          Revisión de diseño del 02/10: en el teléfono esta tabla se
+          desplazaba de lado (390 px: 353 → 765). Por debajo de `@3xl`
+          (48 rem, 816 px con la base de 17 px) cada línea es una tarjeta con
+          lo mismo apilado; se mide ESTA caja (`@container`), no la pantalla.
+          Los totales del pie van al final, en su propio bloque.
+        */}
+        <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
+          {r.lineas.map((l) => (
+            <li
+              key={l.id}
+              className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3"
+            >
+              <div>
+                <p className="font-mono text-sm font-semibold">{l.codigo}</p>
+                <p className="text-sm">{l.descripcion}</p>
+                {l.marca ? (
+                  <p className="text-sm text-[var(--fg-subtle)]">{l.marca}</p>
+                ) : null}
+              </div>
+              <dl className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm">
+                <div className="min-w-0">
+                  <dt className="text-[var(--fg-subtle)]">Cantidad</dt>
+                  <dd className="tabular">
+                    {l.cantidad.toLocaleString("es-PE")}
+                    <span className="ml-1 text-[var(--fg-subtle)]">{l.unidad}</span>
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[var(--fg-subtle)]">Costo por unidad</dt>
+                  <dd>
+                    <Moneda valor={l.costo_unitario} tamano="sm" enfasis="suave" />
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-[var(--fg-subtle)]">Importe</dt>
+                  <dd>
+                    <Moneda valor={l.importe} tamano="sm" />
+                  </dd>
+                </div>
+              </dl>
+              {/* En la tabla se entra por el código; aquí, con un botón que
+                  se vea como tal. */}
+              <Link
+                href={`/productos/${l.producto_id}`}
+                className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              >
+                Ver el producto
+              </Link>
+            </li>
+          ))}
+          <li className="flex flex-wrap items-baseline justify-between gap-2 px-1 pt-1 text-sm font-medium">
+            <span>
+              {r.lineas.length} {r.lineas.length === 1 ? "línea" : "líneas"} ·{" "}
+              <span className="tabular">{unidades.toLocaleString("es-PE")}</span>{" "}
+              {unidades === 1 ? "unidad" : "unidades"}
+            </span>
+            <span className="flex items-baseline gap-2">
+              <span className="text-[var(--fg-muted)]">Valor al proveedor</span>
+              <Moneda valor={total} enfasis="fuerte" />
+            </span>
+          </li>
+        </ul>
+        <div className="scroll-x hidden @3xl:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">

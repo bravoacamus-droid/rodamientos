@@ -161,108 +161,161 @@ export function QueVende({
       ) : null}
 
       {productos.length === 0 ? null : (
-        <div className="scroll-x mt-3">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-                <th className="py-2 pr-3 font-medium">Producto</th>
-                <th className="py-2 pr-3 font-medium">Cómo se sabe</th>
-                <th className="py-2 pr-3 font-medium">Última compra</th>
-                <th className="py-2 pr-3 text-right font-medium">Último costo</th>
-                {puedeEditar ? <th className="w-10 py-2" /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {productos.map((p) => (
-                <tr key={p.producto_id} className="border-b border-[var(--border-soft)]">
-                  <td className="py-2 pr-3">
-                    <Link
-                      href={`/productos/${p.producto_id}`}
-                      className="font-mono text-base font-medium text-brand-600 hover:underline"
-                    >
-                      {p.codigo}
-                    </Link>
-                    <span className="block text-sm text-[var(--fg-muted)]">
-                      {p.marca ? `${p.marca} · ` : ""}
-                      {p.descripcion}
-                    </span>
-                    {p.notas ? (
-                      <span className="block text-sm text-[var(--fg-subtle)]">
-                        {p.notas}
-                      </span>
-                    ) : null}
-                  </td>
+        /*
+          Tarjetas en una caja estrecha y tabla cuando cabe. Revisión de diseño
+          del 02/10: en el teléfono esta tabla se desplazaba de lado (390 px:
+          329 → 469). Lo que pinta cada celda se comparte entre las dos vistas.
+        */
+        <div className="@container mt-3">
+          <ul className="flex flex-col gap-2 @2xl:hidden">
+            {productos.map((p) => (
+              <li key={p.producto_id} className="rounded-md border border-[var(--border)] p-3">
+                <Producto p={p} />
+                <div className="mt-2">
+                  <ComoSeSabe p={p} />
+                </div>
+                <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-[var(--fg-muted)]">Última compra</dt>
+                    <dd>
+                      <UltimaCompra p={p} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--fg-muted)]">Último costo</dt>
+                    <dd className="tabular">
+                      <Costo p={p} />
+                    </dd>
+                  </div>
+                </dl>
+                {puedeEditar && p.veces === 0 ? (
+                  <div className="mt-2">
+                    <Quitar p={p} onQuitar={quitar} disabled={guardando} />
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
 
-                  <td className="py-2 pr-3">
-                    {p.veces > 0 ? (
-                      <Badge tone="success" size="md">
-                        {p.veces === 1 ? "Comprado 1 vez" : `Comprado ${p.veces} veces`}
-                      </Badge>
-                    ) : (
-                      <Badge tone="neutral" size="md">
-                        Anotado a mano
-                      </Badge>
-                    )}
-                    {p.esHabitual ? (
-                      <span className="ml-1.5 text-sm text-[var(--fg-subtle)]">
-                        es su proveedor habitual
-                      </span>
-                    ) : null}
-                  </td>
-
-                  <td className="whitespace-nowrap py-2 pr-3">
-                    {p.ultimaCompra ? (
-                      formatearFecha(p.ultimaCompra)
-                    ) : (
-                      <span className="text-[var(--fg-subtle)]">—</span>
-                    )}
-                  </td>
-
-                  <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
-                    {p.ultimoCosto === null ? (
-                      <span className="text-[var(--fg-subtle)]">—</span>
-                    ) : (
-                      <>
-                        <Moneda
-                          valor={p.ultimoCosto}
-                          moneda={p.moneda === "PEN" ? "PEN" : "USD"}
-                        />
-                        {/* Si su factura vino en soles se enseña también en
-                            dólares: es la única cifra con la que se puede
-                            comparar contra otro proveedor. */}
-                        {p.moneda && p.moneda !== "USD" && p.ultimoCostoUsd !== null ? (
-                          <span className="block text-sm text-[var(--fg-subtle)]">
-                            <Moneda valor={p.ultimoCostoUsd} /> al cambio
-                          </span>
-                        ) : null}
-                      </>
-                    )}
-                  </td>
-
-                  {puedeEditar ? (
-                    <td className="py-2 text-right">
-                      {/* Solo lo que nadie compró. Lo demás es historia. */}
-                      {p.veces === 0 ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="h-8 px-2"
-                          onClick={() => quitar(p)}
-                          disabled={guardando}
-                          aria-label={`Quitar ${p.codigo}`}
-                          title="Quitar de la ficha"
-                        >
-                          <X aria-hidden="true" />
-                        </Button>
-                      ) : null}
-                    </td>
-                  ) : null}
+          <div className="scroll-x hidden @2xl:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                  <th className="py-2 pr-3 font-medium">Producto</th>
+                  <th className="py-2 pr-3 font-medium">Cómo se sabe</th>
+                  <th className="py-2 pr-3 font-medium">Última compra</th>
+                  <th className="py-2 pr-3 text-right font-medium">Último costo</th>
+                  {puedeEditar ? <th className="py-2" /> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {productos.map((p) => (
+                  <tr key={p.producto_id} className="border-b border-[var(--border-soft)]">
+                    <td className="py-2 pr-3">
+                      <Producto p={p} />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <ComoSeSabe p={p} />
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3">
+                      <UltimaCompra p={p} />
+                    </td>
+                    <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
+                      <Costo p={p} />
+                    </td>
+                    {puedeEditar ? (
+                      <td className="py-2 text-right">
+                        {/* Solo lo que nadie compró. Lo demás es historia. */}
+                        {p.veces === 0 ? <Quitar p={p} onQuitar={quitar} disabled={guardando} /> : null}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </section>
+  );
+}
+
+type Fila = ProductoDeProveedor;
+
+function Producto({ p }: { p: Fila }) {
+  return (
+    <>
+      <Link
+        href={`/productos/${p.producto_id}`}
+        className="font-mono text-base font-medium text-brand-600 hover:underline"
+      >
+        {p.codigo}
+      </Link>
+      <span className="block text-sm text-[var(--fg-muted)]">
+        {p.marca ? `${p.marca} · ` : ""}
+        {p.descripcion}
+      </span>
+      {p.notas ? <span className="block text-sm text-[var(--fg-subtle)]">{p.notas}</span> : null}
+    </>
+  );
+}
+
+function ComoSeSabe({ p }: { p: Fila }) {
+  return (
+    <>
+      {p.veces > 0 ? (
+        <Badge tone="success" size="md">
+          {p.veces === 1 ? "Comprado 1 vez" : `Comprado ${p.veces} veces`}
+        </Badge>
+      ) : (
+        <Badge tone="neutral" size="md">
+          Anotado a mano
+        </Badge>
+      )}
+      {p.esHabitual ? (
+        <span className="ml-1.5 text-sm text-[var(--fg-subtle)]">es su proveedor habitual</span>
+      ) : null}
+    </>
+  );
+}
+
+function UltimaCompra({ p }: { p: Fila }) {
+  return p.ultimaCompra ? (
+    <>{formatearFecha(p.ultimaCompra)}</>
+  ) : (
+    <span className="text-[var(--fg-subtle)]">—</span>
+  );
+}
+
+function Costo({ p }: { p: Fila }) {
+  if (p.ultimoCosto === null) return <span className="text-[var(--fg-subtle)]">—</span>;
+  return (
+    <>
+      <Moneda valor={p.ultimoCosto} moneda={p.moneda === "PEN" ? "PEN" : "USD"} />
+      {/* Si su factura vino en soles se enseña también en dólares: es la única
+          cifra con la que se puede comparar contra otro proveedor. */}
+      {p.moneda && p.moneda !== "USD" && p.ultimoCostoUsd !== null ? (
+        <span className="block text-sm text-[var(--fg-subtle)]">
+          <Moneda valor={p.ultimoCostoUsd} /> al cambio
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/** Con su palabra: una X gris suelta no parecía un botón (revisión del 02/10). */
+function Quitar({ p, onQuitar, disabled }: { p: Fila; onQuitar: (p: Fila) => void; disabled: boolean }) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={() => onQuitar(p)}
+      disabled={disabled}
+      aria-label={`Quitar ${p.codigo} de la ficha`}
+    >
+      <X aria-hidden="true" />
+      Quitar
+    </Button>
   );
 }

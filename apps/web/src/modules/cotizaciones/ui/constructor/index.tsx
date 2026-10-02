@@ -33,7 +33,7 @@ import { AltaProducto } from "./alta-producto";
 import { BuscadorLineas } from "./buscador";
 import { BuscadorClientes } from "./buscador-clientes";
 import { SelectorContacto } from "./selector-contacto";
-import { FilaLinea } from "./linea";
+import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 
 /**
@@ -390,7 +390,15 @@ export function Constructor({
           </section>
 
           {/* --------------------------------------------------- Líneas */}
-          <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+          {/*
+            `@container`: tarjetas o tabla según el ancho de ESTA sección, no
+            de la pantalla, como el registro de compra. Revisión de diseño del
+            02/10: en el teléfono esta tabla se desplazaba de lado (390 px:
+            319 → 867). El corte es `@3xl` (48 rem, 816 px con la base de
+            17 px), el mismo de compras: más arriba se habría pasado a
+            tarjetas en un portátil de 1280, que hoy ve la tabla.
+          */}
+          <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
             {/*
               La sección se presenta, y el subtítulo hace un trabajo de verdad.
 
@@ -450,6 +458,23 @@ export function Constructor({
                 y un renglón vacío dice a la vez QUÉ se va a pedir y DÓNDE va a
                 salir, sin que nadie tenga que leer nada.
               */
+              <>
+              {/*
+                En el teléfono, el mismo «sitio vacío» que pidió Willy, pero
+                con la forma de la tarjeta que va a aparecer: los nombres de
+                lo que se va a pedir, y dónde.
+              */}
+              <div className="rounded-md border border-dashed border-[var(--border-strong)] p-3 text-sm text-[var(--fg-subtle)] @3xl:hidden">
+                <p className="text-[var(--fg-muted)]">
+                  1. Busca un producto arriba —por código, por el del
+                  fabricante o por parte de la descripción— y aparecerá aquí.
+                </p>
+                <p className="mt-2">
+                  Código · Descripción · Cantidad · Valor unitario · Entrega ·
+                  Importe
+                </p>
+              </div>
+              <div className="hidden @3xl:block">
               <TableContenedor>
                 <Table>
                   <THead>
@@ -483,7 +508,25 @@ export function Constructor({
                   </tbody>
                 </Table>
               </TableContenedor>
+              </div>
+              </>
             ) : (
+              <>
+              <ul className="flex flex-col gap-2.5 @3xl:hidden">
+                {estado.lineas.map((l, i) => (
+                  <TarjetaLinea
+                    key={l.key}
+                    linea={l}
+                    indice={i}
+                    total={estado.lineas.length}
+                    clienteId={estado.clienteId}
+                    mostrarDescuento={estado.mostrarDescuento}
+                    despachar={despachar}
+                    puedeEditarKit={puedeEditarKit}
+                  />
+                ))}
+              </ul>
+              <div className="hidden @3xl:block">
               <TableContenedor>
                 <Table>
                   <THead>
@@ -524,6 +567,8 @@ export function Constructor({
                   </TBody>
                 </Table>
               </TableContenedor>
+              </div>
+              </>
             )}
           </section>
 

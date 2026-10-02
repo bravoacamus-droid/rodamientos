@@ -149,7 +149,20 @@ export async function PaginaKits({
           }
         />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card @container overflow-hidden">
+          {/*
+            Revisión de diseño del 02/10: en el teléfono esta tabla se
+            desplazaba de lado (390 px: 302 → 924). Por debajo de `@4xl`
+            (56 rem, 952 px con la base de 17 px) cada kit es una tarjeta con
+            lo mismo apilado y los dos botones a lo ancho. Se mide ESTA caja
+            (`@container`), no la pantalla.
+          */}
+          <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
+            {enPagina.map((k) => (
+              <TarjetaKit key={k.id} kit={k} />
+            ))}
+          </ul>
+          <div className="hidden @4xl:block">
           <TableContenedor>
             <Table>
               <THead>
@@ -170,6 +183,7 @@ export async function PaginaKits({
               </TBody>
             </Table>
           </TableContenedor>
+          </div>
 
           <PaginacionKeyset
             cantidadEnPagina={enPagina.length}
@@ -192,14 +206,21 @@ export async function PaginaKits({
  * a descubrir que lo es—. Lo que se pulsa son los dos botones de la derecha,
  * como en las otras diez tablas del ERP.
  */
+/**
+ * La pieza que limita cuántos se arman, si es una sola la que manda. Lo usan
+ * la fila y la tarjeta: la misma pregunta no puede tener dos respuestas.
+ */
+function frenoDe(k: KitDetalle) {
+  return k.componentes.length > 1
+    ? k.componentes.reduce(
+        (peor, c) => (c.alcanzaPara < peor.alcanzaPara ? c : peor),
+        k.componentes[0]!,
+      )
+    : null;
+}
+
 function FilaKit({ kit: k }: { kit: KitDetalle }) {
-  const freno =
-    k.componentes.length > 1
-      ? k.componentes.reduce(
-          (peor, c) => (c.alcanzaPara < peor.alcanzaPara ? c : peor),
-          k.componentes[0]!,
-        )
-      : null;
+  const freno = frenoDe(k);
 
   return (
     <tr className={k.archivado ? "opacity-60" : ""}>
@@ -247,19 +268,93 @@ function FilaKit({ kit: k }: { kit: KitDetalle }) {
       <td className="text-right tabular text-sm">{k.componentes.length}</td>
 
       <td className="text-right">
-        <span className="tabular font-medium">{dolar(k.precioVenta)}</span>
-        {/* Cuando lo que se cobra no es la suma, se dice: no es un error
-            —un kit se vende redondeado— pero no saberlo sí lo sería. */}
-        {Math.abs(k.precioVenta - k.sumaVenta) >= 0.01 ? (
-          <span className="block text-sm text-[var(--fg-muted)]">
-            suma {dolar(k.sumaVenta)}
-          </span>
-        ) : null}
+        <PrecioKit kit={k} />
       </td>
 
       <td className="text-right">
         <AccionesKit kit={k} />
       </td>
     </tr>
+  );
+}
+
+function PrecioKit({ kit: k }: { kit: KitDetalle }) {
+  return (
+    <>
+      <span className="tabular font-medium">{dolar(k.precioVenta)}</span>
+      {/* Cuando lo que se cobra no es la suma, se dice: no es un error
+          —un kit se vende redondeado— pero no saberlo sí lo sería. */}
+      {Math.abs(k.precioVenta - k.sumaVenta) >= 0.01 ? (
+        <span className="block text-sm text-[var(--fg-muted)]">
+          suma {dolar(k.sumaVenta)}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * El mismo kit, cuando la tabla no cabe: cada dato con su nombre encima,
+ * porque aquí no hay cabecera que lo diga.
+ */
+function TarjetaKit({ kit: k }: { kit: KitDetalle }) {
+  const freno = frenoDe(k);
+  const loFrena = freno && k.armable === freno.alcanzaPara ? freno.codigo : null;
+
+  return (
+    <li
+      className={`flex flex-col gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+        k.archivado ? "opacity-60" : ""
+      }`}
+    >
+      <div>
+        <p className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 font-mono font-semibold">
+            <Boxes className="size-4 shrink-0 text-[var(--fg-muted)]" />
+            {k.codigo}
+          </span>
+          {k.archivado ? (
+            <Badge tone="neutral" size="xs">
+              de baja
+            </Badge>
+          ) : null}
+        </p>
+        <p className="text-sm">{k.descripcion}</p>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Se arman</dt>
+          <dd>
+            <span className="tabular font-medium">{k.armable}</span>
+            {k.armable <= 0 ? (
+              <Badge tone="danger" size="xs" className="ml-2">
+                falta material
+              </Badge>
+            ) : null}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Precio</dt>
+          <dd>
+            <PrecioKit kit={k} />
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Piezas</dt>
+          <dd className="tabular">{k.componentes.length}</dd>
+        </div>
+        {/* Solo cuando hay una pieza que manda: un «—» con nombre propio
+            ocupa un renglón para no decir nada. */}
+        {loFrena ? (
+          <div className="min-w-0">
+            <dt className="text-[var(--fg-subtle)]">Lo frena</dt>
+            <dd className="truncate font-mono">{loFrena}</dd>
+          </div>
+        ) : null}
+      </dl>
+
+      <AccionesKit kit={k} aLoAncho />
+    </li>
   );
 }

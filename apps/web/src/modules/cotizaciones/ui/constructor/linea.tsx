@@ -81,15 +81,7 @@ import { importeLinea } from "../../dominio/totales";
 const dolar = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
 
-export function FilaLinea({
-  linea,
-  indice,
-  total,
-  clienteId,
-  mostrarDescuento,
-  despachar,
-  puedeEditarKit = false,
-}: {
+interface PropsLinea {
   linea: LineaConstructor;
   indice: number;
   total: number;
@@ -98,7 +90,29 @@ export function FilaLinea({
   despachar: (a: Accion) => void;
   /** Gerencia, admin y compras: los que pueden cambiar un kit (25/09). */
   puedeEditarKit?: boolean;
-}) {
+  /**
+   * Fila de tabla o tarjeta (revisión de diseño del 02/10). Es el mismo
+   * componente y no dos: la línea lleva sus diálogos, sus paneles y sus
+   * cargas, y duplicarlos sería tener dos líneas que se pueden desalinear.
+   */
+  vista?: "fila" | "tarjeta";
+}
+
+/** La línea como tarjeta, para cuando la tabla no cabe. */
+export function TarjetaLinea(props: Omit<PropsLinea, "vista">) {
+  return <FilaLinea {...props} vista="tarjeta" />;
+}
+
+export function FilaLinea({
+  linea,
+  indice,
+  total,
+  clienteId,
+  mostrarDescuento,
+  despachar,
+  puedeEditarKit = false,
+  vista = "fila",
+}: PropsLinea) {
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
   const [editando, setEditando] = useState(false);
   /** El kit, visto o editado sin salir de la cotización (25/09). */
@@ -166,476 +180,338 @@ export function FilaLinea({
     traerHistorial(cuantasVentas);
   };
 
-  return (
+  /*
+    Las piezas de la línea que se pintan igual en la fila de la tabla y en
+    la tarjeta del teléfono. Salen de aquí para que las dos editen lo mismo
+    con el mismo código: un campo copiado acaba comportándose distinto.
+  */
+  const textoStock = (
     <>
-      <tr className={revision.ok ? "" : "bg-[var(--danger-bg)]"}>
-        {/*
-          El número de línea y las flechas que lo cambian, juntos.
+      <span
+        className={`text-sm ${noAlcanza ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
+      >
+        {sinNada
+          ? "sin stock"
+          : noAlcanza
+            ? `solo ${linea.stock}`
+            : `stock ${linea.stock}`}
+      </span>
+    </>
+  );
 
-          Estaban al final, en «Acciones», donde ocupaban 70 px fijos de una
-          columna que en la pantalla de Willy ahogaba a todas las demás. Y
-          estaban lejos de lo único que modifican: este número.
+  const campoCantidad = (
+    <>
+      <Input
+        type="number"
+        min={0}
+        step="any"
+        value={linea.cantidad}
+        onChange={(e) =>
+          despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
+        }
+        className="min-w-[4.5rem] text-right tabular"
+        aria-label={`Cantidad de ${linea.codigo}`}
+      />
+    </>
+  );
 
-          No se esconden —siguen siendo dos botones con su `aria-label`—; se
-          mudan a donde significan algo.
-        */}
-        <td className="align-top">
-          <div className="flex items-center gap-0.5">
-            <span className="tabular text-[var(--fg-muted)]">{indice + 1}</span>
-            <div className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
-                disabled={indice === 0}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
-                aria-label={`Subir ${linea.codigo}`}
-                title="Subir"
-              >
-                <ChevronUp className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
-                disabled={indice === total - 1}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
-                aria-label={`Bajar ${linea.codigo}`}
-                title="Bajar"
-              >
-                <ChevronDown className="size-3.5" />
-              </button>
-            </div>
-          </div>
-        </td>
+  const campoEntrega = (
+    <>
+      <SelectNativo
+        value={linea.disponibilidad}
+        onChange={(e) =>
+          despachar({
+            tipo: "disponibilidad",
+            key: linea.key,
+            // El `as` es honesto: las opciones del select SON el enum.
+            valor: e.target.value as Disponibilidad,
+          })
+        }
+        // Sin `min-w`, la columna lo estrechaba hasta dejar «Inmedia» y
+        // media flecha: una promesa de entrega a medio leer.
+        className="h-control-sm min-w-[7rem] text-sm"
+        aria-label={`Disponibilidad de ${linea.codigo}`}
+      >
+        {DISPONIBILIDADES.map((d) => (
+          <option key={d} value={d}>
+            {ETIQUETA_DISPONIBILIDAD[d]}
+          </option>
+        ))}
+      </SelectNativo>
 
-        {/*
-          El stock, como DATO y no como puerta.
-
-          Era un enlace subrayado en ámbar de 12 px —«sin stock · ver
-          alternativas»— y hacía dos trabajos a la vez: avisar y ser el único
-          camino a las alternativas. Los dos mal. Willy no lo veía, y con
-          stock suficiente el enlace no salía, así que no había forma de
-          mirar una equivalencia por precio o por marca aunque se quisiera.
-
-          Ahora esto solo informa. Las alternativas son un botón de la
-          columna de acciones, y están siempre.
-        */}
-        {/* Un código no se parte: «6310-2Z/C3» en dos renglones deja de
-            parecerse a lo que el cliente tiene escrito en su orden. */}
-        <td className="min-w-[6.5rem]">
-          <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
-          <span
-            className={`text-sm ${noAlcanza ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
-          >
-            {sinNada
-              ? "sin stock"
-              : noAlcanza
-                ? `solo ${linea.stock}`
-                : `stock ${linea.stock}`}
-          </span>
-        </td>
-
-        {/*
-          C2: la marca en columna propia. Y se LEE, no se teclea.
-
-          Estuvo unas horas siendo una caja de texto, porque era el único sitio
-          donde se podía arreglar el retén que sale «sin marca». Luis, 16/09,
-          en cuanto «Editar artículo» pasó a traer la ficha entera: *«¿qué pasó
-          con esto?, ¿por qué se puede cambiar eso?, no quedamos… y ocupa mucho
-          también»*.
-
-          Las dos cosas son ciertas. La caja se comía entre 112 y 199 px de una
-          fila donde la descripción es lo que hay que leer, y desde que el
-          diálogo edita el catálogo había dos maneras de cambiar la marca sin
-          que nada dijera en qué se diferencian.
-
-          Ahora hay una sola puerta —el menú— con las dos salidas dentro y su
-          alcance escrito. Y el caso del retén no se pierde: en el diálogo se
-          elige «solo en esta cotización», que es donde 45x60x8TC se vende como
-          LYO, NQK, PHK o NAK sobre una única fila del maestro.
-        */}
-        <td className="text-sm">
-          {linea.marca ?? (
-            <span className="text-[var(--fg-subtle)]">sin marca</span>
-          )}
-        </td>
-
-        {/* C3: la descripción no repite el código. */}
-        <td className="text-sm">{linea.descripcion}</td>
-
-        {/*
-          La cantidad, con un ancho que NO se puede aplastar.
-
-          Willy, 16/09: *«le he ingresado 50 unidades y no se ve la cantidad
-          completa, solo el 0»*. Y era literal: en su pantalla esta caja medía
-          **42 px**.
-
-          El motivo no estaba aquí sino al final de la fila. Los botones de
-          «Alternativas» y «Ventas» enseñan su texto desde `xl` (1280 px) y no
-          se encogen, así que en una pantalla de 1600 —la de Willy— la columna
-          de acciones se queda con 414 px fijos y el resto de columnas se
-          reparten lo que sobra. Las de texto se parten en más renglones; las
-          que llevan un campo dentro, no: se quedan sin sitio donde escribir.
-
-          `min-w` en el propio campo es lo que lo impide. Un ancho en el `<td>`
-          no basta: en una tabla es una sugerencia, y el navegador la ignora
-          cuando va justo. Si con esto la tabla no cabe, se desplaza —para eso
-          está `scroll-x`—, que es mucho mejor que una caja donde no se lee lo
-          que se acaba de teclear.
-        */}
-        <td className="w-24">
+      {linea.disponibilidad !== "inmediata" ? (
+        <div className="mt-1 flex items-center gap-1">
           <Input
             type="number"
-            min={0}
-            step="any"
-            value={linea.cantidad}
-            onChange={(e) =>
-              despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
-            }
-            className="min-w-[4.5rem] text-right tabular"
-            aria-label={`Cantidad de ${linea.codigo}`}
-          />
-        </td>
-
-        <td className="text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
-
-        {/*
-          Cuándo se puede entregar (040).
-
-          Esta columna se ve SIEMPRE, a diferencia de la del descuento, que
-          aparece solo si se activa. No es una incoherencia: la casilla de la
-          cabecera decide si la columna se IMPRIME, no si el dato existe. Y el
-          dato hace falta aunque no se imprima, porque es de donde va a salir
-          la bandeja «Por comprar»: lo que no es inmediato hay que pedirlo.
-        */}
-        <td className="w-40">
-          <SelectNativo
-            value={linea.disponibilidad}
+            min={1}
+            max={365}
+            step="1"
+            value={linea.diasEntrega ?? ""}
             onChange={(e) =>
               despachar({
-                tipo: "disponibilidad",
+                tipo: "diasEntrega",
                 key: linea.key,
-                // El `as` es honesto: las opciones del select SON el enum.
-                valor: e.target.value as Disponibilidad,
+                // Vaciar la caja vuelve al plazo habitual, no a cero.
+                valor: e.target.value === "" ? null : Number(e.target.value),
               })
             }
-            // Sin `min-w`, la columna lo estrechaba hasta dejar «Inmedia» y
-            // media flecha: una promesa de entrega a medio leer.
-            className="h-control-sm min-w-[7rem] text-sm"
-            aria-label={`Disponibilidad de ${linea.codigo}`}
-          >
-            {DISPONIBILIDADES.map((d) => (
-              <option key={d} value={d}>
-                {ETIQUETA_DISPONIBILIDAD[d]}
-              </option>
-            ))}
-          </SelectNativo>
-
-          {linea.disponibilidad !== "inmediata" ? (
-            <div className="mt-1 flex items-center gap-1">
-              <Input
-                type="number"
-                min={1}
-                max={365}
-                step="1"
-                value={linea.diasEntrega ?? ""}
-                onChange={(e) =>
-                  despachar({
-                    tipo: "diasEntrega",
-                    key: linea.key,
-                    // Vaciar la caja vuelve al plazo habitual, no a cero.
-                    valor: e.target.value === "" ? null : Number(e.target.value),
-                  })
-                }
-                placeholder={String(DIAS_POR_DEFECTO[linea.disponibilidad] ?? "")}
-                className="h-control-sm w-14 text-right tabular text-sm"
-                aria-label={`Días de entrega de ${linea.codigo}`}
-              />
-              <span className="text-sm text-[var(--fg-muted)]">días</span>
-            </div>
-          ) : null}
-
-          {/* Prometer «inmediata» sin stock no se bloquea —Willy consigue en
-              el día casi todo lo que no tiene— pero sí se dice: lo que salga
-              en esa columna es una promesa impresa. */}
-          {prometeDeMas(linea.disponibilidad, linea.cantidad, linea.stock) ? (
-            /*
-              El aviso, corto.
-
-              Decía «sin stock para prometer entrega inmediata»: cuarenta
-              caracteres dentro de una columna estrecha, que en la pantalla de
-              Willy se partían en CUATRO renglones y estiraban la fila entera.
-              La frase completa se queda en el `title`, para quien pase el
-              ratón; lo que se lee de un vistazo es que algo va mal, y eso cabe
-              en dos palabras. La columna de al lado ya dice qué se prometió.
-            */
-            <span
-              className="mt-1 block text-sm font-medium text-[var(--warn)]"
-              title={
-                sinNada
-                  ? "No hay stock para prometer entrega inmediata"
-                  : `Solo hay ${linea.stock} para prometer entrega inmediata`
-              }
-            >
-              {sinNada ? "sin stock" : `solo ${linea.stock}`}
-            </span>
-          ) : null}
-        </td>
-
-        {/* C1: SOLO valor unitario. La columna "precio unitario" (valor x 1.18)
-            desaparece del modelo, no solo del PDF: es la que le hizo perder
-            ventas porque el cliente comparaba con IGV contra la competencia. */}
-        <td className="w-28">
-          <Input
-            type="number"
-            min={0}
-            step="0.0001"
-            value={linea.valorUnitario}
-            onChange={(e) =>
-              despachar({ tipo: "precio", key: linea.key, valor: Number(e.target.value) })
-            }
-            className={`min-w-[5.5rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
-            aria-label={`Valor unitario de ${linea.codigo}`}
+            placeholder={String(DIAS_POR_DEFECTO[linea.disponibilidad] ?? "")}
+            className="h-control-sm w-14 text-right tabular text-sm"
+            aria-label={`Días de entrega de ${linea.codigo}`}
           />
-          {linea.valorUnitario !== linea.precioLista ? (
-            <button
-              type="button"
-              onClick={() => despachar({ tipo: "volverALista", key: linea.key })}
-              className="mt-0.5 block text-sm text-[var(--fg-muted)] underline"
-              title={`Lista: ${dolar(linea.precioLista)}`}
-            >
-              volver a {dolar(linea.precioLista)}
-            </button>
-          ) : null}
-
-        </td>
-
-        {mostrarDescuento ? (
-          <td className="w-24">
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              value={linea.descuentoPct}
-              onChange={(e) =>
-                despachar({ tipo: "descuento", key: linea.key, valor: Number(e.target.value) })
-              }
-              className={`min-w-[4rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
-              aria-label={`Descuento de ${linea.codigo}`}
-            />
-            {revision.descuentoMaximoPct !== null && revision.ok ? (
-              <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
-                máx. {revision.descuentoMaximoPct}%
-              </span>
-            ) : null}
-          </td>
-        ) : null}
-
-        <td className="text-right tabular font-medium">{dolar(importe)}</td>
-
-        {/*
-          Todo lo de la línea, en un menú.
-
-          Luis, 16/09, con el menú de otro sistema en la pantalla: *«yo creo
-          que así está bien… ahí adentro también estaría alternativas, ventas,
-          eliminar si se queda»*.
-
-          -------------------------------------------------------------------
-          Esto DESHACE una decisión del 08/09, y conviene saberlo
-          -------------------------------------------------------------------
-          «Alternativas» y «Ventas anteriores» existen desde la 011 y Willy no
-          las encontró nunca: la primera era un enlace ámbar de 12 px que solo
-          aparecía SIN stock; la segunda, un enlace azul partido en dos
-          renglones. En 47:00, tecleando un precio, preguntó si el sistema no
-          le mostraba *«a quién se ha vendido, a cuánto se ha vendido»* — y lo
-          tenía delante. Por eso el 08/09 se sacaron a botones con su palabra.
-
-          Volverlas a meter en un menú es repetir la forma del problema. Se
-          hace igual, porque lo pidió, y porque hay tres diferencias que no
-          son de estilo:
-
-            · el menú lo abre un botón con borde, no un enlace gris — el
-              disparador SE VE, que es lo que fallaba;
-            · dentro se leen con su nombre entero a 14 px, no abreviadas
-              («hist.») ni a 12;
-            · y salen SIEMPRE, con stock o sin él. Lo de 011 no era solo que
-              fuera pequeño: es que con stock no existía.
-
-          A cambio, la columna baja de 414 px fijos a los 52 de un botón, que
-          es de donde sale el sitio para que se lea la cantidad.
-        */}
-        <td>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              title={`Opciones de ${linea.codigo}`}
-              aria-label={`Opciones de ${linea.codigo}`}
-              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-            >
-              <MoreVertical className="size-[18px]" aria-hidden="true" />
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-60">
-              {/*
-                Lo primero, lo que pidió Luis: *«en la opción de editar
-                artículo deben aparecer todos los campos editables: código,
-                marca, descripción»*. Se puede en las líneas escritas a mano
-                —sin `productoId`— igual que en las del catálogo: lo que se
-                edita es la copia impresa, y esa la tienen las dos.
-              */}
-              {/*
-                Un KIT, lo primero: ver lo que lleva, y cambiarlo ahí mismo.
-
-                Luis, 25/09: *«solo si es un kit, en los tres puntos ver
-                detalle de kit […] un nuevo modal ahí mismo, así es dinámico en
-                la misma cotización, para no regresar a la otra ventana»*. Y es
-                lo que Willy buscó en la reunión del 24/09 (8:09) y no
-                encontró: tenía «Editar artículo», que cambia la copia impresa
-                de la línea, no lo que el kit lleva dentro.
-              */}
-              {/*
-                Y SIN «Editar artículo». Luis, 25/09: *«editar un kit no es
-                como editar un producto»*. Ese diálogo es el de la ficha de
-                producto —marca, familia, costo—, y en un kit no deja tocar lo
-                único que importa: qué lleva dentro. «Editar kit» abre el
-                editor de kits, en el mismo modal.
-              */}
-              {esKit ? (
-                <>
-                  <DropdownMenuItem
-                    onSelect={() => requestAnimationFrame(() => abrirKit("ver"))}
-                  >
-                    <Package />
-                    Ver kit
-                  </DropdownMenuItem>
-                  {puedeEditarKit ? (
-                    <DropdownMenuItem
-                      onSelect={() => requestAnimationFrame(() => abrirKit("editar"))}
-                    >
-                      <Pencil />
-                      Editar kit
-                    </DropdownMenuItem>
-                  ) : null}
-                </>
-              ) : (
-                <DropdownMenuItem onSelect={() => setEditando(true)}>
-                  <Pencil />
-                  Editar artículo
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuSeparator />
-
-              {/*
-                Ver precios y ver stock, las dos que pidió Luis el 17/09:
-                *«en las opciones hay que ponerlo ver stock y ver precios, y le
-                salga modal de los precios pues: compra, precio mínimo, precio
-                venta, etc.»*.
-
-                Son DOS entradas y UN diálogo, no dos pantallas. Quien busca el
-                stock y quien busca el costo entran por la palabra que tiene en
-                la cabeza, pero una vez dentro lo que se mira es lo mismo: si
-                este precio vale la pena y si hay para despachar. Partirlo en
-                dos modales obligaría a abrir los dos para decidir una cosa.
-
-                Y responde a lo que Willy pidió el 16/09 (7:30): *«puede verlos
-                los precios como un ojito, y ver a cuánto lo compró, a cuánto
-                le costó y a cuánto lo está vendiendo»*.
-              */}
-              {/* En un kit, los dos abren el modal del kit: su costo es la
-                  suma de sus piezas y su stock, cuántos se pueden armar. El
-                  de producto diría costo cero y stock cero. */}
-              <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
-                <DollarSign />
-                Ver precios
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
-                <Boxes />
-                Ver stock
-                {/* El número, ya en el menú: muchas veces es lo único que se
-                    venía a mirar, y así no hace falta abrir nada. */}
-                <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
-                  {linea.stock}
-                </span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {/*
-                `onSelect` con el diálogo: Radix devuelve el foco al
-                disparador al cerrarse el menú, y si el diálogo ya se montó se
-                lo quita de las manos. Se deja cerrar antes con un
-                `requestAnimationFrame`.
-              */}
-              {/* Las alternativas son equivalencias de rodamiento (mismo
-                  núcleo ISO, otra marca): un kit no tiene. */}
-              {esKit ? null : (
-                <DropdownMenuItem
-                  disabled={!linea.productoId}
-                  onSelect={() => requestAnimationFrame(abrirSustitutos)}
-                >
-                  <ArrowLeftRight />
-                  Ver alternativas
-                </DropdownMenuItem>
-              )}
-
-              <DropdownMenuItem
-                disabled={!linea.productoId}
-                onSelect={() => requestAnimationFrame(abrirHistorial)}
-              >
-                <History />
-                Ventas anteriores
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {/* «Quitar de la cotización» y no «Eliminar»: no se borra nada,
-                  sale de este papel. La misma distinción que «dar de baja» en
-                  el catálogo (24:21). */}
-              <DropdownMenuItem
-                destructivo
-                onSelect={() => despachar({ tipo: "quitar", key: linea.key })}
-              >
-                <Trash2 />
-                Quitar de la cotización
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </td>
-      </tr>
-
-      {/* Aviso del piso: con el número que hace falta, no un "no puedes". */}
-      {!revision.ok ? (
-        <tr className="bg-[var(--danger-bg)]">
-          <td />
-          <td colSpan={mostrarDescuento ? 8 : 7} className="pb-2 text-sm">
-            <span className="font-medium text-[var(--danger)]">
-              {dolar(revision.precioNeto)} queda bajo el mínimo de{" "}
-              {dolar(revision.piso)}
-            </span>{" "}
-            — faltan {dolar(revision.faltantePorUnidad)} por unidad (
-            {dolar(revision.faltanteEnLinea)} en la línea).{" "}
-            {linea.descuentoPct > 0 && revision.descuentoMaximoPct !== null ? (
-              <>Con este precio el descuento máximo es {revision.descuentoMaximoPct}%. </>
-            ) : null}
-            {revision.valorUnitarioMinimo !== null && linea.descuentoPct > 0 ? (
-              <>
-                Con {linea.descuentoPct}% de descuento no bajes de{" "}
-                {dolar(revision.valorUnitarioMinimo)}.{" "}
-              </>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => despachar({ tipo: "bajarAlPiso", key: linea.key })}
-            >
-              Dejar en el mínimo
-            </Button>
-          </td>
-        </tr>
+          <span className="text-sm text-[var(--fg-muted)]">días</span>
+        </div>
       ) : null}
 
+      {/* Prometer «inmediata» sin stock no se bloquea —Willy consigue en
+          el día casi todo lo que no tiene— pero sí se dice: lo que salga
+          en esa columna es una promesa impresa. */}
+      {prometeDeMas(linea.disponibilidad, linea.cantidad, linea.stock) ? (
+        /*
+          El aviso, corto.
+
+          Decía «sin stock para prometer entrega inmediata»: cuarenta
+          caracteres dentro de una columna estrecha, que en la pantalla de
+          Willy se partían en CUATRO renglones y estiraban la fila entera.
+          La frase completa se queda en el `title`, para quien pase el
+          ratón; lo que se lee de un vistazo es que algo va mal, y eso cabe
+          en dos palabras. La columna de al lado ya dice qué se prometió.
+        */
+        <span
+          className="mt-1 block text-sm font-medium text-[var(--warn)]"
+          title={
+            sinNada
+              ? "No hay stock para prometer entrega inmediata"
+              : `Solo hay ${linea.stock} para prometer entrega inmediata`
+          }
+        >
+          {sinNada ? "sin stock" : `solo ${linea.stock}`}
+        </span>
+      ) : null}
+    </>
+  );
+
+  const campoPrecio = (
+    <>
+      <Input
+        type="number"
+        min={0}
+        step="0.0001"
+        value={linea.valorUnitario}
+        onChange={(e) =>
+          despachar({ tipo: "precio", key: linea.key, valor: Number(e.target.value) })
+        }
+        className={`min-w-[5.5rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
+        aria-label={`Valor unitario de ${linea.codigo}`}
+      />
+      {linea.valorUnitario !== linea.precioLista ? (
+        <button
+          type="button"
+          onClick={() => despachar({ tipo: "volverALista", key: linea.key })}
+          className="mt-0.5 block text-sm text-[var(--fg-muted)] underline"
+          title={`Lista: ${dolar(linea.precioLista)}`}
+        >
+          volver a {dolar(linea.precioLista)}
+        </button>
+      ) : null}
+    </>
+  );
+
+  const campoDescuento = (
+    <>
+      <Input
+        type="number"
+        min={0}
+        max={100}
+        step="0.01"
+        value={linea.descuentoPct}
+        onChange={(e) =>
+          despachar({ tipo: "descuento", key: linea.key, valor: Number(e.target.value) })
+        }
+        className={`min-w-[4rem] text-right tabular ${revision.ok ? "" : "border-[var(--danger)]"}`}
+        aria-label={`Descuento de ${linea.codigo}`}
+      />
+      {revision.descuentoMaximoPct !== null && revision.ok ? (
+        <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
+          máx. {revision.descuentoMaximoPct}%
+        </span>
+      ) : null}
+    </>
+  );
+
+  /** `conTexto`: en la tarjeta el botón dice lo que es; en la fila basta el icono con su borde. */
+  const menuOpciones = (conTexto: boolean) => (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          title={`Opciones de ${linea.codigo}`}
+          aria-label={`Opciones de ${linea.codigo}`}
+          className={`inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] ${conTexto ? "gap-1.5 px-3 text-sm font-medium" : "px-2"} text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]`}
+        >
+          <MoreVertical className="size-[18px]" aria-hidden="true" />
+          {conTexto ? "Más opciones" : null}
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end" className="w-60">
+          {/*
+            Lo primero, lo que pidió Luis: *«en la opción de editar
+            artículo deben aparecer todos los campos editables: código,
+            marca, descripción»*. Se puede en las líneas escritas a mano
+            —sin `productoId`— igual que en las del catálogo: lo que se
+            edita es la copia impresa, y esa la tienen las dos.
+          */}
+          {/*
+            Un KIT, lo primero: ver lo que lleva, y cambiarlo ahí mismo.
+
+            Luis, 25/09: *«solo si es un kit, en los tres puntos ver
+            detalle de kit […] un nuevo modal ahí mismo, así es dinámico en
+            la misma cotización, para no regresar a la otra ventana»*. Y es
+            lo que Willy buscó en la reunión del 24/09 (8:09) y no
+            encontró: tenía «Editar artículo», que cambia la copia impresa
+            de la línea, no lo que el kit lleva dentro.
+          */}
+          {/*
+            Y SIN «Editar artículo». Luis, 25/09: *«editar un kit no es
+            como editar un producto»*. Ese diálogo es el de la ficha de
+            producto —marca, familia, costo—, y en un kit no deja tocar lo
+            único que importa: qué lleva dentro. «Editar kit» abre el
+            editor de kits, en el mismo modal.
+          */}
+          {esKit ? (
+            <>
+              <DropdownMenuItem
+                onSelect={() => requestAnimationFrame(() => abrirKit("ver"))}
+              >
+                <Package />
+                Ver kit
+              </DropdownMenuItem>
+              {puedeEditarKit ? (
+                <DropdownMenuItem
+                  onSelect={() => requestAnimationFrame(() => abrirKit("editar"))}
+                >
+                  <Pencil />
+                  Editar kit
+                </DropdownMenuItem>
+              ) : null}
+            </>
+          ) : (
+            <DropdownMenuItem onSelect={() => setEditando(true)}>
+              <Pencil />
+              Editar artículo
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuSeparator />
+
+          {/*
+            Ver precios y ver stock, las dos que pidió Luis el 17/09:
+            *«en las opciones hay que ponerlo ver stock y ver precios, y le
+            salga modal de los precios pues: compra, precio mínimo, precio
+            venta, etc.»*.
+
+            Son DOS entradas y UN diálogo, no dos pantallas. Quien busca el
+            stock y quien busca el costo entran por la palabra que tiene en
+            la cabeza, pero una vez dentro lo que se mira es lo mismo: si
+            este precio vale la pena y si hay para despachar. Partirlo en
+            dos modales obligaría a abrir los dos para decidir una cosa.
+
+            Y responde a lo que Willy pidió el 16/09 (7:30): *«puede verlos
+            los precios como un ojito, y ver a cuánto lo compró, a cuánto
+            le costó y a cuánto lo está vendiendo»*.
+          */}
+          {/* En un kit, los dos abren el modal del kit: su costo es la
+              suma de sus piezas y su stock, cuántos se pueden armar. El
+              de producto diría costo cero y stock cero. */}
+          <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
+            <DollarSign />
+            Ver precios
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => requestAnimationFrame(verPreciosYStock)}>
+            <Boxes />
+            Ver stock
+            {/* El número, ya en el menú: muchas veces es lo único que se
+                venía a mirar, y así no hace falta abrir nada. */}
+            <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
+              {linea.stock}
+            </span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/*
+            `onSelect` con el diálogo: Radix devuelve el foco al
+            disparador al cerrarse el menú, y si el diálogo ya se montó se
+            lo quita de las manos. Se deja cerrar antes con un
+            `requestAnimationFrame`.
+          */}
+          {/* Las alternativas son equivalencias de rodamiento (mismo
+              núcleo ISO, otra marca): un kit no tiene. */}
+          {esKit ? null : (
+            <DropdownMenuItem
+              disabled={!linea.productoId}
+              onSelect={() => requestAnimationFrame(abrirSustitutos)}
+            >
+              <ArrowLeftRight />
+              Ver alternativas
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuItem
+            disabled={!linea.productoId}
+            onSelect={() => requestAnimationFrame(abrirHistorial)}
+          >
+            <History />
+            Ventas anteriores
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* «Quitar de la cotización» y no «Eliminar»: no se borra nada,
+              sale de este papel. La misma distinción que «dar de baja» en
+              el catálogo (24:21). */}
+          <DropdownMenuItem
+            destructivo
+            onSelect={() => despachar({ tipo: "quitar", key: linea.key })}
+          >
+            <Trash2 />
+            Quitar de la cotización
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+
+  const avisoPiso = (
+    <>
+      <span className="font-medium text-[var(--danger)]">
+        {dolar(revision.precioNeto)} queda bajo el mínimo de{" "}
+        {dolar(revision.piso)}
+      </span>{" "}
+      — faltan {dolar(revision.faltantePorUnidad)} por unidad (
+      {dolar(revision.faltanteEnLinea)} en la línea).{" "}
+      {linea.descuentoPct > 0 && revision.descuentoMaximoPct !== null ? (
+        <>Con este precio el descuento máximo es {revision.descuentoMaximoPct}%. </>
+      ) : null}
+      {revision.valorUnitarioMinimo !== null && linea.descuentoPct > 0 ? (
+        <>
+          Con {linea.descuentoPct}% de descuento no bajes de{" "}
+          {dolar(revision.valorUnitarioMinimo)}.{" "}
+        </>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => despachar({ tipo: "bajarAlPiso", key: linea.key })}
+      >
+        Dejar en el mínimo
+      </Button>
+    </>
+  );
+
+  const dialogos = (
+    <>
       {/*
         En diálogo, no como fila desplegada dentro de la tabla.
 
@@ -768,6 +644,311 @@ export function FilaLinea({
           </DialogBody>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  if (vista === "tarjeta") {
+    /*
+      La misma línea, cuando la tabla no cabe.
+
+      Revisión de diseño del 02/10: en el teléfono esta tabla se desplazaba
+      de lado (390 px: 319 → 867), y lo que se viene a teclear —cantidad,
+      precio, descuento— quedaba fuera de la vista. Es lo que ya resolvió el
+      registro de compra con `TarjetaCompra`, y se hace igual: arriba lo que
+      identifica al producto, en medio los campos con su nombre encima —aquí
+      no hay cabecera que lo diga—, y abajo el importe y los botones, con su
+      palabra y a lo ancho.
+
+      Las flechas de la fila (16 px de alto) no sirven para un dedo: aquí son
+      «Subir» y «Bajar», con borde.
+    */
+    return (
+      <li
+        className={`rounded-md border p-3 ${
+          revision.ok
+            ? "border-[var(--border)]"
+            : "border-[var(--danger)] bg-[var(--danger-bg)]"
+        }`}
+      >
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-baseline gap-x-2">
+              <span className="tabular text-sm text-[var(--fg-muted)]">
+                {indice + 1}.
+              </span>
+              <span className="font-semibold">{linea.codigo}</span>
+              {textoStock}
+            </p>
+            <p className="text-sm">{linea.descripcion}</p>
+            <p className="text-sm">
+              {linea.marca ?? (
+                <span className="text-[var(--fg-subtle)]">sin marca</span>
+              )}
+            </p>
+          </div>
+          <div className="shrink-0">{menuOpciones(true)}</div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Cantidad ({linea.unidad})</span>
+            {campoCantidad}
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Valor unitario</span>
+            {campoPrecio}
+          </label>
+          {mostrarDescuento ? (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Descuento %</span>
+              {campoDescuento}
+            </label>
+          ) : null}
+          {/* Un `div` y no un `label`: dentro hay dos campos (plazo y días). */}
+          <div
+            className={`flex flex-col gap-1 ${mostrarDescuento ? "" : "col-span-2"}`}
+          >
+            <span className="text-sm font-medium">Entrega</span>
+            {campoEntrega}
+          </div>
+        </div>
+
+        {!revision.ok ? <p className="mt-3 text-sm">{avisoPiso}</p> : null}
+
+        <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm">
+          <span className="text-[var(--fg-muted)]">Importe</span>
+          <span className="tabular text-base font-semibold">{dolar(importe)}</span>
+        </div>
+
+        <div className="mt-2 flex flex-wrap gap-2 [&>*]:flex-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
+            disabled={indice === 0}
+            aria-label={`Subir ${linea.codigo}`}
+          >
+            <ChevronUp className="size-4" aria-hidden />
+            Subir
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
+            disabled={indice === total - 1}
+            aria-label={`Bajar ${linea.codigo}`}
+          >
+            <ChevronDown className="size-4" aria-hidden />
+            Bajar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => despachar({ tipo: "quitar", key: linea.key })}
+            aria-label={`Quitar ${linea.codigo} de la cotización`}
+          >
+            <Trash2 className="size-4" aria-hidden />
+            Quitar
+          </Button>
+        </div>
+
+        {dialogos}
+      </li>
+    );
+  }
+
+  return (
+    <>
+      <tr className={revision.ok ? "" : "bg-[var(--danger-bg)]"}>
+        {/*
+          El número de línea y las flechas que lo cambian, juntos.
+
+          Estaban al final, en «Acciones», donde ocupaban 70 px fijos de una
+          columna que en la pantalla de Willy ahogaba a todas las demás. Y
+          estaban lejos de lo único que modifican: este número.
+
+          No se esconden —siguen siendo dos botones con su `aria-label`—; se
+          mudan a donde significan algo.
+        */}
+        <td className="align-top">
+          <div className="flex items-center gap-0.5">
+            <span className="tabular text-[var(--fg-muted)]">{indice + 1}</span>
+            <div className="flex flex-col">
+              <button
+                type="button"
+                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
+                disabled={indice === 0}
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                aria-label={`Subir ${linea.codigo}`}
+                title="Subir"
+              >
+                <ChevronUp className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
+                disabled={indice === total - 1}
+                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                aria-label={`Bajar ${linea.codigo}`}
+                title="Bajar"
+              >
+                <ChevronDown className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        </td>
+
+        {/*
+          El stock, como DATO y no como puerta.
+
+          Era un enlace subrayado en ámbar de 12 px —«sin stock · ver
+          alternativas»— y hacía dos trabajos a la vez: avisar y ser el único
+          camino a las alternativas. Los dos mal. Willy no lo veía, y con
+          stock suficiente el enlace no salía, así que no había forma de
+          mirar una equivalencia por precio o por marca aunque se quisiera.
+
+          Ahora esto solo informa. Las alternativas son un botón de la
+          columna de acciones, y están siempre.
+        */}
+        {/* Un código no se parte: «6310-2Z/C3» en dos renglones deja de
+            parecerse a lo que el cliente tiene escrito en su orden. */}
+        <td className="min-w-[6.5rem]">
+          <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
+          {textoStock}
+        </td>
+
+        {/*
+          C2: la marca en columna propia. Y se LEE, no se teclea.
+
+          Estuvo unas horas siendo una caja de texto, porque era el único sitio
+          donde se podía arreglar el retén que sale «sin marca». Luis, 16/09,
+          en cuanto «Editar artículo» pasó a traer la ficha entera: *«¿qué pasó
+          con esto?, ¿por qué se puede cambiar eso?, no quedamos… y ocupa mucho
+          también»*.
+
+          Las dos cosas son ciertas. La caja se comía entre 112 y 199 px de una
+          fila donde la descripción es lo que hay que leer, y desde que el
+          diálogo edita el catálogo había dos maneras de cambiar la marca sin
+          que nada dijera en qué se diferencian.
+
+          Ahora hay una sola puerta —el menú— con las dos salidas dentro y su
+          alcance escrito. Y el caso del retén no se pierde: en el diálogo se
+          elige «solo en esta cotización», que es donde 45x60x8TC se vende como
+          LYO, NQK, PHK o NAK sobre una única fila del maestro.
+        */}
+        <td className="text-sm">
+          {linea.marca ?? (
+            <span className="text-[var(--fg-subtle)]">sin marca</span>
+          )}
+        </td>
+
+        {/* C3: la descripción no repite el código. */}
+        <td className="text-sm">{linea.descripcion}</td>
+
+        {/*
+          La cantidad, con un ancho que NO se puede aplastar.
+
+          Willy, 16/09: *«le he ingresado 50 unidades y no se ve la cantidad
+          completa, solo el 0»*. Y era literal: en su pantalla esta caja medía
+          **42 px**.
+
+          El motivo no estaba aquí sino al final de la fila. Los botones de
+          «Alternativas» y «Ventas» enseñan su texto desde `xl` (1280 px) y no
+          se encogen, así que en una pantalla de 1600 —la de Willy— la columna
+          de acciones se queda con 414 px fijos y el resto de columnas se
+          reparten lo que sobra. Las de texto se parten en más renglones; las
+          que llevan un campo dentro, no: se quedan sin sitio donde escribir.
+
+          `min-w` en el propio campo es lo que lo impide. Un ancho en el `<td>`
+          no basta: en una tabla es una sugerencia, y el navegador la ignora
+          cuando va justo. Si con esto la tabla no cabe, se desplaza —para eso
+          está `scroll-x`—, que es mucho mejor que una caja donde no se lee lo
+          que se acaba de teclear.
+        */}
+        <td className="w-24">
+          {campoCantidad}
+        </td>
+
+        <td className="text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
+
+        {/*
+          Cuándo se puede entregar (040).
+
+          Esta columna se ve SIEMPRE, a diferencia de la del descuento, que
+          aparece solo si se activa. No es una incoherencia: la casilla de la
+          cabecera decide si la columna se IMPRIME, no si el dato existe. Y el
+          dato hace falta aunque no se imprima, porque es de donde va a salir
+          la bandeja «Por comprar»: lo que no es inmediato hay que pedirlo.
+        */}
+        <td className="w-40">
+          {campoEntrega}
+        </td>
+
+        {/* C1: SOLO valor unitario. La columna "precio unitario" (valor x 1.18)
+            desaparece del modelo, no solo del PDF: es la que le hizo perder
+            ventas porque el cliente comparaba con IGV contra la competencia. */}
+        <td className="w-28">
+          {campoPrecio}
+        </td>
+
+        {mostrarDescuento ? (
+          <td className="w-24">
+            {campoDescuento}
+          </td>
+        ) : null}
+
+        <td className="text-right tabular font-medium">{dolar(importe)}</td>
+
+        {/*
+          Todo lo de la línea, en un menú.
+
+          Luis, 16/09, con el menú de otro sistema en la pantalla: *«yo creo
+          que así está bien… ahí adentro también estaría alternativas, ventas,
+          eliminar si se queda»*.
+
+          -------------------------------------------------------------------
+          Esto DESHACE una decisión del 08/09, y conviene saberlo
+          -------------------------------------------------------------------
+          «Alternativas» y «Ventas anteriores» existen desde la 011 y Willy no
+          las encontró nunca: la primera era un enlace ámbar de 12 px que solo
+          aparecía SIN stock; la segunda, un enlace azul partido en dos
+          renglones. En 47:00, tecleando un precio, preguntó si el sistema no
+          le mostraba *«a quién se ha vendido, a cuánto se ha vendido»* — y lo
+          tenía delante. Por eso el 08/09 se sacaron a botones con su palabra.
+
+          Volverlas a meter en un menú es repetir la forma del problema. Se
+          hace igual, porque lo pidió, y porque hay tres diferencias que no
+          son de estilo:
+
+            · el menú lo abre un botón con borde, no un enlace gris — el
+              disparador SE VE, que es lo que fallaba;
+            · dentro se leen con su nombre entero a 14 px, no abreviadas
+              («hist.») ni a 12;
+            · y salen SIEMPRE, con stock o sin él. Lo de 011 no era solo que
+              fuera pequeño: es que con stock no existía.
+
+          A cambio, la columna baja de 414 px fijos a los 52 de un botón, que
+          es de donde sale el sitio para que se lea la cantidad.
+        */}
+        <td>
+          {menuOpciones(false)}
+        </td>
+      </tr>
+
+      {/* Aviso del piso: con el número que hace falta, no un "no puedes". */}
+      {!revision.ok ? (
+        <tr className="bg-[var(--danger-bg)]">
+          <td />
+          <td colSpan={mostrarDescuento ? 8 : 7} className="pb-2 text-sm">
+            {avisoPiso}
+          </td>
+        </tr>
+      ) : null}
+
+      {dialogos}
     </>
   );
 }

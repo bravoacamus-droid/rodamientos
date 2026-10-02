@@ -4592,6 +4592,48 @@ de Defontana.
 
 ---
 
+## §AR · 02/10 — Revisión de diseño de TODO el ERP, para cerrar
+
+Luis, 02/10: *«ya vamos a terminar este proyecto, entonces los módulos ya
+deben estar perfectos en todo para ya cerrar esos temas»*. Un revisor midió 49
+de las 50 rutas con iframes de 390, 1280 y 1600 px (todo con JS; las capturas
+de la pestaña automatizada salen congeladas). Lo que salió, y cómo quedó:
+
+### AR.1 · Hecho
+
+- **Nada por debajo de 14 px** (afe6528). La base es de 17 px: `text-xs` eran
+  12,75 px y `text-[0.8rem]` 13,6 px, en los botones `sm`, la paginación de
+  las 11 tablas, la explicación de TODOS los estados vacíos, y los códigos y
+  números de documento. 111 archivos. Los papeles impresos no se tocan.
+- **La página se desbordaba** en /productos (1454 px a 1280) y /compras: el
+  `sr-only` absoluto de la columna de acciones se escapaba de `.scroll-x`,
+  que ahora es `position: relative`.
+- **Botones fijos a la derecha** en las tablas anchas, y lo secundario desde
+  1536 px (4b444ba). A 1280 con el menú abierto los botones quedaban fuera.
+- **Iconos de lucide** en vez de los 33 dibujados a mano; queda el de WhatsApp.
+- **«Volver a…»**: un solo componente con aspecto de botón.
+- **Ficha del cliente**: «Lo que se le ha vendido» → sus cotizaciones, guías,
+  facturas y lo que debe (las listas ya filtraban por `?cliente=`).
+- **Jerga**: NIU → «und», Trazabilidad → «Historia del producto», SKU →
+  «productos», Import. → Importación, Ubigeo explicado, «último 0.00».
+- **Color**: cartera sin hexadecimales; «Dar de baja» en rojo.
+- **Botones que no lo parecían**: alertas («Leída», «Archivar»),
+  importaciones («En camino | Todas»), estados vacíos con su botón.
+- **Tarjetas en el teléfono** donde la tabla se desplazaba de lado: ver AR.2.
+
+### AR.2 · Queda, a propósito
+
+- **Listas con tope fijo sin paginación** (cobranzas 500, importaciones 300,
+  transporte 200, equivalencias 100, trazabilidad 500, «qué vende» 500). Hoy
+  no se pierde nada: hay 35 facturas con saldo, 6 importaciones, 0
+  equivalencias y como mucho 19 productos por proveedor. Se mira cuando crezca.
+- **«Valorización», «Reposición y sobrestock», «Kardex»**: Willy probablemente
+  los usa; no se cambian sin preguntarle.
+- **Pastillas de estado pintadas a mano** («vencida», «Anulado», completo /
+  parcial): ya a 14 px; pasarlas a `EstadoBadge` es coherencia, no lectura.
+
+---
+
 ## §AQ · 01/10 (reunión) — El Excel era el ANÁLISIS antes de comprar
 
 La reunión del 01/10 corrigió la lectura de §AP: el Excel no es la compra,

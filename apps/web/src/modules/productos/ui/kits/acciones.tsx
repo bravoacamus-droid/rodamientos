@@ -52,17 +52,34 @@ const SECUNDARIO =
  * Una pantalla aparte obligaría a ir y volver para comparar dos kits. Con un
  * diálogo se cierra y se abre el siguiente.
  */
-export function AccionesKit({ kit }: { kit: KitDetalle }) {
+export function AccionesKit({
+  kit,
+  aLoAncho = false,
+}: {
+  kit: KitDetalle;
+  /**
+   * En la tarjeta del teléfono los dos botones se reparten el ancho, como en
+   * las otras listas del ERP: ahí el pulgar no apunta a una esquina.
+   */
+  aLoAncho?: boolean;
+}) {
   const [viendo, setViendo] = React.useState(false);
+  const boton = aLoAncho ? `${SECUNDARIO} flex-1 justify-center` : SECUNDARIO;
 
   return (
     <>
-      <span className="inline-flex items-center justify-end gap-1.5">
-        <button type="button" onClick={() => setViendo(true)} className={SECUNDARIO}>
+      <span
+        className={
+          aLoAncho
+            ? "flex w-full items-center gap-2"
+            : "inline-flex items-center justify-end gap-1.5"
+        }
+      >
+        <button type="button" onClick={() => setViendo(true)} className={boton}>
           <Eye className="size-4 shrink-0" />
           Ver
         </button>
-        <Link href={`/productos/kits/${kit.id}`} className={SECUNDARIO}>
+        <Link href={`/productos/kits/${kit.id}`} className={boton}>
           <Pencil className="size-4 shrink-0" />
           Editar
         </Link>

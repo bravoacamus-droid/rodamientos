@@ -154,7 +154,7 @@ function Tarjeta({
 
   return (
     <li
-      className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
+      className={`flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
         cuenta.activo ? "" : "opacity-60"
       }`}
     >
@@ -195,8 +195,10 @@ function Tarjeta({
         </div>
       </dl>
 
+      {/* Con `flex-wrap`: «Editar» y «Quitar del papel» juntos no caben en
+          un teléfono y empujaban la página 54 px de lado (revisión del 02/10). */}
       {puedeEditar ? (
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             variant="outline"
             size="sm"

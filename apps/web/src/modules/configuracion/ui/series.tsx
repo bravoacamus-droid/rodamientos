@@ -87,8 +87,18 @@ export function TablaSeries({
     (s) => s.es_prueba && s.predeterminada && s.activo,
   );
 
+  /*
+    Lo tecleado en «Desde», por serie, hasta que se guarda o se deshace. Vive
+    aquí y no en cada fila porque cada serie se pinta dos veces (tarjeta y
+    tabla) y las dos tienen que enseñar el mismo número. Sin borrador, lo que
+    vale es lo guardado.
+  */
+  const [borradores, setBorradores] = React.useState<Record<string, string>>({});
+  const inicialDe = (s: SerieDocumento) =>
+    borradores[s.id] ?? String(s.correlativo_inicial);
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container flex flex-col gap-3">
       {pruebasPorDefecto.length > 0 ? (
         <div className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
           <p className="text-sm font-medium">
@@ -118,7 +128,25 @@ export function TablaSeries({
         {puedeEditar ? <DialogNuevaSerie /> : null}
       </div>
 
-      <div className="scroll-x">
+      {/*
+        Revisión de diseño del 02/10: en el teléfono esta tabla se desplazaba
+        de lado (390 px: 319 → 791). Por debajo de `@3xl` (48 rem, 816 px con
+        la base de 17 px) cada serie es una tarjeta; se mide el ancho de ESTA
+        caja (`@container`), no el de la pantalla.
+      */}
+      <ul className="flex flex-col gap-2.5 @3xl:hidden">
+        {series.map((s) => (
+          <TarjetaSerie
+            key={s.id}
+            serie={s}
+            puedeEditar={puedeEditar}
+            inicial={inicialDe(s)}
+            setInicial={(v) => setBorradores((b) => ({ ...b, [s.id]: v }))}
+          />
+        ))}
+      </ul>
+
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -132,7 +160,13 @@ export function TablaSeries({
           </thead>
           <tbody>
             {series.map((s) => (
-              <FilaSerie key={s.id} serie={s} puedeEditar={puedeEditar} />
+              <FilaSerie
+                key={s.id}
+                serie={s}
+                puedeEditar={puedeEditar}
+                inicial={inicialDe(s)}
+                setInicial={(v) => setBorradores((b) => ({ ...b, [s.id]: v }))}
+              />
             ))}
           </tbody>
         </table>
@@ -141,17 +175,21 @@ export function TablaSeries({
   );
 }
 
-function FilaSerie({
-  serie,
-  puedeEditar,
-}: {
-  serie: SerieDocumento;
-  puedeEditar: boolean;
-}) {
+/**
+ * Lo que la fila y la tarjeta de una serie comparten: el número tecleado en
+ * «Desde», sus avisos y las acciones.
+ *
+ * El borrador vive en `TablaSeries` y no aquí, porque la misma serie se pinta
+ * dos veces —tabla y tarjeta, una de las dos oculta según el ancho—: con un
+ * estado en cada una, lo tecleado en la tarjeta se perdería al ensanchar la
+ * ventana y aparecería el número viejo en la tabla.
+ */
+function useEdicionSerie(
+  serie: SerieDocumento,
+  inicial: string,
+  setInicial: (v: string) => void,
+) {
   const { ocupado, correr } = useAccion();
-  const [inicial, setInicial] = React.useState(
-    String(serie.correlativo_inicial),
-  );
 
   const propuesto = Number(inicial);
   const cambiado =
@@ -159,6 +197,38 @@ function FilaSerie({
   const avisos = cambiado ? avisosDelInicial(serie, propuesto) : [];
   const bloqueado = avisos.some((a) => a.tono === "danger");
 
+  return {
+    ocupado,
+    cambiado,
+    avisos,
+    bloqueado,
+    deshacer: () => setInicial(String(serie.correlativo_inicial)),
+    guardar: async () => {
+      const bien = await correr(() =>
+        guardarSerie(serie.id, {
+          correlativo_inicial: propuesto,
+        }),
+      );
+      if (!bien) setInicial(String(serie.correlativo_inicial));
+    },
+    predeterminar: () =>
+      correr(() => guardarSerie(serie.id, { predeterminada: true })),
+    alternarActivo: () =>
+      correr(() => guardarSerie(serie.id, { activo: !serie.activo })),
+  };
+}
+
+type EdicionSerie = ReturnType<typeof useEdicionSerie>;
+
+interface PropsSerie {
+  serie: SerieDocumento;
+  puedeEditar: boolean;
+  inicial: string;
+  setInicial: (v: string) => void;
+}
+
+function FilaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
+  const edicion = useEdicionSerie(serie, inicial, setInicial);
   const fiscal = TIPOS_FISCALES.includes(serie.tipo);
 
   return (
@@ -175,43 +245,17 @@ function FilaSerie({
 
         <td className="px-3 py-2">
           <span className="font-mono">{serie.serie}</span>
-          {serie.predeterminada ? (
-            <Badge tone="brand" size="xs" className="ml-2">
-              Por defecto
-            </Badge>
-          ) : null}
-          {!serie.activo ? (
-            <Badge tone="neutral" size="xs" className="ml-2">
-              Inactiva
-            </Badge>
-          ) : null}
-          {/*
-            Se dice cuáles son de ensayo, porque desde la 093 cambia lo que el
-            sistema deja hacer con ellas: en producción se niega a emitir. Sin
-            enseñarlo, el día que alguien ponga producción el error saldría de
-            la nada.
-          */}
-          {serie.es_prueba ? (
-            <Badge tone="warning" size="xs" className="ml-2">
-              Pruebas
-            </Badge>
-          ) : null}
+          <InsigniasSerie serie={serie} />
         </td>
 
         <td className="px-3 py-2 text-right">
-          {puedeEditar ? (
-            <Input
-              value={inicial}
-              onChange={(e) =>
-                setInicial(e.target.value.replace(/[^0-9]/g, ""))
-              }
-              inputMode="numeric"
-              aria-label={`Correlativo inicial de ${serie.serie}`}
-              className="h-8 w-28 text-right tabular"
-            />
-          ) : (
-            <span className="tabular">{serie.correlativo_inicial}</span>
-          )}
+          <CampoDesde
+            serie={serie}
+            puedeEditar={puedeEditar}
+            inicial={inicial}
+            setInicial={setInicial}
+            className="h-8 w-28 text-right tabular"
+          />
         </td>
 
         <td className="px-3 py-2 text-right tabular text-[var(--fg-muted)]">
@@ -225,95 +269,210 @@ function FilaSerie({
         <td className="whitespace-nowrap px-3 py-2 text-right">
           {puedeEditar ? (
             <div className="flex justify-end gap-1">
-              {cambiado ? (
-                <>
-                  <Button
-                    size="sm"
-                    disabled={ocupado || bloqueado}
-                    onClick={async () => {
-                      const bien = await correr(() =>
-                        guardarSerie(serie.id, {
-                          correlativo_inicial: propuesto,
-                        }),
-                      );
-                      if (!bien) setInicial(String(serie.correlativo_inicial));
-                    }}
-                  >
-                    Guardar
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setInicial(String(serie.correlativo_inicial))
-                    }
-                  >
-                    Deshacer
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {!serie.predeterminada && serie.activo ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={ocupado}
-                      onClick={() =>
-                        correr(() =>
-                          guardarSerie(serie.id, { predeterminada: true }),
-                        )
-                      }
-                    >
-                      Usar por defecto
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={ocupado || serie.predeterminada}
-                    title={
-                      serie.predeterminada
-                        ? "La serie por defecto no se puede desactivar: elige otra antes."
-                        : undefined
-                    }
-                    onClick={() =>
-                      correr(() =>
-                        guardarSerie(serie.id, { activo: !serie.activo }),
-                      )
-                    }
-                  >
-                    {serie.activo ? "Desactivar" : "Activar"}
-                  </Button>
-                </>
-              )}
+              <AccionesSerie serie={serie} edicion={edicion} variante="ghost" />
             </div>
           ) : null}
         </td>
       </tr>
 
-      {avisos.length > 0 ? (
+      {edicion.avisos.length > 0 ? (
         <tr className="border-b border-[var(--border-soft)]">
           <td colSpan={6} className="px-3 pb-2">
-            <ul className="flex flex-col gap-0.5">
-              {avisos.map((a, i) => (
-                <li
-                  key={i}
-                  className={`text-sm ${
-                    a.tono === "danger"
-                      ? "text-[var(--danger)]"
-                      : a.tono === "warning"
-                        ? "text-[var(--warn)]"
-                        : "text-[var(--fg-muted)]"
-                  }`}
-                >
-                  {a.texto}
-                </li>
-              ))}
-            </ul>
+            <AvisosSerie avisos={edicion.avisos} />
           </td>
         </tr>
       ) : null}
     </>
+  );
+}
+
+/**
+ * La misma serie, cuando la tabla no cabe.
+ *
+ * Revisión de diseño del 02/10: en el teléfono esta tabla se desplazaba de
+ * lado (390 px: 319 → 791), y lo que se viene a tocar —«Desde» y los
+ * botones— quedaba fuera de la vista. Aquí cada dato lleva su nombre al
+ * lado, porque no hay cabecera que lo diga, y los botones van a lo ancho y
+ * con borde: en la tabla son discretos porque la fila ya dice dónde están.
+ */
+function TarjetaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
+  const edicion = useEdicionSerie(serie, inicial, setInicial);
+  const fiscal = TIPOS_FISCALES.includes(serie.tipo);
+
+  return (
+    <li className="flex flex-col gap-2.5 rounded-lg border border-[var(--border)] p-3">
+      <div>
+        <p className="text-sm font-medium">
+          {ETIQUETA_TIPO_DOCUMENTO[serie.tipo]}
+          {fiscal ? (
+            <Badge tone="info" size="xs" className="ml-2">
+              SUNAT
+            </Badge>
+          ) : null}
+        </p>
+        <p className="mt-1 text-sm">
+          <span className="font-mono text-base font-semibold">{serie.serie}</span>
+          <InsigniasSerie serie={serie} />
+        </p>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+        <div className="col-span-2 flex items-center justify-between gap-3">
+          <dt className="text-[var(--fg-subtle)]">Desde</dt>
+          <dd>
+            <CampoDesde
+              serie={serie}
+              puedeEditar={puedeEditar}
+              inicial={inicial}
+              setInicial={setInicial}
+              className="w-32 text-right tabular"
+            />
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Va por</dt>
+          <dd className="tabular">{serie.correlativo_actual}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">El próximo</dt>
+          <dd className="font-mono">{proximoNumero(serie)}</dd>
+        </div>
+      </dl>
+
+      {edicion.avisos.length > 0 ? <AvisosSerie avisos={edicion.avisos} /> : null}
+
+      {puedeEditar ? (
+        <div className="flex flex-wrap gap-2 [&>*]:flex-1">
+          <AccionesSerie serie={serie} edicion={edicion} variante="outline" />
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
+function InsigniasSerie({ serie }: { serie: SerieDocumento }) {
+  return (
+    <>
+      {serie.predeterminada ? (
+        <Badge tone="brand" size="xs" className="ml-2">
+          Por defecto
+        </Badge>
+      ) : null}
+      {!serie.activo ? (
+        <Badge tone="neutral" size="xs" className="ml-2">
+          Inactiva
+        </Badge>
+      ) : null}
+      {/*
+        Se dice cuáles son de ensayo, porque desde la 093 cambia lo que el
+        sistema deja hacer con ellas: en producción se niega a emitir. Sin
+        enseñarlo, el día que alguien ponga producción el error saldría de
+        la nada.
+      */}
+      {serie.es_prueba ? (
+        <Badge tone="warning" size="xs" className="ml-2">
+          Pruebas
+        </Badge>
+      ) : null}
+    </>
+  );
+}
+
+function CampoDesde({
+  serie,
+  puedeEditar,
+  inicial,
+  setInicial,
+  className,
+}: PropsSerie & { className: string }) {
+  return puedeEditar ? (
+    <Input
+      value={inicial}
+      onChange={(e) => setInicial(e.target.value.replace(/[^0-9]/g, ""))}
+      inputMode="numeric"
+      aria-label={`Correlativo inicial de ${serie.serie}`}
+      className={className}
+    />
+  ) : (
+    <span className="tabular">{serie.correlativo_inicial}</span>
+  );
+}
+
+/**
+ * Los botones de una serie. `variante` es lo único que cambia entre la fila
+ * (fantasma, como estaba) y la tarjeta (con borde, para que se vean botones).
+ */
+function AccionesSerie({
+  serie,
+  edicion,
+  variante,
+}: {
+  serie: SerieDocumento;
+  edicion: EdicionSerie;
+  variante: "ghost" | "outline";
+}) {
+  const { ocupado, cambiado, bloqueado } = edicion;
+
+  if (cambiado) {
+    return (
+      <>
+        <Button size="sm" disabled={ocupado || bloqueado} onClick={edicion.guardar}>
+          Guardar
+        </Button>
+        <Button variant={variante} size="sm" onClick={edicion.deshacer}>
+          Deshacer
+        </Button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {!serie.predeterminada && serie.activo ? (
+        <Button
+          variant={variante}
+          size="sm"
+          disabled={ocupado}
+          onClick={edicion.predeterminar}
+        >
+          Usar por defecto
+        </Button>
+      ) : null}
+      <Button
+        variant={variante}
+        size="sm"
+        disabled={ocupado || serie.predeterminada}
+        title={
+          serie.predeterminada
+            ? "La serie por defecto no se puede desactivar: elige otra antes."
+            : undefined
+        }
+        onClick={edicion.alternarActivo}
+      >
+        {serie.activo ? "Desactivar" : "Activar"}
+      </Button>
+    </>
+  );
+}
+
+function AvisosSerie({ avisos }: { avisos: EdicionSerie["avisos"] }) {
+  return (
+    <ul className="flex flex-col gap-0.5">
+      {avisos.map((a, i) => (
+        <li
+          key={i}
+          className={`text-sm ${
+            a.tono === "danger"
+              ? "text-[var(--danger)]"
+              : a.tono === "warning"
+                ? "text-[var(--warn)]"
+                : "text-[var(--fg-muted)]"
+          }`}
+        >
+          {a.texto}
+        </li>
+      ))}
+    </ul>
   );
 }
 

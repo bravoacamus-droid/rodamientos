@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EstadoError, EstadoVacio, formatearFecha } from "@rodatech/ui";
+import { Button, EstadoError, EstadoVacio, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 import { MessageCircleQuestion, Plus } from "lucide-react";
 
@@ -97,8 +97,64 @@ export default async function PaginaPrecios() {
           }
         />
       ) : (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="card @container overflow-hidden">
+          {/*
+            Tarjetas o tabla según el ancho de ESTA caja (`@container`), no de
+            la pantalla. Revisión de diseño del 02/10: en el teléfono esta
+            tabla se desplazaba de lado (390 px: 363 → 918). La tabla pide
+            54 rem (918 px), así que el corte es `@4xl` (56 rem, 952 px con la
+            base de 17 px): por debajo no cabe entera.
+          */}
+          <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
+            {filas.map((f) => (
+              <li
+                key={f.id}
+                className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <Link
+                    href={`/compras/precios/${f.id}`}
+                    className="font-semibold tabular-nums text-brand-600"
+                  >
+                    {f.numero}
+                  </Link>
+                  <span className="shrink-0 text-sm">
+                    <Desenlace
+                      estado={f.estado}
+                      compras={f.compras}
+                      contestaron={f.contestaron}
+                    />
+                  </span>
+                </div>
+                {f.nota ? <p className="text-sm">{f.nota}</p> : null}
+                <dl className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-sm">
+                  <div className="min-w-0">
+                    <dt className="text-[var(--fg-subtle)]">Fecha</dt>
+                    <dd className="tabular-nums">{formatearFecha(f.fecha)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[var(--fg-subtle)]">Productos</dt>
+                    <dd className="tabular-nums">{f.productos}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[var(--fg-subtle)]">Contestaron</dt>
+                    <dd
+                      className={`tabular-nums ${f.contestaron === 0 ? "text-[var(--fg-subtle)]" : ""}`}
+                    >
+                      {f.contestaron} de {f.preguntados}
+                    </dd>
+                  </div>
+                </dl>
+                {/* En la tabla se entra pulsando el número, que no parece un
+                    botón; aquí no hay fila entera que señalar, así que va uno
+                    de verdad, a lo ancho. */}
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/compras/precios/${f.id}`}>Abrir la consulta</Link>
+                </Button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto @4xl:block">
             <table className="w-full min-w-[54rem] text-sm">
               <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                 <tr>

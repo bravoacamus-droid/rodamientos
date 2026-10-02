@@ -21,6 +21,8 @@ import {
   estadoDeFila,
   resumirComparativa,
   resumirProveedores,
+  type Celda,
+  type FilaComparada,
   type ProveedorConsultado,
   type Respuesta,
 } from "../../dominio/comparador";
@@ -376,6 +378,250 @@ export function Comparativa({
     });
   }
 
+  /*
+    Las tres piezas de cada fila que se pintan IGUAL en la tabla y en la
+    tarjeta del teléfono: la cantidad, el precio de cada proveedor y a quién
+    se le compra. Salen de aquí y no se copian, para que las dos vistas no
+    puedan decir cosas distintas del mismo producto.
+
+    Revisión de diseño del 02/10: en el teléfono esta tabla se desplazaba de
+    lado (390 px: 363 → 548), y con cada proveedor que se añade crece otra
+    columna.
+  */
+  function campoCantidad(fila: FilaComparada, ancho: string) {
+    return (
+      <>
+        {ronda.estado === "abierta" ? (
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            defaultValue={fila.item.cantidad}
+            disabled={enCurso}
+            onBlur={(e) => cambiarCantidad(fila.item.item_id, e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className={`h-9 ${ancho} text-right tabular`}
+            aria-label={`Cuántas ${fila.item.codigo} se piden`}
+          />
+        ) : (
+          <span className="tabular-nums">{fila.item.cantidad}</span>
+        )}
+      </>
+    );
+  }
+
+  /** `enTarjeta`: con borde y más alto, para que en el teléfono el precio se vea pulsable. */
+  function precioDeCelda(fila: FilaComparada, celda: Celda, enTarjeta: boolean) {
+    const elegido = eleccion[fila.item.item_id];
+    const gana =
+      fila.ganador?.consulta_proveedor_id === celda.consulta_proveedor_id;
+    const esElegido = elegido === celda.consulta_proveedor_id;
+    /*
+      Y cuál es el más CARO.
+
+      Luis: *«así diferencia cuál es más barato o más caro»*.
+      El verde del ganador ya estaba; faltaba la otra punta,
+      que es la que hace que se vea de un golpe cuánto va de
+      uno a otro.
+
+      Solo con dos o más precios: con uno solo no hay nada
+      que comparar, y pintarlo diría que es caro cuando es
+      simplemente el único.
+    */
+    const conPrecio = fila.celdas.filter((c) => c.costoUsd !== null);
+    const masCaro =
+      conPrecio.length > 1 &&
+      celda.costoUsd !== null &&
+      celda.costoUsd ===
+        Math.max(...conPrecio.map((c) => c.costoUsd!));
+    return (
+      <>
+        {celda.costoUsd === null ? (
+          // Tres estados, no dos. «No se le preguntó» —no
+          // vende eso— no es una respuesta que falte, y
+          // marcarlo como tal llena la rejilla de deudas
+          // que no existen. En la tarjeta la raya va en palabras:
+          // sin la columna encima, un «—» suelto no dice qué falta.
+          <span className="text-[var(--fg-subtle)]">
+            {!celda.preguntada
+              ? ""
+              : !celda.respondida
+                ? enTarjeta
+                  ? "no ha contestado"
+                  : "—"
+                : "no tiene"}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              alternar(fila.item.item_id, celda.consulta_proveedor_id)
+            }
+            className={`inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 tabular-nums transition-colors ${
+              enTarjeta ? "min-h-10 border border-[var(--border)] " : ""
+            }${
+              /*
+                El mejor precio se sigue viendo aunque se
+                elija otro.
+
+                Willy, 16/09 (31:40): *«tú puedes
+                seleccionar el otro… por ejemplo picas el de
+                16, y el otro es 10; debe quedarse resaltado
+                porque es el mejor precio»*.
+
+                Ya conservaba el color, pero solo el color
+                del texto: al lado de un elegido con fondo
+                azul sólido, un verde suelto se pierde. Con
+                fondo propio compiten de igual a igual, que
+                es justo lo que hay que comparar.
+              */
+              esElegido
+                ? "bg-brand-600 text-white"
+                : gana
+                  ? "bg-[var(--ok-bg)] font-semibold text-[var(--ok)]"
+                  : masCaro
+                    ? "text-[var(--danger)] hover:bg-[var(--surface-2)]"
+                    : "hover:bg-[var(--surface-2)]"
+            }`}
+            title={
+              celda.costo !== null && celda.costo !== celda.costoUsd
+                ? `Dijo ${celda.costo} · son ${celda.costoUsd} USD sin IGV`
+                : undefined
+            }
+          >
+            {esElegido ? <Check className="size-3" /> : null}
+            {formatearMoneda(celda.costoUsd, "USD")}
+          </button>
+        )}
+        {celda.dias !== null && celda.costoUsd !== null ? (
+          /* 10 px era el texto más pequeño de todo el ERP, y
+             dice en cuántos días entrega ese proveedor: es
+             media decisión de compra. */
+          <span className="block text-sm text-[var(--fg-subtle)]">
+            {celda.dias} d
+          </span>
+        ) : null}
+      </>
+    );
+  }
+
+  function seLeCompraA(fila: FilaComparada) {
+    const elegido = eleccion[fila.item.item_id];
+    return (
+      <>
+        {fila.ganador === null ? (
+          // «Nadie lo tiene» solo cuando TODOS los preguntados
+          // contestaron que no. Decirlo mientras se espera es
+          // dar por cerrada una pregunta abierta, y manda a
+          // buscar fuera algo que quizá llegue mañana.
+          <EsperaOFalta estado={estadoDeFila(fila)} />
+        ) : elegido ? (
+          <span title={proveedores.find((p) => p.consulta_proveedor_id === elegido)?.proveedor}>
+            {
+              proveedores.find((p) => p.consulta_proveedor_id === elegido)
+                ?.proveedor
+            }
+
+            {/*
+              El REPARTO, cuando al elegido no le alcanza.
+
+              Willy, 21/09: *«no siempre todos cuentan con el
+              stock solicitado, a veces tienen stock parcial y
+              habría que completar con los demás. Al final el
+              precio de compra sería el promedio ponderado de los
+              mejores precios»*.
+
+              Sin esto, la pantalla diría «se le compra a B» y el
+              pedido saldría a dos proveedores: lo que se ve y lo
+              que pasa tienen que ser lo mismo. Y el ponderado es
+              el número con el que se decide el precio de venta,
+              así que no puede quedarse dentro del cálculo.
+            */}
+            {(() => {
+              const r = repartir(fila, elegido);
+              if (r.tramos.length <= 1) return null;
+              return (
+                <span className="mt-1 block text-sm">
+                  {r.tramos.map((t) => (
+                    <span
+                      key={t.consulta_proveedor_id}
+                      className="block text-[var(--fg-muted)]"
+                    >
+                      {t.cantidad} · {t.proveedor}{" "}
+                      <span className="tabular">
+                        {formatearMoneda(t.costoUsd, "USD")}
+                      </span>
+                    </span>
+                  ))}
+                  {r.costoPonderado !== null ? (
+                    <span className="block font-medium text-[var(--fg)]">
+                      te sale a{" "}
+                      <span className="tabular">
+                        {formatearMoneda(r.costoPonderado, "USD")}
+                      </span>
+                    </span>
+                  ) : null}
+                  {r.falta > 0 ? (
+                    <span className="block font-medium text-[var(--warn)]">
+                      faltan {r.falta}: nadie más tiene
+                    </span>
+                  ) : null}
+                </span>
+              );
+            })()}
+            {fila.ganador.ahorroUnitario !== null &&
+            elegido === fila.ganador.consulta_proveedor_id ? (
+              <span className="block text-sm text-[var(--fg-subtle)]">
+                {formatearMoneda(
+                  fila.ganador.ahorroUnitario * fila.item.cantidad,
+                  "USD",
+                )}{" "}
+                menos que {fila.ganador.segundo}
+              </span>
+            ) : null}
+
+            {/*
+              Y si se eligió uno que NO es el más barato, cuánto
+              cuesta esa decisión.
+
+              Es la mitad que faltaba. Se decía cuánto se AHORRA
+              al elegir al ganador —cuando ya se eligió bien, o
+              sea cuando la información no cambia nada— y se
+              callaba en el único caso donde sirve.
+
+              No se impide: hay motivos para pagar más —plazo de
+              entrega, un proveedor que no falla, el que tiene
+              los otros cuatro ítems—. Lo que no puede pasar es
+              que se pague de más sin saberlo.
+            */}
+            {(() => {
+              if (elegido === fila.ganador.consulta_proveedor_id) return null;
+              const suyo = fila.celdas.find(
+                (c) => c.consulta_proveedor_id === elegido,
+              )?.costoUsd;
+              if (suyo == null || fila.ganador.costoUsd == null) return null;
+              const demas = (suyo - fila.ganador.costoUsd) * fila.item.cantidad;
+              if (demas <= 0) return null;
+              return (
+                <span className="block text-sm font-medium text-[var(--warn)]">
+                  {formatearMoneda(demas, "USD")} más que{" "}
+                  {fila.ganador.proveedor}
+                </span>
+              );
+            })()}
+          </span>
+        ) : (
+          <span className="text-[var(--fg-subtle)]">Sin elegir</span>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
       {/*
@@ -638,8 +884,85 @@ export function Comparativa({
       ) : null}
 
       {/* ------------------------------------------------------- La rejilla */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="card @container overflow-hidden">
+        {/*
+          En una caja estrecha, un producto por tarjeta.
+
+          Revisión de diseño del 02/10: en el teléfono esta tabla se
+          desplazaba de lado (390 px: 363 → 548). Con dos proveedores ya pide
+          548 px, y cada uno que se añade es otra columna: en el teléfono no
+          hay forma de que quepa. Se decide por el ancho de ESTA caja
+          (`@container`) y no de la pantalla; el corte es `@2xl` (42 rem,
+          714 px con la base de 17 px), donde la tabla de tres o cuatro
+          proveedores ya entra y la columna del producto, fija, sostiene el
+          resto.
+
+          En la tarjeta los proveedores van uno debajo de otro, con su
+          nombre al lado —aquí no hay cabecera que lo diga—, y solo los que
+          se preguntaron por ESTE producto: un hueco vacío en la tabla es una
+          columna; en la tarjeta sería un renglón que no dice nada.
+        */}
+        <ul className="flex flex-col divide-y divide-[var(--border)] @2xl:hidden">
+          {filas.map((fila) => {
+            const ref =
+              referencias[fila.item.producto_id] ??
+              referenciaVacia(fila.item.producto_id);
+            const faltan = faltaPreguntarle(ref, enLaRonda);
+            const consultadas = fila.celdas.filter(
+              (c) => c.preguntada || c.costoUsd !== null,
+            );
+            return (
+              <li key={fila.item.item_id} className="flex flex-col gap-3 p-3">
+                <div>
+                  <p className="font-medium tabular-nums">{fila.item.codigo}</p>
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    {fila.item.descripcion}
+                  </p>
+                  <ReferenciaDeFila referencia={ref} />
+                  <AQuienFalta
+                    faltan={faltan}
+                    anadiendo={anadiendo}
+                    itemId={fila.item.item_id}
+                    bloqueado={enCurso || ronda.estado !== "abierta"}
+                    onAnadir={(provId) => anadir(fila.item.item_id, provId)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Cantidad que se pide</span>
+                  <span className="text-sm">{campoCantidad(fila, "w-24")}</span>
+                </div>
+
+                {consultadas.length > 0 ? (
+                  <div>
+                    <p className="text-sm font-medium">Lo que dijo cada proveedor</p>
+                    <ul className="mt-1 flex flex-col divide-y divide-[var(--border-soft)]">
+                      {consultadas.map((celda) => (
+                        <li
+                          key={celda.consulta_proveedor_id}
+                          className="flex items-center justify-between gap-3 py-1.5"
+                        >
+                          <span className="min-w-0 truncate text-sm" title={celda.proveedor}>
+                            {celda.proveedor}
+                          </span>
+                          <span className="shrink-0 text-right text-sm">
+                            {precioDeCelda(fila, celda, true)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                <div className="rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm">
+                  <p className="text-[var(--fg-subtle)]">Se le compra a</p>
+                  <div className="font-medium">{seLeCompraA(fila)}</div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto @2xl:block">
           <table className="w-full text-sm">
             <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <tr>
@@ -670,7 +993,6 @@ export function Comparativa({
             </thead>
             <tbody>
               {filas.map((fila) => {
-                const elegido = eleccion[fila.item.item_id];
                 const ref =
                   referencias[fila.item.producto_id] ??
                   referenciaVacia(fila.item.producto_id);
@@ -726,224 +1048,20 @@ export function Comparativa({
                       cosa y la orden otra.
                     */}
                     <td className="px-3 py-2.5 text-right">
-                      {ronda.estado === "abierta" ? (
-                        <Input
-                          type="number"
-                          min={1}
-                          step={1}
-                          defaultValue={fila.item.cantidad}
-                          disabled={enCurso}
-                          onBlur={(e) => cambiarCantidad(fila.item.item_id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              (e.target as HTMLInputElement).blur();
-                            }
-                          }}
-                          className="h-9 w-20 text-right tabular"
-                          aria-label={`Cuántas ${fila.item.codigo} se piden`}
-                        />
-                      ) : (
-                        <span className="tabular-nums">{fila.item.cantidad}</span>
-                      )}
+                      {campoCantidad(fila, "w-20")}
                     </td>
 
-                    {fila.celdas.map((celda) => {
-                      const gana =
-                        fila.ganador?.consulta_proveedor_id === celda.consulta_proveedor_id;
-                      const esElegido = elegido === celda.consulta_proveedor_id;
-                      /*
-                        Y cuál es el más CARO.
-
-                        Luis: *«así diferencia cuál es más barato o más caro»*.
-                        El verde del ganador ya estaba; faltaba la otra punta,
-                        que es la que hace que se vea de un golpe cuánto va de
-                        uno a otro.
-
-                        Solo con dos o más precios: con uno solo no hay nada
-                        que comparar, y pintarlo diría que es caro cuando es
-                        simplemente el único.
-                      */
-                      const conPrecio = fila.celdas.filter((c) => c.costoUsd !== null);
-                      const masCaro =
-                        conPrecio.length > 1 &&
-                        celda.costoUsd !== null &&
-                        celda.costoUsd ===
-                          Math.max(...conPrecio.map((c) => c.costoUsd!));
-                      return (
-                        <td
-                          key={celda.consulta_proveedor_id}
-                          className="px-3 py-2.5 text-right"
-                        >
-                          {celda.costoUsd === null ? (
-                            // Tres estados, no dos. «No se le preguntó» —no
-                            // vende eso— no es una respuesta que falte, y
-                            // marcarlo como tal llena la rejilla de deudas
-                            // que no existen.
-                            <span className="text-[var(--fg-subtle)]">
-                              {!celda.preguntada
-                                ? ""
-                                : !celda.respondida
-                                  ? "—"
-                                  : "no tiene"}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                alternar(fila.item.item_id, celda.consulta_proveedor_id)
-                              }
-                              className={`inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 tabular-nums transition-colors ${
-                                /*
-                                  El mejor precio se sigue viendo aunque se
-                                  elija otro.
-
-                                  Willy, 16/09 (31:40): *«tú puedes
-                                  seleccionar el otro… por ejemplo picas el de
-                                  16, y el otro es 10; debe quedarse resaltado
-                                  porque es el mejor precio»*.
-
-                                  Ya conservaba el color, pero solo el color
-                                  del texto: al lado de un elegido con fondo
-                                  azul sólido, un verde suelto se pierde. Con
-                                  fondo propio compiten de igual a igual, que
-                                  es justo lo que hay que comparar.
-                                */
-                                esElegido
-                                  ? "bg-brand-600 text-white"
-                                  : gana
-                                    ? "bg-[var(--ok-bg)] font-semibold text-[var(--ok)]"
-                                    : masCaro
-                                      ? "text-[var(--danger)] hover:bg-[var(--surface-2)]"
-                                      : "hover:bg-[var(--surface-2)]"
-                              }`}
-                              title={
-                                celda.costo !== null && celda.costo !== celda.costoUsd
-                                  ? `Dijo ${celda.costo} · son ${celda.costoUsd} USD sin IGV`
-                                  : undefined
-                              }
-                            >
-                              {esElegido ? <Check className="size-3" /> : null}
-                              {formatearMoneda(celda.costoUsd, "USD")}
-                            </button>
-                          )}
-                          {celda.dias !== null && celda.costoUsd !== null ? (
-                            /* 10 px era el texto más pequeño de todo el ERP, y
-                               dice en cuántos días entrega ese proveedor: es
-                               media decisión de compra. */
-                            <span className="block text-sm text-[var(--fg-subtle)]">
-                              {celda.dias} d
-                            </span>
-                          ) : null}
-                        </td>
-                      );
-                    })}
+                    {fila.celdas.map((celda) => (
+                      <td
+                        key={celda.consulta_proveedor_id}
+                        className="px-3 py-2.5 text-right"
+                      >
+                        {precioDeCelda(fila, celda, false)}
+                      </td>
+                    ))}
 
                     <td className="px-4 py-2.5">
-                      {fila.ganador === null ? (
-                        // «Nadie lo tiene» solo cuando TODOS los preguntados
-                        // contestaron que no. Decirlo mientras se espera es
-                        // dar por cerrada una pregunta abierta, y manda a
-                        // buscar fuera algo que quizá llegue mañana.
-                        <EsperaOFalta estado={estadoDeFila(fila)} />
-                      ) : elegido ? (
-                        <span title={proveedores.find((p) => p.consulta_proveedor_id === elegido)?.proveedor}>
-                          {
-                            proveedores.find((p) => p.consulta_proveedor_id === elegido)
-                              ?.proveedor
-                          }
-
-                          {/*
-                            El REPARTO, cuando al elegido no le alcanza.
-
-                            Willy, 21/09: *«no siempre todos cuentan con el
-                            stock solicitado, a veces tienen stock parcial y
-                            habría que completar con los demás. Al final el
-                            precio de compra sería el promedio ponderado de los
-                            mejores precios»*.
-
-                            Sin esto, la pantalla diría «se le compra a B» y el
-                            pedido saldría a dos proveedores: lo que se ve y lo
-                            que pasa tienen que ser lo mismo. Y el ponderado es
-                            el número con el que se decide el precio de venta,
-                            así que no puede quedarse dentro del cálculo.
-                          */}
-                          {(() => {
-                            const r = repartir(fila, elegido);
-                            if (r.tramos.length <= 1) return null;
-                            return (
-                              <span className="mt-1 block text-sm">
-                                {r.tramos.map((t) => (
-                                  <span
-                                    key={t.consulta_proveedor_id}
-                                    className="block text-[var(--fg-muted)]"
-                                  >
-                                    {t.cantidad} · {t.proveedor}{" "}
-                                    <span className="tabular">
-                                      {formatearMoneda(t.costoUsd, "USD")}
-                                    </span>
-                                  </span>
-                                ))}
-                                {r.costoPonderado !== null ? (
-                                  <span className="block font-medium text-[var(--fg)]">
-                                    te sale a{" "}
-                                    <span className="tabular">
-                                      {formatearMoneda(r.costoPonderado, "USD")}
-                                    </span>
-                                  </span>
-                                ) : null}
-                                {r.falta > 0 ? (
-                                  <span className="block font-medium text-[var(--warn)]">
-                                    faltan {r.falta}: nadie más tiene
-                                  </span>
-                                ) : null}
-                              </span>
-                            );
-                          })()}
-                          {fila.ganador.ahorroUnitario !== null &&
-                          elegido === fila.ganador.consulta_proveedor_id ? (
-                            <span className="block text-sm text-[var(--fg-subtle)]">
-                              {formatearMoneda(
-                                fila.ganador.ahorroUnitario * fila.item.cantidad,
-                                "USD",
-                              )}{" "}
-                              menos que {fila.ganador.segundo}
-                            </span>
-                          ) : null}
-
-                          {/*
-                            Y si se eligió uno que NO es el más barato, cuánto
-                            cuesta esa decisión.
-
-                            Es la mitad que faltaba. Se decía cuánto se AHORRA
-                            al elegir al ganador —cuando ya se eligió bien, o
-                            sea cuando la información no cambia nada— y se
-                            callaba en el único caso donde sirve.
-
-                            No se impide: hay motivos para pagar más —plazo de
-                            entrega, un proveedor que no falla, el que tiene
-                            los otros cuatro ítems—. Lo que no puede pasar es
-                            que se pague de más sin saberlo.
-                          */}
-                          {(() => {
-                            if (elegido === fila.ganador.consulta_proveedor_id) return null;
-                            const suyo = fila.celdas.find(
-                              (c) => c.consulta_proveedor_id === elegido,
-                            )?.costoUsd;
-                            if (suyo == null || fila.ganador.costoUsd == null) return null;
-                            const demas = (suyo - fila.ganador.costoUsd) * fila.item.cantidad;
-                            if (demas <= 0) return null;
-                            return (
-                              <span className="block text-sm font-medium text-[var(--warn)]">
-                                {formatearMoneda(demas, "USD")} más que{" "}
-                                {fila.ganador.proveedor}
-                              </span>
-                            );
-                          })()}
-                        </span>
-                      ) : (
-                        <span className="text-[var(--fg-subtle)]">Sin elegir</span>
-                      )}
+                      {seLeCompraA(fila)}
                     </td>
                   </tr>
                 );
