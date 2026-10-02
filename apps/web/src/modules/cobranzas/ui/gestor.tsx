@@ -123,7 +123,7 @@ export function Gestor({
                   value={compromiso}
                   onChange={(e) => setCompromiso(e.target.value)}
                 />
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="text-sm text-[var(--fg-subtle)]">
                   Si se comprometió a una fecha, apúntala: sale sola en la lista
                   del día que llegue.
                 </span>
@@ -150,7 +150,7 @@ export function Gestor({
             </label>
 
             {sinContenido ? (
-              <p className="text-xs text-[var(--fg-muted)]">
+              <p className="text-sm text-[var(--fg-muted)]">
                 Apunta al menos qué dijo el cliente, o para cuándo se
                 comprometió: una gestión vacía solo dice que alguien llamó.
               </p>

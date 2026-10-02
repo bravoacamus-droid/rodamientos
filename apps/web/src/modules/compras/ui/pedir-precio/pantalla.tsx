@@ -491,7 +491,7 @@ export function PedirPrecio({
       {items.length === 0 ? null : items.length > 1 ? (
         <section className="card p-4">
           <h2 className="mb-1 text-sm font-semibold">¿Cómo lo preguntas?</h2>
-          <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
             {modoSugerido(items, idsPorProducto) === "separado"
               ? "Ningún proveedor vende todo lo de esta lista, así que lo propuesto es preguntar por separado."
               : "Hay proveedores que venden todo lo de esta lista."}
@@ -629,7 +629,7 @@ export function PedirPrecio({
           </ul>
 
           <h2 className="mb-1 text-sm font-semibold">A quién se le pide</h2>
-          <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
             A cada uno le llega la lista completa, con los {items.length}{" "}
             {items.length === 1 ? "producto" : "productos"}.
           </p>
@@ -788,7 +788,7 @@ function OpcionModo({
       }`}
     >
       <span className="block text-sm font-medium">{titulo}</span>
-      <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">{detalle}</span>
+      <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">{detalle}</span>
     </button>
   );
 }
@@ -832,7 +832,7 @@ function ListaProveedores({
             />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{p.razon_social}</span>
-              <span className="block text-xs text-[var(--fg-subtle)]">
+              <span className="block text-sm text-[var(--fg-subtle)]">
                 {totalItems !== undefined
                   ? `vende ${p.coincidencias} de ${totalItems}`
                   : p.coincidencias > 0

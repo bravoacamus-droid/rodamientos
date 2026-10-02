@@ -124,7 +124,7 @@ export function FiltroSelect({
       aria-label={placeholder}
       onChange={(e) => fijar({ [param]: e.target.value || null })}
       className={cn(
-        "h-control-sm w-auto text-xs",
+        "h-control-sm w-auto text-sm",
         actual && "border-brand-300 bg-brand-50 font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-200",
         className,
       )}

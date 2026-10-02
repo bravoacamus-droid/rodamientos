@@ -34,7 +34,7 @@ export function THead({ className, ...props }: React.ComponentPropsWithRef<"thea
     <thead
       className={cn(
         "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface-2",
-        // `text-sm` y no `text-xs`: el título de una columna hay que LEERLO
+        // `text-sm` y no `text-sm`: el título de una columna hay que LEERLO
         // para saber qué es la cifra de debajo, y la regla de Willy es que
         // nada legible baja de 14 px. Luis, 17/09, con la medición delante.
         // Lo que se pierde es ancho —la fila crece un pelo de alto— y lo que

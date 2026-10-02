@@ -62,7 +62,7 @@ export default async function PaginaInventario() {
       <section className="card">
         <header className="px-4 pt-4">
           <h2 className="text-sm font-semibold">Valorización</h2>
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             A costo promedio, por familia y subfamilia. Sin contar archivados.
           </p>
         </header>
@@ -74,7 +74,7 @@ export default async function PaginaInventario() {
       <section className="card">
         <header className="px-4 pt-4">
           <h2 className="text-sm font-semibold">Reposición y sobrestock</h2>
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             Lo que está bajo el mínimo y lo que sobra. La cobertura sale del
             consumo real de los últimos 90 días.
           </p>

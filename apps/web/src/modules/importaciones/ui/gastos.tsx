@@ -125,7 +125,7 @@ export function PanelGastos({
         type="button"
         onClick={alternar}
         aria-expanded={abierto}
-        className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"
+        className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
       >
         {abierto ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
         {total > 0 ? `Gastos ${dinero(total)}` : "Sin gastos"}
@@ -134,9 +134,9 @@ export function PanelGastos({
       {abierto ? (
         <div className="mt-2 rounded-md border border-[var(--border-soft)] bg-[var(--surface-2)] p-3">
           {cargando ? (
-            <p className="anim-latido text-xs text-[var(--fg-muted)]">Trayendo el detalle…</p>
+            <p className="anim-latido text-sm text-[var(--fg-muted)]">Trayendo el detalle…</p>
           ) : error ? (
-            <p className="text-xs text-[var(--danger)]">{error}</p>
+            <p className="text-sm text-[var(--danger)]">{error}</p>
           ) : (
             <>
               {gastos && gastos.length > 0 ? (
@@ -144,7 +144,7 @@ export function PanelGastos({
                   {gastos.map((g) => (
                     <li
                       key={g.id}
-                      className="flex items-baseline justify-between gap-3 py-1.5 text-xs"
+                      className="flex items-baseline justify-between gap-3 py-1.5 text-sm"
                     >
                       <div className="min-w-0">
                         <span className="font-medium">{g.concepto}</span>
@@ -171,7 +171,7 @@ export function PanelGastos({
                   ))}
                 </ul>
               ) : (
-                <p className="mb-2 text-xs text-[var(--fg-muted)]">
+                <p className="mb-2 text-sm text-[var(--fg-muted)]">
                   {total > 0
                     ? `Los ${dinero(total)} de esta compra se tecleraron como un solo número. Detállalos y el total pasa a ser la suma.`
                     : "Todavía no hay gastos anotados."}
@@ -181,7 +181,7 @@ export function PanelGastos({
               {/* La consecuencia, dicha donde se decide: el número que sale de
                   aquí es el que reparte el costo al recibir (022). */}
               {gastos && gastos.length > 0 ? (
-                <p className="mb-2 text-xs text-[var(--fg-muted)]">
+                <p className="mb-2 text-sm text-[var(--fg-muted)]">
                   Suman <strong>{dinero(detallado)}</strong>
                   {subtotal > 0
                     ? ` · encarecen la mercadería un ${((detallado / subtotal) * 100).toFixed(1)} %`
@@ -193,7 +193,7 @@ export function PanelGastos({
               {editable ? (
                 <div className="flex flex-wrap items-end gap-2">
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-[var(--fg-muted)]">
+                    <span className="text-sm font-medium text-[var(--fg-muted)]">
                       Concepto
                     </span>
                     <SelectNativo
@@ -221,7 +221,7 @@ export function PanelGastos({
                   </label>
 
                   <label className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-[var(--fg-muted)]">
+                    <span className="text-sm font-medium text-[var(--fg-muted)]">
                       Documento
                     </span>
                     <Input
@@ -241,7 +241,7 @@ export function PanelGastos({
                   </Button>
                 </div>
               ) : (
-                <p className="text-xs text-[var(--fg-subtle)]">
+                <p className="text-sm text-[var(--fg-subtle)]">
                   {motivoBloqueo ??
                     "Los gastos se congelan en cuanto entra mercadería: el costo ya está en el kardex."}
                 </p>

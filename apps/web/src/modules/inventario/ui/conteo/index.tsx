@@ -171,7 +171,7 @@ export function HojaDeConteo({
             />
             {/* Obligatorio y no por formalismo: un ajuste sin explicación es un
                 descuadre que nadie va a poder auditar en tres meses. */}
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               Quien lea esto dentro de tres meses tiene que entender qué pasó.
             </span>
           </label>
@@ -232,14 +232,14 @@ export function HojaDeConteo({
         </div>
 
         {avisoCarga ? (
-          <p className="mt-2 text-xs text-[var(--warn)]">{avisoCarga}</p>
+          <p className="mt-2 text-sm text-[var(--warn)]">{avisoCarga}</p>
         ) : null}
 
         {/* Sin `soloConStock` entra el catálogo entero, incluido lo que el
             sistema cree que está a cero. Es lo correcto para un cuadre inicial
             y una trampa para un conteo de rutina. */}
         {!soloConStock ? (
-          <p className="mt-2 text-xs text-[var(--fg-subtle)]">
+          <p className="mt-2 text-sm text-[var(--fg-subtle)]">
             Vas a cargar también lo que está a cero. Tiene sentido en un cuadre
             inicial; para un conteo de rutina suele sobrar.
           </p>
@@ -311,7 +311,7 @@ export function HojaDeConteo({
                 </div>
               </dl>
 
-              <p className="text-xs text-[var(--fg-subtle)]">
+              <p className="text-sm text-[var(--fg-subtle)]">
                 Valorado al costo promedio vigente, que es a lo que la base va a
                 registrar el movimiento.
               </p>
@@ -319,13 +319,13 @@ export function HojaDeConteo({
               {/* Motivos, no un booleano: un botón deshabilitado sin
                   explicación es de las cosas que más se odian de un ERP. */}
               {bloqueos.length > 0 ? (
-                <ul className="flex flex-col gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2 text-xs text-[var(--fg-muted)]">
+                <ul className="flex flex-col gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-2 text-sm text-[var(--fg-muted)]">
                   {bloqueos.map((b) => (
                     <li key={b.campo}>· {b.mensaje}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-xs text-[var(--warn)]">
+                <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-2 text-sm text-[var(--warn)]">
                   Al confirmar se mueven {impacto.conDiferencia} productos. No hay
                   deshacer: corregirlo sería otro ajuste.
                 </p>

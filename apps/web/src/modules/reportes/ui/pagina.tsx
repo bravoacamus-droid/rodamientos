@@ -176,7 +176,7 @@ function Bloque({
         {/* La nota explica CÓMO leer el gráfico. Un gráfico sin instrucciones
             se mira una vez y no se vuelve a abrir. */}
         {nota ? (
-          <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{nota}</p>
+          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{nota}</p>
         ) : null}
       </div>
       {children}
@@ -293,7 +293,7 @@ function Kpi({
           : "";
   return (
     <div className="card anim-entrada p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
       <p className="mt-0.5 text-xl font-semibold">
         {texto !== undefined ? (
           <span className="text-[var(--fg-subtle)]">{texto}</span>
@@ -306,7 +306,7 @@ function Kpi({
           />
         )}
       </p>
-      {pie ? <p className={`mt-0.5 text-xs ${color || "text-[var(--fg-subtle)]"}`}>{pie}</p> : null}
+      {pie ? <p className={`mt-0.5 text-sm ${color || "text-[var(--fg-subtle)]"}`}>{pie}</p> : null}
     </div>
   );
 }
@@ -334,7 +334,7 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
   return (
     <>
       <GraficoSerieVentas datos={r.datos} />
-      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--fg-muted)]">
+      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
         <span className="font-medium text-[var(--fg)]">$ {venta.toFixed(2)}</span> en{" "}
         {documentos} {documentos === 1 ? "documento" : "documentos"} ·{" "}
         {/* «margen 0.0 %» con el costo en cero no es un margen del cero por
@@ -376,7 +376,7 @@ async function BloqueCompras({ rango }: { rango: Rango }) {
   return (
     <>
       <GraficoSerieCompras datos={r.datos} />
-      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--fg-muted)]">
+      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
         <span className="font-medium text-[var(--fg)]">$ {total.toFixed(2)}</span> en{" "}
         {ordenes} {ordenes === 1 ? "orden" : "órdenes"}
         {gastos > 0
@@ -472,7 +472,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
       </div>
 
       <div className="hidden scroll-x md:block">
-      {/* `text-sm`: era `text-xs` y un informe está para leerse. */}
+      {/* `text-sm`: era `text-sm` y un informe está para leerse. */}
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -708,7 +708,7 @@ async function BloqueAging() {
   return (
     <>
       <GraficoAging datos={r.datos} />
-      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-xs">
+      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-sm">
         {r.datos.map((t) => (
           <li key={t.tramo} className="flex items-baseline justify-between gap-2">
             <span className="text-[var(--fg-muted)]">
@@ -747,7 +747,7 @@ async function BloqueValorizacion() {
   return (
     <>
       <GraficoValorizacion datos={r.datos} />
-      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-xs">
+      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-sm">
         {r.datos.map((f) => (
           <li key={f.familia} className="flex items-baseline justify-between gap-2">
             <span className="truncate text-[var(--fg-muted)]">
@@ -811,7 +811,7 @@ async function BloqueEmbudo() {
 
         return (
           <div key={p.nombre} className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-xs text-[var(--fg-muted)]">{p.nombre}</span>
+            <span className="w-24 shrink-0 text-sm text-[var(--fg-muted)]">{p.nombre}</span>
 
             <div className="flex h-7 flex-1 items-center gap-2">
               <div
@@ -832,7 +832,7 @@ async function BloqueEmbudo() {
                   }}
                 >
                   {dentro ? (
-                    <span className="tabular text-xs font-medium text-white">
+                    <span className="tabular text-sm font-medium text-white">
                       $ {p.valor.toFixed(2)}
                     </span>
                   ) : null}
@@ -840,13 +840,13 @@ async function BloqueEmbudo() {
               </div>
 
               {!dentro ? (
-                <span className="tabular shrink-0 text-xs font-medium text-[var(--fg-muted)]">
+                <span className="tabular shrink-0 text-sm font-medium text-[var(--fg-muted)]">
                   $ {p.valor.toFixed(2)}
                 </span>
               ) : null}
             </div>
 
-            <span className="w-32 shrink-0 text-right text-xs text-[var(--fg-subtle)]">
+            <span className="w-32 shrink-0 text-right text-sm text-[var(--fg-subtle)]">
               {p.pie}
             </span>
           </div>
@@ -854,7 +854,7 @@ async function BloqueEmbudo() {
       })}
 
       {e.porCobrar > 0 ? (
-        <p className="mt-1 text-xs text-[var(--fg-muted)]">
+        <p className="mt-1 text-sm text-[var(--fg-muted)]">
           Quedan <strong className="text-[var(--warn)]">$ {e.porCobrar.toFixed(2)}</strong> sin
           cobrar de lo ya facturado.
         </p>

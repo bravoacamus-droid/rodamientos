@@ -81,7 +81,7 @@ export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
           </ul>
 
           {enCamino.length > 0 && porPedir.length > 0 ? (
-            <p className="mt-2 text-xs text-[var(--fg-muted)]">
+            <p className="mt-2 text-sm text-[var(--fg-muted)]">
               Lo que ya está pedido no entra en el botón: volver a pedirlo sería
               comprarlo dos veces.
             </p>

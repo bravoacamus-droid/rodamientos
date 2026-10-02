@@ -186,7 +186,7 @@ export default async function PaginaDetalleGuia({
                     <td className="py-2 pr-3">
                       <Link
                         href={`/productos/${l.producto_id}`}
-                        className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                        className="font-mono text-sm font-medium text-brand-600 hover:underline"
                       >
                         {l.codigo}
                       </Link>

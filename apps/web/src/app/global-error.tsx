@@ -80,7 +80,7 @@ export default function GlobalError({
           </button>
 
           {error.digest ? (
-            <p style={{ marginTop: 20, fontSize: 12, color: "#94a3b8" }}>
+            <p style={{ marginTop: 20, fontSize: 14, color: "#94a3b8" }}>
               Código del fallo:{" "}
               <code style={{ fontFamily: "ui-monospace, monospace" }}>
                 {error.digest}

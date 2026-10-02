@@ -51,7 +51,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
               Comprueba las credenciales sin emitir nada ni gastar un correlativo.
             </p>
             {config.probado_en ? (
-              <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+              <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                 Última prueba: {new Date(config.probado_en).toLocaleString("es-PE")} ·{" "}
                 {config.probado_ok ? "correcta" : "falló"}
               </p>
@@ -63,7 +63,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
         </div>
 
         {probando ? (
-          <p className="anim-latido mt-3 text-xs text-[var(--fg-muted)]">
+          <p className="anim-latido mt-3 text-sm text-[var(--fg-muted)]">
             Hablando con SUNAT…
           </p>
         ) : null}
@@ -102,7 +102,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
               <option value="produccion">Producción — documentos reales</option>
             </SelectNativo>
             {ambiente === "produccion" ? (
-              <span className="anim-entrada text-xs font-medium text-[var(--danger)]">
+              <span className="anim-entrada text-sm font-medium text-[var(--danger)]">
                 En producción, lo que se emita tiene valor fiscal y no se puede
                 deshacer sin una nota de crédito.
               </span>
@@ -120,7 +120,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
             />
             {/* Es la causa número uno de «error de autenticación» al arrancar:
                 se escribe solo el usuario y falta el RUC delante. */}
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               RUC + usuario, todo junto. El usuario PRINCIPAL no vale: SUNAT no lo
               acepta para facturación electrónica.
             </span>
@@ -157,14 +157,14 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
               className="file:mr-3 file:rounded-sm file:border-0 file:bg-[var(--surface-2)] file:px-2 file:py-1 file:text-sm"
             />
             {config.certificado_nombre ? (
-              <span className="text-xs text-[var(--fg-muted)]">
+              <span className="text-sm text-[var(--fg-muted)]">
                 Cargado: {config.certificado_nombre}
                 {config.certificado_caduca_en
                   ? ` · caduca el ${config.certificado_caduca_en}`
                   : ""}
               </span>
             ) : (
-              <span className="text-xs text-[var(--fg-subtle)]">
+              <span className="text-sm text-[var(--fg-subtle)]">
                 Todavía no hay ninguno. Sin él no se puede firmar.
               </span>
             )}

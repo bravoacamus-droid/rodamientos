@@ -77,7 +77,7 @@ export function ResumenConstructor({
               {/* Se dice «sobre el costo» aquí, y solo aquí, porque es la
                   pantalla donde se negocia: leer un 20 % como si fuera sobre
                   la venta cambia lo que el vendedor está dispuesto a ceder. */}
-              <span className="text-xs text-[var(--fg-muted)]">Margen s/ costo</span>
+              <span className="text-sm text-[var(--fg-muted)]">Margen s/ costo</span>
               <span
                 className={`tabular text-sm font-semibold ${
                   totales.margenPct < 12
@@ -91,10 +91,10 @@ export function ResumenConstructor({
               </span>
             </div>
             <div className="mt-0.5 flex items-baseline justify-between">
-              <span className="text-xs text-[var(--fg-muted)]">
+              <span className="text-sm text-[var(--fg-muted)]">
                 {dolar(totales.subtotal - totales.costoTotal)}
               </span>
-              <span className="text-xs text-[var(--fg-muted)]">
+              <span className="text-sm text-[var(--fg-muted)]">
                 costo {dolar(totales.costoTotal)}
               </span>
             </div>
@@ -108,7 +108,7 @@ export function ResumenConstructor({
         <label className="flex items-start justify-between gap-3">
           <span className="text-sm">
             Mostrar columna de descuento
-            <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">
+            <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
               Solo si de verdad hay algo que descontar.
             </span>
           </span>
@@ -131,7 +131,7 @@ export function ResumenConstructor({
         <label className="mt-3 flex items-start justify-between gap-3 border-t border-[var(--border)] pt-3">
           <span className="text-sm">
             Mostrar columna de entrega
-            <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">
+            <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
               {hayNoInmediatos
                 ? "Hay ítems que no son inmediatos: conviene que el cliente lo vea."
                 : "Todo es inmediato, así que diría lo mismo en cada línea."}
@@ -144,7 +144,7 @@ export function ResumenConstructor({
           />
         </label>
 
-        <p className="mt-3 border-t border-[var(--border)] pt-3 text-xs text-[var(--fg-muted)]">
+        <p className="mt-3 border-t border-[var(--border)] pt-3 text-sm text-[var(--fg-muted)]">
           El PDF lleva <strong>valor unitario</strong>, nunca el precio con IGV:
           es la columna que hacía que el cliente comparara mal contra la
           competencia. La moneda es siempre el dólar.

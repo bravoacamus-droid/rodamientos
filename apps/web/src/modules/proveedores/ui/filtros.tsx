@@ -68,7 +68,7 @@ export function FiltrosProveedoresBarra({
 
       {/* La pregunta que justifica que exista `proveedor_marcas`. */}
       <label className="flex min-w-44 flex-col gap-1">
-        <span className="text-xs font-medium text-[var(--fg-muted)]">
+        <span className="text-sm font-medium text-[var(--fg-muted)]">
           Vende la marca
         </span>
         <SelectNativo

@@ -57,7 +57,7 @@ export function ParaQuienEs({
   return (
     <section className="card p-4">
       <h2 className="mb-1 text-sm font-semibold">Para quién es</h2>
-      <p className="mb-3 text-xs text-[var(--fg-muted)]">
+      <p className="mb-3 text-sm text-[var(--fg-muted)]">
         Pedidos confirmados que esperan esto y que el almacén todavía no cubre.
       </p>
 
@@ -68,12 +68,12 @@ export function ParaQuienEs({
           return (
             <li key={l.producto_id} className="border-b border-[var(--border-soft)] pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="font-mono text-[0.8rem] font-medium">{l.codigo}</span>
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="font-mono text-sm font-medium">{l.codigo}</span>
+                <span className="text-sm text-[var(--fg-subtle)]">
                   traes {l.cantidad} · esperan {e.total}
                 </span>
                 {alcance === "no_alcanza" ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--warn)]">
+                  <span className="inline-flex items-center gap-1 text-sm font-medium text-[var(--warn)]">
                     <TriangleAlert className="size-3.5" aria-hidden="true" />
                     no alcanza para todos
                   </span>
@@ -88,7 +88,7 @@ export function ParaQuienEs({
                   >
                     <Link
                       href={`/cotizaciones/${p.cotizacion_id}`}
-                      className="font-mono text-[0.8rem] text-brand-600 hover:underline"
+                      className="font-mono text-sm text-brand-600 hover:underline"
                     >
                       {p.cotizacion}
                     </Link>

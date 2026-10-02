@@ -163,10 +163,10 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
       */}
 
       <div className="rounded-md border border-[var(--border-soft)] p-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
           Impuestos y retenciones
         </h3>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           Salen de la norma, no del gusto de nadie. Se editan aquí porque cuando
           cambian, cambian para todo el mundo el mismo día.
         </p>
@@ -243,12 +243,12 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
           <Button type="submit" disabled={guardando}>
             {guardando ? "Guardando…" : "Guardar"}
           </Button>
-          <span className="text-xs text-[var(--fg-subtle)]">
+          <span className="text-sm text-[var(--fg-subtle)]">
             Última modificación: {empresa.actualizado_en.slice(0, 10)}
           </span>
         </div>
       ) : (
-        <p className="text-xs text-[var(--fg-subtle)]">
+        <p className="text-sm text-[var(--fg-subtle)]">
           Solo gerencia y administración pueden cambiar estos datos.
         </p>
       )}

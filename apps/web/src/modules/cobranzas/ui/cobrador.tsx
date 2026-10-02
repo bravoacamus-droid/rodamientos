@@ -160,12 +160,12 @@ export function Cobrador({
                   <button
                     type="button"
                     onClick={() => setMonto(documento.saldo)}
-                    className="self-start text-xs text-brand-600 underline underline-offset-2"
+                    className="self-start text-sm text-brand-600 underline underline-offset-2"
                   >
                     Cobrar el saldo completo
                   </button>
                 ) : (
-                  <span className="text-xs text-[var(--ok)]">
+                  <span className="text-sm text-[var(--ok)]">
                     Queda saldado.
                   </span>
                 )}
@@ -219,8 +219,8 @@ export function Cobrador({
               cliente. Solo se enseña si hay más de una; con una sola no aporta. */}
             {reparto.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
-                <p className="mb-1 text-xs font-medium">Cómo se reparte</p>
-                <ul className="flex flex-col gap-0.5 text-xs">
+                <p className="mb-1 text-sm font-medium">Cómo se reparte</p>
+                <ul className="flex flex-col gap-0.5 text-sm">
                   {reparto.map((r) => (
                     <li key={r.cuota.id} className="flex justify-between gap-2">
                       <span className="text-[var(--fg-muted)]">
@@ -245,7 +245,7 @@ export function Cobrador({
 
             {avisos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
-                <ul className="flex flex-col gap-1 text-xs">
+                <ul className="flex flex-col gap-1 text-sm">
                   {avisos.map((a) => (
                     <li key={a.clave}>· {a.mensaje}</li>
                   ))}
@@ -255,7 +255,7 @@ export function Cobrador({
 
             {bloqueos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
-                <ul className="flex flex-col gap-1 text-xs text-[var(--danger)]">
+                <ul className="flex flex-col gap-1 text-sm text-[var(--danger)]">
                   {bloqueos.map((b) => (
                     <li key={b.campo}>· {b.mensaje}</li>
                   ))}

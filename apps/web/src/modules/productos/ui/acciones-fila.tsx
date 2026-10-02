@@ -90,7 +90,7 @@ export function AccionesFila({
           {puedeAjustarStock && !archivado ? (
             <DropdownMenuItem onSelect={() => setDialogo("stock")}>
               Actualizar stock
-              <span className="ml-auto tabular text-xs text-[var(--fg-muted)]">
+              <span className="ml-auto tabular text-sm text-[var(--fg-muted)]">
                 {stock}
               </span>
             </DropdownMenuItem>
@@ -265,7 +265,7 @@ function DialogoStock({
                 rows={2}
                 placeholder="Conteo físico del 21/08, se encontraron 3 unidades más en el anaquel B."
               />
-              <span className="text-xs text-[var(--fg-muted)]">
+              <span className="text-sm text-[var(--fg-muted)]">
                 Obligatorio. Un ajuste sin explicación es un descuadre que nadie
                 va a poder auditar en tres meses.
               </span>

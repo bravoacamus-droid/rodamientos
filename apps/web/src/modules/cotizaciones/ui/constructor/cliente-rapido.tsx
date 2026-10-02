@@ -290,7 +290,7 @@ export function ClienteRapido({
         <DialogBody className="flex flex-col gap-5">
           {/* ---------------------------------------------- 1 · Quién es */}
           <section className="flex flex-col gap-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
               Identificación
             </h3>
 
@@ -351,7 +351,7 @@ export function ClienteRapido({
             </label>
 
             {direccion ? (
-              <p className="flex items-start gap-2 text-xs text-[var(--fg-muted)]">
+              <p className="flex items-start gap-2 text-sm text-[var(--fg-muted)]">
                 <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 <span>
                   SUNAT también dio la dirección —<em>{direccion}</em>— y se
@@ -429,7 +429,7 @@ export function ClienteRapido({
             </p>
           ) : null}
 
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             Nace <strong>al contado</strong>. Darle crédito es una decisión que se
             toma en su ficha, no un valor por defecto.
           </p>

@@ -33,7 +33,7 @@ export function YaFacturado({
   return (
     <section className="card p-4 print:hidden">
       <h2 className="mb-1 text-sm font-semibold">Lo que ya se le facturó</h2>
-      <p className="mb-3 text-xs text-[var(--fg-muted)]">
+      <p className="mb-3 text-sm text-[var(--fg-muted)]">
         {comprobantes.length === 1
           ? "Un comprobante salió de este pedido"
           : `${comprobantes.length} comprobantes salieron de este pedido`}
@@ -45,11 +45,11 @@ export function YaFacturado({
           <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
             <Link
               href={`/facturacion/${c.id}`}
-              className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+              className="font-mono text-sm font-medium text-brand-600 hover:underline"
             >
               {c.numero}
             </Link>
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               {formatearFecha(c.fecha)}
             </span>
             {c.estado_sunat !== "aceptado" ? (
@@ -61,11 +61,11 @@ export function YaFacturado({
             <span className="ml-auto flex items-center gap-3 text-sm">
               <Moneda valor={c.total} tamano="sm" />
               {c.saldo > 0 ? (
-                <span className="text-xs text-[var(--warn)]">
+                <span className="text-sm text-[var(--warn)]">
                   debe <Moneda valor={c.saldo} tamano="sm" />
                 </span>
               ) : (
-                <span className="text-xs text-[var(--ok)]">cobrado</span>
+                <span className="text-sm text-[var(--ok)]">cobrado</span>
               )}
             </span>
           </li>

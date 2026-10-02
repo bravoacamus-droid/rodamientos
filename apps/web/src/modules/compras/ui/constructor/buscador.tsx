@@ -91,7 +91,7 @@ export function BuscadorCompra({
       />
 
       {buscando ? (
-        <span className="absolute right-3 top-2.5 text-xs text-[var(--fg-muted)]">
+        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
           buscando…
         </span>
       ) : null}
@@ -105,7 +105,7 @@ export function BuscadorCompra({
           ) : null}
 
           {resultados.length > 0 ? (
-            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
+            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
               {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
             </p>
           ) : null}
@@ -126,10 +126,10 @@ export function BuscadorCompra({
                     : "hover:bg-[var(--surface-2)]"
                 }`}
               >
-                <span className="w-40 shrink-0 font-mono text-[0.8rem] font-semibold">
+                <span className="w-40 shrink-0 font-mono text-sm font-semibold">
                   {p.codigo}
                 </span>
-                <span className="w-14 shrink-0 text-xs text-[var(--fg-muted)]">
+                <span className="w-14 shrink-0 text-sm text-[var(--fg-muted)]">
                   {p.marca}
                 </span>
                 <span className="flex-1 truncate text-sm">{p.descripcion}</span>
@@ -149,13 +149,13 @@ export function BuscadorCompra({
                   {p.stock ?? 0}
                 </Badge>
 
-                <span className="w-28 shrink-0 text-right text-xs">
+                <span className="w-28 shrink-0 text-right text-sm">
                   {ultimo ? (
                     <>
                       <span className="tabular block font-medium">
                         ${ultimo.costo.toFixed(4)}
                       </span>
-                      <span className="block text-xs text-[var(--fg-subtle)]">
+                      <span className="block text-sm text-[var(--fg-subtle)]">
                         {ultimo.numero}
                       </span>
                     </>

@@ -94,7 +94,7 @@ function Globo({
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-xs elev-2">
+    <div className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm elev-2">
       {label ? <p className="mb-1 font-medium">{label}</p> : null}
       {payload.map((p, i) => (
         <p key={i} className="flex items-center gap-2">
@@ -113,7 +113,7 @@ function Globo({
 
 const EJE = {
   stroke: "var(--fg-subtle)",
-  fontSize: 11,
+  fontSize: 14,
   tickLine: false,
   axisLine: false,
 } as const;
@@ -193,7 +193,7 @@ export function GraficoTopProductos({ datos }: { datos: ProductoVendido[] }) {
           dataKey="codigo"
           width={110}
           {...EJE}
-          tick={{ fontSize: 11, fill: "var(--fg-muted)", fontFamily: "ui-monospace, monospace" }}
+          tick={{ fontSize: 14, fill: "var(--fg-muted)", fontFamily: "ui-monospace, monospace" }}
         />
         <Tooltip content={<Globo />} cursor={{ fill: "var(--surface-2)" }} />
         <Bar
@@ -297,7 +297,7 @@ export function GraficoValorizacion({ datos }: { datos: FamiliaValorizada[] }) {
 
       {/* El total va en el hueco: es el número que se busca al abrir esto. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-xs text-[var(--fg-muted)]">A costo</span>
+        <span className="text-sm text-[var(--fg-muted)]">A costo</span>
         <span className="tabular text-lg font-semibold">{dinero(total)}</span>
       </div>
     </div>

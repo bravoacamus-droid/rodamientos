@@ -239,7 +239,7 @@ function DialogoBloqueo({
                 rows={2}
                 placeholder="Tiene tres facturas vencidas desde julio."
               />
-              <span className="text-xs text-[var(--fg-muted)]">
+              <span className="text-sm text-[var(--fg-muted)]">
                 Obligatorio. Queda en la ficha para que el siguiente que lo mire
                 sepa por qué está así.
               </span>

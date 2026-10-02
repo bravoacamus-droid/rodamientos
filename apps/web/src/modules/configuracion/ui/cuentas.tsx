@@ -178,13 +178,13 @@ function Tarjeta({
 
       <dl className="flex flex-col gap-1.5 text-sm">
         <div className="min-w-0">
-          <dt className="text-xs text-[var(--fg-subtle)]">Número</dt>
+          <dt className="text-sm text-[var(--fg-subtle)]">Número</dt>
           <dd className="tabular">{cuenta.numero}</dd>
         </div>
         <div className="min-w-0">
           {/* El CCI se dice aunque falte: sin él, un cliente de otro banco no
               puede pagar, y eso no puede quedarse en un hueco en blanco. */}
-          <dt className="text-xs text-[var(--fg-subtle)]">CCI</dt>
+          <dt className="text-sm text-[var(--fg-subtle)]">CCI</dt>
           <dd className="tabular">
             {cuenta.cci ?? (
               <span className="text-[var(--warn)]">

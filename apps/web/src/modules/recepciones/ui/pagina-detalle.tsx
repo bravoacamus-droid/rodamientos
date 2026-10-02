@@ -136,7 +136,7 @@ export default async function PaginaDetalleRecepcion({
                   <td className="px-4 py-2.5">
                     <Link
                       href={`/productos/${l.producto_id}`}
-                      className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                      className="font-mono text-sm font-medium text-brand-600 hover:underline"
                     >
                       {l.codigo}
                     </Link>

@@ -129,12 +129,12 @@ async function Compromisos({ hoy }: { hoy: string }) {
       <ul className="mt-1.5 flex flex-col gap-1 text-sm">
         {r.datos.map((g) => (
           <li key={g.id} className="flex flex-wrap items-baseline gap-x-2">
-            <span className="tabular text-xs text-[var(--fg-muted)]">
+            <span className="tabular text-sm text-[var(--fg-muted)]">
               {g.compromiso_fecha}
             </span>
             <span>{g.nota}</span>
             {g.comprobante_numero ? (
-              <span className="font-mono text-xs">{g.comprobante_numero}</span>
+              <span className="font-mono text-sm">{g.comprobante_numero}</span>
             ) : null}
           </li>
         ))}
@@ -154,33 +154,33 @@ async function Indicadores() {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Por cobrar</p>
+        <p className="text-sm text-[var(--fg-muted)]">Por cobrar</p>
         <p className="mt-0.5 text-xl font-semibold">
           <CifraAnimada valor={total} decimales={2} prefijo="$ " />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {r.datos.length} {r.datos.length === 1 ? "cliente" : "clientes"}
         </p>
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Ya vencido</p>
+        <p className="text-sm text-[var(--fg-muted)]">Ya vencido</p>
         <p
           className={`mt-0.5 text-xl font-semibold ${vencido > 0 ? "text-[var(--danger)]" : ""}`}
         >
           <CifraAnimada valor={vencido} decimales={2} prefijo="$ " />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {total > 0 ? `${Math.round((vencido / total) * 100)} % de la cartera` : "nada"}
         </p>
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">A quién llamar primero</p>
+        <p className="text-sm text-[var(--fg-muted)]">A quién llamar primero</p>
         <p className="mt-0.5 truncate text-base font-semibold">
           {peor ? peor.cliente : "—"}
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {peor
             ? `$ ${peor.saldo.toFixed(2)}${peor.diasMasAntiguo > 0 ? ` · ${peor.diasMasAntiguo} días` : ""}`
             : "no hay nada que cobrar"}
@@ -309,12 +309,12 @@ async function TablaCartera({
               <td className="px-4 py-2.5">
                 <Link
                   href={`/facturacion/${d.id}`}
-                  className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                  className="font-mono text-sm font-medium text-brand-600 hover:underline"
                 >
                   {d.numero}
                 </Link>
                 {d.orden_compra_cliente ? (
-                  <span className="block text-xs text-[var(--fg-subtle)]">
+                  <span className="block text-sm text-[var(--fg-subtle)]">
                     OC {d.orden_compra_cliente}
                   </span>
                 ) : null}
@@ -322,7 +322,7 @@ async function TablaCartera({
 
               <td className="max-w-xs px-4 py-2.5">
                 <span className="block truncate">{d.cliente}</span>
-                <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                   {d.documento ?? ""}
                 </span>
               </td>
@@ -341,7 +341,7 @@ async function TablaCartera({
               <td className="px-4 py-2.5 text-right tabular font-medium">
                 {d.saldo.toFixed(2)}
                 {d.pagado > 0 ? (
-                  <span className="block text-xs font-normal text-[var(--fg-subtle)]">
+                  <span className="block text-sm font-normal text-[var(--fg-subtle)]">
                     pagado {d.pagado.toFixed(2)}
                   </span>
                 ) : null}
@@ -385,18 +385,18 @@ async function ListaPagos() {
           <div className="min-w-0">
             <Link
               href={`/facturacion/${p.comprobante_id}`}
-              className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+              className="font-mono text-sm font-medium text-brand-600 hover:underline"
             >
               {p.comprobante_numero}
             </Link>
-            <span className="ml-2 text-xs text-[var(--fg-muted)]">
+            <span className="ml-2 text-sm text-[var(--fg-muted)]">
               {ETIQUETA_MEDIO[p.medio] ?? p.medio}
               {p.referencia ? ` · ${p.referencia}` : ""}
             </span>
           </div>
           <div className="text-right">
             <span className="tabular font-medium">$ {p.monto.toFixed(2)}</span>
-            <span className="ml-2 tabular text-xs text-[var(--fg-subtle)]">{p.fecha}</span>
+            <span className="ml-2 tabular text-sm text-[var(--fg-subtle)]">{p.fecha}</span>
           </div>
         </li>
       ))}
@@ -428,7 +428,7 @@ async function ListaGestiones() {
           style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
         >
           <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-            <span className="text-xs font-medium">
+            <span className="text-sm font-medium">
               {ETIQUETA_CANAL[g.canal] ?? g.canal}
               {g.comprobante_numero ? (
                 <span className="ml-2 font-mono text-[var(--fg-muted)]">
@@ -436,16 +436,16 @@ async function ListaGestiones() {
                 </span>
               ) : null}
             </span>
-            <span className="tabular text-xs text-[var(--fg-subtle)]">
+            <span className="tabular text-sm text-[var(--fg-subtle)]">
               {g.fecha.slice(0, 10)}
             </span>
           </div>
           {g.resultado ? <p className="mt-0.5">{g.resultado}</p> : null}
           {g.nota ? (
-            <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{g.nota}</p>
+            <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{g.nota}</p>
           ) : null}
           {g.compromiso_fecha ? (
-            <p className="mt-0.5 text-xs font-medium text-[var(--warn)]">
+            <p className="mt-0.5 text-sm font-medium text-[var(--warn)]">
               Prometió pagar el {g.compromiso_fecha}
             </p>
           ) : null}

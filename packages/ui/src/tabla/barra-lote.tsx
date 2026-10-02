@@ -39,7 +39,7 @@ export function BarraLote({
         className,
       )}
     >
-      <p className="text-xs font-medium text-fg" aria-live="polite">
+      <p className="text-sm font-medium text-fg" aria-live="polite">
         <span className="tabular">{cantidad}</span>{" "}
         {cantidad === 1 ? "fila seleccionada" : "filas seleccionadas"}
       </p>

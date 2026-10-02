@@ -158,7 +158,7 @@ export function EmisorNota({
                   <option value="nota_credito">Nota de crédito — reduce</option>
                   <option value="nota_debito">Nota de débito — aumenta</option>
                 </SelectNativo>
-                <span className="font-mono text-xs text-[var(--fg-subtle)]">
+                <span className="font-mono text-sm text-[var(--fg-subtle)]">
                   Se emitirá en {serie}
                 </span>
               </label>
@@ -207,7 +207,7 @@ export function EmisorNota({
                   className="tabular"
                 />
                 {total ? (
-                  <span className="text-xs text-[var(--fg-subtle)]">
+                  <span className="text-sm text-[var(--fg-subtle)]">
                     Con este motivo va por el total pendiente.
                   </span>
                 ) : null}
@@ -218,7 +218,7 @@ export function EmisorNota({
                 ya redondeada. Se enseña para que nadie teclee un número y vea
                 otro en el documento. */}
               {monto > 0 && Math.abs(totalReal - monto) >= 0.01 ? (
-                <div className="anim-entrada self-end rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2 text-xs">
+                <div className="anim-entrada self-end rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2 text-sm">
                   Saldrá por{" "}
                   <strong className="tabular">{totalReal.toFixed(2)}</strong>,
                   no {monto.toFixed(2)}: el IGV se calcula sobre la base
@@ -235,12 +235,12 @@ export function EmisorNota({
                   onChange={(e) => setConcepto(e.target.value)}
                   placeholder="Descuento comercial acordado"
                 />
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="text-sm text-[var(--fg-subtle)]">
                   Es lo que sale impreso en la única línea de la nota.
                 </span>
               </label>
             ) : (
-              <p className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs">
+              <p className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
                 La nota copiará las <strong>{documento.lineas.length}</strong>{" "}
                 {documento.lineas.length === 1 ? "línea" : "líneas"} del
                 documento original: con este motivo se está corrigiendo la
@@ -259,7 +259,7 @@ export function EmisorNota({
 
             {avisos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
-                <ul className="flex flex-col gap-1 text-xs">
+                <ul className="flex flex-col gap-1 text-sm">
                   {avisos.map((a) => (
                     <li key={a.clave}>· {a.mensaje}</li>
                   ))}
@@ -269,10 +269,10 @@ export function EmisorNota({
 
             {motivo && bloqueos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
-                <p className="mb-1 text-xs font-medium text-[var(--danger)]">
+                <p className="mb-1 text-sm font-medium text-[var(--danger)]">
                   SUNAT lo rechazaría:
                 </p>
-                <ul className="flex flex-col gap-1 text-xs text-[var(--danger)]">
+                <ul className="flex flex-col gap-1 text-sm text-[var(--danger)]">
                   {bloqueos.map((b, i) => (
                     <li key={`${b.campo}-${i}`}>· {b.mensaje}</li>
                   ))}
@@ -284,7 +284,7 @@ export function EmisorNota({
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
                 <p className="font-medium">{resultado.error}</p>
                 {resultado.bloqueos ? (
-                  <ul className="mt-1 flex flex-col gap-0.5 text-xs">
+                  <ul className="mt-1 flex flex-col gap-0.5 text-sm">
                     {resultado.bloqueos.map((b) => (
                       <li key={b}>· {b}</li>
                     ))}

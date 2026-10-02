@@ -43,7 +43,7 @@ const EJE_X = {
   dataKey: "mes",
   tickLine: false,
   axisLine: false,
-  tick: { fontSize: 12, fill: "var(--fg-subtle)" },
+  tick: { fontSize: 14, fill: "var(--fg-subtle)" },
   // Con muchos periodos, que la librería salte etiquetas antes de apilarlas.
   interval: "preserveStartEnd" as const,
   minTickGap: 16,
@@ -53,7 +53,7 @@ const EJE_Y = {
   tickLine: false,
   axisLine: false,
   width: 72,
-  tick: { fontSize: 12, fill: "var(--fg-subtle)" },
+  tick: { fontSize: 14, fill: "var(--fg-subtle)" },
   tickFormatter: (v: number) => dolares(v),
 };
 
@@ -70,7 +70,7 @@ const GLOBO = {
     background: "var(--surface)",
     border: "1px solid var(--border)",
     borderRadius: 6,
-    fontSize: 13,
+    fontSize: 14,
   },
   labelStyle: { color: "var(--fg)", fontWeight: 600 },
 };

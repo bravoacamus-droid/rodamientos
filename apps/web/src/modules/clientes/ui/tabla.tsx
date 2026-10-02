@@ -169,7 +169,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
             className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${c.activo ? "" : "opacity-60"}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
+              <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">
                 {c.codigo}
               </span>
               <span className="shrink-0">
@@ -266,7 +266,7 @@ function Contacto({ c }: { c: ClienteLista }) {
   return (
     <>
       {c.contacto ? <span className="block truncate">{c.contacto}</span> : null}
-      <span className="block truncate text-xs text-[var(--fg-subtle)]">
+      <span className="block truncate text-sm text-[var(--fg-subtle)]">
         {[via, c.email].filter(Boolean).join(" · ")}
       </span>
     </>
@@ -355,7 +355,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

@@ -78,7 +78,7 @@ export default async function PaginaFormularioProducto({
             : "El alta va por el maestro, no desde la cotización: así el catálogo no se llena de duplicados."}
         </p>
         {p?.designacion_base ? (
-          <p className="mt-1 text-xs text-[var(--fg-muted)]">
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">
             Medida detectada: <strong>{p.designacion_base}</strong> — con ella se
             proponen los equivalentes de otras marcas.
           </p>

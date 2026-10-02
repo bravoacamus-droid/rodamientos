@@ -41,8 +41,8 @@ export function EstadoVacio({
           {icono}
         </div>
       )}
-      <p className="text-sm font-semibold text-fg">{titulo}</p>
-      {descripcion && <p className="mt-1 max-w-sm text-xs text-muted">{descripcion}</p>}
+      <p className="text-base font-semibold text-fg">{titulo}</p>
+      {descripcion && <p className="mt-1 max-w-sm text-sm text-muted">{descripcion}</p>}
       {accion && <div className="mt-4">{accion}</div>}
     </div>
   );

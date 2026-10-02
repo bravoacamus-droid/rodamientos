@@ -348,7 +348,7 @@ export function EmisorComprobante({
                 ))}
               </SelectNativo>
               {cotizaciones.length === 0 ? (
-                <span className="text-xs text-[var(--fg-muted)]">
+                <span className="text-sm text-[var(--fg-muted)]">
                   No hay cotizaciones aprobadas sin facturar. Aprueba una primero.
                 </span>
               ) : null}
@@ -377,7 +377,7 @@ export function EmisorComprobante({
                     <option value="factura">Factura</option>
                     <option value="boleta">Boleta</option>
                   </SelectNativo>
-                  <span className="font-mono text-xs text-[var(--fg-subtle)]">{serie}</span>
+                  <span className="font-mono text-sm text-[var(--fg-subtle)]">{serie}</span>
                 </label>
 
                 <label className="flex flex-col gap-1">
@@ -417,7 +417,7 @@ export function EmisorComprobante({
                     className="tabular"
                   />
                   {vencimiento ? (
-                    <span className="text-xs text-[var(--fg-subtle)]">
+                    <span className="text-sm text-[var(--fg-subtle)]">
                       vence {vencimiento}
                     </span>
                   ) : null}
@@ -436,7 +436,7 @@ export function EmisorComprobante({
                     de {cot.numero}
                   </span>
                 </h2>
-                <span className="text-xs text-[var(--fg-muted)]">
+                <span className="text-sm text-[var(--fg-muted)]">
                   {cot.cliente} · {cot.cliente_documento ?? "sin documento"}
                 </span>
               </div>
@@ -462,7 +462,7 @@ export function EmisorComprobante({
                         className="anim-entrada border-b border-[var(--border-soft)] last:border-0"
                         style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
                       >
-                        <td className="py-2 pr-3 font-mono text-[0.8rem]">{l.codigo}</td>
+                        <td className="py-2 pr-3 font-mono text-sm">{l.codigo}</td>
                         <td className="max-w-xs py-2 pr-3">
                           <span className="block truncate" title={l.descripcion}>
                             {l.descripcion}
@@ -494,10 +494,10 @@ export function EmisorComprobante({
                             }}
                             aria-label={`Cantidad a facturar de ${l.codigo}`}
                           />
-                          <span className="ml-1 text-xs text-[var(--fg-subtle)]">
+                          <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                             {l.unidad}
                           </span>
-                          <span className="block text-xs text-[var(--fg-subtle)]">
+                          <span className="block text-sm text-[var(--fg-subtle)]">
                             {(cantidades[i] ?? l.cantidad) < l.cantidad
                               ? `quedarían ${l.cantidad - (cantidades[i] ?? l.cantidad)} sin facturar`
                               : l.cantidad !== l.cantidad_cotizada
@@ -575,7 +575,7 @@ export function EmisorComprobante({
                   onChange={(e) => setOrdenCompra(e.target.value)}
                   placeholder="La que mandó al confirmar"
                 />
-                <span className="text-xs text-[var(--fg-muted)]">
+                <span className="text-sm text-[var(--fg-muted)]">
                   Sale impresa en el comprobante. Si te piden solo los últimos
                   dígitos —el 345 de 2026-000-345—, escribe esos.
                 </span>
@@ -612,8 +612,8 @@ export function EmisorComprobante({
               <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
                 {/* SUNAT exige el cronograma desde 2022: sin él, un comprobante
                     al crédito se rechaza con el error 3251. */}
-                <p className="mb-1 text-xs font-medium">Cronograma para SUNAT</p>
-                <ul className="flex flex-col gap-0.5 text-xs text-[var(--fg-muted)]">
+                <p className="mb-1 text-sm font-medium">Cronograma para SUNAT</p>
+                <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {cuotas.map((q) => (
                     <li key={q.numero} className="flex justify-between gap-2">
                       <span>Cuota {q.numero}</span>
@@ -693,7 +693,7 @@ export function EmisorComprobante({
                 <p className="mb-1 text-sm font-medium text-[var(--danger)]">
                   SUNAT lo rechazaría:
                 </p>
-                {/* `text-sm` y no `text-xs`: es un mensaje que hay que LEER
+                {/* `text-sm` y no `text-sm`: es un mensaje que hay que LEER
                     para saber qué corregir, y la regla de la casa es que eso
                     no baja de 14 px (17/09). */}
                 <ul className="flex flex-col gap-1 text-sm">
@@ -707,7 +707,7 @@ export function EmisorComprobante({
             ) : null}
 
             {cot && bloqueos.length === 0 ? (
-              <p className="text-xs text-[var(--fg-muted)]">
+              <p className="text-sm text-[var(--fg-muted)]">
                 Se emite como <Badge tone="neutral" size="xs">{serie}</Badge>
                 {opciones.enviarSunat && puedeEnviar
                   ? " y se manda a SUNAT en el mismo paso."

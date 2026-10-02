@@ -135,7 +135,7 @@ export async function TablaComprobantes({
 
                   <td className="max-w-xs px-4 py-2.5">
                     <span className="block truncate">{c.cliente ?? "—"}</span>
-                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                       {c.cliente_documento ?? ""}
                     </span>
                   </td>
@@ -175,7 +175,7 @@ export async function TablaComprobantes({
                       size="xs"
                     />
                     {c.estado === "anulado" ? (
-                      <span className="ml-1.5 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
+                      <span className="ml-1.5 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
                         Anulado
                       </span>
                     ) : null}
@@ -265,7 +265,7 @@ export async function TablaComprobantes({
               </div>
 
               {c.estado === "anulado" ? (
-                <span className="self-start rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
+                <span className="self-start rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
                   Anulado
                 </span>
               ) : null}
@@ -273,7 +273,7 @@ export async function TablaComprobantes({
               <div>
                 <p className="text-sm font-medium">{c.cliente ?? "—"}</p>
                 {c.cliente_documento ? (
-                  <p className="font-mono text-xs text-[var(--fg-subtle)]">
+                  <p className="font-mono text-sm text-[var(--fg-subtle)]">
                     {c.cliente_documento}
                   </p>
                 ) : null}
@@ -392,7 +392,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

@@ -51,7 +51,7 @@ export function FilaCompra({
   return (
     <tr className="border-b border-[var(--border-soft)] last:border-0">
       <td className="px-2 py-2">
-        <span className="block font-mono text-[0.8rem] font-medium">{linea.codigo}</span>
+        <span className="block font-mono text-sm font-medium">{linea.codigo}</span>
         <span className="block text-sm text-[var(--fg-subtle)]">{linea.marca}</span>
       </td>
 

@@ -77,7 +77,7 @@ export function NuevoNodo({
         disabled={deshabilitado}
         title={deshabilitado ? ayudaDeshabilitado : `Crear una ${etiqueta} nueva`}
         onClick={() => setAbierto(true)}
-        className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline disabled:cursor-not-allowed disabled:text-[var(--fg-subtle)] disabled:no-underline"
+        className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline disabled:cursor-not-allowed disabled:text-[var(--fg-subtle)] disabled:no-underline"
       >
         <Plus className="size-3" />
         Nueva {etiqueta}

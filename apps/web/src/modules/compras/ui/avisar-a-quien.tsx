@@ -41,12 +41,12 @@ export async function AvisarAQuien() {
         <h2 className="text-sm font-semibold">A quién se le puede entregar ya</h2>
         <Link
           href="/cotizaciones/listos"
-          className="text-xs text-brand-600 underline-offset-2 hover:underline"
+          className="text-sm text-brand-600 underline-offset-2 hover:underline"
         >
           Verlos todos
         </Link>
       </div>
-      <p className="mb-3 text-xs text-[var(--fg-muted)]">
+      <p className="mb-3 text-sm text-[var(--fg-muted)]">
         Con lo que hay hoy en almacén. Es el momento de avisarles.
       </p>
 
@@ -55,7 +55,7 @@ export async function AvisarAQuien() {
           <li key={p.cotizacion_id} className="flex flex-wrap items-center gap-x-2 text-sm">
             <Link
               href={`/cotizaciones/${p.cotizacion_id}`}
-              className="font-mono text-[0.8rem] text-brand-600 hover:underline"
+              className="font-mono text-sm text-brand-600 hover:underline"
             >
               {p.cotizacion}
             </Link>
@@ -77,7 +77,7 @@ export async function AvisarAQuien() {
                 ? "completo"
                 : ETIQUETA_URGENCIA[p.urgencia]}
             </Badge>
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               {formatearFecha(p.prometida)}
             </span>
           </li>
@@ -85,7 +85,7 @@ export async function AvisarAQuien() {
       </ul>
 
       {r.datos.length > primeros.length ? (
-        <p className="mt-2 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-2 text-sm text-[var(--fg-subtle)]">
           y {r.datos.length - primeros.length} más.
         </p>
       ) : null}

@@ -326,14 +326,14 @@ export function Constructor({
                     ))}
                   </SelectNativo>
                   {entregaSinRespaldo ? (
-                    <span className="text-xs font-medium text-[var(--warn)]">
+                    <span className="text-sm font-medium text-[var(--warn)]">
                       Prometes una espera y las líneas están todas como
                       inmediatas. Marca en su línea cuál tarda, o el cliente no
                       sabrá por cuál está esperando.
                     </span>
                   ) : null}
                   {entregaMiente ? (
-                    <span className="text-xs font-medium text-[var(--warn)]">
+                    <span className="text-sm font-medium text-[var(--warn)]">
                       Dice inmediato y hay líneas que tardan. Lo que cuadra:{" "}
                       <button
                         type="button"
@@ -350,7 +350,7 @@ export function Constructor({
                       </button>
                     </span>
                   ) : (
-                    <span className="text-xs text-[var(--fg-subtle)]">
+                    <span className="text-sm text-[var(--fg-subtle)]">
                       La promesa general del documento. Sale de las líneas.
                     </span>
                   )}

@@ -108,7 +108,7 @@ export default async function PaginaMiPerfil() {
 function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

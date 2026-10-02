@@ -220,7 +220,7 @@ export function DialogoEnviar({
               <Download className="size-[18px] shrink-0" />
               Descargar la cotización
             </Button>
-            <p className="mt-1.5 text-xs text-[var(--fg-subtle)]">
+            <p className="mt-1.5 text-sm text-[var(--fg-subtle)]">
               Se abre la ventana de imprimir: elige «Guardar como PDF».
             </p>
           </div>

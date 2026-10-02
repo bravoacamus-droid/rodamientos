@@ -153,7 +153,7 @@ function BotonEstado({
       size="sm"
       disabled={ocupado}
       onClick={onCambiar}
-      /* `text-sm` porque el tamaño `sm` del sistema de diseño es `text-xs`, y
+      /* `text-sm` porque el tamaño `sm` del sistema de diseño es `text-sm`, y
          12,75 px en un BOTÓN es exactamente lo que no puede pasar aquí. */
       className="text-sm"
     >
@@ -259,7 +259,7 @@ function FilaUsuario({
         <span className="font-medium">{usuario.nombre}</span>
         <Distintivos esUnoMismo={esUnoMismo} activo={usuario.activo} />
         {/*
-          `text-sm` y no `text-xs`. El correo es con lo que esa persona entra:
+          `text-sm` y no `text-sm`. El correo es con lo que esa persona entra:
           si hay que confirmárselo por teléfono, tiene que leerse. Nada por
           debajo de 14 px en algo que hay que leer.
         */}

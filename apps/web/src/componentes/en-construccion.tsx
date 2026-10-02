@@ -24,7 +24,7 @@ export function EnConstruccion({
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
-          <span className="rounded-sm bg-[var(--warn-bg)] px-2 py-0.5 text-xs font-medium text-[var(--warn)]">
+          <span className="rounded-sm bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium text-[var(--warn)]">
             {fase}
           </span>
         </div>
@@ -32,7 +32,7 @@ export function EnConstruccion({
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
           Qué va a hacer
         </h2>
         <ul className="flex flex-col gap-2">

@@ -45,7 +45,7 @@ export default async function PaginaDetalleProveedor({
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{p.razon_social}</h1>
             {p.activo ? null : (
-              <span className="rounded-sm bg-[var(--surface-2)] px-2 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
+              <span className="rounded-sm bg-[var(--surface-2)] px-2 py-0.5 text-sm font-medium text-[var(--fg-muted)]">
                 De baja
               </span>
             )}
@@ -138,7 +138,7 @@ export default async function PaginaDetalleProveedor({
           {p.email ? <Dato etiqueta="Correo" valor={p.email} /> : null}
           {p.notas ? (
             <div className="sm:col-span-2">
-              <dt className="text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+              <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                 Notas
               </dt>
               <dd className="mt-0.5 whitespace-pre-wrap text-sm">{p.notas}</dd>
@@ -161,11 +161,11 @@ function Dato({
 }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+      <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
         {etiqueta}
       </dt>
       <dd className="mt-0.5 text-sm">{valor}</dd>
-      {pie ? <p className="text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

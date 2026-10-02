@@ -176,12 +176,12 @@ export default async function PaginaDetalleProducto({
         <section className="card p-4">
           <h2 className="mb-1 text-sm font-semibold">Equivalentes de otras marcas</h2>
           {p.designacion_base ? (
-            <p className="mb-3 text-xs text-[var(--fg-muted)]">
+            <p className="mb-3 text-sm text-[var(--fg-muted)]">
               Medida detectada en el código: <strong>{p.designacion_base}</strong>. Es
               lo único que comparten las marcas, así que sale solo.
             </p>
           ) : (
-            <p className="mb-3 text-xs text-[var(--fg-muted)]">
+            <p className="mb-3 text-sm text-[var(--fg-muted)]">
               De este código no se pudo deducir una medida ISO.
             </p>
           )}
@@ -203,7 +203,7 @@ export default async function PaginaDetalleProducto({
                   <Badge tone="neutral" size="xs">
                     {e.marca}
                   </Badge>
-                  <span className="ml-auto text-xs text-[var(--fg-muted)]">
+                  <span className="ml-auto text-sm text-[var(--fg-muted)]">
                     stock {e.stock}
                   </span>
                   <Moneda valor={e.precio_venta} tamano="sm" />
@@ -264,9 +264,9 @@ function Tarjeta({
           : "";
   return (
     <div className="card p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
       <p className={`mt-0.5 truncate text-lg font-semibold tabular ${color}`}>{valor}</p>
-      {pie ? <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

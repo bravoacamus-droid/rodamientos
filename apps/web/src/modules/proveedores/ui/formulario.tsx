@@ -277,7 +277,7 @@ export function FormularioProveedor({
               onChange={(e) => set("dias_pago", Number(e.target.value))}
               className="tabular"
             />
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               0 = al contado.
             </span>
           </label>
@@ -292,7 +292,7 @@ export function FormularioProveedor({
               onChange={(e) => set("lead_time_dias", Number(e.target.value))}
               className="tabular"
             />
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               Días desde que se le pide hasta que llega.
             </span>
           </label>
@@ -302,7 +302,7 @@ export function FormularioProveedor({
       {/* --------------------------------------------------------- Marcas */}
       <section className="card p-4">
         <h2 className="text-sm font-semibold">Marcas que representa</h2>
-        <p className="mb-3 text-xs text-[var(--fg-muted)]">
+        <p className="mb-3 text-sm text-[var(--fg-muted)]">
           Es lo que permite responder «¿quién me vende SKF?» sin abrir las
           fichas una a una.
         </p>
@@ -393,7 +393,7 @@ export function FormularioProveedor({
                 value={datos.pais}
                 onChange={(e) => set("pais", e.target.value)}
               />
-              <span className="text-xs text-[var(--fg-subtle)]">
+              <span className="text-sm text-[var(--fg-subtle)]">
                 Importa para las compras por courier.
               </span>
             </label>

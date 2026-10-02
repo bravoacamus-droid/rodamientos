@@ -76,7 +76,7 @@ export function SheetDescription({
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description className={cn("mt-0.5 text-xs text-muted", className)} {...props} />
+    <DialogPrimitive.Description className={cn("mt-0.5 text-sm text-muted", className)} {...props} />
   );
 }
 

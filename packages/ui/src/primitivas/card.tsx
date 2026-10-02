@@ -33,11 +33,11 @@ export function CardHeader({ className, ...props }: React.ComponentPropsWithRef<
 }
 
 export function CardTitle({ className, ...props }: React.ComponentPropsWithRef<"h3">) {
-  return <h3 className={cn("text-[0.8rem] font-semibold tracking-tight text-fg", className)} {...props} />;
+  return <h3 className={cn("text-sm font-semibold tracking-tight text-fg", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {
-  return <p className={cn("mt-0.5 text-xs text-muted", className)} {...props} />;
+  return <p className={cn("mt-0.5 text-sm text-muted", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.ComponentPropsWithRef<"div">) {

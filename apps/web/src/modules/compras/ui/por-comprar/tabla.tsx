@@ -191,7 +191,7 @@ export function TablaPorComprar({
                         <>
                           {cantidad(f.pedido)}
                           {f.proximaLlegada ? (
-                            <span className="block text-xs text-[var(--fg-subtle)]">
+                            <span className="block text-sm text-[var(--fg-subtle)]">
                               llega {formatearFecha(f.proximaLlegada)}
                             </span>
                           ) : null}
@@ -431,7 +431,7 @@ export function TablaPorComprar({
                     <span className="text-sm font-medium">
                       {g.proveedor ?? "Sin proveedor conocido"}
                     </span>
-                    <span className="text-xs opacity-80">
+                    <span className="text-sm opacity-80">
                       {g.filas.length}
                       {g.filas.length === 1 ? " producto" : " productos"}
                     </span>

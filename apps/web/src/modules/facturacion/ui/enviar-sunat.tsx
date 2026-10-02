@@ -51,7 +51,7 @@ export function EnviarASunat({
     return (
       <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
         <p className="font-medium">{numero} está emitido pero no se ha enviado.</p>
-        <p className="mt-0.5 text-[0.8rem]">
+        <p className="mt-0.5 text-sm">
           Falta configurar el certificado y las credenciales SOL. El documento
           queda esperando: cuando estén, se envía desde aquí sin volver a
           emitirlo.
@@ -67,7 +67,7 @@ export function EnviarASunat({
       </Button>
 
       {enviando ? (
-        <p className="anim-latido text-xs text-[var(--fg-muted)]">
+        <p className="anim-latido text-sm text-[var(--fg-muted)]">
           SUNAT puede tardar unos segundos. No cierres esta pantalla.
         </p>
       ) : null}
@@ -89,17 +89,17 @@ export function EnviarASunat({
           <p className="font-medium">
             {resultado.aceptado ? "Aceptado por SUNAT." : "SUNAT lo rechazó."}
             {resultado.codigo ? (
-              <span className="ml-1.5 font-mono text-xs">({resultado.codigo})</span>
+              <span className="ml-1.5 font-mono text-sm">({resultado.codigo})</span>
             ) : null}
           </p>
-          <p className="mt-0.5 text-[0.8rem]">{resultado.mensaje}</p>
+          <p className="mt-0.5 text-sm">{resultado.mensaje}</p>
 
           {resultado.observaciones.length > 0 ? (
             <>
-              <p className="mt-2 text-[0.8rem] font-medium">
+              <p className="mt-2 text-sm font-medium">
                 Aceptado CON observaciones:
               </p>
-              <ul className="mt-0.5 flex flex-col gap-0.5 text-[0.8rem]">
+              <ul className="mt-0.5 flex flex-col gap-0.5 text-sm">
                 {resultado.observaciones.map((o) => (
                   <li key={o}>· {o}</li>
                 ))}
@@ -108,7 +108,7 @@ export function EnviarASunat({
           ) : null}
 
           {!resultado.aceptado ? (
-            <p className="mt-2 text-[0.8rem]">
+            <p className="mt-2 text-sm">
               {resultado.reintentable
                 ? "Se puede volver a intentar: el problema es transitorio."
                 : "Reenviarlo no sirve de nada. Hay que corregir y emitir otro documento."}

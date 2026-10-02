@@ -34,7 +34,7 @@ export function Input({ className, numerico, ...props }: InputProps) {
         numerico && "text-right tabular",
         // Ocultar el spinner nativo ya se hace en tokens.css; aquí solo el
         // ancho de la caret zone.
-        "file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-xs file:text-fg",
+        "file:mr-3 file:rounded file:border-0 file:bg-surface-2 file:px-2 file:py-1 file:text-sm file:text-fg",
         className,
       )}
       {...props}

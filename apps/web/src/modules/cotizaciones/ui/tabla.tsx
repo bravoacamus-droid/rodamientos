@@ -138,7 +138,7 @@ export async function TablaCotizaciones({
                 <td className="whitespace-nowrap px-4 py-2.5 tabular">
                   {fechaCorta(c.fecha)}
                   {vencida(c) ? (
-                    <span className="ml-1.5 rounded-sm bg-[var(--warn-bg)] px-1 py-0.5 text-xs font-medium text-[var(--warn)]">
+                    <span className="ml-1.5 rounded-sm bg-[var(--warn-bg)] px-1 py-0.5 text-sm font-medium text-[var(--warn)]">
                       vencida
                     </span>
                   ) : null}
@@ -147,7 +147,7 @@ export async function TablaCotizaciones({
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{c.cliente}</span>
                   {c.cliente_documento ? (
-                    <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                       {c.cliente_documento}
                     </span>
                   ) : null}

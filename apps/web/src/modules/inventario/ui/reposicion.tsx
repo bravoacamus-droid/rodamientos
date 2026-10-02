@@ -155,7 +155,7 @@ export async function TablaReposicion() {
               <td className="px-4 py-2.5">
                 <Link
                   href={`/productos/${f.id}`}
-                  className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                  className="font-mono text-sm font-medium text-brand-600 hover:underline"
                 >
                   {f.codigo}
                 </Link>
@@ -169,14 +169,14 @@ export async function TablaReposicion() {
               <td className="px-4 py-2.5 text-right tabular">
                 {Number(f.stock ?? 0).toLocaleString("es-PE")}
               </td>
-              <td className="hidden px-4 py-2.5 text-right tabular text-xs text-[var(--fg-muted)] lg:table-cell">
+              <td className="hidden px-4 py-2.5 text-right tabular text-sm text-[var(--fg-muted)] lg:table-cell">
                 {f.stock_minimo} / {f.stock_maximo || "—"}
               </td>
               <td className="px-4 py-2.5 text-right tabular">
                 {/* Sin consumo en 90 días no se puede estimar cobertura. Decir
                     "0 días" sería mentir: puede que simplemente no se venda. */}
                 {f.dias_cobertura === null ? (
-                  <span className="text-xs text-[var(--fg-subtle)]">
+                  <span className="text-sm text-[var(--fg-subtle)]">
                     sin consumo
                   </span>
                 ) : (
@@ -196,7 +196,7 @@ export async function TablaReposicion() {
               </td>
               <td className="px-4 py-2.5">
                 <span
-                  className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR[f.estado_stock]}`}
+                  className={`inline-block rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR[f.estado_stock]}`}
                 >
                   {ETIQUETA[f.estado_stock]}
                 </span>

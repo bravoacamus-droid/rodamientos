@@ -296,7 +296,7 @@ export function FilaLinea({
           />
         </td>
 
-        <td className="text-xs text-[var(--fg-muted)]">{linea.unidad}</td>
+        <td className="text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
 
         {/*
           Cuándo se puede entregar (040).
@@ -320,7 +320,7 @@ export function FilaLinea({
             }
             // Sin `min-w`, la columna lo estrechaba hasta dejar «Inmedia» y
             // media flecha: una promesa de entrega a medio leer.
-            className="h-control-sm min-w-[7rem] text-xs"
+            className="h-control-sm min-w-[7rem] text-sm"
             aria-label={`Disponibilidad de ${linea.codigo}`}
           >
             {DISPONIBILIDADES.map((d) => (
@@ -347,10 +347,10 @@ export function FilaLinea({
                   })
                 }
                 placeholder={String(DIAS_POR_DEFECTO[linea.disponibilidad] ?? "")}
-                className="h-control-sm w-14 text-right tabular text-xs"
+                className="h-control-sm w-14 text-right tabular text-sm"
                 aria-label={`Días de entrega de ${linea.codigo}`}
               />
-              <span className="text-xs text-[var(--fg-muted)]">días</span>
+              <span className="text-sm text-[var(--fg-muted)]">días</span>
             </div>
           ) : null}
 
@@ -424,7 +424,7 @@ export function FilaLinea({
               aria-label={`Descuento de ${linea.codigo}`}
             />
             {revision.descuentoMaximoPct !== null && revision.ok ? (
-              <span className="mt-0.5 block text-xs text-[var(--fg-muted)]">
+              <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
                 máx. {revision.descuentoMaximoPct}%
               </span>
             ) : null}
@@ -842,7 +842,7 @@ function PanelSustitutos({
                   catálogo el código ES el producto. */}
               <td className="whitespace-nowrap py-2.5 pr-3 align-top">
                 <span className="block font-medium">{s.codigo}</span>
-                <span className="block text-xs text-[var(--fg-subtle)]">{s.marca}</span>
+                <span className="block text-sm text-[var(--fg-subtle)]">{s.marca}</span>
               </td>
 
               {/*
@@ -882,7 +882,7 @@ function PanelSustitutos({
                 <span className="block tabular font-medium">{dolar(s.precio_venta)}</span>
                 {s.diferencia_pct !== 0 ? (
                   <span
-                    className={`block text-xs tabular ${
+                    className={`block text-sm tabular ${
                       s.diferencia_pct < 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"
                     }`}
                   >

@@ -199,7 +199,7 @@ export default async function PaginaListos({ searchParams }: Props) {
                       className="border-b border-[var(--border-soft)] last:border-0 transition-colors hover:bg-[var(--surface-2)]"
                     >
                       <td className="px-4 py-2.5">
-                        <span className="font-mono text-[0.8rem] font-semibold text-brand-700">
+                        <span className="font-mono text-sm font-semibold text-brand-700">
                           {p.cotizacion}
                         </span>
                       </td>
@@ -213,7 +213,7 @@ export default async function PaginaListos({ searchParams }: Props) {
                           {p.cliente}
                         </span>
                         {p.cliente_documento ? (
-                          <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                          <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                             {p.cliente_documento}
                           </span>
                         ) : null}
@@ -256,7 +256,7 @@ export default async function PaginaListos({ searchParams }: Props) {
                         >
                           {ETIQUETA_URGENCIA[p.urgencia]}
                         </Badge>
-                        <span className="ml-1.5 text-xs text-[var(--fg-subtle)]">
+                        <span className="ml-1.5 text-sm text-[var(--fg-subtle)]">
                           {formatearFecha(p.prometida)}
                         </span>
                       </td>
@@ -300,7 +300,7 @@ export default async function PaginaListos({ searchParams }: Props) {
             ) : null}
           </div>
 
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             El stock se reparte por orden de confirmación, el más antiguo
             primero — es el mismo reparto que usa la bandeja «Por comprar», para
             que las dos pantallas no puedan contradecirse.
@@ -365,7 +365,7 @@ function EstadoDelPedido({ estado }: { estado: Monton }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium ${tono}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm px-1.5 py-0.5 text-sm font-medium ${tono}`}
     >
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {ETIQUETA[estado]}

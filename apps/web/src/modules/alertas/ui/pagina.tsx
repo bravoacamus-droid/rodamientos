@@ -120,23 +120,23 @@ async function Indicadores() {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Sin leer</p>
+        <p className="text-sm text-[var(--fg-muted)]">Sin leer</p>
         <p className="mt-0.5 text-xl font-semibold">
           <CifraAnimada valor={sinLeer} decimales={0} />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {total === 0 ? "la bandeja está vacía" : `de ${total} en la bandeja`}
         </p>
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Críticas</p>
+        <p className="text-sm text-[var(--fg-muted)]">Críticas</p>
         <p
           className={`mt-0.5 text-xl font-semibold ${criticas > 0 ? "text-[var(--danger)]" : ""}`}
         >
           <CifraAnimada valor={criticas} decimales={0} />
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {criticas === 0
             ? "nada que pare la operación"
             : "quiebre, saldo negativo o rechazo de SUNAT"}
@@ -144,13 +144,13 @@ async function Indicadores() {
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Última revisión</p>
+        <p className="text-sm text-[var(--fg-muted)]">Última revisión</p>
         <p className="mt-0.5 text-base font-semibold">
           {ultima ? haceCuanto(ultima, ahora) : "nunca"}
         </p>
         {/* Se dice en voz alta porque cambia cómo se lee la pantalla: sin cron,
             lo que ves es de la última vez que alguien pulsó Actualizar. */}
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           se calculan al pulsar «Actualizar»
         </p>
       </div>
@@ -203,7 +203,7 @@ async function Bandeja({ filtros }: { filtros: FiltrosBandeja }) {
     <div className="flex flex-col">
       {grupos.map((grupo) => (
         <section key={grupo.familia}>
-          <h2 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+          <h2 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
             {ETIQUETA_FAMILIA[grupo.familia]}
             <span className="ml-2 font-normal normal-case tracking-normal text-[var(--fg-subtle)]">
               {grupo.alertas.length}
@@ -259,7 +259,7 @@ function FilaAlerta({
           <Badge tone={tonoSeveridad(alerta.severidad)} size="xs">
             {ETIQUETA_SEVERIDAD[alerta.severidad]}
           </Badge>
-          <span className="text-xs text-[var(--fg-subtle)]">
+          <span className="text-sm text-[var(--fg-subtle)]">
             {ETIQUETA_TIPO[alerta.tipo]}
           </span>
           {!alerta.leida ? (
@@ -272,7 +272,7 @@ function FilaAlerta({
 
         <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{alerta.mensaje}</p>
 
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-[var(--fg-subtle)]">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-[var(--fg-subtle)]">
           <span className="tabular">{haceCuanto(alerta.generada_en, ahora)}</span>
           {alerta.accion_url ? (
             <Link

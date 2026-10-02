@@ -126,7 +126,7 @@ export function BotonDeclarar({
             </RadioGroup>
 
             <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-[var(--fg-muted)]">
+              <span className="text-sm font-medium text-[var(--fg-muted)]">
                 Nota (opcional)
               </span>
               <Textarea

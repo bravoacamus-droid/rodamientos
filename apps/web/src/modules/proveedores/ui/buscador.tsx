@@ -233,7 +233,7 @@ export function BuscadorProveedores({
             className="h-control-md w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-9 pr-20 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
           />
           {buscando ? (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--fg-muted)]">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
               buscando…
             </span>
           ) : null}
@@ -256,7 +256,7 @@ export function BuscadorProveedores({
           role="listbox"
           className="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-96 overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3"
         >
-          <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
+          <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
             {error
               ? error
               : resultados === null
@@ -374,7 +374,7 @@ export function BuscadorProveedores({
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <span className="block text-xs text-[var(--fg-muted)]">
+                  <span className="block text-sm text-[var(--fg-muted)]">
                     {ultimaVez(p.ultima_compra, hoy)}
                   </span>
                   {p.compras > 0 ? (

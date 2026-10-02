@@ -135,7 +135,7 @@ export default async function PaginaPorComprar() {
             <TablaPorComprar filas={filas} ofertas={ofertas} />
           </section>
 
-          <p className="text-xs text-[var(--fg-subtle)]">
+          <p className="text-sm text-[var(--fg-subtle)]">
             El stock que hay se reparte por orden de confirmación: el primero
             que confirmó se lo lleva entero.{" "}
             <strong>No queda apartado</strong> — mientras no se decida si

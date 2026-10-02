@@ -468,6 +468,12 @@
 /* Contenedor con scroll horizontal propio. Lo usa el envoltorio de la
    DataTable: la PÁGINA nunca debe desplazarse en horizontal, solo la tabla. */
 @utility scroll-x {
+  /*
+    Contenedor de posición: sin él, el «sr-only» (absoluto) de la columna de
+    acciones se escapaba de la tabla y estiraba la PÁGINA entera — /productos
+    medía 1454 px a 1280 y /compras 1337 (revisión de diseño, 02/10).
+  */
+  position: relative;
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }

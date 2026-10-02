@@ -64,7 +64,7 @@ export function CuentasParaPagar({
     <div className="mt-3 break-inside-avoid border-t border-[#ccc] pt-2">
       <p className="mb-1 font-semibold uppercase tracking-wide">{titulo}</p>
 
-      <table className="w-full border-collapse text-xs">
+      <table className="w-full border-collapse text-sm">
         <thead>
           {/* En mayúsculas como en el cuadro que mandó Willy, no en
               minúscula como el resto del papel: es una tabla de cifras dentro

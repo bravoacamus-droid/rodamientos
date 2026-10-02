@@ -61,7 +61,7 @@ export default async function PaginaComparativa({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-[var(--fg-subtle)]">
+          <p className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
             <Link href="/compras/precios" className="underline-offset-2 hover:underline">
               Precios de proveedores
             </Link>

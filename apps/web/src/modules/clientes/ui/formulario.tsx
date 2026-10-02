@@ -420,7 +420,7 @@ export function FormularioCliente({
       <section className="card flex flex-col gap-3 p-4">
         <div>
           <h2 className="text-sm font-semibold">¿Quién es?</h2>
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             Pega el RUC y dale a «Traer datos»: razón social, dirección y
             distrito se rellenan solos. Con eso ya se puede guardar.
           </p>
@@ -526,7 +526,7 @@ export function FormularioCliente({
         {/* Ni Decolecta ni nadie expone un padrón de carnés de extranjería o
             pasaportes. Se dice, para que no parezca que el botón está roto. */}
         {tipoDocumento !== "RUC" && tipoDocumento !== "DNI" && !sinDocumento ? (
-          <p className="text-xs text-[var(--fg-muted)]">
+          <p className="text-sm text-[var(--fg-muted)]">
             Este documento no tiene padrón que consultar: los datos se escriben a
             mano.
           </p>
@@ -790,7 +790,7 @@ export function FormularioCliente({
               ) : null}
 
               {num(f.dias_credito) === 0 ? (
-                <p className="text-xs text-[var(--warn)]">
+                <p className="text-sm text-[var(--warn)]">
                   Con 0 días la factura nace vencida el mismo día que se emite.
                   Elige un plazo.
                 </p>

@@ -153,7 +153,7 @@ export function BuscadorClientes({
 
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{elegido.razon_social}</p>
-            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--fg-muted)]">
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-[var(--fg-muted)]">
               <span className="tabular">
                 {elegido.numero_documento
                   ? `${elegido.tipo_documento} ${elegido.numero_documento}`
@@ -169,7 +169,7 @@ export function BuscadorClientes({
               ) : null}
             </p>
             {aviso ? (
-              <p className="mt-1 text-xs font-medium text-[var(--danger)]">{aviso}</p>
+              <p className="mt-1 text-sm font-medium text-[var(--danger)]">{aviso}</p>
             ) : null}
           </div>
 
@@ -228,7 +228,7 @@ export function BuscadorClientes({
             className="h-control-md w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-9 pr-20 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
           />
           {buscando ? (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--fg-muted)]">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
               buscando…
             </span>
           ) : null}
@@ -254,7 +254,7 @@ export function BuscadorClientes({
           role="listbox"
           className="absolute left-0 right-0 top-full z-30 mt-1.5 max-h-96 overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3"
         >
-          <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
+          <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
             {error
               ? error
               : resultados === null
@@ -274,7 +274,7 @@ export function BuscadorClientes({
                   : `Ningún cliente coincide con «${q}».`}
               </p>
               {q.length >= 2 ? (
-                <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+                <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                   {buscandoDocumento
                     ? "Dalo de alta con el botón de la derecha: el documento ya va puesto."
                     : "Prueba con el RUC, o con menos palabras del nombre."}
@@ -323,7 +323,7 @@ export function BuscadorClientes({
                       ),
                     )}
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-[var(--fg-muted)]">
                     <span className="tabular">
                       {c.numero_documento ? (
                         resaltar(c.numero_documento, digitosDe(q)).map((t, i) =>
@@ -346,14 +346,14 @@ export function BuscadorClientes({
                     <span>{resumenCredito(c)}</span>
                   </p>
                   {impedimento ? (
-                    <p className="mt-0.5 text-xs font-medium text-[var(--danger)]">
+                    <p className="mt-0.5 text-sm font-medium text-[var(--danger)]">
                       {impedimento}
                     </p>
                   ) : null}
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <span className="block text-xs text-[var(--fg-muted)]">
+                  <span className="block text-sm text-[var(--fg-muted)]">
                     {ultimaVez(c.ultima_cotizacion, hoy)}
                   </span>
                   {c.cotizaciones > 0 ? (
@@ -373,7 +373,7 @@ export function BuscadorClientes({
         </div>
       ) : null}
 
-      <span className="text-xs text-[var(--fg-subtle)]">
+      <span className="text-sm text-[var(--fg-subtle)]">
         Es lo único que hace falta para empezar.
       </span>
 

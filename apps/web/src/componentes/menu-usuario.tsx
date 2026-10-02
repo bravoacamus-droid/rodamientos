@@ -39,7 +39,7 @@ export function MenuUsuario({
         <Button variant="subtle" className="gap-2">
           <span className="max-w-40 truncate">{nombre}</span>
           {rol ? (
-            <span className="text-xs text-[var(--fg-subtle)]">
+            <span className="text-sm text-[var(--fg-subtle)]">
               {ETIQUETA_ROL[rol]}
             </span>
           ) : null}

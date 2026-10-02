@@ -174,12 +174,12 @@ export default async function PaginaDetalleComprobante({
                       {l.producto_id ? (
                         <Link
                           href={`/productos/${l.producto_id}`}
-                          className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                          className="font-mono text-sm font-medium text-brand-600 hover:underline"
                         >
                           {l.codigo}
                         </Link>
                       ) : (
-                        <span className="font-mono text-[0.8rem]">{l.codigo}</span>
+                        <span className="font-mono text-sm">{l.codigo}</span>
                       )}
                     </td>
                     <td className="max-w-xs py-2 pr-3">
@@ -189,14 +189,14 @@ export default async function PaginaDetalleComprobante({
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
                       {l.cantidad}{" "}
-                      <span className="text-xs text-[var(--fg-subtle)]">
+                      <span className="text-sm text-[var(--fg-subtle)]">
                         {l.unidad}
                       </span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
                       {l.valor_unitario.toFixed(4)}
                       {l.descuento_pct > 0 ? (
-                        <span className="block text-xs text-[var(--fg-subtle)]">
+                        <span className="block text-sm text-[var(--fg-subtle)]">
                           −{l.descuento_pct}%
                         </span>
                       ) : null}
@@ -259,12 +259,12 @@ export default async function PaginaDetalleComprobante({
               <div className="rounded-sm border border-[var(--ok)] bg-[var(--surface-2)] p-2.5 text-sm">
                 <p className="font-medium">Aceptado.</p>
                 {c.sunat_enviado_en ? (
-                  <p className="mt-0.5 text-xs text-[var(--fg-muted)]">
+                  <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
                     {new Date(c.sunat_enviado_en).toLocaleString("es-PE")}
                   </p>
                 ) : null}
                 {c.sunat_hash_cdr ? (
-                  <p className="mt-1 break-all font-mono text-xs text-[var(--fg-subtle)]">
+                  <p className="mt-1 break-all font-mono text-sm text-[var(--fg-subtle)]">
                     {c.sunat_hash_cdr}
                   </p>
                 ) : null}
@@ -283,7 +283,7 @@ export default async function PaginaDetalleComprobante({
             )}
 
             {c.sunat_mensaje && c.estado_sunat !== "aceptado" ? (
-              <p className="mt-2 text-xs text-[var(--fg-muted)]">
+              <p className="mt-2 text-sm text-[var(--fg-muted)]">
                 Último mensaje: {c.sunat_mensaje}
               </p>
             ) : null}
@@ -321,7 +321,7 @@ export default async function PaginaDetalleComprobante({
             </dl>
 
             {c.detraccion_aplica ? (
-              <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-xs">
+              <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
                 <p className="font-medium">
                   Detracción {c.detraccion_porcentaje}% · $
                   {c.detraccion_monto.toFixed(2)}
@@ -366,9 +366,9 @@ function Tarjeta({
           : "";
   return (
     <div className="card anim-entrada p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
       <p className={`mt-0.5 truncate text-lg font-semibold tabular ${color}`}>{valor}</p>
-      {pie ? <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

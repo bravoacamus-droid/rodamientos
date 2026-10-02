@@ -265,7 +265,7 @@ export function ConstructorGuia({
                         className="anim-entrada border-b border-[var(--border-soft)] last:border-0"
                         style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
                       >
-                        <td className="py-2 pr-3 font-mono text-[0.8rem]">{l.codigo}</td>
+                        <td className="py-2 pr-3 font-mono text-sm">{l.codigo}</td>
                         <td className="max-w-xs py-2 pr-3">
                           <span className="block truncate" title={l.descripcion}>
                             {l.descripcion}

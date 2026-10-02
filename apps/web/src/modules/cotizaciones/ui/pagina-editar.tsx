@@ -234,7 +234,7 @@ function AvisoDeCompras({ compras }: { compras: CompraAbierta[] }) {
           <li key={c.id}>
             <Link
               href={`/compras/${c.id}`}
-              className="font-mono text-[0.8rem] font-semibold text-brand-700 underline"
+              className="font-mono text-sm font-semibold text-brand-700 underline"
             >
               {c.numero}
             </Link>{" "}

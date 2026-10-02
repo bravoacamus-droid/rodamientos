@@ -59,7 +59,7 @@ export function PaginacionKeyset({
       aria-label="Paginación del listado"
       className={cn("no-print flex flex-wrap items-center justify-between gap-3 border-t px-4 py-2.5", className)}
     >
-      <p className="text-xs text-muted" aria-live="polite">
+      <p className="text-sm text-muted" aria-live="polite">
         <span className="tabular font-medium text-fg">{cantidadEnPagina.toLocaleString("es-PE")}</span>{" "}
         {cantidadEnPagina === 1 ? "registro" : "registros"} en pantalla
         {total !== undefined && (
@@ -72,13 +72,13 @@ export function PaginacionKeyset({
 
       <div className="flex items-center gap-3">
         {tamanoAjustable && (
-          <label className="flex items-center gap-1.5 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-sm text-muted">
             <span className="hidden sm:inline">Filas</span>
             <SelectNativo
               value={String(porPagina)}
               aria-label="Filas por página"
               onChange={(e) => fijar({ [PARAMS.tamano]: e.target.value })}
-              className="h-control-sm w-[4.5rem] text-xs"
+              className="h-control-sm w-[4.5rem] text-sm"
             >
               {TAMANOS_PAGINA.map((n) => (
                 <option key={n} value={n}>

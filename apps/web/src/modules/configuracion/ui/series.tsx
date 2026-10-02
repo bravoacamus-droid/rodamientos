@@ -218,7 +218,7 @@ function FilaSerie({
           {serie.correlativo_actual}
         </td>
 
-        <td className="px-3 py-2 font-mono text-[0.8rem]">
+        <td className="px-3 py-2 font-mono text-sm">
           {proximoNumero(serie)}
         </td>
 

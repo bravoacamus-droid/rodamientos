@@ -99,7 +99,7 @@ export function BuscadorRecepcion({
       />
 
       {buscando ? (
-        <span className="absolute right-3 top-2.5 text-xs text-[var(--fg-muted)]">
+        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
           buscando…
         </span>
       ) : null}
@@ -113,7 +113,7 @@ export function BuscadorRecepcion({
           ) : null}
 
           {resultados.length > 0 ? (
-            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
+            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
               {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
             </p>
           ) : null}
@@ -132,10 +132,10 @@ export function BuscadorRecepcion({
                     : "hover:bg-[var(--surface-2)]"
                 }`}
               >
-                <span className="w-40 shrink-0 font-mono text-[0.8rem] font-semibold">
+                <span className="w-40 shrink-0 font-mono text-sm font-semibold">
                   {p.codigo}
                 </span>
-                <span className="w-14 shrink-0 text-xs text-[var(--fg-muted)]">
+                <span className="w-14 shrink-0 text-sm text-[var(--fg-muted)]">
                   {p.marca}
                 </span>
                 <span className="flex-1 truncate text-sm">{p.descripcion}</span>
@@ -148,7 +148,7 @@ export function BuscadorRecepcion({
                   </Badge>
                 ) : null}
 
-                <span className="w-20 shrink-0 text-right text-xs text-[var(--fg-muted)]">
+                <span className="w-20 shrink-0 text-right text-sm text-[var(--fg-muted)]">
                   stock {p.stock ?? 0}
                 </span>
                 <span className="w-20 shrink-0 text-right tabular text-sm">

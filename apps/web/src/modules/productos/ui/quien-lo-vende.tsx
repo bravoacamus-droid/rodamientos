@@ -36,7 +36,7 @@ export function QuienLoVende({
         </p>
       ) : (
         <>
-          <p className="mb-3 text-xs text-[var(--fg-muted)]">
+          <p className="mb-3 text-sm text-[var(--fg-muted)]">
             Del más barato al más caro, con lo que cobró la última vez. En
             dólares, para que se puedan comparar entre sí.
           </p>
@@ -63,7 +63,7 @@ export function QuienLoVende({
                   </Badge>
                 )}
 
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="text-sm text-[var(--fg-subtle)]">
                   {v.veces > 0
                     ? `${v.veces} ${v.veces === 1 ? "compra" : "compras"}` +
                       (v.ultimaCompra ? ` · ${formatearFecha(v.ultimaCompra)}` : "")
@@ -79,7 +79,7 @@ export function QuienLoVende({
                       {/* Si su factura vino en soles, se dice: es la cifra que
                           aparece cuando se le llama a preguntar. */}
                       {v.moneda && v.moneda !== "USD" && v.ultimoCosto !== null ? (
-                        <span className="ml-1 text-xs text-[var(--fg-subtle)]">
+                        <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                           (S/ {v.ultimoCosto})
                         </span>
                       ) : null}

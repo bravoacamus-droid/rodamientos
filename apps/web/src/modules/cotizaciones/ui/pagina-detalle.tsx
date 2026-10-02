@@ -407,7 +407,7 @@ export default async function PaginaDetalleCotizacion({
                     <td className="whitespace-nowrap px-4 py-2.5">
                       <span className="block font-medium">{l.codigo}</span>
                       {l.marca ? (
-                        <span className="block text-xs text-[var(--fg-subtle)]">
+                        <span className="block text-sm text-[var(--fg-subtle)]">
                           {l.marca}
                         </span>
                       ) : null}

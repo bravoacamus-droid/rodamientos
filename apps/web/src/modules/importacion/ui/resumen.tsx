@@ -31,7 +31,7 @@ function Cifra({
   return (
     <div className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-3">
       <p className={`text-2xl font-semibold tabular ${color}`}>{valor}</p>
-      <p className="mt-0.5 text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{etiqueta}</p>
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function Resumen({
           <p className="mt-0.5">
             {resumen.proveedores_desconocidos.join(", ")}.
           </p>
-          <p className="mt-1 text-xs text-[var(--fg-muted)]">
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">
             Las filas entran igual, solo que sin proveedor habitual. No se crean
             solos a propósito: un proveedor lleva RUC, condiciones de pago y
             plazo de entrega, y darlo de alta desde un nombre suelto llenaría el
@@ -139,7 +139,7 @@ export function Resumen({
             ))}
           </ul>
           {problemas.length > 10 ? (
-            <p className="mt-1 text-xs text-[var(--fg-muted)]">
+            <p className="mt-1 text-sm text-[var(--fg-muted)]">
               y {problemas.length - 10} más.
             </p>
           ) : null}
@@ -231,7 +231,7 @@ function Tabla({
         </TBody>
       </Table>
       {filas.length > TOPE_DETALLE ? (
-        <p className="mt-1.5 text-xs text-[var(--fg-muted)]">
+        <p className="mt-1.5 text-sm text-[var(--fg-muted)]">
           Se muestran {TOPE_DETALLE} de {filas.length}. Las demás siguen la misma
           suerte.
         </p>

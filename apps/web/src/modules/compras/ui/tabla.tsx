@@ -92,7 +92,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     {c.numero}
                   </Link>
                   {c.tipo === "importacion" ? (
-                    <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--fg-muted)]">
+                    <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
                       Import.
                     </span>
                   ) : null}
@@ -121,7 +121,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={c.total} tamano="sm" />
                   {c.gastos_importacion > 0 ? (
-                    <span className="block text-xs text-[var(--fg-subtle)]">
+                    <span className="block text-sm text-[var(--fg-subtle)]">
                       +{c.gastos_importacion.toFixed(2)} gastos
                     </span>
                   ) : null}
@@ -174,7 +174,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   {c.numero}
                 </Link>
                 {c.tipo === "importacion" ? (
-                  <span className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs text-[var(--fg-muted)]">
+                  <span className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
                     Import.
                   </span>
                 ) : null}
@@ -208,13 +208,13 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
               <Dato etiqueta="Total">
                 <Moneda valor={c.total} tamano="sm" />
                 {c.gastos_importacion > 0 ? (
-                  <span className="block text-xs text-[var(--fg-subtle)]">
+                  <span className="block text-sm text-[var(--fg-subtle)]">
                     +{c.gastos_importacion.toFixed(2)} gastos
                   </span>
                 ) : null}
               </Dato>
               <div className="min-w-0">
-                <dt className="text-xs text-[var(--fg-subtle)]">Recibido</dt>
+                <dt className="text-sm text-[var(--fg-subtle)]">Recibido</dt>
                 <dd className="pt-1">
                   <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} />
                 </dd>
@@ -321,7 +321,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

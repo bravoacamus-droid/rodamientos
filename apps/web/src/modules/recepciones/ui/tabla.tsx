@@ -88,12 +88,12 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                     {r.numero}
                   </Link>
                   {r.anulada ? (
-                    <span className="ml-2 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
+                    <span className="ml-2 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
                       Anulada
                     </span>
                   ) : null}
                   {r.compra_numero ? (
-                    <span className="ml-2 font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="ml-2 font-mono text-sm text-[var(--fg-subtle)]">
                       {r.compra_numero}
                     </span>
                   ) : null}
@@ -164,13 +164,13 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                   {r.numero}
                 </Link>
                 {r.compra_numero ? (
-                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                     {r.compra_numero}
                   </span>
                 ) : null}
               </div>
               {r.anulada ? (
-                <span className="shrink-0 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-xs font-medium text-[var(--danger)]">
+                <span className="shrink-0 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
                   Anulada
                 </span>
               ) : null}
@@ -186,7 +186,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
               </Dato>
               <Dato etiqueta="Recibió">{r.recibido_por ?? "—"}</Dato>
               <div className="col-span-2 min-w-0">
-                <dt className="text-xs text-[var(--fg-subtle)]">
+                <dt className="text-sm text-[var(--fg-subtle)]">
                   Papeles del proveedor
                 </dt>
                 <dd className="text-sm">
@@ -250,7 +250,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

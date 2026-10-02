@@ -96,7 +96,7 @@ async function Cabecera({ id }: { id: string }) {
         <span className="text-sm text-[var(--fg-muted)]">{p.marca}</span>
       </div>
       <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{p.descripcion}</p>
-      <p className="mt-1 text-xs text-[var(--fg-subtle)]">
+      <p className="mt-1 text-sm text-[var(--fg-subtle)]">
         {p.stock > 0 ? `${p.stock} en stock` : "sin stock"} · costo promedio{" "}
         {dinero(p.costo_promedio)} · lista {dinero(p.precio_venta)}
         {p.precio_minimo > 0 ? ` · mínimo ${dinero(p.precio_minimo)}` : ""}
@@ -163,7 +163,7 @@ async function Respuestas({ id }: { id: string }) {
       />
 
       <div className="card anim-entrada p-3">
-        <p className="text-xs text-[var(--fg-muted)]">Margen de referencia</p>
+        <p className="text-sm text-[var(--fg-muted)]">Margen de referencia</p>
         <p
           className={`mt-0.5 text-xl font-semibold ${
             margen === null
@@ -177,7 +177,7 @@ async function Respuestas({ id }: { id: string }) {
         >
           {margen === null ? "—" : `${margen.toFixed(1)} %`}
         </p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {margen === null
             ? "hace falta una compra y una cotización"
             : "comprando al mejor precio y vendiendo al último cotizado"}
@@ -200,7 +200,7 @@ function Tarjeta({
 }) {
   return (
     <div className="card anim-entrada p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{titulo}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{titulo}</p>
       {referencia ? (
         <>
           <p className="mt-0.5 truncate text-base font-semibold" title={referencia.nombre ?? ""}>
@@ -208,7 +208,7 @@ function Tarjeta({
           </p>
           <p className="mt-0.5 text-sm">
             <span className="tabular font-medium">{dinero(referencia.unitario)}</span>
-            <span className="ml-2 text-xs text-[var(--fg-subtle)]">
+            <span className="ml-2 text-sm text-[var(--fg-subtle)]">
               {referencia.documento} · {referencia.fecha.slice(0, 10)}
             </span>
           </p>
@@ -216,7 +216,7 @@ function Tarjeta({
       ) : (
         <p className="mt-0.5 text-base font-semibold text-[var(--fg-subtle)]">{vacio}</p>
       )}
-      {pie ? <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }
@@ -245,7 +245,7 @@ async function Historia({ id }: { id: string }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card p-4">
           <h2 className="mb-1 text-sm font-semibold">Proveedores</h2>
-          <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
             Ordenados por el mejor precio conseguido, no por el más reciente.
           </p>
           {proveedores.length === 0 ? (
@@ -263,14 +263,14 @@ async function Historia({ id }: { id: string }) {
                     >
                       {p.nombre}
                     </Link>
-                    <span className="block text-xs text-[var(--fg-subtle)]">
+                    <span className="block text-sm text-[var(--fg-subtle)]">
                       {p.veces} {p.veces === 1 ? "compra" : "compras"} · {p.unidades} unidades
                     </span>
                   </div>
                   <div className="text-right">
                     <span className="tabular text-sm font-medium">{dinero(p.mejorPrecio)}</span>
                     {p.ultimoPrecio !== p.mejorPrecio ? (
-                      <span className="block text-xs text-[var(--fg-subtle)]">
+                      <span className="block text-sm text-[var(--fg-subtle)]">
                         la última vez {dinero(p.ultimoPrecio)}
                       </span>
                     ) : null}
@@ -283,7 +283,7 @@ async function Historia({ id }: { id: string }) {
 
         <section className="card p-4">
           <h2 className="mb-1 text-sm font-semibold">Clientes</h2>
-          <p className="mb-3 text-xs text-[var(--fg-subtle)]">
+          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
             Lo más reciente arriba: es lo que hay que sostener si vuelve a llamar.
           </p>
           {clientes.length === 0 ? (
@@ -301,13 +301,13 @@ async function Historia({ id }: { id: string }) {
                     >
                       {c.nombre}
                     </Link>
-                    <span className="block text-xs text-[var(--fg-subtle)]">
+                    <span className="block text-sm text-[var(--fg-subtle)]">
                       {c.cotizaciones} cotizado · {c.ventas} vendido
                     </span>
                   </div>
                   <div className="text-right">
                     <span className="tabular text-sm font-medium">{dinero(c.ultimoPrecio)}</span>
-                    <span className="block text-xs text-[var(--fg-subtle)]">
+                    <span className="block text-sm text-[var(--fg-subtle)]">
                       {c.ultimaFecha}
                     </span>
                   </div>
@@ -321,7 +321,7 @@ async function Historia({ id }: { id: string }) {
       <section className="card overflow-hidden">
         <header className="border-b border-[var(--border-soft)] px-4 py-3">
           <h2 className="text-sm font-semibold">Todo lo que ha pasado</h2>
-          <p className="text-xs text-[var(--fg-subtle)]">
+          <p className="text-sm text-[var(--fg-subtle)]">
             {r.datos.length} {r.datos.length === 1 ? "evento" : "eventos"}, del más
             reciente al más antiguo. Dentro de cada día, en el orden en que
             ocurrieron.
@@ -331,7 +331,7 @@ async function Historia({ id }: { id: string }) {
         <div className="flex flex-col">
           {agruparPorDia(r.datos).map((grupo) => (
             <section key={grupo.dia}>
-              <h3 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-xs font-semibold tabular text-[var(--fg-muted)]">
+              <h3 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-sm font-semibold tabular text-[var(--fg-muted)]">
                 {grupo.dia}
               </h3>
               <ul className="flex flex-col">
@@ -384,23 +384,23 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
         {ruta ? (
           <Link
             href={ruta}
-            className="font-mono text-xs font-medium text-brand-600 hover:underline"
+            className="font-mono text-sm font-medium text-brand-600 hover:underline"
           >
             {evento.documento}
           </Link>
         ) : (
-          <span className="font-mono text-xs">{evento.documento}</span>
+          <span className="font-mono text-sm">{evento.documento}</span>
         )}
-        <span className="ml-2 text-xs text-[var(--fg-muted)]">
+        <span className="ml-2 text-sm text-[var(--fg-muted)]">
           {evento.contraparte ?? "—"}
         </span>
         {evento.referencia ? (
-          <span className="ml-2 text-xs text-[var(--fg-subtle)]">
+          <span className="ml-2 text-sm text-[var(--fg-subtle)]">
             {esCompra ? "doc." : "OC"} {evento.referencia}
           </span>
         ) : null}
         <span
-          className="block text-xs text-[var(--fg-subtle)]"
+          className="block text-sm text-[var(--fg-subtle)]"
           title={AYUDA_EVENTO[evento.evento]}
         >
           {AYUDA_EVENTO[evento.evento]}
@@ -409,7 +409,7 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
 
       <div className="shrink-0 text-right">
         <span className="tabular text-sm font-medium">{dinero(evento.unitario)}</span>
-        <span className="block text-xs text-[var(--fg-subtle)] tabular">
+        <span className="block text-sm text-[var(--fg-subtle)] tabular">
           {evento.cantidad} × · {dinero(evento.importe)}
         </span>
       </div>

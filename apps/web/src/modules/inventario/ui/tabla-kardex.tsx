@@ -150,26 +150,26 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   key={m.id}
                   className="border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)]"
                 >
-                  <td className="whitespace-nowrap px-4 py-2.5 tabular text-[0.8rem]">
+                  <td className="whitespace-nowrap px-4 py-2.5 tabular text-sm">
                     {m.fecha.slice(0, 10)}
-                    <span className="ml-1 text-xs text-[var(--fg-subtle)]">
+                    <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                       {m.fecha.slice(11, 16)}
                     </span>
                   </td>
                   <td className="max-w-xs px-4 py-2.5">
                     <Link
                       href={`/inventario/kardex?producto=${m.producto_id}`}
-                      className="block font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                      className="block font-mono text-sm font-medium text-brand-600 hover:underline"
                     >
                       {m.codigo}
                     </Link>
-                    <span className="block truncate text-xs text-[var(--fg-subtle)]">
+                    <span className="block truncate text-sm text-[var(--fg-subtle)]">
                       {m.descripcion}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
                     <span
-                      className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR[m.tipo]}`}
+                      className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR[m.tipo]}`}
                     >
                       {ETIQUETA_MOVIMIENTO[m.tipo]}
                     </span>
@@ -189,7 +189,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   <td className="hidden px-4 py-2.5 text-right lg:table-cell">
                     <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
                   </td>
-                  <td className="px-4 py-2.5 text-xs">
+                  <td className="px-4 py-2.5 text-sm">
                     {m.referencia_numero ? (
                       enlace ? (
                         <Link
@@ -208,7 +208,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                     )}
                     {m.motivo ? (
                       <span
-                        className="block truncate text-xs text-[var(--fg-subtle)]"
+                        className="block truncate text-sm text-[var(--fg-subtle)]"
                         title={m.motivo}
                       >
                         {m.motivo}

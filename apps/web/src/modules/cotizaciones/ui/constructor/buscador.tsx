@@ -108,7 +108,7 @@ export function BuscadorLineas({
       />
 
       {buscando ? (
-        <span className="absolute right-3 top-2.5 text-xs text-[var(--fg-muted)]">
+        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
           buscando…
         </span>
       ) : null}
@@ -170,7 +170,7 @@ export function BuscadorLineas({
           ) : null}
 
           {resultados.length > 0 ? (
-            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--fg-muted)]">
+            <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
               {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
             </p>
           ) : null}
@@ -197,7 +197,7 @@ export function BuscadorLineas({
                   : "hover:bg-[var(--surface-2)]"
               }`}
             >
-              <span className="shrink-0 font-mono text-[0.8rem] font-semibold sm:w-40">
+              <span className="shrink-0 font-mono text-sm font-semibold sm:w-40">
                 {p.codigo}
               </span>
               <span className="order-last flex min-w-0 basis-full gap-2 sm:order-none sm:contents">

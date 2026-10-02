@@ -24,7 +24,7 @@ const contenidoBase = [
 ].join(" ");
 
 /*
-  `text-sm` y `min-h-9`, no `text-[0.8rem]`.
+  `text-sm` y `min-h-9`, no `text-sm`.
 
   Eran 12.8 px, por debajo del suelo de la casa —«nada por debajo de 14 px»— y
   en los cinco menús que ya existen: el del catálogo, el de clientes, el de
@@ -107,7 +107,7 @@ export function DropdownMenuRadioItem({
 export function DropdownMenuLabel({ className, ...props }: React.ComponentPropsWithRef<typeof Menu.Label>) {
   return (
     <Menu.Label
-      className={cn("px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-subtle", className)}
+      className={cn("px-2 py-1.5 text-sm font-semibold uppercase tracking-wide text-subtle", className)}
       {...props}
     />
   );
@@ -121,7 +121,7 @@ export function DropdownMenuSeparator({
 }
 
 export function DropdownMenuShortcut({ className, ...props }: React.ComponentPropsWithRef<"span">) {
-  return <span className={cn("ml-auto text-xs tracking-widest text-subtle", className)} {...props} />;
+  return <span className={cn("ml-auto text-sm tracking-widest text-subtle", className)} {...props} />;
 }
 
 export function DropdownMenuSubTrigger({

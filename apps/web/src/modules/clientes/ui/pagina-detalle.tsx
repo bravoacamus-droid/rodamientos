@@ -52,7 +52,7 @@ export default async function PaginaDetalleCliente({
             {c.razon_social}
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs text-[var(--fg-subtle)]">{c.codigo}</span>
+            <span className="font-mono text-sm text-[var(--fg-subtle)]">{c.codigo}</span>
             <Badge tone="neutral" size="xs">
               {ETIQUETA_DOCUMENTO[c.tipo_documento]} {c.numero_documento ?? "—"}
             </Badge>
@@ -185,7 +185,7 @@ export default async function PaginaDetalleCliente({
                       </Badge>
                     ) : null}
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-muted)]">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-[var(--fg-muted)]">
                     {p.cargo ? <span>{p.cargo}</span> : null}
                     {p.cargo && p.area ? <span aria-hidden="true">·</span> : null}
                     {p.area ? <span>{p.area}</span> : null}
@@ -218,7 +218,7 @@ export default async function PaginaDetalleCliente({
             <Dato etiqueta="Referencia" valor={c.referencia_direccion} />
           </dl>
           {!c.direccion || !c.ubigeo_codigo ? (
-            <p className="mt-3 rounded-sm bg-[var(--surface-2)] p-2.5 text-xs text-[var(--fg-muted)]">
+            <p className="mt-3 rounded-sm bg-[var(--surface-2)] p-2.5 text-sm text-[var(--fg-muted)]">
               Falta dirección o distrito. Se puede cotizar igual, pero la guía de
               remisión los exige: conviene completarlos antes del primer despacho.
             </p>
@@ -233,7 +233,7 @@ export default async function PaginaDetalleCliente({
         </section>
       ) : null}
 
-      <p className="text-xs text-[var(--fg-subtle)]">
+      <p className="text-sm text-[var(--fg-subtle)]">
         Dado de alta el {new Date(c.creado_en).toLocaleDateString("es-PE")}.
       </p>
     </div>
@@ -251,9 +251,9 @@ function Tarjeta({
 }) {
   return (
     <div className="card p-3">
-      <p className="text-xs text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
       <p className="mt-0.5 truncate text-lg font-semibold tabular">{valor}</p>
-      {pie ? <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">{pie}</p> : null}
+      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

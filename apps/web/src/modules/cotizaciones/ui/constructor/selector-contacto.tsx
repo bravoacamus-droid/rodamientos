@@ -137,7 +137,7 @@ export function SelectorContacto({
         </SelectNativo>
       )}
 
-      <span className="flex flex-wrap items-center gap-x-2 text-xs text-[var(--fg-subtle)]">
+      <span className="flex flex-wrap items-center gap-x-2 text-sm text-[var(--fg-subtle)]">
         {cargando
           ? "Cargando sus contactos…"
           : sinCliente

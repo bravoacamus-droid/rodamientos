@@ -444,7 +444,7 @@ export function ConstructorCompra({
                         className="rounded-full border border-[var(--border-strong)] px-3 py-1 text-sm hover:bg-[var(--surface-2)]"
                       >
                         {c.proveedor.razon_social}
-                        <span className="ml-1.5 text-xs text-[var(--fg-subtle)]">
+                        <span className="ml-1.5 text-sm text-[var(--fg-subtle)]">
                           {c.coincidencias} de {c.deCuantos}
                         </span>
                       </button>
@@ -732,7 +732,7 @@ export function ConstructorCompra({
                   const linea = estado.lineas.find((l) => l.productoId === f.producto_id);
                   return (
                     <li key={f.producto_id} className="flex flex-wrap items-baseline gap-x-2">
-                      <strong className="font-mono text-[0.8rem]">
+                      <strong className="font-mono text-sm">
                         {linea?.codigo ?? "—"}
                       </strong>
                       <span>

@@ -322,7 +322,7 @@ export function AccionesCotizacion({
               onSelect={() => correr(() => clonar(id))}
             >
               Clonar
-              <span className="ml-auto text-xs text-[var(--fg-subtle)]">
+              <span className="ml-auto text-sm text-[var(--fg-subtle)]">
                 precios de hoy
               </span>
             </DropdownMenuItem>

@@ -97,7 +97,7 @@ export function FiltroCliente({
 
   return (
     <div ref={caja} className="relative flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="text-xs font-medium text-[var(--fg-muted)]">
+      <label htmlFor={id} className="text-sm font-medium text-[var(--fg-muted)]">
         Cliente
       </label>
 
@@ -179,7 +179,7 @@ export function FiltroCliente({
                   >
                     <span className="truncate text-sm font-medium">{c.razon_social}</span>
                     {c.numero_documento ? (
-                      <span className="font-mono text-xs text-[var(--fg-subtle)]">
+                      <span className="font-mono text-sm text-[var(--fg-subtle)]">
                         {c.numero_documento}
                       </span>
                     ) : null}

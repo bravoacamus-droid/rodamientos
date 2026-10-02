@@ -45,7 +45,7 @@ export default async function PaginaLogin({
           <AtajosDev destino={destino} />
         </div>
 
-        <p className="mt-6 text-center text-xs text-[var(--fg-subtle)]">
+        <p className="mt-6 text-center text-sm text-[var(--fg-subtle)]">
           Inversiones Rodatech E.I.R.L. · Lima, Perú
         </p>
       </div>

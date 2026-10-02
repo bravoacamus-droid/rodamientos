@@ -90,7 +90,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                   >
                     {p.razon_social}
                   </Link>
-                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                     {p.codigo}
                     {p.activo ? "" : " · de baja"}
                   </span>
@@ -98,19 +98,19 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
 
                 <td className="max-w-xs px-4 py-2.5">
                   {p.marcas.length === 0 ? (
-                    <span className="text-xs text-[var(--fg-subtle)]">—</span>
+                    <span className="text-sm text-[var(--fg-subtle)]">—</span>
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {p.marcas.slice(0, 4).map((m) => (
                         <span
                           key={m}
-                          className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs"
+                          className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm"
                         >
                           {m}
                         </span>
                       ))}
                       {p.marcas.length > 4 ? (
-                        <span className="px-1 py-0.5 text-xs text-[var(--fg-subtle)]">
+                        <span className="px-1 py-0.5 text-sm text-[var(--fg-subtle)]">
                           +{p.marcas.length - 4}
                         </span>
                       ) : null}
@@ -123,7 +123,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 <td className="hidden max-w-[14rem] px-4 py-2.5 lg:table-cell">
                   {p.contacto ? <span className="block truncate">{p.contacto}</span> : null}
                   {p.telefono || p.whatsapp ? (
-                    <span className="block truncate text-xs text-[var(--fg-muted)]">
+                    <span className="block truncate text-sm text-[var(--fg-muted)]">
                       {p.telefono ?? p.whatsapp}
                     </span>
                   ) : null}
@@ -143,7 +143,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 </td>
                 <td className="px-4 py-2.5">
                   <span
-                    className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-xs font-medium ${
+                    className={`inline-block whitespace-nowrap rounded-sm px-1.5 py-0.5 text-sm font-medium ${
                       p.tipo === "importacion"
                         ? "bg-[var(--info-bg)] text-[var(--info)]"
                         : "bg-[var(--surface-2)] text-[var(--fg-muted)]"
@@ -189,7 +189,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
             className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${p.activo ? "" : "opacity-60"}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate font-mono text-xs text-[var(--fg-subtle)]">
+              <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">
                 {p.codigo}
               </span>
               <Badge tone={p.activo ? "success" : "neutral"} size="xs">
@@ -295,7 +295,7 @@ function DatoTarjeta({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );

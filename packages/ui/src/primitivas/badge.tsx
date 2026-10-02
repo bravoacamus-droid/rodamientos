@@ -27,7 +27,7 @@ export const badgeVariants = cva(
         LOS TRES TAMAÑOS SON `text-sm`. No es un descuido: el tamaño solo
         gradúa el RELLENO, nunca la letra.
 
-        Los tres eran `text-xs` —12,75 px con la base de este proyecto— y eso
+        Los tres eran `text-sm` —12,75 px con la base de este proyecto— y eso
         va contra la primera regla de CLAUDE.md: nada por debajo de 14 px en
         algo que hay que leer. Y una pastilla es de lo que MÁS hay que leer:
         dice si un documento está emitido o anulado, si una cuenta está

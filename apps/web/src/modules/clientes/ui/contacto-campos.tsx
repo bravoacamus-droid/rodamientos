@@ -175,7 +175,7 @@ export function CamposContacto({
  * en el alta solo tocan memoria— pero la fila se ve igual en los dos sitios,
  * que es de lo que se trata.
  *
- * El texto va en `text-sm` y no en `text-xs`. Willy no ve bien de cerca y lo
+ * El texto va en `text-sm` y no en `text-sm`. Willy no ve bien de cerca y lo
  * dijo él: los 12 px de la línea secundaria eran ilegibles para él.
  */
 export function FilaContacto({

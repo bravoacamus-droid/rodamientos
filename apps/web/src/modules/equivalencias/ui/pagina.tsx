@@ -109,7 +109,7 @@ async function Contador() {
   if (!r.ok) return null;
 
   return (
-    <p className="mt-3 text-xs text-[var(--fg-subtle)]">
+    <p className="mt-3 text-sm text-[var(--fg-subtle)]">
       {r.datos.pares === 0
         ? "Todavía no hay ninguna equivalencia declarada: lo que salga abajo será todo deducido del código."
         : `${r.datos.pares} ${r.datos.pares === 1 ? "equivalencia declarada" : "equivalencias declaradas"} sobre ${r.datos.productos} productos.`}
@@ -182,11 +182,11 @@ async function Cross({
                 <Badge tone={tonoOrigen(grupo.origen)} size="sm">
                   {ETIQUETA_ORIGEN[grupo.origen]}
                 </Badge>
-                <span className="text-xs text-[var(--fg-subtle)]">
+                <span className="text-sm text-[var(--fg-subtle)]">
                   {grupo.sustitutos.length}
                 </span>
               </div>
-              <p className="text-xs text-[var(--fg-muted)]">
+              <p className="text-sm text-[var(--fg-muted)]">
                 {EXPLICACION_ORIGEN[grupo.origen]}
               </p>
             </header>
@@ -219,19 +219,19 @@ async function Cross({
                 <div className="min-w-0">
                   <Link
                     href={`/equivalencias?producto=${d.otro_id}`}
-                    className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {d.otro_codigo}
                   </Link>
-                  <span className="ml-2 text-xs text-[var(--fg-muted)]">
+                  <span className="ml-2 text-sm text-[var(--fg-muted)]">
                     {d.otro_marca} · {ETIQUETA_CLASE[d.clase]}
                   </span>
                   {d.nota ? (
-                    <p className="text-xs text-[var(--fg-subtle)]">{d.nota}</p>
+                    <p className="text-sm text-[var(--fg-subtle)]">{d.nota}</p>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-[var(--fg-subtle)]">
+                  <span className="text-sm text-[var(--fg-subtle)]">
                     {d.creado_por ?? "—"} · {d.creado_en.slice(0, 10)}
                   </span>
                   {puedeDeclarar ? (
@@ -272,7 +272,7 @@ function Cabecera({
           ) : null}
         </div>
         <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{producto.descripcion}</p>
-        <p className="mt-0.5 text-xs text-[var(--fg-subtle)]">
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {producto.stock > 0 ? `${producto.stock} en stock` : "sin stock"} ·
           {" "}
           $ {producto.precio_venta.toFixed(2)} · {contarPorOrigen(sustitutos)}
@@ -304,7 +304,7 @@ function Fila({
         <div className="flex flex-wrap items-baseline gap-x-2">
           <Link
             href={`/equivalencias?producto=${sustituto.id}`}
-            className="font-mono text-[0.8rem] font-medium text-brand-600 hover:underline"
+            className="font-mono text-sm font-medium text-brand-600 hover:underline"
           >
             {sustituto.codigo}
           </Link>
@@ -314,8 +314,8 @@ function Fila({
             </Badge>
           ) : null}
         </div>
-        <p className="truncate text-xs text-[var(--fg-muted)]">{sustituto.descripcion}</p>
-        <p className="text-xs text-[var(--fg-subtle)]">
+        <p className="truncate text-sm text-[var(--fg-muted)]">{sustituto.descripcion}</p>
+        <p className="text-sm text-[var(--fg-subtle)]">
           {resumenSustituto(sustituto)}
         </p>
       </div>

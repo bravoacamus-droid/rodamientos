@@ -102,7 +102,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                     {p.codigo}
                   </Link>
                   {p.codigo_fabricante ? (
-                    <span className="ml-2 font-mono text-xs text-[var(--fg-subtle)]">
+                    <span className="ml-2 font-mono text-sm text-[var(--fg-subtle)]">
                       {p.codigo_fabricante}
                     </span>
                   ) : null}
@@ -110,14 +110,14 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="whitespace-nowrap px-4 py-2.5">{p.marca}</td>
                 <td className="max-w-md px-4 py-2.5">
                   <span className="block truncate">{p.descripcion}</span>
-                  <span className="block truncate text-xs text-[var(--fg-subtle)]">
+                  <span className="block truncate text-sm text-[var(--fg-subtle)]">
                     {p.subfamilia}
                     {p.tipo ? ` · ${p.tipo}` : ""}
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">
                   {p.stock.toLocaleString("es-PE")}
-                  <span className="ml-1 text-xs text-[var(--fg-subtle)]">
+                  <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                     {p.unidad}
                   </span>
                 </td>
@@ -175,7 +175,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                   {p.codigo}
                 </Link>
                 {p.codigo_fabricante ? (
-                  <span className="block font-mono text-xs text-[var(--fg-subtle)]">
+                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                     {p.codigo_fabricante}
                   </span>
                 ) : null}
@@ -199,7 +199,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 la descripción. */}
             <div>
               <p className="text-sm">{p.descripcion}</p>
-              <p className="text-xs text-[var(--fg-subtle)]">
+              <p className="text-sm text-[var(--fg-subtle)]">
                 {p.marca}
                 {p.subfamilia ? ` · ${p.subfamilia}` : ""}
                 {p.tipo ? ` · ${p.tipo}` : ""}
@@ -209,7 +209,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
               <Dato etiqueta="Stock">
                 <span className="tabular">{p.stock.toLocaleString("es-PE")}</span>{" "}
-                <span className="text-xs text-[var(--fg-subtle)]">{p.unidad}</span>
+                <span className="text-sm text-[var(--fg-subtle)]">{p.unidad}</span>
               </Dato>
               <Dato etiqueta="Precio venta">
                 <Moneda valor={p.precio_venta} tamano="sm" />
@@ -253,14 +253,14 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
 function Estado({ p }: { p: ProductoLista }) {
   if (p.archivado) {
     return (
-      <span className="inline-block rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-xs font-medium text-[var(--fg-muted)]">
+      <span className="inline-block rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm font-medium text-[var(--fg-muted)]">
         De baja
       </span>
     );
   }
   return (
     <span
-      className={`inline-block rounded-sm px-1.5 py-0.5 text-xs font-medium ${COLOR_STOCK[p.estado_stock]}`}
+      className={`inline-block rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR_STOCK[p.estado_stock]}`}
     >
       {ETIQUETA_STOCK[p.estado_stock]}
     </span>
@@ -294,7 +294,7 @@ function Dato({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );
