@@ -59,7 +59,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Cartera comercial: documento, condición de pago y línea de crédito.
+            Cartera comercial: documento, cómo paga y su tope de deuda.
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
         ) : null}
       </div>
 
-      <section className="card pt-4">
+      <section className="card @container pt-4">
         <FiltrosClientesBarra />
 
         <Suspense

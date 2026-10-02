@@ -103,7 +103,7 @@ export default async function PaginaFormularioCliente({
         </h1>
         <p className="text-sm text-[var(--fg-muted)]">
           {c
-            ? "Cambiar la condición de pago o la línea de crédito afecta a los documentos NUEVOS; los ya emitidos conservan lo que se pactó."
+            ? "Cambiar cómo paga, el plazo o el tope de deuda afecta a los documentos NUEVOS; los ya emitidos conservan lo que se pactó."
             : "Con el RUC basta: pulsa «Traer datos» y el resto se rellena solo. Lo que falte se puede completar después."}
         </p>
       </header>

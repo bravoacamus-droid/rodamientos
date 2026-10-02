@@ -162,7 +162,7 @@ export default async function PaginaTransporte() {
             titulo: a.nombre_corto || a.razon_social,
             detalle: juntar(
               a.nombre_corto ? a.razon_social : null,
-              a.numero_documento ? `RUC ${a.numero_documento}` : "sin RUC",
+              a.numero_documento ? `RUC\u00a0${a.numero_documento}` : "sin RUC",
               a.telefono,
             ),
           }),
@@ -201,8 +201,11 @@ export default async function PaginaTransporte() {
             ...c,
             titulo: c.nombre,
             detalle: juntar(
-              c.numero_documento ? `DNI ${c.numero_documento}` : "sin DNI",
-              c.licencia ? `licencia ${c.licencia}` : "sin licencia",
+              // Espacio de no separación: a 390 px «RUC» quedaba al final de
+              // una línea y el número en la siguiente (revisión por módulos
+              // del 02/10). Lo mismo con DNI y licencia.
+              c.numero_documento ? `DNI\u00a0${c.numero_documento}` : "sin DNI",
+              c.licencia ? `licencia\u00a0${c.licencia}` : "sin licencia",
               c.telefono,
             ),
           }),

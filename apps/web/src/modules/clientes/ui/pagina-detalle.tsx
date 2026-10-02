@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, EstadoError, Moneda } from "@rodatech/ui";
-import { FileText, HandCoins, Receipt, Truck } from "lucide-react";
+import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
+import { FileText, HandCoins, Pencil, Receipt, Truck } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { clientePorId } from "../api/consultas";
@@ -77,14 +77,17 @@ export default async function PaginaDetalleCliente({
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Los tres botones del mismo alto y con el mismo dibujo: «Editar»
+            era un enlace sin fondo, más alto que «Cotizar» y gris sobre el
+            gris de la página (revisión por módulos del 02/10). */}
+        <div className="flex flex-wrap items-center gap-2">
           {puedeEditar ? (
-            <Link
-              href={`/clientes/${c.id}/editar`}
-              className="inline-flex h-11 items-center rounded-md border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)] md:h-control-md"
-            >
-              Editar
-            </Link>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <Link href={`/clientes/${c.id}/editar`}>
+                <Pencil className="size-4" aria-hidden="true" />
+                Editar
+              </Link>
+            </Button>
           ) : null}
           <AccionesFila
             id={c.id}
@@ -118,7 +121,10 @@ export default async function PaginaDetalleCliente({
           pie={c.condicion_pago === "credito" ? `${c.dias_credito} días` : "paga al entregar"}
         />
         <Tarjeta
-          etiqueta="Línea de crédito"
+          // Con el nombre del formulario: allí se llama «Tope de deuda» desde
+          // que Willy entendió «línea» como un máximo mensual. Aquí seguía
+          // «Línea de crédito» (revisión por módulos del 02/10).
+          etiqueta="Tope de deuda"
           valor={
             c.condicion_pago === "credito" && c.linea_credito > 0 ? (
               <Moneda valor={c.linea_credito} />
@@ -130,7 +136,7 @@ export default async function PaginaDetalleCliente({
             c.condicion_pago !== "credito"
               ? "no aplica al contado"
               : c.linea_credito > 0
-                ? "tope de deuda"
+                ? "lo que puede deber a la vez"
                 : "sin tope definido"
           }
         />
@@ -209,7 +215,7 @@ export default async function PaginaDetalleCliente({
               {c.contactos_lista.map((p) => (
                 <li key={p.id} className="py-2 first:pt-0 last:pb-0">
                   <p className="flex items-center gap-2 text-sm font-medium">
-                    <span className="truncate">{p.nombre}</span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{p.nombre}</span>
                     {p.principal ? (
                       <Badge tone="brand" size="xs">
                         Principal
@@ -223,13 +229,23 @@ export default async function PaginaDetalleCliente({
                     {p.email ? (
                       <>
                         {p.cargo || p.area ? <span aria-hidden="true">·</span> : null}
-                        <span className="truncate">{p.email}</span>
+                        {/* Partido donde haga falta y no cortado: un correo
+                            con puntos suspensivos no se puede copiar. */}
+                        <span className="min-w-0 [overflow-wrap:anywhere]">{p.email}</span>
                       </>
                     ) : null}
                     {p.telefono ? (
                       <>
                         <span aria-hidden="true">·</span>
                         <span className="tabular">{p.telefono}</span>
+                      </>
+                    ) : null}
+                    {/* El WhatsApp se pedía al darlo de alta y no salía en la
+                        ficha (revisión por módulos del 02/10). */}
+                    {p.whatsapp ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="tabular whitespace-nowrap">WhatsApp {p.whatsapp}</span>
                       </>
                     ) : null}
                   </p>
@@ -293,7 +309,11 @@ function Tarjeta({
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-3">
-      <dt className="w-40 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
+      {/* El ancho fijo solo cuando va al lado del valor: en el teléfono va
+          encima, y con `w-40` «Código del distrito (SUNAT)» se partía en
+          dos líneas teniendo la fila entera libre (revisión por módulos del
+          02/10). */}
+      <dt className="shrink-0 text-[var(--fg-muted)] sm:w-40">{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">
         {valor ?? <span className="text-[var(--fg-subtle)]">Sin registrar</span>}
       </dd>

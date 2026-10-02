@@ -66,8 +66,11 @@ export function FiltrosProveedoresBarra({
         />
       </label>
 
-      {/* La pregunta que justifica que exista `proveedor_marcas`. */}
-      <label className="flex min-w-44 flex-col gap-1">
+      {/* La pregunta que justifica que exista `proveedor_marcas`.
+          `grow` en el teléfono: cada desplegable va solo en su línea, y a
+          media anchura dejaba un hueco a la derecha y los dos de distinto
+          largo (revisión por módulos del 02/10). */}
+      <label className="flex min-w-44 grow flex-col gap-1 sm:grow-0">
         <span className="text-sm font-medium text-[var(--fg-muted)]">
           Vende la marca
         </span>
@@ -84,7 +87,7 @@ export function FiltrosProveedoresBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex min-w-40 flex-col gap-1">
+      <label className="flex min-w-40 grow flex-col gap-1 sm:grow-0">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>
         <SelectNativo
           value={params.get("tipo") ?? ""}

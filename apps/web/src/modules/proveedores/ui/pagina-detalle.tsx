@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
+import { PackageCheck, Pencil } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { productosDeProveedor } from "../api/catalogo";
@@ -64,15 +65,20 @@ export default async function PaginaDetalleProveedor({
         <div className="flex items-center gap-2">
           <Link
             href={`/recepciones?proveedor=${p.id}`}
-            className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            // Con fondo e icono, como «Editar» en la ficha de cliente: sin
+            // fondo era gris sobre el gris de la página (revisión por módulos
+            // del 02/10).
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
           >
+            <PackageCheck className="size-4" aria-hidden="true" />
             Ver recepciones
           </Link>
           {puedeEditar ? (
             <Link
               href={`/proveedores/${p.id}/editar`}
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
             >
+              <Pencil className="size-4" aria-hidden="true" />
               Editar
             </Link>
           ) : null}

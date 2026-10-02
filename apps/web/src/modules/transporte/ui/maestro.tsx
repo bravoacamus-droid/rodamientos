@@ -62,6 +62,12 @@ export interface FilaMaestro {
   [clave: string]: string | boolean | null;
 }
 
+const ETIQUETA_EDITAR: Record<TipoTransporte, string> = {
+  agencia: "Editar agencia",
+  vehiculo: "Editar vehículo",
+  conductor: "Editar conductor",
+};
+
 export function Maestro({
   tipo,
   titulo,
@@ -133,7 +139,11 @@ export function Maestro({
           {filas.map((f) => (
             <li
               key={f.id}
-              className={`flex flex-wrap items-center justify-between gap-2 py-2.5 ${
+              // En el teléfono, los botones debajo y a lo ancho: al lado del
+              // texto lo dejaban en una columna de 140 px y «WILLY ANGEL
+              // FERNANDEZ PAREDES» ocupaba tres líneas (revisión por módulos
+              // del 02/10).
+              className={`flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between ${
                 f.activo ? "" : "opacity-60"
               }`}
             >
@@ -148,7 +158,7 @@ export function Maestro({
               </div>
 
               {puedeEditar ? (
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2 *:flex-1 sm:*:flex-none">
                   <Button
                     type="button"
                     variant="outline"
@@ -186,7 +196,10 @@ export function Maestro({
 
       <EditorMaestro
         abierto={editando !== null}
-        titulo={editando === "nuevo" ? etiquetaNuevo : "Editar"}
+        // «Editar» a secas no decía qué: con tres listas en la misma
+        // pantalla, el diálogo nombra lo que se edita (revisión por módulos
+        // del 02/10).
+        titulo={editando === "nuevo" ? etiquetaNuevo : ETIQUETA_EDITAR[tipo]}
         campos={campos}
         valores={editando === "nuevo" || editando === null ? null : editando}
         guardar={guardar}

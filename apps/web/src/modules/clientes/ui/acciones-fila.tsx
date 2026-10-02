@@ -5,7 +5,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EllipsisVertical, Eye, Plus } from "lucide-react";
+import { EllipsisVertical, Eye, Lock, LockOpen, Plus } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -106,14 +106,44 @@ export function AccionesFila({
         </Button>
       ) : null}
 
+      {/*
+        En la ficha, sin menú: «Editar» ya es un botón al lado, así que en el
+        menú solo quedaba «Bloquear», detrás de tres puntos. Un botón con su
+        nombre lo dice sin abrir nada, y el diálogo pide el motivo antes de
+        tocar nada (revisión por módulos del 02/10). Y sin permiso de edición
+        no se pinta ni el menú: salía vacío.
+      */}
+      {!puedeEditar ? null : enFicha ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setAbierto(true)}
+        >
+          {bloqueado ? (
+            <LockOpen className="size-4" aria-hidden="true" />
+          ) : (
+            <Lock className="size-4" aria-hidden="true" />
+          )}
+          {bloqueado ? "Desbloquear" : "Bloquear"}
+        </Button>
+      ) : (
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={`Acciones de ${razonSocial}`}
-          // 44 px en móvil, 36 en escritorio: en la tabla el ratón apunta fino,
-          // en la tarjeta apunta un pulgar.
-          className="flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:size-9"
+          // Con borde, y en la tarjeta con su palabra: tres puntos grises
+          // sueltos no dicen que ahí están Editar y Bloquear (revisión por
+          // módulos del 02/10). En la tabla va solo el icono con borde, como
+          // en productos: con «Más» la fila no cabía a 1280 y la columna de
+          // estado quedaba debajo de la de acciones. 36 px de alto, el de
+          // «Ver» y «Cotizar», para que los tres midan lo mismo.
+          type="button"
+          title="Más acciones"
+          className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "px-2.5" : "w-9"}`}
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
+          {ancho ? "Más" : null}
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">
@@ -140,6 +170,7 @@ export function AccionesFila({
           ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      )}
 
       <DialogoBloqueo
         abierto={abierto}

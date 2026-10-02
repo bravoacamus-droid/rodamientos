@@ -174,6 +174,10 @@ export function ContactosNuevos({
         ) : null}
       </div>
 
+      {/* Todos los botones de la fila con borde: «Quitar» y «Hacer
+          principal» eran `ghost`, texto gris sin caja al lado de un
+          «Corregir» con borde, y no parecían botones (revisión por módulos
+          del 02/10). Lo mismo el «Cancelar» del contacto en curso. */}
       {lista.length > 0 ? (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
           {lista.map((c) => (
@@ -186,7 +190,7 @@ export function ContactosNuevos({
                   {!c.principal ? (
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       className="h-10"
                       onClick={() => hacerPrincipal(c.clave)}
@@ -206,7 +210,7 @@ export function ContactosNuevos({
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     className="h-10"
                     onClick={() => quitar(c.clave)}
@@ -242,7 +246,7 @@ export function ContactosNuevos({
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               className="h-11 md:h-control-md"
               onClick={cerrar}
             >

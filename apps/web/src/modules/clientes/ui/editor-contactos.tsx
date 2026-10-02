@@ -201,6 +201,8 @@ export function EditorContactos({
         </p>
       ) : null}
 
+      {/* Los botones de la fila, con borde: «Quitar» en `ghost` no parecía
+          un botón (revisión por módulos del 02/10). */}
       {lista.length > 0 ? (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
           {lista.map((c) => (
@@ -241,7 +243,7 @@ export function EditorContactos({
                   </Button>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     className="h-10"
                     disabled={ocupado}
@@ -285,7 +287,7 @@ export function EditorContactos({
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               className="h-11 md:h-control-md"
               onClick={cerrar}
               disabled={ocupado}

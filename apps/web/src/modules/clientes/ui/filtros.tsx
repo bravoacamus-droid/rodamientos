@@ -92,7 +92,9 @@ export function FiltrosClientesBarra() {
         <button
           type="button"
           onClick={() => iniciarTransicion(() => router.replace(ruta, { scroll: false }))}
-          className="h-11 rounded-md px-2 text-sm text-[var(--fg-muted)] underline hover:text-[var(--fg)] md:h-control-md"
+          // Con borde: un «Limpiar» gris subrayado no parece un botón
+          // (revisión por módulos del 02/10).
+          className="h-11 shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] hover:bg-[var(--surface-2)] md:h-control-md"
         >
           Limpiar
         </button>
@@ -182,7 +184,10 @@ function BuscadorConRetardo({
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="RUC, razón social, nombre comercial o contacto…"
-        className="h-11 w-full min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--fg)] placeholder:text-[var(--fg-subtle)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] sm:min-w-64 md:h-control-md"
+        // A lo ancho en el teléfono, en su propia línea: compartiéndola con el
+        // desplegable se quedaba en «RUC, razón social,» y el desplegable en
+        // «Contado y crédit» (revisión por módulos del 02/10).
+        className="h-11 w-full min-w-0 grow basis-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--fg)] placeholder:text-[var(--fg-subtle)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] sm:basis-64 md:h-control-md"
       />
     </>
   );

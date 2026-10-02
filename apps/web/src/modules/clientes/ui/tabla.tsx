@@ -56,7 +56,12 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
   return (
     <>
       {/* ------------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden md:block">
+      {/* Tabla o tarjetas según el ancho de la CAJA (`@container` en la
+          página), no de la pantalla. A 820 px con el menú abierto la caja
+          mide ~520 y con `md:` salía la tabla: la razón social se quedaba en
+          «ACEROS CHILC» y el código, partido en dos líneas (revisión por
+          módulos del 02/10). */}
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -96,7 +101,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/clientes/${c.id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.codigo}
                   </Link>
@@ -143,7 +148,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
       </div>
 
       {/* ------------------------------------------------------------ Móvil */}
-      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+      <ul className="grid gap-2.5 p-3 @3xl:hidden @xl:grid-cols-2">
         {filas.map((c) => (
           /*
             La tarjeta, en vertical.

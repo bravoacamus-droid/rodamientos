@@ -289,16 +289,20 @@ export function ProveedorRapido({
     >
       <DialogTrigger asChild>
         {variante === "boton" ? (
+          // «Nuevo proveedor» y no «+ Nuevo» a secas: junto a la caja de
+          // búsqueda de la compra o del producto, «Nuevo» no decía nuevo QUÉ
+          // (revisión por módulos del 02/10).
           <Button type="button" variant="outline" className="shrink-0">
             <Plus aria-hidden="true" />
-            Nuevo
+            Nuevo proveedor
           </Button>
         ) : (
           <button
             type="button"
-            className="text-sm font-medium text-brand-600 underline hover:text-brand-700"
+            className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 underline hover:text-brand-700"
           >
-            + Nuevo proveedor
+            <Plus className="size-4" aria-hidden="true" />
+            Nuevo proveedor
           </button>
         )}
       </DialogTrigger>
@@ -444,13 +448,12 @@ export function ProveedorRapido({
               ) : null}
             </label>
 
-            {/* El distrito, solo en Perú: la misma cascada de clientes. */}
+            {/* El distrito, solo en Perú: la misma cascada de clientes. Sin
+                un «Distrito (opcional)» encima: la cascada ya pone sus tres
+                etiquetas y salía «Distrito» dos veces (revisión por módulos
+                del 02/10). */}
             {extranjero ? null : (
               <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Distrito{" "}
-                  <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
-                </span>
                 <SelectorUbigeoCascada
                   id="ubigeo-proveedor"
                   codigo={ubigeo.codigo}
@@ -460,6 +463,7 @@ export function ProveedorRapido({
                   cargarDepartamentos={departamentosUbigeo}
                   cargarProvincias={provinciasUbigeo}
                   cargarDistritos={distritosUbigeo}
+                  ayudaDistrito={null}
                 />
                 {traido && ubigeo.distrito ? (
                   <span className="text-sm text-[var(--fg-muted)]">

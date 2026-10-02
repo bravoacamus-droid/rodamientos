@@ -68,7 +68,7 @@ export default async function PaginaProveedores({ searchParams }: Props) {
         ) : null}
       </div>
 
-      <section className="card pt-4">
+      <section className="card @container pt-4">
         <FiltrosProveedoresBarra marcas={marcas.ok ? marcas.datos : []} />
 
         <Suspense

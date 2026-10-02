@@ -59,8 +59,15 @@ export function SelectorUbigeoCascada({
   cargarDepartamentos,
   cargarProvincias,
   cargarDistritos,
+  ayudaDistrito = "SUNAT lo exige en la guía de remisión.",
 }: {
   id: string;
+  /**
+   * Lo que se dice bajo el distrito. La guía de remisión es cosa del
+   * CLIENTE: en el alta de proveedor la frase no venía a cuento y se pasa
+   * `null` (revisión por módulos del 02/10).
+   */
+  ayudaDistrito?: string | null;
   /** El código elegido, o "" si todavía no hay. */
   codigo: string;
   /** Dónde está parada la cascada. Los sube el formulario para poder
@@ -184,7 +191,7 @@ export function SelectorUbigeoCascada({
       <Campo
         id={id}
         label="Distrito"
-        ayuda={cargando ? "Cargando…" : "SUNAT lo exige en la guía de remisión."}
+        ayuda={cargando ? "Cargando…" : (ayudaDistrito ?? undefined)}
       >
         <SelectNativo
           id={id}

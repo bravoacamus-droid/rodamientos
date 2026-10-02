@@ -122,7 +122,9 @@ export function QueVende({
             className="h-9"
             onClick={() => setAbierto((v) => !v)}
           >
-            <Plus aria-hidden="true" />
+            {/* Un «+» delante de «Cerrar» decía lo contrario de lo que hace
+                (revisión por módulos del 02/10). */}
+            {abierto ? <X aria-hidden="true" /> : <Plus aria-hidden="true" />}
             {abierto ? "Cerrar" : "Añadir un producto"}
           </Button>
         ) : null}
@@ -269,7 +271,10 @@ function ComoSeSabe({ p }: { p: Fila }) {
         </Badge>
       ) : (
         <Badge tone="neutral" size="md">
-          Anotado a mano
+          {/* Lo que entró al contestar una consulta de precios (055) no lo
+              anotó nadie a mano: debajo dice «Cotizó en CPR-…» y la etiqueta
+              lo contradecía (revisión por módulos del 02/10). */}
+          {p.notas?.startsWith("Cotizó en ") ? "Nos dio precio" : "Anotado a mano"}
         </Badge>
       )}
       {p.esHabitual ? (

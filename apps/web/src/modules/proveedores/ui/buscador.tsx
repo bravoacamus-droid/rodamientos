@@ -200,12 +200,16 @@ export function BuscadorProveedores({
   /* ----------------------------------------------------- Todavía sin elegir */
 
   return (
-    <div ref={contenedor} className="relative flex flex-col gap-1">
+    <div ref={contenedor} className="@container relative flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
         Proveedor <span className="text-[var(--danger)]">*</span>
       </label>
 
-      <div className="flex gap-2">
+      {/* El botón debajo cuando la CAJA es estrecha (`@container`), no la
+          pantalla: con «Nuevo proveedor» entero al lado, la búsqueda se
+          quedaba en 170 px en el teléfono y en 120 en la columna de la
+          compra a 1280 (revisión por módulos del 02/10). */}
+      <div className="flex flex-col gap-2 @md:flex-row">
         <div className="relative min-w-0 flex-1">
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
@@ -303,7 +307,7 @@ export function BuscadorProveedores({
                 // 48 px de alto y el resaltado ocupando la fila entera, igual
                 // que en el buscador de productos: fallar el clic parecía que
                 // la búsqueda no funcionaba.
-                className={`flex min-h-12 w-full items-center gap-3 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
+                className={`flex min-h-12 w-full flex-col items-stretch gap-1 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 @md:flex-row @md:items-center @md:gap-3 ${
                   impedimento !== null
                     ? "cursor-not-allowed opacity-60"
                     : activo
@@ -311,8 +315,15 @@ export function BuscadorProveedores({
                       : "hover:bg-[var(--surface-2)]"
                 }`}
               >
+                {/*
+                  En columna cuando la caja es estrecha (`@md` es la del
+                  buscador): en la columna de la compra, a 1280, el bloque de
+                  la derecha —«Comprado hace 1 semana · 4 compras»— dejaba el
+                  nombre en «A…» y el pago en una palabra por línea (revisión
+                  por módulos del 02/10).
+                */}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
+                  <p className="text-sm font-medium [overflow-wrap:anywhere] @md:truncate">
                     {resaltar(p.razon_social, q).map((t, i) =>
                       t.coincide ? (
                         <mark
@@ -373,7 +384,7 @@ export function BuscadorProveedores({
                   ) : null}
                 </div>
 
-                <div className="shrink-0 text-right">
+                <div className="flex shrink-0 flex-wrap items-center gap-2 @md:block @md:text-right">
                   <span className="block text-sm text-[var(--fg-muted)]">
                     {ultimaVez(p.ultima_compra, hoy)}
                   </span>
@@ -385,7 +396,7 @@ export function BuscadorProveedores({
                 </div>
 
                 {activo ? (
-                  <Check className="size-4 shrink-0 text-brand-600" aria-hidden="true" />
+                  <Check className="hidden size-4 shrink-0 text-brand-600 @md:block" aria-hidden="true" />
                 ) : null}
               </button>
             );

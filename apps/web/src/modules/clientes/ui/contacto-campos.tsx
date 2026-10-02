@@ -187,15 +187,25 @@ export function FilaContacto({
   principal: boolean;
   acciones: React.ReactNode;
 }) {
-  const detalle = [contacto.cargo, contacto.area, contacto.email, contacto.telefono].filter(
-    (x) => x && x.trim() !== "",
-  );
+  // El WhatsApp también, y dicho: se pedía en el alta y luego no salía en la
+  // lista, justo el dato «por donde de verdad se les escribe» (revisión por
+  // módulos del 02/10).
+  const detalle = [
+    contacto.cargo,
+    contacto.area,
+    contacto.email,
+    contacto.telefono,
+    contacto.whatsapp && contacto.whatsapp.trim() !== "" ? `WhatsApp ${contacto.whatsapp}` : null,
+  ].filter((x) => x && x.trim() !== "");
 
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-3">
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2 text-base font-semibold">
-          <span className="truncate">{contacto.nombre}</span>
+          {/* Entero, sin puntos suspensivos: es el dato que se viene a
+              buscar, y en el teléfono un nombre de cuatro palabras se cortaba
+              a la mitad (revisión por módulos del 02/10). */}
+          <span className="min-w-0 [overflow-wrap:anywhere]">{contacto.nombre}</span>
           {principal ? (
             <Badge tone="brand" size="xs">
               <Star aria-hidden="true" className="size-3" />
@@ -204,7 +214,11 @@ export function FilaContacto({
           ) : null}
         </p>
         {detalle.length > 0 ? (
-          <p className="mt-1 text-sm text-[var(--fg-muted)]">{detalle.join(" · ")}</p>
+          // `anywhere`: un correo largo es una sola «palabra» y se salía de
+          // la tarjeta por la derecha a 390 px.
+          <p className="mt-1 text-sm text-[var(--fg-muted)] [overflow-wrap:anywhere]">
+            {detalle.join(" · ")}
+          </p>
         ) : null}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div>
