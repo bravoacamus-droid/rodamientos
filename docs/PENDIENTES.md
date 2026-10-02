@@ -4627,10 +4627,45 @@ Probado en pantalla con su proforma real (FT250730TA): $10.15/kg, PU Lima
 26.99 y 4.29, Courier $106.39 en la compra, el PDF subido y quitado. Datos de
 prueba borrados (ANA-26-00001 y la CMP-26-00009, anulada).
 
+### AQ.1b · 02/10 tarde — «no me sale el mismo resultado» (100)
+
+Luis lo rellenó como su hoja y no cuadraba, y no sabía de dónde salía el
+10.15. Tres causas:
+
+1. **El 10.15 está escrito a mano en su hoja.** E40 calcula DHL ÷ peso =
+   1039 ÷ 102.3054 = **10.1559**, pero cada PU LIMA es `=+F2+10.15*H2`: el
+   factor CORTADO a dos decimales (redondeado sería 10.16). El ERP usaba el
+   exacto → el pedido salía 1279.95 contra sus 1279.57. Ahora se usa el
+   cortado (`porKgDeLaHoja`) y la pantalla enseña la cuenta entera:
+   «DHL $1,039.00 ÷ 102.31 kg = 10.1559 → se usa $10.15».
+2. **El $/kg cambia con cada proforma** (DHL y peso total), y solo da 10.15
+   con las 29 filas: con 3, daba 49.
+3. **Faltaban columnas.** Ahora están las 18 de su hoja, en su orden y con sus
+   nombres (CLIENTE —nueva columna, 100—, f, CANT.Ref, FOB, PARC.$, PESO U,
+   PESO PARC., CANT. PEDIDO, $PARC, PESO PED., PU LIMA, TOT.$, P.M, TOT. PM,
+   PROV., %), su fila de totales y su bloque de abajo (TOT. FOB, DHL, TOTAL,
+   W. TOT, W. REAL = peso + 10 %, $/kg, K) con «lo cotizado» y «lo que pides».
+
+Y **«Subir tu hoja de Excel»**: lee su archivo tal cual —títulos por nombre,
+DHL del bloque de abajo— y cruza los códigos con el catálogo ignorando
+espacios y guiones (`6313 2Z/C3` = `6313-2Z/C3`). Se sube el archivo y no se
+pega porque **copiar pierde decimales**: su FOB está formateado `$#,##0.00` y
+3.144 se pegaría como 3.14.
+
+**Probado en pantalla con su archivo real**: 29 filas, 17 fuera del catálogo,
+y cuadra al céntimo con su hoja — 945.32 · 102.305 kg · 611.115 · 65.857 kg ·
+DHL pedido 668.45 · TOTAL 1,984.32 / **1,279.57** · TOT. PM 3,394.18 · K 2.65.
+En móvil, tarjetas sin desborde. **Sin probar en pantalla:** guardar un
+análisis con cliente (el centinela de la 100 sí lo guarda y lo lee).
+
+Ojo, su propia hoja tiene dos cifras distintas para el DHL del pedido: K32
+(10.15 × peso = 668.45) y F37 (exacto × peso = 668.80, que da su TOTAL de
+1279.92). El ERP usa la primera, que es la que suma con sus TOT.$. Y su F39
+(W. REAL del pedido) tiene `=101*F38` en vez de `1.1*`: el ERP pone 1.1.
+
 ### AQ.2 · Lo que queda
 
-- [ ] **Pegar desde Excel** la lista de la proforma: con 29 líneas, teclear
-      cada una es lo que más cuesta. Lo más útil que le falta.
+- [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).
 - [ ] Dar de alta en bloque los códigos que no están en el catálogo (de su
       proforma real, 17 de 29): hoy hay que hacerlo uno a uno antes de comprar.
 - [ ] El desaduanaje estimado en el análisis (*«como 700, 800 soles»*): hoy

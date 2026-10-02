@@ -45,6 +45,7 @@ export interface AnalisisDetalle {
     precio_mercado: number;
     proveedor_mercado: string | null;
     frecuencia: number | null;
+    cliente: string | null;
   }[];
 }
 
@@ -110,7 +111,7 @@ export async function analisisPorId(id: string): Promise<Resultado<AnalisisDetal
          analisis_importacion_items(
            orden, producto_id, codigo, marca, descripcion, cantidad_ref,
            cantidad_pedido, precio_fob, peso_kg, precio_mercado,
-           proveedor_mercado, frecuencia
+           proveedor_mercado, frecuencia, cliente
          )`,
       )
       .eq("id", id)
@@ -150,6 +151,7 @@ export async function analisisPorId(id: string): Promise<Resultado<AnalisisDetal
             precio_mercado: n(i.precio_mercado),
             proveedor_mercado: (i.proveedor_mercado as string | null) ?? null,
             frecuencia: i.frecuencia === null ? null : n(i.frecuencia),
+            cliente: (i.cliente as string | null) ?? null,
           })),
       },
     };

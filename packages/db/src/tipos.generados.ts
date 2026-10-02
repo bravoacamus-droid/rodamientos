@@ -338,6 +338,7 @@ export type Database = {
           analisis_id: string
           cantidad_pedido: number
           cantidad_ref: number
+          cliente: string | null
           codigo: string
           descripcion: string | null
           frecuencia: number | null
@@ -354,6 +355,7 @@ export type Database = {
           analisis_id: string
           cantidad_pedido?: number
           cantidad_ref?: number
+          cliente?: string | null
           codigo: string
           descripcion?: string | null
           frecuencia?: number | null
@@ -370,6 +372,7 @@ export type Database = {
           analisis_id?: string
           cantidad_pedido?: number
           cantidad_ref?: number
+          cliente?: string | null
           codigo?: string
           descripcion?: string | null
           frecuencia?: number | null

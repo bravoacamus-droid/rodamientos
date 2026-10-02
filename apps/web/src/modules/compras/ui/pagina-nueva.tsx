@@ -123,6 +123,7 @@ export default async function PaginaNuevaCompra({
             pesoKg: i.peso_kg,
             precioMercado: i.precio_mercado,
             proveedorMercado: "",
+            cliente: "",
             frecuencia: null,
           })),
           costoEnvio: analisis.costo_envio,

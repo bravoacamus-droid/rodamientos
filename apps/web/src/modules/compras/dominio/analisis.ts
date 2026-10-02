@@ -41,6 +41,8 @@ export interface LineaAnalisis {
   proveedorMercado: string;
   /** Veces al año que lo piden sus clientes («f»). Null si no se sabe. */
   frecuencia: number | null;
+  /** Para quién se trae (CLIENTE, la columna A de su hoja). */
+  cliente: string;
   /** El FOB de la última vez que este proveedor se lo cotizó, si hay. */
   fobAnterior?: { precio: number; numero: string } | null;
 }
@@ -87,7 +89,22 @@ export type Accion =
         | "frecuencia";
       valor: number;
     }
-  | { tipo: "texto"; key: string; campo: "codigo" | "marca" | "descripcion" | "proveedorMercado"; valor: string }
+  | {
+      tipo: "texto";
+      key: string;
+      campo: "codigo" | "marca" | "descripcion" | "proveedorMercado" | "cliente";
+      valor: string;
+    }
+  /**
+   * Su hoja de Excel entera, ya leída y cruzada con el catálogo. REEMPLAZA las
+   * líneas: la hoja es la proforma completa, y mezclarla con lo escrito antes
+   * duplicaría productos y descuadraría el $/kg.
+   */
+  | {
+      tipo: "cargarHoja";
+      lineas: Omit<LineaAnalisis, "key" | "fobAnterior">[];
+      costoEnvio: number | null;
+    }
   /** Lo que llega del servidor después de añadir: la «f» y el último FOB. */
   | {
       tipo: "propuestas";
@@ -127,6 +144,7 @@ function nuevaLinea(key: string, parcial: Partial<LineaAnalisis>): LineaAnalisis
     precioMercado: 0,
     proveedorMercado: "",
     frecuencia: null,
+    cliente: "",
     fobAnterior: null,
     ...parcial,
   };
@@ -239,6 +257,16 @@ export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis 
         }),
       };
 
+    case "cargarHoja": {
+      let k = estado.proximaKey;
+      return {
+        ...estado,
+        costoEnvio: accion.costoEnvio !== null && accion.costoEnvio > 0 ? accion.costoEnvio : estado.costoEnvio,
+        lineas: accion.lineas.map((l) => nuevaLinea(`a${k++}`, l)),
+        proximaKey: k,
+      };
+    }
+
     case "pedirLoCotizado":
       return {
         ...estado,
@@ -255,6 +283,18 @@ export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis 
 // ---------------------------------------------------------------------------
 
 const dos = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * El $/kg que se usa: DHL ÷ peso, CORTADO a dos decimales.
+ *
+ * Así lo hace Willy: su hoja calcula 1039 ÷ 102.3054 = 10.1559 (E40), pero en
+ * cada PU LIMA escribió el factor a mano: `=+F2+10.15*H2`. Cortado, no
+ * redondeado —redondear daría 10.16—. Con el exacto, el total del pedido salía
+ * 1279.95 y en su hoja dice 1279.57: Luis lo vio el 02/10 y por eso «no salía
+ * lo mismo». Con 10.15, las 29 filas cuadran al céntimo.
+ */
+export const porKgDeLaHoja = (exacto: number) =>
+  exacto > 0 ? Math.floor(exacto * 100 + 1e-9) / 100 : 0;
 const cuatro = (n: number) => Math.round(n * 1e4) / 1e4;
 
 export interface LineaCalculada {
@@ -286,13 +326,23 @@ export interface Calculo {
   /** Lo cotizado. */
   fobRef: number;
   pesoRef: number;
-  /** $/kg = envío ÷ peso cotizado. 0 si no hay peso o no hay envío. */
+  /** DHL ÷ peso cotizado, sin cortar (su E40). */
+  porKgExacto: number;
+  /** El que se usa en cada PU Lima: el exacto cortado a dos decimales. */
   porKg: number;
+  /** Unidades cotizadas, sumadas. */
+  cantidadRef: number;
+  /** W. REAL de su hoja: el peso más un 10 % (=1.1*E38). Solo se enseña. */
+  pesoRealRef: number;
+  /** Su «K» de lo cotizado: mercado ÷ Lima. Null si no hay mercado. */
+  rindeRef: number | null;
   /** Diferencia con el peso que dice el proveedor, en kg. Null si no lo dijo. */
   difPeso: number | null;
   /** Lo que se va a pedir. */
+  cantidadPedido: number;
   fobPedido: number;
   pesoPedido: number;
+  pesoRealPedido: number;
   /** El envío que tocaría a lo pedido: $/kg × peso pedido. */
   envioPedido: number;
   totalLima: number;
@@ -310,7 +360,8 @@ export interface Calculo {
 export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | "pesoDeclarado">): Calculo {
   const fobRef = dos(estado.lineas.reduce((a, l) => a + l.cantidadRef * l.precioFob, 0));
   const pesoRef = estado.lineas.reduce((a, l) => a + l.cantidadRef * l.pesoKg, 0);
-  const porKg = pesoRef > 0 && estado.costoEnvio > 0 ? estado.costoEnvio / pesoRef : 0;
+  const porKgExacto = pesoRef > 0 && estado.costoEnvio > 0 ? estado.costoEnvio / pesoRef : 0;
+  const porKg = porKgDeLaHoja(porKgExacto);
 
   const lineas: Record<string, LineaCalculada> = {};
   let fobPedido = 0;
@@ -318,6 +369,10 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
   let totalLima = 0;
   let totalMercado = 0;
   let limaConMercado = 0;
+  let mercadoRef = 0;
+  let limaRefConMercado = 0;
+  let cantidadRef = 0;
+  let cantidadPedido = 0;
 
   for (const l of estado.lineas) {
     const envioUnitario = l.pesoKg * porKg;
@@ -325,24 +380,28 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
     const tieneMercado = l.precioMercado > 0 && puLima > 0;
     const c: LineaCalculada = {
       key: l.key,
-      parcialRef: dos(l.cantidadRef * l.precioFob),
+      parcialRef: cuatro(l.cantidadRef * l.precioFob),
       pesoRef: cuatro(l.cantidadRef * l.pesoKg),
       envioUnitario: cuatro(envioUnitario),
       puLima: cuatro(puLima),
       margen: tieneMercado ? (l.precioMercado - puLima) / puLima : null,
       rinde: tieneMercado ? l.precioMercado / puLima : null,
-      parcialPedido: dos(l.cantidadPedido * l.precioFob),
+      parcialPedido: cuatro(l.cantidadPedido * l.precioFob),
       pesoPedido: cuatro(l.cantidadPedido * l.pesoKg),
       totalLima: dos(l.cantidadPedido * puLima),
       totalMercado: dos(l.cantidadPedido * l.precioMercado),
     };
     lineas[l.key] = c;
-    fobPedido += c.parcialPedido;
+    cantidadRef += l.cantidadRef;
+    cantidadPedido += l.cantidadPedido;
+    fobPedido += l.cantidadPedido * l.precioFob;
     pesoPedido += l.cantidadPedido * l.pesoKg;
     totalLima += l.cantidadPedido * puLima;
     if (tieneMercado) {
       totalMercado += c.totalMercado;
       limaConMercado += l.cantidadPedido * puLima;
+      mercadoRef += l.cantidadRef * l.precioMercado;
+      limaRefConMercado += l.cantidadRef * puLima;
     }
   }
 
@@ -350,10 +409,17 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
     lineas,
     fobRef,
     pesoRef: cuatro(pesoRef),
-    porKg: cuatro(porKg),
+    porKgExacto: cuatro(porKgExacto),
+    porKg,
+    cantidadRef,
+    pesoRealRef: cuatro(pesoRef * 1.1),
+    rindeRef: limaRefConMercado > 0 ? mercadoRef / limaRefConMercado : null,
     difPeso: estado.pesoDeclarado > 0 ? cuatro(pesoRef - estado.pesoDeclarado) : null,
-    fobPedido: dos(fobPedido),
+    cantidadPedido,
+    // Con tres decimales, como su K31 (611.115): el FOB lleva cuatro.
+    fobPedido: Math.round(fobPedido * 1000) / 1000,
     pesoPedido: cuatro(pesoPedido),
+    pesoRealPedido: cuatro(pesoPedido * 1.1),
     envioPedido: dos(pesoPedido * porKg),
     totalLima: dos(totalLima),
     totalMercado: dos(totalMercado),
@@ -397,6 +463,7 @@ export function aPayload(estado: EstadoAnalisis, id?: string) {
       precio_mercado: l.precioMercado,
       proveedor_mercado: l.proveedorMercado.trim() || null,
       frecuencia: l.frecuencia,
+      cliente: l.cliente.trim() || null,
     })),
   };
 }

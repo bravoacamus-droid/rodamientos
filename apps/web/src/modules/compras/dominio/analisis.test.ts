@@ -5,9 +5,11 @@ import {
   bloqueos,
   calcular,
   estadoInicial,
+  porKgDeLaHoja,
   reducir,
   type Accion,
   type EstadoAnalisis,
+  type LineaAnalisis,
 } from "./analisis";
 
 const correr = (...acciones: Accion[]): EstadoAnalisis =>
@@ -155,3 +157,94 @@ describe("guardar", () => {
     expect(p.items[0]).toMatchObject({ producto_id: null, codigo: "6312 2Z/C3", marca: "SKF" });
   });
 });
+
+describe("el $/kg de su hoja (100)", () => {
+  it("se CORTA a dos decimales, no se redondea: 10.1559 → 10.15", () => {
+    expect(porKgDeLaHoja(1039 / 102.3054)).toBe(10.15);
+    expect(porKgDeLaHoja(10.159999)).toBe(10.15);
+    expect(porKgDeLaHoja(10.2)).toBe(10.2);
+    expect(porKgDeLaHoja(0)).toBe(0);
+  });
+
+  it("el PU Lima usa el cortado, y enseña también el exacto", () => {
+    const e = correr(
+      { tipo: "cargarHoja", costoEnvio: 1000, lineas: [linea({ codigo: "A", cantidadRef: 3, precioFob: 2, pesoKg: 33 })] },
+    );
+    const c = calcular(e);
+    // 1000 ÷ 99 = 10.1010… → 10.10
+    expect(c.porKgExacto).toBeCloseTo(10.101, 3);
+    expect(c.porKg).toBe(10.1);
+    expect(c.lineas[e.lineas[0]!.key]!.puLima).toBeCloseTo(2 + 33 * 10.1, 6);
+  });
+
+  it("el bloque de abajo: W. REAL es el peso más un 10 %, y el envío del pedido va al $/kg cortado", () => {
+    const e = correr({
+      tipo: "cargarHoja",
+      costoEnvio: 500,
+      lineas: [
+        linea({ codigo: "A", cantidadRef: 10, cantidadPedido: 4, precioFob: 1.5, pesoKg: 2, precioMercado: 60 }),
+        linea({ codigo: "B", cantidadRef: 5, cantidadPedido: 5, precioFob: 3, pesoKg: 6 }),
+      ],
+    });
+    const c = calcular(e);
+    expect(c.pesoRef).toBe(50);
+    expect(c.pesoRealRef).toBe(55);
+    expect(c.porKg).toBe(10);
+    expect(c.cantidadRef).toBe(15);
+    expect(c.cantidadPedido).toBe(9);
+    expect(c.pesoPedido).toBe(38);
+    expect(c.envioPedido).toBe(380);
+    // El total en Lima es FOB + envío, sin un céntimo de diferencia.
+    expect(c.totalLima).toBeCloseTo(c.fobPedido + c.envioPedido, 6);
+  });
+});
+
+describe("cargar su hoja", () => {
+  it("reemplaza las líneas, guarda el cliente y pone el DHL", () => {
+    const e = correr(
+      { tipo: "agregarLibre", codigo: "VIEJO", marca: "" },
+      {
+        tipo: "cargarHoja",
+        costoEnvio: 1039,
+        lineas: [linea({ codigo: "NUEVO", cliente: "ACME" })],
+      },
+    );
+    expect(e.lineas.map((l) => l.codigo)).toEqual(["NUEVO"]);
+    expect(e.lineas[0]!.cliente).toBe("ACME");
+    expect(e.costoEnvio).toBe(1039);
+    expect(aPayload(e).items[0]!.cliente).toBe("ACME");
+  });
+
+  it("sin DHL en la hoja, se queda el que estaba escrito", () => {
+    const e = correr(
+      { tipo: "cabecera", campo: "costoEnvio", valor: 800 },
+      { tipo: "cargarHoja", costoEnvio: null, lineas: [linea({ codigo: "X" })] },
+    );
+    expect(e.costoEnvio).toBe(800);
+  });
+
+  it("las claves no se repiten aunque se cargue dos veces", () => {
+    const una: Accion = { tipo: "cargarHoja", costoEnvio: null, lineas: [linea({ codigo: "X" }), linea({ codigo: "Y" })] };
+    const e = correr(una, una);
+    expect(new Set(e.lineas.map((l) => l.key)).size).toBe(2);
+    expect(e.proximaKey).toBeGreaterThan(2);
+  });
+});
+
+function linea(p: Partial<Omit<LineaAnalisis, "key" | "fobAnterior">>): Omit<LineaAnalisis, "key" | "fobAnterior"> {
+  return {
+    productoId: null,
+    codigo: "",
+    marca: "",
+    descripcion: "",
+    cantidadRef: 1,
+    cantidadPedido: 1,
+    precioFob: 0,
+    pesoKg: 0,
+    precioMercado: 0,
+    proveedorMercado: "",
+    frecuencia: null,
+    cliente: "",
+    ...p,
+  };
+}

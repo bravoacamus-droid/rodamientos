@@ -46,6 +46,7 @@ const esquema = z.object({
         precio_mercado: numero.max(10_000_000),
         proveedor_mercado: z.string().max(120).nullable().default(null),
         frecuencia: numero.max(10_000).nullable().default(null),
+        cliente: z.string().max(120).nullable().default(null),
       }),
     )
     .min(1, "Añade los productos de la proforma.")

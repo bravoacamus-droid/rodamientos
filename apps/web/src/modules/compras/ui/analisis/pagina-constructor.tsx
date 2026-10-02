@@ -66,6 +66,7 @@ export default async function PaginaConstructorAnalisis({
       pesoKg: i.peso_kg,
       precioMercado: i.precio_mercado,
       proveedorMercado: i.proveedor_mercado ?? "",
+      cliente: i.cliente ?? "",
       frecuencia: i.frecuencia,
       fobAnterior: null,
     })),

@@ -4,12 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, toast } from "@rodatech/ui";
-import { Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
+import { FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
 
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 
 import { guardarAnalisis, propuestasAnalisis } from "../../acciones/analisis";
+import { leerExcelAnalisis } from "../../acciones/analisis-hoja";
 import {
   aPayload,
   bloqueos as calcularBloqueos,
@@ -24,8 +25,8 @@ import { BuscadorCompra } from "../constructor/buscador";
 
 const dolar = (n: number, dec = 2) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
-const kg = (n: number) =>
-  `${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
+const kg = (n: number, dec = 2) =>
+  `${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })} kg`;
 const pct = (n: number) => `${Math.round(n * 100)} %`;
 
 /** Color del margen: rojo si pierde, ámbar si es poco, verde si conviene. */
@@ -248,7 +249,7 @@ export function ConstructorAnalisis({
       </section>
 
       {/* ------------------------------------------------- Los totales */}
-      <Totales c={c} estado={estado} />
+      <Resumen c={c} estado={estado} />
 
       {/* ------------------------------------------------- Productos */}
       <section className="card @container p-4">
@@ -268,6 +269,12 @@ export function ConstructorAnalisis({
         </div>
 
         {soloLectura ? null : (
+          <div className="mb-3">
+            <CargarExcel hayLineas={estado.lineas.length} despachar={despachar} />
+          </div>
+        )}
+
+        {soloLectura ? null : (
           <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end">
             <div className="flex-1">
               <span className="mb-1 flex items-center gap-1.5 text-sm font-medium">
@@ -285,7 +292,7 @@ export function ConstructorAnalisis({
                       descripcion: p.descripcion,
                       marca: p.marca,
                       peso_kg: p.peso_kg,
-                      precio_mercado: (p as { precio_mercado?: number }).precio_mercado,
+                      precio_mercado: p.precio_mercado,
                     },
                   })
                 }
@@ -327,6 +334,7 @@ export function ConstructorAnalisis({
               <Tabla
                 lineas={estado.lineas}
                 c={c.lineas}
+                calculo={c}
                 editar={editarCampo}
                 despachar={despachar}
                 soloLectura={soloLectura}
@@ -446,36 +454,88 @@ function CampoNumero({
   );
 }
 
-function Totales({ c, estado }: { c: ReturnType<typeof calcular>; estado: EstadoAnalisis }) {
+/**
+ * Su bloque de abajo (D34–F41 de la hoja), con las dos columnas de él: lo
+ * cotizado y lo que pides. Las filas, con sus nombres y en su orden.
+ *
+ * Arriba de todo, de dónde sale el $/kg, con los números a la vista. Luis,
+ * 02/10: *«todavía no sé cómo es 10.15»*. Si quien lo hizo no lo sabía, Willy
+ * mirando otra pantalla tampoco: la cuenta tiene que estar escrita.
+ */
+function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: EstadoAnalisis }) {
+  const filas: { etiqueta: string; ayuda?: string; ref: string; ped: string; fuerte?: boolean }[] = [
+    { etiqueta: "TOT. FOB $", ref: dolar(c.fobRef), ped: dolar(c.fobPedido, 3) },
+    {
+      etiqueta: "DHL $",
+      ayuda: "Lo que pides: su peso × el $/kg",
+      ref: dolar(estado.costoEnvio),
+      ped: dolar(c.envioPedido),
+    },
+    {
+      etiqueta: "TOTAL $",
+      ayuda: "Puesto en Lima, sin desaduanaje",
+      ref: dolar(c.fobRef + estado.costoEnvio),
+      ped: dolar(c.totalLima),
+      fuerte: true,
+    },
+    { etiqueta: "W. TOT (kg)", ref: kg(c.pesoRef, 3), ped: kg(c.pesoPedido, 3) },
+    { etiqueta: "W. REAL (kg)", ayuda: "El peso más un 10 %", ref: kg(c.pesoRealRef), ped: kg(c.pesoRealPedido) },
+    {
+      etiqueta: "$ / kg",
+      ref: c.porKg > 0 ? dolar(c.porKg) : "—",
+      ped: c.porKg > 0 ? dolar(c.porKg) : "—",
+    },
+    {
+      etiqueta: "K",
+      ayuda: "Precio de mercado ÷ puesto en Lima",
+      ref: c.rindeRef !== null ? c.rindeRef.toFixed(2) : "—",
+      ped: c.rinde !== null ? c.rinde.toFixed(2) : "—",
+      fuerte: true,
+    },
+  ];
+
   return (
-    <section className="grid gap-4 lg:grid-cols-2">
-      <div className="card p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
-          Lo que cotiza
-        </h2>
-        <dl className="mt-2 flex flex-col gap-1.5 text-sm">
-          <Fila etiqueta="Valor FOB" valor={dolar(c.fobRef)} />
-          <Fila etiqueta="Peso de la carga" valor={kg(c.pesoRef)} />
-          <Fila etiqueta="Costo de envío" valor={dolar(estado.costoEnvio)} />
-        </dl>
-        <p className="mt-3 flex flex-wrap items-center gap-2 rounded-md bg-[var(--surface-2)] p-3 text-base">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+      {/* ---------------------------------------- De dónde sale el $/kg */}
+      <div className="card flex flex-col gap-3 p-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold">
           <Scale className="size-5 text-[var(--fg-muted)]" aria-hidden />
-          <span className="text-[var(--fg-muted)]">Envío por kilo</span>
-          <span className="tabular text-lg font-semibold">
-            {c.porKg > 0 ? `${dolar(c.porKg)} / kg` : "—"}
-          </span>
-        </p>
-        {/* Visto en la prueba del 02/10: con 3 de sus 29 productos y los
-            $1,039 de DHL, el $/kg salía de 49 y todo «perdía». El envío es de
-            TODA la carga: hay que cargar todos los productos de la proforma. */}
-        <p className="mt-2 text-sm text-[var(--fg-muted)]">
-          {c.porKg === 0 && estado.lineas.length > 0
-            ? "Sale cuando estén el costo de envío y los pesos."
-            : "El envío es de toda la carga: sale bien cuando están todos los productos de la proforma."}
+          Envío por kilo
+        </h2>
+        {c.porKg > 0 ? (
+          <>
+            <p className="tabular text-base">
+              <span className="text-[var(--fg-muted)]">DHL</span> {dolar(estado.costoEnvio)}
+              <span className="px-2 text-[var(--fg-muted)]">÷</span>
+              {kg(c.pesoRef)}
+              <span className="px-2 text-[var(--fg-muted)]">=</span>
+              {c.porKgExacto.toFixed(4)}
+            </p>
+            <p className="flex flex-wrap items-baseline gap-2 rounded-md bg-[var(--info-bg)] p-3">
+              <span className="text-sm">Se usa</span>
+              <span className="tabular text-2xl font-semibold">{dolar(c.porKg)}</span>
+              <span className="text-sm">por kilo</span>
+            </p>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Con dos decimales, como en tu hoja. Cada producto paga su peso por este número: el PU
+              Lima es su FOB más su peso × {c.porKg.toFixed(2)}.
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-[var(--fg-muted)]">
+            Sale solo cuando estén el costo de DHL y los pesos: DHL ÷ peso de toda la carga.
+          </p>
+        )}
+        {/* Visto el 02/10: con 3 de sus 29 productos, el $/kg salía de 49.
+            El DHL es de TODA la carga cotizada. */}
+        <p className="rounded-md border border-[var(--border-soft)] p-3 text-sm">
+          <strong>Cambia con cada proforma</strong>: depende del DHL y de lo que pese la carga. Por
+          eso tienen que estar <strong>todos</strong> los productos que cotizó el proveedor, aunque
+          luego no los pidas.
         </p>
         {c.difPeso !== null ? (
           <p
-            className={`mt-2 text-sm ${
+            className={`text-sm ${
               Math.abs(c.difPeso) > estado.pesoDeclarado * 0.05 ? "text-[var(--warn)]" : "text-[var(--ok)]"
             }`}
           >
@@ -487,48 +547,53 @@ function Totales({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
         ) : null}
       </div>
 
-      <div className="card border-[var(--warn)] p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
-          Lo que vas a pedir
-        </h2>
-        <dl className="mt-2 flex flex-col gap-1.5 text-sm">
-          <Fila etiqueta="Valor FOB" valor={dolar(c.fobPedido)} />
-          <Fila etiqueta="Peso" valor={kg(c.pesoPedido)} />
-          <Fila etiqueta="Envío (por kilo)" valor={dolar(c.envioPedido)} />
-          <Fila etiqueta="Puesto en Lima" valor={dolar(c.totalLima)} fuerte />
-          <Fila etiqueta="A precio de mercado" valor={dolar(c.totalMercado)} />
-        </dl>
-        {c.rinde !== null ? (
-          <p className="mt-3 flex flex-wrap items-baseline gap-2 rounded-md bg-[var(--ok-bg)] p-3">
-            <span className="text-sm text-[var(--fg-muted)]">Rinde</span>
-            <span className="tabular text-lg font-semibold text-[var(--ok)]">
-              × {c.rinde.toFixed(2)}
-            </span>
-            <span className="text-sm text-[var(--fg-muted)]">
-              · margen {c.margen !== null ? pct(c.margen) : "—"} sobre el costo
-            </span>
-          </p>
-        ) : (
-          <p className="mt-3 text-sm text-[var(--fg-muted)]">
-            Pon el precio de mercado de cada producto para ver cuánto rinde.
-          </p>
-        )}
-        <p className="mt-2 text-sm text-[var(--fg-muted)]">
-          Sin desaduanaje: ese llega después y se anota en la compra.
+      {/* ------------------------------------------ Su bloque de abajo */}
+      <div className="card p-4">
+        <h2 className="mb-2 text-base font-semibold">Resumen</h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border)] text-[var(--fg-muted)]">
+              <th className="py-2 pr-2 text-left font-medium" />
+              <th className="px-2 py-2 text-right font-medium">Lo cotizado</th>
+              <th className="rounded-t-md bg-[var(--warn-bg)] px-2 py-2 text-right font-semibold text-[var(--fg)]">
+                Lo que pides
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr key={f.etiqueta} className="border-b border-[var(--border-soft)] last:border-0">
+                <th scope="row" className="py-2 pr-2 text-left align-top font-medium">
+                  {f.etiqueta}
+                  {f.ayuda ? (
+                    <span className="block font-normal text-[var(--fg-muted)]">{f.ayuda}</span>
+                  ) : null}
+                </th>
+                <td className={`tabular px-2 py-2 text-right align-top ${f.fuerte ? "font-semibold" : ""}`}>
+                  {f.ref}
+                </td>
+                <td
+                  className={`tabular bg-[var(--warn-bg)] px-2 py-2 text-right align-top ${
+                    f.fuerte ? "text-base font-semibold" : ""
+                  }`}
+                >
+                  {f.ped}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-3 text-sm text-[var(--fg-muted)]">
+          {c.rinde !== null && c.margen !== null
+            ? `Con K ${c.rinde.toFixed(2)}, por cada dólar puesto en Lima vendes ${dolar(c.rinde)} a precio de mercado: ganas ${pct(c.margen)} sobre el costo. `
+            : "Pon el precio de mercado de cada producto para ver la K. "}
+          El desaduanaje no está: llega después y se anota en la compra.
         </p>
       </div>
     </section>
   );
 }
 
-function Fila({ etiqueta, valor, fuerte }: { etiqueta: string; valor: string; fuerte?: boolean }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-[var(--fg-muted)]">{etiqueta}</dt>
-      <dd className={`tabular ${fuerte ? "text-base font-semibold" : ""}`}>{valor}</dd>
-    </div>
-  );
-}
 
 /** Un código que todavía no está en el catálogo. */
 function CodigoLibre({ onAgregar }: { onAgregar: (codigo: string, marca: string) => void }) {
@@ -579,115 +644,250 @@ type Editar = (
   disabled: boolean;
 };
 
-const num = "text-right tabular";
+type Despachar = React.Dispatch<Parameters<typeof reducir>[1]>;
 
+const num = "text-right tabular";
+/** Con los decimales de su hoja: 3 en los pesos y en el $PARC, 2 en el resto. */
+const cifra = (n: number, dec = 2) =>
+  n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+/** Su «%»: precio de mercado ÷ PU Lima. 2.53 es «vendo a 2.53 veces lo que me cuesta». */
+function Rinde({ r }: { r: LineaCalculada }) {
+  if (r.rinde === null || r.margen === null) return <span className="text-[var(--fg-muted)]">—</span>;
+  return (
+    <span className={`font-semibold ${tonoMargen(r.margen)}`}>
+      {r.rinde.toFixed(2)}
+      <span className="block whitespace-nowrap font-normal">
+        {r.margen >= 0 ? `gana ${pct(r.margen)}` : `pierde ${pct(-r.margen)}`}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * Subir su hoja de Excel tal cual. Ver `dominio/analisis-hoja.ts`: copiar y
+ * pegar perdía los decimales del FOB.
+ */
+function CargarExcel({ hayLineas, despachar }: { hayLineas: number; despachar: Despachar }) {
+  const entrada = React.useRef<HTMLInputElement>(null);
+  const [leyendo, leer] = React.useTransition();
+  const [avisos, setAvisos] = React.useState<string[]>([]);
+
+  const subir = (archivo: File) => {
+    const datos = new FormData();
+    datos.set("archivo", archivo);
+    leer(async () => {
+      const r = await leerExcelAnalisis(datos);
+      if (!r.ok) {
+        toast.error(r.error);
+        setAvisos(r.problemas ?? []);
+        return;
+      }
+      despachar({ tipo: "cargarHoja", lineas: r.lineas, costoEnvio: r.costoEnvio });
+      setAvisos(r.problemas);
+      const fuera = r.lineas.length - r.enCatalogo;
+      toast.success(
+        `${r.lineas.length} productos cargados de tu hoja` +
+          (fuera > 0 ? `; ${fuera} no están en el catálogo.` : "."),
+      );
+    });
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-[var(--info)] bg-[var(--info-bg)] p-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="button" onClick={() => entrada.current?.click()} disabled={leyendo}>
+          <FileSpreadsheet className="size-4" aria-hidden />
+          {leyendo ? "Leyendo tu hoja…" : "Subir tu hoja de Excel"}
+        </Button>
+        <p className="min-w-0 flex-1 text-sm">
+          La misma hoja de siempre, con sus columnas: CLIENTE, f, CODIGO, MARCA, CANT.Ref, Price
+          FOB $, PESO U(Kg.), CANT. PEDIDO, P.M y PROV. El DHL lo saca de abajo.
+          {hayLineas > 0 ? <strong> Reemplaza los {hayLineas} productos que hay ahora.</strong> : null}
+        </p>
+      </div>
+      <input
+        ref={entrada}
+        type="file"
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        className="hidden"
+        onChange={(e) => {
+          const a = e.target.files?.[0];
+          e.target.value = "";
+          if (a) subir(a);
+        }}
+      />
+      {avisos.length > 0 ? (
+        <ul className="list-disc pl-5 text-sm text-[var(--warn)]">
+          {avisos.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * La tabla, con las columnas de su hoja EN SU ORDEN (A–R) y sus nombres.
+ *
+ * Luis, 02/10: *«tiene que darme todos los datos como están ahí […] el mismo
+ * formato o más amigable»*. Lo único movido es el CÓDIGO, que va primero y
+ * fijo a la izquierda: con 18 columnas hay que desplazarse, y sin él no se
+ * sabe de qué fila son los números de la derecha.
+ *
+ * Los cuatro bloques llevan color: el amarillo de lo que pide y el verde del
+ * mercado son los de su hoja.
+ */
 function Tabla({
   lineas,
   c,
+  calculo,
   editar,
   despachar,
   soloLectura,
 }: {
   lineas: LineaAnalisis[];
   c: Record<string, LineaCalculada>;
+  calculo: ReturnType<typeof calcular>;
   editar: Editar;
-  despachar: React.Dispatch<Parameters<typeof reducir>[1]>;
+  despachar: Despachar;
   soloLectura: boolean;
 }) {
-  const th = "px-2 py-2 text-sm font-medium";
+  const th = "px-2 py-2 text-sm font-medium whitespace-nowrap";
+  const fijo = "sticky left-0 z-10 bg-[var(--surface)]";
+  const amarillo = "bg-[var(--warn-bg)]";
+  const verde = "bg-[var(--ok-bg)]";
+  const azul = "bg-[var(--info-bg)]";
   return (
     <div className="scroll-x">
-      <table className="w-full text-sm">
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
-          {/* Los cuatro bloques de su hoja, con su color. */}
           <tr className="text-sm font-semibold">
-            <th colSpan={4} className="rounded-tl-md bg-[var(--surface-2)] px-2 py-1.5 text-left">
+            <th className={`${fijo} px-2 py-1.5`} />
+            <th colSpan={7} className="bg-[var(--surface-2)] px-2 py-1.5 text-left">
               Lo que cotiza el proveedor
             </th>
-            <th colSpan={1} className="bg-[var(--info-bg)] px-2 py-1.5 text-left">
-              En Lima
-            </th>
-            <th colSpan={4} className="bg-[var(--ok-bg)] px-2 py-1.5 text-left">
-              Contra el mercado
-            </th>
-            <th colSpan={3} className="rounded-tr-md bg-[var(--warn-bg)] px-2 py-1.5 text-left">
+            <th colSpan={3} className={`${amarillo} px-2 py-1.5 text-left`}>
               Lo que pides
             </th>
-          </tr>
-          <tr className="border-b border-[var(--border)] text-left text-[var(--fg-muted)]">
-            <th className={th}>Código</th>
-            <th className={`${th} text-right`}>Cant.</th>
-            <th className={`${th} text-right`}>FOB $</th>
-            <th className={`${th} text-right`}>Peso kg</th>
-            <th className={`${th} text-right`}>PU Lima</th>
-            <th className={`${th} text-right`}>P. mercado</th>
-            <th className={th}>De quién</th>
-            <th className={`${th} text-right`}>Margen</th>
-            <th className={`${th} text-right`} title="Veces al año que lo piden tus clientes">
-              f / año
+            <th colSpan={2} className={`${azul} px-2 py-1.5 text-left`}>
+              Puesto en Lima
             </th>
-            <th className={`${th} text-right`}>Cant.</th>
-            <th className={`${th} text-right`}>Total Lima</th>
+            <th colSpan={4} className={`${verde} px-2 py-1.5 text-left`}>
+              Contra el mercado
+            </th>
+            <th />
+          </tr>
+          <tr className="text-left text-[var(--fg-muted)] [&>th]:border-b [&>th]:border-[var(--border)]">
+            <th className={`${th} ${fijo}`}>CÓDIGO</th>
+            <th className={th}>CLIENTE</th>
+            <th className={`${th} text-right`} title="Veces al año que lo piden tus clientes">
+              f
+            </th>
+            <th className={`${th} text-right`}>CANT. Ref</th>
+            <th className={`${th} text-right`}>FOB $</th>
+            <th className={`${th} text-right`}>PARC. $</th>
+            <th className={`${th} text-right`}>PESO U (kg)</th>
+            <th className={`${th} text-right`}>PESO PARC.</th>
+            <th className={`${th} ${amarillo} text-right`}>CANT. PEDIDO</th>
+            <th className={`${th} ${amarillo} text-right`}>$ PARC</th>
+            <th className={`${th} ${amarillo} text-right`}>PESO PED.</th>
+            <th className={`${th} ${azul} text-right`}>PU LIMA $</th>
+            <th className={`${th} ${azul} text-right`}>TOT. $</th>
+            <th className={`${th} ${verde} text-right`}>P.M</th>
+            <th className={`${th} ${verde} text-right`}>TOT. PM</th>
+            <th className={`${th} ${verde}`}>PROV.</th>
+            <th className={`${th} ${verde} text-right`} title="Precio de mercado ÷ PU Lima">
+              %
+            </th>
             <th className={th} />
           </tr>
         </thead>
         <tbody>
           {lineas.map((l) => {
             const r = c[l.key]!;
+            const td = "border-b border-[var(--border-soft)] px-1 py-1.5 align-top";
+            const calc = `${td} ${num} px-2 pt-3.5`;
             return (
-              <tr key={l.key} className="border-b border-[var(--border-soft)] align-top">
-                <td className="px-2 py-2">
-                  <span className="block font-mono font-semibold">{l.codigo}</span>
-                  <span className="block text-[var(--fg-subtle)]">
+              <tr key={l.key}>
+                <td className={`${td} ${fijo} px-2 pt-2`}>
+                  <span className="block whitespace-nowrap font-mono font-semibold">{l.codigo}</span>
+                  <span className="block whitespace-nowrap text-[var(--fg-subtle)]">
                     {l.marca || "—"}
                     {l.productoId ? "" : " · no está en el catálogo"}
                   </span>
                 </td>
-                <td className="px-1 py-2">
-                  <CampoNumero {...editar(l, "cantidadRef")} className={`w-20 ${num}`} aria-label={`Cantidad cotizada de ${l.codigo}`} />
+                <td className={td}>
+                  <Input
+                    value={l.cliente}
+                    onChange={(e) =>
+                      despachar({ tipo: "texto", key: l.key, campo: "cliente", valor: e.target.value })
+                    }
+                    disabled={soloLectura}
+                    className="w-28"
+                    aria-label={`Cliente para el que se trae ${l.codigo}`}
+                  />
                 </td>
-                <td className="px-1 py-2">
+                <td className={td}>
+                  <CampoNumero {...editar(l, "frecuencia")} className={`w-14 ${num}`} aria-label={`Veces al año que piden ${l.codigo}`} />
+                </td>
+                <td className={td}>
+                  <CampoNumero {...editar(l, "cantidadRef")} className={`w-16 ${num}`} aria-label={`Cantidad cotizada de ${l.codigo}`} />
+                </td>
+                <td className={td}>
                   <CampoNumero {...editar(l, "precioFob")} className={`w-24 ${num}`} aria-label={`Precio FOB de ${l.codigo}`} />
                   {l.fobAnterior ? (
-                    <span className="mt-0.5 block text-right text-[var(--fg-subtle)]">
+                    <span className="mt-0.5 block whitespace-nowrap text-right text-[var(--fg-subtle)]">
                       {l.fobAnterior.numero}: {l.fobAnterior.precio}
                     </span>
                   ) : null}
                 </td>
-                <td className="px-1 py-2">
+                <td className={calc}>{cifra(r.parcialRef)}</td>
+                <td className={td}>
                   <CampoNumero
                     {...editar(l, "pesoKg")}
                     className={`w-24 ${num} ${l.pesoKg > 0 ? "" : "border-[var(--warn)] bg-[var(--warn-bg)]"}`}
                     aria-label={`Peso por unidad de ${l.codigo}, en kilos`}
                   />
                 </td>
-                <td className={`px-2 py-2 ${num} pt-4 font-semibold`}>{r.puLima > 0 ? r.puLima.toFixed(2) : "—"}</td>
-                <td className="px-1 py-2">
+                <td className={calc}>{cifra(r.pesoRef, 3)}</td>
+                <td className={`${td} ${amarillo}`}>
+                  <CampoNumero {...editar(l, "cantidadPedido")} className={`w-16 ${num} border-[var(--warn)]`} aria-label={`Cantidad a pedir de ${l.codigo}`} />
+                </td>
+                <td className={`${calc} ${amarillo}`}>{cifra(r.parcialPedido, 3)}</td>
+                <td className={`${calc} ${amarillo}`}>{cifra(r.pesoPedido, 3)}</td>
+                <td className={`${calc} ${azul} font-semibold`}>{r.puLima > 0 ? cifra(r.puLima) : "—"}</td>
+                <td className={`${calc} ${azul}`}>{cifra(r.totalLima)}</td>
+                <td className={`${td} ${verde}`}>
                   <CampoNumero {...editar(l, "precioMercado")} className={`w-24 ${num}`} aria-label={`Precio de mercado de ${l.codigo}`} />
                 </td>
-                <td className="px-1 py-2">
+                <td className={`${calc} ${verde}`}>{cifra(r.totalMercado)}</td>
+                <td className={`${td} ${verde}`}>
                   <Input
                     value={l.proveedorMercado}
-                    onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })}
+                    onChange={(e) =>
+                      despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })
+                    }
                     disabled={soloLectura}
-                    placeholder="Proveedor"
-                    className="w-32"
+                    className="w-28"
                     aria-label={`De quién es el precio de mercado de ${l.codigo}`}
                   />
                 </td>
-                <td className={`px-2 py-2 pt-4 ${num} font-semibold ${tonoMargen(r.margen)}`}>
-                  {r.margen !== null ? pct(r.margen) : "—"}
+                <td className={`${calc} ${verde}`}>
+                  <Rinde r={r} />
                 </td>
-                <td className="px-1 py-2">
-                  <CampoNumero {...editar(l, "frecuencia")} className={`w-16 ${num}`} aria-label={`Veces al año que piden ${l.codigo}`} />
-                </td>
-                <td className="px-1 py-2">
-                  <CampoNumero {...editar(l, "cantidadPedido")} className={`w-20 ${num} border-[var(--warn)]`} aria-label={`Cantidad a pedir de ${l.codigo}`} />
-                </td>
-                <td className={`px-2 py-2 pt-4 ${num} font-semibold`}>{r.totalLima.toFixed(2)}</td>
-                <td className="px-1 py-2 text-right">
+                <td className={`${td} text-right`}>
                   {soloLectura ? null : (
-                    <Button type="button" variant="outline" size="sm" className="h-10 text-sm" onClick={() => despachar({ tipo: "quitar", key: l.key })} aria-label={`Quitar ${l.codigo}`} title={`Quitar ${l.codigo}`}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-10 text-sm"
+                      onClick={() => despachar({ tipo: "quitar", key: l.key })}
+                      aria-label={`Quitar ${l.codigo}`}
+                      title={`Quitar ${l.codigo}`}
+                    >
                       <Trash2 className="size-4" aria-hidden />
                     </Button>
                   )}
@@ -696,6 +896,29 @@ function Tabla({
             );
           })}
         </tbody>
+        {/* Su fila 31: las sumas. */}
+        <tfoot>
+          <tr className="font-semibold [&>td]:border-t-2 [&>td]:border-[var(--border)] [&>td]:px-2 [&>td]:py-2.5">
+            <td className={fijo}>TOTALES</td>
+            <td />
+            <td />
+            <td className={num}>{cifra(calculo.cantidadRef, 0)}</td>
+            <td />
+            <td className={num}>{cifra(calculo.fobRef)}</td>
+            <td />
+            <td className={num}>{cifra(calculo.pesoRef, 3)}</td>
+            <td className={`${num} ${amarillo}`}>{cifra(calculo.cantidadPedido, 0)}</td>
+            <td className={`${num} ${amarillo}`}>{cifra(calculo.fobPedido, 3)}</td>
+            <td className={`${num} ${amarillo}`}>{cifra(calculo.pesoPedido, 3)}</td>
+            <td className={azul} />
+            <td className={`${num} ${azul}`}>{cifra(calculo.totalLima)}</td>
+            <td className={verde} />
+            <td className={`${num} ${verde}`}>{cifra(calculo.totalMercado)}</td>
+            <td className={`${verde} text-right`}>K</td>
+            <td className={`${num} ${verde}`}>{calculo.rinde !== null ? calculo.rinde.toFixed(2) : "—"}</td>
+            <td />
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
@@ -711,7 +934,7 @@ function Tarjeta({
   l: LineaAnalisis;
   r: LineaCalculada;
   editar: Editar;
-  despachar: React.Dispatch<Parameters<typeof reducir>[1]>;
+  despachar: Despachar;
   soloLectura: boolean;
 }) {
   const campo = (etiqueta: string, nodo: React.ReactNode, fondo = "") => (
@@ -719,6 +942,12 @@ function Tarjeta({
       <span className="text-sm font-medium">{etiqueta}</span>
       {nodo}
     </label>
+  );
+  const dato = (etiqueta: string, valor: string, fuerte = false) => (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-[var(--fg-muted)]">{etiqueta}</dt>
+      <dd className={`tabular ${fuerte ? "font-semibold" : ""}`}>{valor}</dd>
+    </div>
   );
   return (
     <li className="rounded-md border border-[var(--border)] p-3">
@@ -731,7 +960,14 @@ function Tarjeta({
           </p>
         </div>
         {soloLectura ? null : (
-          <Button type="button" variant="outline" size="sm" className="shrink-0 text-sm" onClick={() => despachar({ tipo: "quitar", key: l.key })} aria-label={`Quitar ${l.codigo}`}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 text-sm"
+            onClick={() => despachar({ tipo: "quitar", key: l.key })}
+            aria-label={`Quitar ${l.codigo}`}
+          >
             <Trash2 className="size-4" aria-hidden />
             Quitar
           </Button>
@@ -739,20 +975,41 @@ function Tarjeta({
       </div>
 
       <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">
-        {campo("Cant. cotizada", <CampoNumero {...editar(l, "cantidadRef")} className={num} />)}
+        {campo(
+          "Cliente",
+          <Input
+            value={l.cliente}
+            onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "cliente", valor: e.target.value })}
+            disabled={soloLectura}
+          />,
+        )}
+        {campo("f (veces al año)", <CampoNumero {...editar(l, "frecuencia")} className={num} />)}
+        {campo("CANT. Ref", <CampoNumero {...editar(l, "cantidadRef")} className={num} />)}
         {campo("FOB $", <CampoNumero {...editar(l, "precioFob")} className={num} />)}
         {campo(
-          "Peso kg",
-          <CampoNumero {...editar(l, "pesoKg")} className={`${num} ${l.pesoKg > 0 ? "" : "border-[var(--warn)] bg-[var(--warn-bg)]"}`} />,
+          "PESO U (kg)",
+          <CampoNumero
+            {...editar(l, "pesoKg")}
+            className={`${num} ${l.pesoKg > 0 ? "" : "border-[var(--warn)] bg-[var(--warn-bg)]"}`}
+          />,
         )}
-        {campo("Precio de mercado", <CampoNumero {...editar(l, "precioMercado")} className={num} />, "bg-[var(--ok-bg)]")}
         {campo(
-          "De quién",
-          <Input value={l.proveedorMercado} onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })} disabled={soloLectura} />,
+          "CANT. PEDIDO",
+          <CampoNumero {...editar(l, "cantidadPedido")} className={`${num} border-[var(--warn)]`} />,
+          "bg-[var(--warn-bg)]",
+        )}
+        {campo("P.M (mercado)", <CampoNumero {...editar(l, "precioMercado")} className={num} />, "bg-[var(--ok-bg)]")}
+        {campo(
+          "PROV.",
+          <Input
+            value={l.proveedorMercado}
+            onChange={(e) =>
+              despachar({ tipo: "texto", key: l.key, campo: "proveedorMercado", valor: e.target.value })
+            }
+            disabled={soloLectura}
+          />,
           "bg-[var(--ok-bg)]",
         )}
-        {campo("f / año", <CampoNumero {...editar(l, "frecuencia")} className={num} />, "bg-[var(--ok-bg)]")}
-        {campo("Cant. a pedir", <CampoNumero {...editar(l, "cantidadPedido")} className={`${num} border-[var(--warn)]`} />, "bg-[var(--warn-bg)]")}
       </div>
       {l.fobAnterior ? (
         <p className="mt-1 text-sm text-[var(--fg-subtle)]">
@@ -760,22 +1017,21 @@ function Tarjeta({
         </p>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-[var(--border-soft)] pt-2 text-sm">
-        <p>
-          <span className="text-[var(--fg-muted)]">PU Lima </span>
-          <span className="tabular font-semibold">{r.puLima > 0 ? r.puLima.toFixed(2) : "—"}</span>
-        </p>
-        <p>
-          <span className="text-[var(--fg-muted)]">Margen </span>
-          <span className={`tabular font-semibold ${tonoMargen(r.margen)}`}>
-            {r.margen !== null ? pct(r.margen) : "—"}
-          </span>
-        </p>
-        <p>
-          <span className="text-[var(--fg-muted)]">Total Lima </span>
-          <span className="tabular font-semibold">{r.totalLima.toFixed(2)}</span>
-        </p>
-      </div>
+      <dl className="mt-3 grid gap-x-6 gap-y-1 border-t border-[var(--border-soft)] pt-2 text-sm sm:grid-cols-2">
+        {dato("PARC. $", cifra(r.parcialRef))}
+        {dato("PESO PARC.", cifra(r.pesoRef, 3))}
+        {dato("$ PARC (pedido)", cifra(r.parcialPedido, 3))}
+        {dato("PESO PED.", cifra(r.pesoPedido, 3))}
+        {dato("PU LIMA $", r.puLima > 0 ? cifra(r.puLima) : "—", true)}
+        {dato("TOT. $", cifra(r.totalLima), true)}
+        {dato("TOT. PM", cifra(r.totalMercado))}
+        <div className="flex items-baseline justify-between gap-2">
+          <dt className="text-[var(--fg-muted)]">% (P.M ÷ PU)</dt>
+          <dd className="tabular text-right">
+            <Rinde r={r} />
+          </dd>
+        </div>
+      </dl>
     </li>
   );
 }

@@ -21,6 +21,8 @@ export type Resultado<T> =
 export interface ProductoComprable extends ProductoParaComprar {
   codigo_fabricante: string | null;
   estado_stock: "sin_stock" | "bajo" | "ok";
+  /** El de referencia en Lima (098), para el análisis de importación. */
+  precio_mercado?: number;
 }
 
 /**
@@ -62,15 +64,21 @@ export async function buscarParaComprar(
       kits. Una consulta más por los ≤ 20 resultados no se nota.
     */
     if (datos.length > 0) {
+      // Y el precio de mercado (098): el análisis de importación lo propone al
+      // añadir, y hasta el 02/10 llegaba siempre vacío porque nadie lo leía.
       const { data: pesos } = await supabase
         .from("productos")
-        .select("id, peso_kg")
+        .select("id, peso_kg, precio_mercado")
         .in(
           "id",
           datos.map((p) => p.id),
         );
-      const porId = new Map((pesos ?? []).map((p) => [p.id, Number(p.peso_kg) || 0]));
-      for (const p of datos) p.peso_kg = porId.get(p.id) ?? 0;
+      const porId = new Map((pesos ?? []).map((p) => [p.id, p]));
+      for (const p of datos) {
+        const extra = porId.get(p.id);
+        p.peso_kg = Number(extra?.peso_kg) || 0;
+        p.precio_mercado = Number(extra?.precio_mercado) || 0;
+      }
     }
     return { ok: true, datos };
   } catch (e) {
