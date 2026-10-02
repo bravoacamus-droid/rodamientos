@@ -4,6 +4,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { EllipsisVertical } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -67,11 +68,7 @@ export function AccionesFila({
           aria-label={`Acciones de ${codigo}`}
           className="flex size-9 items-center justify-center rounded-sm text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
         >
-          <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-            <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-            <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-            <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-          </svg>
+          <EllipsisVertical className="size-4" aria-hidden="true" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">

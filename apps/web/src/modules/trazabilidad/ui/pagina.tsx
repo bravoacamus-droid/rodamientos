@@ -17,6 +17,7 @@ import {
   type EventoTrazabilidad,
   type Referencia,
 } from "../dominio/tipos";
+import { Volver } from "@/componentes/volver";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -79,14 +80,9 @@ async function Cabecera({ id }: { id: string }) {
 
   return (
     <div>
-      <Link
-        href={`/productos/${p.id}`}
-        className="text-sm text-[var(--fg-muted)] underline"
-      >
-        ← Ficha del producto
-      </Link>
+      <Volver href={`/productos/${p.id}`}>Volver a la ficha del producto</Volver>
       <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Trazabilidad</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Historia del producto</h1>
         <Link
           href={`/productos/${p.id}`}
           className="font-mono text-base font-medium text-brand-600 hover:underline"

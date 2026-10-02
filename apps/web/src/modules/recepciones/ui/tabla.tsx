@@ -52,12 +52,12 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
               <th className="px-4 py-2.5 font-medium">Número</th>
               <th className="px-4 py-2.5 font-medium">Fecha</th>
               <th className="px-4 py-2.5 font-medium">Proveedor</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">
                 Documentos
               </th>
               <th className="px-4 py-2.5 text-right font-medium">Líneas</th>
               <th className="px-4 py-2.5 text-right font-medium">Valorizado</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Recibió</th>
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Recibió</th>
               {/*
                 La fila de escritorio se quedó sin botón.
 
@@ -69,14 +69,14 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 que Luis dio por cerrado en compras: *«falta el botón de
                 recibir mercadería, no darle clic al número»*.
               */}
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((r) => (
               <tr
                 key={r.id}
-                className={`border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
                   r.anulada ? "opacity-60" : ""
                 }`}
               >
@@ -105,7 +105,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 {/* Los papeles del proveedor son por lo que se busca una
                     recepción cuando llama reclamando —así lo dice el marcador
                     del buscador—, así que se leen: en 14, no en 12. */}
-                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
                   {r.guia_proveedor ? <span className="block">G: {r.guia_proveedor}</span> : null}
                   {r.factura_proveedor ? (
                     <span className="block">F: {r.factura_proveedor}</span>
@@ -116,12 +116,12 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={r.valorizado} tamano="sm" />
                 </td>
-                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
                   {r.recibido_por ?? "—"}
                 </td>
                 {/* Ancho fijo y no el del texto, como en guías y facturación:
                     es lo que mantiene la columna a plomo entre filas. */}
-                <td className="px-4 py-2.5">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-4 py-2.5">
                   <div className="ml-auto w-[140px]">
                     <Link
                       href={`/recepciones/${r.id}`}

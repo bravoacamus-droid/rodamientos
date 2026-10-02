@@ -38,6 +38,7 @@ import {
 } from "../../dominio/analisis";
 import { BuscadorCompra } from "../constructor/buscador";
 import { AltaEnBloque } from "./alta-en-bloque";
+import { Volver } from "@/componentes/volver";
 
 const dolar = (n: number, dec = 2) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
@@ -244,9 +245,7 @@ export function ConstructorAnalisis({
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href="/compras/analisis" className="text-sm text-[var(--fg-muted)] underline">
-            ← Análisis de importación
-          </Link>
+          <Volver href="/compras/analisis">Volver a los análisis</Volver>
           <h1 className="mt-1 text-xl font-semibold">
             {!inicial
               ? "Nuevo análisis de importación"

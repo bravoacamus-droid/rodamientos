@@ -66,20 +66,20 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               */}
               <th className="px-4 py-2.5 font-medium">Proveedor</th>
               <th className="px-4 py-2.5 font-medium">Marcas</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Contacto</th>
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Contacto</th>
               <th className="px-4 py-2.5 text-right font-medium">Pago</th>
               <th className="px-4 py-2.5 text-right font-medium">Entrega</th>
               <th className="px-4 py-2.5 font-medium">Tipo</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valía cuando ahí solo había tres puntos. */}
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((p) => (
               <tr
                 key={p.id}
-                className={`border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
                   p.activo ? "" : "opacity-60"
                 }`}
               >
@@ -120,7 +120,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 {/* La celda entera iba en 12 px. El nombre de a quién se llama
                     no es una etiqueta que se reconoce: se lee, y va en 14. El
                     número debajo sí es dato secundario. */}
-                <td className="hidden max-w-[14rem] px-4 py-2.5 lg:table-cell">
+                <td className="hidden max-w-[14rem] px-4 py-2.5 2xl:table-cell">
                   {p.contacto ? <span className="block truncate">{p.contacto}</span> : null}
                   {p.telefono || p.whatsapp ? (
                     <span className="block truncate text-sm text-[var(--fg-muted)]">
@@ -152,7 +152,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                     {ETIQUETA_TIPO[p.tipo]}
                   </span>
                 </td>
-                <td className="px-2 py-1.5">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
                   <AccionesFila
                     id={p.id}
                     razonSocial={p.razon_social}

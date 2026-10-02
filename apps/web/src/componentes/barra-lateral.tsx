@@ -18,7 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@rodatech/ui";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/componentes/logo";
 import { IconoNav } from "@/componentes/iconos-nav";
 import {
@@ -282,23 +282,14 @@ function Grupos({
                 className="size-[18px] shrink-0 text-brand-600"
               />
               <span className="truncate">{grupo.titulo}</span>
-              <svg
-                viewBox="0 0 24 24"
+              <ChevronRight
+                strokeWidth={2.5}
                 className={cn(
                   "ml-auto size-4 shrink-0 text-[var(--fg-subtle)] transition-transform",
                   abierto ? "-rotate-90" : "rotate-90",
                 )}
                 aria-hidden="true"
-              >
-                <path
-                  d="M9 5l7 7-7 7"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              />
             </button>
 
             {abierto ? (
@@ -532,15 +523,7 @@ export function MenuMovil({
         className="-ml-1 flex size-10 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:hidden"
         aria-label="Abrir menú de módulos"
       >
-        <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
-          <path
-            d="M4 7h16M4 12h16M4 17h16"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-          />
-        </svg>
+        <Menu className="size-5" aria-hidden="true" />
       </SheetTrigger>
 
       <SheetContent lado="izquierda" className="flex w-72 max-w-[85vw] flex-col p-0">

@@ -1,5 +1,4 @@
 import { cuentasParaCobrar } from "@/lib/emisor";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
@@ -18,6 +17,7 @@ import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { YaFacturado } from "./detalle/ya-facturado";
 import { VistaPreviaDocumento } from "./detalle/vista-previa";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Ficha de una cotización.
@@ -207,12 +207,7 @@ export default async function PaginaDetalleCotizacion({
         componente, así que la ventaja no se pierde.
       */}
       <div className="flex flex-col gap-5 print:hidden">
-        <Link
-          href="/cotizaciones"
-          className="inline-flex w-fit items-center gap-1.5 text-sm text-[var(--fg-muted)] hover:text-[var(--fg)]"
-        >
-          <span aria-hidden="true">←</span> Cotizaciones
-        </Link>
+        <Volver href="/cotizaciones">Volver a cotizaciones</Volver>
 
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">

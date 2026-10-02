@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -8,6 +7,7 @@ import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleComprobante } from "../api/consultas";
 import { DocumentoComprobante } from "./documento";
+import { Volver } from "@/componentes/volver";
 
 /**
  * La hoja imprimible de un comprobante.
@@ -58,12 +58,7 @@ export default async function PaginaImprimirComprobante({
     <div className="flex flex-col gap-3">
       {/* Lo único que no es el documento, y por eso lleva `no-print`. */}
       <div className="flex items-center justify-between gap-3 no-print">
-        <Link
-          href={`/facturacion/${c.id}`}
-          className="text-sm text-[var(--fg-muted)] underline-offset-2 hover:underline"
-        >
-          ← Volver al comprobante
-        </Link>
+        <Volver href={`/facturacion/${c.id}`}>Volver al comprobante</Volver>
         {c.estado === "anulado" ? (
           <span className="text-sm font-medium text-[var(--danger)]">
             Este comprobante está ANULADO. No debería imprimirse para entregar.

@@ -20,6 +20,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 
 /**
  * Lo que se tarda en escribir el resto de la palabra.
@@ -73,18 +74,10 @@ export function BuscadorCotizaciones() {
 
   return (
     <div className="relative flex-1 sm:max-w-sm">
-      <svg
-        viewBox="0 0 24 24"
+      <Search
         aria-hidden="true"
         className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-[var(--fg-subtle)]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      >
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-      </svg>
+      />
 
       <input
         type="search"

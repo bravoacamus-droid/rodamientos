@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, Printer } from "lucide-react";
 import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 
 import { listarGuias } from "../api/consultas";
@@ -37,6 +38,17 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
           filtrando
             ? "Prueba con menos filtros, o busca por número, dirección o placa."
             : "La guía acompaña la mercadería cuando sale del almacén, y es lo que descarga el stock. Se prepara desde una cotización aprobada."
+        }
+        accion={
+          // El camino, aquí mismo y no solo arriba (revisión del 02/10).
+          filtrando ? undefined : (
+            <Link
+              href="/guias/nueva"
+              className="inline-flex h-10 items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Preparar una guía
+            </Link>
+          )
         }
       />
     );
@@ -291,24 +303,11 @@ const SECUNDARIO =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
 
 function IconoVer() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+  return <Eye aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 function IconoImprimir() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9V3h12v6" />
-      <rect x="3" y="9" width="18" height="7" rx="1" />
-      <path d="M6 14h12v7H6z" />
-    </svg>
-  );
+  return <Printer aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 /**

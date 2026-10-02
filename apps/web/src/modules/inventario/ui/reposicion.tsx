@@ -135,13 +135,13 @@ export async function TablaReposicion() {
             <th className="hidden px-4 py-2.5 font-medium md:table-cell">Marca</th>
             <th className="px-4 py-2.5 font-medium">Descripción</th>
             <th className="px-4 py-2.5 text-right font-medium">Stock</th>
-            <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+            <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
               Mín / Máx
             </th>
             <th className="px-4 py-2.5 text-right font-medium">Cobertura</th>
             <th className="px-4 py-2.5 text-right font-medium">Sugerido</th>
             <th className="px-4 py-2.5 font-medium">Estado</th>
-            <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+            <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
               Inmovilizado
             </th>
           </tr>
@@ -169,7 +169,7 @@ export async function TablaReposicion() {
               <td className="px-4 py-2.5 text-right tabular">
                 {Number(f.stock ?? 0).toLocaleString("es-PE")}
               </td>
-              <td className="hidden px-4 py-2.5 text-right tabular text-sm text-[var(--fg-muted)] lg:table-cell">
+              <td className="hidden px-4 py-2.5 text-right tabular text-sm text-[var(--fg-muted)] 2xl:table-cell">
                 {f.stock_minimo} / {f.stock_maximo || "—"}
               </td>
               <td className="px-4 py-2.5 text-right tabular">
@@ -201,7 +201,7 @@ export async function TablaReposicion() {
                   {ETIQUETA[f.estado_stock]}
                 </span>
               </td>
-              <td className="hidden px-4 py-2.5 text-right lg:table-cell">
+              <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                 {/* Solo tiene sentido para el sobrestock: es el dinero parado. */}
                 {f.estado_stock === "sobrestock" ? (
                   <Moneda valor={f.valorizado} tamano="sm" />

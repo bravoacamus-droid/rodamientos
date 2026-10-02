@@ -7,7 +7,7 @@
 import type * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Send } from "lucide-react";
+import { Check, EllipsisVertical, Pencil, Send } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -309,11 +309,7 @@ export function AccionesCotizacion({
             aria-label="Más acciones"
             className="flex size-11 items-center justify-center rounded-md border border-[var(--border)] text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:size-9"
           >
-            <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-              <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-              <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-            </svg>
+            <EllipsisVertical className="size-4" aria-hidden="true" />
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-56">

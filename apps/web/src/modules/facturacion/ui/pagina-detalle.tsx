@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Download, Printer } from "lucide-react";
 import { Badge, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -8,6 +9,8 @@ import { detalleComprobante, motivosNota, yaAcreditadoDe } from "../api/consulta
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
 import { EmisorNota } from "./emisor-nota";
 import { EnviarASunat } from "./enviar-sunat";
+import { abreviaturaUnidad } from "@rodatech/config";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Ficha de un comprobante.
@@ -56,9 +59,7 @@ export default async function PaginaDetalleComprobante({
     <div className="flex flex-col gap-5">
       <header className="anim-entrada flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/facturacion" className="text-sm text-[var(--fg-muted)] underline">
-            ← Facturación
-          </Link>
+          <Volver href="/facturacion">Volver a facturación</Volver>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {c.numero}
@@ -190,7 +191,7 @@ export default async function PaginaDetalleComprobante({
                     <td className="py-2 pr-3 text-right tabular">
                       {l.cantidad}{" "}
                       <span className="text-sm text-[var(--fg-subtle)]">
-                        {l.unidad}
+                        {abreviaturaUnidad(l.unidad)}
                       </span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular">
@@ -235,7 +236,7 @@ export default async function PaginaDetalleComprobante({
                 {/* La cuenta entera: «4 NIU × 25.4000». Sin cabecera que
                     explique las columnas, se escribe la multiplicación. */}
                 <p className="text-sm text-[var(--fg-muted)]">
-                  <span className="tabular">{l.cantidad}</span> {l.unidad} ×{" "}
+                  <span className="tabular">{l.cantidad}</span> {abreviaturaUnidad(l.unidad)} ×{" "}
                   <span className="tabular">{l.valor_unitario.toFixed(4)}</span>
                   {l.descuento_pct > 0 ? (
                     <span className="text-[var(--fg-subtle)]">
@@ -383,22 +384,9 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
 }
 
 function IconoDescargar() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3v12m0 0 4-4m-4 4-4-4" />
-      <path d="M4 19h16" />
-    </svg>
-  );
+  return <Download aria-hidden="true" className="size-[18px] shrink-0" />;
 }
 
 function IconoImprimir() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9V3h12v6" />
-      <rect x="3" y="9" width="18" height="7" rx="1" />
-      <path d="M6 14h12v7H6z" />
-    </svg>
-  );
+  return <Printer aria-hidden="true" className="size-[18px] shrink-0" />;
 }

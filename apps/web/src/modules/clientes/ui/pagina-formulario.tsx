@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -11,6 +10,7 @@ import {
   ubigeoProvincias,
 } from "../api/consultas";
 import { FormularioCliente } from "./formulario";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Los tres niveles del ubigeo, para la cascada departamento → provincia →
@@ -95,12 +95,9 @@ export default async function PaginaFormularioCliente({
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <Link
-          href={c ? `/clientes/${c.id}` : "/clientes"}
-          className="text-sm text-[var(--fg-muted)] underline"
-        >
-          ← {c ? "Volver a la ficha" : "Clientes"}
-        </Link>
+        <Volver href={c ? `/clientes/${c.id}` : "/clientes"}>
+          {c ? "Volver a la ficha" : "Volver a clientes"}
+        </Volver>
         <h1 className="mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
           {c ? c.razon_social : "Nuevo cliente"}
         </h1>

@@ -49,7 +49,7 @@ export async function ResumenInventario() {
       <KpiCard
         etiqueta="Unidades"
         valor={r.unidades.toLocaleString("es-PE")}
-        detalle={`en ${r.skusConStock.toLocaleString("es-PE")} de ${r.skus.toLocaleString("es-PE")} SKU`}
+        detalle={`en ${r.skusConStock.toLocaleString("es-PE")} de ${r.skus.toLocaleString("es-PE")} productos`}
       />
     </div>
   );

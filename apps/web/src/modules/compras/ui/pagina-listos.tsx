@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Eye, ShoppingCart, Truck } from "lucide-react";
 import { Badge, EstadoError, EstadoVacio, Moneda, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -431,34 +432,13 @@ const PRINCIPAL =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
 
 function IconoVer() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+  return <Eye aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 function IconoGuia() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 3h13v13H1z" />
-      <path d="M14 8h4l3 3v5h-7" />
-      <circle cx="6" cy="19" r="2" />
-      <circle cx="17.5" cy="19" r="2" />
-    </svg>
-  );
+  return <Truck aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 function IconoCarrito() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 3h2.5l2.2 11.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L20 7H5.2" />
-      <circle cx="9" cy="20" r="1.5" />
-      <circle cx="17" cy="20" r="1.5" />
-    </svg>
-  );
+  return <ShoppingCart aria-hidden="true" className="size-4 shrink-0" />;
 }

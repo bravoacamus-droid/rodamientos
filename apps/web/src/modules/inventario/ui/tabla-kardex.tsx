@@ -132,11 +132,11 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
               <th className="px-4 py-2.5 font-medium">Tipo</th>
               <th className="px-4 py-2.5 text-right font-medium">Entrada</th>
               <th className="px-4 py-2.5 text-right font-medium">Salida</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Costo unit.
               </th>
               <th className="px-4 py-2.5 text-right font-medium">Saldo</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Costo prom.
               </th>
               <th className="px-4 py-2.5 font-medium">Referencia</th>
@@ -180,13 +180,13 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   <td className="px-4 py-2.5 text-right tabular">
                     {m.salida > 0 ? Number(m.salida).toLocaleString("es-PE") : "—"}
                   </td>
-                  <td className="hidden px-4 py-2.5 text-right lg:table-cell">
+                  <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                     <Moneda valor={m.costo_unitario} tamano="sm" enfasis="suave" />
                   </td>
                   <td className="px-4 py-2.5 text-right tabular font-medium">
                     {Number(m.saldo_cantidad).toLocaleString("es-PE")}
                   </td>
-                  <td className="hidden px-4 py-2.5 text-right lg:table-cell">
+                  <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                     <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
                   </td>
                   <td className="px-4 py-2.5 text-sm">

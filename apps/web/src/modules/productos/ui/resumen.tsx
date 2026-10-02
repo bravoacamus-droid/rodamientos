@@ -26,7 +26,7 @@ export async function ResumenProductos() {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <KpiCard
-        etiqueta="SKU activos"
+        etiqueta="Productos activos"
         valor={r.total.toLocaleString("es-PE")}
         detalle="sin contar archivados"
       />

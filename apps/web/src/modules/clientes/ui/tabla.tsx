@@ -77,19 +77,19 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               */}
               <th className="px-4 py-2.5 font-medium">Código</th>
               <th className="px-4 py-2.5 font-medium">Razón social</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Contacto</th>
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Contacto</th>
               <th className="px-4 py-2.5 font-medium">Condición</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valia cuando ahi solo habia tres puntos. */}
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((c) => (
               <tr
                 key={c.id}
-                className={`border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
                   c.activo ? "" : "opacity-60"
                 }`}
               >
@@ -113,7 +113,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                   */}
                   <SegundaLinea c={c} />
                 </td>
-                <td className="hidden max-w-[14rem] px-4 py-2.5 lg:table-cell">
+                <td className="hidden max-w-[14rem] px-4 py-2.5 2xl:table-cell">
                   <Contacto c={c} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-2.5">
@@ -127,7 +127,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="px-4 py-2.5">
                   <Estado c={c} />
                 </td>
-                <td className="px-2 py-1.5">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
                   <AccionesFila
                     id={c.id}
                     codigo={c.codigo}

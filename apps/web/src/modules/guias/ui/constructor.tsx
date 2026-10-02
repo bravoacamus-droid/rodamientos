@@ -401,7 +401,7 @@ export function ConstructorGuia({
                 </label>
 
                 <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Ubigeo de llegada</span>
+                  <span className="text-sm font-medium">Código del distrito de llegada (6 cifras, SUNAT)</span>
                   <Input
                     value={estado.ubigeoLlegada}
                     onChange={(e) =>

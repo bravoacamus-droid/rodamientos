@@ -12,6 +12,7 @@ import { comprasDelProducto, preciosPorProveedor } from "../api/compras";
 import { AQuienPreguntar } from "./a-quien-preguntar";
 import { ComprasAnteriores } from "./compras-anteriores";
 import { QuienLoVende } from "./quien-lo-vende";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Ficha de un producto.
@@ -66,9 +67,7 @@ export default async function PaginaDetalleProducto({
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/productos" className="text-sm text-[var(--fg-muted)] underline">
-            ← Productos
-          </Link>
+          <Volver href="/productos">Volver a productos</Volver>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {p.codigo}
@@ -88,7 +87,7 @@ export default async function PaginaDetalleProducto({
             href={`/productos/${p.id}/trazabilidad`}
             className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
           >
-            Ver trazabilidad
+            Ver su historia (compras y ventas)
           </Link>
           {puedeEditar ? (
             <Link
@@ -139,7 +138,7 @@ export default async function PaginaDetalleProducto({
         <Tarjeta
           etiqueta="Costo promedio"
           valor={<Moneda valor={p.costo_promedio} enfasis="suave" />}
-          pie={`último ${p.ultimo_costo.toFixed(2)}`}
+          pie={p.ultimo_costo > 0 ? `última compra ${p.ultimo_costo.toFixed(2)}` : "sin compras registradas"}
         />
         <Tarjeta
           etiqueta="Margen"

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, EstadoError, Moneda } from "@rodatech/ui";
+import { FileText, HandCoins, Receipt, Truck } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { clientePorId } from "../api/consultas";
 import { ETIQUETA_CONDICION, ETIQUETA_DOCUMENTO } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
+import { Volver } from "@/componentes/volver";
 
 /** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
 const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
@@ -43,16 +45,16 @@ export default async function PaginaDetalleCliente({
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/clientes" className="text-sm text-[var(--fg-muted)] underline">
-            ← Clientes
-          </Link>
+          <Volver href="/clientes">Volver a clientes</Volver>
           {/* `break-words` y no `truncate`: la razón social es el dato que se
               viene a leer, cortarla a 360 px sería esconder justo lo importante. */}
           <h1 className="mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
             {c.razon_social}
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm text-[var(--fg-subtle)]">{c.codigo}</span>
+            {c.numero_documento && c.codigo.includes(c.numero_documento) ? null : (
+              <span className="font-mono text-sm text-[var(--fg-subtle)]">{c.codigo}</span>
+            )}
             <Badge tone="neutral" size="xs">
               {ETIQUETA_DOCUMENTO[c.tipo_documento]} {c.numero_documento ?? "—"}
             </Badge>
@@ -90,6 +92,7 @@ export default async function PaginaDetalleCliente({
             razonSocial={c.razon_social}
             bloqueado={c.bloqueado}
             puedeEditar={puedeEditar}
+            enFicha
           />
         </div>
       </header>
@@ -142,6 +145,34 @@ export default async function PaginaDetalleCliente({
           pie={c.vendedor_nombre ? "lo atiende" : "nadie lo tiene asignado"}
         />
       </div>
+
+      {/* ---------------------------------------------------- Sus ventas */}
+      {/*
+        Revisión de diseño del 02/10: la ficha no llevaba a lo que se le ha
+        vendido, y Willy recuerda a un cliente por sus ventas. Las cuatro
+        listas YA filtraban por `?cliente=` desde hace meses; faltaba la
+        puerta. La pieza sin camino, otra vez.
+      */}
+      <section className="card p-4">
+        <h2 className="mb-3 text-sm font-semibold">Lo que se le ha vendido</h2>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: `/cotizaciones?cliente=${c.id}`, texto: "Sus cotizaciones", Icono: FileText },
+            { href: `/guias?cliente=${c.id}`, texto: "Sus guías", Icono: Truck },
+            { href: `/facturacion?cliente=${c.id}`, texto: "Sus facturas", Icono: Receipt },
+            { href: `/cobranzas?cliente=${c.id}`, texto: "Lo que debe", Icono: HandCoins },
+          ].map(({ href, texto, Icono }) => (
+            <Link
+              key={href}
+              href={href}
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              <Icono className="size-4 text-brand-600" aria-hidden />
+              {texto}
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ------------------------------------------------------ Contacto */}
@@ -214,7 +245,7 @@ export default async function PaginaDetalleCliente({
           <dl className="flex flex-col gap-2 text-sm">
             <Dato etiqueta="Dirección fiscal" valor={c.direccion} />
             <Dato etiqueta="Distrito" valor={c.ubigeo_nombre} />
-            <Dato etiqueta="Ubigeo" valor={c.ubigeo_codigo} />
+            <Dato etiqueta="Código del distrito (SUNAT)" valor={c.ubigeo_codigo} />
             <Dato etiqueta="Referencia" valor={c.referencia_direccion} />
           </dl>
           {!c.direccion || !c.ubigeo_codigo ? (

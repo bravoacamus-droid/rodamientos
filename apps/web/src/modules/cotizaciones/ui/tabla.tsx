@@ -103,14 +103,14 @@ export async function TablaCotizaciones({
               <th className="py-2.5 pl-3 pr-4 font-medium">Número</th>
               <th className="px-4 py-2.5 font-medium">Fecha</th>
               <th className="px-4 py-2.5 font-medium">Cliente</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">O/C</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">O/C</th>
+              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Ítems
               </th>
               <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 text-right font-medium">Margen</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -156,10 +156,10 @@ export async function TablaCotizaciones({
                 {/* La orden de compra del cliente se busca por esta pantalla
                     —está en el marcador del buscador— y es lo que hay que
                     citar al facturar. Se lee: en 14, no en 12. */}
-                <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] 2xl:table-cell">
                   {c.orden_compra_cliente ?? "—"}
                 </td>
-                <td className="hidden px-4 py-2.5 text-right tabular text-[var(--fg-muted)] lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-right tabular text-[var(--fg-muted)] 2xl:table-cell">
                   {c.items}
                 </td>
 
@@ -208,7 +208,7 @@ export async function TablaCotizaciones({
                   segunda columna se queda vacía y el «Ver» no se mueve: es
                   justamente lo que mantiene la columna a plomo.
                 */}
-                <td className="px-4 py-2.5">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover:bg-[var(--surface-2)] px-4 py-2.5">
                   <div className="ml-auto grid w-[216px] grid-cols-[84px_1fr] gap-1.5">
                     <Link
                       href={`/cotizaciones/${c.id}`}

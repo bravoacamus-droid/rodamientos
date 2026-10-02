@@ -58,18 +58,37 @@ export function FiltrosImportacionesBarra() {
         />
       </label>
 
-      <button
-        type="button"
-        onClick={() => aplicar("abiertas", soloAbiertas ? "0" : "1")}
-        aria-pressed={soloAbiertas}
-        className={`inline-flex h-9 items-center rounded-sm border px-3 text-sm font-medium transition-colors ${
-          soloAbiertas
-            ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-200"
-            : "border-[var(--border)] hover:bg-[var(--surface-2)]"
-        }`}
-      >
-        {soloAbiertas ? "Solo lo que viene" : "Viendo todo"}
-      </button>
+      {/*
+        Dos opciones a la vista y no un botón cuyo texto cambia con el estado:
+        «Solo lo que viene / Viendo todo» no decía qué pasaba al pulsarlo, y en
+        azul parecía la acción principal (revisión de diseño del 02/10).
+      */}
+      <div role="group" aria-label="Qué importaciones ver" className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Ver</span>
+        <div className="inline-flex rounded-md border border-[var(--border)] p-0.5">
+          {(
+            [
+              ["1", "En camino"],
+              ["0", "Todas"],
+            ] as const
+          ).map(([valor, texto]) => {
+            const activo = (valor === "1") === soloAbiertas;
+            return (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => aplicar("abiertas", valor)}
+                className={`h-9 rounded-sm px-3 text-sm font-medium transition-colors ${
+                  activo ? "bg-[var(--surface-2)] text-[var(--fg)] shadow-sm" : "text-[var(--fg-muted)] hover:text-[var(--fg)]"
+                }`}
+              >
+                {texto}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

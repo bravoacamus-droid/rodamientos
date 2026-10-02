@@ -199,8 +199,19 @@ async function Listado({
           filtrando
             ? "Prueba con el número de compra, el tracking o el courier."
             : filtros.abiertas === "1"
-              ? "Todo lo que se pidió fuera ya llegó. Quita el filtro para ver el histórico."
+              ? "Todo lo que se pidió fuera ya llegó."
               : "Una compra aparece aquí cuando se registra con tipo «importación»."
+        }
+        accion={
+          // Decía «quita el filtro» y no daba con qué (revisión del 02/10).
+          !filtrando && filtros.abiertas === "1" ? (
+            <Link
+              href="/importaciones?abiertas=0"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              Ver todas, también las que ya llegaron
+            </Link>
+          ) : undefined
         }
       />
     );

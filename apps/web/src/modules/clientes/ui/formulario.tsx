@@ -7,7 +7,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Plus } from "lucide-react";
+import { Check, ChevronDown, Pencil, Plus } from "lucide-react";
 import {
   Badge,
   Button,
@@ -874,19 +874,10 @@ export function FormularioCliente({
             {llenosDeMas} de {campos.length}
           </span>
         </span>
-        <svg
-          viewBox="0 0 24 24"
+        <ChevronDown
           aria-hidden="true"
           className={`size-4 shrink-0 transition-transform ${masDatos ? "rotate-180" : ""}`}
-        >
-          <path
-            d="m6 9 6 6 6-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
+        />
       </button>
 
       {/* Se monta y desmonta en vez de ocultarse con CSS: si un error del

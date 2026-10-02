@@ -10,6 +10,7 @@ import {
   type ProductoLista,
 } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
+import { abreviaturaUnidad } from "@rodatech/config";
 
 /**
  * Tabla del catálogo.
@@ -76,12 +77,12 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
               <th className="px-4 py-2.5 font-medium">Marca</th>
               <th className="px-4 py-2.5 font-medium">Descripción</th>
               <th className="px-4 py-2.5 text-right font-medium">Stock</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Costo prom.
               </th>
               <th className="px-4 py-2.5 text-right font-medium">Precio venta</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="w-12 px-2 py-2.5">
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] w-12 px-2 py-2.5">
                 <span className="sr-only">Acciones</span>
               </th>
             </tr>
@@ -90,7 +91,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
             {filas.map((p) => (
               <tr
                 key={p.id}
-                className={`border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
                   p.archivado ? "opacity-60" : ""
                 }`}
               >
@@ -118,10 +119,10 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="px-4 py-2.5 text-right tabular">
                   {p.stock.toLocaleString("es-PE")}
                   <span className="ml-1 text-sm text-[var(--fg-subtle)]">
-                    {p.unidad}
+                    {abreviaturaUnidad(p.unidad)}
                   </span>
                 </td>
-                <td className="hidden px-4 py-2.5 text-right lg:table-cell">
+                <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                   <Moneda valor={p.costo_promedio} tamano="sm" enfasis="suave" />
                 </td>
                 <td className="px-4 py-2.5 text-right">
@@ -130,7 +131,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="px-4 py-2.5">
                   <Estado p={p} />
                 </td>
-                <td className="px-2 py-1.5">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
                   <AccionesFila
                     id={p.id}
                     codigo={p.codigo}
@@ -209,7 +210,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
               <Dato etiqueta="Stock">
                 <span className="tabular">{p.stock.toLocaleString("es-PE")}</span>{" "}
-                <span className="text-sm text-[var(--fg-subtle)]">{p.unidad}</span>
+                <span className="text-sm text-[var(--fg-subtle)]">{abreviaturaUnidad(p.unidad)}</span>
               </Dato>
               <Dato etiqueta="Precio venta">
                 <Moneda valor={p.precio_venta} tamano="sm" />

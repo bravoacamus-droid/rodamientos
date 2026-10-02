@@ -752,7 +752,7 @@ async function BloqueValorizacion() {
           <li key={f.familia} className="flex items-baseline justify-between gap-2">
             <span className="truncate text-[var(--fg-muted)]">
               {f.familia}
-              <span className="ml-1.5 text-[var(--fg-subtle)]">({f.skus} SKU)</span>
+              <span className="ml-1.5 text-[var(--fg-subtle)]">({f.skus} productos)</span>
             </span>
             <span className="tabular font-medium">$ {f.valorCosto.toFixed(2)}</span>
           </li>

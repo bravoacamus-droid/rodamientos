@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button, Campo, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
@@ -10,6 +9,7 @@ import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 import { actualizarGuia } from "../acciones/actualizar";
 import type { GuiaDetalle } from "../dominio/tipos";
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado } from "../dominio/tipos";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Corregir un borrador de guía.
@@ -110,9 +110,7 @@ export function EditorGuia({
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <Link href={`/guias/${guia.id}`} className="text-sm text-[var(--fg-muted)] underline">
-            ← {guia.numero}
-          </Link>
+          <Volver href={`/guias/${guia.id}`}>Volver a la guía {guia.numero}</Volver>
           <h1 className="mt-1 text-xl font-semibold tracking-tight">Corregir la guía</h1>
           <p className="text-sm text-[var(--fg-muted)]">
             Sigue siendo un borrador: la mercadería no ha salido del almacén.

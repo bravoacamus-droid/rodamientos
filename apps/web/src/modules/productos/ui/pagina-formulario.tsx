@@ -1,11 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { catalogosParaProducto, productoPorId } from "../api/consultas";
 import { esKit } from "../api/kits";
 import { FormularioProducto } from "./formulario";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Alta y edición de un producto.
@@ -66,9 +66,7 @@ export default async function PaginaFormularioProducto({
   return (
     <div className="flex flex-col gap-5 p-6">
       <header>
-        <Link href="/productos" className="text-sm text-[var(--fg-muted)] underline">
-          ← Productos
-        </Link>
+        <Volver href="/productos">Volver a productos</Volver>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">
           {p ? p.codigo : "Nuevo producto"}
         </h1>

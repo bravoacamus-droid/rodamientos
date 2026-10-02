@@ -25,9 +25,11 @@ export async function PanelCartera() {
   const tramos = [
     { etiqueta: "Por vencer", valor: c.porVencer, color: "var(--ok)" },
     { etiqueta: "1 – 15 días", valor: c.vencido1a15, color: "var(--warn)" },
-    { etiqueta: "16 – 30 días", valor: c.vencido16a30, color: "#E07A1F" },
+    // Entre el ámbar y el rojo, y el rojo oscurecido: mezclas de los tokens y
+    // no hexadecimales, para que sigan al tema oscuro (revisión del 02/10).
+    { etiqueta: "16 – 30 días", valor: c.vencido16a30, color: "color-mix(in oklab, var(--warn) 55%, var(--danger))" },
     { etiqueta: "31 – 60 días", valor: c.vencido31a60, color: "var(--danger)" },
-    { etiqueta: "Más de 60", valor: c.vencidoMas60, color: "#7A1D18" },
+    { etiqueta: "Más de 60", valor: c.vencidoMas60, color: "color-mix(in oklab, var(--danger) 70%, var(--fg))" },
   ];
 
   const vencido = c.total - c.porVencer;

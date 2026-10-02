@@ -80,7 +80,7 @@ export async function TablaValorizacion() {
             <p className="font-medium">{familia}</p>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <span className="text-[var(--fg-muted)]">
-                {sub.skus} SKU · {sub.unidades.toLocaleString("es-PE")} uds.
+                {sub.skus} productos · {sub.unidades.toLocaleString("es-PE")} uds.
               </span>
               <span>
                 <span className="text-[var(--fg-muted)]">A costo </span>
@@ -117,10 +117,10 @@ export async function TablaValorizacion() {
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
             <th className="px-4 py-2.5 font-medium">Familia / subfamilia</th>
-            <th className="px-4 py-2.5 text-right font-medium">SKU</th>
+            <th className="px-4 py-2.5 text-right font-medium">Productos</th>
             <th className="px-4 py-2.5 text-right font-medium">Unidades</th>
             <th className="px-4 py-2.5 text-right font-medium">A costo</th>
-            <th className="hidden px-4 py-2.5 text-right font-medium lg:table-cell">
+            <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
               A venta
             </th>
             <th className="px-4 py-2.5 text-right font-medium">Margen potencial</th>
@@ -151,7 +151,7 @@ export async function TablaValorizacion() {
                 <td className="px-4 py-2 text-right">
                   <Moneda valor={sub.costo} tamano="sm" enfasis="fuerte" />
                 </td>
-                <td className="hidden px-4 py-2 text-right lg:table-cell">
+                <td className="hidden px-4 py-2 text-right 2xl:table-cell">
                   <Moneda valor={sub.venta} tamano="sm" />
                 </td>
                 <td className="px-4 py-2 text-right">
@@ -183,7 +183,7 @@ export async function TablaValorizacion() {
                   <td className="px-4 py-2 text-right">
                     <Moneda valor={f.valor_costo} tamano="sm" />
                   </td>
-                  <td className="hidden px-4 py-2 text-right lg:table-cell">
+                  <td className="hidden px-4 py-2 text-right 2xl:table-cell">
                     <Moneda valor={f.valor_venta} tamano="sm" enfasis="suave" />
                   </td>
                   <td className="px-4 py-2 text-right">

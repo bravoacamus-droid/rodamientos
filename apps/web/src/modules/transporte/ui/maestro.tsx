@@ -167,7 +167,11 @@ export function Maestro({
                     type="button"
                     variant={f.activo ? "outline" : "primary"}
                     size="sm"
-                    className="text-sm"
+                    className={
+                      f.activo
+                        ? "border-[var(--danger)] text-sm text-[var(--danger)] hover:bg-[var(--danger-bg)]"
+                        : "text-sm"
+                    }
                     disabled={enCurso}
                     onClick={() => alternar(f)}
                   >

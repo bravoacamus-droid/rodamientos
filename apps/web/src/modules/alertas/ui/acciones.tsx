@@ -93,27 +93,22 @@ export function AccionesAlerta({ id, leida }: { id: string; leida: boolean }) {
   const { ocupado, correr } = useAccion();
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
+    // Con su palabra y con borde (revisión de diseño del 02/10): dos iconos
+    // sueltos y grises no se reconocen como botones (CLAUDE.md §1).
+    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
       <Button
-        variant="ghost"
-        size="icon-sm"
+        variant="outline"
+        size="sm"
         disabled={ocupado}
-        title={leida ? "Devolver a no leída" : "Marcar como leída"}
-        aria-label={leida ? "Devolver a no leída" : "Marcar como leída"}
         onClick={() => correr(() => marcarLeida(id, !leida))}
       >
         {leida ? <Undo2 /> : <Check />}
+        {leida ? "No leída" : "Leída"}
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        disabled={ocupado}
-        title="Archivar"
-        aria-label="Archivar"
-        onClick={() => correr(() => archivar(id))}
-      >
+      <Button variant="outline" size="sm" disabled={ocupado} onClick={() => correr(() => archivar(id))}>
         <Archive />
+        Archivar
       </Button>
     </div>
   );

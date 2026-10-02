@@ -25,6 +25,20 @@ export const UNIDADES = [
 
 export type CodigoUnidad = (typeof UNIDADES)[number]["codigo"];
 
+/** Otros códigos del catálogo 03 que hay en la base (CEN y PK, uno cada uno). */
+const OTRAS_UNIDADES: Record<string, string> = { CEN: "ciento", PK: "paquete", KGM: "kg", ZZ: "und" };
+
+/**
+ * La unidad como se LEE en pantalla: «und» y no «NIU».
+ *
+ * El código es el de SUNAT y es lo que viaja en el XML, pero enseñado tal cual
+ * es jerga (revisión de diseño del 02/10: «NIU» salía en el catálogo y en la
+ * ficha de la factura). Si llega un código que no conocemos, se enseña él.
+ */
+export function abreviaturaUnidad(codigo: string): string {
+  return UNIDADES.find((u) => u.codigo === codigo)?.abreviatura ?? OTRAS_UNIDADES[codigo] ?? codigo;
+}
+
 /** Roles del ERP. El rol decide qué puede escribir, y se valida en Postgres. */
 export const ROLES = [
   "gerencia",

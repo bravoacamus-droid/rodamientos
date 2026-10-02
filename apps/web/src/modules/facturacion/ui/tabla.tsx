@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, Printer } from "lucide-react";
 import {
   Badge,
   EstadoBadge,
@@ -73,11 +74,11 @@ export async function TablaComprobantes({
               <th className="px-4 py-2.5 font-medium">Documento</th>
               <th className="px-4 py-2.5 font-medium">Fecha</th>
               <th className="px-4 py-2.5 font-medium">Cliente</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Cotización</th>
+              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Cotización</th>
               <th className="px-4 py-2.5 text-right font-medium">Total</th>
               <th className="px-4 py-2.5 text-right font-medium">Saldo</th>
               <th className="px-4 py-2.5 font-medium">SUNAT</th>
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -94,7 +95,7 @@ export async function TablaComprobantes({
                   // Entrada escalonada. El retraso se corta a la sexta fila: más
                   // allá el usuario ya está leyendo y una fila que aparece tarde
                   // distrae en vez de guiar.
-                  className={`anim-entrada border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                  className={`anim-entrada group/fila border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
                     c.estado === "anulado" ? "opacity-60" : ""
                   }`}
                   style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
@@ -140,7 +141,7 @@ export async function TablaComprobantes({
                     </span>
                   </td>
 
-                  <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] lg:table-cell">
+                  <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] 2xl:table-cell">
                     {c.cotizacion_numero ?? "—"}
                   </td>
 
@@ -187,7 +188,9 @@ export async function TablaComprobantes({
                     Rejilla de dos columnas fijas: con anchos libres, «Ver»
                     quedaría en una equis distinta en cada fila.
                   */}
-                  <td className="px-4 py-2.5">
+                  {/* Fija a la derecha (revisión del 02/10): la tabla mide 1361 px y a
+                      1280 —y aún a 1600— «Ver» e «Imprimir» quedaban fuera. */}
+                  <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
                     <div className="ml-auto grid w-[210px] grid-cols-[84px_1fr] gap-1.5">
                       <Link
                         href={`/facturacion/${c.id}`}
@@ -355,24 +358,11 @@ const SECUNDARIO =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
 
 function IconoVer() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
+  return <Eye aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 function IconoImprimir() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
-      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M6 9V3h12v6" />
-      <rect x="3" y="9" width="18" height="7" rx="1" />
-      <path d="M6 14h12v7H6z" />
-    </svg>
-  );
+  return <Printer aria-hidden="true" className="size-4 shrink-0" />;
 }
 
 /**

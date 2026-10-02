@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -61,9 +62,7 @@ export default async function PaginaProveedores({ searchParams }: Props) {
             href="/proveedores/nuevo"
             className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-            </svg>
+            <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
             Nuevo proveedor
           </Link>
         ) : null}

@@ -93,7 +93,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   </Link>
                   {c.tipo === "importacion" ? (
                     <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
-                      Import.
+                      Importación
                     </span>
                   ) : null}
                 </td>
@@ -175,7 +175,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 </Link>
                 {c.tipo === "importacion" ? (
                   <span className="rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
-                    Import.
+                    Importación
                   </span>
                 ) : null}
               </span>

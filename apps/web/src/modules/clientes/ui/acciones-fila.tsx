@@ -5,7 +5,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, Plus } from "lucide-react";
+import { EllipsisVertical, Eye, Plus } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -63,6 +63,8 @@ export interface AccionesFilaProps {
    * debajo, repartiéndose el ancho, que es como se pulsa con el pulgar.
    */
   ancho?: boolean;
+  /** En la ficha del cliente: sin «Ver», que sería un enlace a la misma página. */
+  enFicha?: boolean;
 }
 
 export function AccionesFila({
@@ -72,23 +74,26 @@ export function AccionesFila({
   bloqueado,
   puedeEditar,
   ancho = false,
+  enFicha = false,
 }: AccionesFilaProps) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
 
   return (
     <div className={`flex items-center gap-1.5 ${ancho ? "w-full" : "justify-end"}`}>
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
-      >
-        <Link href={`/clientes/${id}`}>
-          <Eye className="size-4" aria-hidden="true" />
-          Ver
-        </Link>
-      </Button>
+      {enFicha ? null : (
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
+        >
+          <Link href={`/clientes/${id}`}>
+            <Eye className="size-4" aria-hidden="true" />
+            Ver
+          </Link>
+        </Button>
+      )}
 
       {/* A un cliente bloqueado no se le cotiza: el botón no aparece, en vez
           de aparecer y rebotar al pulsarlo. */}
@@ -108,11 +113,7 @@ export function AccionesFila({
           // en la tarjeta apunta un pulgar.
           className="flex size-11 shrink-0 items-center justify-center rounded-md text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:size-9"
         >
-          <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-            <circle cx="12" cy="5" r="1.8" fill="currentColor" />
-            <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-            <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-          </svg>
+          <EllipsisVertical className="size-4" aria-hidden="true" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="w-56">

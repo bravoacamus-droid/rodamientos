@@ -65,7 +65,7 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
     return (
       <EstadoVacio
         titulo="No hay nada que facturar"
-        descripcion="Un comprobante nace de una cotización aprobada que todavía no se ha facturado. Aprueba una y vuelve."
+        descripcion="Un comprobante nace de una cotización aprobada que ya tiene su guía emitida y todavía no se ha facturado. Emite primero la guía y vuelve."
         accion={
           <Link
             href="/cotizaciones"

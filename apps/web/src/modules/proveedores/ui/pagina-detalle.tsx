@@ -7,6 +7,7 @@ import { productosDeProveedor } from "../api/catalogo";
 import { detalleProveedor } from "../api/consultas";
 import { ETIQUETA_DOCUMENTO, ETIQUETA_TIPO } from "../dominio/tipos";
 import { QueVende } from "./que-vende";
+import { Volver } from "@/componentes/volver";
 
 /** La ficha de un proveedor. */
 export default async function PaginaDetalleProveedor({
@@ -42,7 +43,9 @@ export default async function PaginaDetalleProveedor({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* No tenía ninguna forma de volver (revisión de diseño del 02/10). */}
+          <Volver href="/proveedores">Volver a proveedores</Volver>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{p.razon_social}</h1>
             {p.activo ? null : (
               <span className="rounded-sm bg-[var(--surface-2)] px-2 py-0.5 text-sm font-medium text-[var(--fg-muted)]">
@@ -51,10 +54,10 @@ export default async function PaginaDetalleProveedor({
             )}
           </div>
           <p className="font-mono text-sm text-[var(--fg-muted)]">
-            {p.codigo}
-            {p.numero_documento
-              ? ` · ${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}`
-              : " · sin documento"}
+            {/* El código interno suele SER el RUC: no se repite. */}
+            {p.numero_documento && p.codigo.includes(p.numero_documento)
+              ? `${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}`
+              : `${p.codigo}${p.numero_documento ? ` · ${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}` : " · sin documento"}`}
           </p>
         </div>
 

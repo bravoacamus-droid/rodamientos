@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -89,10 +90,7 @@ export function AnularGuia({
         que no se quiere.
       */}
       <DialogTrigger className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--danger)] px-3 text-sm font-medium text-[var(--danger)] transition-colors hover:bg-[var(--danger-bg)]">
-        <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[18px] shrink-0"
-          fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M18 6 6 18M6 6l12 12" />
-        </svg>
+        <X aria-hidden="true" className="size-[18px] shrink-0" />
         Anular
       </DialogTrigger>
 

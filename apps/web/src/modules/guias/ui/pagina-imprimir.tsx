@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -8,6 +7,7 @@ import { emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleGuia } from "../api/consultas";
 import { DocumentoGuia } from "./documento";
+import { Volver } from "@/componentes/volver";
 
 /**
  * La hoja imprimible de una guía de remisión.
@@ -55,12 +55,7 @@ export default async function PaginaImprimirGuia({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 no-print">
-        <Link
-          href={`/guias/${g.id}`}
-          className="text-sm text-[var(--fg-muted)] underline-offset-2 hover:underline"
-        >
-          ← Volver a la guía
-        </Link>
+        <Volver href={`/guias/${g.id}`}>Volver a la guía</Volver>
         {/* Un borrador impreso no vale: la mercadería no ha salido y el
             número todavía se puede mover. Se dice aquí y no se bloquea,
             porque revisar el papel antes de emitir es lo que Willy pidió. */}

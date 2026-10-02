@@ -11,6 +11,7 @@ import { DocumentosCompra } from "./documentos";
 import { GastosFicha } from "./gastos-ficha";
 import { ParaQuienEs } from "./para-quien";
 import { ETIQUETA_MODALIDAD, costeoEstimado } from "../dominio/gastos";
+import { Volver } from "@/componentes/volver";
 
 /**
  * Ficha de una compra.
@@ -93,9 +94,7 @@ export default async function PaginaDetalleCompra({
     <div className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href="/compras" className="text-sm text-[var(--fg-muted)] underline">
-            ← Compras
-          </Link>
+          <Volver href="/compras">Volver a compras</Volver>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {c.numero}
