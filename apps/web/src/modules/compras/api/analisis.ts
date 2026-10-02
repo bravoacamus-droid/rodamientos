@@ -30,6 +30,8 @@ export interface AnalisisDetalle {
   costo_envio: number;
   peso_declarado: number | null;
   notas: string | null;
+  desaduanaje_soles: number;
+  tipo_cambio: number | null;
   estado: "borrador" | "comprado";
   compra_id: string | null;
   compra_numero: string | null;
@@ -106,7 +108,7 @@ export async function analisisPorId(id: string): Promise<Resultado<AnalisisDetal
       .from("analisis_importacion")
       .select(
         `id, numero, fecha, proveedor_id, referencia, costo_envio, peso_declarado,
-         notas, estado, compra_id,
+         notas, estado, compra_id, desaduanaje_soles, tipo_cambio,
          compra:compras(numero),
          analisis_importacion_items(
            orden, producto_id, codigo, marca, descripcion, cantidad_ref,
@@ -134,6 +136,8 @@ export async function analisisPorId(id: string): Promise<Resultado<AnalisisDetal
         costo_envio: n(f.costo_envio),
         peso_declarado: f.peso_declarado === null ? null : n(f.peso_declarado),
         notas: (f.notas as string | null) ?? null,
+        desaduanaje_soles: n(f.desaduanaje_soles),
+        tipo_cambio: f.tipo_cambio === null || f.tipo_cambio === undefined ? null : n(f.tipo_cambio),
         estado: f.estado === "comprado" ? "comprado" : "borrador",
         compra_id: (f.compra_id as string | null) ?? null,
         compra_numero: f.compra?.numero ?? null,

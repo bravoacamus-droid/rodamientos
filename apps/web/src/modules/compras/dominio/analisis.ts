@@ -56,6 +56,13 @@ export interface CabeceraAnalisis {
   /** Lo que el proveedor dice que pesa la carga. 0 = no lo dijo. */
   pesoDeclarado: number;
   notas: string;
+  /**
+   * El desaduanaje ESTIMADO, en soles, como lo da Willy (*«como 700, 800
+   * soles»*). Entra en la K (101).
+   */
+  desaduanajeSoles: number;
+  /** Soles por dólar, para pasar el desaduanaje a dólares. 0 = no se sabe. */
+  tipoCambio: number;
 }
 
 export interface EstadoAnalisis extends CabeceraAnalisis {
@@ -132,6 +139,8 @@ export function estadoInicial(fecha: string): EstadoAnalisis {
     costoEnvio: 0,
     pesoDeclarado: 0,
     notas: "",
+    desaduanajeSoles: 0,
+    tipoCambio: 0,
     lineas: [],
     proximaKey: 1,
   };
@@ -164,8 +173,13 @@ export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis 
   switch (accion.tipo) {
     case "cabecera": {
       const v = accion.valor;
-      if (accion.campo === "costoEnvio" || accion.campo === "pesoDeclarado") {
-        return { ...estado, [accion.campo]: positivo(Number(v), 3) };
+      if (
+        accion.campo === "costoEnvio" ||
+        accion.campo === "pesoDeclarado" ||
+        accion.campo === "desaduanajeSoles" ||
+        accion.campo === "tipoCambio"
+      ) {
+        return { ...estado, [accion.campo]: positivo(Number(v), accion.campo === "tipoCambio" ? 4 : 3) };
       }
       return { ...estado, [accion.campo]: v } as EstadoAnalisis;
     }
@@ -396,8 +410,16 @@ export interface Calculo {
   cantidadRef: number;
   /** W. REAL de su hoja: el peso más un 10 % (=1.1*E38). Solo se enseña. */
   pesoRealRef: number;
-  /** Su «K» de lo cotizado: mercado ÷ Lima. Null si no hay mercado. */
+  /** Su «K» de lo cotizado: mercado ÷ costo total. Null si no hay mercado. */
   rindeRef: number | null;
+  /** El desaduanaje estimado, ya en dólares. 0 sin tipo de cambio. */
+  desaduanaje: number;
+  /** Hay desaduanaje en soles pero no tipo de cambio: no se pudo sumar. */
+  faltaTipoCambio: boolean;
+  /** Costo total de importación de lo cotizado: FOB + DHL + desaduanaje. */
+  costoTotalRef: number;
+  /** Lo cotizado a precio de mercado. */
+  totalMercadoRef: number;
   /** Diferencia con el peso que dice el proveedor, en kg. Null si no lo dijo. */
   difPeso: number | null;
   /** Lo que se va a pedir. */
@@ -408,8 +430,18 @@ export interface Calculo {
   /** El envío que tocaría a lo pedido: $/kg × peso pedido. */
   envioPedido: number;
   totalLima: number;
+  /** Costo total de importación de lo que pides: puesto en Lima + desaduanaje. */
+  costoTotal: number;
   totalMercado: number;
-  /** Su «K»: mercado ÷ Lima del pedido entero. Null si no hay mercado. */
+  /**
+   * La K. Willy, 02/10: *«el índice que me indica la utilidad de la
+   * operación, considerando los precios en origen + gastos de envío + gastos
+   * de desaduanaje vs el importe […] de los precios de venta de mercado»*.
+   *
+   * Se calcula como su hoja (F41 = TOT.PM ÷ TOT.$): MERCADO ÷ COSTO, más de 1
+   * es ganar. Él lo escribió al revés («costo / total PM»); está preguntado.
+   * Lo nuevo es que el costo lleva el desaduanaje, que su hoja no tenía.
+   */
   rinde: number | null;
   /** Margen del pedido entero, sobre el costo. */
   margen: number | null;
@@ -419,7 +451,14 @@ export interface Calculo {
   sinMercado: string[];
 }
 
-export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | "pesoDeclarado">): Calculo {
+export function calcular(
+  estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | "pesoDeclarado"> &
+    Partial<Pick<EstadoAnalisis, "desaduanajeSoles" | "tipoCambio">>,
+): Calculo {
+  const soles = estado.desaduanajeSoles ?? 0;
+  const tc = estado.tipoCambio ?? 0;
+  // Uno por carga: el mismo para lo cotizado y para lo que se pide.
+  const desaduanaje = soles > 0 && tc > 0 ? soles / tc : 0;
   const fobRef = dos(estado.lineas.reduce((a, l) => a + l.cantidadRef * l.precioFob, 0));
   const pesoRef = estado.lineas.reduce((a, l) => a + l.cantidadRef * l.pesoKg, 0);
   const porKgExacto = pesoRef > 0 && estado.costoEnvio > 0 ? estado.costoEnvio / pesoRef : 0;
@@ -475,7 +514,11 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
     porKg,
     cantidadRef,
     pesoRealRef: cuatro(pesoRef * 1.1),
-    rindeRef: limaRefConMercado > 0 ? mercadoRef / limaRefConMercado : null,
+    rindeRef: limaRefConMercado > 0 ? mercadoRef / (limaRefConMercado + desaduanaje) : null,
+    desaduanaje: dos(desaduanaje),
+    faltaTipoCambio: soles > 0 && !(tc > 0),
+    costoTotalRef: dos(fobRef + estado.costoEnvio + desaduanaje),
+    totalMercadoRef: dos(mercadoRef),
     difPeso: estado.pesoDeclarado > 0 ? cuatro(pesoRef - estado.pesoDeclarado) : null,
     cantidadPedido,
     // Con tres decimales, como su K31 (611.115): el FOB lleva cuatro.
@@ -484,11 +527,15 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
     pesoRealPedido: cuatro(pesoPedido * 1.1),
     envioPedido: dos(pesoPedido * porKg),
     totalLima: dos(totalLima),
+    costoTotal: dos(totalLima + desaduanaje),
     totalMercado: dos(totalMercado),
     // El rinde y el margen del pedido se miden solo con las líneas que tienen
     // precio de mercado: con las otras, dividir diría un margen que no existe.
-    rinde: limaConMercado > 0 ? totalMercado / limaConMercado : null,
-    margen: limaConMercado > 0 ? (totalMercado - limaConMercado) / limaConMercado : null,
+    rinde: limaConMercado > 0 ? totalMercado / (limaConMercado + desaduanaje) : null,
+    margen:
+      limaConMercado > 0
+        ? (totalMercado - limaConMercado - desaduanaje) / (limaConMercado + desaduanaje)
+        : null,
     sinPeso: estado.lineas.filter((l) => !enBlanco(l) && !(l.pesoKg > 0)).map((l) => l.key),
     sinMercado: estado.lineas.filter((l) => !enBlanco(l) && !(l.precioMercado > 0)).map((l) => l.key),
   };
@@ -518,6 +565,8 @@ export function aPayload(estado: EstadoAnalisis, id?: string) {
     costo_envio: estado.costoEnvio,
     peso_declarado: estado.pesoDeclarado > 0 ? estado.pesoDeclarado : null,
     notas: estado.notas.trim() || null,
+    desaduanaje_soles: estado.desaduanajeSoles,
+    tipo_cambio: estado.tipoCambio > 0 ? estado.tipoCambio : null,
     items: estado.lineas.filter((l) => !enBlanco(l)).map((l) => ({
       producto_id: l.productoId,
       codigo: l.codigo.trim(),

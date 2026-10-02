@@ -304,3 +304,55 @@ describe("el buscador y las filas vacías", () => {
     expect(e.lineas[1]!.cantidadRef).toBe(1);
   });
 });
+
+describe("la K con el desaduanaje (101)", () => {
+  // FOB 100 + DHL 50 = 150 en Lima; mercado 450. Sin desaduanaje, K = 3.
+  const base = () =>
+    correr({
+      tipo: "cargarHoja",
+      costoEnvio: 50,
+      lineas: [linea({ codigo: "A", cantidadRef: 10, cantidadPedido: 10, precioFob: 10, pesoKg: 1, precioMercado: 45 })],
+    });
+
+  it("sin desaduanaje, la K es la de su hoja: mercado ÷ puesto en Lima", () => {
+    const c = calcular(base());
+    expect(c.porKg).toBe(5);
+    expect(c.costoTotal).toBe(150);
+    expect(c.rinde).toBeCloseTo(3, 6);
+  });
+
+  it("el desaduanaje en soles pasa a dólares y entra en el costo y en la K", () => {
+    const e = reducir(
+      reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 }),
+      { tipo: "cabecera", campo: "tipoCambio", valor: 3.75 },
+    );
+    const c = calcular(e);
+    expect(c.desaduanaje).toBe(200);
+    expect(c.costoTotal).toBe(350);
+    expect(c.costoTotalRef).toBe(350);
+    expect(c.rinde).toBeCloseTo(450 / 350, 6);
+    expect(c.margen).toBeCloseTo(100 / 350, 6);
+    // El PU Lima de cada fila no cambia: es el de su hoja.
+    expect(c.lineas[e.lineas[0]!.key]!.puLima).toBe(15);
+    expect(aPayload(e)).toMatchObject({ desaduanaje_soles: 750, tipo_cambio: 3.75 });
+  });
+
+  it("al pedir menos, la K baja: el desaduanaje es de la carga, no por unidad", () => {
+    let e = reducir(
+      reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 }),
+      { tipo: "cabecera", campo: "tipoCambio", valor: 3.75 },
+    );
+    const antes = calcular(e).rinde!;
+    e = reducir(e, { tipo: "campo", key: e.lineas[0]!.key, campo: "cantidadPedido", valor: 5 });
+    // 225 de mercado contra 75 + 200.
+    expect(calcular(e).rinde).toBeCloseTo(225 / 275, 6);
+    expect(calcular(e).rinde!).toBeLessThan(antes);
+  });
+
+  it("con soles y sin tipo de cambio no suma nada, y lo avisa", () => {
+    const e = reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 });
+    const c = calcular(e);
+    expect(c.desaduanaje).toBe(0);
+    expect(c.faltaTipoCambio).toBe(true);
+  });
+});

@@ -11,6 +11,7 @@ import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 
 import { guardarAnalisis, propuestasAnalisis } from "../../acciones/analisis";
 import { leerExcelAnalisis, productoPorCodigo } from "../../acciones/analisis-hoja";
+import { tipoCambioDelDia } from "../../acciones/tipo-cambio";
 import {
   aPayload,
   bloqueos as calcularBloqueos,
@@ -29,6 +30,8 @@ const dolar = (n: number, dec = 2) =>
 const kg = (n: number, dec = 2) =>
   `${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })} kg`;
 const pct = (n: number) => `${Math.round(n * 100)} %`;
+const soles = (n: number) =>
+  `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Color del margen: rojo si pierde, ámbar si es poco, verde si conviene. */
 const tonoMargen = (m: number | null) =>
@@ -105,6 +108,28 @@ export function ConstructorAnalisis({
   const sinGuardar = guardado !== actual;
 
   const c = React.useMemo(() => calcular(estado), [estado]);
+
+  /*
+    El tipo de cambio del día, propuesto al abrir si no hay uno guardado: el
+    desaduanaje se da en soles y la K se calcula en dólares. Una vez, al
+    montar; si SUNAT no contesta, se escribe a mano.
+  */
+  const [tcAviso, setTcAviso] = React.useState<string | null>(null);
+  const traerTipoCambio = React.useCallback(() => {
+    setTcAviso("Consultando SUNAT…");
+    void tipoCambioDelDia().then((r) => {
+      if (r.ok) {
+        despachar({ tipo: "cabecera", campo: "tipoCambio", valor: r.venta });
+        setTcAviso(`SUNAT, venta del ${r.fecha.split("-").reverse().join("/")}.`);
+      } else {
+        setTcAviso("SUNAT no respondió: escríbelo a mano.");
+      }
+    });
+  }, []);
+  React.useEffect(() => {
+    if (!soloLectura && !(estado.tipoCambio > 0)) traerTipoCambio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al abrir
+  }, []);
   const bloqueos = calcularBloqueos(estado);
 
   /*
@@ -265,6 +290,44 @@ export function ConstructorAnalisis({
             />
             <span className="text-sm text-[var(--fg-muted)]">Para comprobar que la carga pesa lo que cobra.</span>
           </label>
+          {/* Willy, 02/10: la K es *«precios en origen + gastos de envío +
+              gastos de desaduanaje»* contra el mercado (101). */}
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Desaduanaje estimado S/</span>
+            <CampoNumero
+              valor={estado.desaduanajeSoles}
+              onNumero={(n) => despachar({ tipo: "cabecera", campo: "desaduanajeSoles", valor: n })}
+              placeholder="750.00"
+              className="text-right tabular"
+              disabled={soloLectura}
+            />
+            <span className="text-sm text-[var(--fg-muted)]">Agente, almacén y tasas. Entra en la K.</span>
+          </label>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="ana-tc" className="text-sm font-medium">
+              Tipo de cambio
+            </label>
+            <div className="flex gap-2">
+              <CampoNumero
+                id="ana-tc"
+                valor={estado.tipoCambio}
+                onNumero={(n) => despachar({ tipo: "cabecera", campo: "tipoCambio", valor: n })}
+                placeholder="3.750"
+                className="min-w-0 flex-1 text-right tabular"
+                disabled={soloLectura}
+              />
+              {soloLectura ? null : (
+                <Button type="button" variant="outline" onClick={traerTipoCambio}>
+                  Traer de SUNAT
+                </Button>
+              )}
+            </div>
+            <span className={`text-sm ${c.faltaTipoCambio ? "text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}>
+              {c.faltaTipoCambio
+                ? "Sin tipo de cambio, el desaduanaje no se suma."
+                : (tcAviso ?? "Soles por dólar, para pasar el desaduanaje a dólares.")}
+            </span>
+          </div>
         </div>
       </section>
 
@@ -364,6 +427,8 @@ export function ConstructorAnalisis({
             Añadir fila
           </Button>
         )}
+
+        <BarraK c={c} />
       </section>
 
       {/* ------------------------------------------- Notas y comprar */}
@@ -484,6 +549,48 @@ function CampoNumero({
  * 02/10: *«todavía no sé cómo es 10.15»*. Si quien lo hizo no lo sabía, Willy
  * mirando otra pantalla tampoco: la cuenta tiene que estar escrita.
  */
+/**
+ * La K a la vista MIENTRAS se cambian las cantidades.
+ *
+ * Willy, 02/10: *«de tal modo que yo al variar las cantidades debo ver cómo
+ * varía K»*. La K ya se recalculaba con cada tecla, pero vivía en el resumen,
+ * arriba, y con 29 filas la tabla queda muy por debajo: se cambiaba una
+ * cantidad y no se veía nada. Esta barra se queda pegada al pie de la
+ * pantalla mientras la tabla está a la vista.
+ */
+function BarraK({ c }: { c: ReturnType<typeof calcular> }) {
+  if (c.cantidadPedido === 0) return null;
+  return (
+    <div
+      aria-live="polite"
+      className="sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-b-lg border-t-2 border-[var(--warn)] bg-[var(--surface)] px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
+    >
+      <span className="text-sm font-semibold">Lo que pides</span>
+      <span className="text-sm">
+        <span className="text-[var(--fg-muted)]">Costo total </span>
+        <span className="tabular font-semibold">{dolar(c.costoTotal)}</span>
+      </span>
+      <span className="text-sm">
+        <span className="text-[var(--fg-muted)]">A precio de mercado </span>
+        <span className="tabular font-semibold">{dolar(c.totalMercado)}</span>
+      </span>
+      <span className="ml-auto flex items-baseline gap-2">
+        <span className="text-base font-semibold">K</span>
+        <span
+          className={`tabular text-2xl font-bold ${tonoMargen(c.margen)}`}
+        >
+          {c.rinde !== null ? c.rinde.toFixed(2) : "—"}
+        </span>
+        {c.margen !== null ? (
+          <span className={`text-sm font-medium ${tonoMargen(c.margen)}`}>
+            {c.margen >= 0 ? `gana ${pct(c.margen)}` : `pierde ${pct(-c.margen)}`}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: EstadoAnalisis }) {
   const filas: { etiqueta: string; ayuda?: string; ref: string; ped: string; fuerte?: boolean }[] = [
     { etiqueta: "TOT. FOB $", ref: dolar(c.fobRef), ped: dolar(c.fobPedido, 3) },
@@ -494,11 +601,28 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
       ped: dolar(c.envioPedido),
     },
     {
-      etiqueta: "TOTAL $",
-      ayuda: "Puesto en Lima, sin desaduanaje",
-      ref: dolar(c.fobRef + estado.costoEnvio),
-      ped: dolar(c.totalLima),
+      etiqueta: "DESADUANAJE $",
+      ayuda:
+        c.desaduanaje > 0
+          ? `${soles(estado.desaduanajeSoles)} ÷ ${estado.tipoCambio}`
+          : c.faltaTipoCambio
+            ? "Falta el tipo de cambio"
+            : "Escríbelo arriba",
+      ref: dolar(c.desaduanaje),
+      ped: dolar(c.desaduanaje),
+    },
+    {
+      etiqueta: "COSTO TOTAL $",
+      ayuda: "FOB + DHL + desaduanaje",
+      ref: dolar(c.costoTotalRef),
+      ped: dolar(c.costoTotal),
       fuerte: true,
+    },
+    {
+      etiqueta: "TOT. PM $",
+      ayuda: "A precio de mercado",
+      ref: dolar(c.totalMercadoRef),
+      ped: dolar(c.totalMercado),
     },
     { etiqueta: "W. TOT (kg)", ref: kg(c.pesoRef, 3), ped: kg(c.pesoPedido, 3) },
     { etiqueta: "W. REAL (kg)", ayuda: "El peso más un 10 %", ref: kg(c.pesoRealRef), ped: kg(c.pesoRealPedido) },
@@ -509,7 +633,7 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
     },
     {
       etiqueta: "K",
-      ayuda: "Precio de mercado ÷ puesto en Lima",
+      ayuda: "TOT. PM ÷ costo total",
       ref: c.rindeRef !== null ? c.rindeRef.toFixed(2) : "—",
       ped: c.rinde !== null ? c.rinde.toFixed(2) : "—",
       fuerte: true,
@@ -607,9 +731,9 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
         </table>
         <p className="mt-3 text-sm text-[var(--fg-muted)]">
           {c.rinde !== null && c.margen !== null
-            ? `Con K ${c.rinde.toFixed(2)}, por cada dólar puesto en Lima vendes ${dolar(c.rinde)} a precio de mercado: ganas ${pct(c.margen)} sobre el costo. `
-            : "Pon el precio de mercado de cada producto para ver la K. "}
-          El desaduanaje no está: llega después y se anota en la compra.
+            ? `Con K ${c.rinde.toFixed(2)}, por cada dólar que te cuesta traerlo vendes ${dolar(c.rinde)} a precio de mercado: ganas ${pct(c.margen)} sobre el costo.`
+            : "Pon el precio de mercado de cada producto para ver la K."}
+          {c.desaduanaje > 0 ? null : " Sin desaduanaje, la K sale más alta de lo que es."}
         </p>
       </div>
     </section>

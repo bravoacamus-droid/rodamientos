@@ -270,6 +270,7 @@ export type Database = {
           costo_envio: number
           creado_en: string
           creado_por: string | null
+          desaduanaje_soles: number
           estado: string
           fecha: string
           id: string
@@ -278,6 +279,7 @@ export type Database = {
           peso_declarado: number | null
           proveedor_id: string
           referencia: string | null
+          tipo_cambio: number | null
         }
         Insert: {
           actualizado_en?: string
@@ -285,6 +287,7 @@ export type Database = {
           costo_envio?: number
           creado_en?: string
           creado_por?: string | null
+          desaduanaje_soles?: number
           estado?: string
           fecha?: string
           id?: string
@@ -293,6 +296,7 @@ export type Database = {
           peso_declarado?: number | null
           proveedor_id: string
           referencia?: string | null
+          tipo_cambio?: number | null
         }
         Update: {
           actualizado_en?: string
@@ -300,6 +304,7 @@ export type Database = {
           costo_envio?: number
           creado_en?: string
           creado_por?: string | null
+          desaduanaje_soles?: number
           estado?: string
           fecha?: string
           id?: string
@@ -308,6 +313,7 @@ export type Database = {
           peso_declarado?: number | null
           proveedor_id?: string
           referencia?: string | null
+          tipo_cambio?: number | null
         }
         Relationships: [
           {

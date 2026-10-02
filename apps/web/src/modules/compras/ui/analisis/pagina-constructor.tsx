@@ -54,6 +54,8 @@ export default async function PaginaConstructorAnalisis({
     costoEnvio: a.costo_envio,
     pesoDeclarado: a.peso_declarado ?? 0,
     notas: a.notas ?? "",
+    desaduanajeSoles: a.desaduanaje_soles,
+    tipoCambio: a.tipo_cambio ?? 0,
     lineas: a.items.map((i, n) => ({
       key: `a${n + 1}`,
       productoId: i.producto_id,

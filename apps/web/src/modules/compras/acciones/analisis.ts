@@ -32,6 +32,8 @@ const esquema = z.object({
   costo_envio: numero.max(10_000_000),
   peso_declarado: numero.max(1_000_000).nullable().default(null),
   notas: z.string().max(2000).nullable().default(null),
+  desaduanaje_soles: numero.max(10_000_000).default(0),
+  tipo_cambio: numero.max(100).nullable().default(null),
   items: z
     .array(
       z.object({

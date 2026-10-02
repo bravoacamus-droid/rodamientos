@@ -4674,6 +4674,30 @@ Excel queda como botón secundario, «Traer de un Excel». Probado en pantalla:
 `6313 2z/c3` se enlazó con el 6313-2Z/C3 y su peso; un código que no está se
 calculó entero a mano.
 
+### AQ.1c · 02/10 noche — la K lleva el desaduanaje (101)
+
+Willy, al ver el resumen (que decía «el desaduanaje no está»): la K es *«la
+utilidad de la operación, considerando los precios en origen + gastos de envío
++ gastos de desaduanaje»* contra el mercado, y *«al variar las cantidades debo
+ver cómo varía K»*.
+
+- **Desaduanaje estimado S/** y **tipo de cambio** en la cabecera (101). El
+  tipo de cambio lo trae solo de SUNAT al abrir (y «Traer de SUNAT»); se
+  puede escribir a mano.
+- El resumen añade DESADUANAJE $ (con la cuenta «S/ 750 ÷ 3.454»), COSTO
+  TOTAL $ y TOT. PM $; **K = TOT. PM ÷ costo total**. El desaduanaje es uno
+  por carga: el mismo en lo cotizado y en lo pedido, así que **pedir menos
+  baja la K**. El PU LIMA de cada fila no cambia (es el de su hoja).
+- **Barra fija al pie** de la tabla con costo total, mercado y la K: con 29
+  filas el resumen queda muy arriba y no se veía cambiar.
+
+Probado con su hoja: S/ 750 a 3.454 = $217.14; pedido $1,496.71; K de 2.65 a
+**2.27**. Cambiando la G1105 de 6 a 0 y a 60, la barra pasa de 2.27 a 2.26 y
+2.33, pegada al pie.
+
+**Ojo, el sentido de la K:** él escribió «costo / total PM» (0.38) y su hoja
+hace PM ÷ costo (2.65). Se sigue la hoja; preguntado en PREGUNTAS-WILLY 02/10.
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).

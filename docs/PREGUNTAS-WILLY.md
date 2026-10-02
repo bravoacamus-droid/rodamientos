@@ -13,6 +13,28 @@ el tiempo.
 
 ---
 
+## 02/10 · LA K Y EL DHL DEL PEDIDO · para mandar
+
+Lo dijo él (02/10, textual): *«falta definir el "K" ... es el índice que me
+indica la utilidad de la operación, considerando los precios en origen + gastos
+de envío + gastos de desaduanaje vs el importe correspondiente basado en los
+precios de venta de mercado local ... K = (costo total de importación) / total
+PM»* y *«al variar las cantidades debo ver cómo varía K»*. **Hecho** (101): el
+desaduanaje entra en la K y la K está a la vista mientras cambia cantidades.
+
+Quedan dos, listas para copiar:
+
+> **1.** Sr. Willy, en su Excel la K sale 2.65: la calcula como **precio de
+> mercado ÷ costo** (más de 1 es ganar). En su mensaje la escribió al revés,
+> costo ÷ precio de mercado, que daría 0.38. La dejamos como en su Excel,
+> ¿correcto?
+>
+> **2.** Cuando pide menos de lo que le cotizaron, ¿el proveedor le vuelve a
+> cotizar el DHL, o le cobra lo mismo por kilo? Hoy el sistema hace como su
+> hoja: el pedido paga los mismos $10.15 por kilo.
+
+---
+
 ## 07/09 · lo que respondieron SUS FORMATOS
 
 Mandó la cotización, la guía y la factura reales. Antes de volver a
