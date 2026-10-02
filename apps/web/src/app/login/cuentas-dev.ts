@@ -11,7 +11,7 @@ import "server-only";
  * accidente a un componente cliente.
  */
 export const CUENTAS_DEV = [
-  { correo: "gerencia@rodatech.pe", nombre: "Willy Rodríguez", rol: "Gerencia", atajo: true },
+  { correo: "gerencia@rodatech.pe", nombre: "Willy Fernández", rol: "Gerencia", atajo: true },
   { correo: "admin@rodatech.pe", nombre: "Ana Salazar", rol: "Administración", atajo: false },
   { correo: "ventas@rodatech.pe", nombre: "Carlos Mendoza", rol: "Ventas", atajo: true },
   { correo: "almacen@rodatech.pe", nombre: "Julio Ramos", rol: "Almacén", atajo: false },

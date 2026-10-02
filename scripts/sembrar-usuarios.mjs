@@ -27,7 +27,7 @@ const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /** Las seis cuentas, una por rol del ERP. */
 const CUENTAS = [
-  { correo: "gerencia@rodatech.pe", nombre: "Willy Rodríguez", rol: "gerencia", cargo: "Gerente General" },
+  { correo: "gerencia@rodatech.pe", nombre: "Willy Fernández", rol: "gerencia", cargo: "Gerente General" },
   { correo: "admin@rodatech.pe", nombre: "Ana Salazar", rol: "admin", cargo: "Administración" },
   { correo: "ventas@rodatech.pe", nombre: "Carlos Mendoza", rol: "ventas", cargo: "Asesor comercial" },
   { correo: "almacen@rodatech.pe", nombre: "Julio Ramos", rol: "almacen", cargo: "Jefe de almacén" },
