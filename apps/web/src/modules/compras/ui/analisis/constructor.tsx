@@ -4,13 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, toast } from "@rodatech/ui";
-import { Check, FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, Download, FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
 
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 
 import { guardarAnalisis, propuestasAnalisis } from "../../acciones/analisis";
-import { leerExcelAnalisis, productoPorCodigo } from "../../acciones/analisis-hoja";
+import { exportarAnalisisExcel, leerExcelAnalisis, productoPorCodigo } from "../../acciones/analisis-hoja";
 import { tipoCambioDelDia } from "../../acciones/tipo-cambio";
 import {
   aPayload,
@@ -200,6 +200,7 @@ export function ConstructorAnalisis({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <DescargarExcel estado={estado} numero={inicial?.numero ?? null} proveedor={proveedor?.razon_social ?? null} />
           {soloLectura ? null : (
             <Button type="button" onClick={enviar} disabled={guardando || bloqueos.length > 0}>
               {guardando ? "Guardando…" : sinGuardar ? "Guardar análisis" : "Guardado"}
@@ -549,6 +550,69 @@ function CampoNumero({
  * 02/10: *«todavía no sé cómo es 10.15»*. Si quien lo hizo no lo sabía, Willy
  * mirando otra pantalla tampoco: la cuenta tiene que estar escrita.
  */
+/**
+ * Descargar lo que está en pantalla como SU hoja de Excel, con fórmulas que
+ * funcionan (ver `api/analisis-excel.ts`). Luis, 02/10: *«puede exportar en
+ * excel»*. Vale también sin guardar, y también en uno ya comprado.
+ */
+function DescargarExcel({
+  estado,
+  numero,
+  proveedor,
+}: {
+  estado: EstadoAnalisis;
+  numero: string | null;
+  proveedor: string | null;
+}) {
+  const [armando, armar] = React.useTransition();
+  const lineas = estado.lineas.filter((l) => !enBlanco(l));
+
+  const descargar = () =>
+    armar(async () => {
+      const r = await exportarAnalisisExcel({
+        numero,
+        proveedor,
+        referencia: estado.referencia,
+        fecha: estado.fecha,
+        costoEnvio: estado.costoEnvio,
+        desaduanajeSoles: estado.desaduanajeSoles,
+        tipoCambio: estado.tipoCambio,
+        lineas: lineas.map((l) => ({
+          cliente: l.cliente,
+          frecuencia: l.frecuencia,
+          codigo: l.codigo,
+          marca: l.marca,
+          cantidadRef: l.cantidadRef,
+          precioFob: l.precioFob,
+          pesoKg: l.pesoKg,
+          cantidadPedido: l.cantidadPedido,
+          precioMercado: l.precioMercado,
+          proveedorMercado: l.proveedorMercado,
+        })),
+      });
+      if (!r.ok) {
+        toast.error(r.error);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(r.base64), (ch) => ch.charCodeAt(0));
+      const url = URL.createObjectURL(
+        new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = r.nombre;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+
+  return (
+    <Button type="button" variant="outline" onClick={descargar} disabled={armando || lineas.length === 0}>
+      <Download className="size-4" aria-hidden />
+      {armando ? "Armando el Excel…" : "Descargar en Excel"}
+    </Button>
+  );
+}
+
 /**
  * La K a la vista MIENTRAS se cambian las cantidades.
  *

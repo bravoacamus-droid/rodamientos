@@ -4698,6 +4698,22 @@ Probado con su hoja: S/ 750 a 3.454 = $217.14; pedido $1,496.71; K de 2.65 a
 **Ojo, el sentido de la K:** él escribió «costo / total PM» (0.38) y su hoja
 hace PM ÷ costo (2.65). Se sigue la hoja; preguntado en PREGUNTAS-WILLY 02/10.
 
+### AQ.1d · 02/10 — «Descargar en Excel»
+
+Luis: *«también podemos ponerlo aparte que se guarda puede exportar en
+excel»*. Botón en la cabecera del análisis; exporta lo que está en pantalla,
+guardado o no. Sale con SU hoja —títulos A–R literales, fila de TOTALES,
+bloque de abajo, sus colores— y con **fórmulas**, no números pegados
+(`api/analisis-excel.ts`). Tres correcciones a propósito sobre la suya: el
+PU LIMA apunta a UNA celda de $/kg (`ROUNDDOWN(DHL/peso,2)`) en vez del 10.15
+escrito en cada fila; la K lleva el desaduanaje; el W. REAL del pedido es ×1.1.
+
+**Comprobado con Excel de verdad** (automatización COM, recálculo completo)
+sobre sus 29 filas: PU LIMA 9.40655, % 2.528, TOT.$ 1279.566, TOT. PM
+3394.18, $/kg 10.15, costo total 1496.71, K 2.268 — lo mismo que su hoja y
+que el ERP. Y la ida y vuelta: lo exportado se vuelve a leer con «Traer de un
+Excel» igual (test).
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).

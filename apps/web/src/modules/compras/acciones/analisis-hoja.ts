@@ -1,9 +1,11 @@
 "use server";
 
+import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { matrizDeArchivo } from "@/modules/importacion/api/hoja";
 
+import { libroAnalisis } from "../api/analisis-excel";
 import { leerHojaAnalisis } from "../dominio/analisis-hoja";
 import type { LineaAnalisis, ProductoParaAnalizar } from "../dominio/analisis";
 
@@ -169,4 +171,69 @@ export async function leerExcelAnalisis(formData: FormData): Promise<ResultadoHo
   });
 
   return { ok: true, lineas, costoEnvio: lectura.costoEnvio, problemas: lectura.problemas, enCatalogo };
+}
+
+// ---------------------------------------------------------------------------
+// De vuelta a Excel
+// ---------------------------------------------------------------------------
+
+const numero = z.number().finite().nonnegative();
+const texto = (max: number) => z.string().max(max).default("");
+
+/* TODOS los campos declarados: `z.object` quita en silencio lo que no conoce. */
+const esquemaExcel = z.object({
+  numero: z.string().max(40).nullable().default(null),
+  proveedor: z.string().max(200).nullable().default(null),
+  referencia: texto(80),
+  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  costoEnvio: numero.max(10_000_000),
+  desaduanajeSoles: numero.max(10_000_000).default(0),
+  tipoCambio: numero.max(100).default(0),
+  lineas: z
+    .array(
+      z.object({
+        cliente: texto(120),
+        frecuencia: numero.max(10_000).nullable().default(null),
+        codigo: z.string().trim().min(1).max(80),
+        marca: texto(60),
+        cantidadRef: numero.max(1_000_000),
+        precioFob: numero.max(10_000_000),
+        pesoKg: numero.max(5000),
+        cantidadPedido: numero.max(1_000_000),
+        precioMercado: numero.max(10_000_000),
+        proveedorMercado: texto(120),
+      }),
+    )
+    .min(1, "No hay productos que exportar.")
+    .max(300),
+});
+
+export type ResultadoExcel =
+  | { ok: true; base64: string; nombre: string }
+  | { ok: false; error: string };
+
+/**
+ * El análisis que está en pantalla, como un .xlsx con el formato y las
+ * fórmulas de su hoja (ver `api/analisis-excel.ts`). Exporta lo que se ve,
+ * esté guardado o no: no escribe nada.
+ */
+export async function exportarAnalisisExcel(entrada: unknown): Promise<ResultadoExcel> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
+    return { ok: false, error: "Tu rol no puede hacer análisis de importación." };
+  }
+  const v = esquemaExcel.safeParse(entrada);
+  if (!v.success) {
+    return { ok: false, error: v.error.issues[0]?.message ?? "Los datos no son válidos." };
+  }
+  try {
+    const libro = await libroAnalisis(v.data);
+    // Sin caracteres que Windows no acepta en un nombre de archivo.
+    const base = (v.data.numero ?? v.data.referencia) || v.data.fecha;
+    const nombre = `Analisis importacion ${base}`.replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) + ".xlsx";
+    return { ok: true, base64: libro.toString("base64"), nombre };
+  } catch {
+    return { ok: false, error: "No se pudo armar el Excel. Prueba otra vez." };
+  }
 }
