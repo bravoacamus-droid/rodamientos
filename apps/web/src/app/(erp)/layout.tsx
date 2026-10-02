@@ -1,10 +1,11 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
 import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
-import { menuPara } from "@/lib/navegacion";
+import { COOKIE_MENU_ESTRECHO, menuPara } from "@/lib/navegacion";
 import { pendientesDelMenu } from "@/lib/pendientes-del-menu";
 import { emisorParaImprimir } from "@/lib/emisor";
 
@@ -50,6 +51,9 @@ export default async function LayoutErp({
   const emisor = await emisorParaImprimir();
   const empresa = emisor.nombreComercial || emisor.razonSocial || "Rodatech";
 
+  // El menú recogido a iconos, como lo dejó (ver BarraLateral).
+  const menuEstrecho = (await cookies()).get(COOKIE_MENU_ESTRECHO)?.value === "1";
+
   return (
     // AL IMPRIMIR NO QUEDA NADA DE ESTO.
     //
@@ -64,6 +68,7 @@ export default async function LayoutErp({
         empresa={empresa}
         usuario={perfil?.nombre ?? "Sesión"}
         pendientes={pendientes}
+        estrechoInicial={menuEstrecho}
       />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">

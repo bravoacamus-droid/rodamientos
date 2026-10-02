@@ -296,3 +296,13 @@ export function menuPara(rol: Rol | null): GrupoNav[] {
     items: grupo.items.filter((i) => !i.roles || (rol !== null && i.roles.includes(rol))),
   })).filter((grupo) => grupo.items.length > 0);
 }
+
+/**
+ * El menú estrecho —solo iconos— se recuerda en una COOKIE y no en
+ * `localStorage`: así el servidor ya lo pinta como quedó, y no se ve el menú
+ * ancho medio segundo antes de encogerse en cada página. Lo lee `(erp)/layout` y la escribe `BarraLateral`.
+ *
+ * Vive aquí y no en la barra: una constante de un archivo "use client" llega
+ * al servidor como referencia de cliente, no como texto.
+ */
+export const COOKIE_MENU_ESTRECHO = "rodatech.menu.estrecho";

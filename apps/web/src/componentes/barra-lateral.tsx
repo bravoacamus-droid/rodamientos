@@ -13,10 +13,16 @@ import {
   SheetContent,
   SheetTitle,
   SheetTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@rodatech/ui";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/componentes/logo";
 import { IconoNav } from "@/componentes/iconos-nav";
 import {
+  COOKIE_MENU_ESTRECHO,
   TABLERO,
   rutaActiva,
   type GrupoNav,
@@ -75,6 +81,7 @@ import type { PendientesDelMenu } from "@/lib/pendientes-del-menu";
   menú antes de verlo entero.
 */
 const CLAVE = "rodatech.nav.plegados";
+
 
 /** Grupos plegados, leídos del navegador. Nunca revienta si el valor está roto. */
 function leerPlegados(): Set<string> {
@@ -135,14 +142,17 @@ function Enlace({
   espera,
   dentroDeGrupo = true,
   onNavegar,
+  estrecho = false,
 }: {
   item: ItemNav;
   activo: boolean;
   espera: number;
   dentroDeGrupo?: boolean;
   onNavegar?: () => void;
+  /** Solo el icono; el nombre sale al pasar por encima. */
+  estrecho?: boolean;
 }) {
-  return (
+  const enlace = (
     <Link
       href={item.ruta}
       aria-current={activo ? "page" : undefined}
@@ -151,7 +161,8 @@ function Enlace({
         // 48 px, la altura de su prototipo. Se mantiene en escritorio: aquí no
         // se gana nada apretando las filas, y en móvil es además la medida
         // mínima para acertar con el dedo.
-        "flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+        "relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+        estrecho && "justify-center px-0",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
         activo
           ? "bg-brand-600 font-semibold text-white"
@@ -162,9 +173,11 @@ function Enlace({
     >
       <IconoNav
         nombre={item.icono}
-        className={cn("size-[18px] shrink-0", activo ? "" : "text-brand-600/75")}
+        // Recogido, el icono es lo único que hay: más grande, que se distinga.
+        className={cn(estrecho ? "size-[22px]" : "size-[18px]", "shrink-0", activo ? "" : "text-brand-600/75")}
       />
-      <span className="truncate">{item.etiqueta}</span>
+      {/* Estrecho, el nombre sigue ahí para el lector de pantalla. */}
+      <span className={estrecho ? "sr-only" : "truncate"}>{item.etiqueta}</span>
 
       {/*
         Cuántas esperan. Solo si hay: un «0» ocupa el mismo sitio que un número
@@ -177,6 +190,9 @@ function Enlace({
             // `text-sm` como el resto de pastillas (24/09): este número dice
             // cuántas cosas esperan, y es de lo primero que se mira al entrar.
             "ml-auto min-w-6 shrink-0 rounded-full px-2 py-0.5 text-center text-sm font-bold tabular",
+            // Estrecho, la pastilla se monta en la esquina del icono: lo que
+            // espera tiene que seguir viéndose con el menú recogido.
+            estrecho && "absolute -top-0.5 right-0.5 ml-0 min-w-5 px-1.5 py-0",
             activo ? "bg-white/25 text-white" : "bg-[var(--warn-bg)] text-[var(--warn)]",
           )}
           aria-label={`${espera} esperando`}
@@ -185,6 +201,19 @@ function Enlace({
         </span>
       ) : null}
     </Link>
+  );
+
+  if (!estrecho) return enlace;
+  // El nombre, a 14 px y no a los 12 del tooltip de serie: es la única
+  // forma de saber qué es cada icono con el menú recogido.
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{enlace}</TooltipTrigger>
+      <TooltipContent side="right" className="px-3 py-1.5 text-sm">
+        {item.etiqueta}
+        {espera > 0 ? ` · ${espera} esperando` : ""}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -195,6 +224,7 @@ function Grupos({
   alternar,
   pendientes,
   onNavegar,
+  estrecho = false,
 }: {
   grupos: GrupoNav[];
   ruta: string;
@@ -202,7 +232,35 @@ function Grupos({
   alternar: (titulo: string) => void;
   pendientes?: PendientesDelMenu;
   onNavegar?: () => void;
+  estrecho?: boolean;
 }) {
+  /*
+    Estrecho no hay títulos que plegar: los iconos de cada grupo van seguidos,
+    separados por una raya. Un grupo plegado escondería iconos que no se
+    pueden desplegar sin ensanchar el menú.
+  */
+  if (estrecho) {
+    return (
+      <>
+        {grupos.map((grupo) => (
+          <div key={grupo.titulo} className="flex flex-col gap-0.5">
+            <div className="mx-2 my-1.5 h-px bg-[var(--border-soft)]" aria-hidden />
+            {grupo.items.map((item) => (
+              <Enlace
+                key={item.ruta}
+                item={item}
+                activo={activoEn(ruta, item.ruta)}
+                espera={esperaEn(item, pendientes)}
+                onNavegar={onNavegar}
+                estrecho
+              />
+            ))}
+          </div>
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       {grupos.map((grupo) => {
@@ -277,19 +335,24 @@ function Cabecera({
   empresa,
   usuario,
   onNavegar,
+  estrecho = false,
 }: {
   empresa: string;
   usuario: string;
   onNavegar?: () => void;
+  estrecho?: boolean;
 }) {
   return (
     <Link
       href="/dashboard"
       onClick={onNavegar}
-      className="flex shrink-0 items-center gap-3 border-b border-[var(--border)] px-4 py-4 transition-colors hover:bg-[var(--surface-2)]"
+      className={cn(
+        "flex shrink-0 items-center gap-3 border-b border-[var(--border)] py-4 transition-colors hover:bg-[var(--surface-2)]",
+        estrecho ? "justify-center px-2" : "px-4",
+      )}
     >
-      <Logo className="h-9 w-auto shrink-0" />
-      <span className="min-w-0">
+      <Logo className={cn("w-auto shrink-0", estrecho ? "h-7" : "h-9")} />
+      <span className={estrecho ? "sr-only" : "min-w-0"}>
         <span className="block truncate text-sm font-bold leading-tight">
           {empresa}
         </span>
@@ -309,6 +372,7 @@ function Cuerpo({
   alternar,
   pendientes,
   onNavegar,
+  estrecho = false,
 }: {
   grupos: GrupoNav[];
   ruta: string;
@@ -316,19 +380,26 @@ function Cuerpo({
   alternar: (titulo: string) => void;
   pendientes?: PendientesDelMenu;
   onNavegar?: () => void;
+  estrecho?: boolean;
 }) {
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden py-3",
+          estrecho ? "px-2" : "px-3",
+        )}
+      >
         <Enlace
           item={TABLERO}
           activo={activoEn(ruta, TABLERO.ruta)}
           espera={0}
           dentroDeGrupo={false}
           onNavegar={onNavegar}
+          estrecho={estrecho}
         />
 
-        <div className="my-1 h-px bg-[var(--border-soft)]" />
+        {estrecho ? null : <div className="my-1 h-px bg-[var(--border-soft)]" />}
 
         <Grupos
           grupos={grupos}
@@ -337,6 +408,7 @@ function Cuerpo({
           alternar={alternar}
           pendientes={pendientes}
           onNavegar={onNavegar}
+          estrecho={estrecho}
         />
       </div>
 
@@ -345,35 +417,95 @@ function Cuerpo({
   );
 }
 
-/** Columna fija. Desde `md` hacia arriba. */
+/**
+ * Columna fija. Desde `md` hacia arriba.
+ *
+ * Se puede RECOGER a solo iconos. Luis, 02/10, con la tabla del análisis de
+ * importación —dieciocho columnas— delante: *«un icono así para ocultar el
+ * sidebar […] así tenemos más espacio […] solo aparecían los iconos […] bonito
+ * con animación»*. Son 176 px más para la pantalla.
+ *
+ * El botón dice lo que hace con palabras —«Ocultar menú»— y no es solo un
+ * icono: CLAUDE.md §1, *«un botón tiene que parecer un botón»*. Recogido, cada
+ * icono dice su nombre al pasar por encima, a 14 px.
+ */
 export function BarraLateral({
   grupos,
   empresa,
   usuario,
   pendientes,
+  estrechoInicial = false,
 }: {
   grupos: GrupoNav[];
   empresa: string;
   usuario: string;
   pendientes?: PendientesDelMenu;
+  /** Cómo lo dejó la última vez, leído de la cookie en el servidor. */
+  estrechoInicial?: boolean;
 }) {
   const ruta = usePathname();
   const { plegados, alternar } = usePlegados();
+  const [estrecho, setEstrecho] = React.useState(estrechoInicial);
+
+  const alternarAncho = () => {
+    const siguiente = !estrecho;
+    setEstrecho(siguiente);
+    // Un año. Sin `secure` a propósito: en local se sirve por http.
+    document.cookie = `${COOKIE_MENU_ESTRECHO}=${siguiente ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
+  };
+
+  const Icono = estrecho ? PanelLeftOpen : PanelLeftClose;
+  const boton = (
+    <button
+      type="button"
+      onClick={alternarAncho}
+      aria-expanded={!estrecho}
+      aria-label={estrecho ? "Mostrar el menú completo" : "Ocultar menú"}
+      className={cn(
+        "flex min-h-11 w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+        estrecho ? "justify-center px-0" : "px-3",
+      )}
+    >
+      <Icono className="size-5 shrink-0 text-brand-600" aria-hidden />
+      {estrecho ? null : <span className="truncate">Ocultar menú</span>}
+    </button>
+  );
 
   return (
-    <nav
-      aria-label="Módulos"
-      className="hidden h-dvh w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:sticky md:top-0 md:flex print:!hidden"
-    >
-      <Cabecera empresa={empresa} usuario={usuario} />
-      <Cuerpo
-        grupos={grupos}
-        ruta={ruta}
-        plegados={plegados}
-        alternar={alternar}
-        pendientes={pendientes}
-      />
-    </nav>
+    <TooltipProvider delayDuration={150}>
+      <nav
+        aria-label="Módulos"
+        className={cn(
+          "hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] md:sticky md:top-0 md:flex print:!hidden",
+          // La animación: solo el ancho. El contenido cambia de forma al
+          // instante y la columna lo acompaña en 200 ms.
+          "transition-[width] duration-200 ease-out motion-reduce:transition-none",
+          estrecho ? "w-20" : "w-64",
+        )}
+      >
+        <Cabecera empresa={empresa} usuario={usuario} estrecho={estrecho} />
+        <Cuerpo
+          grupos={grupos}
+          ruta={ruta}
+          plegados={plegados}
+          alternar={alternar}
+          pendientes={pendientes}
+          estrecho={estrecho}
+        />
+        <div className={cn("shrink-0 border-t border-[var(--border)] py-3", estrecho ? "px-2" : "px-3")}>
+          {estrecho ? (
+            <Tooltip>
+              <TooltipTrigger asChild>{boton}</TooltipTrigger>
+              <TooltipContent side="right" className="px-3 py-1.5 text-sm">
+                Mostrar el menú completo
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            boton
+          )}
+        </div>
+      </nav>
+    </TooltipProvider>
   );
 }
 
