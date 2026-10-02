@@ -40,13 +40,15 @@ import { BuscadorCompra } from "../constructor/buscador";
 import { AltaEnBloque } from "./alta-en-bloque";
 import { Volver } from "@/componentes/volver";
 
+// Espacio de NO separación entre el signo y la cifra: en el teléfono «$ 11.58»
+// se partía en dos líneas (revisión del 02/10).
 const dolar = (n: number, dec = 2) =>
-  `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+  `$\u00a0${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
 const kg = (n: number, dec = 2) =>
-  `${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })} kg`;
-const pct = (n: number) => `${Math.round(n * 100)} %`;
+  `${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}\u00a0kg`;
+const pct = (n: number) => `${Math.round(n * 100)}\u00a0%`;
 const soles = (n: number) =>
-  `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `S/\u00a0${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /**
  * El asterisco rojo de lo que se ESCRIBE a mano.
@@ -257,7 +259,9 @@ export function ConstructorAnalisis({
             Antes de comprar: cuánto te cuesta cada producto puesto en Lima y cuánto ganas.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* En el teléfono, en rejilla de dos: cada botón con su ancho y el
+            principal a lo ancho, en vez de una fila que se parte donde caiga. */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center [&>*]:justify-center">
           {inicial && soloLectura ? (
             <>
               {/* Lo guardado, armado en el servidor: lo mismo que desde la lista. */}
@@ -291,11 +295,16 @@ export function ConstructorAnalisis({
               href={`/compras/analisis/${inicial.id}`}
               className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
             >
-              {sinGuardar ? "Salir sin guardar" : "Volver"}
+              {sinGuardar ? "Salir sin guardar" : "Ver la ficha"}
             </Link>
           ) : null}
           {soloLectura ? null : (
-            <Button type="button" onClick={enviar} disabled={guardando || bloqueos.length > 0}>
+            <Button
+              type="button"
+              onClick={enviar}
+              disabled={guardando || bloqueos.length > 0}
+              className="order-first col-span-2 sm:order-none"
+            >
               {guardando ? "Guardando…" : sinGuardar ? "Guardar análisis" : "Guardado"}
             </Button>
           )}
@@ -831,18 +840,20 @@ function BarraK({ c }: { c: ReturnType<typeof calcular> }) {
   return (
     <div
       aria-live="polite"
-      className="sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-b-lg border-t-2 border-[var(--warn)] bg-[var(--surface)] px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)]"
+      className="sticky bottom-0 z-20 -mx-4 -mb-4 mt-4 flex items-center gap-x-6 gap-y-1 rounded-b-lg border-t-2 border-[var(--warn)] bg-[var(--surface)] px-4 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] sm:py-3"
     >
-      <span className="text-sm font-semibold">Lo que pides</span>
-      <span className="text-sm">
-        <span className="text-[var(--fg-muted)]">Costo total </span>
-        <span className="tabular font-semibold">{dolar(c.costoTotal)}</span>
+      <span className="hidden text-sm font-semibold sm:inline">Lo que pides</span>
+      <span className="flex min-w-0 flex-col text-sm sm:flex-row sm:gap-6">
+        <span className="whitespace-nowrap">
+          <span className="text-[var(--fg-muted)]">Costo </span>
+          <span className="tabular font-semibold">{dolar(c.costoTotal)}</span>
+        </span>
+        <span className="whitespace-nowrap">
+          <span className="text-[var(--fg-muted)]">Mercado </span>
+          <span className="tabular font-semibold">{dolar(c.totalMercado)}</span>
+        </span>
       </span>
-      <span className="text-sm">
-        <span className="text-[var(--fg-muted)]">A precio de mercado </span>
-        <span className="tabular font-semibold">{dolar(c.totalMercado)}</span>
-      </span>
-      <span className="ml-auto flex items-baseline gap-2">
+      <span className="ml-auto flex shrink-0 items-baseline gap-2">
         <span className="text-base font-semibold">K</span>
         <span className={`tabular text-2xl font-bold ${tonoMargen(c.margen)}`}>
           {c.rinde !== null ? c.rinde.toFixed(2) : "—"}
@@ -1591,40 +1602,27 @@ function Tarjeta({
   );
   return (
     <li className="rounded-md border border-[var(--border)] p-3">
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <CeldaCodigo l={l} despachar={despachar} soloLectura={soloLectura} />
-        </div>
-        {soloLectura ? null : (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 text-sm"
-            onClick={() => despachar({ tipo: "quitar", key: l.key })}
-            aria-label={`Quitar ${l.codigo}`}
-          >
-            <Trash2 className="size-4" aria-hidden />
-            Quitar
-          </Button>
-        )}
-      </div>
+      <CeldaCodigo l={l} despachar={despachar} soloLectura={soloLectura} />
 
       <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-3">
         {campo(
           "Cliente",
-          <Input
-            value={l.cliente}
-            onChange={(e) =>
-              despachar({
-                tipo: "texto",
-                key: l.key,
-                campo: "cliente",
-                valor: e.target.value,
-              })
-            }
-            disabled={soloLectura}
-          />,
+          // Al leer, el texto y no una casilla gris deshabilitada.
+          soloLectura ? (
+            <span className="block py-2">{l.cliente || <span className="text-[var(--fg-muted)]">—</span>}</span>
+          ) : (
+            <Input
+              value={l.cliente}
+              onChange={(e) =>
+                despachar({
+                  tipo: "texto",
+                  key: l.key,
+                  campo: "cliente",
+                  valor: e.target.value,
+                })
+              }
+            />
+          ),
         )}
         {campo("f (veces al año)", <CampoNumero {...editar(l, "frecuencia")} className={num} />)}
         {campo("CANT. Ref", <CampoNumero {...editar(l, "cantidadRef")} className={num} />)}
@@ -1651,18 +1649,22 @@ function Tarjeta({
         )}
         {campo(
           "PROV.",
-          <Input
-            value={l.proveedorMercado}
-            onChange={(e) =>
-              despachar({
-                tipo: "texto",
-                key: l.key,
-                campo: "proveedorMercado",
-                valor: e.target.value,
-              })
-            }
-            disabled={soloLectura}
-          />,
+          // Al leer, el texto y no una casilla gris deshabilitada.
+          soloLectura ? (
+            <span className="block py-2">{l.proveedorMercado || <span className="text-[var(--fg-muted)]">—</span>}</span>
+          ) : (
+            <Input
+              value={l.proveedorMercado}
+              onChange={(e) =>
+                despachar({
+                  tipo: "texto",
+                  key: l.key,
+                  campo: "proveedorMercado",
+                  valor: e.target.value,
+                })
+              }
+            />
+          ),
           "bg-[var(--ok-bg)]",
         )}
       </div>
@@ -1687,6 +1689,18 @@ function Tarjeta({
           </dd>
         </div>
       </dl>
+      {soloLectura ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3 w-full border-[var(--danger)] text-sm text-[var(--danger)] hover:bg-[var(--danger-bg)]"
+          onClick={() => despachar({ tipo: "quitar", key: l.key })}
+          aria-label={`Quitar ${l.codigo || "este producto"}`}
+        >
+          <Trash2 className="size-4" aria-hidden />
+          Quitar este producto
+        </Button>
+      )}
     </li>
   );
 }
