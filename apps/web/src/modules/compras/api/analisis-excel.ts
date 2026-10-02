@@ -15,8 +15,9 @@ import type { LineaAnalisis } from "../dominio/analisis";
  *   · El $/kg no va escrito a mano en cada fila (`=+F2+10.15*H2`): las filas
  *     apuntan a UNA celda, que lo calcula como él —DHL ÷ peso, cortado a dos
  *     decimales (`ROUNDDOWN`)—. Cambia el DHL o un peso y cambia todo.
- *   · El desaduanaje entra en la K (101), y la K es TOT. PM ÷ costo total,
- *     el sentido de su F41.
+ *   · El $/kg lleva el DHL Y el desaduanaje (Willy, 02/10: *«DHL +
+ *     desaduanaje ÷ peso total, cortado a 2 decimales»*), así que el PU LIMA
+ *     y la K —TOT. PM ÷ costo total, el sentido de su F41— ya lo incluyen.
  *   · El W. REAL del pedido es ×1.1 (en la suya, F39 tenía `=101*F38`).
  *
  * Se arma en el servidor: ExcelJS pesa cerca de un mega y en el navegador lo
@@ -88,7 +89,8 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
     porKg: b + 10,
     k: b + 11,
   };
-  const porKg = `$E$${F.porKg}`;
+  // Fija ($E$n): se usa en todas las filas de producto.
+  const porKg = "$E$" + F.porKg;
 
   // ---------------------------------------------------------------- títulos
   ws.addRow([...TITULOS_HOJA]);
@@ -113,6 +115,7 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
       l.cantidadPedido,
       { formula: `J${r}*F${r}` },
       { formula: `J${r}*H${r}` },
+      // FOB + peso × $/kg, y el $/kg lleva DHL y desaduanaje (Willy, 02/10).
       { formula: `F${r}+${porKg}*H${r}` },
       { formula: `M${r}*J${r}` },
       l.precioMercado || null,
@@ -143,33 +146,44 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   fila(F.cabecera, "", "CANT. REF", "CANT. PEDIDO");
   ws.getRow(F.cabecera).font = { bold: true };
   fila(F.fob, "TOT. FOB $", { formula: `G${filaTotal}` }, { formula: `K${filaTotal}` });
-  fila(F.dhl, "DHL $", d.costoEnvio, { formula: `${porKg}*F${F.wTot}` }, "Lo que pides: su peso × el $/kg");
+  // Lo de lo pedido: su peso × $/kg, partido entre DHL y desaduanaje en la
+  // proporción de la carga. Sin desaduanaje, el de su hoja (peso × 10.15).
+  const reparto = `(E${F.dhl}+E${F.des})`;
+  fila(
+    F.dhl,
+    "DHL $",
+    d.costoEnvio,
+    { formula: `IF(${reparto}>0,${porKg}*F${F.wTot}*E${F.dhl}/${reparto},0)` },
+    "Lo que pides: su parte por peso",
+  );
   fila(F.desSoles, "DESADUANAJE S/", d.desaduanajeSoles, { formula: `E${F.desSoles}` }, "Estimado, en soles");
   fila(F.tc, "TIPO DE CAMBIO", d.tipoCambio || null, { formula: `E${F.tc}` });
   fila(
     F.des,
     "DESADUANAJE $",
     { formula: `IF(E${F.tc}>0,E${F.desSoles}/E${F.tc},0)` },
-    { formula: `E${F.des}` },
-    "Uno por carga",
+    { formula: `IF(${reparto}>0,${porKg}*F${F.wTot}*E${F.des}/${reparto},0)` },
+    "Soles ÷ tipo de cambio; lo que pides, su parte por peso",
   );
   fila(
     F.costo,
     "COSTO TOTAL $",
     { formula: `E${F.fob}+E${F.dhl}+E${F.des}` },
-    { formula: `N${filaTotal}+F${F.des}` },
+    // Los PU ya llevan DHL y desaduanaje: es la suma de los TOT. $.
+    { formula: `N${filaTotal}` },
     "FOB + DHL + desaduanaje",
   );
   fila(F.pm, "TOT. PM $", { formula: `SUMPRODUCT(${rango("E")},${rango("O")})` }, { formula: `P${filaTotal}` });
   fila(F.wTot, "W. TOT (Kg)", { formula: `I${filaTotal}` }, { formula: `L${filaTotal}` });
   fila(F.wReal, "W. REAL (Kg)", { formula: `1.1*E${F.wTot}` }, { formula: `1.1*F${F.wTot}` }, "El peso más un 10 %");
-  // Cortado a dos decimales, como su 10.15 (1039 ÷ 102.3054 = 10.1559).
+  // Willy, 02/10: «DHL + desaduanaje ÷ peso total, cortado a 2 decimales».
+  // Sin desaduanaje, su 10.15 (1039 ÷ 102.3054 = 10.1559).
   fila(
     F.porKg,
     "$/Kg.",
-    { formula: `IF(E${F.wTot}>0,ROUNDDOWN(E${F.dhl}/E${F.wTot},2),0)` },
+    { formula: `IF(E${F.wTot}>0,ROUNDDOWN(${reparto}/E${F.wTot},2),0)` },
     { formula: `E${F.porKg}` },
-    "DHL ÷ peso de lo cotizado, a dos decimales",
+    "(DHL + desaduanaje) ÷ peso de lo cotizado, a dos decimales",
   );
   fila(
     F.k,
@@ -218,7 +232,7 @@ export async function libroAnalisis(d: DatosExcelAnalisis): Promise<Buffer> {
   for (let r = F.fob; r <= F.k; r++) {
     for (const col of ["E", "F"]) {
       ws.getCell(`${col}${r}`).numFmt =
-        r === F.wTot || r === F.wReal ? "0.000" : r === F.tc ? "0.000" : "#,##0.00";
+        r === F.wTot || r === F.wReal || r === F.tc ? "0.000" : "#,##0.00";
     }
   }
 

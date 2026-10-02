@@ -56,7 +56,7 @@ describe("el análisis, a su hoja de Excel", () => {
     expect(formula(ws.getCell("M2").value)).toBe(`F2+$E$${kg}*H2`);
     const dhl = filaDe(ws, "DHL $");
     const wTot = filaDe(ws, "W. TOT (Kg)");
-    expect(formula(ws.getCell(`E${kg}`).value)).toBe(`IF(E${wTot}>0,ROUNDDOWN(E${dhl}/E${wTot},2),0)`);
+    expect(formula(ws.getCell(`E${kg}`).value)).toBe(`IF(E${wTot}>0,ROUNDDOWN((E${dhl}+E${filaDe(ws, "DESADUANAJE $")})/E${wTot},2),0)`);
   });
 
   it("la K lleva el desaduanaje: TOT. PM ÷ costo total", async () => {

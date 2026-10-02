@@ -305,54 +305,80 @@ describe("el buscador y las filas vacías", () => {
   });
 });
 
-describe("la K con el desaduanaje (101)", () => {
-  // FOB 100 + DHL 50 = 150 en Lima; mercado 450. Sin desaduanaje, K = 3.
+describe("el desaduanaje, dentro del $/kg (Willy, 02/10)", () => {
+  /*
+    Willy, 02/10: «DHL + desaduanaje ÷ peso total, cortado a 2 decimales […]
+    después ya se divide por el peso».
+
+    FOB 10 × 10 uds, 1 kg cada una → 10 kg. DHL 50. Mercado 45.
+  */
   const base = () =>
     correr({
       tipo: "cargarHoja",
       costoEnvio: 50,
       lineas: [linea({ codigo: "A", cantidadRef: 10, cantidadPedido: 10, precioFob: 10, pesoKg: 1, precioMercado: 45 })],
     });
+  const conDesaduanaje = (soles: number, tc: number) =>
+    reducir(
+      reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: soles }),
+      { tipo: "cabecera", campo: "tipoCambio", valor: tc },
+    );
 
-  it("sin desaduanaje, la K es la de su hoja: mercado ÷ puesto en Lima", () => {
+  it("sin desaduanaje, el $/kg y el PU son los de su hoja", () => {
     const c = calcular(base());
     expect(c.porKg).toBe(5);
+    expect(c.lineas[base().lineas[0]!.key]!.puLima).toBe(15);
     expect(c.costoTotal).toBe(150);
     expect(c.rinde).toBeCloseTo(3, 6);
   });
 
-  it("el desaduanaje en soles pasa a dólares y entra en el costo y en la K", () => {
-    const e = reducir(
-      reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 }),
-      { tipo: "cabecera", campo: "tipoCambio", valor: 3.75 },
-    );
+  it("(DHL + desaduanaje en $) ÷ peso, y el PU LIMA = FOB + peso × ese $/kg", () => {
+    const e = conDesaduanaje(750, 3.75); // $200
     const c = calcular(e);
     expect(c.desaduanaje).toBe(200);
+    expect(c.porKgExacto).toBe(25); // (50 + 200) ÷ 10
+    expect(c.porKg).toBe(25);
+    expect(c.lineas[e.lineas[0]!.key]!.puLima).toBe(35); // 10 + 1 × 25
     expect(c.costoTotal).toBe(350);
     expect(c.costoTotalRef).toBe(350);
     expect(c.rinde).toBeCloseTo(450 / 350, 6);
-    expect(c.margen).toBeCloseTo(100 / 350, 6);
-    // El PU Lima de cada fila no cambia: es el de su hoja.
-    expect(c.lineas[e.lineas[0]!.key]!.puLima).toBe(15);
     expect(aPayload(e)).toMatchObject({ desaduanaje_soles: 750, tipo_cambio: 3.75 });
   });
 
-  it("al pedir menos, la K baja: el desaduanaje es de la carga, no por unidad", () => {
-    let e = reducir(
-      reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 }),
-      { tipo: "cabecera", campo: "tipoCambio", valor: 3.75 },
-    );
-    const antes = calcular(e).rinde!;
-    e = reducir(e, { tipo: "campo", key: e.lineas[0]!.key, campo: "cantidadPedido", valor: 5 });
-    // 225 de mercado contra 75 + 200.
-    expect(calcular(e).rinde).toBeCloseTo(225 / 275, 6);
-    expect(calcular(e).rinde!).toBeLessThan(antes);
+  it("se corta a dos decimales DESPUÉS de sumar, como su 10.15", () => {
+    // (50 + 750/3.454) ÷ 10 = (50 + 217.1395…) ÷ 10 = 26.7139… → 26.71
+    const c = calcular(conDesaduanaje(750, 3.454));
+    expect(c.porKgExacto).toBeCloseTo(26.7139, 3);
+    expect(c.porKg).toBe(26.71);
+  });
+
+  it("el DHL y el desaduanaje del pedido suman justo lo que reparte el $/kg", () => {
+    const e = reducir(conDesaduanaje(750, 3.75), {
+      tipo: "campo",
+      key: base().lineas[0]!.key,
+      campo: "cantidadPedido",
+      valor: 4,
+    });
+    const c = calcular(e);
+    // 4 kg × 25 = 100: 20 de DHL y 80 de desaduanaje (50 : 200).
+    expect(c.envioPedido).toBe(100);
+    expect(c.dhlPedido).toBe(20);
+    expect(c.desaduanajePedido).toBe(80);
+    expect(c.costoTotal).toBe(140); // 40 + 100
+    expect(c.rinde).toBeCloseTo(180 / 140, 6);
+  });
+
+  it("sin desaduanaje, el DHL del pedido es el de su hoja (peso × $/kg)", () => {
+    const e = reducir(base(), { tipo: "campo", key: base().lineas[0]!.key, campo: "cantidadPedido", valor: 4 });
+    const c = calcular(e);
+    expect(c.dhlPedido).toBe(20);
+    expect(c.desaduanajePedido).toBe(0);
   });
 
   it("con soles y sin tipo de cambio no suma nada, y lo avisa", () => {
-    const e = reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 });
-    const c = calcular(e);
+    const c = calcular(reducir(base(), { tipo: "cabecera", campo: "desaduanajeSoles", valor: 750 }));
     expect(c.desaduanaje).toBe(0);
+    expect(c.porKg).toBe(5);
     expect(c.faltaTipoCambio).toBe(true);
   });
 });

@@ -379,9 +379,9 @@ export interface LineaCalculada {
   parcialRef: number;
   /** PESO PARC. = cantidad cotizada × peso. */
   pesoRef: number;
-  /** Envío por unidad = peso × $/kg. */
+  /** DHL y desaduanaje por unidad = peso × $/kg. */
   envioUnitario: number;
-  /** PU LIMA = FOB + envío por unidad. */
+  /** PU LIMA = FOB + peso × $/kg. */
   puLima: number;
   /** Margen sobre el costo (CLAUDE.md §5): (mercado − Lima) ÷ Lima. Null sin precio de mercado. */
   margen: number | null;
@@ -402,7 +402,7 @@ export interface Calculo {
   /** Lo cotizado. */
   fobRef: number;
   pesoRef: number;
-  /** DHL ÷ peso cotizado, sin cortar (su E40). */
+  /** (DHL + desaduanaje) ÷ peso cotizado, sin cortar (su E40). */
   porKgExacto: number;
   /** El que se usa en cada PU Lima: el exacto cortado a dos decimales. */
   porKg: number;
@@ -414,6 +414,7 @@ export interface Calculo {
   rindeRef: number | null;
   /** El desaduanaje estimado, ya en dólares. 0 sin tipo de cambio. */
   desaduanaje: number;
+
   /** Hay desaduanaje en soles pero no tipo de cambio: no se pudo sumar. */
   faltaTipoCambio: boolean;
   /** Costo total de importación de lo cotizado: FOB + DHL + desaduanaje. */
@@ -427,10 +428,13 @@ export interface Calculo {
   fobPedido: number;
   pesoPedido: number;
   pesoRealPedido: number;
-  /** El envío que tocaría a lo pedido: $/kg × peso pedido. */
+  /** DHL y desaduanaje que tocan a lo pedido: $/kg × peso pedido. */
   envioPedido: number;
+  /** De eso, la parte de DHL y la de desaduanaje (en la proporción de la carga). */
+  dhlPedido: number;
+  desaduanajePedido: number;
   totalLima: number;
-  /** Costo total de importación de lo que pides: puesto en Lima + desaduanaje. */
+  /** Costo total de importación de lo que pides: la suma de los TOT. $. */
   costoTotal: number;
   totalMercado: number;
   /**
@@ -461,7 +465,16 @@ export function calcular(
   const desaduanaje = soles > 0 && tc > 0 ? soles / tc : 0;
   const fobRef = dos(estado.lineas.reduce((a, l) => a + l.cantidadRef * l.precioFob, 0));
   const pesoRef = estado.lineas.reduce((a, l) => a + l.cantidadRef * l.pesoKg, 0);
-  const porKgExacto = pesoRef > 0 && estado.costoEnvio > 0 ? estado.costoEnvio / pesoRef : 0;
+
+  /*
+    El $/kg lleva el DHL Y el desaduanaje. Willy, 02/10: *«DHL + desaduanaje
+    ÷ peso total, cortado a 2 decimales […] después ya se divide por el
+    peso»*. Un solo factor, como su 10.15: el desaduanaje (en soles, pasado a
+    dólares) se reparte POR PESO igual que el DHL, sobre el peso de lo
+    cotizado. Sin desaduanaje, es exactamente el de su hoja.
+  */
+  const aRepartir = estado.costoEnvio + desaduanaje;
+  const porKgExacto = pesoRef > 0 && aRepartir > 0 ? aRepartir / pesoRef : 0;
   const porKg = porKgDeLaHoja(porKgExacto);
 
   const lineas: Record<string, LineaCalculada> = {};
@@ -514,7 +527,8 @@ export function calcular(
     porKg,
     cantidadRef,
     pesoRealRef: cuatro(pesoRef * 1.1),
-    rindeRef: limaRefConMercado > 0 ? mercadoRef / (limaRefConMercado + desaduanaje) : null,
+    // Como la del pedido: mercado ÷ Σ cantidad × PU LIMA, que ya lleva todo.
+    rindeRef: limaRefConMercado > 0 ? mercadoRef / limaRefConMercado : null,
     desaduanaje: dos(desaduanaje),
     faltaTipoCambio: soles > 0 && !(tc > 0),
     costoTotalRef: dos(fobRef + estado.costoEnvio + desaduanaje),
@@ -526,16 +540,19 @@ export function calcular(
     pesoPedido: cuatro(pesoPedido),
     pesoRealPedido: cuatro(pesoPedido * 1.1),
     envioPedido: dos(pesoPedido * porKg),
+    // Partido en la proporción de la carga, para que DHL + desaduanaje del
+    // pedido sumen justo el envío por kilo (y sin desaduanaje, el DHL de su
+    // hoja: 65.857 × 10.15 = 668.45).
+    dhlPedido: dos(aRepartir > 0 ? (pesoPedido * porKg * estado.costoEnvio) / aRepartir : 0),
+    desaduanajePedido: dos(aRepartir > 0 ? (pesoPedido * porKg * desaduanaje) / aRepartir : 0),
     totalLima: dos(totalLima),
-    costoTotal: dos(totalLima + desaduanaje),
+    // Los PU ya llevan DHL y desaduanaje: el costo es la suma de los TOT. $.
+    costoTotal: dos(totalLima),
     totalMercado: dos(totalMercado),
     // El rinde y el margen del pedido se miden solo con las líneas que tienen
     // precio de mercado: con las otras, dividir diría un margen que no existe.
-    rinde: limaConMercado > 0 ? totalMercado / (limaConMercado + desaduanaje) : null,
-    margen:
-      limaConMercado > 0
-        ? (totalMercado - limaConMercado - desaduanaje) / (limaConMercado + desaduanaje)
-        : null,
+    rinde: limaConMercado > 0 ? totalMercado / limaConMercado : null,
+    margen: limaConMercado > 0 ? (totalMercado - limaConMercado) / limaConMercado : null,
     sinPeso: estado.lineas.filter((l) => !enBlanco(l) && !(l.pesoKg > 0)).map((l) => l.key),
     sinMercado: estado.lineas.filter((l) => !enBlanco(l) && !(l.precioMercado > 0)).map((l) => l.key),
   };

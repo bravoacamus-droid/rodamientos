@@ -660,9 +660,9 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
     { etiqueta: "TOT. FOB $", ref: dolar(c.fobRef), ped: dolar(c.fobPedido, 3) },
     {
       etiqueta: "DHL $",
-      ayuda: "Lo que pides: su peso × el $/kg",
+      ayuda: "Lo que pides: su parte por peso",
       ref: dolar(estado.costoEnvio),
-      ped: dolar(c.envioPedido),
+      ped: dolar(c.dhlPedido),
     },
     {
       etiqueta: "DESADUANAJE $",
@@ -673,7 +673,7 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
             ? "Falta el tipo de cambio"
             : "Escríbelo arriba",
       ref: dolar(c.desaduanaje),
-      ped: dolar(c.desaduanaje),
+      ped: dolar(c.desaduanajePedido),
     },
     {
       etiqueta: "COSTO TOTAL $",
@@ -692,6 +692,7 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
     { etiqueta: "W. REAL (kg)", ayuda: "El peso más un 10 %", ref: kg(c.pesoRealRef), ped: kg(c.pesoRealPedido) },
     {
       etiqueta: "$ / kg",
+      ayuda: "(DHL + desaduanaje) ÷ peso",
       ref: c.porKg > 0 ? dolar(c.porKg) : "—",
       ped: c.porKg > 0 ? dolar(c.porKg) : "—",
     },
@@ -710,13 +711,31 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
       <div className="card flex flex-col gap-3 p-4">
         <h2 className="flex items-center gap-2 text-base font-semibold">
           <Scale className="size-5 text-[var(--fg-muted)]" aria-hidden />
-          Envío por kilo
+          Cómo sale el PU LIMA
         </h2>
+        {/* Willy, 02/10: *«DHL + desaduanaje ÷ peso total, cortado a 2
+            decimales […] después ya se divide por el peso»*. La cuenta entera,
+            a la vista, paso por paso. */}
+        {c.desaduanaje > 0 ? (
+          <p className="tabular text-base">
+            <span className="text-[var(--fg-muted)]">Desaduanaje</span> {soles(estado.desaduanajeSoles)}
+            <span className="px-2 text-[var(--fg-muted)]">÷</span>
+            {estado.tipoCambio}
+            <span className="px-2 text-[var(--fg-muted)]">=</span>
+            {dolar(c.desaduanaje)}
+          </p>
+        ) : null}
         {c.porKg > 0 ? (
           <>
             <p className="tabular text-base">
-              <span className="text-[var(--fg-muted)]">DHL</span> {dolar(estado.costoEnvio)}
-              <span className="px-2 text-[var(--fg-muted)]">÷</span>
+              (<span className="text-[var(--fg-muted)]">DHL</span> {dolar(estado.costoEnvio)}
+              {c.desaduanaje > 0 ? (
+                <>
+                  <span className="px-1.5 text-[var(--fg-muted)]">+</span>
+                  <span className="text-[var(--fg-muted)]">desaduanaje</span> {dolar(c.desaduanaje)}
+                </>
+              ) : null}
+              )<span className="px-2 text-[var(--fg-muted)]">÷</span>
               {kg(c.pesoRef)}
               <span className="px-2 text-[var(--fg-muted)]">=</span>
               {c.porKgExacto.toFixed(4)}
@@ -726,16 +745,30 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
               <span className="tabular text-2xl font-semibold">{dolar(c.porKg)}</span>
               <span className="text-sm">por kilo</span>
             </p>
+            <p className="rounded-md border border-[var(--info)] p-3 text-base">
+              <strong>PU LIMA</strong> = FOB + peso × {c.porKg.toFixed(2)}
+            </p>
             <p className="text-sm text-[var(--fg-muted)]">
-              Con dos decimales, como en tu hoja. Cada producto paga su peso por este número: el PU
-              Lima es su FOB más su peso × {c.porKg.toFixed(2)}.
+              Con dos decimales, como en tu hoja. Cada producto paga su peso por este número: el DHL
+              {c.desaduanaje > 0 ? " y el desaduanaje van" : " va"} repartidos por kilo.
             </p>
           </>
         ) : (
           <p className="text-sm text-[var(--fg-muted)]">
-            Sale solo cuando estén el costo de DHL y los pesos: DHL ÷ peso de toda la carga.
+            Sale solo cuando estén el costo de DHL y los pesos: (DHL + desaduanaje) ÷ peso de toda
+            la carga.
           </p>
         )}
+        {c.faltaTipoCambio ? (
+          <p className="text-sm text-[var(--warn)]">
+            Falta el tipo de cambio: sin él, el desaduanaje no entra en el PU LIMA.
+          </p>
+        ) : c.desaduanaje > 0 ? null : (
+          <p className="text-sm text-[var(--fg-muted)]">
+            Escribe arriba el desaduanaje estimado en soles: se suma al DHL antes de dividir.
+          </p>
+        )}
+
         {/* Visto el 02/10: con 3 de sus 29 productos, el $/kg salía de 49.
             El DHL es de TODA la carga cotizada. */}
         <p className="rounded-md border border-[var(--border-soft)] p-3 text-sm">
@@ -1075,7 +1108,7 @@ function Tabla({
             <th className={`${th} ${amarillo} text-right`}>CANT. PEDIDO</th>
             <th className={`${th} ${amarillo} text-right`}>$ PARC</th>
             <th className={`${th} ${amarillo} text-right`}>PESO PED.</th>
-            <th className={`${th} ${azul} text-right`}>PU LIMA $</th>
+            <th className={`${th} ${azul} text-right`} title="FOB + DHL + desaduanaje, por unidad">PU LIMA $</th>
             <th className={`${th} ${azul} text-right`}>TOT. $</th>
             <th className={`${th} ${verde} text-right`}>P.M</th>
             <th className={`${th} ${verde} text-right`}>TOT. PM</th>

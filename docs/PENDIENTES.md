@@ -4714,6 +4714,31 @@ sobre sus 29 filas: PU LIMA 9.40655, % 2.528, TOT.$ 1279.566, TOT. PM
 que el ERP. Y la ida y vuelta: lo exportado se vuelve a leer con «Traer de un
 Excel» igual (test).
 
+### AQ.1e · 02/10 — el desaduanaje, DENTRO del $/kg
+
+Willy, por Luis: *«para sacar el PU LIMA hay que sumar el DHL + desaduanaje
+también estimado […] está en soles, tenemos que convertirlo a dólares»*, y
+precisó: *«DHL + desaduanaje ÷ peso total, cortado a 2 decimales […] después
+ya se divide por el peso»*.
+
+Queda así, un solo factor como su 10.15:
+
+    $/kg     = ROUNDDOWN((DHL + desaduanaje S/ ÷ tipo de cambio) ÷ peso cotizado, 2)
+    PU LIMA  = FOB + peso × $/kg
+
+(Se llegó a escribir un reparto del desaduanaje POR VALOR —el criterio de la
+recepción de compras— y se quitó antes de commitear: él lo quiere por peso.)
+
+Con su hoja y S/ 750 a 3.454: (1039 + 217.14) ÷ 102.31 = 12.2783 → **12.27**;
+PU de la G1105 10.71; pedido $1,419.18; **K 2.39**. ERP y Excel exportado
+(recalculado con Excel de verdad) dan lo mismo al centavo.
+
+**Consecuencia que conviene que sepa:** como el DHL, el desaduanaje se
+reparte sobre el peso de lo COTIZADO. Si pide menos, al pedido le toca solo su
+parte —$139.68 de los $217.14—, y la K del pedido no carga el trámite entero.
+Es lo mismo que ya pasaba con el DHL en su hoja, y está preguntado (si al pedir
+menos el DHL cambia).
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).
