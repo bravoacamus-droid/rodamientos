@@ -4663,6 +4663,17 @@ Ojo, su propia hoja tiene dos cifras distintas para el DHL del pedido: K32
 1279.92). El ERP usa la primera, que es la que suma con sus TOT.$. Y su F39
 (W. REAL del pedido) tiene `=101*F38` en vez de `1.1*`: el ERP pone 1.1.
 
+**Y lo principal es escribirlo AQUÍ** (Luis, 02/10: *«eso lo quiere
+rellenar acá para no usar el excel»*). La tabla está siempre a la vista y un
+análisis nuevo empieza con una fila en blanco: se escribe el código, al salir
+del campo el sistema lo busca en el catálogo (mismo cruce sin espacios ni
+guiones) y llena lo que sabe —descripción, peso, precio de mercado, la «f»—;
+**Enter baja a la fila de abajo** y en la última añade otra; «Añadir fila»
+debajo. Las filas que se dejan vacías no se guardan ni estorban. Subir el
+Excel queda como botón secundario, «Traer de un Excel». Probado en pantalla:
+`6313 2z/c3` se enlazó con el 6313-2Z/C3 y su peso; un código que no está se
+calculó entero a mano.
+
 ### AQ.2 · Lo que queda
 
 - [x] ~~Pegar desde Excel~~ → subir la hoja (100, arriba).

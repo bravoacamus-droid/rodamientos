@@ -5,7 +5,7 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { matrizDeArchivo } from "@/modules/importacion/api/hoja";
 
 import { leerHojaAnalisis } from "../dominio/analisis-hoja";
-import type { LineaAnalisis } from "../dominio/analisis";
+import type { LineaAnalisis, ProductoParaAnalizar } from "../dominio/analisis";
 
 const ROLES = ["gerencia", "admin", "compras"] as const;
 /** Su hoja pesa 17 KB; el tope de una Server Action es 1 MB. */
@@ -19,6 +19,56 @@ const MAX_BYTES = 900 * 1024;
  * catálogo» a productos que sí están.
  */
 const claveCodigo = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/**
+ * El producto del catálogo para el código que se acaba de escribir en una
+ * fila, o null si no está. La pantalla lo llama al salir del campo.
+ *
+ * Con dos marcas del mismo código manda la escrita; si no desempata, no se
+ * adivina.
+ */
+export async function productoPorCodigo(
+  codigo: string,
+  marca: string,
+): Promise<ProductoParaAnalizar | null> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo || !ROLES.includes(perfil.rol as (typeof ROLES)[number])) return null;
+  const trozos = String(codigo).toUpperCase().match(/[A-Z0-9]+/g);
+  if (!trozos || trozos.join("").length < 2) return null;
+
+  const supabase = await clienteServidor();
+  // «6313 2Z/C3» → `6313%2Z%C3`: encuentra «6313-2Z/C3» y se afina aquí abajo.
+  const { data } = await supabase
+    .from("productos")
+    .select("id, codigo, descripcion, peso_kg, precio_mercado, marcas(nombre)")
+    .eq("es_kit", false)
+    .ilike("codigo", trozos.join("%"))
+    .limit(20);
+  type Fila = {
+    id: string;
+    codigo: string;
+    descripcion: string;
+    peso_kg: number | null;
+    precio_mercado: number | null;
+    marcas: { nombre: string } | null;
+  };
+  const clave = trozos.join("");
+  const candidatos = ((data ?? []) as unknown as Fila[]).filter((p) => claveCodigo(p.codigo) === clave);
+  const m = String(marca).trim().toUpperCase();
+  const p =
+    candidatos.length === 1
+      ? candidatos[0]
+      : candidatos.find((c) => (c.marcas?.nombre ?? "").toUpperCase() === m);
+  if (!p) return null;
+  return {
+    id: p.id,
+    codigo: p.codigo,
+    descripcion: p.descripcion,
+    marca: p.marcas?.nombre ?? null,
+    peso_kg: Number(p.peso_kg) || 0,
+    precio_mercado: Number(p.precio_mercado) || 0,
+  };
+}
 
 export type ResultadoHoja =
   | {

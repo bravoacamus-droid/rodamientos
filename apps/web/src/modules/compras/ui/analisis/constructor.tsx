@@ -4,17 +4,18 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, toast } from "@rodatech/ui";
-import { FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
+import { Check, FileSpreadsheet, Plus, Scale, ShoppingCart, Trash2 } from "lucide-react";
 
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 
 import { guardarAnalisis, propuestasAnalisis } from "../../acciones/analisis";
-import { leerExcelAnalisis } from "../../acciones/analisis-hoja";
+import { leerExcelAnalisis, productoPorCodigo } from "../../acciones/analisis-hoja";
 import {
   aPayload,
   bloqueos as calcularBloqueos,
   calcular,
+  enBlanco,
   estadoInicial,
   reducir,
   type EstadoAnalisis,
@@ -69,8 +70,27 @@ export function ConstructorAnalisis({
   const [estado, despachar] = React.useReducer(
     reducir,
     null,
-    () => inicial?.estado ?? estadoInicial(hoy),
+    // Uno nuevo empieza con una fila para escribir, como una hoja en blanco.
+    () => inicial?.estado ?? reducir(estadoInicial(hoy), { tipo: "agregarFila" }),
   );
+
+  /*
+    «Añadir fila» lleva el cursor al código de la fila nueva. Se busca el
+    campo VISIBLE: la tabla y las tarjetas existen las dos y una está oculta.
+  */
+  const [enfocar, setEnfocar] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    if (!enfocar) return;
+    const campo = [...document.querySelectorAll<HTMLInputElement>(`[data-codigo-de="${enfocar}"]`)].find(
+      (e) => e.offsetParent !== null,
+    );
+    campo?.focus();
+    setEnfocar(null);
+  }, [enfocar]);
+  const agregarFila = () => {
+    setEnfocar(`a${estado.proximaKey}`);
+    despachar({ tipo: "agregarFila" });
+  };
   const [proveedor, setProveedor] = React.useState<ProveedorOpcion | null>(
     inicial?.proveedor ?? null,
   );
@@ -255,31 +275,32 @@ export function ConstructorAnalisis({
       <section className="card @container p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-base font-semibold">Productos de la proforma</h2>
-          {estado.lineas.length > 0 && !soloLectura ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-sm"
-              onClick={() => despachar({ tipo: "pedirLoCotizado" })}
-            >
-              Pedir todo lo cotizado
-            </Button>
-          ) : null}
+          {soloLectura ? null : (
+            <div className="flex flex-wrap gap-2">
+              {estado.lineas.some((l) => !enBlanco(l)) ? (
+                <Button type="button" variant="outline" onClick={() => despachar({ tipo: "pedirLoCotizado" })}>
+                  Pedir todo lo cotizado
+                </Button>
+              ) : null}
+              <CargarExcel hayLineas={estado.lineas.filter((l) => !enBlanco(l)).length} despachar={despachar} />
+            </div>
+          )}
         </div>
 
+        {/* Luis, 02/10: *«eso lo quiere rellenar acá para no usar el excel»*.
+            Se escribe en la tabla, fila por fila, como en su hoja. */}
         {soloLectura ? null : (
-          <div className="mb-3">
-            <CargarExcel hayLineas={estado.lineas.length} despachar={despachar} />
-          </div>
+          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+            Escribe cada producto de la proforma en una fila, como en tu hoja: el código, y el
+            sistema lo busca en el catálogo. <strong>Enter</strong> baja a la fila de abajo.
+          </p>
         )}
 
         {soloLectura ? null : (
-          <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="flex-1">
+          <div className="mb-3">
+            <div>
               <span className="mb-1 flex items-center gap-1.5 text-sm font-medium">
-                <Plus className="size-4" aria-hidden />
-                Añadir un producto del catálogo
+                ¿No recuerdas el código? Búscalo por descripción
               </span>
               <BuscadorCompra
                 ultimosCostos={{}}
@@ -298,7 +319,6 @@ export function ConstructorAnalisis({
                 }
               />
             </div>
-            <CodigoLibre onAgregar={(codigo, marca) => despachar({ tipo: "agregarLibre", codigo, marca })} />
           </div>
         )}
 
@@ -311,12 +331,7 @@ export function ConstructorAnalisis({
           </p>
         ) : null}
 
-        {estado.lineas.length === 0 ? (
-          <p className="rounded-md border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--fg-muted)]">
-            Busca arriba cada producto de la proforma. Si todavía no está en el catálogo, añádelo
-            con su código.
-          </p>
-        ) : (
+        {estado.lineas.length === 0 ? null : (
           <>
             <ul className="flex flex-col gap-3 @6xl:hidden">
               {estado.lineas.map((l) => (
@@ -341,6 +356,13 @@ export function ConstructorAnalisis({
               />
             </div>
           </>
+        )}
+
+        {soloLectura ? null : (
+          <Button type="button" variant="outline" className="mt-3 w-full border-dashed sm:w-auto" onClick={agregarFila}>
+            <Plus className="size-4" aria-hidden />
+            Añadir fila
+          </Button>
         )}
       </section>
 
@@ -595,41 +617,73 @@ function Resumen({ c, estado }: { c: ReturnType<typeof calcular>; estado: Estado
 }
 
 
-/** Un código que todavía no está en el catálogo. */
-function CodigoLibre({ onAgregar }: { onAgregar: (codigo: string, marca: string) => void }) {
-  const [codigo, setCodigo] = React.useState("");
-  const [marca, setMarca] = React.useState("");
-  const agregar = () => {
-    if (codigo.trim() === "") return;
-    onAgregar(codigo, marca);
-    setCodigo("");
-    setMarca("");
+/**
+ * El código y la marca de una fila, escritos a mano como en su hoja.
+ *
+ * Al salir del campo se pregunta al catálogo: si está, la fila queda enlazada
+ * —con su descripción a la vista y el peso y el precio de mercado que ya se
+ * sepan—; si no, lo dice, y sigue valiendo para analizar. Para comprar sí hará
+ * falta darlo de alta.
+ */
+function CeldaCodigo({
+  l,
+  despachar,
+  soloLectura,
+}: {
+  l: LineaAnalisis;
+  despachar: Despachar;
+  soloLectura: boolean;
+}) {
+  const [buscando, setBuscando] = React.useState(false);
+
+  const comprobar = () => {
+    if (enBlanco(l) || l.productoId) return;
+    setBuscando(true);
+    void productoPorCodigo(l.codigo, l.marca)
+      .then((p) => despachar({ tipo: "enlazar", key: l.key, producto: p }))
+      .finally(() => setBuscando(false));
   };
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-sm font-medium">¿No está en el catálogo?</span>
-      <div className="flex flex-wrap gap-2">
-        <Input
-          value={codigo}
-          onChange={(e) => setCodigo(e.target.value.slice(0, 80))}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), agregar())}
-          placeholder="Código"
-          aria-label="Código del producto que no está en el catálogo"
-          className="w-36 font-mono"
-        />
-        <Input
-          value={marca}
-          onChange={(e) => setMarca(e.target.value.slice(0, 60))}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), agregar())}
-          placeholder="Marca"
-          aria-label="Marca"
-          className="w-28"
-        />
-        <Button type="button" variant="outline" onClick={agregar} disabled={codigo.trim() === ""}>
-          <Plus className="size-4" aria-hidden />
-          Añadir
-        </Button>
+
+  if (soloLectura) {
+    return (
+      <div>
+        <span className="block whitespace-nowrap font-mono font-semibold">{l.codigo}</span>
+        <span className="block whitespace-nowrap text-[var(--fg-subtle)]">{l.marca || "—"}</span>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <div className="flex gap-1">
+        <Input
+          value={l.codigo}
+          onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "codigo", valor: e.target.value.slice(0, 80) })}
+          onBlur={comprobar}
+          placeholder="Código"
+          data-codigo-de={l.key}
+          aria-label="Código del producto"
+          className="w-36 min-w-0 flex-1 font-mono font-semibold"
+        />
+        <Input
+          value={l.marca}
+          onChange={(e) => despachar({ tipo: "texto", key: l.key, campo: "marca", valor: e.target.value.slice(0, 60) })}
+          onBlur={comprobar}
+          placeholder="Marca"
+          aria-label={`Marca de ${l.codigo || "este producto"}`}
+          className="w-20 shrink-0"
+        />
+      </div>
+      {enBlanco(l) ? null : buscando ? (
+        <span className="text-sm text-[var(--fg-muted)]">Buscando en el catálogo…</span>
+      ) : l.productoId ? (
+        <span className="flex max-w-60 items-center gap-1 text-sm text-[var(--ok)]" title={l.descripcion}>
+          <Check className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">{l.descripcion || "En el catálogo"}</span>
+        </span>
+      ) : (
+        <span className="text-sm text-[var(--fg-muted)]">No está en el catálogo</span>
+      )}
     </div>
   );
 }
@@ -694,18 +748,26 @@ function CargarExcel({ hayLineas, despachar }: { hayLineas: number; despachar: D
   };
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-[var(--info)] bg-[var(--info-bg)] p-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={() => entrada.current?.click()} disabled={leyendo}>
-          <FileSpreadsheet className="size-4" aria-hidden />
-          {leyendo ? "Leyendo tu hoja…" : "Subir tu hoja de Excel"}
-        </Button>
-        <p className="min-w-0 flex-1 text-sm">
-          La misma hoja de siempre, con sus columnas: CLIENTE, f, CODIGO, MARCA, CANT.Ref, Price
-          FOB $, PESO U(Kg.), CANT. PEDIDO, P.M y PROV. El DHL lo saca de abajo.
-          {hayLineas > 0 ? <strong> Reemplaza los {hayLineas} productos que hay ahora.</strong> : null}
-        </p>
-      </div>
+    <div className="flex flex-col gap-1">
+      {/* Secundario: lo normal es escribirlo aquí. Sirve para las proformas
+          que ya tiene en Excel. */}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => entrada.current?.click()}
+        disabled={leyendo}
+        title={
+          hayLineas > 0
+            ? `Reemplaza los ${hayLineas} productos que hay ahora`
+            : "Tu hoja de siempre: CLIENTE, f, CODIGO, MARCA, CANT.Ref, Price FOB $, PESO U(Kg.), CANT. PEDIDO, P.M y PROV."
+        }
+      >
+        <FileSpreadsheet className="size-4" aria-hidden />
+        {leyendo ? "Leyendo tu hoja…" : "Traer de un Excel"}
+      </Button>
+      {hayLineas > 0 ? (
+        <span className="text-sm text-[var(--fg-muted)]">Reemplaza lo escrito</span>
+      ) : null}
       <input
         ref={entrada}
         type="file"
@@ -759,9 +821,41 @@ function Tabla({
   const amarillo = "bg-[var(--warn-bg)]";
   const verde = "bg-[var(--ok-bg)]";
   const azul = "bg-[var(--info-bg)]";
+
+  /*
+    Enter baja a la misma columna de la fila de abajo, como en Excel; en la
+    última, añade una fila. Se maneja aquí, una vez, y no campo por campo.
+  */
+  const tabla = React.useRef<HTMLTableElement>(null);
+  const columnaPendiente = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    const col = columnaPendiente.current;
+    if (col === null) return;
+    columnaPendiente.current = null;
+    const filas = tabla.current?.tBodies[0]?.rows;
+    filas?.[filas.length - 1]?.cells[col]?.querySelector("input")?.focus();
+  }, [lineas.length]);
+  const alPulsar = (e: React.KeyboardEvent<HTMLTableElement>) => {
+    if (e.key !== "Enter" || soloLectura) return;
+    const t = e.target as HTMLElement;
+    const celda = t.closest("td");
+    const fila = celda?.parentElement as HTMLTableRowElement | null;
+    if (t.tagName !== "INPUT" || !celda || fila?.parentElement?.tagName !== "TBODY") return;
+    e.preventDefault();
+    const col = celda.cellIndex;
+    const abajo = (fila.nextElementSibling as HTMLTableRowElement | null)?.cells[col]?.querySelector("input");
+    if (abajo) {
+      abajo.focus();
+      abajo.select();
+    } else {
+      columnaPendiente.current = col;
+      despachar({ tipo: "agregarFila" });
+    }
+  };
+
   return (
     <div className="scroll-x">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+      <table ref={tabla} onKeyDown={alPulsar} className="w-full border-separate border-spacing-0 text-sm">
         <thead>
           <tr className="text-sm font-semibold">
             <th className={`${fijo} px-2 py-1.5`} />
@@ -780,7 +874,7 @@ function Tabla({
             <th />
           </tr>
           <tr className="text-left text-[var(--fg-muted)] [&>th]:border-b [&>th]:border-[var(--border)]">
-            <th className={`${th} ${fijo}`}>CÓDIGO</th>
+            <th className={`${th} ${fijo}`}>CÓDIGO · MARCA</th>
             <th className={th}>CLIENTE</th>
             <th className={`${th} text-right`} title="Veces al año que lo piden tus clientes">
               f
@@ -811,12 +905,8 @@ function Tabla({
             const calc = `${td} ${num} px-2 pt-3.5`;
             return (
               <tr key={l.key}>
-                <td className={`${td} ${fijo} px-2 pt-2`}>
-                  <span className="block whitespace-nowrap font-mono font-semibold">{l.codigo}</span>
-                  <span className="block whitespace-nowrap text-[var(--fg-subtle)]">
-                    {l.marca || "—"}
-                    {l.productoId ? "" : " · no está en el catálogo"}
-                  </span>
+                <td className={`${td} ${fijo}`}>
+                  <CeldaCodigo l={l} despachar={despachar} soloLectura={soloLectura} />
                 </td>
                 <td className={td}>
                   <Input
@@ -953,11 +1043,7 @@ function Tarjeta({
     <li className="rounded-md border border-[var(--border)] p-3">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-sm font-semibold">{l.codigo}</p>
-          <p className="text-sm text-[var(--fg-subtle)]">
-            {l.marca || "—"}
-            {l.productoId ? "" : " · no está en el catálogo"}
-          </p>
+          <CeldaCodigo l={l} despachar={despachar} soloLectura={soloLectura} />
         </div>
         {soloLectura ? null : (
           <Button

@@ -248,3 +248,59 @@ function linea(p: Partial<Omit<LineaAnalisis, "key" | "fobAnterior">>): Omit<Lin
     ...p,
   };
 }
+
+describe("rellenarlo a mano, como su hoja", () => {
+  const PRODUCTO = { id: "p1", codigo: "6313-2Z/C3", descripcion: "Rodamiento", marca: "SKF", peso_kg: 2.13, precio_mercado: 53.95 };
+
+  it("una fila nueva sale vacía y con cantidades en 0", () => {
+    const e = correr({ tipo: "agregarFila" });
+    expect(e.lineas).toHaveLength(1);
+    expect(e.lineas[0]).toMatchObject({ codigo: "", cantidadRef: 0, cantidadPedido: 0, productoId: null });
+  });
+
+  it("al escribir lo cotizado, el pedido lo sigue", () => {
+    let e = correr({ tipo: "agregarFila" });
+    e = reducir(e, { tipo: "campo", key: e.lineas[0]!.key, campo: "cantidadRef", valor: 6 });
+    expect(e.lineas[0]!.cantidadPedido).toBe(6);
+  });
+
+  it("el catálogo enlaza el código y llena solo lo vacío", () => {
+    let e = correr({ tipo: "agregarFila" });
+    const key = e.lineas[0]!.key;
+    e = reducir(e, { tipo: "texto", key, campo: "codigo", valor: "6313 2z/c3" });
+    e = reducir(e, { tipo: "campo", key, campo: "pesoKg", valor: 2.2 });
+    e = reducir(e, { tipo: "enlazar", key, producto: PRODUCTO });
+    expect(e.lineas[0]).toMatchObject({ productoId: "p1", codigo: "6313-2Z/C3", marca: "SKF", pesoKg: 2.2, precioMercado: 53.95 });
+  });
+
+  it("cambiar el código suelta el producto; repetirlo igual, no", () => {
+    let e = correr({ tipo: "agregarFila" });
+    const key = e.lineas[0]!.key;
+    e = reducir(e, { tipo: "enlazar", key, producto: PRODUCTO });
+    e = reducir(e, { tipo: "texto", key, campo: "codigo", valor: "6313-2z/c3" });
+    expect(e.lineas[0]!.productoId).toBe("p1");
+    e = reducir(e, { tipo: "texto", key, campo: "codigo", valor: "6314" });
+    expect(e.lineas[0]).toMatchObject({ productoId: null, codigo: "6314", descripcion: "" });
+  });
+
+  it("las filas vacías ni bloquean, ni se guardan, ni piden peso", () => {
+    let e = correr({ tipo: "cabecera", campo: "proveedorId", valor: "prov" }, { tipo: "agregarFila" }, { tipo: "agregarFila" });
+    expect(bloqueos(e)).toEqual(["Escribe los productos de la proforma."]);
+    e = reducir(e, { tipo: "texto", key: e.lineas[0]!.key, campo: "codigo", valor: "A1" });
+    expect(bloqueos(e)).toEqual([]);
+    expect(aPayload(e).items).toHaveLength(1);
+    expect(calcular(e).sinPeso).toEqual([e.lineas[0]!.key]);
+  });
+});
+
+describe("el buscador y las filas vacías", () => {
+  it("el producto elegido cae en la fila vacía, no debajo", () => {
+    const e = correr(
+      { tipo: "agregarLibre", codigo: "A1", marca: "" },
+      { tipo: "agregarFila" },
+      { tipo: "agregar", producto: { id: "p9", codigo: "6205", descripcion: "Rod.", marca: "SKF" } },
+    );
+    expect(e.lineas.map((l) => l.codigo)).toEqual(["A1", "6205"]);
+    expect(e.lineas[1]!.cantidadRef).toBe(1);
+  });
+});

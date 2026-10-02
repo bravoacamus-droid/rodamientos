@@ -112,7 +112,17 @@ export type Accion =
       fobs: Readonly<Record<string, { precio: number; numero: string }>>;
     }
   /** Todas las cantidades finales iguales a las cotizadas. */
-  | { tipo: "pedirLoCotizado" };
+  | { tipo: "pedirLoCotizado" }
+  /**
+   * Una fila vacía, para escribirla como en su hoja. Luis, 02/10: *«eso lo
+   * quiere rellenar acá para no usar el excel»*.
+   */
+  | { tipo: "agregarFila" }
+  /**
+   * Lo que dijo el catálogo del código escrito en una fila: el producto, o
+   * null si no está. Llega del servidor al salir del campo.
+   */
+  | { tipo: "enlazar"; key: string; producto: ProductoParaAnalizar | null };
 
 export function estadoInicial(fecha: string): EstadoAnalisis {
   return {
@@ -172,6 +182,21 @@ export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis 
               : l,
           ),
         };
+      }
+      // Si hay filas vacías para escribir, la primera se queda con él: si no,
+      // quedaría un hueco encima del producto elegido.
+      const hueco = estado.lineas.findIndex(enBlanco);
+      const lineas = hueco < 0 ? estado.lineas : estado.lineas.filter((_, i) => i !== hueco);
+      const nueva = nuevaLinea(hueco < 0 ? `a${estado.proximaKey}` : estado.lineas[hueco]!.key, {
+        productoId: p.id,
+        codigo: p.codigo,
+        marca: p.marca ?? "",
+        descripcion: p.descripcion,
+        pesoKg: p.peso_kg ?? 0,
+        precioMercado: p.precio_mercado ?? 0,
+      });
+      if (hueco >= 0) {
+        return { ...estado, lineas: [...lineas.slice(0, hueco), nueva, ...lineas.slice(hueco)] };
       }
       return {
         ...estado,
@@ -235,10 +260,47 @@ export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis 
     case "texto":
       return {
         ...estado,
-        lineas: estado.lineas.map((l) =>
-          l.key === accion.key ? { ...l, [accion.campo]: accion.valor.slice(0, 300) } : l,
-        ),
+        lineas: estado.lineas.map((l) => {
+          if (l.key !== accion.key) return l;
+          const valor = accion.valor.slice(0, 300);
+          // Cambiar el código suelta el producto: hasta que el catálogo diga
+          // otra cosa, ese código no se sabe si está.
+          if (accion.campo === "codigo" && valor.trim().toUpperCase() !== l.codigo.trim().toUpperCase()) {
+            return { ...l, codigo: valor.toUpperCase(), productoId: null, descripcion: "" };
+          }
+          return { ...l, [accion.campo]: accion.campo === "marca" ? valor.toUpperCase() : valor };
+        }),
       };
+
+    case "agregarFila":
+      return {
+        ...estado,
+        // Cantidades en 0: se escriben, como en su hoja. Mientras sean
+        // iguales, el pedido sigue a lo cotizado.
+        lineas: [...estado.lineas, nuevaLinea(`a${estado.proximaKey}`, { cantidadRef: 0, cantidadPedido: 0 })],
+        proximaKey: estado.proximaKey + 1,
+      };
+
+    case "enlazar": {
+      const p = accion.producto;
+      return {
+        ...estado,
+        lineas: estado.lineas.map((l) => {
+          if (l.key !== accion.key) return l;
+          if (!p) return { ...l, productoId: null, descripcion: "" };
+          return {
+            ...l,
+            productoId: p.id,
+            codigo: p.codigo,
+            marca: l.marca || (p.marca ?? "").toUpperCase(),
+            descripcion: p.descripcion,
+            // Lo escrito manda; el catálogo solo llena lo vacío.
+            pesoKg: l.pesoKg || p.peso_kg || 0,
+            precioMercado: l.precioMercado || p.precio_mercado || 0,
+          };
+        }),
+      };
+    }
 
     case "propuestas":
       return {
@@ -427,17 +489,22 @@ export function calcular(estado: Pick<EstadoAnalisis, "lineas" | "costoEnvio" | 
     // precio de mercado: con las otras, dividir diría un margen que no existe.
     rinde: limaConMercado > 0 ? totalMercado / limaConMercado : null,
     margen: limaConMercado > 0 ? (totalMercado - limaConMercado) / limaConMercado : null,
-    sinPeso: estado.lineas.filter((l) => !(l.pesoKg > 0)).map((l) => l.key),
-    sinMercado: estado.lineas.filter((l) => !(l.precioMercado > 0)).map((l) => l.key),
+    sinPeso: estado.lineas.filter((l) => !enBlanco(l) && !(l.pesoKg > 0)).map((l) => l.key),
+    sinMercado: estado.lineas.filter((l) => !enBlanco(l) && !(l.precioMercado > 0)).map((l) => l.key),
   };
 }
+
+/**
+ * Una fila sin código: la que se añadió para escribir y se dejó vacía. No se
+ * guarda ni impide guardar —como una fila vacía en Excel—.
+ */
+export const enBlanco = (l: LineaAnalisis) => l.codigo.trim() === "";
 
 /** Por qué no se puede guardar todavía. */
 export function bloqueos(estado: EstadoAnalisis): string[] {
   const b: string[] = [];
   if (!estado.proveedorId) b.push("Falta el proveedor que cotiza.");
-  if (estado.lineas.length === 0) b.push("Añade los productos de la proforma.");
-  if (estado.lineas.some((l) => l.codigo.trim() === "")) b.push("Hay una línea sin código.");
+  if (estado.lineas.every(enBlanco)) b.push("Escribe los productos de la proforma.");
   return b;
 }
 
@@ -451,7 +518,7 @@ export function aPayload(estado: EstadoAnalisis, id?: string) {
     costo_envio: estado.costoEnvio,
     peso_declarado: estado.pesoDeclarado > 0 ? estado.pesoDeclarado : null,
     notas: estado.notas.trim() || null,
-    items: estado.lineas.map((l) => ({
+    items: estado.lineas.filter((l) => !enBlanco(l)).map((l) => ({
       producto_id: l.productoId,
       codigo: l.codigo.trim(),
       marca: l.marca.trim() || null,
