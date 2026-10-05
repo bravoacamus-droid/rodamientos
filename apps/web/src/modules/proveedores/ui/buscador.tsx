@@ -149,7 +149,8 @@ export function BuscadorProveedores({
           <Truck className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{elegido.razon_social}</p>
+            {/* Parte línea en vez de cortarse: a 390 salía «MARCO PERUANA …» (revisión del 02/10). */}
+            <p className="text-sm font-semibold [overflow-wrap:anywhere]">{elegido.razon_social}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-[var(--fg-muted)]">
               {/* El «·» va DENTRO del dato que le sigue: suelto, en un
                   teléfono se quedaba solo en su propia línea. */}
@@ -228,7 +229,7 @@ export function BuscadorProveedores({
             }}
             onFocus={() => setAbierto(true)}
             onKeyDown={teclas}
-            placeholder="Busca por nombre, RUC o marca…"
+            placeholder="Nombre, RUC o marca…"
             autoComplete="off"
             role="combobox"
             aria-expanded={abierto}
