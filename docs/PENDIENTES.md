@@ -4592,6 +4592,47 @@ de Defontana.
 
 ---
 
+## §AS · 05/10 — SUNAT: escrito, pero desde este ERP no ha salido nada
+
+Luis, 05/10: *«los datos q se tiene q mandar a sunat tmb esta bien la
+integracion tmbbtodo?»*. Lo comprobado en la base, sin leer secretos:
+
+- `config_sunat` en **beta**, **sin usuario SOL, sin clave y sin certificado**
+  (.pfx). «Probar conexión» no se ha pulsado nunca (`probado_en` nulo).
+- **Ningún comprobante creado desde la carga del 28/08.** Los 518 que salen
+  «aceptados» (F002 y FC02) los mandó el sistema anterior de Willy; vinieron
+  del Excel. Desde este ERP **no ha llegado nada a SUNAT**.
+- Facturas, notas, bajas y resúmenes: XML UBL 2.1, firma, SOAP y lectura del
+  CDR están escritos, con tests unitarios, pero **nunca han ido contra SUNAT**.
+- **Guías (GRE): sin escribir.** Van por REST + OAuth2 (§3, R5) y SUNAT **no
+  tiene beta** para ellas.
+
+### Se puede probar sin el certificado de Willy
+
+Beta acepta un certificado **autofirmado** y el usuario público `MODDATOS` /
+`moddatos`: comprueba que el XML esté bien formado y firmado, no quién emitió
+el certificado. Comprobado el 05/10: `leerCertificadoPfx` (node-forge) abre un
+.pfx de OpenSSL 3.5 **tanto con el cifrado moderno (AES) como con `-legacy`**,
+que era el riesgo (forge no lee todo PKCS#12).
+
+**Propuesto, sin hacer** (Luis dio el OK y pidió cerrar el día): un script
+aparte que arme una factura con `@rodatech/sunat`, la firme con ese
+certificado y la mande a beta — **sin tocar la base del cliente**: ni
+credenciales en `config_sunat` ni un correlativo gastado. Luego nota y baja.
+No prueba ni el certificado real ni la GRE.
+
+### Lo que tiene que dar Willy
+
+- [ ] Certificado digital (.pfx) y su clave.
+- [ ] Usuario SOL secundario con permiso de emisión, y su clave.
+- [ ] Para la GRE: `client_id` y `client_secret` de la API (se generan en SOL).
+- [ ] Desde qué número siguen `T002` y `CT02`.
+
+Todo eso se carga en **Configuración → SUNAT y numeración**, nunca por chat ni
+por correo (CLAUDE.md §3).
+
+---
+
 ## §AR · 02/10 — Revisión de diseño de TODO el ERP, para cerrar
 
 Luis, 02/10: *«ya vamos a terminar este proyecto, entonces los módulos ya
