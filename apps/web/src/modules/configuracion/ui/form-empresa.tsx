@@ -182,7 +182,7 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
               disabled={!puedeEditar}
             />
           </Campo>
-          <Campo id="det_min" label="Detracción desde" ayuda="Umbral SPOT en soles.">
+          <Campo id="det_min" label="Detracción desde" ayuda="Importe en soles a partir del cual se aplica.">
             <Input
               id="det_min"
               type="number"
@@ -244,7 +244,9 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
             {guardando ? "Guardando…" : "Guardar"}
           </Button>
           <span className="text-sm text-[var(--fg-subtle)]">
-            Última modificación: {empresa.actualizado_en.slice(0, 10)}
+            {/* «15/09/2026» y no «2026-09-15» (revisión del 02/10). */}
+            Última modificación:{" "}
+            {empresa.actualizado_en.slice(0, 10).split("-").reverse().join("/")}
           </span>
         </div>
       ) : (

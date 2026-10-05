@@ -4,7 +4,12 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 import type { Severidad } from "@/modules/alertas";
-import { etiquetaPeriodo, periodoAnterior, type Rango } from "@/modules/reportes";
+import {
+  etiquetaPeriodo,
+  periodoAnterior,
+  rellenarPeriodos,
+  type Rango,
+} from "@/modules/reportes";
 
 export type Resultado<T> =
   | { ok: true; datos: T }
@@ -262,7 +267,16 @@ export async function kpisDeRango(
         unidades: a.unidades,
         ventaNetaPrevia: b.venta,
         margenPrevio: b.margen,
-        serie: ahora.map((f) => ({
+        // Con los periodos sin venta a cero: ver `reportes/dominio/serie.ts`.
+        serie: rellenarPeriodos(ahora, rango.hasta, rango.grano, (periodo) => ({
+          periodo,
+          venta: 0,
+          costo: 0,
+          ventaConCosto: 0,
+          margen: 0,
+          documentos: 0,
+          unidades: 0,
+        })).map((f) => ({
           periodo: f.periodo,
           etiqueta: etiquetaPeriodo(f.periodo, rango.grano),
           venta: f.venta,

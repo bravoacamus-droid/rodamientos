@@ -1,6 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Badge, CifraAnimada, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
+import { ArrowRight } from "lucide-react";
+import {
+  Badge,
+  CifraAnimada,
+  EstadoError,
+  EstadoVacio,
+  Skeleton,
+  buttonVariants,
+} from "@rodatech/ui";
 
 import { bandeja, resumenBandeja } from "../api/consultas";
 import {
@@ -34,8 +42,9 @@ function uno(v: string | string[] | undefined): string | undefined {
  * envío. `alertas.notificado_en` existe porque lo que Willy pidió fue que la
  * alerta le LLEGUE — *«pero no te llega como una alerta, tú tienes que entrar y
  * ver»* (25:21)—. El worker que empuja por WhatsApp o correo todavía no existe;
- * mientras tanto, esta bandeja es lo que hay, y el botón «Actualizar» hace el
- * trabajo del cron que tampoco existe todavía.
+ * mientras tanto, esta bandeja es lo que hay. El cálculo SÍ es automático:
+ * `generar_alertas()` corre cada día a las 07:00 de Lima desde la 032, y
+ * «Actualizar» solo lo adelanta.
  *
  * Se agrupa por a-quién-le-toca y no por gravedad porque son personas
  * distintas: el quiebre de stock lo resuelve almacén y la factura vencida la
@@ -144,14 +153,19 @@ async function Indicadores() {
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Última revisión</p>
-        <p className="mt-0.5 text-base font-semibold">
-          {ultima ? haceCuanto(ultima, ahora) : "nunca"}
-        </p>
-        {/* Se dice en voz alta porque cambia cómo se lee la pantalla: sin cron,
-            lo que ves es de la última vez que alguien pulsó Actualizar. */}
+        {/*
+          Decía «Última revisión: nunca · se calculan al pulsar Actualizar», y
+          era falso: el cron de la 032 revisa todos los días a las 07:00 y ha
+          corrido cada mañana. «nunca» salía de la fecha de la última alerta
+          —no hay ninguna— y no de la última revisión. Leído así, la bandeja
+          vacía parecía un sistema apagado (revisión por módulos del 02/10).
+        */}
+        <p className="text-sm text-[var(--fg-muted)]">Revisión automática</p>
+        <p className="mt-0.5 text-base font-semibold">cada día a las 7:00</p>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          se calculan al pulsar «Actualizar»
+          {ultima
+            ? `última alerta ${haceCuanto(ultima, ahora)}; «Actualizar» revisa ahora`
+            : "«Actualizar» revisa ahora, sin esperar a mañana"}
         </p>
       </div>
     </div>
@@ -190,7 +204,7 @@ async function Bandeja({ filtros }: { filtros: FiltrosBandeja }) {
             ? "Prueba con menos filtros."
             : archivadas
               ? "Aquí se guarda lo que ya se atendió."
-              : "O todo está en orden, o nadie ha pulsado «Actualizar» todavía."
+              : "Todo en orden: la revisión de cada mañana no ha encontrado nada que mirar."
         }
       />
     );
@@ -246,7 +260,9 @@ function FilaAlerta({
 
   return (
     <li
-      className={`anim-entrada flex items-start gap-3 border-b border-l-2 border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-2)] ${franja} ${
+      // En el teléfono los botones van DEBAJO del texto: al lado dejaban el
+      // mensaje en una columna de 150 px (revisión por módulos del 02/10).
+      className={`anim-entrada flex flex-col items-stretch gap-2 border-b sm:flex-row sm:items-start sm:gap-3 border-l-2 border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-2)] ${franja} ${
         alerta.leida ? "opacity-70" : ""
       }`}
       style={{ animationDelay: `${Math.min(indice, 6) * 28}ms` }}
@@ -275,11 +291,14 @@ function FilaAlerta({
         <div className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-[var(--fg-subtle)]">
           <span className="tabular">{haceCuanto(alerta.generada_en, ahora)}</span>
           {alerta.accion_url ? (
+            // Botón con borde y flecha de lucide, no un enlace azul con «→»
+            // de texto (revisión por módulos del 02/10; CLAUDE.md §1 y §5).
             <Link
               href={alerta.accion_url}
-              className="font-medium text-brand-600 hover:underline"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
             >
-              Ir a arreglarlo →
+              Ir a arreglarlo
+              <ArrowRight aria-hidden="true" />
             </Link>
           ) : null}
           {/* Se enseña porque distingue «ya te avisamos por WhatsApp» de «esto

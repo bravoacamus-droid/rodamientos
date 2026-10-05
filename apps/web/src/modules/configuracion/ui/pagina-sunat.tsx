@@ -89,7 +89,9 @@ export default async function PaginaConfigSunat() {
       {/* Lo que hay que pedirle al cliente, escrito donde se necesita. Es la
           lista que más veces se pide por chat y más veces llega incompleta. */}
       <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
-        <h2 className="text-sm font-semibold">Qué hay que pedirle a Willy</h2>
+        {/* Lo lee el propio Willy: «qué hay que pedirle a Willy» le hablaba
+            de él en tercera persona (revisión por módulos del 02/10). */}
+        <h2 className="text-sm font-semibold">Lo que falta para declarar a SUNAT</h2>
         <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm text-[var(--fg-muted)]">
           <li>
             El <strong>certificado digital .pfx</strong> y su contraseña.

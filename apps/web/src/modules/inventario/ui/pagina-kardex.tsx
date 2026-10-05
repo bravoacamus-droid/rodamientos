@@ -1,6 +1,7 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
+
+import { Volver } from "@/componentes/volver";
 
 import { productoDelKardex } from "../api/consultas";
 import type { FiltrosKardex } from "../dominio/tipos";
@@ -49,7 +50,11 @@ export default async function PaginaKardex({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      {/* «Volver» arriba y con el de todas las fichas (revisión por módulos del
+          02/10): era un enlace con borde hecho a mano, a la derecha del título
+          en escritorio y debajo en el teléfono. */}
+      <div className="flex flex-col gap-1">
+        <Volver href="/inventario">Volver a inventario</Volver>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Kardex</h1>
           {p ? (
@@ -64,13 +69,6 @@ export default async function PaginaKardex({ searchParams }: Props) {
             </p>
           )}
         </div>
-
-        <Link
-          href="/inventario"
-          className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-        >
-          Volver a inventario
-        </Link>
       </div>
 
       <section className="card pt-4">

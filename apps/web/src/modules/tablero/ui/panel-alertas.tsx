@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { EstadoVacio } from "@rodatech/ui";
+import { ArrowRight } from "lucide-react";
+import { EstadoVacio, buttonVariants } from "@rodatech/ui";
 
 // Las etiquetas salen del módulo de alertas y no de una copia local: aquí
 // había una lista de cuatro niveles cuando el enum tiene cinco, así que una
@@ -47,11 +48,10 @@ export async function PanelAlertas() {
               {sinNotificar} sin avisar
             </span>
           ) : null}
-          <Link
-            href="/alertas"
-            className="text-sm font-medium text-brand-600 hover:underline"
-          >
+          {/* Botón y no enlace suelto, como el de la cartera (revisión del 02/10). */}
+          <Link href="/alertas" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Ver todas
+            <ArrowRight aria-hidden="true" />
           </Link>
         </div>
       </header>

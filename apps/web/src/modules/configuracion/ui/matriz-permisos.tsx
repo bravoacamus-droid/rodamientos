@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@rodatech/ui";
-import { Check, Minus } from "lucide-react";
+import { Check, Lock, Minus } from "lucide-react";
 
 import { cambiarPermisoArea } from "../acciones/permisos";
 import {
@@ -80,8 +80,11 @@ export function MatrizPermisos({
     );
   };
 
+  // @container: tarjetas o rejilla según el ancho de la caja y no de la
+  // ventana. A 820 con el menú abierto la rejilla pedía 296 px más de los que
+  // había y la página se desplazaba de lado (revisión por módulos del 02/10).
   return (
-    <div className="flex flex-col gap-4">
+    <div className="@container flex flex-col gap-4">
       {/*
         EN MÓVIL, TARJETAS. EN ESCRITORIO, REJILLA.
 
@@ -91,7 +94,7 @@ export function MatrizPermisos({
         posible de decidir un permiso. Así que en móvil cada área es una
         tarjeta con sus seis roles debajo, y el nombre siempre encima.
       */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-3 @3xl:hidden">
         {AREAS.map((area) => (
           <div key={area.clave} className="rounded-lg border border-[var(--border)] p-3">
             <p className="font-medium">{area.etiqueta}</p>
@@ -110,7 +113,7 @@ export function MatrizPermisos({
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className="hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -142,6 +145,14 @@ export function MatrizPermisos({
           </tbody>
         </table>
       </div>
+
+      <p className="flex items-start gap-1.5 text-sm text-[var(--fg-muted)]">
+        <Lock className="mt-0.5 size-4 shrink-0 text-[var(--fg-subtle)]" aria-hidden />
+        <span>
+          Con candado, lo que no se cambia aquí: Gerencia lo tiene todo siempre, y
+          nadie puede quitarse permisos a su propio rol.
+        </span>
+      </p>
 
       {/*
         Lo que nadie clasificó. Hoy no sale nunca; saldrá el día que alguien
@@ -179,16 +190,25 @@ function Casilla({
   const comun =
     // h-10 en móvil: 38 px es poco para un dedo, y la recomendación son 44.
     // En escritorio vuelve a h-9, que es la altura del resto de controles.
-    "inline-flex h-10 w-full min-w-[4.5rem] items-center justify-center gap-1.5 rounded-md border px-2 text-sm font-medium transition md:h-9 md:w-auto";
+    // `whitespace-nowrap`: «A medias» se partía en «— A» y «medias» en
+    // dos líneas a 1280 (revisión por módulos del 02/10).
+    "inline-flex h-10 w-full min-w-[4.5rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-md border px-2 text-sm font-medium transition md:h-9 md:w-auto";
 
   if (bloqueada) {
+    /*
+      Lo que no se puede cambiar NO lleva caja (revisión por módulos del
+      02/10). Era una casilla gris con borde, igual que un botón apagado: en
+      la columna de Gerencia salían nueve seguidas y parecían rotas. Ahora es
+      el texto con un candado, y la nota de debajo de la tabla dice por qué.
+    */
     return (
       <span
-        className={`${comun} cursor-not-allowed border-[var(--border)] bg-[var(--surface-2)] text-[var(--fg-subtle)]`}
+        className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap px-2 text-sm font-medium text-[var(--fg-muted)] md:h-9"
         title={
           estado === "nada" ? "No, y no se cambia desde aquí" : "Sí, y no se cambia desde aquí"
         }
       >
+        <Lock className="size-4 text-[var(--fg-subtle)]" aria-hidden />
         {estado === "nada" ? "No" : "Sí"}
       </span>
     );

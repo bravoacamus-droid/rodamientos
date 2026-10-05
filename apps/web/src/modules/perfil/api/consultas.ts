@@ -43,7 +43,10 @@ export async function miPerfil(): Promise<Resultado<MiPerfil | null>> {
         telefono: (data.telefono as string | null) ?? null,
         cargo: (data.cargo as string | null) ?? null,
         rol: String(data.rol),
-        ultimo_acceso: (data.ultimo_acceso as string | null) ?? null,
+        // De la sesión y no de la tabla: `perfiles.ultimo_acceso` no lo
+        // escribe nadie y salía siempre «—» (revisión por módulos del 02/10).
+        ultimo_acceso:
+          usuario.last_sign_in_at ?? (data.ultimo_acceso as string | null) ?? null,
       },
     };
   } catch (e) {

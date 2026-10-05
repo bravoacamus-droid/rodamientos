@@ -1,5 +1,6 @@
 import "server-only";
 
+import { clienteAdmin, exigirAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
@@ -110,6 +111,33 @@ export async function series(): Promise<Resultado<SerieDocumento[]>> {
   }
 }
 
+/**
+ * Cuándo entró cada uno por última vez, de Supabase Auth.
+ *
+ * `perfiles.ultimo_acceso` existe desde la 002 y NADIE la escribe: las seis
+ * cuentas salían «nunca» aunque entran a diario (revisión por módulos del
+ * 02/10). Auth sí lo apunta —`last_sign_in_at`—, así que se lee de ahí.
+ *
+ * Solo con la clave de servicio y solo para gerencia/admin, que es quien ve
+ * esta lista. Si falta algo, mapa vacío: la lista sale igual, con lo que diga
+ * la tabla.
+ */
+async function ultimosAccesos(): Promise<Map<string, string>> {
+  const mapa = new Map<string, string>();
+  if (!hayClaveAdmin()) return mapa;
+  try {
+    await exigirAdmin();
+    const { data, error } = await clienteAdmin().auth.admin.listUsers({ perPage: 200 });
+    if (error) return mapa;
+    for (const u of data.users) {
+      if (u.last_sign_in_at) mapa.set(u.id, u.last_sign_in_at);
+    }
+  } catch {
+    // Sin permiso o sin red: se queda lo de la tabla.
+  }
+  return mapa;
+}
+
 /** Quién entra y con qué rol. */
 export async function usuarios(): Promise<Resultado<Usuario[]>> {
   try {
@@ -123,6 +151,8 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
 
     if (error) return fallo(error);
 
+    const accesos = await ultimosAccesos();
+
     return {
       ok: true,
       datos: (data ?? []).map((u) => ({
@@ -132,7 +162,8 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
         rol: String(u.rol) as Rol,
         cargo: (u.cargo as string | null) ?? null,
         activo: Boolean(u.activo),
-        ultimo_acceso: (u.ultimo_acceso as string | null) ?? null,
+        ultimo_acceso:
+          accesos.get(String(u.id)) ?? (u.ultimo_acceso as string | null) ?? null,
       })),
     };
   } catch (e) {

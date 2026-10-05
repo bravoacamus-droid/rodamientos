@@ -86,7 +86,13 @@ async function BloqueCatalogos() {
 
   return (
     <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
-      <h2 className="text-sm font-semibold">Los catálogos todavía no se editan aquí</h2>
+      {/*
+        Decía «todavía no se editan aquí… se cargan por migración»: jerga, y
+        además ya no era verdad. Desde la ficha del producto se crean marca,
+        familia y subfamilia (§AM.7b). Se dice dónde, que es lo que se busca al
+        leer esto (revisión por módulos del 02/10).
+      */}
+      <h2 className="text-sm font-semibold">Marcas, familias y unidades</h2>
       <p className="mt-1 text-sm text-[var(--fg-muted)]">
         {r.ok ? (
           <>
@@ -103,8 +109,9 @@ async function BloqueCatalogos() {
         ) : (
           <>No se pudieron contar.</>
         )}{" "}
-        Se cargan por migración, y un producto nuevo elige entre lo que ya
-        existe.
+        Una marca, familia o subfamilia nueva se crea al dar de alta el
+        producto, desde su propia ficha: ahí mismo, al lado de cada lista,
+        está el botón para añadirla.
       </p>
     </section>
   );

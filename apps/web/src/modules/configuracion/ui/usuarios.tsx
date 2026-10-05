@@ -12,6 +12,21 @@ import { cambiarUsuario, type ResultadoConfig } from "../acciones/guardar";
 import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol, type Usuario } from "../dominio/tipos";
 
 /**
+ * «05/10/2026», en hora de Lima. Era `slice(0, 10)` del ISO en UTC: «2026-10-05»
+ * al revés y, entrando después de las 7 de la tarde, con el día siguiente
+ * (revisión por módulos del 02/10).
+ */
+function fechaAcceso(iso: string | null): string {
+  if (!iso) return "nunca";
+  return new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(iso));
+}
+
+/**
  * Quién entra y con qué rol.
  *
  * El ALTA vive en `alta-usuario.tsx`, encima de esta tabla, desde el 24/09.
@@ -40,9 +55,11 @@ export function TablaUsuarios({
   idPropio: string | null;
   puedeEditar: boolean;
 }) {
+  // @container: a 820 con el menú abierto la tabla pedía 232 px más de los
+  // que había y «Desactivar» quedaba fuera (revisión por módulos del 02/10).
   return (
-    <>
-      <div className="flex flex-col gap-3 md:hidden">
+    <div className="@container">
+      <div className="flex flex-col gap-3 @3xl:hidden">
         {usuarios.map((u) => (
           <TarjetaUsuario
             key={u.id}
@@ -53,7 +70,7 @@ export function TablaUsuarios({
         ))}
       </div>
 
-      <div className="hidden md:block">
+      <div className="hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -75,7 +92,7 @@ export function TablaUsuarios({
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -221,7 +238,7 @@ function TarjetaUsuario({
       <div className="mt-3 flex items-center justify-between gap-2">
         <span className="text-sm text-[var(--fg-muted)]">
           Último acceso:{" "}
-          {usuario.ultimo_acceso ? usuario.ultimo_acceso.slice(0, 10) : "nunca"}
+          {fechaAcceso(usuario.ultimo_acceso)}
         </span>
         {editable ? (
           <BotonEstado
@@ -286,7 +303,7 @@ function FilaUsuario({
       </td>
 
       <td className="tabular px-3 py-2 text-sm text-[var(--fg-muted)]">
-        {usuario.ultimo_acceso ? usuario.ultimo_acceso.slice(0, 10) : "nunca"}
+        {fechaAcceso(usuario.ultimo_acceso)}
       </td>
 
       <td className="whitespace-nowrap px-3 py-2 text-right">

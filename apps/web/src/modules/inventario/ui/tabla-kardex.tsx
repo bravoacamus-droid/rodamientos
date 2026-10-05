@@ -12,6 +12,14 @@ const COLOR: Record<TipoMovimiento, string> = {
   ajuste_negativo: "bg-[var(--warn-bg)] text-[var(--warn)]",
 };
 
+/**
+ * La fecha como se escribe en Perú, «25/09/2026», y no en ISO: «2026-09-25»
+ * hay que leerlo al revés (revisión por módulos del 02/10).
+ */
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.slice(0, 10).split("-");
+  return `${d}/${m}/${a}`;
+}
 
 /**
  * El kardex: todos los movimientos, del más reciente al más antiguo.
@@ -54,7 +62,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
   }
 
   return (
-    <>
+    <div className="@container">
       {/*
         EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 595 y no encoge,
         porque la descripción del producto no se deja.
@@ -63,8 +71,12 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
         la tarjeta lleva el movimiento, la cantidad con su signo y el documento
         que lo causó. Los costos —unitario y promedio— se quedan en la tabla de
         escritorio: ahí no se miran de pie en el almacén, se analizan sentado.
+
+        Por ancho del contenedor y no de la ventana, y con margen dentro de la
+        sección: las tarjetas iban pegadas al borde de la caja que las contiene
+        (revisión por módulos del 02/10).
       */}
-      <div className="flex flex-col gap-2.5 md:hidden">
+      <div className="flex flex-col gap-2.5 p-3 pt-0 @3xl:hidden">
         {filas.map((m) => {
           const enlace = enlaceDeReferencia(m.referencia_tipo, m.referencia_id);
           return (
@@ -100,7 +112,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   </span>
                 </span>
                 <span className="tabular text-[var(--fg-subtle)]">
-                  {m.fecha.slice(0, 10)}
+                  {fechaCorta(m.fecha)}
                 </span>
               </div>
 
@@ -123,15 +135,17 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
         })}
       </div>
 
-      <div className="hidden scroll-x md:block">
+      <div className="hidden scroll-x @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-4 py-2.5 font-medium">Fecha</th>
               <th className="px-4 py-2.5 font-medium">Producto</th>
               <th className="px-4 py-2.5 font-medium">Tipo</th>
-              <th className="px-4 py-2.5 text-right font-medium">Entrada</th>
-              <th className="px-4 py-2.5 text-right font-medium">Salida</th>
+              {/* Entrada y salida en UNA columna con su signo, como en la
+                  tarjeta: con dos, a 1280 con el menú abierto la tabla no
+                  cabía y se cortaba la referencia (revisión del 02/10). */}
+              <th className="px-4 py-2.5 text-right font-medium">Cantidad</th>
               <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
                 Costo unit.
               </th>
@@ -151,19 +165,22 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   className="border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)]"
                 >
                   <td className="whitespace-nowrap px-4 py-2.5 tabular text-sm">
-                    {m.fecha.slice(0, 10)}
+                    {fechaCorta(m.fecha)}
                     <span className="ml-1 text-sm text-[var(--fg-subtle)]">
                       {m.fecha.slice(11, 16)}
                     </span>
                   </td>
-                  <td className="max-w-xs px-4 py-2.5">
+                  <td className="max-w-[16rem] px-4 py-2.5">
                     <Link
                       href={`/inventario/kardex?producto=${m.producto_id}`}
                       className="block font-mono text-sm font-medium text-brand-600 hover:underline"
                     >
                       {m.codigo}
                     </Link>
-                    <span className="block truncate text-sm text-[var(--fg-subtle)]">
+                    <span
+                      className="block truncate text-sm text-[var(--fg-subtle)]"
+                      title={m.descripcion}
+                    >
                       {m.descripcion}
                     </span>
                   </td>
@@ -174,11 +191,14 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                       {ETIQUETA_MOVIMIENTO[m.tipo]}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular">
-                    {m.entrada > 0 ? Number(m.entrada).toLocaleString("es-PE") : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular">
-                    {m.salida > 0 ? Number(m.salida).toLocaleString("es-PE") : "—"}
+                  <td
+                    className={`whitespace-nowrap px-4 py-2.5 text-right tabular font-medium ${
+                      m.entrada > 0 ? "text-[var(--ok)]" : ""
+                    }`}
+                  >
+                    {m.entrada > 0
+                      ? `+${Number(m.entrada).toLocaleString("es-PE")}`
+                      : `−${Number(m.salida).toLocaleString("es-PE")}`}
                   </td>
                   <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                     <Moneda valor={m.costo_unitario} tamano="sm" enfasis="suave" />
@@ -189,7 +209,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
                   <td className="hidden px-4 py-2.5 text-right 2xl:table-cell">
                     <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
                   </td>
-                  <td className="px-4 py-2.5 text-sm">
+                  <td className="max-w-[12rem] whitespace-nowrap px-4 py-2.5 text-sm">
                     {m.referencia_numero ? (
                       enlace ? (
                         <Link
@@ -230,6 +250,6 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }

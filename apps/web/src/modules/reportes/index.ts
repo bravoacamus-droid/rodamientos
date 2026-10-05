@@ -46,6 +46,9 @@ export {
   type Rango,
 } from "./dominio/rango";
 
+// Los periodos sin datos, a cero, en cualquier granularidad (revisión del 02/10).
+export { inicioDePeriodo, rellenarPeriodos } from "./dominio/serie";
+
 export type {
   ClienteFrecuente,
   Embudo,

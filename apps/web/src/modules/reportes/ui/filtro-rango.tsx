@@ -119,8 +119,33 @@ export function FiltroRango({
         Las pastillas suben a 36 px y `text-sm`: iban a 12 px, que en este
         proyecto es directamente un fallo.
       */}
+      {/*
+        EN EL TELÉFONO, UN DESPLEGABLE (revisión por módulos del 02/10).
+
+        Las ocho pastillas ocupaban cuatro filas, y con las fechas debajo el
+        filtro llenaba la pantalla entera: Willy abría el tablero y no veía
+        ni una cifra hasta bajar. El desplegable nativo del teléfono es grande,
+        se toca bien y deja las cifras a la vista.
+      */}
+      <label className="flex flex-col gap-1 sm:hidden">
+        <span className="text-sm font-medium text-[var(--fg-muted)]">Periodo</span>
+        <SelectNativo
+          value={atajo ?? ""}
+          onChange={(e) => {
+            if (e.target.value) elegirAtajo(e.target.value as Atajo);
+          }}
+        >
+          {atajo === null ? <option value="">Entre dos fechas</option> : null}
+          {ATAJOS.map((a) => (
+            <option key={a} value={a}>
+              {ETIQUETA_ATAJO[a]}
+            </option>
+          ))}
+        </SelectNativo>
+      </label>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
+        <div className="hidden flex-wrap gap-1.5 sm:flex">
           {ATAJOS.map((a) => (
             <button
               key={a}
@@ -143,35 +168,36 @@ export function FiltroRango({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 border-t border-[var(--border-soft)] pt-3">
-        <label className="flex flex-col gap-1">
+      {/* En el teléfono, las dos fechas en una fila y «Agrupar» debajo. */}
+      <div className="grid grid-cols-2 items-end gap-3 border-t border-[var(--border-soft)] pt-3 sm:flex sm:flex-wrap">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
           <Input
             type="date"
             value={desde}
             max={hasta}
             onChange={(e) => cambiarFecha("desde", e.target.value)}
-            className="w-auto tabular"
+            className="w-full tabular sm:w-auto"
           />
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
           <Input
             type="date"
             value={hasta}
             min={desde}
             onChange={(e) => cambiarFecha("hasta", e.target.value)}
-            className="w-auto tabular"
+            className="w-full tabular sm:w-auto"
           />
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="col-span-2 flex flex-col gap-1 sm:col-span-1">
           <span className="text-sm font-medium text-[var(--fg-muted)]">Agrupar</span>
           <SelectNativo
             value={grano}
             onChange={(e) => aplicar({ grano: e.target.value })}
-            className="w-auto"
+            className="w-full sm:w-auto"
           >
             {GRANOS.map((g) => (
               <option key={g} value={g}>

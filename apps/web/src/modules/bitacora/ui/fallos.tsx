@@ -4,7 +4,7 @@
 
 import * as React from "react";
 import { Badge, Button, formatearFechaHora } from "@rodatech/ui";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { marcarRevisado } from "../acciones/fallos";
@@ -20,10 +20,14 @@ import type { Fallo } from "../api/consultas";
  * Marcar como revisado no borra nada. Y libera la huella: si el fallo vuelve,
  * abre fila nueva y se nota que volvió.
  */
+/** Cuántos se enseñan antes de «Ver los otros». */
+const VISIBLES = 5;
+
 export function Fallos({ fallos }: { fallos: Fallo[] }) {
   const router = useRouter();
   const [marcando, marcar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  const [todos, setTodos] = React.useState(false);
 
   if (fallos.length === 0) {
     return (
@@ -42,10 +46,18 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
         </p>
       ) : null}
 
-      {fallos.map((f) => (
+      {/*
+        Los cinco más recientes, y el resto detrás de un botón (revisión por
+        módulos del 02/10). Eran decenas y ocupaban 9.000 px en escritorio y
+        23.000 en el teléfono: el historial —que es para lo que se abre esta
+        pantalla— quedaba enterrado debajo.
+      */}
+      {(todos ? fallos : fallos.slice(0, VISIBLES)).map((f) => (
         <div
           key={f.id}
-          className="flex flex-wrap items-start gap-3 rounded-md border border-[var(--border)] p-3"
+          // En el teléfono el botón va debajo: al lado, el mensaje se quedaba
+          // en una columna de 150 px partido palabra a palabra.
+          className="flex flex-col gap-2 rounded-md border border-[var(--border)] p-3 sm:flex-row sm:items-start sm:gap-3"
         >
           <div className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-2">
@@ -78,7 +90,7 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
           <Button
             type="button"
             variant="outline"
-            className="h-9"
+            className="h-9 self-start"
             disabled={marcando}
             onClick={() =>
               marcar(async () => {
@@ -93,6 +105,18 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
           </Button>
         </div>
       ))}
+
+      {!todos && fallos.length > VISIBLES ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="self-start"
+          onClick={() => setTodos(true)}
+        >
+          <ChevronDown aria-hidden="true" />
+          Ver los otros {fallos.length - VISIBLES}
+        </Button>
+      ) : null}
     </div>
   );
 }

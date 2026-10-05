@@ -4,12 +4,14 @@
 // `ventas.tsx`, así los ~90 kB de la librería no entran al bundle inicial —
 // en la demo se importaba estáticamente y viajaba en cada carga del tablero.
 
+import { useEffect, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -19,15 +21,39 @@ import {
 
 import type { PuntoSerie } from "../api/consultas";
 
-const dolares = (n: number) =>
-  n.toLocaleString("es-PE", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
-
 const dolaresExactos = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
+
+/**
+ * La cifra corta del eje y de las etiquetas: «20 mil», «4.5 mil», «850».
+ *
+ * Revisión por módulos del 02/10: el eje decía «USD 20,000» a 14 px en una
+ * columna de 72 y se comía la primera letra —«SD 20,000», «JSD 5,000»—. Y
+ * repetir «USD» en cada marca no añade nada: la moneda va UNA vez, en el
+ * título del gráfico.
+ */
+export function cifraCorta(n: number): string {
+  const abs = Math.abs(n);
+  if (abs < 1000) return Math.round(n).toLocaleString("es-PE");
+  const miles = n / 1000;
+  return `${miles.toLocaleString("es-PE", {
+    maximumFractionDigits: Math.abs(miles) >= 10 ? 0 : 1,
+  })} mil`;
+}
+
+/** Ancho real del gráfico, para decidir si caben las cifras sobre los puntos. */
+function useAncho() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ancho, setAncho] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setAncho(e?.contentRect.width ?? 0));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, ancho] as const;
+}
 
 /*
   Las props de los ejes, compartidas por los dos gráficos.
@@ -52,9 +78,26 @@ const EJE_X = {
 const EJE_Y = {
   tickLine: false,
   axisLine: false,
-  width: 72,
-  tick: { fontSize: 14, fill: "var(--fg-subtle)" },
-  tickFormatter: (v: number) => dolares(v),
+  width: 64,
+  tick: { fontSize: 14, fill: "var(--fg-muted)" },
+  tickFormatter: (v: number) => cifraCorta(v),
+};
+
+/*
+  Las cifras encima de cada punto o barra.
+
+  Willy, del tablero: *«se ve feíto»*. Lo que más le faltaba era LEERLO sin
+  pasar el ratón: el globo solo sale al apuntar, y en el teléfono casi nunca.
+  Con la cifra escrita sobre cada mes el gráfico se lee de un vistazo, que es
+  para lo que está (revisión por módulos del 02/10). Solo se ponen si caben
+  —ver `caben`—; amontonadas serían peor que ninguna.
+*/
+const ETIQUETA_VALOR = {
+  position: "top" as const,
+  offset: 8,
+  fontSize: 14,
+  fill: "var(--fg)",
+  formatter: (v: unknown) => (typeof v === "number" && v !== 0 ? cifraCorta(v) : ""),
 };
 
 const REJILLA = {
@@ -75,7 +118,9 @@ const GLOBO = {
   labelStyle: { color: "var(--fg)", fontWeight: 600 },
 };
 
-const MARGENES = { top: 8, right: 8, bottom: 0, left: 0 };
+// Arriba y a la derecha con aire: arriba va la cifra del punto más alto, y a
+// la derecha la del último mes, que si no se corta contra el borde.
+const MARGENES = { top: 28, right: 24, bottom: 0, left: 0 };
 
 /**
  * Venta y margen a lo largo del periodo.
@@ -137,7 +182,17 @@ export function GraficoVentas({
     margen: m.margen,
   }));
 
-  const enBarras = datos.length <= 4;
+  /*
+    Barras hasta doce periodos (revisión por módulos del 02/10).
+
+    Antes solo con cuatro o menos. Mirando «este año» por mes, el área
+    dibujaba una ola que subía y bajaba ENTRE los meses —entre marzo y abril
+    no hay «venta de mitad de mes», hay dos totales— y el valle de mayo
+    parecía tocar el cero. Un total por mes es una barra: se compara con la
+    de al lado sin interpretar curvas. El área queda para muchos periodos
+    (los días de un mes), donde sí hay recorrido que mirar.
+  */
+  const enBarras = datos.length <= 12;
 
   /*
     Con pocos puntos, las marcas del área se dibujan.
@@ -147,9 +202,15 @@ export function GraficoVentas({
   */
   const conPuntos = datos.length <= 15;
 
+  // ~72 px por periodo es lo que ocupa «12.5 mil» a 14 px con su respiro; con
+  // el margen al lado, en barras, son dos cifras por periodo.
+  const [ref, ancho] = useAncho();
+  const porPeriodo = ancho / Math.max(datos.length, 1);
+  const caben = ancho > 0 && porPeriodo >= (mostrarMargen ? 130 : 72);
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="h-64 w-full">
+      <div ref={ref} className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {enBarras ? (
             <BarChart data={datos} margin={MARGENES}>
@@ -164,14 +225,20 @@ export function GraficoVentas({
                 fill="var(--viz-1)"
                 radius={[4, 4, 0, 0]}
                 maxBarSize={72}
-              />
+                isAnimationActive={false}
+              >
+                {caben ? <LabelList dataKey="venta" {...ETIQUETA_VALOR} /> : null}
+              </Bar>
               {mostrarMargen ? (
                 <Bar
                   dataKey="margen"
                   fill="var(--viz-3)"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={72}
-                />
+                  isAnimationActive={false}
+                >
+                  {caben ? <LabelList dataKey="margen" {...ETIQUETA_VALOR} /> : null}
+                </Bar>
               ) : null}
             </BarChart>
           ) : (
@@ -196,7 +263,12 @@ export function GraficoVentas({
                 fill="url(#degradadoVenta)"
                 dot={conPuntos ? { r: 4, fill: "var(--viz-1)", strokeWidth: 0 } : false}
                 activeDot={{ r: 5 }}
-              />
+                // Sin animación: el trazo crecía desde cero en cada cambio de
+                // filtro y durante ese segundo el gráfico decía otra cosa.
+                isAnimationActive={false}
+              >
+                {caben ? <LabelList dataKey="venta" {...ETIQUETA_VALOR} /> : null}
+              </Area>
               {mostrarMargen ? (
                 <Line
                   type="monotone"
@@ -205,7 +277,17 @@ export function GraficoVentas({
                   strokeWidth={2}
                   dot={conPuntos ? { r: 4, fill: "var(--viz-3)", strokeWidth: 0 } : false}
                   activeDot={{ r: 5 }}
-                />
+                  isAnimationActive={false}
+                >
+                  {caben ? (
+                    <LabelList
+                      dataKey="margen"
+                      {...ETIQUETA_VALOR}
+                      position="bottom"
+                      fill="var(--viz-3)"
+                    />
+                  ) : null}
+                </Line>
               ) : null}
             </AreaChart>
           )}

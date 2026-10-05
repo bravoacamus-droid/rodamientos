@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton } from "@rodatech/ui";
+import { Skeleton, buttonVariants } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { ResumenInventario } from "./resumen";
@@ -37,18 +37,15 @@ export default async function PaginaInventario() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/inventario/kardex"
-            className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-          >
+        {/* Los botones del sistema y no clases copiadas a mano: eran 36 px y
+            esquina de 2 px, al lado de botones de 40 y 6 en el resto del ERP
+            (revisión por módulos del 02/10). */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/inventario/kardex" className={buttonVariants({ variant: "outline" })}>
             Ver kardex
           </Link>
           {puedeCuadrar ? (
-            <Link
-              href="/inventario/ajuste"
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-            >
+            <Link href="/inventario/ajuste" className={buttonVariants({ variant: "primary" })}>
               Cuadrar inventario
             </Link>
           ) : null}

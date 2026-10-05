@@ -92,13 +92,24 @@ export default async function PaginaMiPerfil() {
           </Dato>
           <Dato etiqueta="Rol">{ETIQUETA_ROL[perfil.rol] ?? perfil.rol}</Dato>
           <Dato etiqueta="Último acceso">
-            {perfil.ultimo_acceso ? perfil.ultimo_acceso.slice(0, 16).replace("T", " ") : "—"}
+            {/* En hora de Lima: cortar el ISO enseñaba la hora UTC, cinco
+                horas por delante (revisión por módulos del 02/10). */}
+            {perfil.ultimo_acceso
+              ? new Intl.DateTimeFormat("es-PE", {
+                  timeZone: "America/Lima",
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(perfil.ultimo_acceso))
+              : "—"}
           </Dato>
         </dl>
         <p className="mt-3 text-sm text-[var(--fg-muted)]">
           El correo es la credencial con la que entras y el rol decide lo que
-          puedes hacer. Los dos los cambia <strong>Gerencia</strong>, desde
-          Configuración → Usuarios.
+          puedes hacer. Los dos los cambia <strong>Gerencia</strong>, en
+          Configuración, «Usuarios».
         </p>
       </section>
     </div>

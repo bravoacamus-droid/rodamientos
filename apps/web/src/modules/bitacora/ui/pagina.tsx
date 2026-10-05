@@ -98,7 +98,10 @@ export default async function PaginaBitacora({ searchParams }: Props) {
         </Suspense>
       </section>
 
-      <section className="card pt-4">
+      {/* @container: tarjetas o tabla según el ancho de la caja, no de la
+          ventana; y las tarjetas con margen, que iban pegadas al borde
+          (revisión por módulos del 02/10). */}
+      <section className="card @container pt-4">
         <FiltrosBarra personas={personas.ok ? personas.datos : []} />
 
         <Suspense
@@ -175,7 +178,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
         entonces»—, así que la tarjeta la escribe en ese orden y deja la fecha
         al final, que es el dato que menos se busca y el que más ancho ocupa.
       */}
-      <ul className="flex flex-col gap-2.5 md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 pt-0 @3xl:hidden">
         {filas.map((m) => {
           const href = enlaceDe(m.entidad, m.entidad_id);
           return (
@@ -210,7 +213,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
         })}
       </ul>
 
-      <div className="hidden scroll-x md:block">
+      <div className="hidden scroll-x @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">

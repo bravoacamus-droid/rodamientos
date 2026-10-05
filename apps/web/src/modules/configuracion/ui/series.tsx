@@ -153,8 +153,8 @@ export function TablaSeries({
               <th className="px-3 py-2 font-medium">Documento</th>
               <th className="px-3 py-2 font-medium">Serie</th>
               <th className="px-3 py-2 text-right font-medium">Desde</th>
-              <th className="px-3 py-2 text-right font-medium">Va por</th>
-              <th className="px-3 py-2 font-medium">El próximo</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Va por</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">El próximo</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
           </thead>
@@ -262,14 +262,16 @@ function FilaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
           {serie.correlativo_actual}
         </td>
 
-        <td className="px-3 py-2 font-mono text-sm">
+        {/* Sin partir: «F001-» arriba y «00000001» abajo no se lee como un
+            número (revisión por módulos del 02/10). */}
+        <td className="whitespace-nowrap px-3 py-2 font-mono text-sm">
           {proximoNumero(serie)}
         </td>
 
         <td className="whitespace-nowrap px-3 py-2 text-right">
           {puedeEditar ? (
             <div className="flex justify-end gap-1">
-              <AccionesSerie serie={serie} edicion={edicion} variante="ghost" />
+              <AccionesSerie serie={serie} edicion={edicion} variante="outline" />
             </div>
           ) : null}
         </td>
@@ -400,7 +402,11 @@ function CampoDesde({
 
 /**
  * Los botones de una serie. `variante` es lo único que cambia entre la fila
- * (fantasma, como estaba) y la tarjeta (con borde, para que se vean botones).
+ * y la tarjeta.
+ *
+ * Revisión por módulos del 02/10: en la tabla iban en «ghost» —texto suelto,
+ * sin caja— y ahora van con borde en las dos: un botón tiene que parecer un
+ * botón (CLAUDE.md §1).
  */
 function AccionesSerie({
   serie,
@@ -438,19 +444,22 @@ function AccionesSerie({
           Usar por defecto
         </Button>
       ) : null}
-      <Button
-        variant={variante}
-        size="sm"
-        disabled={ocupado || serie.predeterminada}
-        title={
-          serie.predeterminada
-            ? "La serie por defecto no se puede desactivar: elige otra antes."
-            : undefined
-        }
-        onClick={edicion.alternarActivo}
-      >
-        {serie.activo ? "Desactivar" : "Activar"}
-      </Button>
+      {/*
+        La serie por defecto no se puede desactivar, y el botón no se pinta:
+        un «Desactivar» gris deshabilitado en cada fila por defecto parecía
+        roto, y la explicación solo salía al pasar el ratón (revisión por
+        módulos del 02/10). Para desactivarla, primero se elige otra.
+      */}
+      {serie.predeterminada ? null : (
+        <Button
+          variant={variante}
+          size="sm"
+          disabled={ocupado}
+          onClick={edicion.alternarActivo}
+        >
+          {serie.activo ? "Desactivar" : "Activar"}
+        </Button>
+      )}
     </>
   );
 }
@@ -597,11 +606,12 @@ function DialogNuevaSerie() {
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={() => setAbierto(false)}>
+          {/* Con borde y a tamaño normal, como el «Cancelar» de los demás
+              diálogos de Configuración (revisión por módulos del 02/10). */}
+          <Button variant="outline" onClick={() => setAbierto(false)}>
             Cancelar
           </Button>
           <Button
-            size="sm"
             disabled={ocupado || !formatoOk}
             onClick={async () => {
               const bien = await correr(() =>

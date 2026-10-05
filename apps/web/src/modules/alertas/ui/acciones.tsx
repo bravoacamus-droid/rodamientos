@@ -76,8 +76,9 @@ export function BotonMarcarTodas({ sinLeer }: { sinLeer: number }) {
   if (sinLeer === 0) return null;
 
   return (
+    // Con borde, como los demás: en «ghost» era texto gris sin caja.
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={ocupado}
       onClick={() => correr(marcarTodasLeidas)}

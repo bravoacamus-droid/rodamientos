@@ -56,9 +56,20 @@ export async function SeccionVentas({
   // que hacía que el tablero diera la venta entera como ganancia.
   const margen = estadoDelMargen(k.ventaNeta, k.ventaConCosto, k.costo);
 
+  const conMargen = margen.tipo === "completo" || margen.tipo === "parcial";
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="@container flex flex-col gap-4">
+      {/*
+        Una columna en el teléfono, dos en la tablet, cuatro en escritorio
+        —por el ancho del contenedor, no de la ventana—.
+
+        Revisión por módulos del 02/10: a 390 iban dos por fila de 170 px, el
+        título largo se metía debajo del icono y «vs. el periodo anterior»
+        salía en tres líneas. Willy dijo que el tablero «se ve feíto»; una
+        cifra por fila, grande y entera, es lo que se lee de un vistazo.
+      */}
+      <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
         <KpiCard
           etiqueta="Vendido"
           icono={<ShoppingBag aria-hidden="true" />}
@@ -130,17 +141,23 @@ export async function SeccionVentas({
           detalle={`${k.unidades.toLocaleString("es-PE")} unidades`}
           href="/facturacion"
         />
+        {/* «Ticket promedio» y «venta / comprobantes» eran jerga y una
+            fórmula: se dice lo que es (revisión por módulos del 02/10). */}
         <KpiCard
-          etiqueta="Ticket promedio"
+          etiqueta="Venta promedio"
           icono={<Receipt aria-hidden="true" />}
           valor={dolares(k.documentos > 0 ? k.ventaNeta / k.documentos : 0)}
-          detalle="venta / comprobantes"
+          detalle="por cada comprobante"
         />
       </div>
 
       <section className="card p-4">
+        {/* El título dice lo que se dibuja: sin costo no hay línea de
+            margen, y «Venta y margen» sobre una sola curva confundía. La
+            moneda va aquí una vez, y no en cada marca del eje. */}
         <h2 className="mb-3 text-sm font-semibold">
-          Venta y margen · {describirRango(rango, hoy)}
+          {conMargen ? "Venta y margen" : "Lo vendido"}, en dólares sin IGV ·{" "}
+          {describirRango(rango, hoy)}
         </h2>
         {/*
           Con un solo periodo TAMBIÉN se dibuja, en barras.
@@ -162,7 +179,7 @@ export async function SeccionVentas({
             // La línea de margen solo se dibuja si el margen significa algo.
             // Con costos falsos sería una curva que miente, y una gráfica se
             // cree sin leer la letra pequeña de al lado.
-            mostrarMargen={margen.tipo === "completo" || margen.tipo === "parcial"}
+            mostrarMargen={conMargen}
             // Si el último punto es un periodo a medias, se avisa: mirando
             // doce meses un día 9, ese punto son nueve días contra once meses
             // enteros y el gráfico dibuja un desplome que no ha ocurrido.

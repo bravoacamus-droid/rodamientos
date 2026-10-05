@@ -128,6 +128,22 @@ export const COLOR_AGING: Record<string, string> = {
   mas_90: "var(--danger)",
 };
 
+/**
+ * Los colores del anillo del capital, por orden de familia.
+ *
+ * Aquí y no en el gráfico: la lista de debajo pinta la MISMA muestra de color
+ * al lado de cada familia, y sin ella no había forma de saber qué porción era
+ * cuál (revisión por módulos del 02/10). El gráfico es de cliente y la lista
+ * de servidor; una constante en un archivo "use client" no llega al servidor.
+ */
+export const COLORES_FAMILIA: readonly string[] = [
+  "var(--color-brand-600)",
+  "var(--color-brand-400)",
+  "var(--color-accent-400)",
+  "var(--ok)",
+  "var(--warn)",
+];
+
 export function etiquetaAging(tramo: string): string {
   return ETIQUETA_AGING[tramo] ?? tramo;
 }

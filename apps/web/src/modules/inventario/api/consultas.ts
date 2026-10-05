@@ -107,22 +107,49 @@ export async function resumenInventario(): Promise<Resultado<ResumenInventario>>
  * saldo a días de cobertura, que es como Willy decide comprar. El sobrestock
  * entra en la misma lista a propósito: *"tengo 80 rodamientos que no sé cómo
  * vender"* (25:21) es capital inmovilizado, y duele igual que un quiebre.
+ *
+ * Lo que está a cero SIN mínimo, sin máximo y sin una sola salida en 90 días
+ * no se lista: se cuenta (revisión por módulos del 02/10). Con el catálogo
+ * recién cargado del Excel eran los 789 productos, y la tabla enseñaba cien
+ * filas de «0 · sin consumo · —» elegidas al azar entre ellos. Nada de eso es
+ * algo que reponer —nadie lo ha pedido ni nadie lo vende— y tapaba lo que sí
+ * lo es. El día que un producto tenga mínimo o se venda, vuelve a la lista.
  */
 export async function reposicion(
   limite = 100,
-): Promise<Resultado<FilaReposicion[]>> {
+): Promise<Resultado<{ filas: FilaReposicion[]; omitidos: number }>> {
   try {
     const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("v_reposicion")
-      .select("*")
-      // Lo más urgente arriba: primero lo que no tiene con qué aguantar.
-      .order("dias_cobertura", { ascending: true, nullsFirst: false })
-      .order("valorizado", { ascending: false })
-      .limit(limite);
+    const [lista, omitidos] = await Promise.all([
+      supabase
+        .from("v_reposicion")
+        .select("*")
+        .or(
+          "estado_stock.neq.sin_stock,stock_minimo.gt.0,stock_maximo.gt.0,consumo_diario.gt.0",
+        )
+        // Lo más urgente arriba: primero lo que no tiene con qué aguantar.
+        .order("dias_cobertura", { ascending: true, nullsFirst: false })
+        .order("valorizado", { ascending: false })
+        .limit(limite),
+      supabase
+        .from("v_reposicion")
+        .select("id", { count: "exact", head: true })
+        .eq("estado_stock", "sin_stock")
+        .lte("stock_minimo", 0)
+        .lte("stock_maximo", 0)
+        .lte("consumo_diario", 0),
+    ]);
 
-    if (error) return fallo(error, "inventario/reposicion");
-    return { ok: true, datos: (data ?? []) as unknown as FilaReposicion[] };
+    if (lista.error) return fallo(lista.error, "inventario/reposicion");
+    return {
+      ok: true,
+      datos: {
+        filas: (lista.data ?? []) as unknown as FilaReposicion[],
+        // Si el conteo falla no se inventa: se queda en cero y la lista,
+        // que es lo que importa, sale igual.
+        omitidos: omitidos.count ?? 0,
+      },
+    };
   } catch (e) {
     return fallo(e, "inventario/reposicion");
   }

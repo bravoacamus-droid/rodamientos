@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Moneda } from "@rodatech/ui";
+import { ArrowRight } from "lucide-react";
+import { Moneda, buttonVariants } from "@rodatech/ui";
 
 import { cartera } from "../api/consultas";
 
@@ -38,8 +39,11 @@ export async function PanelCartera() {
     <section className="card flex flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-[var(--border-soft)] px-4 py-3">
         <h2 className="text-sm font-semibold">Cartera</h2>
-        <Link href="/cobranzas" className="text-sm font-medium text-brand-600 hover:underline">
+        {/* Botón con borde y no un enlace azul suelto: *«una persona que no
+            sabe que tiene que darle click ahí»* (revisión del 02/10). */}
+        <Link href="/cobranzas" className={buttonVariants({ variant: "outline", size: "sm" })}>
           Ver cobranzas
+          <ArrowRight aria-hidden="true" />
         </Link>
       </header>
 

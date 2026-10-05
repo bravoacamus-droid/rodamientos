@@ -12,7 +12,7 @@ import {
   topProductosRango,
   valorizacionPorFamilia,
 } from "../api/consultas";
-import { etiquetaAging, variacionPct } from "../dominio/periodo";
+import { COLORES_FAMILIA, etiquetaAging, variacionPct } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
 import {
@@ -39,6 +39,18 @@ interface Props {
 function uno(v: string | string[] | undefined): string | undefined {
   const valor = Array.isArray(v) ? v[0] : v;
   return valor && valor.length > 0 ? valor : undefined;
+}
+
+/**
+ * «$ 114,882.71» y no «$ 114882.71».
+ *
+ * Revisión por módulos del 02/10: las cifras salían con `toFixed(2)`, sin
+ * separador de miles, y una de seis dígitos hay que contarla con el dedo. El
+ * espacio entre el signo y la cifra es de no separación, para que el «$» no se
+ * quede solo al final de una línea.
+ */
+function dinero(n: number): string {
+  return `$\u00a0${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default async function PaginaReportes({ searchParams }: Props) {
@@ -86,7 +98,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
           titulo="Ventas"
-          nota="El área es lo vendido sin IGV; la línea, lo que queda después del costo."
+          nota="Lo vendido en cada periodo, sin IGV. En verde, lo que queda después del costo, cuando se conoce."
         >
           <Suspense key={`v-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
             <BloqueVentas rango={rango} />
@@ -170,7 +182,7 @@ function Bloque({
   children: React.ReactNode;
 }) {
   return (
-    <section className="anim-entrada card p-4">
+    <section className="anim-entrada card @container p-4">
       <div className="mb-3">
         <h2 className="text-sm font-semibold">{titulo}</h2>
         {/* La nota explica CÓMO leer el gráfico. Un gráfico sin instrucciones
@@ -238,7 +250,7 @@ async function Indicadores({ hoy }: { hoy: string }) {
         valor={d.porCobrar}
         prefijo="$ "
         decimales={2}
-        pie={d.vencido > 0 ? `$ ${d.vencido.toFixed(2)} ya vencido` : "nada vencido"}
+        pie={d.vencido > 0 ? `${dinero(d.vencido)} ya vencido` : "nada vencido"}
         tono={d.vencido > 0 ? "malo" : "ok"}
       />
       <Kpi
@@ -333,15 +345,15 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
 
   return (
     <>
-      <GraficoSerieVentas datos={r.datos} />
+      <GraficoSerieVentas datos={r.datos} mostrarMargen={costo > 0} />
       <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
-        <span className="font-medium text-[var(--fg)]">$ {venta.toFixed(2)}</span> en{" "}
+        <span className="font-medium text-[var(--fg)]">{dinero(venta)}</span> en{" "}
         {documentos} {documentos === 1 ? "documento" : "documentos"} ·{" "}
         {/* «margen 0.0 %» con el costo en cero no es un margen del cero por
             ciento: es que no se sabe. El histórico se cargó sin costo, así que
             este es el caso normal mirando hacia atrás. */}
         {costo > 0
-          ? `costo $ ${costo.toFixed(2)} · margen ${margenPct.toFixed(1)} % sobre el costo`
+          ? `costo ${dinero(costo)} · margen ${margenPct.toFixed(1)} % sobre el costo`
           : "sin costo registrado, así que no hay margen que calcular"}
       </p>
     </>
@@ -377,10 +389,10 @@ async function BloqueCompras({ rango }: { rango: Rango }) {
     <>
       <GraficoSerieCompras datos={r.datos} />
       <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
-        <span className="font-medium text-[var(--fg)]">$ {total.toFixed(2)}</span> en{" "}
+        <span className="font-medium text-[var(--fg)]">{dinero(total)}</span> en{" "}
         {ordenes} {ordenes === 1 ? "orden" : "órdenes"}
         {gastos > 0
-          ? ` · de los cuales $ ${gastos.toFixed(2)} son gastos de importación`
+          ? ` · de los cuales ${dinero(gastos)} son gastos de importación`
           : " · sin gastos de importación"}
         . Sin IGV: es crédito fiscal, no costo.
       </p>
@@ -418,7 +430,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
         deja el código y el margen en la primera línea —que es la comparación
         que se viene a hacer— y debajo lo vendido y quién se lo lleva.
       */}
-      <div className="flex flex-col gap-2.5 md:hidden">
+      <div className="flex flex-col gap-2.5 @3xl:hidden">
         {r.datos.map((p) => (
           <div key={p.id} className="rounded-lg border border-[var(--border)] p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -430,14 +442,16 @@ async function BloqueTop({ rango }: { rango: Rango }) {
               </Link>
               <span
                 className={`tabular text-sm font-medium ${
-                  p.margenPct >= 20
+                  p.costo <= 0
+                    ? "text-[var(--fg-subtle)]"
+                    : p.margenPct >= 20
                     ? "text-[var(--ok)]"
                     : p.margenPct < 12
                       ? "text-[var(--warn)]"
                       : ""
                 }`}
               >
-                {p.margenPct} % de margen
+                {p.costo > 0 ? `${p.margenPct} % de margen` : "sin costo"}
               </span>
             </div>
 
@@ -447,7 +461,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
               <span className="tabular font-medium text-[var(--fg)]">{p.unidades}</span>{" "}
               uds. ·{" "}
               <span className="tabular font-medium text-[var(--fg)]">
-                {p.venta.toFixed(2)}
+                {dinero(p.venta)}
               </span>{" "}
               vendido
             </p>
@@ -471,7 +485,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
         ))}
       </div>
 
-      <div className="hidden scroll-x md:block">
+      <div className="hidden scroll-x @3xl:block">
       {/* `text-sm`: era `text-sm` y un informe está para leerse. */}
       <table className="w-full text-sm">
         <thead>
@@ -503,17 +517,21 @@ async function BloqueTop({ rango }: { rango: Rango }) {
                 </span>
               </td>
               <td className="py-1.5 pr-3 text-right tabular">{p.unidades}</td>
-              <td className="py-1.5 pr-3 text-right tabular">{p.venta.toFixed(2)}</td>
+              <td className="py-1.5 pr-3 text-right tabular">{dinero(p.venta)}</td>
               <td
                 className={`py-1.5 pr-3 text-right tabular font-medium ${
-                  p.margenPct >= 20
+                  p.costo <= 0
+                    ? "text-[var(--fg-subtle)]"
+                    : p.margenPct >= 20
                     ? "text-[var(--ok)]"
                     : p.margenPct < 12
                       ? "text-[var(--warn)]"
                       : ""
                 }`}
               >
-                {p.margenPct} %
+                {/* Sin costo no hay margen que decir. «0 %» en ámbar se leía
+                    como «se vende sin ganar nada» (revisión del 02/10). */}
+                {p.costo > 0 ? `${p.margenPct} %` : "—"}
               </td>
               <td className="py-1.5">
                 {p.clientePrincipal ? (
@@ -577,7 +595,7 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
         venir» sube a la primera línea junto al nombre — en la tabla es la
         última columna, la primera que se pierde al arrastrar.
       */}
-      <div className="flex flex-col gap-2.5 md:hidden">
+      <div className="flex flex-col gap-2.5 @3xl:hidden">
         {r.datos.map((c) => (
           <div key={c.id} className="rounded-lg border border-[var(--border)] p-3">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -592,27 +610,29 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
                   c.diasSinComprar > 90 ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"
                 }`}
               >
-                {c.diasSinComprar} d sin venir
+                {c.diasSinComprar} días sin comprar
               </span>
             </div>
 
             <p className="mt-2 text-sm text-[var(--fg-muted)]">
               <span className="tabular font-medium text-[var(--fg)]">
-                {c.venta.toFixed(2)}
+                {dinero(c.venta)}
               </span>{" "}
               en {c.documentos} {c.documentos === 1 ? "documento" : "documentos"} ·{" "}
               <span
                 className={`tabular font-medium ${
-                  c.margenPct >= 20
+                  c.costo <= 0
+                    ? "text-[var(--fg-subtle)]"
+                    : c.margenPct >= 20
                     ? "text-[var(--ok)]"
                     : c.margenPct < 12
                       ? "text-[var(--warn)]"
                       : "text-[var(--fg)]"
                 }`}
               >
-                {c.margenPct} %
-              </span>{" "}
-              de margen
+                {c.costo > 0 ? `${c.margenPct} %` : "sin costo"}
+              </span>
+              {c.costo > 0 ? " de margen" : ""}
             </p>
 
             <p className="mt-1 text-sm text-[var(--fg-subtle)]">
@@ -624,7 +644,7 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
         ))}
       </div>
 
-      <div className="hidden scroll-x md:block">
+      <div className="hidden scroll-x @3xl:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -653,17 +673,19 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
                   {c.documentos} {c.documentos === 1 ? "documento" : "documentos"}
                 </span>
               </td>
-              <td className="py-1.5 pr-3 text-right tabular">{c.venta.toFixed(2)}</td>
+              <td className="py-1.5 pr-3 text-right tabular">{dinero(c.venta)}</td>
               <td
                 className={`py-1.5 pr-3 text-right tabular font-medium ${
-                  c.margenPct >= 20
+                  c.costo <= 0
+                    ? "text-[var(--fg-subtle)]"
+                    : c.margenPct >= 20
                     ? "text-[var(--ok)]"
                     : c.margenPct < 12
                       ? "text-[var(--warn)]"
                       : ""
                 }`}
               >
-                {c.margenPct} %
+                {c.costo > 0 ? `${c.margenPct} %` : "—"}
               </td>
               <td className="py-1.5 pr-3 text-right tabular">
                 {c.diasEntreCompras === null ? (
@@ -717,12 +739,12 @@ async function BloqueAging() {
                 ({t.documentos} {t.documentos === 1 ? "doc." : "docs."})
               </span>
             </span>
-            <span className="tabular font-medium">$ {t.saldo.toFixed(2)}</span>
+            <span className="tabular font-medium">{dinero(t.saldo)}</span>
           </li>
         ))}
         <li className="mt-1 flex items-baseline justify-between gap-2 border-t border-[var(--border-soft)] pt-1.5">
           <span className="font-medium">Total</span>
-          <span className="tabular font-semibold">$ {total.toFixed(2)}</span>
+          <span className="tabular font-semibold">{dinero(total)}</span>
         </li>
       </ul>
     </>
@@ -735,7 +757,7 @@ async function BloqueValorizacion() {
     return <EstadoError titulo="No se pudo cargar la valorización" detalle={r.error} />;
   }
 
-  if (r.datos.length === 0) {
+  if (r.datos.every((f) => f.valorCosto === 0)) {
     return (
       <EstadoVacio
         titulo="El almacén está vacío"
@@ -744,20 +766,38 @@ async function BloqueValorizacion() {
     );
   }
 
+  /*
+    Solo se listan las familias con capital (revisión por módulos del 02/10).
+    Eran once líneas y ocho decían «$ 0.00»: el catálogo entró de un Excel y
+    casi nada tiene stock. Las vacías se nombran juntas en una línea.
+  */
+  const conCapital = r.datos.filter((f) => f.valorCosto !== 0);
+  const vacias = r.datos.filter((f) => f.valorCosto === 0);
+
   return (
     <>
-      <GraficoValorizacion datos={r.datos} />
+      <GraficoValorizacion datos={conCapital} />
       <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-sm">
-        {r.datos.map((f) => (
+        {conCapital.map((f, i) => (
           <li key={f.familia} className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[var(--fg-muted)]">
+            <span className="flex min-w-0 items-baseline gap-2 truncate text-[var(--fg-muted)]">
+              <span
+                aria-hidden="true"
+                className="inline-block size-3 shrink-0 self-center rounded-[3px]"
+                style={{ background: COLORES_FAMILIA[i % COLORES_FAMILIA.length] }}
+              />
               {f.familia}
               <span className="ml-1.5 text-[var(--fg-subtle)]">({f.skus} productos)</span>
             </span>
-            <span className="tabular font-medium">$ {f.valorCosto.toFixed(2)}</span>
+            <span className="tabular font-medium">{dinero(f.valorCosto)}</span>
           </li>
         ))}
       </ul>
+      {vacias.length > 0 ? (
+        <p className="mt-2 text-sm text-[var(--fg-subtle)]">
+          Sin stock: {vacias.map((f) => f.familia).join(", ")}.
+        </p>
+      ) : null}
     </>
   );
 }
@@ -810,10 +850,16 @@ async function BloqueEmbudo() {
         const dentro = pct >= 18;
 
         return (
-          <div key={p.nombre} className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm text-[var(--fg-muted)]">{p.nombre}</span>
+          /* En el teléfono, el nombre y su nota arriba y la barra debajo a
+             lo ancho: en una sola fila la barra se quedaba en 70 px y la
+             cifra no cabía (revisión por módulos del 02/10). */
+          <div
+            key={p.nombre}
+            className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_1fr_8rem]"
+          >
+            <span className="text-sm text-[var(--fg-muted)]">{p.nombre}</span>
 
-            <div className="flex h-7 flex-1 items-center gap-2">
+            <div className="order-last col-span-2 flex h-7 items-center gap-2 sm:order-none sm:col-span-1">
               <div
                 className="h-full overflow-hidden rounded-sm bg-[var(--surface-2)]"
                 style={{ width: dentro ? `${pct}%` : undefined, flex: dentro ? "none" : 1 }}
@@ -833,7 +879,7 @@ async function BloqueEmbudo() {
                 >
                   {dentro ? (
                     <span className="tabular text-sm font-medium text-white">
-                      $ {p.valor.toFixed(2)}
+                      {dinero(p.valor)}
                     </span>
                   ) : null}
                 </div>
@@ -841,12 +887,12 @@ async function BloqueEmbudo() {
 
               {!dentro ? (
                 <span className="tabular shrink-0 text-sm font-medium text-[var(--fg-muted)]">
-                  $ {p.valor.toFixed(2)}
+                  {dinero(p.valor)}
                 </span>
               ) : null}
             </div>
 
-            <span className="w-32 shrink-0 text-right text-sm text-[var(--fg-subtle)]">
+            <span className="text-right text-sm text-[var(--fg-subtle)]">
               {p.pie}
             </span>
           </div>
@@ -855,7 +901,7 @@ async function BloqueEmbudo() {
 
       {e.porCobrar > 0 ? (
         <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          Quedan <strong className="text-[var(--warn)]">$ {e.porCobrar.toFixed(2)}</strong> sin
+          Quedan <strong className="text-[var(--warn)]">{dinero(e.porCobrar)}</strong> sin
           cobrar de lo ya facturado.
         </p>
       ) : null}

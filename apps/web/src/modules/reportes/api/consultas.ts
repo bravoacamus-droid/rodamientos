@@ -12,6 +12,7 @@ import {
   rellenarMeses,
 } from "../dominio/periodo";
 import { etiquetaPeriodo, type Rango } from "../dominio/rango";
+import { rellenarPeriodos } from "../dominio/serie";
 import type {
   ClienteFrecuente,
   Embudo,
@@ -353,17 +354,30 @@ export async function serieVentas(
     });
     if (error) return fallo(error);
 
+    const filas = (data ?? []).map((f) => ({
+      periodo: String(f.periodo),
+      documentos: Number(f.documentos ?? 0),
+      venta: Number(f.venta ?? 0),
+      costo: Number(f.costo ?? 0),
+      margen: Number(f.margen ?? 0),
+      margenPct: Number(f.margen_pct ?? 0),
+      unidades: Number(f.unidades ?? 0),
+    }));
+
+    // Los periodos sin venta, a cero: ver `dominio/serie.ts`.
     return {
       ok: true,
-      datos: (data ?? []).map((f) => ({
-        periodo: String(f.periodo),
-        etiqueta: etiquetaPeriodo(String(f.periodo), rango.grano),
-        documentos: Number(f.documentos ?? 0),
-        venta: Number(f.venta ?? 0),
-        costo: Number(f.costo ?? 0),
-        margen: Number(f.margen ?? 0),
-        margenPct: Number(f.margen_pct ?? 0),
-        unidades: Number(f.unidades ?? 0),
+      datos: rellenarPeriodos(filas, rango.hasta, rango.grano, (periodo) => ({
+        periodo,
+        documentos: 0,
+        venta: 0,
+        costo: 0,
+        margen: 0,
+        margenPct: 0,
+        unidades: 0,
+      })).map((f) => ({
+        ...f,
+        etiqueta: etiquetaPeriodo(f.periodo, rango.grano),
       })),
     };
   } catch (e) {
@@ -391,17 +405,27 @@ export async function serieCompras(
     });
     if (error) return fallo(error);
 
+    const filas = (data ?? []).map((f) => ({
+      periodo: String(f.periodo),
+      ordenes: Number(f.ordenes ?? 0),
+      proveedores: Number(f.proveedores ?? 0),
+      subtotal: Number(f.subtotal ?? 0),
+      gastos: Number(f.gastos ?? 0),
+      costoTotal: Number(f.costo_total ?? 0),
+    }));
+
+    // Los periodos sin compras, a cero, como en las ventas: un mes sin
+    // órdenes también es información.
     return {
       ok: true,
-      datos: (data ?? []).map((f) => ({
-        periodo: String(f.periodo),
-        etiqueta: etiquetaPeriodo(String(f.periodo), rango.grano),
-        ordenes: Number(f.ordenes ?? 0),
-        proveedores: Number(f.proveedores ?? 0),
-        subtotal: Number(f.subtotal ?? 0),
-        gastos: Number(f.gastos ?? 0),
-        costoTotal: Number(f.costo_total ?? 0),
-      })),
+      datos: rellenarPeriodos(filas, rango.hasta, rango.grano, (periodo) => ({
+        periodo,
+        ordenes: 0,
+        proveedores: 0,
+        subtotal: 0,
+        gastos: 0,
+        costoTotal: 0,
+      })).map((f) => ({ ...f, etiqueta: etiquetaPeriodo(f.periodo, rango.grano) })),
     };
   } catch (e) {
     return fallo(e);

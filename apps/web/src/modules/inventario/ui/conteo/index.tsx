@@ -22,7 +22,7 @@ import {
   reducir,
 } from "../../dominio/ajuste";
 import { TIPOS_AJUSTE, type ProductoContable } from "../../dominio/tipos";
-import { FilaConteo } from "./linea";
+import { FilaConteo, TarjetaConteo } from "./linea";
 
 /**
  * Hoja de conteo del cuadre de inventario.
@@ -96,7 +96,27 @@ export function HojaDeConteo({
     n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
 
   return (
-    <form action={guardar} className="flex flex-col gap-5">
+    <form
+      action={guardar}
+      className="flex flex-col gap-5"
+      /*
+        Enter en un campo NO confirma el cuadre: se confirma con el botón.
+
+        Revisión por módulos del 02/10. Con el motivo puesto y una línea
+        contada, un Enter en la cantidad —que es como se teclea una hoja de
+        conteo, número y Enter— disparaba el envío implícito del navegador y
+        REGISTRABA el ajuste: mueve stock real y «no hay deshacer». Es el
+        mismo fallo que guardó dos cotizaciones sin querer el 02/10.
+      */
+      onKeyDown={(e) => {
+        if (
+          e.key === "Enter" &&
+          e.target instanceof HTMLInputElement &&
+          e.currentTarget.contains(e.target)
+        )
+          e.preventDefault();
+      }}
+    >
       <input type="hidden" name="ajuste" value={JSON.stringify(aPayload(estado))} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -248,8 +268,21 @@ export function HojaDeConteo({
 
       {/* -------------------------------------------------------- Líneas */}
       {estado.lineas.length > 0 ? (
-        <div className="flex flex-col gap-5 lg:flex-row">
-          <section className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+        /*
+          El impacto va ENCIMA de la hoja salvo en pantallas muy anchas
+          (revisión por módulos del 02/10). Al lado, a 1280 con el menú
+          abierto, la tabla se quedaba en ~570 px y se cortaban el código y la
+          diferencia; y debajo, con una hoja de 400 líneas, el resumen que se
+          firma quedaba a 27.000 px del botón de confirmar.
+        */
+        <div className="flex flex-col-reverse gap-5 2xl:flex-row">
+          <section className="@container min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+            <ul className="flex flex-col gap-2.5 @3xl:hidden">
+              {estado.lineas.map((l) => (
+                <TarjetaConteo key={l.productoId} linea={l} despachar={despachar} />
+              ))}
+            </ul>
+            <div className="hidden @3xl:block">
             <TableContenedor>
               <Table>
                 <THead>
@@ -269,14 +302,18 @@ export function HojaDeConteo({
                 </TBody>
               </Table>
             </TableContenedor>
+            </div>
           </section>
 
           {/* ---------------------------------------------------- Impacto */}
-          <aside className="w-full shrink-0 lg:w-80">
+          <aside className="w-full shrink-0 2xl:w-80">
             <div className="card sticky top-4 flex flex-col gap-3 p-4">
               <h2 className="text-sm font-semibold">Impacto del cuadre</h2>
 
-              <dl className="flex flex-col gap-1.5 text-sm">
+              {/* Con tope de ancho: a lo ancho de 900 px la cifra quedaba
+                  lejos de su etiqueta y había que seguir la línea con el
+                  dedo (revisión por módulos del 02/10). */}
+              <dl className="flex w-full max-w-md flex-col gap-1.5 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-[var(--fg-muted)]">Contadas</dt>
                   <dd className="tabular">

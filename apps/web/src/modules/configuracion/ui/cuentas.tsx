@@ -160,7 +160,10 @@ function Tarjeta({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{cuenta.banco}</p>
+          {/* Entero, partido en dos líneas si hace falta: a 390 salía
+              «BANCO DE CREDITO D…», y el banco es lo que se viene a leer
+              (revisión por módulos del 02/10). */}
+          <p className="break-words text-sm font-semibold">{cuenta.banco}</p>
           <p className="text-sm text-[var(--fg-muted)]">
             {ETIQUETA_MONEDA_CUENTA[cuenta.moneda]}
           </p>
@@ -293,7 +296,10 @@ function DialogoCuenta({
           />
 
           <DialogBody className="flex flex-col gap-3">
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* El banco a lo ancho: a media columna «BANCO INTERNACIONAL DEL
+                PE…» se cortaba, y los nombres de banco son largos (revisión
+                por módulos del 02/10). */}
+            <div className="flex flex-col gap-3">
               <Campo id="cuenta-banco" label="Banco" requerido>
                 <Input
                   id="cuenta-banco"
@@ -351,7 +357,7 @@ function DialogoCuenta({
             <Campo
               id="cuenta-orden"
               label="Orden en el papel"
-              ayuda="El número más bajo sale primero. Willy imprime primero la de dólares, que es la moneda en la que factura."
+              ayuda="El número más bajo sale primero. Lo normal es poner primero la de dólares, que es la moneda en la que se factura."
             >
               <Input
                 id="cuenta-orden"
