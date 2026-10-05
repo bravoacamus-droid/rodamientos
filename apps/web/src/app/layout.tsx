@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@rodatech/ui";
 
@@ -16,6 +16,19 @@ import "./globals.css";
 const manrope = Manrope({
   subsets: ["latin"],
   variable: "--font-manrope",
+  display: "swap",
+});
+
+/*
+  JetBrains Mono para los códigos, RUC y números de documento.
+
+  La pila del token ya la nombraba, pero nadie la CARGABA: en Windows —el
+  equipo de Willy— no está instalada y caía a Courier New, fina y difícil de
+  leer (revisión por módulos del 02/10). Ahora viene con la página.
+*/
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
   display: "swap",
 });
 
@@ -54,7 +67,7 @@ export default function RootLayout({
       lang="es-PE"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={manrope.variable}
+      className={`${manrope.variable} ${mono.variable}`}
     >
       <body className="min-h-dvh bg-[var(--bg)] font-sans text-[var(--fg)] antialiased">
         {/*

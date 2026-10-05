@@ -102,10 +102,15 @@ export function HojaDocumento({
   pie?: ReactNode;
 }) {
   return (
-    <article className="mx-auto w-full max-w-[210mm] bg-white p-4 text-[#111] sm:p-8 print:max-w-none print:p-0 print:text-xs">
+    // `@container`: el membrete y el bloque del cliente se ponen en dos
+    // columnas según el ancho de la HOJA, no de la pantalla. A 820 con el
+    // menú abierto la hoja medía ~500 px, «sm:» ya valía y el recuadro del
+    // documento se montaba encima de la razón social (revisión del 02/10).
+    // El papel impreso no cambia: manda `print:`.
+    <article className="@container mx-auto w-full max-w-[210mm] bg-white p-4 text-[#111] sm:p-8 print:max-w-none print:p-0 print:text-xs">
       {/* ------------------------------------------------------ Cabecera */}
       <header
-        className="flex flex-col items-start justify-between gap-4 border-b-2 pb-4 sm:flex-row sm:gap-6 print:flex-row"
+        className="flex flex-col items-start justify-between gap-4 border-b-2 pb-4 @2xl:flex-row @2xl:gap-6 print:flex-row"
         style={{ borderColor: AZUL }}
       >
         <div className="flex items-start gap-4">
@@ -157,12 +162,12 @@ export function HojaDocumento({
       </header>
 
       {/* -------------------------------------------------------- Los datos */}
-      <section className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-xs sm:grid-cols-2 print:grid-cols-2">
+      <section className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-xs @2xl:grid-cols-2 print:grid-cols-2">
         {datos.map((d, i) =>
           d ? (
             <p
               key={`${d.etiqueta}-${i}`}
-              className={`flex gap-2 ${d.ancho ? "sm:col-span-2 print:col-span-2" : ""}`}
+              className={`flex gap-2 ${d.ancho ? "@2xl:col-span-2 print:col-span-2" : ""}`}
             >
               <span className="w-28 shrink-0 font-semibold" style={{ color: AZUL }}>
                 {d.etiqueta}
