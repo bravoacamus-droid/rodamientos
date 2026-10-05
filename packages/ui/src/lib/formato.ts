@@ -109,13 +109,16 @@ function aFecha(valor: string | Date | null | undefined): Date | null {
 export function formatearFecha(valor: string | Date | null | undefined): string {
   const d = aFecha(valor);
   if (!d) return "—";
-  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // En hora de Lima siempre: el servidor de producción suele ir en UTC, y una
+  // venta de las 21:00 salía con la fecha del día siguiente (revisión del 02/10).
+  return d.toLocaleDateString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Lima" });
 }
 
 export function formatearFechaHora(valor: string | Date | null | undefined): string {
   const d = aFecha(valor);
   if (!d) return "—";
   return d.toLocaleString("es-PE", {
+    timeZone: "America/Lima",
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { Button, Input, SelectNativo } from "@rodatech/ui";
+import { FileUp } from "lucide-react";
 
 import {
   guardarConfigSunat,
@@ -150,12 +151,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
         <div className="grid gap-3 border-t border-[var(--border-soft)] pt-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Certificado digital (.pfx)</span>
-            <Input
-              name="certificado"
-              type="file"
-              accept=".pfx,.p12"
-              className="file:mr-3 file:rounded-sm file:border-0 file:bg-[var(--surface-2)] file:px-2 file:py-1 file:text-sm"
-            />
+            <CampoCertificado />
             {config.certificado_nombre ? (
               <span className="text-sm text-[var(--fg-muted)]">
                 Cargado: {config.certificado_nombre}
@@ -211,5 +207,36 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
         </div>
       </form>
     </div>
+  );
+}
+
+/**
+ * El certificado, con un botón en español.
+ *
+ * El campo de archivo del navegador sale en el idioma del navegador —«Choose
+ * File / No file chosen»— y parece un texto, no un botón (revisión por módulos
+ * del 02/10). El campo real va oculto DENTRO del mismo <label>, así que se
+ * envía con el formulario igual que antes; lo que se ve es el botón y el
+ * nombre del archivo elegido.
+ */
+function CampoCertificado() {
+  const [nombre, setNombre] = React.useState<string | null>(null);
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <input
+        name="certificado"
+        type="file"
+        accept=".pfx,.p12"
+        className="sr-only"
+        onChange={(e) => setNombre(e.target.files?.[0]?.name ?? null)}
+      />
+      <span className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]">
+        <FileUp className="size-4" aria-hidden />
+        Elegir archivo
+      </span>
+      <span className="min-w-0 text-sm text-[var(--fg-muted)] [overflow-wrap:anywhere]">
+        {nombre ?? "Ningún archivo elegido"}
+      </span>
+    </span>
   );
 }

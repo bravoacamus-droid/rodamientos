@@ -97,7 +97,9 @@ export function PaginacionKeyset({
             onClick={() => irACursor(cursorAnterior, "ant")}
           >
             <ChevronLeft />
-            <span className="hidden sm:inline">Anterior</span>
+            {/* Con su palabra también en el teléfono: dos flechas sueltas no parecen
+                botones (revisión por módulos del 02/10). */}
+            <span>Anterior</span>
           </Button>
           <Button
             variant="outline"
@@ -105,7 +107,7 @@ export function PaginacionKeyset({
             disabled={!haySiguiente || pendiente}
             onClick={() => irACursor(cursorSiguiente, "sig")}
           >
-            <span className="hidden sm:inline">Siguiente</span>
+            <span>Siguiente</span>
             <ChevronRight />
           </Button>
         </div>
