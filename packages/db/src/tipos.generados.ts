@@ -3037,7 +3037,6 @@ export type Database = {
           nombre: string
           rol: Database["public"]["Enums"]["rol_usuario"]
           telefono: string | null
-          ultimo_acceso: string | null
         }
         Insert: {
           activo?: boolean
@@ -3050,7 +3049,6 @@ export type Database = {
           nombre: string
           rol?: Database["public"]["Enums"]["rol_usuario"]
           telefono?: string | null
-          ultimo_acceso?: string | null
         }
         Update: {
           activo?: boolean
@@ -3063,7 +3061,6 @@ export type Database = {
           nombre?: string
           rol?: Database["public"]["Enums"]["rol_usuario"]
           telefono?: string | null
-          ultimo_acceso?: string | null
         }
         Relationships: []
       }

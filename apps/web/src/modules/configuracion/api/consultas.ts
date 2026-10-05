@@ -114,7 +114,7 @@ export async function series(): Promise<Resultado<SerieDocumento[]>> {
 /**
  * Cuándo entró cada uno por última vez, de Supabase Auth.
  *
- * `perfiles.ultimo_acceso` existe desde la 002 y NADIE la escribe: las seis
+ * `perfiles.ultimo_acceso` existía desde la 002 y NADIE la escribía: las seis
  * cuentas salían «nunca» aunque entran a diario (revisión por módulos del
  * 02/10). Auth sí lo apunta —`last_sign_in_at`—, así que se lee de ahí.
  *
@@ -144,7 +144,7 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id, nombre, email, rol, cargo, activo, ultimo_acceso")
+      .select("id, nombre, email, rol, cargo, activo")
       .order("activo", { ascending: false })
       .order("nombre")
       .limit(200);
@@ -162,8 +162,8 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
         rol: String(u.rol) as Rol,
         cargo: (u.cargo as string | null) ?? null,
         activo: Boolean(u.activo),
-        ultimo_acceso:
-          accesos.get(String(u.id)) ?? (u.ultimo_acceso as string | null) ?? null,
+        // Solo de Auth: la columna de la tabla se quitó en la 103.
+        ultimo_acceso: accesos.get(String(u.id)) ?? null,
       })),
     };
   } catch (e) {

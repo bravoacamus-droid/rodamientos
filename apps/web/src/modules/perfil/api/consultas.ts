@@ -27,7 +27,7 @@ export async function miPerfil(): Promise<Resultado<MiPerfil | null>> {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id, nombre, email, telefono, cargo, rol, ultimo_acceso")
+      .select("id, nombre, email, telefono, cargo, rol")
       .eq("id", usuario.id)
       .maybeSingle();
 
@@ -43,10 +43,9 @@ export async function miPerfil(): Promise<Resultado<MiPerfil | null>> {
         telefono: (data.telefono as string | null) ?? null,
         cargo: (data.cargo as string | null) ?? null,
         rol: String(data.rol),
-        // De la sesión y no de la tabla: `perfiles.ultimo_acceso` no lo
-        // escribe nadie y salía siempre «—» (revisión por módulos del 02/10).
-        ultimo_acceso:
-          usuario.last_sign_in_at ?? (data.ultimo_acceso as string | null) ?? null,
+        // De la sesión (Supabase Auth). La columna perfiles.ultimo_acceso no la
+        // escribía nadie y salía siempre «—»; se quitó en la 103.
+        ultimo_acceso: usuario.last_sign_in_at ?? null,
       },
     };
   } catch (e) {
