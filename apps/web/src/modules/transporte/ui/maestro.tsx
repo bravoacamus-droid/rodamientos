@@ -62,6 +62,13 @@ export interface FilaMaestro {
   [clave: string]: string | boolean | null;
 }
 
+/** Cómo se nombra lo que se da de baja, en la pregunta de confirmación. */
+const QUE_ES: Record<TipoTransporte, string> = {
+  agencia: "la agencia",
+  vehiculo: "el vehículo",
+  conductor: "el conductor",
+};
+
 const ETIQUETA_EDITAR: Record<TipoTransporte, string> = {
   agencia: "Editar agencia",
   vehiculo: "Editar vehículo",
@@ -94,6 +101,13 @@ export function Maestro({
   const [editando, setEditando] = React.useState<FilaMaestro | "nuevo" | null>(null);
   const [errorFila, setErrorFila] = React.useState<string | null>(null);
   const [enCurso, empezar] = React.useTransition();
+  /*
+    «Dar de baja» pregunta antes. Luis, 05/10, con la recomendación de la
+    revisión por módulos: se ejecutaba al primer toque y un dedo torpe en el
+    teléfono dejaba fuera de las guías el único vehículo. «Volver a usar» no
+    pregunta: deshace, no rompe.
+  */
+  const [porDarDeBaja, setPorDarDeBaja] = React.useState<FilaMaestro | null>(null);
 
   function alternar(f: FilaMaestro) {
     setErrorFila(null);
@@ -103,6 +117,7 @@ export function Maestro({
         setErrorFila(r.error);
         return;
       }
+      setPorDarDeBaja(null);
       router.refresh();
     });
   }
@@ -183,7 +198,7 @@ export function Maestro({
                         : "text-sm"
                     }
                     disabled={enCurso}
-                    onClick={() => alternar(f)}
+                    onClick={() => (f.activo ? setPorDarDeBaja(f) : alternar(f))}
                   >
                     {f.activo ? "Dar de baja" : "Volver a usar"}
                   </Button>
@@ -209,6 +224,33 @@ export function Maestro({
           router.refresh();
         }}
       />
+
+      <Dialog open={porDarDeBaja !== null} onOpenChange={(v) => (!v && !enCurso ? setPorDarDeBaja(null) : null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              ¿Dar de baja {QUE_ES[tipo]} {porDarDeBaja?.titulo}?
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Deja de salir al preparar una guía. No se borra nada: las guías que ya lo
+              llevan lo siguen enseñando, y se puede volver a usar cuando quieras.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={enCurso} onClick={() => setPorDarDeBaja(null)}>
+              No, dejarlo
+            </Button>
+            <Button
+              type="button"
+              disabled={enCurso}
+              className="bg-[var(--danger)] text-white hover:bg-[var(--danger)]/90"
+              onClick={() => porDarDeBaja && alternar(porDarDeBaja)}
+            >
+              {enCurso ? "Dando de baja…" : "Sí, dar de baja"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
