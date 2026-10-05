@@ -31,6 +31,7 @@ import {
 import { abreviaturaUnidad } from "@rodatech/config";
 
 import { Volver } from "@/componentes/volver";
+import { sinEnvioConEnter } from "@/lib/formularios";
 
 /*
   Por RUTA y no desde `@/modules/cotizaciones`.
@@ -520,7 +521,7 @@ export function FormularioKit({
   }
 
   return (
-    <form onSubmit={enviar} className={`flex flex-col gap-5 ${enModal ? "" : "sm:p-6"}`}>
+    <form onSubmit={enviar} onKeyDown={sinEnvioConEnter} className={`flex flex-col gap-5 ${enModal ? "" : "sm:p-6"}`}>
       {/* En el modal el título lo pone el propio diálogo. */}
       {enModal ? null : (
         <header>

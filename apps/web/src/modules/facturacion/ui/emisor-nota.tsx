@@ -32,6 +32,7 @@ import {
   type TipoNota,
 } from "../dominio/nota";
 import type { ComprobanteDetalle } from "../dominio/tipos";
+import { sinEnvioConEnter } from "@/lib/formularios";
 
 /**
  * Emitir una nota de crédito o de débito sobre un comprobante.
@@ -148,7 +149,7 @@ export function EmisorNota({
         </DialogHeader>
 
         {/* El pie va dentro del formulario: su botón es el que emite. */}
-        <form action={emitir}>
+        <form action={emitir} onKeyDown={sinEnvioConEnter}>
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="nota" value={payload} />
 

@@ -21,6 +21,7 @@ import { ETIQUETA_MODALIDAD, type ModalidadTraslado, type MotivoTraslado } from 
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { DialogoAgencia } from "./dialogo-agencia";
+import { sinEnvioConEnter } from "@/lib/formularios";
 
 /**
  * Preparación de una guía de remisión.
@@ -154,7 +155,7 @@ export function ConstructorGuia({
   const esPublico = estado.modalidad === "01";
 
   return (
-    <form action={guardar} className="flex flex-col gap-5">
+    <form action={guardar} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="guia" value={JSON.stringify(aPayload(estado))} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">

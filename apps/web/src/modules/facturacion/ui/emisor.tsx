@@ -28,6 +28,7 @@ import {
   vencimientoDe,
 } from "../dominio/emision";
 import type { CotizacionFacturable, TipoComprobante } from "../dominio/tipos";
+import { sinEnvioConEnter } from "@/lib/formularios";
 
 /**
  * Emisión de un comprobante a partir de una cotización aprobada.
@@ -284,7 +285,7 @@ export function EmisorComprobante({
   const listo = Boolean(cot) && bloqueos.length === 0 && !emitiendo;
 
   return (
-    <form action={emitir} className="flex flex-col gap-5">
+    <form action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="comprobante" value={payload} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
