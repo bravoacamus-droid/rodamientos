@@ -41,7 +41,8 @@ function uno(v: string | string[] | undefined): string | undefined {
   «$ 2600.00» sin coma, y con un espacio normal que dejaba partir el signo de
   su número (revisión por módulos del 02/10).
 */
-const dinero = (n: number) => formatearMoneda(n).replace(" ", "\u00a0");
+// `formatearMoneda` ya pega el signo a la cifra (espacio de no separaci\u00f3n).
+const dinero = (n: number) => formatearMoneda(n);
 
 /** Los roles que `permisos_rol` deja escribir en `gastos_importacion`. */
 const ROLES_GASTOS = ["gerencia", "admin", "compras"];

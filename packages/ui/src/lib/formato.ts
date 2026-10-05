@@ -54,8 +54,12 @@ export function formatearMoneda(
   const n = aNumero(valor);
   const cifra = nfImporte.format(n);
   if (opciones?.sinSimbolo) return cifra;
-  // El signo va delante del símbolo: "-$ 120.00" y no "$ -120.00".
-  return n < 0 ? `-${SIMBOLO[moneda]} ${nfImporte.format(Math.abs(n))}` : `${SIMBOLO[moneda]} ${cifra}`;
+  // El signo va delante del símbolo: "-$ 120.00" y no "$ -120.00". Y entre
+  // el símbolo y la cifra, un espacio de NO separación: en texto corrido «$»
+  // y «11.58» acababan en líneas distintas (revisión por módulos del 02/10).
+  return n < 0
+    ? `-${SIMBOLO[moneda]} ${nfImporte.format(Math.abs(n))}`
+    : `${SIMBOLO[moneda]} ${cifra}`;
 }
 
 /** Formato compacto para KPIs: `$ 1.2M`, `$ 84.5k`. Nunca en una tabla. */
@@ -64,7 +68,7 @@ export function formatearMonedaCorta(
   moneda: CodigoMoneda = "USD",
 ): string {
   const n = aNumero(valor);
-  const s = `${SIMBOLO[moneda]} `;
+  const s = `${SIMBOLO[moneda]} `;
   const abs = Math.abs(n);
   if (abs >= 1_000_000) return `${s}${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
   if (abs >= 10_000) return `${s}${(n / 1000).toFixed(abs >= 100_000 ? 0 : 1)}k`;
