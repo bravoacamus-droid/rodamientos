@@ -284,7 +284,29 @@ export function ConstructorCompra({
   });
 
   return (
-    <form action={guardar} className="flex flex-col gap-5">
+    <form
+      action={guardar}
+      className="flex flex-col gap-5"
+      /*
+        Enter en un campo no guarda la compra: se guarda con el botón.
+
+        Revisión por módulos del 02/10, rellenando a 390: con proveedor y
+        un producto puestos, un Enter en el buscador mientras decía
+        «buscando…» —o en el n.° de factura, un monto, el tracking— hacía el
+        envío implícito del navegador y GUARDABA. Es el mismo fallo que
+        guardó dos cotizaciones sin querer; aquí movería stock y costos.
+      */
+      onKeyDown={(e) => {
+        // `contains`: los diálogos van en un portal y React les pasa el
+        // evento igual; su Enter es suyo y no se toca.
+        if (
+          e.key === "Enter" &&
+          e.target instanceof HTMLInputElement &&
+          e.currentTarget.contains(e.target)
+        )
+          e.preventDefault();
+      }}
+    >
       <input type="hidden" name="compra" value={JSON.stringify(aPayload(estado))} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -320,7 +342,12 @@ export function ConstructorCompra({
             recepcione.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {/*
+          En el teléfono, «Cancelar» y «Guardar compra» en la misma fila y a
+          medias: «Guardar» caía solo en una tercera línea (revisión por
+          módulos del 02/10).
+        */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           {/*
             Preguntar antes de comprar.
 
@@ -336,6 +363,7 @@ export function ConstructorCompra({
             <Button
               type="button"
               variant="outline"
+              className="col-span-2"
               onClick={() =>
                 router.push(
                   `/compras/pedir-precio?items=${estado.lineas
@@ -413,8 +441,14 @@ export function ConstructorCompra({
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* ------------------------------------------------- Cabecera */}
-          <section className="card p-4">
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          {/*
+            Las columnas las decide el ancho de ESTA tarjeta (`@container`),
+            no la pantalla: a 820 con el menú abierto quedan 480 px, y en tres
+            columnas el proveedor salía «AU…» con el RUC debajo del botón, y
+            el n.° de factura y el PDF cortados (revisión por módulos del 02/10).
+          */}
+          <section className="card @container p-4">
+            <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
               {/* La caja de búsqueda ya enseña cómo paga y cuánto tarda en la
                   ficha del elegido, así que aquí solo queda el porqué de que
                   sea lo primero que se rellena. */}
@@ -519,7 +553,10 @@ export function ConstructorCompra({
               </label>
             </div>
 
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {/* `grid-cols-1` y no la columna implícita: esa crece con su
+                contenido, y el nombre de un PDF largo sacaba la página 60 px
+                de lado a 390 (revisión por módulos del 02/10). */}
+            <div className="mt-3 grid grid-cols-1 gap-3 @2xl:grid-cols-3">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">N.° de la factura del proveedor</span>
                 <Input

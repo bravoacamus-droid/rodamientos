@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Volver } from "@/componentes/volver";
 import { redirect } from "next/navigation";
 import { EstadoError, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -61,12 +61,11 @@ export default async function PaginaComparativa({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-            <Link href="/compras/precios" className="underline-offset-2 hover:underline">
-              Precios de proveedores
-            </Link>
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight tabular-nums">
+          {/* El «Volver» de las demás fichas. Era un enlace gris en
+              mayúsculas encima del número, que no parece un botón
+              (revisión por módulos del 02/10). */}
+          <Volver href="/compras/precios">Volver a pedir precios</Volver>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
             {ronda.numero}
           </h1>
           <p className="text-sm text-[var(--fg-muted)]">

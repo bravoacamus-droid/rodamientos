@@ -53,7 +53,8 @@ export function FiltrosImportacionesBarra() {
         <Input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
-          placeholder="Número de compra, tracking, courier o factura"
+          // Corto para que quepa entero a 390 (revisión por módulos del 02/10).
+          placeholder="Compra, tracking, courier o factura"
           autoComplete="off"
         />
       </label>

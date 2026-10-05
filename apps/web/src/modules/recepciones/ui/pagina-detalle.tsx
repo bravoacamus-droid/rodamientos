@@ -1,8 +1,11 @@
+// «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EstadoError, Moneda } from "@rodatech/ui";
 
 import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
+import { Volver } from "@/componentes/volver";
 
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -61,7 +64,12 @@ export default async function PaginaDetalleRecepcion({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* El mismo «Volver» que el resto de fichas, encima del número.
+              Era un botón «Volver al listado» al lado de «Editar papeles»: la
+              cuarta manera de volver que tenía el ERP (revisión por módulos
+              del 02/10). */}
+          <Volver href="/recepciones">Volver a recepciones</Volver>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-mono text-2xl font-semibold tracking-tight">
               {r.numero}
             </h1>
@@ -78,43 +86,49 @@ export default async function PaginaDetalleRecepcion({
         </div>
 
         {/*
-          El botón de los papeles va aquí arriba, en color, y delante de
-          «Volver al listado». Luis, 09/09: *«ponlo pero que tenga color; por
-          eso yo te decía poner un botón editar al costado de Volver al
-          listado»*. Metido dentro de la sección de papeles y en gris no lo
-          veía.
-
-          Delante y no detrás porque es el que se usa: volver al listado se
-          hace una vez y esto se hace cada vez que llega un papel.
+          El botón de los papeles va aquí arriba y en color. Luis, 09/09:
+          *«ponlo pero que tenga color; por eso yo te decía poner un botón
+          editar al costado de Volver al listado»*. Metido dentro de la sección
+          de papeles y en gris no lo veía. Desde el 02/10 «Volver» está encima
+          del número, como en las demás fichas, y este sigue arriba y en azul.
         */}
-        <div className="flex flex-wrap items-center gap-2">
-          {puedeAdjuntar && !r.anulada ? (
+        {puedeAdjuntar && !r.anulada ? (
+          <div className="flex flex-wrap items-center gap-2">
             <EditarPapelesDelProveedor
               recepcionId={r.id}
               hayPapeles={papeles.ok && papeles.datos.length > 0}
               guiaProveedor={r.guia_proveedor}
               facturaProveedor={r.factura_proveedor}
             />
-          ) : null}
-
-          <Link
-            href="/recepciones"
-            className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-          >
-            Volver al listado
-          </Link>
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <section className="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <Dato etiqueta="Proveedor" valor={r.proveedor ?? "—"} pie={r.proveedor_documento} />
         <Dato etiqueta="Guía del proveedor" valor={r.guia_proveedor ?? "—"} />
         <Dato etiqueta="Factura del proveedor" valor={r.factura_proveedor ?? "—"} />
-        <Dato
-          etiqueta="Compra"
-          valor={r.compra_numero ?? "Recepción suelta"}
-          pie={r.compra_numero ? null : "No viene de una compra registrada"}
-        />
+        {r.compra_id && r.compra_numero ? (
+          // La compra, con su botón: el número en texto plano no llevaba a
+          // ninguna parte (revisión por módulos del 02/10).
+          <div>
+            <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">Compra</dt>
+            <dd className="mt-1">
+              <Link
+                href={`/compras/${r.compra_id}`}
+                className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 font-mono text-sm font-medium text-brand-600 hover:bg-[var(--surface-2)]"
+              >
+                Ver {r.compra_numero}
+              </Link>
+            </dd>
+          </div>
+        ) : (
+          <Dato
+            etiqueta="Compra"
+            valor="Recepción suelta"
+            pie="No viene de una compra registrada"
+          />
+        )}
       </section>
 
       <section className="card @container">
@@ -143,11 +157,11 @@ export default async function PaginaDetalleRecepcion({
                   <dt className="text-[var(--fg-subtle)]">Cantidad</dt>
                   <dd className="tabular">
                     {l.cantidad.toLocaleString("es-PE")}
-                    <span className="ml-1 text-[var(--fg-subtle)]">{l.unidad}</span>
+                    <span className="ml-1 text-[var(--fg-subtle)]">{unidadLegible(l.unidad)}</span>
                   </dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="text-[var(--fg-subtle)]">Costo por unidad</dt>
+                  <dt className="text-[var(--fg-subtle)]">Costo c/u</dt>
                   <dd>
                     <Moneda valor={l.costo_unitario} tamano="sm" enfasis="suave" />
                   </dd>
@@ -211,7 +225,7 @@ export default async function PaginaDetalleRecepcion({
                   <td className="px-4 py-2.5 text-right tabular">
                     {l.cantidad.toLocaleString("es-PE")}
                     <span className="ml-1 text-sm text-[var(--fg-subtle)]">
-                      {l.unidad}
+                      {unidadLegible(l.unidad)}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right">

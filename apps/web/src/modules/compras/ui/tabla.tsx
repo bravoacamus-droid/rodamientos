@@ -51,9 +51,15 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
   }
 
   return (
-    <>
+    <div className="@container">
+      {/*
+        Tarjetas o tabla según el ancho de ESTA caja (`@container`), no de la
+        pantalla. A 820 con el menú abierto quedan 550 px, `md:` ya pintaba la
+        tabla y el número de documento se partía en dos líneas (revisión por
+        módulos del 02/10).
+      */}
       {/* ------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden md:block">
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -87,7 +93,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/compras/${c.id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.numero}
                   </Link>
@@ -119,10 +125,14 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} />
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  <Moneda valor={c.total} tamano="sm" />
+                  <Moneda valor={c.total} moneda={c.moneda} tamano="sm" />
                   {c.gastos_importacion > 0 ? (
                     <span className="block text-sm text-[var(--fg-subtle)]">
-                      +{c.gastos_importacion.toFixed(2)} gastos
+                      {/* Con su moneda: «+106.39 gastos», a secas, no decía de qué
+                        (revisión por módulos del 02/10). */}
+                    {"+\u00a0"}
+                    <Moneda valor={c.gastos_importacion} moneda={c.moneda} tamano="sm" enfasis="suave" />
+                    {"\u00a0en gastos"}
                     </span>
                   ) : null}
                 </td>
@@ -157,7 +167,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
         cada dato con su nombre encima, y el botón de ver abajo: hasta hoy solo
         se entraba pulsando el número, que no parece un botón.
       */}
-      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
         {filas.map((c) => (
           <li
             key={c.id}
@@ -206,10 +216,14 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
               </Dato>
               <Dato etiqueta="Líneas">{c.items}</Dato>
               <Dato etiqueta="Total">
-                <Moneda valor={c.total} tamano="sm" />
+                <Moneda valor={c.total} moneda={c.moneda} tamano="sm" />
                 {c.gastos_importacion > 0 ? (
                   <span className="block text-sm text-[var(--fg-subtle)]">
-                    +{c.gastos_importacion.toFixed(2)} gastos
+                    {/* Con su moneda: «+106.39 gastos», a secas, no decía de qué
+                        (revisión por módulos del 02/10). */}
+                    {"+\u00a0"}
+                    <Moneda valor={c.gastos_importacion} moneda={c.moneda} tamano="sm" enfasis="suave" />
+                    {"\u00a0en gastos"}
                   </span>
                 ) : null}
               </Dato>
@@ -248,7 +262,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }
 

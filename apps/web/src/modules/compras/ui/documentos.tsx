@@ -119,7 +119,10 @@ export function DocumentosCompra({
                     aria-label={`Quitar ${d.nombre}`}
                     title={`Quitar ${d.nombre}`}
                   >
+                    {/* Con su palabra, al lado de «Ver» (revisión por módulos
+                        del 02/10). */}
                     <Trash2 className="size-4" aria-hidden />
+                    Quitar
                   </Button>
                 ) : null}
               </span>

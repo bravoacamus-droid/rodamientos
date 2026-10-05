@@ -92,7 +92,7 @@ export async function listarCompras(
       .from("compras")
       .select(
         `id, numero, fecha, fecha_estimada, tipo, documento_proveedor, estado,
-         total, gastos_importacion,
+         total, gastos_importacion, moneda,
          proveedores(razon_social),
          compra_items(cantidad, cantidad_recibida)`,
       )
@@ -150,6 +150,7 @@ export async function listarCompras(
         tipo: (c.tipo as TipoCompra) ?? "local",
         documento_proveedor: (c.documento_proveedor as string | null) ?? null,
         estado: c.estado as EstadoCompra,
+        moneda: (c.moneda as "USD" | "PEN" | null) ?? "USD",
         total: Number(c.total ?? 0),
         gastos_importacion: Number(c.gastos_importacion ?? 0),
         items: items.length,

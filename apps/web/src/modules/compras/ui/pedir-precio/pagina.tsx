@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Volver } from "@/componentes/volver";
 import { redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -77,19 +77,22 @@ export default async function PaginaPedirPrecio({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pedir precio</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Apunta a quién le vas a preguntar. El mensaje lo mandas tú por donde quieras.
-          </p>
-        </div>
-        <Link
-          href="/compras/por-comprar"
-          className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-        >
-          Volver a la bandeja
-        </Link>
+      {/*
+        El «Volver» de todas las fichas, encima del título, y a donde se vino:
+        decía siempre «Volver a la bandeja», también llegando sin lista desde
+        «Pedir precios», que es el caso normal desde el 21/09 (revisión por
+        módulos del 02/10).
+      */}
+      <div className="flex flex-col gap-1">
+        {items.length > 0 ? (
+          <Volver href="/compras/por-comprar">Volver a por comprar</Volver>
+        ) : (
+          <Volver href="/compras/precios">Volver a pedir precios</Volver>
+        )}
+        <h1 className="text-2xl font-semibold tracking-tight">Pedir precio</h1>
+        <p className="text-sm text-[var(--fg-muted)]">
+          Apunta a quién le vas a preguntar. El mensaje lo mandas tú por donde quieras.
+        </p>
       </div>
 
       <PedirPrecio

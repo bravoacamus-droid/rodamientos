@@ -43,9 +43,15 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
   }
 
   return (
-    <>
+    <div className="@container">
+      {/*
+        Tarjetas o tabla según el ancho de ESTA caja (`@container`), no de la
+        pantalla. A 820 con el menú abierto quedan 550 px, `md:` ya pintaba la
+        tabla y el número de documento se partía en dos líneas (revisión por
+        módulos del 02/10).
+      */}
       {/* ------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden md:block">
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -83,7 +89,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/recepciones/${r.id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
                   >
                     {r.numero}
                   </Link>
@@ -106,9 +112,9 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                     recepción cuando llama reclamando —así lo dice el marcador
                     del buscador—, así que se leen: en 14, no en 12. */}
                 <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
-                  {r.guia_proveedor ? <span className="block">G: {r.guia_proveedor}</span> : null}
+                  {r.guia_proveedor ? <span className="block">Guía {r.guia_proveedor}</span> : null}
                   {r.factura_proveedor ? (
-                    <span className="block">F: {r.factura_proveedor}</span>
+                    <span className="block">Factura {r.factura_proveedor}</span>
                   ) : null}
                   {!r.guia_proveedor && !r.factura_proveedor ? "—" : null}
                 </td>
@@ -147,7 +153,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
         dato por el que se busca una recepción cuando el proveedor llama
         reclamando.
       */}
-      <ul className="flex flex-col gap-2.5 p-3 md:hidden">
+      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
         {filas.map((r) => (
           <li
             key={r.id}
@@ -190,10 +196,12 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                   Papeles del proveedor
                 </dt>
                 <dd className="text-sm">
+                  {/* «Guía» y «Factura» enteras: «G:» y «F:» eran claves que
+                      había que saber (revisión por módulos del 02/10). */}
                   {r.guia_proveedor || r.factura_proveedor
                     ? [
-                        r.guia_proveedor ? `G: ${r.guia_proveedor}` : null,
-                        r.factura_proveedor ? `F: ${r.factura_proveedor}` : null,
+                        r.guia_proveedor ? `Guía ${r.guia_proveedor}` : null,
+                        r.factura_proveedor ? `Factura ${r.factura_proveedor}` : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")
@@ -222,7 +230,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
           cursorAnterior={anterior}
         />
       </div>
-    </>
+    </div>
   );
 }
 

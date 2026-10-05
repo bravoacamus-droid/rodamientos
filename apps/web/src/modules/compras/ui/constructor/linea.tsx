@@ -1,5 +1,7 @@
 "use client";
 
+// «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { Button, Input } from "@rodatech/ui";
 import { Trash2 } from "lucide-react";
 
@@ -95,7 +97,7 @@ export function FilaCompra({
         />
       </td>
 
-      <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{linea.unidad}</td>
+      <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</td>
 
       <td className="px-2 py-2">
         <Input
@@ -146,9 +148,12 @@ export function FilaCompra({
           size="sm"
           onClick={() => despachar({ tipo: "quitar", key: linea.key })}
           aria-label={`Quitar ${linea.codigo} de la compra`}
-          className="text-sm"
+          className="gap-1 text-sm"
         >
+          {/* Y con su palabra, como en la tarjeta: la papelera sola no dice
+              qué hace (revisión por módulos del 02/10). */}
           <Trash2 className="size-4" aria-hidden />
+          Quitar
         </Button>
       </td>
     </tr>
@@ -207,7 +212,7 @@ export function TarjetaCompra({
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Cantidad ({linea.unidad})</span>
+          <span className="text-sm font-medium">Cantidad ({unidadLegible(linea.unidad)})</span>
           <Input
             type="number"
             inputMode="numeric"

@@ -1,6 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Badge, CifraAnimada, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
+import {
+  Badge,
+  CifraAnimada,
+  EstadoError,
+  EstadoVacio,
+  Skeleton,
+  formatearMoneda,
+} from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { importaciones } from "../api/consultas";
@@ -29,7 +36,12 @@ function uno(v: string | string[] | undefined): string | undefined {
   return valor && valor.length > 0 ? valor : undefined;
 }
 
-const dinero = (n: number) => `$ ${n.toFixed(2)}`;
+/*
+  Con separador de miles y el «$» pegado a la cifra. Era `$ ${n.toFixed(2)}`:
+  «$ 2600.00» sin coma, y con un espacio normal que dejaba partir el signo de
+  su número (revisión por módulos del 02/10).
+*/
+const dinero = (n: number) => formatearMoneda(n).replace(" ", "\u00a0");
 
 /** Los roles que `permisos_rol` deja escribir en `gastos_importacion`. */
 const ROLES_GASTOS = ["gerencia", "admin", "compras"];
@@ -150,7 +162,9 @@ async function Indicadores({
       </div>
 
       <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Dinero fuera</p>
+        {/* «Dinero fuera» no decía de qué: es lo que vale lo que está en camino
+            (revisión por módulos del 02/10). */}
+        <p className="text-sm text-[var(--fg-muted)]">Valor en camino</p>
         <p className="mt-0.5 text-xl font-semibold">
           <CifraAnimada valor={s.valorEnCamino} decimales={2} prefijo="$ " />
         </p>
@@ -218,7 +232,20 @@ async function Listado({
   }
 
   return (
-    <div className="scroll-x">
+    <div className="@container">
+      {/*
+        En el teléfono, TARJETAS. Revisión por módulos del 02/10: a 390 la
+        tabla se desplazaba de lado y la fecha se partía en tres líneas
+        («2026- / 09- / 25»), con el panel de gastos fuera de la vista. Se
+        mide esta caja (`@container`) y no la pantalla, como en compras.
+      */}
+      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
+        {r.datos.map((c) => (
+          <Tarjeta key={c.id} compra={c} hoy={hoy} puedeGastos={puedeGastos} />
+        ))}
+      </ul>
+
+      <div className="scroll-x hidden @3xl:block">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -236,7 +263,125 @@ async function Listado({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
+  );
+}
+
+/** Lo que la fila y la tarjeta dicen igual: cuándo llega y el panel de gastos. */
+function cuandoLlega(compra: Importacion, hoy: string): string {
+  // Ya llegada, «nadie prometió fecha» no dice nada útil.
+  if (estadoTransito(compra, hoy) === "recibida") return "ya llegó";
+  const atraso = diasDeAtraso(compra, hoy);
+  const faltan = diasParaLlegar(compra, hoy);
+  return atraso > 0
+    ? `${atraso} ${atraso === 1 ? "día" : "días"} de retraso`
+    : faltan !== null
+      ? faltan === 0
+        ? "llega hoy"
+        : `en ${faltan} ${faltan === 1 ? "día" : "días"}`
+      : compra.fecha_estimada
+        ? compra.fecha_estimada
+        : "nadie prometió fecha";
+}
+
+function Gastos({ compra, puedeGastos }: { compra: Importacion; puedeGastos: boolean }) {
+  const incidencia = incidenciaGastos(compra);
+  // El cerrojo de la 022: los gastos se congelan en cuanto entra mercadería.
+  const editable = puedeGastos && compra.estado === "registrada";
+  return (
+    <>
+      <PanelGastos
+        compraId={compra.id}
+        total={compra.gastos}
+        subtotal={compra.subtotal}
+        editable={editable}
+        motivoBloqueo={
+          puedeGastos
+            ? "Ya entró mercadería: el costo está en el kardex y los gastos se congelan. Se corrige con un ajuste de inventario."
+            : "Tu rol no puede tocar los gastos de importación."
+        }
+      />
+      {incidencia !== null && incidencia > 0 ? (
+        <span
+          className={`mt-1 block text-sm ${incidencia >= 25 ? "text-[var(--warn)]" : "text-[var(--fg-subtle)]"}`}
+        >
+          encarecen un {incidencia.toFixed(1)} %
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+function Tarjeta({
+  compra,
+  hoy,
+  puedeGastos,
+}: {
+  compra: Importacion;
+  hoy: string;
+  puedeGastos: boolean;
+}) {
+  const estado = estadoTransito(compra, hoy);
+  return (
+    <li className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Link
+            href={`/compras/${compra.id}`}
+            className="whitespace-nowrap font-mono text-sm font-semibold text-brand-600"
+          >
+            {compra.numero}
+          </Link>
+          <p className="truncate text-sm font-medium">{compra.proveedor}</p>
+        </div>
+        <span className="shrink-0">
+          <Badge tone={tonoTransito(estado)} size="xs">
+            {ETIQUETA_TRANSITO[estado]}
+          </Badge>
+        </span>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Envío</dt>
+          <dd className="break-words">
+            {compra.courier ?? "sin courier"}
+            {compra.tracking ? (
+              <span className="block break-all font-mono text-[var(--fg-muted)]">
+                {compra.tracking}
+              </span>
+            ) : null}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Llega</dt>
+          <dd>{cuandoLlega(compra, hoy)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Mercadería, sin IGV</dt>
+          <dd className="tabular whitespace-nowrap">{dinero(compra.subtotal)}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-[var(--fg-subtle)]">Llegó</dt>
+          <dd>
+            {compra.lineasRecibidas} de {compra.lineas}{" "}
+            {compra.lineas === 1 ? "línea" : "líneas"}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="border-t border-[var(--border-soft)] pt-2">
+        <Gastos compra={compra} puedeGastos={puedeGastos} />
+      </div>
+
+      <Link
+        href={`/compras/${compra.id}`}
+        className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+      >
+        Ver la compra
+      </Link>
+    </li>
   );
 }
 
@@ -252,12 +397,6 @@ function Fila({
   puedeGastos: boolean;
 }) {
   const estado = estadoTransito(compra, hoy);
-  const atraso = diasDeAtraso(compra, hoy);
-  const faltan = diasParaLlegar(compra, hoy);
-  const incidencia = incidenciaGastos(compra);
-
-  // El cerrojo de la 022: los gastos se congelan en cuanto entra mercadería.
-  const editable = puedeGastos && compra.estado === "registrada";
 
   return (
     <tr
@@ -267,11 +406,11 @@ function Fila({
       <td className="px-4 py-2.5">
         <Link
           href={`/compras/${compra.id}`}
-          className="font-mono text-sm font-medium text-brand-600 hover:underline"
+          className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
         >
           {compra.numero}
         </Link>
-        <span className="block text-sm text-[var(--fg-subtle)] tabular">{compra.fecha}</span>
+        <span className="block whitespace-nowrap text-sm text-[var(--fg-subtle)] tabular">{compra.fecha}</span>
         {compra.documento_proveedor ? (
           <span className="block text-sm text-[var(--fg-subtle)]">
             {compra.documento_proveedor}
@@ -310,42 +449,17 @@ function Fila({
           {ETIQUETA_TRANSITO[estado]}
         </Badge>
         <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
-          {atraso > 0
-            ? `${atraso} ${atraso === 1 ? "día" : "días"} de retraso`
-            : faltan !== null
-              ? faltan === 0
-                ? "llega hoy"
-                : `en ${faltan} ${faltan === 1 ? "día" : "días"}`
-              : compra.fecha_estimada
-                ? compra.fecha_estimada
-                : "nadie prometió fecha"}
+          {cuandoLlega(compra, hoy)}
         </span>
       </td>
 
-      <td className="px-4 py-2.5 text-right tabular">
+      <td className="whitespace-nowrap px-4 py-2.5 text-right tabular">
         {dinero(compra.subtotal)}
         <span className="block text-sm text-[var(--fg-subtle)]">sin IGV</span>
       </td>
 
       <td className="px-4 py-2.5">
-        <PanelGastos
-          compraId={compra.id}
-          total={compra.gastos}
-          subtotal={compra.subtotal}
-          editable={editable}
-          motivoBloqueo={
-            puedeGastos
-              ? "Ya entró mercadería: el costo está en el kardex y los gastos se congelan. Se corrige con un ajuste de inventario."
-              : "Tu rol no puede tocar los gastos de importación."
-          }
-        />
-        {incidencia !== null && incidencia > 0 ? (
-          <span
-            className={`mt-1 block text-sm ${incidencia >= 25 ? "text-[var(--warn)]" : "text-[var(--fg-subtle)]"}`}
-          >
-            encarecen un {incidencia.toFixed(1)} %
-          </span>
-        ) : null}
+        <Gastos compra={compra} puedeGastos={puedeGastos} />
       </td>
     </tr>
   );

@@ -92,9 +92,15 @@ export function TablaPorComprar({
   const repartida = grupos.length > 1;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col @container">
+      {/*
+        Tarjetas o tabla según el ancho de ESTA caja (`@container`), no de la
+        pantalla. A 820 con el menú abierto quedan 550 px, `md:` ya pintaba la
+        tabla y el número de documento se partía en dos líneas (revisión por
+        módulos del 02/10).
+      */}
       {/* ------------------------------------------------------- Escritorio */}
-      <div className="scroll-x hidden md:block">
+      <div className="scroll-x hidden @3xl:block">
         <table className="w-full">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -298,7 +304,7 @@ export function TablaPorComprar({
       </div>
 
       {/* ------------------------------------------------------------ Móvil */}
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul className="flex flex-col gap-3 @3xl:hidden">
         {filas.map((f) => {
           const abierto = abiertos.has(f.producto_id);
           return (

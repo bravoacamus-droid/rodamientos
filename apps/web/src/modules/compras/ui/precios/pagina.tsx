@@ -102,10 +102,12 @@ export default async function PaginaPrecios() {
             Tarjetas o tabla según el ancho de ESTA caja (`@container`), no de
             la pantalla. Revisión de diseño del 02/10: en el teléfono esta
             tabla se desplazaba de lado (390 px: 363 → 918). La tabla pide
-            54 rem (918 px), así que el corte es `@4xl` (56 rem, 952 px con la
-            base de 17 px): por debajo no cabe entera.
+            54 rem (918 px), así que el corte era `@4xl` (56 rem, 952 px con la
+            base de 17 px): por debajo no cabe entera. Desde la revisión por
+            módulos del 02/10 lleva el botón «Abrir» y pide 60 rem, así que el
+            corte es `@5xl`: a 1280 con el menú abierto, tarjetas.
           */}
-          <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
+          <ul className="flex flex-col gap-2.5 p-3 @5xl:hidden">
             {filas.map((f) => (
               <li
                 key={f.id}
@@ -154,8 +156,8 @@ export default async function PaginaPrecios() {
               </li>
             ))}
           </ul>
-          <div className="hidden overflow-x-auto @4xl:block">
-            <table className="w-full min-w-[54rem] text-sm">
+          <div className="hidden overflow-x-auto @5xl:block">
+            <table className="w-full min-w-[60rem] text-sm">
               <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Consulta</th>
@@ -164,18 +166,25 @@ export default async function PaginaPrecios() {
                   <th className="px-4 py-2.5 text-right font-medium">Productos</th>
                   <th className="px-4 py-2.5 text-right font-medium">Contestaron</th>
                   <th className="px-4 py-2.5 font-medium">En qué quedó</th>
+                  {/* Un botón por fila, como en compras y recepciones: el
+                      número solo no parece un botón (revisión por módulos
+                      del 02/10). Pegado a la derecha por si la tabla se
+                      desplaza. */}
+                  <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5">
+                    <span className="sr-only">Acciones</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filas.map((f) => (
                   <tr
                     key={f.id}
-                    className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface-2)]"
+                    className="border-b border-[var(--border)] last:border-0"
                   >
                     <td className="px-4 py-2.5">
                       <Link
                         href={`/compras/precios/${f.id}`}
-                        className="font-medium tabular-nums underline-offset-2 hover:underline"
+                        className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 underline-offset-2 hover:underline"
                       >
                         {f.numero}
                       </Link>
@@ -200,6 +209,11 @@ export default async function PaginaPrecios() {
                         compras={f.compras}
                         contestaron={f.contestaron}
                       />
+                    </td>
+                    <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right">
+                      <Button asChild variant="outline">
+                        <Link href={`/compras/precios/${f.id}`}>Abrir</Link>
+                      </Button>
                     </td>
                   </tr>
                 ))}

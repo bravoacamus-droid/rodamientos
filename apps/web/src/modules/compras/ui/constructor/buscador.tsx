@@ -62,6 +62,11 @@ export function BuscadorCompra({
   };
 
   const teclas = (e: React.KeyboardEvent) => {
+    // Enter NUNCA llega al <form>: con la lista cerrada o todavía
+    // «buscando…», un Enter aquí enviaba el formulario entero y GUARDABA.
+    // Visto rellenando a 390 en la revisión por módulos del 02/10 (el mismo
+    // fallo que guardó dos cotizaciones en ventas).
+    if (e.key === "Enter") e.preventDefault();
     if (!abierto || resultados.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();

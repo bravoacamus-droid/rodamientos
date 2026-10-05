@@ -6,14 +6,16 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input, SelectNativo, toast } from "@rodatech/ui";
+import { Button, Input, SelectNativo, formatearMoneda, toast } from "@rodatech/ui";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 
 import { agregarGasto, gastosDeCompra, quitarGasto } from "../acciones/gastos";
 import { sumarGastos } from "../dominio/transito";
 import { CONCEPTOS_HABITUALES, type GastoImportacion } from "../dominio/tipos";
 
-const dinero = (n: number) => `$ ${n.toFixed(2)}`;
+// Con miles y el signo pegado a la cifra (revisión por módulos del 02/10).
+const NBSP = String.fromCharCode(0xa0);
+const dinero = (n: number) => formatearMoneda(n).replace(" ", NBSP);
 
 /**
  * El detalle de gastos de una importación.
@@ -121,15 +123,20 @@ export function PanelGastos({
 
   return (
     <div>
-      <button
+      {/* Un botón con su borde, no un texto azul con una flecha de 12 px:
+          «un botón tiene que parecer un botón» (revisión por módulos del
+          02/10). */}
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={alternar}
         aria-expanded={abierto}
-        className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:underline"
+        className="gap-1.5 whitespace-nowrap"
       >
-        {abierto ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+        {abierto ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}
         {total > 0 ? `Gastos ${dinero(total)}` : "Sin gastos"}
-      </button>
+      </Button>
 
       {abierto ? (
         <div className="mt-2 rounded-md border border-[var(--border-soft)] bg-[var(--surface-2)] p-3">
@@ -156,14 +163,18 @@ export function PanelGastos({
                       <div className="flex items-center gap-2">
                         <span className="tabular font-medium">{dinero(g.monto)}</span>
                         {editable ? (
+                          // Con su palabra: un icono suelto no dice qué hace
+                          // (revisión por módulos del 02/10).
                           <Button
-                            variant="ghost"
-                            size="icon-xs"
+                            variant="outline"
+                            size="sm"
                             disabled={ocupado}
                             aria-label={`Quitar ${g.concepto}`}
                             onClick={() => void quitar(g.id)}
+                            className="gap-1"
                           >
-                            <Trash2 />
+                            <Trash2 className="size-4" aria-hidden />
+                            Quitar
                           </Button>
                         ) : null}
                       </div>
@@ -173,7 +184,12 @@ export function PanelGastos({
               ) : (
                 <p className="mb-2 text-sm text-[var(--fg-muted)]">
                   {total > 0
-                    ? `Los ${dinero(total)} de esta compra se tecleraron como un solo número. Detállalos y el total pasa a ser la suma.`
+                    ? // «Detállalos» solo si se puede: debajo de una compra
+                      // ya recibida invitaba a algo que la línea siguiente
+                      // prohíbe (revisión por módulos del 02/10).
+                      editable
+                      ? `Los ${dinero(total)} de esta compra se teclearon como un solo número. Detállalos y el total pasa a ser la suma.`
+                      : `Los ${dinero(total)} de esta compra se anotaron como un solo número, sin detalle.`
                     : "Todavía no hay gastos anotados."}
                 </p>
               )}

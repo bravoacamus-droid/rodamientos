@@ -193,7 +193,7 @@ export function GastosFicha({
                 </Badge>
               </span>
               <span className="flex items-center gap-2">
-                <span className="tabular">$ {g.monto.toFixed(2)}</span>
+                <span className="tabular whitespace-nowrap">{"$\u00a0"}{g.monto.toFixed(2)}</span>
                 {editable && puedeTocar ? (
                   <Button
                     type="button"
@@ -205,8 +205,10 @@ export function GastosFicha({
                     title={`Quitar ${g.concepto}`}
                     className="h-9"
                   >
+                    {/* Con su palabra, no el icono suelto (revisión por
+                        módulos del 02/10). */}
                     <Trash2 className="size-4" aria-hidden />
-                    {quitando === g.id ? "…" : null}
+                    {quitando === g.id ? "Quitando…" : "Quitar"}
                   </Button>
                 ) : null}
               </span>
@@ -223,7 +225,7 @@ export function GastosFicha({
       {hayAlgo ? (
         <div className="mt-2 flex justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm font-semibold">
           <span>Total de gastos</span>
-          <span className="tabular">$ {total.toFixed(2)}</span>
+          <span className="tabular whitespace-nowrap">{"$\u00a0"}{total.toFixed(2)}</span>
         </div>
       ) : null}
 
@@ -232,7 +234,7 @@ export function GastosFicha({
         <p className="mt-2 flex items-center gap-2 text-sm">
           <Scale className="size-4 shrink-0 text-[var(--fg-muted)]" aria-hidden />
           <span>
-            Por kilo: <span className="tabular font-semibold">$ {porKg.toFixed(2)}</span> el kilo
+            Por kilo: <span className="tabular whitespace-nowrap font-semibold">{"$\u00a0"}{porKg.toFixed(2)}</span> el kilo
             <span className="text-[var(--fg-muted)]"> ({kilos.toFixed(2)} kg en total)</span>
           </span>
         </p>

@@ -61,7 +61,8 @@ export function GastosDeCompra({
 }) {
   const total = totalGastos(gastos);
   const simbolo = moneda === "PEN" ? "S/" : "$";
-  const dinero = (n: number) => `${simbolo} ${n.toFixed(2)}`;
+  // Signo pegado a la cifra (revisión por módulos del 02/10).
+  const dinero = (n: number) => `${simbolo}${String.fromCharCode(0xa0)}${n.toFixed(2)}`;
 
   // Lo que se propone y todavía no está en la lista, para añadirlo de un clic
   // si se quitó sin querer.
@@ -116,8 +117,10 @@ export function GastosDeCompra({
                 className="text-right tabular"
                 aria-label={`Monto de ${g.concepto || "este gasto"}`}
               />
-              <span className="col-span-2 flex items-center gap-2 sm:col-span-1">
-                {/* Un botón que parece botón, con su icono. */}
+              <span className="flex items-center gap-2">
+                {/* Un botón que parece botón, con su palabra y en la fila del
+                    monto: a 390 caía solo en una tercera línea, con el icono
+                    suelto (revisión por módulos del 02/10). */}
                 <Button
                   type="button"
                   variant="outline"
@@ -125,9 +128,10 @@ export function GastosDeCompra({
                   onClick={() => despachar({ tipo: "gastoQuitar", key: g.key })}
                   aria-label={`Quitar ${g.concepto || "este gasto"}`}
                   title={`Quitar ${g.concepto || "este gasto"}`}
-                  className="ml-auto h-10 text-sm sm:ml-0"
+                  className="h-10 gap-1 text-sm"
                 >
                   <Trash2 className="size-4" aria-hidden />
+                  Quitar
                 </Button>
               </span>
             </li>

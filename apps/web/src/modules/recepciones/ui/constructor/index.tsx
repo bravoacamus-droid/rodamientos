@@ -36,7 +36,7 @@ import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import type { CompraPendiente } from "../../dominio/tipos";
 import { BuscadorRecepcion } from "./buscador";
-import { FilaRecepcion } from "./linea";
+import { FilaRecepcion, TarjetaRecepcion } from "./linea";
 
 /**
  * Registro de recepción de mercadería.
@@ -178,7 +178,29 @@ export function ConstructorRecepcion({
   }, [estado.lineas, referencias, compraElegida]);
 
   return (
-    <form action={guardar} className="flex flex-col gap-5 p-6">
+    <form
+      action={guardar}
+      className="flex flex-col gap-5"
+      /*
+        Enter en un campo no guarda la recepción: se guarda con el botón.
+
+        Revisión por módulos del 02/10, rellenando a 390: con proveedor y
+        un producto puestos, un Enter en el buscador mientras decía
+        «buscando…» —o en el n.° de factura, un monto, el tracking— hacía el
+        envío implícito del navegador y GUARDABA. Es el mismo fallo que
+        guardó dos cotizaciones sin querer; aquí movería stock y costos.
+      */
+      onKeyDown={(e) => {
+        // `contains`: los diálogos van en un portal y React les pasa el
+        // evento igual; su Enter es suyo y no se toca.
+        if (
+          e.key === "Enter" &&
+          e.target instanceof HTMLInputElement &&
+          e.currentTarget.contains(e.target)
+        )
+          e.preventDefault();
+      }}
+    >
       <input type="hidden" name="recepcion" value={JSON.stringify(aPayload(estado))} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -209,12 +231,18 @@ export function ConstructorRecepcion({
       ) : null}
 
       {/* ----------------------------------------------------- Cabecera */}
-      <section className="card p-4">
+      <section className="card @container p-4">
         {/* Cinco columnas y no cuatro: el selector de proveedor ocupa dos.
             Con cuatro iguales el placeholder se cortaba en «Busca por nombre,
             RUC o…» justo antes de la palabra que menos se espera —marca—, que
-            es la que hay que anunciar porque nadie la busca sola. */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            es la que hay que anunciar porque nadie la busca sola.
+
+            Revisión por módulos del 02/10: las columnas las decide esta
+            tarjeta (`@container`) y no la pantalla, y en una sola columna con
+            `grid-cols-1` —la implícita crecía con el contenido y a 390 los
+            campos se salían 40 px de la tarjeta—. El formulario tampoco lleva
+            ya su propio `p-6`: era el único alta con doble margen. */}
+        <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-5">
           {/* Con la compra enlazada el proveedor lo MANDA ELLA: cambiarlo a
               mano dejaría la recepción colgando de una compra de otro. Se
               enseña como campo de solo lectura y no como la ficha completa del
@@ -222,7 +250,7 @@ export function ConstructorRecepcion({
               ficha obligaría a rellenar «al contado» y «entrega en 3 días» sin
               haberlos leído de ningún sitio. */}
           {compraElegida ? (
-            <div className="flex flex-col gap-1 lg:col-span-2">
+            <div className="flex flex-col gap-1 @4xl:col-span-2">
               <span className="text-sm font-medium">Proveedor</span>
               <div className="flex h-control-md items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3">
                 <span className="truncate text-sm">{compraElegida.proveedor}</span>
@@ -232,7 +260,7 @@ export function ConstructorRecepcion({
               </span>
             </div>
           ) : (
-            <div className="flex flex-col gap-1 lg:col-span-2">
+            <div className="flex flex-col gap-1 @4xl:col-span-2">
               <BuscadorProveedores
                 id="rec-proveedor"
                 sugeridos={sugeridos}
@@ -383,7 +411,11 @@ export function ConstructorRecepcion({
       </section>
 
       {/* -------------------------------------------------------- Líneas */}
-      <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+      {/* `@container`: tarjetas o tabla según el ancho de esta caja, como en la
+          compra (revisión por módulos del 02/10). El corte es `@5xl`: la tabla
+          pide unos 1100 px y a 1280 con el menú abierto dejaba «Stock» cortado
+          y «Quitar» fuera de la vista. */}
+      <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
         <div className="mb-3">
           <BuscadorRecepcion
             onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
@@ -397,6 +429,19 @@ export function ConstructorRecepcion({
             {compras.length > 0 ? ", o elige la compra de la que viene" : ""}.
           </p>
         ) : (
+          <>
+          <ul className="flex flex-col gap-2.5 @5xl:hidden">
+            {estado.lineas.map((l, i) => (
+              <TarjetaRecepcion
+                key={l.key}
+                linea={l}
+                costeada={costeo.lineas[i]}
+                conGastos={conGastos}
+                despachar={despachar}
+              />
+            ))}
+          </ul>
+          <div className="hidden @5xl:block">
           <TableContenedor>
             <Table>
               <THead>
@@ -432,6 +477,8 @@ export function ConstructorRecepcion({
               </TBody>
             </Table>
           </TableContenedor>
+          </div>
+          </>
         )}
       </section>
 
@@ -470,18 +517,18 @@ export function ConstructorRecepcion({
               </div>
               <div className="flex justify-between">
                 <dt className="text-[var(--fg-muted)]">Valor al proveedor</dt>
-                <dd className="tabular">${costeo.total.toFixed(2)}</dd>
+                <dd className="tabular whitespace-nowrap">{"$\u00a0"}{costeo.total.toFixed(2)}</dd>
               </div>
 
               {conGastos ? (
                 <>
                   <div className="flex justify-between">
                     <dt className="text-[var(--fg-muted)]">Gastos a repartir</dt>
-                    <dd className="tabular">${costeo.gastos.toFixed(2)}</dd>
+                    <dd className="tabular whitespace-nowrap">{"$\u00a0"}{costeo.gastos.toFixed(2)}</dd>
                   </div>
                   <div className="flex justify-between border-t border-[var(--border-soft)] pt-1.5 font-medium">
                     <dt>Valor al almacén</dt>
-                    <dd className="tabular">${costeo.totalFinal.toFixed(2)}</dd>
+                    <dd className="tabular whitespace-nowrap">{"$\u00a0"}{costeo.totalFinal.toFixed(2)}</dd>
                   </div>
                   <p className="text-sm text-[var(--fg-subtle)]">
                     Factor {costeo.factor} sobre cada costo. Es lo que va al

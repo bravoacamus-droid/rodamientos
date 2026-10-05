@@ -1,5 +1,7 @@
 "use client";
 
+// «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import * as React from "react";
 import {
   Button,
@@ -426,7 +428,7 @@ export function PanelRespuesta({
                     </span>
                     <span className="flex flex-wrap items-baseline gap-x-2 text-sm text-[var(--fg-muted)]">
                       <span>
-                        {item.cantidad} {item.unidad}
+                        {item.cantidad} {unidadLegible(item.unidad)}
                         {item.marca ? ` · ${item.marca}` : ""}
                       </span>
                       {/* De dónde viene, según lo que se le prometió al

@@ -51,6 +51,8 @@ export interface CompraLista {
   tipo: TipoCompra;
   documento_proveedor: string | null;
   estado: EstadoCompra;
+  /** La moneda de la factura del proveedor (042): el total se pinta en ella. */
+  moneda: "USD" | "PEN";
   total: number;
   gastos_importacion: number;
   /** Cuántas líneas trae. */

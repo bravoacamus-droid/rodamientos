@@ -1,3 +1,5 @@
+// «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
@@ -85,6 +87,9 @@ export default async function PaginaDetalleCompra({
   const mostrarPeso = c.lineas.some((l) => l.peso_kg > 0);
   const todasConPeso = c.lineas.length > 0 && c.lineas.every((l) => l.peso_kg > 0);
   const etiquetaPuesto = c.tipo === "importacion" ? "Puesto en Lima" : "Con gastos";
+  // El signo pegado a su cifra, con espacio de no separación: partidos en dos
+  // líneas («$» arriba, «11.58» abajo) es lo que Luis vio feo el 02/10.
+  const simbolo = c.moneda === "PEN" ? "S/\u00a0" : "$\u00a0";
 
   // Los gastos se tocan mientras no haya entrado mercadería: la base los
   // congela en cuanto se recibe (022).
@@ -160,13 +165,13 @@ export default async function PaginaDetalleCompra({
 
       {/* --------------------------------------------------------- Cifras */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Subtotal" valor={<Moneda valor={c.subtotal} />} />
+        <Tarjeta etiqueta="Subtotal" valor={<Moneda valor={c.subtotal} moneda={c.moneda} />} />
         <Tarjeta
           etiqueta="IGV"
-          valor={<Moneda valor={c.igv} enfasis="suave" />}
+          valor={<Moneda valor={c.igv} moneda={c.moneda} enfasis="suave" />}
           pie={c.igv === 0 ? "no afecto" : undefined}
         />
-        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} />} />
+        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} moneda={c.moneda} />} />
         <Tarjeta
           etiqueta="Recibido"
           valor={`${pedido > 0 ? Math.round((recibido / pedido) * 100) : 0}%`}
@@ -185,7 +190,7 @@ export default async function PaginaDetalleCompra({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
-        <section className="card p-4">
+        <section className="card @container p-4">
           <h2 className="mb-3 text-sm font-semibold">Qué se pidió</h2>
           {/*
             EN MÓVIL, TARJETAS. Medido a 390 px: esta pantalla se salía —el
@@ -193,10 +198,16 @@ export default async function PaginaDetalleCompra({
 
             Una línea de compra se lee para contestar «¿llegó ya?», así que la
             tarjeta pone el pedido contra lo recibido en la misma línea y con
-            el color que ya usaba la tabla. El costo unitario con sus cuatro
-            decimales se queda en escritorio: se revisa sentado, no de pie.
+            el color que ya usaba la tabla.
+
+            Desde la revisión por módulos del 02/10 el corte lo pone ESTA caja
+            (`@container`) y no la pantalla: a 820 con el menú abierto la
+            tabla se salía 204 px de la página. Y como a 1280 la caja también
+            queda estrecha, la tarjeta lleva ya el costo unitario —antes solo
+            en la tabla— y las cifras con su moneda: «240.00» a secas no decía
+            de qué.
           */}
-          <div className="flex flex-col gap-2.5 md:hidden">
+          <div className="flex flex-col gap-2.5 @3xl:hidden">
             {c.lineas.map((l) => {
               const completa = l.cantidad_recibida >= l.cantidad;
               return (
@@ -208,9 +219,7 @@ export default async function PaginaDetalleCompra({
                     >
                       {l.codigo}
                     </Link>
-                    <span className="tabular text-sm font-medium">
-                      {l.importe.toFixed(2)}
-                    </span>
+                    <Moneda valor={l.importe} moneda={c.moneda} />
                   </div>
 
                   <p className="mt-1 text-sm">{l.descripcion}</p>
@@ -221,7 +230,7 @@ export default async function PaginaDetalleCompra({
                   <p className="mt-2 text-sm">
                     <span className="text-[var(--fg-muted)]">Pedidas </span>
                     <span className="tabular font-medium">
-                      {l.cantidad} {l.unidad}
+                      {l.cantidad} {unidadLegible(l.unidad)}
                     </span>
                     <span className="text-[var(--fg-muted)]"> · llegaron </span>
                     <span
@@ -232,35 +241,40 @@ export default async function PaginaDetalleCompra({
                       {l.cantidad_recibida}
                     </span>
                   </p>
-                  {mostrarPeso || puestoDe(l) !== null ? (
-                    <p className="mt-1 flex flex-wrap justify-between gap-x-3 text-sm">
+                  <p className="mt-1 flex flex-wrap justify-between gap-x-3 text-sm">
+                    <span>
+                      <span className="text-[var(--fg-muted)]">Costo </span>
+                      <span className="tabular whitespace-nowrap">
+                        {simbolo}
+                        {l.costo_unitario.toFixed(4)}
+                      </span>
+                      <span className="text-[var(--fg-muted)]"> c/u</span>
                       {mostrarPeso ? (
-                        <span>
-                          <span className="text-[var(--fg-muted)]">Peso </span>
-                          <span className="tabular">
-                            {l.peso_kg > 0 ? `${l.peso_kg} kg` : "sin peso"}
+                        <>
+                          <span className="text-[var(--fg-muted)]"> · Peso </span>
+                          <span className="tabular whitespace-nowrap">
+                            {l.peso_kg > 0 ? `${l.peso_kg}\u00a0kg` : "sin peso"}
                           </span>
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                      {puestoDe(l) !== null ? (
-                        <span>
-                          <span className="text-[var(--fg-muted)]">{etiquetaPuesto} </span>
-                          <span className="tabular font-semibold text-brand-700 dark:text-brand-300">
-                            {puestoDe(l)!.toFixed(2)}
-                          </span>
-                          <span className="text-[var(--fg-muted)]"> c/u</span>
-                        </span>
+                        </>
                       ) : null}
-                    </p>
-                  ) : null}
+                    </span>
+                    {puestoDe(l) !== null ? (
+                      <span>
+                        <span className="text-[var(--fg-muted)]">{etiquetaPuesto} </span>
+                        <span className="tabular whitespace-nowrap font-semibold text-brand-700 dark:text-brand-300">
+                          {simbolo}
+                          {puestoDe(l)!.toFixed(2)}
+                        </span>
+                        <span className="text-[var(--fg-muted)]"> c/u</span>
+                      </span>
+                    ) : null}
+                  </p>
                 </div>
               );
             })}
           </div>
 
-          <div className="hidden scroll-x md:block">
+          <div className="hidden scroll-x @3xl:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
@@ -300,7 +314,7 @@ export default async function PaginaDetalleCompra({
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-right tabular">
-                        {l.cantidad} <span className="text-sm text-[var(--fg-subtle)]">{l.unidad}</span>
+                        {l.cantidad} <span className="text-sm text-[var(--fg-subtle)]">{unidadLegible(l.unidad)}</span>
                       </td>
                       <td
                         className={`py-2 pr-3 text-right tabular ${

@@ -4,6 +4,8 @@
 // rehace al vuelo. Los enlaces los abre el navegador — el servidor no manda
 // nada, y eso es deliberado.
 
+// «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input } from "@rodatech/ui";
@@ -172,12 +174,16 @@ export function PedirPrecio({
     if (!yaTengoPrecios) return null;
     const k = clave(proveedorId, item.producto_id);
     return (
-      <div className="mb-2 ml-7 flex flex-wrap items-end gap-2">
+      // En el teléfono, el código en su línea y los dos campos lado a lado:
+      // al envolver, «¿Cuántas tiene?» caía debajo del código y el precio a la
+      // derecha, en zigzag (revisión por módulos del 02/10).
+      <div className="mb-2 ml-7 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-end sm:gap-2">
         {conCodigo ? (
-          <span className="min-w-[7rem] pb-2 font-mono text-sm text-[var(--fg-muted)]">
+          <span className="font-mono text-sm text-[var(--fg-muted)] sm:min-w-[7rem] sm:pb-2">
             {item.codigo}
           </span>
         ) : null}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
         <label className="flex flex-col gap-1">
           <span className="text-sm text-[var(--fg-muted)]">Precio ($)</span>
           <Input
@@ -186,7 +192,7 @@ export function PedirPrecio({
             step="0.0001"
             value={precios[k] ?? ""}
             onChange={(e) => setPrecios((prev) => ({ ...prev, [k]: e.target.value }))}
-            className="h-9 w-28 text-right tabular"
+            className="h-9 w-full text-right tabular sm:w-28"
             placeholder="—"
             aria-label={`Precio de ${item.codigo}`}
           />
@@ -201,11 +207,12 @@ export function PedirPrecio({
             onChange={(e) =>
               setCantidadesProv((prev) => ({ ...prev, [k]: e.target.value }))
             }
-            className="h-9 w-28 text-right tabular"
+            className="h-9 w-full text-right tabular sm:w-28"
             placeholder={String(cantidades[item.producto_id] ?? item.cantidad)}
             aria-label={`Cuántas ${item.codigo} tiene`}
           />
         </label>
+        </div>
       </div>
     );
   };
@@ -400,7 +407,12 @@ export function PedirPrecio({
             listado meses después, así que tiene que ser verdad.
           */
           `${items.length} ${items.length === 1 ? "producto" : "productos"} ${
-            itemsIniciales.length > 0 ? "de la bandeja" : "preguntados a mano"
+            // Concordado (revisión por módulos del 02/10): salía «1 producto preguntados».
+            itemsIniciales.length > 0
+              ? "de la bandeja"
+              : items.length === 1
+                ? "preguntado a mano"
+                : "preguntados a mano"
           }`,
         ),
         precios: preciosParaGuardar(),
@@ -511,7 +523,15 @@ export function PedirPrecio({
                 });
               }}
               titulo="Todo junto"
-              detalle="Un mensaje con los dos productos a cada proveedor. Para el que vende de todo."
+              // Con la cuenta de verdad: decía «los dos productos» también con
+              // tres (revisión por módulos del 02/10).
+              detalle={`Un mensaje con ${
+                items.length === 1
+                  ? "el producto"
+                  : items.length === 2
+                    ? "los dos productos"
+                    : `los ${items.length} productos`
+              } a cada proveedor. Para el que vende de todo.`}
             />
             <OpcionModo
               activa={modo === "separado"}
@@ -548,11 +568,15 @@ export function PedirPrecio({
       {items.length === 0 ? null : modo === "separado" ? (
         items.map((item) => (
           <section key={item.producto_id} className="card p-4">
-            <div className="mb-3 flex flex-wrap items-center gap-2 border-b border-[var(--border-soft)] pb-2">
-              <span className="font-mono text-sm font-semibold">{item.codigo}</span>
-              <span className="min-w-0 flex-1 truncate text-sm text-[var(--fg-muted)]">
-                {item.marca ? `${item.marca} · ` : ""}
-                {item.descripcion}
+            <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-b border-[var(--border-soft)] pb-2">
+              {/* Igual que en «Qué se pide»: la descripción entera en el
+                  teléfono (revisión por módulos del 02/10). */}
+              <span className="min-w-0 basis-full sm:basis-0 sm:flex-1">
+                <span className="font-mono text-sm font-semibold">{item.codigo}</span>
+                <span className="block text-sm text-[var(--fg-muted)] sm:truncate">
+                  {item.marca ? `${item.marca} · ` : ""}
+                  {item.descripcion}
+                </span>
               </span>
               <CampoCantidad
                 item={item}
@@ -601,12 +625,17 @@ export function PedirPrecio({
             {items.map((item) => (
               <li
                 key={item.producto_id}
-                className="flex flex-wrap items-center gap-2 py-2"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1.5 py-2"
               >
-                <span className="font-mono text-sm font-medium">{item.codigo}</span>
-                <span className="min-w-0 flex-1 truncate text-sm text-[var(--fg-muted)]">
-                  {item.marca ? `${item.marca} · ` : ""}
-                  {item.descripcion}
+                {/* El producto a lo ancho y la cantidad debajo en el teléfono:
+                    en una sola fila la descripción quedaba en «SKF …», sin
+                    decir qué se pide (revisión por módulos del 02/10). */}
+                <span className="min-w-0 basis-full sm:basis-0 sm:flex-1">
+                  <span className="font-mono text-sm font-medium">{item.codigo}</span>
+                  <span className="block text-sm text-[var(--fg-muted)] sm:truncate">
+                    {item.marca ? `${item.marca} · ` : ""}
+                    {item.descripcion}
+                  </span>
                 </span>
                 <CampoCantidad
                   item={item}
@@ -615,23 +644,30 @@ export function PedirPrecio({
                 />
                 {/* Quitar. Con la lista armada a mano hace falta poder
                     deshacer un código mal elegido sin empezar de cero. */}
-                <button
+                {/* Con su palabra y su borde: era una papelera gris suelta. */}
+                <Button
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => quitar(item.producto_id)}
                   aria-label={`Quitar ${item.codigo} de la ronda`}
                   title="Quitar de la ronda"
-                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--fg-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
+                  className="ml-auto h-9 shrink-0 gap-1 sm:ml-0"
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
-                </button>
+                  Quitar
+                </Button>
               </li>
             ))}
           </ul>
 
           <h2 className="mb-1 text-sm font-semibold">A quién se le pide</h2>
           <p className="mb-3 text-sm text-[var(--fg-subtle)]">
-            A cada uno le llega la lista completa, con los {items.length}{" "}
-            {items.length === 1 ? "producto" : "productos"}.
+            {/* Con uno solo decía «con los 1 producto» (revisión por
+                módulos del 02/10). */}
+            {items.length === 1
+              ? "A cada uno le llega el producto de la lista."
+              : `A cada uno le llega la lista completa, con los ${items.length} productos.`}
           </p>
 
           <ListaProveedores
@@ -882,7 +918,7 @@ function CampoCantidad({
         className="h-9 w-20 text-right tabular"
         aria-label={`Cantidad de ${item.codigo}`}
       />
-      <span className="text-sm text-[var(--fg-muted)]">{item.unidad}</span>
+      <span className="text-sm text-[var(--fg-muted)]">{unidadLegible(item.unidad)}</span>
     </span>
   );
 }
