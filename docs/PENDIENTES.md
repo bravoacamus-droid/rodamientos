@@ -4632,6 +4632,37 @@ de la pestaña automatizada salen congeladas). Lo que salió, y cómo quedó:
 - **Pastillas de estado pintadas a mano** («vencida», «Anulado», completo /
   parcial): ya a 14 px; pasarlas a `EstadoBadge` es coherencia, no lectura.
 
+### AR.3 · 02-05/10 — Módulo por módulo, con agentes y capturas reales
+
+Luis: *«revisar cada módulo… que todo diseño, responsivo, llenado, todo se vea
+bien, para ir cerrando módulo por módulo»*. Seis agentes, cada uno con sus
+módulos, mirando capturas a 390, 820 y 1280 y RELLENANDO los formularios con
+los envíos bloqueados en la red (y contando filas antes y después). Lección:
+la medición automática (desborde, letra) dio limpio el análisis y Luis lo
+abrió y estaba feo. Hay que mirar.
+
+Cerrados: catálogo (f9265be), ventas (dab5e87), facturación y cobranzas
+(89cb1ce), clientes/transporte/proveedores (59c1551), compras/recepciones/
+importaciones (3fa0c8b), inventario y gestión (ec4a192). Compartidos:
+3193d6d, bb4c8d8, 4e1195d, 404b40c.
+
+**El fallo que más importa: Enter enviaba el formulario.** Lo encontró el
+agente de ventas cuando su script, tecleando un código y Enter como Willy,
+GUARDÓ dos cotizaciones reales (COT1-000002 y -000003, borradores de ACEROS
+CHILCA; pendiente de que Luis decida si se borran). Estaba en la cotización,
+la compra, la recepción, el ajuste de inventario —movía stock real—, y en la
+**emisión de factura y de nota de crédito**, donde gastaba un correlativo y lo
+mandaba a SUNAT. `sinEnvioConEnter` (lib/formularios.ts) en todos (5cd7d2a).
+
+**El cron de SUNAT llevaba un mes roto** (102, 564d39f): 2.498 fallos desde el
+09/09; la alerta «Comprobante sin llegar a SUNAT» no salía nunca.
+
+Queda: «Dar de baja» en transporte sin confirmar (¿se le pone?);
+`perfiles.ultimo_acceso` no lo escribe nadie (se lee de Auth; ¿escribirla o
+quitarla?); «Listos para entregar» en tarjetas cuando haya datos para verlo;
+lo que solo se ve con datos que no hay (guías, cartera con saldo, alertas con
+filas, compras registradas, comparativa con respuestas).
+
 ---
 
 ## §AQ · 01/10 (reunión) — El Excel era el ANÁLISIS antes de comprar
