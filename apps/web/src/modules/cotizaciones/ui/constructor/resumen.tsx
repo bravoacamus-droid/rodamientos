@@ -138,7 +138,7 @@ export function ResumenConstructor({
             <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
               {hayNoInmediatos
                 ? "Hay ítems que no son inmediatos: conviene que el cliente lo vea."
-                : "Todo es inmediato, así que diría lo mismo en cada línea."}
+                : "Todo es inmediato: saldrá «Inmediata» en cada línea."}
             </span>
           </span>
           <Switch

@@ -258,8 +258,13 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
       2. El interruptor está puesto y algo no es inmediato — lo de siempre,
          para cuando se quiere detallar aunque todas coincidan.
 
-    Si TODAS son inmediatas no hay nada que decir, y ahí el interruptor sigue
-    mandando.
+    Si TODAS prometen lo mismo, manda el interruptor, TAMBIÉN cuando todo
+    es inmediato. Hasta el 06/10 la columna no salía con todo inmediato
+    aunque se encendiera («diría lo mismo en cada línea»), y Luis cotizó a
+    COFACO con el interruptor puesto y el papel sin la columna: un
+    interruptor que se enciende y no hace nada es peor que no tenerlo.
+    Willy la quiere —«Inmediata» en cada línea también es una promesa—, y
+    quien no la quiera la deja apagada.
   */
   const entregas = new Set(
     d.lineas.map(
@@ -267,13 +272,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     ),
   );
   const prometenCosasDistintas = entregas.size > 1;
-  const algoNoEsInmediato = d.lineas.some(
-    (l) => (l.disponibilidad ?? "inmediata") !== "inmediata",
-  );
-
-  const conEntrega =
-    prometenCosasDistintas ||
-    ((d.mostrarDisponibilidad ?? false) && algoNoEsInmediato);
+  const conEntrega = prometenCosasDistintas || (d.mostrarDisponibilidad ?? false);
 
   return {
     emisor: d.emisor,

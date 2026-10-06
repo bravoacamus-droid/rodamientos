@@ -382,11 +382,14 @@ describe("la columna «Entrega», y el papel que se contradecía", () => {
     expect(armarCotizacionImpresa(todasIguales(false)).mostrarDisponibilidad).toBe(false);
   });
 
-  it("si TODO es inmediato no sale, ni encendiendo el interruptor", () => {
-    // Una columna con «Inmediata» repetida seis veces es ruido: la promesa
-    // general ya va arriba, en «Entrega».
+  it("con TODO inmediato, también manda el interruptor (COFACO, 06/10)", () => {
+    // Se encendió y el papel salió sin la columna: el interruptor no hacía
+    // nada. Encendido, sale; apagado, no.
     expect(
       armarCotizacionImpresa(base({ mostrarDisponibilidad: true })).mostrarDisponibilidad,
+    ).toBe(true);
+    expect(
+      armarCotizacionImpresa(base({ mostrarDisponibilidad: false })).mostrarDisponibilidad,
     ).toBe(false);
   });
 
