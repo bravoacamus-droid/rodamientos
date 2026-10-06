@@ -6,6 +6,7 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import type { Json } from "@rodatech/db/tipos";
 
 import { lineasBajoPiso } from "../dominio/piso";
+import { bloqueoQueImpide } from "@/lib/bloqueo";
 
 /**
  * Alta de cotización.
@@ -200,6 +201,11 @@ export async function actualizarCotizacion(
 
   try {
     const supabase = await clienteServidor();
+    // Si otra persona la tiene abierta para editar (106), no se pisa: al
+    // guardar se reinsertan las líneas y se perdería su cotización entera.
+    const bloqueo = await bloqueoQueImpide(supabase, "cotizacion", datos.id);
+    if (bloqueo) return { ok: false, error: bloqueo };
+
     const { error } = await supabase.rpc("actualizar_cotizacion", {
       p_datos: datos as unknown as Json,
     });

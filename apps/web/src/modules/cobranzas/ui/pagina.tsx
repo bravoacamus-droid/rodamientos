@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import {
   Badge,
   CifraAnimada,
@@ -77,12 +78,32 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Cobranzas</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Lo que está por cobrar, de lo más atrasado a lo menos. Registrar un pago
-          actualiza el saldo y las cuotas solo.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Cobranzas</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Lo que está por cobrar, de lo más atrasado a lo menos. Registrar un pago
+            actualiza el saldo y las cuotas solo.
+          </p>
+        </div>
+        {/*
+          El estado de cuenta para mandar al cliente (Willy, 06/10: «hay que
+          enviar el reporte de su estado de cuenta para que hagan el pago»).
+          Con un cliente filtrado, va directo al suyo.
+        */}
+        <Link
+          href={
+            filtros.cliente
+              ? `/cobranzas/estado-de-cuenta?cliente=${filtros.cliente}`
+              : "/cobranzas/estado-de-cuenta"
+          }
+          className="inline-flex h-11 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-base font-semibold shadow-sm hover:bg-[var(--surface-2)]"
+        >
+          <FileText className="size-5 shrink-0" aria-hidden="true" />
+          {filtros.cliente && cliente?.ok
+            ? `Estado de cuenta de ${cliente.nombre}`
+            : "Estado de cuenta de un cliente"}
+        </Link>
       </div>
 
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>

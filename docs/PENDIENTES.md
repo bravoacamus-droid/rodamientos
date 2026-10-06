@@ -4592,6 +4592,57 @@ de Defontana.
 
 ---
 
+## §AU · 06/10 (reunión con Willy) — Excel de consumo, estado de cuenta, candado
+
+Dos reuniones el 06/10. Lo que era código:
+
+- **Detalle en Excel** (105). Willy (4:00): *«de todas las ventas por detalle
+  o las cotizaciones, para hacer un estudio, un análisis de consumo de
+  productos»*. Hay un botón verde «Descargar en Excel» en Tablero →
+  Facturación y en Tablero → Cotizaciones, con los mismos filtros (rango y
+  cliente). Cada libro trae tres hojas:
+  - **Detalle**: una fila por línea, con marca, familia y subfamilia,
+    autofiltro y totales con `SUBTOTAL`, que siguen al filtro.
+  - **Por producto**.
+  - **Por cliente**.
+
+  Las notas de crédito restan. El centinela cuadra el detalle con el
+  tablero. Cotizaciones ganó también el filtro de cliente.
+- **Estado de cuenta** (`/cobranzas/estado-de-cuenta?cliente=`). Willy
+  (10:20): *«hay clientes que juntan 6, 7 facturas… hay que enviar el
+  reporte de su estado de cuenta»*.
+  - Es la misma `HojaDocumento`: cada pendiente con sus días de atraso (en
+    rojo), los totales vencido / por vencer, los pagos de los últimos 90
+    días y las cuentas.
+  - Se entra desde Cobranzas (botón arriba) y desde la ficha del cliente.
+  - **Revisado solo con datos de muestra**: la cartera real está vacía (las
+    facturas cargadas están cobradas).
+- **Bloqueo de edición** (106). Willy (5:36): *«para que no se crucen los
+  datos»*. Cubre productos y cotizaciones.
+  - El segundo usuario ve quién lo edita y desde qué hora, y entra solo
+    cuando se libera.
+  - Caduca a los 2 minutos sin latido. Gerencia puede quitarlo.
+  - Al guardar, `bloqueoQueImpide` lo comprueba otra vez.
+  - Probado con dos usuarios a la vez (Gerencia y Ventas).
+- **Año por año** en Tablero → Facturación (53:28, *«¿de qué año se vendió
+  más?»*). No se compara contra el primer año, que empieza en septiembre.
+- **Cuentas bancarias** del papel, compactas como el cuadro de un proveedor
+  que mandó Luis, con la sigla del banco y la columna **MONEDA** en vez de
+  «Tipo de cuenta» (Luis, 06/10).
+
+No es código, o espera a otros:
+- correo con dominio propio y web (presupuesto de Giussepe);
+- chat interno (presupuesto aparte);
+- migración de productos y del histórico de cotizaciones y ventas (Willy
+  manda los Excel).
+
+**Ojo con la numeración:** el resumen automático de la reunión dice
+«restablecer los números de factura a 1», pero lo acordado el 16/09 es
+CONTINUAR (§8 de CLAUDE.md), y en la grabación Willy dice *«si sigue sería
+genial»*. No se tocó nada; hay que confirmarlo con él.
+
+---
+
 ## §AT · 06/10 — Tablero ejecutivo: clientes, cotizaciones y facturación
 
 Luis, 06/10, por Willy: *«quiere reporte de clientes, gestión total de cómo

@@ -36,10 +36,14 @@ export interface CuentaParaPagar {
   cci: string | null;
 }
 
-/** Como lo escribe Willy en su formato, no como lo guarda la base. */
-const TIPO_DE_CUENTA: Record<string, string> = {
-  USD: "CTA. CTE. DÓLARES",
-  PEN: "CTA. CTE. SOLES",
+/**
+ * La moneda, en palabras. Era la columna «Tipo de cuenta» con «CTA. CTE.
+ * DÓLARES»; Luis, 06/10: *«en vez de TIPO DE CUENTA, ponle MONEDA»*. Lo que
+ * el cliente necesita saber para no equivocarse es en qué moneda deposita.
+ */
+const MONEDA: Record<string, string> = {
+  USD: "DÓLARES",
+  PEN: "SOLES",
 };
 
 /** Dólares arriba, soles debajo, y lo que no sea ninguno de los dos al final. */
@@ -64,44 +68,48 @@ export function CuentasParaPagar({
     <div className="mt-3 break-inside-avoid border-t border-[#ccc] pt-2">
       <p className="mb-1 font-semibold uppercase tracking-wide">{titulo}</p>
 
-      <table className="w-full border-collapse text-sm">
+      {/*
+        COMPACTA, como el cuadro del proveedor que mandó Luis (06/10): «la
+        tabla de números de cuenta lo veo muy grande». Iba a `text-sm` y a
+        todo el ancho, y con el nombre entero del banco cada cuenta ocupaba
+        dos renglones. Ahora va a la letra del resto del papel, una línea por
+        cuenta, del ancho de su contenido y con el banco por su sigla.
+      */}
+      <table className="border-collapse border border-[#999] text-xs">
         <thead>
-          {/* En mayúsculas como en el cuadro que mandó Willy, no en
-              minúscula como el resto del papel: es una tabla de cifras dentro
-              del pie, y los títulos en caja alta la separan de la prosa que
-              tiene encima. */}
-          <tr className="text-left uppercase">
-            <th className="border-b border-[#999] px-2 py-1 font-semibold">Banco</th>
-            <th className="border-b border-[#999] px-2 py-1 font-semibold">
-              Tipo de cuenta
-            </th>
-            <th className="border-b border-[#999] px-2 py-1 font-semibold">
-              N.° de cuenta
-            </th>
-            <th className="border-b border-[#999] px-2 py-1 font-semibold">
-              CCI cta. interbancaria
-            </th>
+          {/* En mayúsculas como en el cuadro que mandó Willy (16/09). */}
+          <tr className="uppercase">
+            <th className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">Banco</th>
+            <th className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">Moneda</th>
+            <th className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">N.° de cuenta</th>
+            <th className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">CCI cta. interbancaria</th>
           </tr>
         </thead>
         <tbody>
           {ordenadas.map((c) => (
-            <tr key={c.numero}>
-              <td className="border-b border-[#ddd] px-2 py-1 font-semibold">
-                {c.banco}
+            <tr key={c.numero} className="whitespace-nowrap">
+              <td className="px-3 py-0.5 text-center font-semibold" title={c.banco}>
+                {siglaBanco(c.banco)}
               </td>
-              <td className="border-b border-[#ddd] px-2 py-1">
-                {TIPO_DE_CUENTA[c.moneda.toUpperCase()] ?? c.moneda}
-              </td>
-              <td className="border-b border-[#ddd] px-2 py-1 tabular">{c.numero}</td>
+              <td className="px-3 py-0.5">{MONEDA[c.moneda.toUpperCase()] ?? c.moneda}</td>
+              <td className="px-3 py-0.5 tabular">{c.numero}</td>
               {/* Sin CCI no se puede pagar desde otro banco, así que el hueco
                   se dice en voz alta en vez de dejarlo en blanco. */}
-              <td className="border-b border-[#ddd] px-2 py-1 tabular">
-                {c.cci ?? "—"}
-              </td>
+              <td className="px-3 py-0.5 tabular">{c.cci ?? "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+/**
+ * «BANCO DE CREDITO DEL PERU (BCP)» → «BCP». Es como lo escribe todo el
+ * mundo en un pie de pago, y el nombre entero partía la fila en dos. Si no
+ * trae la sigla entre paréntesis, va el nombre tal cual.
+ */
+export function siglaBanco(banco: string): string {
+  const m = /\(([^)]+)\)\s*$/.exec(banco.trim());
+  return m?.[1]?.trim() || banco;
 }

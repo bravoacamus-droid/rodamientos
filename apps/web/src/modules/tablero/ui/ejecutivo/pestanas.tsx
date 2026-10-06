@@ -24,7 +24,7 @@ const PESTANAS = [
 ] as const;
 
 /** Lo que viaja de una pestaña a otra: el periodo y la comparación. */
-const CONSERVAR = ["atajo", "desde", "hasta", "grano", "comparar"];
+const CONSERVAR = ["atajo", "desde", "hasta", "grano", "comparar", "cliente"];
 
 export function PestanasTablero() {
   const ruta = usePathname();

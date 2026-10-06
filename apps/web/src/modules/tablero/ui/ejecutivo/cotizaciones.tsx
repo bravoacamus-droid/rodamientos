@@ -4,11 +4,12 @@ import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
 
 import { FiltroRango, etiquetaPeriodo } from "@/modules/reportes";
 
-import { datosCotizaciones } from "../../api/ejecutivo";
+import { clientesActivos, datosCotizaciones } from "../../api/ejecutivo";
 import { FRASE_COMPARACION, tasaDeCierre } from "../../dominio/ejecutivo";
-import { FiltroComparar } from "./filtros";
+import { FiltroCliente, FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
 import {
+  BotonExcel,
   Bloque,
   Dato,
   Partes,
@@ -18,6 +19,7 @@ import {
   hoyEnLima,
   leerFiltros,
   pct,
+  uno,
   type ParamsBusqueda,
 } from "./piezas";
 
@@ -55,6 +57,10 @@ export default async function PaginaCotizacionesEjecutiva({
   const hoy = hoyEnLima();
   const f = leerFiltros(sp, hoy);
   const frase = FRASE_COMPARACION[f.comparar];
+  const cliente = uno(sp.cliente) ?? null;
+  const lista = await clientesActivos();
+  const clientes = lista.ok ? lista.datos : [];
+  const nombreCliente = cliente ? (clientes.find((c) => c.id === cliente)?.nombre ?? null) : null;
 
   const filtro = (
     <FiltroRango
@@ -62,13 +68,20 @@ export default async function PaginaCotizacionesEjecutiva({
       hasta={f.rango.hasta}
       grano={f.rango.grano}
       atajo={f.atajo}
-      extra={<FiltroComparar valor={f.comparar} />}
+      extra={
+        <>
+          <FiltroComparar valor={f.comparar} />
+          <FiltroCliente valor={cliente} clientes={clientes} />
+        </>
+      }
     />
   );
 
   const [actual, previo] = await Promise.all([
-    datosCotizaciones(f.rango),
-    f.hayComparacion ? datosCotizaciones({ ...f.previo, grano: f.rango.grano }) : Promise.resolve(null),
+    datosCotizaciones(f.rango, cliente),
+    f.hayComparacion
+      ? datosCotizaciones({ ...f.previo, grano: f.rango.grano }, cliente)
+      : Promise.resolve(null),
   ]);
 
   if (!actual.ok) {
@@ -104,6 +117,12 @@ export default async function PaginaCotizacionesEjecutiva({
   return (
     <div className="@container flex flex-col gap-5">
       {filtro}
+
+      <BotonExcel
+        tipo="cotizaciones"
+        sp={sp}
+        explicacion={`Cada producto de cada cotización de este periodo${nombreCliente ? ` de ${nombreCliente}` : ""}, con su cliente, su marca y su familia. Trae también una hoja por producto y otra por cliente.`}
+      />
 
       {/* Lo que hay hoy en la base: que no se lea como un fallo. */}
       {r.cotizaciones < 5 ? (

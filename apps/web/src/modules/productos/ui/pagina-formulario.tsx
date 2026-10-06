@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { CandadoEdicion } from "@/componentes/candado-edicion";
+
 import { catalogosParaProducto, productoPorId } from "../api/consultas";
 import { esKit } from "../api/kits";
 import { FormularioProducto } from "./formulario";
@@ -91,7 +93,22 @@ export default async function PaginaFormularioProducto({
         ) : null}
       </header>
 
-      <FormularioProducto catalogos={catalogos.datos} producto={p} />
+      {p ? (
+        // El candado (106, Willy 06/10): «mientras yo cargo un grupo de
+        // productos, ¿otra persona puede ir cargando otro grupo?». Sí, y si
+        // coinciden en el mismo, el segundo lo encuentra bloqueado.
+        <CandadoEdicion
+          entidad="producto"
+          registroId={p.id}
+          que="este producto"
+          volverHref={`/productos/${p.id}`}
+          esGerencia={perfil.rol === "gerencia"}
+        >
+          <FormularioProducto catalogos={catalogos.datos} producto={p} />
+        </CandadoEdicion>
+      ) : (
+        <FormularioProducto catalogos={catalogos.datos} producto={p} />
+      )}
     </div>
   );
 }

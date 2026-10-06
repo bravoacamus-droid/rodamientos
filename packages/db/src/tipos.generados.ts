@@ -422,6 +422,38 @@ export type Database = {
           },
         ]
       }
+      bloqueos_edicion: {
+        Row: {
+          entidad: string
+          latido_en: string
+          registro_id: string
+          tomado_en: string
+          usuario_id: string
+        }
+        Insert: {
+          entidad: string
+          latido_en?: string
+          registro_id: string
+          tomado_en?: string
+          usuario_id: string
+        }
+        Update: {
+          entidad?: string
+          latido_en?: string
+          registro_id?: string
+          tomado_en?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloqueos_edicion_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_contactos: {
         Row: {
           activo: boolean
@@ -4722,6 +4754,11 @@ export type Database = {
         }
         Returns: string
       }
+      bloqueo_ajeno: {
+        Args: { p_entidad: string; p_registro: string }
+        Returns: string
+      }
+      bloqueo_caducidad: { Args: never; Returns: string }
       buscar_clientes: {
         Args: { p_limit?: number; p_q: string }
         Returns: {
@@ -4903,6 +4940,55 @@ export type Database = {
       crear_tipo: {
         Args: { p_nombre: string; p_subfamilia: string }
         Returns: Json
+      }
+      detalle_cotizaciones: {
+        Args: { p_cliente?: string; p_desde: string; p_hasta: string }
+        Returns: {
+          cantidad: number
+          cantidad_aprobada: number
+          cliente: string
+          codigo: string
+          descripcion: string
+          descuento_pct: number
+          documento: string
+          entrega: string
+          estado: string
+          familia: string
+          fecha: string
+          importe: number
+          marca: string
+          numero: string
+          subfamilia: string
+          unidad: string
+          valor_unitario: number
+          vence: string
+          vendedor: string
+        }[]
+      }
+      detalle_ventas: {
+        Args: { p_cliente?: string; p_desde: string; p_hasta: string }
+        Returns: {
+          cantidad: number
+          cliente: string
+          codigo: string
+          condicion: string
+          descripcion: string
+          descuento_pct: number
+          documento: string
+          estado: string
+          familia: string
+          fecha: string
+          igv: number
+          importe: number
+          marca: string
+          numero: string
+          orden_compra: string
+          subfamilia: string
+          tipo: string
+          unidad: string
+          valor_unitario: number
+          vendedor: string
+        }[]
       }
       dias_por_defecto: {
         Args: { p_disp: Database["public"]["Enums"]["disponibilidad_item"] }
@@ -5135,6 +5221,10 @@ export type Database = {
         Args: { p_tipo: Database["public"]["Enums"]["tipo_documento"] }
         Returns: string
       }
+      soltar_bloqueo: {
+        Args: { p_entidad: string; p_registro: string }
+        Returns: undefined
+      }
       stock_armable: { Args: { p_kit: string }; Returns: number }
       sustitutos_de: {
         Args: { p_limit?: number; p_producto: string }
@@ -5163,7 +5253,12 @@ export type Database = {
         Returns: Json
       }
       tablero_cotizaciones: {
-        Args: { p_desde: string; p_grano?: string; p_hasta: string }
+        Args: {
+          p_cliente?: string
+          p_desde: string
+          p_grano?: string
+          p_hasta: string
+        }
         Returns: Json
       }
       tablero_facturacion: {
@@ -5176,6 +5271,10 @@ export type Database = {
         Returns: Json
       }
       tiene_rol: { Args: { p_roles: string[] }; Returns: boolean }
+      tomar_bloqueo: {
+        Args: { p_entidad: string; p_forzar?: boolean; p_registro: string }
+        Returns: Json
+      }
       top_clientes_rango: {
         Args: { p_desde: string; p_hasta: string; p_limit?: number }
         Returns: {

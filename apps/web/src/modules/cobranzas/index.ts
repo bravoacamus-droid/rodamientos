@@ -5,6 +5,7 @@
  */
 
 export { default as PaginaCobranzas } from "./ui/pagina";
+export { default as PaginaEstadoDeCuenta } from "./ui/pagina-estado-cuenta";
 
 // Las reglas de cobro son puras y las va a necesitar cualquier pantalla que
 // enseñe deuda: la ficha del cliente, sin ir más lejos.

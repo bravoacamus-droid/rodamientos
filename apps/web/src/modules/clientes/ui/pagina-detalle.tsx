@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
-import { FileText, HandCoins, Pencil, Receipt, Truck } from "lucide-react";
+import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { clientePorId } from "../api/consultas";
@@ -161,12 +161,16 @@ export default async function PaginaDetalleCliente({
       */}
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-semibold">Lo que se le ha vendido</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {[
             { href: `/cotizaciones?cliente=${c.id}`, texto: "Sus cotizaciones", Icono: FileText },
             { href: `/guias?cliente=${c.id}`, texto: "Sus guías", Icono: Truck },
             { href: `/facturacion?cliente=${c.id}`, texto: "Sus facturas", Icono: Receipt },
             { href: `/cobranzas?cliente=${c.id}`, texto: "Lo que debe", Icono: HandCoins },
+            // Willy, 06/10: el papel para mandarle cuando junta varias facturas.
+            { href: `/cobranzas/estado-de-cuenta?cliente=${c.id}`, texto: "Su estado de cuenta", Icono: ScrollText },
+            // Y cómo va: lo que compra mes a mes contra el año pasado.
+            { href: `/dashboard/facturacion?cliente=${c.id}&comparar=anio`, texto: "Cómo va, en el tablero", Icono: ChartColumn },
           ].map(({ href, texto, Icono }) => (
             <Link
               key={href}

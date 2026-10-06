@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { bloqueoQueImpide } from "@/lib/bloqueo";
 
 /**
  * Alta y edición de un producto del maestro.
@@ -197,6 +198,12 @@ export async function guardarProducto(
       if (!eTipo && tipo && typeof tipo === "object" && "id" in tipo) {
         campos.tipo_id = String((tipo as { id: unknown }).id);
       }
+    }
+
+    // Si otra persona lo tiene abierto para editar (106), no se pisa.
+    if (id) {
+      const bloqueo = await bloqueoQueImpide(supabase, "producto", id);
+      if (bloqueo) return { ok: false, error: bloqueo };
     }
 
     const fila = id

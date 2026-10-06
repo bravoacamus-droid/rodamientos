@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { CandadoEdicion } from "@/componentes/candado-edicion";
+
 import {
   comprasAbiertasDe,
   cotizacionPorId,
@@ -163,7 +165,16 @@ export default async function PaginaEditarCotizacion({
       : [];
 
   return (
-    <>
+    // El candado (106, Willy 06/10): dos editando la misma cotización se
+    // pisaban, y al guardar se reinsertan las líneas (069), así que el
+    // último borraba la cotización entera del primero.
+    <CandadoEdicion
+      entidad="cotizacion"
+      registroId={cabecera.id}
+      que="esta cotización"
+      volverHref={`/cotizaciones/${cabecera.id}`}
+      esGerencia={perfil.rol === "gerencia"}
+    >
       {compras.length > 0 ? <AvisoDeCompras compras={compras} /> : null}
       <Constructor
       sugeridos={[]}
@@ -198,7 +209,7 @@ export default async function PaginaEditarCotizacion({
       }}
         editando={{ id: cabecera.id, numero: cabecera.numero, estado }}
       />
-    </>
+    </CandadoEdicion>
   );
 }
 

@@ -284,17 +284,17 @@ export interface DatosCotizaciones {
   motivosRechazo: { motivo: string; veces: number }[];
 }
 
-export async function datosCotizaciones(rango: {
-  desde: string;
-  hasta: string;
-  grano: Grano;
-}): Promise<Resultado<DatosCotizaciones>> {
+export async function datosCotizaciones(
+  rango: { desde: string; hasta: string; grano: Grano },
+  cliente: string | null = null,
+): Promise<Resultado<DatosCotizaciones>> {
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase.rpc("tablero_cotizaciones", {
       p_desde: rango.desde,
       p_hasta: rango.hasta,
       p_grano: rango.grano,
+      ...(cliente ? { p_cliente: cliente } : {}),
     });
     if (error) return fallo(error);
     const d = (data ?? {}) as Json;
@@ -366,6 +366,27 @@ export async function datosCotizaciones(rango: {
         })),
       },
     };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Todos los clientes activos, para el filtro de cotizaciones.
+ *
+ * No solo los que han comprado, como en facturación: se cotiza a quien
+ * todavía no compra, y es justo a quien hay que poder buscar.
+ */
+export async function clientesActivos(): Promise<Resultado<{ id: string; nombre: string }[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("id, razon_social")
+      .eq("activo", true)
+      .order("razon_social");
+    if (error) return fallo(error);
+    return { ok: true, datos: (data ?? []).map((c) => ({ id: c.id, nombre: c.razon_social })) };
   } catch (e) {
     return fallo(e);
   }

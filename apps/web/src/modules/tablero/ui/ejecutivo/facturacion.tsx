@@ -9,6 +9,7 @@ import { FRASE_COMPARACION } from "../../dominio/ejecutivo";
 import { FiltroCliente, FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
 import {
+  BotonExcel,
   Bloque,
   Dato,
   Partes,
@@ -67,12 +68,15 @@ export default async function PaginaFacturacionEjecutiva({
   const cliente = uno(sp.cliente) ?? null;
   const frase = FRASE_COMPARACION[f.comparar];
 
-  const [actual, previo, lista] = await Promise.all([
+  const [actual, previo, lista, historia] = await Promise.all([
     datosFacturacion(f.rango, cliente),
     f.hayComparacion
       ? datosFacturacion({ ...f.previo, grano: f.rango.grano }, cliente)
       : Promise.resolve(null),
     clientesConCompras(),
+    // Toda la historia por año, sin importar el periodo elegido: es la
+    // pregunta de Willy, 06/10 (53:28): «¿de qué año se vendió más?».
+    datosFacturacion({ desde: "2020-01-01", hasta: hoy, grano: "anio" }, cliente),
   ]);
 
   const clientes = lista.ok ? lista.datos : [];
@@ -129,6 +133,12 @@ export default async function PaginaFacturacionEjecutiva({
           </Link>
         </div>
       ) : null}
+
+      <BotonExcel
+        tipo="ventas"
+        sp={sp}
+        explicacion={`Cada producto de cada factura de este periodo${nombreCliente ? ` de ${nombreCliente}` : ""}, con su cliente, su marca y su familia; las notas de crédito restan. Trae también una hoja por producto y otra por cliente.`}
+      />
 
       <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
         <KpiCard
@@ -372,6 +382,15 @@ export default async function PaginaFacturacionEjecutiva({
         </Bloque>
       </div>
 
+      {historia.ok && historia.datos.serie.length > 0 ? (
+        <Bloque
+          titulo="Año por año"
+          descripcion={`Todo lo facturado${nombreCliente ? ` a ${nombreCliente}` : ""}, sin IGV, sin importar el periodo de arriba. El año en curso va hasta hoy.`}
+        >
+          <AnioPorAnio serie={historia.datos.serie} hoy={hoy} />
+        </Bloque>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
         <Dato etiqueta="IGV facturado" valor={dinero(r.igv)} />
         <Dato etiqueta="Total con IGV" valor={dinero(r.total)} />
@@ -379,5 +398,70 @@ export default async function PaginaFacturacionEjecutiva({
         <Dato etiqueta="Neto de notas" valor={dinero(r.venta - r.notasMonto)} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Un año por fila, con su barra, su cifra y su cambio contra el año anterior.
+ *
+ * En HTML y no en recharts por lo mismo que los rankings: son pocos años, la
+ * cifra se lee escrita y no hace falta pasar el ratón. El mejor año se marca,
+ * que es literalmente lo que se preguntó.
+ */
+function AnioPorAnio({
+  serie,
+  hoy,
+}: {
+  serie: { periodo: string; venta: number; documentos: number }[];
+  hoy: string;
+}) {
+  const anios = [...serie].sort((a, b) => a.periodo.localeCompare(b.periodo));
+  const max = Math.max(...anios.map((a) => a.venta));
+  const anioHoy = hoy.slice(0, 4);
+  return (
+    // UNA rejilla para todas las filas (`contents` en cada <li>): con una por
+    // fila, la columna de la cifra medía distinto en cada año y las barras
+    // dejaban de ser comparables, que es lo único que tienen que ser.
+    <ul className="grid grid-cols-[4.5rem_1fr] items-center gap-x-3 gap-y-1 @xl:grid-cols-[4.5rem_1fr_auto] @xl:gap-y-3">
+      {anios.map((a, i) => {
+        const anio = a.periodo.slice(0, 4);
+        const anterior = anios[i - 1];
+        // El primer año del histórico casi nunca es entero (el de Willy
+        // empieza en septiembre de 2024): compararle el siguiente daba
+        // «+255 %», que no dice nada del negocio. Se compara desde el segundo.
+        const cambio =
+          i >= 2 && anterior && anterior.venta > 0 ? ((a.venta - anterior.venta) / anterior.venta) * 100 : null;
+        const mejor = a.venta === max;
+        return (
+          <li key={anio} className="contents">
+            <span className="tabular text-lg font-semibold">{anio}</span>
+            <span className="h-4 overflow-hidden rounded-full bg-[var(--surface-3)]">
+              <span
+                className="block h-full rounded-full"
+                style={{ width: `${Math.max(2, (a.venta / max) * 100)}%`, background: "var(--viz-1)" }}
+              />
+            </span>
+            <span className="col-start-2 mb-2 flex flex-wrap items-baseline gap-x-3 @xl:col-start-3 @xl:mb-0 @xl:justify-end">
+              <span className="tabular text-base font-semibold">{dinero(a.venta)}</span>
+              <span className="text-sm text-[var(--fg-muted)]">
+                {entero(a.documentos)} comprobantes
+                {anio === anioHoy ? " · hasta hoy" : i === 0 && anios.length > 1 ? " · desde la primera factura" : ""}
+              </span>
+              {cambio !== null && anio !== anioHoy ? (
+                <span className={`tabular text-sm font-semibold ${cambio >= 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
+                  {cambio > 0 ? "+" : ""}
+                  {pct(cambio)} vs. {anterior?.periodo.slice(0, 4)}
+                </span>
+              ) : null}
+              {mejor ? (
+                <span className="rounded-full bg-[var(--ok-bg)] px-2 py-0.5 text-sm font-semibold text-[var(--ok)]">
+                  El mejor año
+                </span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
