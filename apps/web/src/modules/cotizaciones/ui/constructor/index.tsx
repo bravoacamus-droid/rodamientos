@@ -53,6 +53,7 @@ export function Constructor({
   hoy,
   editando = null,
   puedeEditarKit = false,
+  puedeAjustarStock = false,
 }: {
   /**
    * Si quien cotiza puede cambiar un kit desde aquí (25/09). Gerencia, admin
@@ -60,6 +61,8 @@ export function Constructor({
    * enseña el kit pero no se le ofrece un botón que la base rechazaría.
    */
   puedeEditarKit?: boolean;
+  /** Gerencia y admin: «Actualizar stock» en la línea (06/10). */
+  puedeAjustarStock?: boolean;
   /** Los últimos cotizados, para que el buscador ofrezca algo sin teclear. */
   sugeridos: ClienteOpcion[];
   /** El cliente de `?cliente=…`, ya resuelto por el servidor. */
@@ -583,6 +586,7 @@ export function Constructor({
                     mostrarDescuento={estado.mostrarDescuento}
                     despachar={despachar}
                     puedeEditarKit={puedeEditarKit}
+                        puedeAjustarStock={puedeAjustarStock}
                   />
                 ))}
               </ul>
@@ -622,6 +626,7 @@ export function Constructor({
                         mostrarDescuento={estado.mostrarDescuento}
                         despachar={despachar}
                         puedeEditarKit={puedeEditarKit}
+                        puedeAjustarStock={puedeAjustarStock}
                       />
                     ))}
                   </TBody>

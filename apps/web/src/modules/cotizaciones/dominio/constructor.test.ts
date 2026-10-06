@@ -664,3 +664,14 @@ describe("la entrega al recuperar o editar · la COT1-000004 (06/10)", () => {
     expect(r.tiempoEntrega).toBe("Parte inmediato, el resto hasta 15 días");
   });
 });
+
+describe("actualizar stock desde la cotización (06/10)", () => {
+  it("pone el saldo nuevo en TODAS las líneas de ese producto, y solo en ellas", () => {
+    let e = reducir(estadoInicial(), { tipo: "agregar", producto: P6209 });
+    e = reducir(e, { tipo: "agregar", producto: P7210 });
+    const id = e.lineas[0]!.productoId!;
+    const r = reducir(e, { tipo: "stock", productoId: id, valor: 3 });
+    expect(r.lineas[0]!.stock).toBe(3);
+    expect(r.lineas[1]!.stock).toBe(e.lineas[1]!.stock);
+  });
+});

@@ -192,6 +192,8 @@ export default async function PaginaEditarCotizacion({
       puedeEditarKit={
         !!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)
       }
+      // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
+      puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}
       hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
         new Date(),
       )}

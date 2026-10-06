@@ -30,6 +30,7 @@ import {
   Pencil,
   SquareArrowOutUpRight,
   Trash2,
+  PackageCheck,
 } from "lucide-react";
 import {
   Badge,
@@ -53,6 +54,7 @@ import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from 
 import { EditarArticulo } from "./editar-articulo";
 import { PreciosYStock } from "./precios-y-stock";
 import { DialogoKit } from "./dialogo-kit";
+import { DialogoStock } from "@/modules/productos/ui/dialogo-stock";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import {
@@ -91,6 +93,8 @@ interface PropsLinea {
   despachar: (a: Accion) => void;
   /** Gerencia, admin y compras: los que pueden cambiar un kit (25/09). */
   puedeEditarKit?: boolean;
+  /** Gerencia y admin: los que pueden cuadrar el stock (06/10). */
+  puedeAjustarStock?: boolean;
   /**
    * Fila de tabla o tarjeta (revisión de diseño del 02/10). Es el mismo
    * componente y no dos: la línea lleva sus diálogos, sus paneles y sus
@@ -112,8 +116,11 @@ export function FilaLinea({
   mostrarDescuento,
   despachar,
   puedeEditarKit = false,
+  puedeAjustarStock = false,
   vista = "fila",
 }: PropsLinea) {
+  /** El cuadre de stock, sin salir de la cotización (06/10). */
+  const [cuadrando, setCuadrando] = useState(false);
   const [panel, setPanel] = useState<"ninguno" | "sustitutos" | "historial">("ninguno");
   const [editando, setEditando] = useState(false);
   /** El kit, visto o editado sin salir de la cotización (25/09). */
@@ -451,6 +458,21 @@ export function FilaLinea({
             </span>
           </DropdownMenuItem>
 
+          {/*
+            «Actualizar stock» también aquí (Luis, 06/10). Willy no va a contar
+            los 790 productos de una vez: los cuadra según los va cotizando
+            —*«nutriéndolo como va cargando»*—, y es justo aquí donde ve que
+            el sistema dice «sin stock» y él tiene tres en el anaquel. Es el
+            mismo diálogo que el del listado de productos: queda en el kardex
+            con su motivo. Un kit no tiene stock propio: no sale.
+          */}
+          {puedeAjustarStock && linea.productoId && !esKit ? (
+            <DropdownMenuItem onSelect={() => requestAnimationFrame(() => setCuadrando(true))}>
+              <PackageCheck />
+              Actualizar stock
+            </DropdownMenuItem>
+          ) : null}
+
           <DropdownMenuSeparator />
 
           {/*
@@ -552,6 +574,20 @@ export function FilaLinea({
       */}
       {viendo ? (
         <PreciosYStock linea={linea} onCerrar={() => setViendo(false)} />
+      ) : null}
+
+      {cuadrando && linea.productoId ? (
+        <DialogoStock
+          abierto
+          cerrar={() => setCuadrando(false)}
+          id={linea.productoId}
+          codigo={linea.codigo}
+          descripcion={linea.descripcion}
+          stock={linea.stock}
+          alGuardar={(nuevo) =>
+            despachar({ tipo: "stock", productoId: linea.productoId!, valor: nuevo })
+          }
+        />
       ) : null}
 
       {/* Montado solo al abrirse, por lo mismo que los demás. */}

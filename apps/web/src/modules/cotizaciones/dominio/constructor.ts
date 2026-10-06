@@ -194,6 +194,12 @@ export type Accion =
    * mismo código de otra marca.
    */
   | { tipo: "codigo"; key: string; valor: string }
+  /**
+   * Se cuadró el stock de un producto desde la cotización (06/10). Se pone
+   * en TODAS las líneas que lo llevan: es el saldo del almacén, no de la
+   * línea.
+   */
+  | { tipo: "stock"; productoId: string; valor: number }
   | { tipo: "descripcion"; key: string; valor: string }
   /**
    * La ficha del catálogo cambió: la línea se pone al día de una vez.
@@ -432,6 +438,14 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         // imprime como un guion y lo que la base guarda como nulo.
         marca: accion.valor?.trim() ? accion.valor.trim() : null,
       }));
+
+    case "stock":
+      return {
+        ...estado,
+        lineas: estado.lineas.map((l) =>
+          l.productoId === accion.productoId ? { ...l, stock: accion.valor } : l,
+        ),
+      };
 
     case "codigo":
       return mapear(estado, accion.key, (l) => ({

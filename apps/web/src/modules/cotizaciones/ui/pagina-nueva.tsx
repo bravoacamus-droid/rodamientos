@@ -53,6 +53,8 @@ export default async function PaginaNuevaCotizacion({
       clienteInicial={resultado.datos.inicial}
       hoy={new Date().toISOString().slice(0, 10)}
       puedeEditarKit={puedeEditarKit}
+      // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
+      puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}
     />
   );
 }
