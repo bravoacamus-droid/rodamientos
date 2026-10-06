@@ -4592,6 +4592,44 @@ de Defontana.
 
 ---
 
+## §AT · 06/10 — Tablero ejecutivo: clientes, cotizaciones y facturación
+
+Luis, 06/10, por Willy: *«quiere reporte de clientes, gestión total de cómo
+van, qué compran más, con gráficos, comparación de sus meses pasados […]
+reporte también de cotizaciones, cómo van, cuántos están en proceso, cuáles no
+[…] otro módulo de facturación»*.
+
+El Tablero tiene ahora **cuatro pestañas** (`/dashboard`, `/clientes`,
+`/cotizaciones`, `/facturacion`) con el mismo filtro de fechas, que se
+conserva al cambiar de pestaña. Las tres nuevas abren en «últimos 12 meses» y
+añaden **Comparar con**: el periodo anterior o el mismo del año pasado.
+
+- **Migración 104**: `tablero_facturacion`, `tablero_clientes` y
+  `tablero_cotizaciones`, una llamada por pestaña y rango, `security invoker`.
+  Su centinela las ejecuta y exige que la venta cuadre al céntimo con
+  `serie_ventas` (Informes).
+- **Comparación por meses enteros** cuando el rango empieza un día 1
+  (`rangoComparado`). Por días, «últimos 12 meses» comparaba contra un
+  noviembre de cinco días. El Resumen usa la misma regla, para que las
+  pestañas no den porcentajes distintos del mismo año.
+- **Clientes**: cinco grupos (nuevos, compran más, igual, compran menos,
+  dejaron de comprar, con un umbral de ±10 %), «A quién llamar», el peso de
+  los 5 primeros y la tabla con su cambio. «Ver detalle» abre la facturación
+  de ese cliente.
+- **Cotizaciones**: en juego, tasa de cierre (solo sobre las ya decididas) y
+  «Se vencen pronto». Una *enviada* con la validez pasada cuenta como
+  vencida.
+- **Facturación**: lo facturado contra la comparación, con la tabla de
+  cifras debajo; notas de crédito, anuladas, contado/crédito, cobro, SUNAT y
+  los rankings. Tiene filtro de cliente.
+
+**Sin verificar del todo:** cotizaciones tiene **una** en la base, así que esa
+pestaña solo se ha visto casi vacía. Los gráficos con muchas cotizaciones,
+vendedores y motivos de rechazo no se han visto con datos. El margen no sale en
+ninguna pestaña: ninguna línea de factura tiene costo.
+
+---
+
 ## §AS · 05/10 — SUNAT: escrito, pero desde este ERP no ha salido nada
 
 Luis, 05/10: *«los datos q se tiene q mandar a sunat tmb esta bien la

@@ -57,11 +57,18 @@ export function FiltroRango({
   hasta,
   grano,
   atajo,
+  extra,
 }: {
   desde: string;
   hasta: string;
   grano: Grano;
   atajo: Atajo | null;
+  /**
+   * Más filtros en la misma fila que las fechas: «Comparar con» y el cliente
+   * del tablero ejecutivo (06/10). Una segunda barra debajo habría empujado
+   * las cifras otra vez fuera de la pantalla del teléfono.
+   */
+  extra?: React.ReactNode;
 }) {
   const router = useRouter();
   const ruta = usePathname();
@@ -206,6 +213,8 @@ export function FiltroRango({
             ))}
           </SelectNativo>
         </label>
+
+        {extra}
       </div>
     </section>
   );

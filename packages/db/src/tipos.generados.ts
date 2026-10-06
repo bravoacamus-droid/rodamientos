@@ -5152,6 +5152,29 @@ export type Database = {
           stock: number
         }[]
       }
+      tablero_clientes: {
+        Args: {
+          p_desde: string
+          p_grano?: string
+          p_hasta: string
+          p_prev_desde: string
+          p_prev_hasta: string
+        }
+        Returns: Json
+      }
+      tablero_cotizaciones: {
+        Args: { p_desde: string; p_grano?: string; p_hasta: string }
+        Returns: Json
+      }
+      tablero_facturacion: {
+        Args: {
+          p_cliente?: string
+          p_desde: string
+          p_grano?: string
+          p_hasta: string
+        }
+        Returns: Json
+      }
       tiene_rol: { Args: { p_roles: string[] }; Returns: boolean }
       top_clientes_rango: {
         Args: { p_desde: string; p_hasta: string; p_limit?: number }

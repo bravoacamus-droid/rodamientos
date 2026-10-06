@@ -65,13 +65,7 @@ export default async function PaginaTablero({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Cómo va el negocio, la cartera y lo que necesita atención.
-        </p>
-      </div>
-
+      {/* El título y las pestañas los pone `app/(erp)/dashboard/layout.tsx`. */}
       <FiltroRango
         desde={rango.desde}
         hasta={rango.hasta}

@@ -6,10 +6,11 @@ import { fallo } from "@/lib/errores";
 import type { Severidad } from "@/modules/alertas";
 import {
   etiquetaPeriodo,
-  periodoAnterior,
   rellenarPeriodos,
   type Rango,
 } from "@/modules/reportes";
+
+import { rangoComparado } from "../dominio/ejecutivo";
 
 export type Resultado<T> =
   | { ok: true; datos: T }
@@ -242,7 +243,9 @@ export async function kpisDeRango(
 ): Promise<Resultado<KpisPeriodo>> {
   try {
     const supabase = await clienteServidor();
-    const previo = periodoAnterior(rango);
+    // La misma regla que las pestañas del tablero ejecutivo (06/10): si no,
+    // el Resumen y Facturación darían porcentajes distintos del mismo año.
+    const previo = rangoComparado(rango, "anterior");
 
     const [ahora, antes] = await Promise.all([
       serieCruda(supabase, rango.desde, rango.hasta, rango.grano),
