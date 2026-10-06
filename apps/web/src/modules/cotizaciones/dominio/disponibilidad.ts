@@ -192,6 +192,28 @@ export function entregaSeContradice(
 }
 
 /**
+ * ¿Es uno de los textos que propone `entregaDelDocumento`?
+ *
+ * Al EDITAR una cotización, la entrega guardada se trataba siempre como
+ * escrita a mano y dejaba de recalcularse. Así la COT1-000004 (06/10) se
+ * guardó con «Stock inmediato» arriba y una línea de importación a 15 días
+ * debajo: se le añadió la línea editando, y la cabecera no se enteró.
+ *
+ * Un texto que el sistema mismo habría propuesto no es una decisión de nadie:
+ * se sigue recalculando. Lo que no tenga esta forma sí es de una persona, y
+ * se respeta.
+ */
+export function esEntregaAutomatica(texto: string | null): boolean {
+  if (texto === null) return true;
+  const t = texto.trim();
+  return (
+    t === "Stock inmediato" ||
+    /^Hasta \d+ días$/.test(t) ||
+    /^Parte inmediato, el resto hasta \d+ días$/.test(t)
+  );
+}
+
+/**
  * ¿La cabecera promete una demora que NINGUNA línea respalda?
  *
  * Es el reverso de `entregaSeContradice`, y hasta el 16/09 se dio por

@@ -313,6 +313,30 @@ export function Constructor({
               </label>
             </div>
 
+            {/*
+              Fuera del desplegable (06/10). El aviso solo estaba DENTRO de
+              «Más datos del documento», que sale plegado: Willy guardó la
+              COT1-000004 con «Stock inmediato» arriba y una línea a 15 días,
+              y no llegó a verlo nunca.
+            */}
+            {entregaMiente ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+                <p className="min-w-0 flex-1 text-base">
+                  <strong>Arriba dice «{estado.tiempoEntrega}»</strong> y hay productos que
+                  tardan. El cliente leerá las dos cosas.
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    despachar({ tipo: "cabecera", campo: "tiempoEntrega", valor: entregaPropuesta })
+                  }
+                  className="inline-flex h-10 items-center rounded-md bg-[var(--warn)] px-3 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Poner «{entregaPropuesta}»
+                </button>
+              </div>
+            ) : null}
+
             <details className="group mt-3 border-t border-[var(--border-soft)] pt-3">
               {/* Con borde y la flecha de lucide. Era texto gris con un «›»
                   tipográfico: no parecía algo que se pudiera pulsar, y ahí

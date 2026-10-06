@@ -8,6 +8,7 @@ import {
   diasDe,
   entregaDelDocumento,
   entregaPrometeSinRespaldo,
+  esEntregaAutomatica,
   entregaSeContradice,
   faltaComprar,
   prometeDeMas,
@@ -258,5 +259,19 @@ describe("entregaPrometeSinRespaldo · el caso de Willy (16/09)", () => {
   it("sin texto o sin líneas, no hay nada que comparar", () => {
     expect(entregaPrometeSinRespaldo(null, [l("inmediata")])).toBe(false);
     expect(entregaPrometeSinRespaldo("Hasta 30 días", [])).toBe(false);
+  });
+});
+
+describe("esEntregaAutomatica · la COT1-000004 (06/10)", () => {
+  it("reconoce los textos que propone el sistema", () => {
+    expect(esEntregaAutomatica("Stock inmediato")).toBe(true);
+    expect(esEntregaAutomatica("Hasta 15 días")).toBe(true);
+    expect(esEntregaAutomatica("Parte inmediato, el resto hasta 45 días")).toBe(true);
+  });
+
+  it("lo demás es de una persona y se respeta", () => {
+    expect(esEntregaAutomatica("24 a 48 horas")).toBe(false);
+    expect(esEntregaAutomatica("Entregas parciales según llegue")).toBe(false);
+    expect(esEntregaAutomatica("15 días (importación)")).toBe(false);
   });
 });

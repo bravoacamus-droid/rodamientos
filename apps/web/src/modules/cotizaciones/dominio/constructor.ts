@@ -42,7 +42,7 @@ export interface ProductoParaCotizar {
   es_kit?: boolean;
 }
 
-import { entregaDelDocumento, type Disponibilidad } from "./disponibilidad";
+import { entregaDelDocumento, esEntregaAutomatica, type Disponibilidad } from "./disponibilidad";
 
 export interface LineaConstructor {
   /** Clave estable para React. Determinista: sale de un contador. */
@@ -351,16 +351,18 @@ export function reducir(estado: EstadoConstructor, accion: Accion): EstadoConstr
     return { ...siguiente, entregaAMano: true };
   }
 
-  // Un borrador que se recupera ya trae una decisión tomada: recalcularla
-  // sería pisar lo que alguien escribió hace tres días.
-  if (accion.tipo === "cargar") return { ...siguiente, entregaAMano: true };
+  // Un borrador que se recupera trae una decisión tomada SOLO si alguien
+  // escribió algo propio: recalcularla pisaría lo de hace tres días. Si es
+  // uno de los textos que propone el sistema, sigue recalculándose (06/10).
+  if (accion.tipo === "cargar" && !esEntregaAutomatica(siguiente.tiempoEntrega)) {
+    return { ...siguiente, entregaAMano: true };
+  }
+  const libre = accion.tipo === "cargar" ? { ...siguiente, entregaAMano: false } : siguiente;
 
-  if (siguiente.entregaAMano) return siguiente;
+  if (libre.entregaAMano) return libre;
 
-  const propuesta = entregaDelDocumento(siguiente.lineas);
-  return siguiente.tiempoEntrega === propuesta
-    ? siguiente
-    : { ...siguiente, tiempoEntrega: propuesta };
+  const propuesta = entregaDelDocumento(libre.lineas);
+  return libre.tiempoEntrega === propuesta ? libre : { ...libre, tiempoEntrega: propuesta };
 }
 
 function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstructor {

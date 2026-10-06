@@ -11,6 +11,7 @@ import {
   type CompraAbierta,
 } from "../api/consultas";
 import { estadoInicial, type EstadoConstructor } from "../dominio/constructor";
+import { entregaDelDocumento, esEntregaAutomatica } from "../dominio/disponibilidad";
 import { Constructor } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `cotizaciones`. */
@@ -111,7 +112,11 @@ export default async function PaginaEditarCotizacion({
     // A mano: lo que hay guardado manda sobre lo que deduciría de las líneas.
     // Si se recalculara al abrir, editar una coma reescribiría un plazo que
     // alguien puso a propósito.
-    entregaAMano: true,
+    // Solo es «a mano» si alguien escribió algo propio. Si es un texto que el
+    // sistema habría propuesto, se sigue recalculando con las líneas: era
+    // `true` siempre, y así la COT1-000004 quedó con «Stock inmediato» arriba
+    // y una línea a 15 días debajo (06/10).
+    entregaAMano: !esEntregaAutomatica(cabecera.tiempo_entrega),
     ordenCompraCliente: cabecera.orden_compra_cliente ?? "",
     contacto: cabecera.contacto ?? "",
     contactoId: null,
@@ -152,6 +157,11 @@ export default async function PaginaEditarCotizacion({
     })),
     proximaKey: lineas.length + 1,
   };
+
+  // Al abrir ya sale la entrega que corresponde a las líneas: el estado
+  // inicial no pasa por el reducer, y sin esto se vería la guardada (la que
+  // estaba mal) hasta tocar cualquier cosa.
+  if (!estado.entregaAMano) estado.tiempoEntrega = entregaDelDocumento(estado.lineas);
 
   /*
     Solo se pregunta por las compras si el pedido ya está aprobado.

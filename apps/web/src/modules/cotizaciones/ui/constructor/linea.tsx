@@ -247,7 +247,10 @@ export function FilaLinea({
             min={1}
             max={365}
             step="1"
-            value={linea.diasEntrega ?? ""}
+            // El plazo habitual se ENSEÑA como valor, en negro, y no como
+            // marcador gris: con el «15» en gris claro y la caja de 56 px,
+            // Willy creyó que no se podía cambiar (06/10).
+            value={linea.diasEntrega ?? DIAS_POR_DEFECTO[linea.disponibilidad] ?? ""}
             onChange={(e) =>
               despachar({
                 tipo: "diasEntrega",
@@ -256,8 +259,7 @@ export function FilaLinea({
                 valor: e.target.value === "" ? null : Number(e.target.value),
               })
             }
-            placeholder={String(DIAS_POR_DEFECTO[linea.disponibilidad] ?? "")}
-            className="h-control-sm w-14 text-right tabular text-sm"
+            className="h-control-sm w-20 text-right tabular text-base"
             aria-label={`Días de entrega de ${linea.codigo}`}
           />
           <span className="text-sm text-[var(--fg-muted)]">días</span>

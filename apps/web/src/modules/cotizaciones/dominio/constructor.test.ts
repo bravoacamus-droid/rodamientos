@@ -645,3 +645,22 @@ describe("refrescarKit", () => {
     expect(e.lineas[0]?.descuentoPct).toBe(5);
   });
 });
+
+describe("la entrega al recuperar o editar · la COT1-000004 (06/10)", () => {
+  it("si lo guardado era automático, se recalcula con las líneas", () => {
+    // Se guardó «Stock inmediato» y luego se añadió una línea de importación:
+    // la cabecera tiene que seguir a las líneas, no quedarse en «inmediato».
+    let base = reducir(estadoInicial(), { tipo: "agregar", producto: P6209 });
+    base = reducir(base, { tipo: "agregar", producto: P7210 });
+    const segunda = base.lineas[1]!.key;
+    base = reducir(base, { tipo: "disponibilidad", key: segunda, valor: "exterior" });
+    const guardado: EstadoConstructor = {
+      ...base,
+      tiempoEntrega: "Stock inmediato",
+      entregaAMano: true,
+    };
+    const r = reducir(estadoInicial(), { tipo: "cargar", estado: guardado });
+    expect(r.entregaAMano).toBe(false);
+    expect(r.tiempoEntrega).toBe("Parte inmediato, el resto hasta 15 días");
+  });
+});
