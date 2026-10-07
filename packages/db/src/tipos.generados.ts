@@ -5024,6 +5024,18 @@ export type Database = {
         Args: { p_filas: Json; p_simular?: boolean }
         Returns: Json
       }
+      indicadores_cobranzas: {
+        Args: { p_desde?: string; p_hasta?: string }
+        Returns: Json
+      }
+      indicadores_cotizaciones: {
+        Args: { p_cliente?: string; p_desde?: string; p_hasta?: string }
+        Returns: Json
+      }
+      indicadores_guias: {
+        Args: { p_cliente?: string; p_desde?: string; p_hasta?: string }
+        Returns: Json
+      }
       kit_suma: {
         Args: { p_kit: string }
         Returns: {

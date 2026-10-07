@@ -1,17 +1,19 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { AlarmClock, CalendarClock, FileText, HandCoins, Wallet } from "lucide-react";
 import {
   Badge,
-  CifraAnimada,
   EstadoError,
   EstadoVacio,
   Moneda,
   Skeleton,
   formatearFecha,
+  formatearMoneda,
 } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { BarraPeriodo } from "@/componentes/barra-periodo";
+import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 
 import {
@@ -19,6 +21,7 @@ import {
   carteraPorCliente,
   compromisosVencidos,
   gestiones,
+  indicadoresCobranzas,
   ultimosPagos,
 } from "../api/consultas";
 import { etiquetaAtraso, tonoTramo } from "../dominio/cobro";
@@ -60,6 +63,8 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
     tramo: uno(sp.tramo),
     vencido: uno(sp.vencido),
   };
+  // El periodo solo cuenta lo COBRADO (07/10): lo que se debe es de hoy.
+  const periodo = { desde: uno(sp.desde), hasta: uno(sp.hasta) };
 
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
     new Date(),
@@ -110,8 +115,11 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
         <Compromisos hoy={hoy} />
       </Suspense>
 
-      <Suspense fallback={<div className="grid gap-3 sm:grid-cols-3"><Skeleton className="h-24" /><Skeleton className="h-24" /><Skeleton className="h-24" /></div>}>
-        <Indicadores />
+      <Suspense
+        key={`${periodo.desde}|${periodo.hasta}`}
+        fallback={<Skeleton className="h-32 w-full" />}
+      >
+        <Indicadores periodo={periodo} />
       </Suspense>
 
       {/* `@container`: tarjetas o tabla según el ancho de esta caja, no de la
@@ -132,10 +140,19 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Últimos pagos</h2>
-          <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-            <ListaPagos />
+        <section className="card flex flex-col gap-3 p-4">
+          <h2 className="text-base font-semibold">Lo cobrado</h2>
+          <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+            <BarraPeriodo
+              titulo="Periodo"
+              ayuda="Cuenta lo cobrado; lo que se debe es siempre el de hoy."
+            />
+          </Suspense>
+          <Suspense
+            key={`${periodo.desde}|${periodo.hasta}`}
+            fallback={<Skeleton className="h-40 w-full" />}
+          >
+            <ListaPagos periodo={periodo} />
           </Suspense>
         </section>
 
@@ -180,55 +197,52 @@ async function Compromisos({ hoy }: { hoy: string }) {
   );
 }
 
-async function Indicadores() {
-  const r = await carteraPorCliente();
-  if (!r.ok) return <EstadoError titulo="No se pudo cargar la cartera" detalle={r.error} />;
-
-  const total = r.datos.reduce((a, c) => a + c.saldo, 0);
-  const vencido = r.datos.reduce((a, c) => a + c.vencido, 0);
-  const peor = r.datos[0];
-
+/**
+ * Las cuatro cifras de cobranzas (07/10, sobre las tres que había): lo que se
+ * debe, lo vencido —con a quién llamar primero—, lo que vence esta semana y
+ * lo cobrado en el periodo, que es el arqueo semanal de Willy.
+ */
+async function Indicadores({ periodo }: { periodo: { desde?: string; hasta?: string } }) {
+  const [r, porCliente] = await Promise.all([indicadoresCobranzas(periodo), carteraPorCliente()]);
+  if (!r.ok) return <IndicadoresError detalle={r.error} />;
+  const d = r.datos;
+  const peor = porCliente.ok ? porCliente.datos[0] : undefined;
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Por cobrar</p>
-        <p className="mt-0.5 text-xl font-semibold">
-          <CifraAnimada valor={total} decimales={2} prefijo="$ " />
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {r.datos.length} {r.datos.length === 1 ? "cliente" : "clientes"}
-        </p>
-      </div>
-
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Ya vencido</p>
-        <p
-          className={`mt-0.5 text-xl font-semibold ${vencido > 0 ? "text-[var(--danger)]" : ""}`}
-        >
-          <CifraAnimada valor={vencido} decimales={2} prefijo="$ " />
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {total > 0 ? `${Math.round((vencido / total) * 100)} % de la cartera` : "nada"}
-        </p>
-      </div>
-
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">A quién llamar primero</p>
-        <p className="mt-0.5 truncate text-base font-semibold">
-          {peor ? peor.cliente : "—"}
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {peor ? (
-            <>
-              <Moneda valor={peor.saldo} tamano="sm" className="text-inherit" />
-              {peor.diasMasAntiguo > 0 ? ` · ${peor.diasMasAntiguo} días de atraso` : ""}
-            </>
-          ) : (
-            "no hay nada que cobrar"
-          )}
-        </p>
-      </div>
-    </div>
+    <FilaIndicadores
+      items={[
+        {
+          etiqueta: "Por cobrar",
+          valor: formatearMoneda(d.porCobrar),
+          detalle: `${d.documentos} ${d.documentos === 1 ? "factura" : "facturas"} de ${d.clientes} ${d.clientes === 1 ? "cliente" : "clientes"}`,
+          icono: <Wallet aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Ya vencido",
+          valor: formatearMoneda(d.vencido),
+          detalle:
+            d.vencido > 0
+              ? `${d.docsVencidos} ${d.docsVencidos === 1 ? "factura" : "facturas"}${peor ? ` · llamar primero a ${peor.cliente}` : ""}`
+              : "nada fuera de plazo",
+          tono: d.vencido > 0 ? "urgente" : "ok",
+          icono: <AlarmClock aria-hidden="true" />,
+          href: d.vencido > 0 ? "/cobranzas?vencido=1" : undefined,
+        },
+        {
+          etiqueta: "Vence esta semana",
+          valor: formatearMoneda(d.venceSemana),
+          detalle: d.docsSemana > 0 ? `${d.docsSemana} ${d.docsSemana === 1 ? "factura" : "facturas"} en los próximos 7 días` : "nada en los próximos 7 días",
+          tono: d.docsSemana > 0 ? "aviso" : undefined,
+          icono: <CalendarClock aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Cobrado",
+          valor: formatearMoneda(d.cobrado),
+          detalle: `${d.pagos} ${d.pagos === 1 ? "pago" : "pagos"} · ${textoPeriodo(periodo.desde, periodo.hasta)}`,
+          tono: d.cobrado > 0 ? "ok" : undefined,
+          icono: <HandCoins aria-hidden="true" />,
+        },
+      ]}
+    />
   );
 }
 
@@ -455,14 +469,16 @@ export function CarteraVista({
   );
 }
 
-async function ListaPagos() {
-  const r = await ultimosPagos(15);
+async function ListaPagos({ periodo }: { periodo: { desde?: string; hasta?: string } }) {
+  const r = await ultimosPagos(15, periodo);
   if (!r.ok) return <EstadoError titulo="No se pudieron cargar los pagos" detalle={r.error} />;
 
   if (r.datos.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-[var(--fg-muted)]">
-        Todavía no se ha registrado ningún pago.
+        {periodo.desde || periodo.hasta
+          ? "Ningún pago registrado en este periodo."
+          : "Todavía no se ha registrado ningún pago."}
       </p>
     );
   }

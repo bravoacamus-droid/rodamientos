@@ -170,7 +170,8 @@ export async function conteoPorEstado(): Promise<
     // "atendida", no "facturada": ese estado nunca existió en el enum
     // `estado_cotizacion`. Con los tipos provisionales la consulta compilaba
     // y devolvía 0 siempre, así que la pastilla se veía vacía sin motivo.
-    const estados = ["borrador", "enviada", "aprobada", "atendida"] as const;
+    // «vencida» desde el 07/10: tiene su pastilla, y sin número parecía vacía.
+    const estados = ["borrador", "enviada", "aprobada", "atendida", "vencida"] as const;
     const respuestas = await Promise.all(estados.map((e) => contar(e)));
 
     const primerError = respuestas.find((r) => r.error)?.error;
@@ -729,5 +730,57 @@ export async function comprobantesDelPedido(
     }));
   } catch {
     return [];
+  }
+}
+
+/**
+ * Las cifras de arriba de la lista (108): siguen al periodo y al cliente, no a
+ * la búsqueda ni al estado, que filtran solo las filas.
+ */
+export interface IndicadoresCotizaciones {
+  cotizaciones: number;
+  monto: number;
+  clientes: number;
+  enJuego: number;
+  montoEnJuego: number;
+  aprobadas: number;
+  decididas: number;
+  montoAprobado: number;
+  vencenSemana: number;
+}
+
+export async function indicadoresCotizaciones(filtros: {
+  desde?: string;
+  hasta?: string;
+  cliente?: string;
+}): Promise<Resultado<IndicadoresCotizaciones>> {
+  try {
+    const supabase = await clienteServidor();
+    const fecha = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined);
+    const uuid = (v?: string) => (v && /^[0-9a-f-]{36}$/i.test(v) ? v : undefined);
+    const { data, error } = await supabase.rpc("indicadores_cotizaciones", {
+      ...(fecha(filtros.desde) ? { p_desde: fecha(filtros.desde) } : {}),
+      ...(fecha(filtros.hasta) ? { p_hasta: fecha(filtros.hasta) } : {}),
+      ...(uuid(filtros.cliente) ? { p_cliente: uuid(filtros.cliente) } : {}),
+    });
+    if (error) return fallo(error);
+    const d = (data ?? {}) as Record<string, unknown>;
+    const n = (k: string) => Number(d[k] ?? 0);
+    return {
+      ok: true,
+      datos: {
+        cotizaciones: n("cotizaciones"),
+        monto: n("monto"),
+        clientes: n("clientes"),
+        enJuego: n("en_juego"),
+        montoEnJuego: n("monto_en_juego"),
+        aprobadas: n("aprobadas"),
+        decididas: n("decididas"),
+        montoAprobado: n("monto_aprobado"),
+        vencenSemana: n("vencen_semana"),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
   }
 }

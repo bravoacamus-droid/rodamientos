@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Eye, ShoppingCart, Truck } from "lucide-react";
-import { Badge, EstadoError, EstadoVacio, Moneda, formatearFecha } from "@rodatech/ui";
+import { AlarmClock, Eye, PackageCheck, PackageOpen, ShoppingCart, Truck } from "lucide-react";
+import { Badge, EstadoError, EstadoVacio, Moneda, formatearFecha, formatearMoneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+
+import { FilaIndicadores } from "@/componentes/indicadores";
 
 import { listosParaEntregar, type PedidoDelCliente } from "../api/por-comprar";
 import { ETIQUETA_URGENCIA } from "../dominio/por-comprar";
@@ -108,9 +110,13 @@ export default async function PaginaListos({ searchParams }: Props) {
         />
       ) : (
         <>
+          <Indicadores todos={todos} />
           <Pastillas activo={filtro} total={todos.length} cuenta={cuenta} />
 
-          <div className="card overflow-hidden">
+          {/* `@container`: tabla o tarjetas según el ancho de ESTA caja (07/10).
+              La tabla pide ~1.250 px; a 1440 con el menú abierto la caja
+              mide 1.116 y las acciones quedaban fuera. */}
+          <div className="card @container overflow-hidden">
             {/*
               EN MÓVIL, TARJETAS. Medido a 390 px: la tabla pide 1247, la más
               ancha de todo el ERP. Buena parte es la rejilla de acciones, que
@@ -121,7 +127,7 @@ export default async function PaginaListos({ searchParams }: Props) {
               que arriba el pedido y para cuándo está prometido —con su
               urgencia—, y abajo los dos botones, que es la acción.
             */}
-            <div className="flex flex-col gap-2.5 p-3 md:hidden">
+            <div className="grid grid-cols-1 gap-2.5 p-3 @3xl:grid-cols-2 @6xl:hidden">
               {visibles.map((p) => (
                 <div
                   key={p.cotizacion_id}
@@ -176,7 +182,7 @@ export default async function PaginaListos({ searchParams }: Props) {
               ))}
             </div>
 
-            <div className="hidden scroll-x md:block">
+            <div className="hidden scroll-x @6xl:block">
               <table className="w-full text-sm">
                 <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                   <tr>
@@ -199,7 +205,7 @@ export default async function PaginaListos({ searchParams }: Props) {
                       key={p.cotizacion_id}
                       className="border-b border-[var(--border-soft)] last:border-0 transition-colors hover:bg-[var(--surface-2)]"
                     >
-                      <td className="px-4 py-2.5">
+                      <td className="whitespace-nowrap px-4 py-2.5">
                         <span className="font-mono text-sm font-semibold text-brand-700">
                           {p.cotizacion}
                         </span>
@@ -271,7 +277,10 @@ export default async function PaginaListos({ searchParams }: Props) {
                           «Qué falta comprar» dejan el «Ver» de cada fila en
                           una equis distinta y la columna sale en escalera. */}
                       <td className="px-4 py-2.5">
-                        <div className="ml-auto grid w-[312px] grid-cols-[124px_1fr] gap-1.5">
+                        {/* Uno ENCIMA del otro desde el 07/10, y no al lado: los 312 px de
+                            dos botones en fila hacían la tabla más ancha que
+                            su caja a 1440 px, y «Ver pedido» salía cortado. */}
+                        <div className="ml-auto flex w-[12.5rem] flex-col gap-1.5">
                           <Link
                             href={`/cotizaciones/${p.cotizacion_id}`}
                             className={`${SECUNDARIO} w-full justify-center`}
@@ -323,10 +332,12 @@ function Pastillas({
   cuenta: (m: Monton) => number;
 }) {
   const clase = (seleccionado: boolean) =>
-    `inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm transition-colors ${
+    // Con borde y a 40 px, como las de cotizaciones (07/10): sin borde y en
+    // gris no se leían como algo que se pulsa (CLAUDE.md §1).
+    `inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-semibold transition-colors ${
       seleccionado
-        ? "bg-brand-600 font-medium text-white"
-        : "bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)]"
+        ? "border-brand-600 bg-brand-600 text-white"
+        : "border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
     }`;
 
   return (
@@ -441,4 +452,52 @@ function IconoGuia() {
 
 function IconoCarrito() {
   return <ShoppingCart aria-hidden="true" className="size-4 shrink-0" />;
+}
+
+/**
+ * Las cuatro cifras de «Listos» (07/10). Sin filtro de fechas, a propósito:
+ * son los pedidos abiertos HOY, y filtrar por fecha escondería pedidos que
+ * siguen esperando. Salen de los mismos pedidos que pinta la lista.
+ */
+function Indicadores({ todos }: { todos: PedidoDelCliente[] }) {
+  const suma = (xs: PedidoDelCliente[]) => xs.reduce((a, p) => a + p.total, 0);
+  const listos = todos.filter((p) => p.estado === "completo");
+  const porCubrir = todos.filter((p) => p.estado === "por_cubrir");
+  const atrasados = todos.filter((p) => p.urgencia === "vencido" || p.urgencia === "hoy");
+  const masViejo = [...todos].sort((a, b) => a.fecha.localeCompare(b.fecha))[0];
+  return (
+    <FilaIndicadores
+      items={[
+        {
+          etiqueta: "Pedidos abiertos",
+          valor: todos.length.toLocaleString("es-PE"),
+          detalle: `${formatearMoneda(suma(todos))} con IGV${masViejo ? ` · el más antiguo, del ${formatearFecha(masViejo.fecha)}` : ""}`,
+          icono: <PackageOpen aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Listos para despachar",
+          valor: listos.length.toLocaleString("es-PE"),
+          detalle: listos.length > 0 ? `${formatearMoneda(suma(listos))} · el almacén los cubre enteros` : "ninguno cubierto del todo",
+          tono: listos.length > 0 ? "ok" : undefined,
+          icono: <PackageCheck aria-hidden="true" />,
+          href: listos.length > 0 ? "/cotizaciones/listos?estado=completo" : undefined,
+        },
+        {
+          etiqueta: "Por cubrir",
+          valor: porCubrir.length.toLocaleString("es-PE"),
+          detalle: porCubrir.length > 0 ? "sin stock: esperan a que compras lo traiga" : "todos tienen algo en almacén",
+          tono: porCubrir.length > 0 ? "aviso" : undefined,
+          icono: <ShoppingCart aria-hidden="true" />,
+          href: porCubrir.length > 0 ? "/compras/por-comprar" : undefined,
+        },
+        {
+          etiqueta: "Prometidos para hoy o antes",
+          valor: atrasados.length.toLocaleString("es-PE"),
+          detalle: atrasados.length > 0 ? "la fecha prometida al cliente ya llegó" : "ninguno con la fecha encima",
+          tono: atrasados.length > 0 ? "urgente" : "ok",
+          icono: <AlarmClock aria-hidden="true" />,
+        },
+      ]}
+    />
+  );
 }

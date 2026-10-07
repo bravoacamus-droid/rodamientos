@@ -591,3 +591,50 @@ export async function agenciasActivas(): Promise<
     return fallo(e);
   }
 }
+
+/**
+ * Las cifras de arriba de la lista (108). «Sin facturar» es la que manda:
+ * desde el 17/09 no se factura sin guía, así que una guía emitida que ninguna
+ * factura ampara es mercadería que salió y no se ha facturado.
+ */
+export interface IndicadoresGuias {
+  emitidas: number;
+  borradores: number;
+  sinFacturar: number;
+  diasSinFacturar: number | null;
+  anuladas: number;
+  sinSunat: number;
+}
+
+export async function indicadoresGuias(filtros: {
+  desde?: string;
+  hasta?: string;
+  cliente?: string;
+}): Promise<Resultado<IndicadoresGuias>> {
+  try {
+    const supabase = await clienteServidor();
+    const esFecha = (v?: string) => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+    const cliente = filtros.cliente && /^[0-9a-f-]{36}$/i.test(filtros.cliente) ? filtros.cliente : null;
+    const { data, error } = await supabase.rpc("indicadores_guias", {
+      ...(esFecha(filtros.desde) ? { p_desde: filtros.desde as string } : {}),
+      ...(esFecha(filtros.hasta) ? { p_hasta: filtros.hasta as string } : {}),
+      ...(cliente ? { p_cliente: cliente } : {}),
+    });
+    if (error) return fallo(error);
+    const d = (data ?? {}) as Record<string, unknown>;
+    const n = (k: string) => Number(d[k] ?? 0);
+    return {
+      ok: true,
+      datos: {
+        emitidas: n("emitidas"),
+        borradores: n("borradores"),
+        sinFacturar: n("sin_facturar"),
+        diasSinFacturar: d.dias_sin_facturar === null || d.dias_sin_facturar === undefined ? null : n("dias_sin_facturar"),
+        anuladas: n("anuladas"),
+        sinSunat: n("sin_sunat"),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

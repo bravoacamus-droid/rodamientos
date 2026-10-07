@@ -66,10 +66,13 @@ export function FiltrosFacturacionBarra({
       pantalla (revisión por módulos del 02/10). En el teléfono, de dos en
       dos: uno debajo de otro eran siete campos y una pantalla entera antes
       del primer comprobante. Con la caja ancha, dos filas: lo que se teclea
-      arriba y los desplegables y fechas debajo, todos del mismo ancho.
+      arriba y los desplegables debajo, todos del mismo ancho.
+
+      Las fechas salen de aquí al 07/10: las pone la barra de periodo común
+      (`BarraPeriodo`), la misma de las cinco listas de ventas.
     */
-    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-10">
-      <label className="col-span-2 flex flex-col gap-1 @3xl:col-span-5">
+    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-6">
+      <label className="col-span-2 flex flex-col gap-1 @3xl:col-span-3">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
           value={texto}
@@ -79,7 +82,7 @@ export function FiltrosFacturacionBarra({
         />
       </label>
 
-      <div className="col-span-2 @3xl:col-span-5">
+      <div className="col-span-2 @3xl:col-span-3">
         <FiltroCliente
           valor={params.get("cliente")}
           nombre={nombreCliente}
@@ -139,23 +142,6 @@ export function FiltrosFacturacionBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex flex-col gap-1 @3xl:col-span-2">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
-        <Input
-          type="date"
-          value={params.get("desde") ?? ""}
-          onChange={(e) => aplicar("desde", e.target.value)}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1 @3xl:col-span-2">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
-        <Input
-          type="date"
-          value={params.get("hasta") ?? ""}
-          onChange={(e) => aplicar("hasta", e.target.value)}
-        />
-      </label>
     </div>
   );
 }

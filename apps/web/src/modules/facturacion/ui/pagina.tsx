@@ -1,12 +1,15 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Info, Plus, Settings } from "lucide-react";
-import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
+import { Ban, ShieldCheck, Info, Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { Skeleton, buttonVariants, cn, formatearMoneda, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { BarraPeriodo } from "@/componentes/barra-periodo";
+import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 
 import { estadoConfiguracion } from "../api/configuracion";
+import { indicadoresFacturacion } from "../api/consultas";
 import type { FiltrosComprobantes } from "../dominio/tipos";
 import { FiltrosFacturacionBarra } from "./filtros";
 import { TablaComprobantes } from "./tabla";
@@ -154,12 +157,24 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         </p>
       ) : null}
 
+      <Suspense
+        key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
+        fallback={<Skeleton className="h-32 w-full" />}
+      >
+        <Indicadores filtros={filtros} />
+      </Suspense>
+
       {/* `@container`: la tabla y los filtros se deciden por el ancho de esta
           caja, no de la pantalla (revisión por módulos del 02/10). */}
       <section className="card @container pt-4">
         <FiltrosFacturacionBarra
           nombreCliente={cliente?.ok ? cliente.nombre : null}
         />
+        <div className="border-t border-[var(--border-soft)] px-4 py-4">
+          <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+            <BarraPeriodo />
+          </Suspense>
+        </div>
 
         <Suspense
           key={JSON.stringify(filtros)}
@@ -169,5 +184,53 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         </Suspense>
       </section>
     </div>
+  );
+}
+
+/**
+ * Las cuatro cifras de facturación (07/10): lo facturado, lo que falta
+ * cobrar de eso, lo que se devolvió o anuló, y cómo está con SUNAT.
+ */
+async function Indicadores({ filtros }: { filtros: FiltrosComprobantes }) {
+  const r = await indicadoresFacturacion(filtros);
+  if (!r.ok) return <IndicadoresError detalle={r.error} />;
+  const d = r.datos;
+  const sinRespuesta = d.sunatPendiente + d.sunatProblema;
+  return (
+    <FilaIndicadores
+      items={[
+        {
+          etiqueta: "Facturado",
+          valor: formatearMoneda(d.venta),
+          detalle: `${d.documentos.toLocaleString("es-PE")} comprobantes · sin IGV · ${textoPeriodo(filtros.desde, filtros.hasta)}`,
+          icono: <Receipt aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Falta cobrar",
+          valor: formatearMoneda(d.saldo),
+          detalle: d.vencido > 0 ? `${formatearMoneda(d.vencido)} ya vencido` : "nada fuera de plazo",
+          tono: d.vencido > 0 ? "urgente" : d.saldo > 0 ? "aviso" : "ok",
+          icono: <Wallet aria-hidden="true" />,
+          href: "/cobranzas",
+        },
+        {
+          etiqueta: "Devuelto y anulado",
+          valor: formatearMoneda(d.notasMonto),
+          detalle: `${d.notas} ${d.notas === 1 ? "nota de crédito" : "notas de crédito"} · ${d.anuladas} ${d.anuladas === 1 ? "anulada" : "anuladas"}`,
+          icono: <Ban aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Con SUNAT",
+          valor: sinRespuesta > 0 ? `${sinRespuesta} pendientes` : "Todo aceptado",
+          detalle:
+            sinRespuesta > 0
+              ? `${d.sunatProblema} observados o rechazados · ${d.sunatAceptado} aceptados`
+              : `${d.sunatAceptado.toLocaleString("es-PE")} aceptados`,
+          tono: d.sunatProblema > 0 ? "urgente" : sinRespuesta > 0 ? "aviso" : "ok",
+          icono: <ShieldCheck aria-hidden="true" />,
+          href: sinRespuesta > 0 ? "/facturacion?sunat=pendiente" : undefined,
+        },
+      ]}
+    />
   );
 }

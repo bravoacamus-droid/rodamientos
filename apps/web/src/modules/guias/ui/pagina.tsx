@@ -1,10 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FilePen, FileWarning, Plus, ShieldCheck, Truck } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
+import { BarraPeriodo } from "@/componentes/barra-periodo";
+import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
+
+import { indicadoresGuias } from "../api/consultas";
 
 import type { FiltrosGuias } from "../dominio/tipos";
 import { FiltrosGuiasBarra } from "./filtros";
@@ -81,8 +85,20 @@ export default async function PaginaGuias({ searchParams }: Props) {
         ) : null}
       </div>
 
+      <Suspense
+        key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
+        fallback={<Skeleton className="h-32 w-full" />}
+      >
+        <Indicadores filtros={filtros} />
+      </Suspense>
+
       <section className="card pt-4">
         <FiltrosGuiasBarra nombreCliente={cliente?.ok ? cliente.nombre : null} />
+        <div className="border-t border-[var(--border-soft)] px-4 py-4">
+          <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+            <BarraPeriodo />
+          </Suspense>
+        </div>
 
         <Suspense
           key={JSON.stringify(filtros)}
@@ -92,5 +108,53 @@ export default async function PaginaGuias({ searchParams }: Props) {
         </Suspense>
       </section>
     </div>
+  );
+}
+
+/** Las cuatro cifras de guías (07/10). */
+async function Indicadores({ filtros }: { filtros: FiltrosGuias }) {
+  const r = await indicadoresGuias(filtros);
+  if (!r.ok) return <IndicadoresError detalle={r.error} />;
+  const d = r.datos;
+  return (
+    <FilaIndicadores
+      items={[
+        {
+          etiqueta: "Emitidas",
+          valor: d.emitidas.toLocaleString("es-PE"),
+          detalle: `guías que ya sacaron mercadería · ${textoPeriodo(filtros.desde, filtros.hasta)}`,
+          icono: <Truck aria-hidden="true" />,
+        },
+        {
+          etiqueta: "Sin facturar",
+          valor: d.sinFacturar.toLocaleString("es-PE"),
+          detalle:
+            d.sinFacturar > 0
+              ? `la más antigua lleva ${d.diasSinFacturar ?? 0} días fuera sin factura`
+              : "todo lo despachado está facturado",
+          tono: d.sinFacturar > 0 ? ((d.diasSinFacturar ?? 0) > 7 ? "urgente" : "aviso") : "ok",
+          icono: <FileWarning aria-hidden="true" />,
+          href: "/facturacion/nueva",
+        },
+        {
+          etiqueta: "Borradores",
+          valor: d.borradores.toLocaleString("es-PE"),
+          detalle: d.borradores > 0 ? "preparadas y sin emitir: no han descargado stock" : "ninguna a medio preparar",
+          tono: d.borradores > 0 ? "aviso" : undefined,
+          icono: <FilePen aria-hidden="true" />,
+          href: d.borradores > 0 ? "/guias?estado=borrador" : undefined,
+        },
+        {
+          etiqueta: "Con SUNAT",
+          valor: d.sinSunat > 0 ? `${d.sinSunat} sin declarar` : "Al día",
+          detalle:
+            d.sinSunat > 0
+              ? "el envío de guías a SUNAT aún no está activo"
+              : `${d.anuladas} ${d.anuladas === 1 ? "anulada" : "anuladas"} en el periodo`,
+          tono: d.sinSunat > 0 ? "aviso" : "ok",
+          icono: <ShieldCheck aria-hidden="true" />,
+        },
+      ]}
+    />
   );
 }

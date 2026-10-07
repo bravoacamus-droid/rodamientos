@@ -60,9 +60,12 @@ export function FiltrosGuiasBarra({
        Revisión por módulos del 02/10: a 1280 con el menú abierto entraban
        las siete columnas en 920 px y las fechas se cortaban en «dd/mm/yy»;
        en el teléfono, cinco campos uno debajo de otro empujaban la lista
-       fuera de la primera pantalla. Ahora «Desde» y «Hasta» van juntas. */
+       fuera de la primera pantalla.
+
+       Las fechas salen de aquí al 07/10: las pone la barra de periodo común
+       (`BarraPeriodo`), la misma de las cinco listas de ventas. */
     <div className="@container">
-    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-4 @6xl:grid-cols-7">
+    <div className="grid grid-cols-2 gap-3 px-4 pb-4 @3xl:grid-cols-5">
       <label className="col-span-2 flex flex-col gap-1">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
         <Input
@@ -98,23 +101,6 @@ export function FiltrosGuiasBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
-        <Input
-          type="date"
-          value={params.get("desde") ?? ""}
-          onChange={(e) => aplicar("desde", e.target.value)}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
-        <Input
-          type="date"
-          value={params.get("hasta") ?? ""}
-          onChange={(e) => aplicar("hasta", e.target.value)}
-        />
-      </label>
     </div>
     </div>
   );

@@ -150,8 +150,13 @@ export async function TablaCotizaciones({
                   ) : null}
                 </td>
 
-                <td className="max-w-xs px-4 py-2.5">
-                  <span className="block truncate">{c.cliente}</span>
+                {/* 14rem y no 20: con 20 la tabla pasaba del ancho de la caja
+                    a 1440 px y la columna fija de acciones tapaba el estado
+                    («Envia…», 07/10). El nombre entero, en el `title`. */}
+                <td className="max-w-[14rem] px-4 py-2.5">
+                  <span className="block truncate" title={c.cliente}>
+                    {c.cliente}
+                  </span>
                   {c.cliente_documento ? (
                     <span className="block font-mono text-sm text-[var(--fg-subtle)]">
                       {c.cliente_documento}
@@ -177,7 +182,9 @@ export async function TablaCotizaciones({
                   <Margen valor={c.margen_pct} costo={c.costo_total} />
                 </td>
 
-                <td className="px-4 py-2.5">
+                {/* Sin partirse ni cortarse: la columna de acciones va fija a la
+                    derecha y se montaba encima, dejando «Envia…» (07/10). */}
+                <td className="whitespace-nowrap px-4 py-2.5">
                   {/*
                     El mismo badge que el resto del ERP.
 

@@ -184,8 +184,14 @@ export async function cuotasDe(
   }
 }
 
-/** Los últimos pagos registrados. */
-export async function ultimosPagos(limite = 50): Promise<Resultado<PagoRegistrado[]>> {
+/**
+ * Los últimos pagos registrados, de un periodo si se da (07/10: el arqueo
+ * semanal de Willy, «cuánto me ingresa, cuánto me depositan»).
+ */
+export async function ultimosPagos(
+  limite = 50,
+  periodo: { desde?: string; hasta?: string } = {},
+): Promise<Resultado<PagoRegistrado[]>> {
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
@@ -197,6 +203,8 @@ export async function ultimosPagos(limite = 50): Promise<Resultado<PagoRegistrad
       )
       .order("fecha", { ascending: false })
       .order("creado_en", { ascending: false })
+      .gte("fecha", esFecha(periodo.desde) ? (periodo.desde as string) : "2000-01-01")
+      .lte("fecha", esFecha(periodo.hasta) ? (periodo.hasta as string) : "2100-01-01")
       .limit(limite);
 
     if (error) return fallo(error, "cobranzas/ultimosPagos");
@@ -330,5 +338,54 @@ export async function compromisosVencidos(hoy: string): Promise<Resultado<Gestio
     };
   } catch (e) {
     return fallo(e, "cobranzas/compromisosVencidos");
+  }
+}
+
+function esFecha(v?: string): boolean {
+  return Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+}
+
+/** Las cifras de arriba de cobranzas (108). */
+export interface IndicadoresCobranzas {
+  porCobrar: number;
+  documentos: number;
+  clientes: number;
+  vencido: number;
+  docsVencidos: number;
+  venceSemana: number;
+  docsSemana: number;
+  cobrado: number;
+  pagos: number;
+}
+
+export async function indicadoresCobranzas(periodo: {
+  desde?: string;
+  hasta?: string;
+}): Promise<Resultado<IndicadoresCobranzas>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("indicadores_cobranzas", {
+      ...(esFecha(periodo.desde) ? { p_desde: periodo.desde as string } : {}),
+      ...(esFecha(periodo.hasta) ? { p_hasta: periodo.hasta as string } : {}),
+    });
+    if (error) return fallo(error, "cobranzas/indicadores");
+    const d = (data ?? {}) as Record<string, unknown>;
+    const n = (k: string) => Number(d[k] ?? 0);
+    return {
+      ok: true,
+      datos: {
+        porCobrar: n("por_cobrar"),
+        documentos: n("documentos"),
+        clientes: n("clientes"),
+        vencido: n("vencido"),
+        docsVencidos: n("docs_vencidos"),
+        venceSemana: n("vence_semana"),
+        docsSemana: n("docs_semana"),
+        cobrado: n("cobrado"),
+        pagos: n("pagos"),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "cobranzas/indicadores");
   }
 }

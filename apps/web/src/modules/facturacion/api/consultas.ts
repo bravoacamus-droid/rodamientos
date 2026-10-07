@@ -63,9 +63,13 @@ const SUNAT = [
 /**
  * Listado de comprobantes.
  *
- * Keyset sobre `numero` descendente. Ojo: aquí el número es `F001-00000001`,
- * con ocho cifras y ceros a la izquierda, así que ordena bien como texto —es
- * lo mismo que hacen cotizaciones y recepciones, y por el mismo motivo—.
+ * Keyset sobre (`fecha_emision`, `numero`) descendente, y el cursor lleva
+ * los dos: `2026-10-05|F002-00000561`.
+ *
+ * Era solo sobre `numero`, y «FC02-…» va DESPUÉS que «F002-…» como texto:
+ * con el histórico cargado (07/10), la lista abría con las cuatro notas de
+ * crédito —la más reciente, de septiembre— y la última factura salía la
+ * quinta. Una lista de facturas abre por la última que se emitió.
  *
  * `comprobantes` tiene DOS claves ajenas a `perfiles` (vendedor y anulado_por),
  * así que la relación se nombra explícitamente o PostgREST responde PGRST201.
@@ -101,13 +105,18 @@ export async function listarComprobantes(
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
       )
+      .order("fecha_emision", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    if (filtros.cursor) {
-      consulta = atras
-        ? consulta.gt("numero", filtros.cursor)
-        : consulta.lt("numero", filtros.cursor);
+    // El cursor es «fecha|número». Uno viejo, solo con el número (de antes del
+    // 07/10, en un enlace guardado), se ignora: vuelve a la primera página.
+    const [cFecha, cNumero] = (filtros.cursor ?? "").split("|");
+    if (cFecha && cNumero && /^\d{4}-\d{2}-\d{2}$/.test(cFecha) && /^[A-Z0-9-]+$/.test(cNumero)) {
+      const op = atras ? "gt" : "lt";
+      consulta = consulta.or(
+        `fecha_emision.${op}.${cFecha},and(fecha_emision.eq.${cFecha},numero.${op}.${cNumero})`,
+      );
     }
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     if (filtros.desde) consulta = consulta.gte("fecha_emision", filtros.desde);
@@ -172,8 +181,9 @@ export async function listarComprobantes(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const primera = filas[0]?.numero ?? null;
-    const ultima = filas[filas.length - 1]?.numero ?? null;
+    const cursorDe = (c?: ComprobanteLista) => (c ? `${c.fecha_emision}|${c.numero}` : null);
+    const primera = cursorDe(filas[0]);
+    const ultima = cursorDe(filas[filas.length - 1]);
 
     return {
       ok: true,
@@ -758,5 +768,64 @@ export async function guiasDelCliente(
     };
   } catch (e) {
     return fallo(e, "facturacion/guiasDelCliente");
+  }
+}
+
+/**
+ * Las cuatro cifras de arriba de la lista (07/10). Salen de
+ * `tablero_facturacion` (104), con el periodo y el cliente de la lista: así la
+ * pantalla y el tablero no pueden decir cifras distintas del mismo mes.
+ */
+export interface IndicadoresFacturacion {
+  venta: number;
+  total: number;
+  documentos: number;
+  saldo: number;
+  vencido: number;
+  notas: number;
+  notasMonto: number;
+  anuladas: number;
+  sunatAceptado: number;
+  sunatPendiente: number;
+  sunatProblema: number;
+}
+
+export async function indicadoresFacturacion(filtros: {
+  desde?: string;
+  hasta?: string;
+  cliente?: string;
+}): Promise<Resultado<IndicadoresFacturacion>> {
+  try {
+    const supabase = await clienteServidor();
+    const esFecha = (v?: string) => Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+    const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
+    const cliente = filtros.cliente && /^[0-9a-f-]{36}$/i.test(filtros.cliente) ? filtros.cliente : null;
+    const { data, error } = await supabase.rpc("tablero_facturacion", {
+      p_desde: esFecha(filtros.desde) ? (filtros.desde as string) : "2000-01-01",
+      p_hasta: esFecha(filtros.hasta) ? (filtros.hasta as string) : hoy,
+      p_grano: "anio",
+      ...(cliente ? { p_cliente: cliente } : {}),
+    });
+    if (error) return fallo(error);
+    const r = ((data ?? {}) as { resumen?: Record<string, unknown> }).resumen ?? {};
+    const n = (k: string) => Number(r[k] ?? 0);
+    return {
+      ok: true,
+      datos: {
+        venta: n("venta"),
+        total: n("total"),
+        documentos: n("documentos"),
+        saldo: n("saldo"),
+        vencido: n("vencido"),
+        notas: n("notas"),
+        notasMonto: n("notas_monto"),
+        anuladas: n("anuladas"),
+        sunatAceptado: n("sunat_aceptado"),
+        sunatPendiente: n("sunat_pendiente"),
+        sunatProblema: n("sunat_problema"),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
   }
 }

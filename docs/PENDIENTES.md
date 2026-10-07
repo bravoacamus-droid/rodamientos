@@ -4592,6 +4592,55 @@ de Defontana.
 
 ---
 
+## §AW · 07/10 — Las cinco listas de ventas, con sus cifras y su periodo (108)
+
+Luis, 07/10: *«mejorar los módulos de ventas, desde cotización hasta
+cobranza, ponerles KPIs, cards necesarias, buenos filtros de fechas, hacerlo
+más profesional»*.
+
+**Dos piezas comunes**, para que las cinco se vean como un mismo sistema:
+
+- `componentes/barra-periodo.tsx` — *Todo · Este mes · Mes pasado · Últimos
+  3 meses · Este año* más Desde/Hasta. Escribe `desde`/`hasta`, que las
+  consultas ya leían, y reinicia la paginación. Sustituye las dos cajas de
+  fecha sueltas de facturación y guías; **cotizaciones aceptaba `desde` y
+  `hasta` y no tenía dónde elegirlos**.
+- `componentes/indicadores.tsx` — fila de 4 cifras. El color dice algo
+  (verde/ámbar/rojo) y no decora. Van de dos en dos en el teléfono.
+
+**Las cifras siguen al periodo y al cliente, no a la búsqueda ni al estado**,
+que filtran solo las filas.
+
+| Lista | Las cuatro cifras |
+|---|---|
+| Cotizaciones | cuántas · monto · en juego (y las que vencen esta semana) · % que se gana |
+| Listos | pedidos abiertos · listos para despachar · por cubrir · prometidos para hoy o antes |
+| Guías | emitidas · **sin facturar** (días de la más antigua) · borradores · SUNAT |
+| Facturación | facturado · falta cobrar (y vencido) · devuelto y anulado · SUNAT |
+| Cobranzas | por cobrar · vencido (a quién llamar) · vence esta semana · **cobrado en el periodo** |
+
+- **Cobranzas**: el periodo solo cuenta lo COBRADO. Lo que se debe es de hoy.
+  Va en el bloque «Lo cobrado», que también se filtra; es el arqueo semanal
+  de Willy.
+- **Listos**: sin periodo, a propósito. Son los pedidos abiertos hoy.
+- La 108 trae `indicadores_cotizaciones`, `indicadores_guias` e
+  `indicadores_cobranzas`. Facturación usa `tablero_facturacion` (104). El
+  centinela cuadra cotizaciones con el tablero y lo por cobrar con la cartera.
+
+**Arreglado de paso:**
+
+- **Facturación abría con las notas de crédito**: el keyset iba por
+  `numero`, y «FC02-…» va después de «F002-…» como texto. Ahora va por
+  (fecha, número) con cursor `fecha|número`. Probado adelante y atrás.
+- Cotizaciones:
+  - el estado salía cortado («Envia…») bajo la columna fija de acciones;
+  - las pastillas de estado borraban los demás filtros;
+  - «Vencida» tenía pastilla pero no conteo.
+- Listos: las acciones quedaban fuera a 1440 px. Ahora tabla o tarjetas según
+  el ancho de la caja, y las pastillas con borde.
+
+---
+
 ## §AV · 07/10 — El margen de la cotización volvía a ir sobre la venta (107)
 
 COT1-000005 (COFACO): la ficha decía «Margen al costo 44,1 %» con USD 410,72
