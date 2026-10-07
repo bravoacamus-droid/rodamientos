@@ -7,7 +7,11 @@ import { proveedoresParaPedir, proveedoresPorProducto } from "@/modules/proveedo
 import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 
 import { precargaDeCompra } from "../../api/por-comprar";
-import { PedirPrecio } from "./pantalla";
+import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
+
+import { referenciasDeProductos } from "../../api/hoja-precios";
+import { hojaVacia } from "../../dominio/hoja-precios";
+import { HojaPrecios } from "../hoja-precios/hoja";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
 const ROLES = ["gerencia", "admin", "compras"];
@@ -61,7 +65,9 @@ export default async function PaginaPedirPrecio({
   */
   const ids = items.map((i) => i.producto.id);
 
-  const [proveedores, porProducto] =
+  const refs = await referenciasDeProductos(ids);
+
+  const [proveedores] =
     ids.length === 0
       ? [
           { ok: true as const, datos: [] as ProveedorParaPedir[] },
@@ -89,23 +95,30 @@ export default async function PaginaPedirPrecio({
         ) : (
           <Volver href="/compras/precios">Volver a pedir precios</Volver>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight">Pedir precio</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Apunta a quién le vas a preguntar. El mensaje lo mandas tú por donde quieras.
+        <h1 className="text-2xl font-semibold tracking-tight">Pedir precios</h1>
+        <p className="text-base text-[var(--fg-muted)]">
+          Los productos en filas y los proveedores en columnas: apunta lo que te diga cada uno. Aquí no se compra nada
+          hasta que pulses «Pasar a compras».
         </p>
       </div>
 
-      <PedirPrecio
-        items={items.map((i) => ({
-          producto_id: i.producto.id,
-          codigo: i.producto.codigo,
-          descripcion: i.producto.descripcion,
-          marca: i.producto.marca,
-          unidad: i.producto.unidad ?? "NIU",
-          cantidad: i.cantidad,
-        }))}
-        proveedores={proveedores.ok ? proveedores.datos : []}
-        porProducto={porProducto.ok ? porProducto.datos : {}}
+      <HojaPrecios
+        inicial={{
+          ...hojaVacia(),
+          productos: items.map((i) => ({
+            productoId: i.producto.id,
+            codigo: i.producto.codigo,
+            descripcion: i.producto.descripcion,
+            marca: i.producto.marca,
+            unidad: unidadLegible(i.producto.unidad ?? "NIU"),
+            cantidad: Math.max(1, Math.round(i.cantidad)),
+            precioVenta: refs.get(i.producto.id)?.precioVenta ?? null,
+            ultimoCosto: refs.get(i.producto.id)?.ultimoCosto ?? null,
+          })),
+        }}
+        sugeridos={(proveedores.ok ? proveedores.datos : [])
+          .filter((p) => p.coincidencias > 0)
+          .map((p) => ({ proveedorId: p.id, nombre: p.razon_social, coincidencias: p.coincidencias }))}
       />
     </div>
   );

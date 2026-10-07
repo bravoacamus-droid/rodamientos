@@ -5017,6 +5017,7 @@ export type Database = {
       generar_alertas: { Args: never; Returns: Json }
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       guardar_analisis: { Args: { p_datos: Json }; Returns: Json }
+      guardar_hoja_precios: { Args: { p_datos: Json }; Returns: Json }
       guia_esta_facturada: { Args: { p_guia: string }; Returns: boolean }
       historial_precio_producto: {
         Args: { p_cliente?: string; p_limit?: number; p_producto: string }

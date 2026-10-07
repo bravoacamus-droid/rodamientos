@@ -4,6 +4,10 @@ import { EstadoError, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { referenciasDeRonda, rondaDetalle } from "../../api/comparador";
+import { proveedoresParaPedir } from "@/modules/proveedores";
+
+import { hojaDeConsulta } from "../../api/hoja-precios";
+import { HojaPrecios } from "../hoja-precios/hoja";
 import { Comparativa } from "./comparativa";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
@@ -47,6 +51,39 @@ export default async function PaginaComparativa({
   }
 
   const ronda = r.datos;
+
+  /*
+    Abierta: la hoja (07/10), donde se sigue apuntando y se decide. Cerrada:
+    la comparativa de siempre, que enseña las compras que salieron y deja
+    ajustar el precio de venta. Luis: *«tiene que ser sencillo»* — mientras
+    se pregunta, una sola pantalla.
+  */
+  if (ronda.estado === "abierta") {
+    const [cargada, proveedores] = await Promise.all([
+      hojaDeConsulta(ronda.id),
+      proveedoresParaPedir(ronda.items.map((i) => i.producto_id)),
+    ]);
+    if (!cargada.ok) {
+      return <EstadoError titulo="No se pudo abrir la hoja" detalle={cargada.error} />;
+    }
+    return (
+      <div className="flex flex-col gap-5">
+        <div>
+          <Volver href="/compras/precios">Volver a pedir precios</Volver>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{ronda.numero}</h1>
+          <p className="text-base text-[var(--fg-muted)]">
+            {formatearFecha(ronda.fecha)} · apunta lo que te diga cada uno; cuando lo decidas, «Pasar a compras».
+          </p>
+        </div>
+        <HojaPrecios
+          inicial={cargada.datos.hoja}
+          sugeridos={(proveedores.ok ? proveedores.datos : [])
+            .filter((p) => p.coincidencias > 0)
+            .map((p) => ({ proveedorId: p.id, nombre: p.razon_social, coincidencias: p.coincidencias }))}
+        />
+      </div>
+    );
+  }
 
   // Contra qué se compara cada precio. Va aquí y no dentro de la rejilla
   // porque hace tres consultas y la rejilla es un componente de cliente: si
