@@ -4598,20 +4598,21 @@ Luis, 07/10: *«el tablero va a ser un card de KPIs de todo el negocio,
 resumido, con gráficos […] después ya tenemos en el módulo de reportes cada
 uno solo, no así como lo tienes compartido; cada uno con su módulo»*.
 
-- **Tablero** (): sin pestañas. Ocho tarjetas: las cuatro de
-  ventas y cuatro nuevas (): cotizado (con la tasa de cierre),
-  comprado, capital en el almacén y clientes que compraron, cada una con
-  enlace. Debajo: lo vendido contra lo comprado, quién más compra, lo que más
-  se vende, en qué quedó lo cotizado, la cartera y las alertas.
+- **Tablero** (`/dashboard`): sin pestañas. Ocho tarjetas: las cuatro de
+  ventas y cuatro nuevas (`ui/negocio.tsx`): cotizado (con la tasa de
+  cierre), comprado, capital en el almacén y clientes que compraron, cada una
+  con enlace. Debajo: lo vendido contra lo comprado, quién más compra, lo que
+  más se vende, en qué quedó lo cotizado, la cartera y las alertas.
 - **Reportes**, grupo propio en el menú, bajo el Tablero:
-   (Ventas por cliente),   (Cotizado y ganado),  (Lo facturado) y
-   (Informe general, antes en Gestión). Cada uno con su título y
-  sus filtros. El Excel se mudó a .
-- Las rutas viejas  redirigen,
-  con sus filtros.
-- «Tablero» no se encendía nunca en el menú; ahora sí ().
+  `/reportes/clientes` (Ventas por cliente), `/reportes/cotizaciones`
+  (Cotizado y ganado), `/reportes/facturacion` (Lo facturado) y `/reportes`
+  (Informe general, antes en Gestión). Cada uno con su título y sus filtros.
+  El Excel se mudó a `/reportes/excel`.
+- Las rutas viejas `/dashboard/clientes`, `/dashboard/cotizaciones` y
+  `/dashboard/facturacion` redirigen, con sus filtros.
+- «Tablero» no se encendía nunca en el menú; ahora sí (`rutaActiva`).
 
-Al borrar  el servidor de desarrollo se quedó con el
+Al borrar `dashboard/layout.tsx` el servidor de desarrollo se quedó con el
 archivo de las pestañas en caché y daba 500 en todo: hubo que reiniciarlo.
 
 ## §AX · 07/10 — El voucher del cobro (109)
