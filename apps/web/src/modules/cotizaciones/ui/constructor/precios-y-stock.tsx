@@ -124,7 +124,7 @@ export function PreciosYStock({
                         : "text-[var(--ok)]"
                   }`}
                 >
-                  {margenPct.toFixed(1)}%
+                  {margenPct.toFixed(2)}%
                 </span>
               </div>
             ) : (

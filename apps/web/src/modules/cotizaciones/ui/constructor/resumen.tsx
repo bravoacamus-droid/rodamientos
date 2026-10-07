@@ -89,7 +89,7 @@ export function ResumenConstructor({
                       : "text-[var(--ok)]"
                 }`}
               >
-                {totales.margenPct.toFixed(1)}%
+                {totales.margenPct.toFixed(2)}%
               </span>
             </div>
             <div className="mt-0.5 flex items-baseline justify-between">

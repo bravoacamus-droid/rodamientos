@@ -323,7 +323,11 @@ export default async function PaginaDetalleCotizacion({
           <Resumen
             etiqueta="Margen al costo"
             valor={
-              cabecera.costo_total > 0 ? `${cabecera.margen_pct.toFixed(1)}%` : "—"
+              // Dos decimales, como lo guarda la base y como lo calcula Willy
+              // a mano (07/10: «debería salir 78.85»). Con uno salía «78.8»,
+              // que además parece mal redondeado: 78,85 en coma flotante es
+              // 78,8499… y `toFixed(1)` lo baja.
+              cabecera.costo_total > 0 ? `${cabecera.margen_pct.toFixed(2)}%` : "—"
             }
             detalle={
               cabecera.costo_total > 0

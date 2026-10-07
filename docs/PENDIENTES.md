@@ -4592,6 +4592,30 @@ de Defontana.
 
 ---
 
+## §AV · 07/10 — El margen de la cotización volvía a ir sobre la venta (107)
+
+COT1-000005 (COFACO): la ficha decía «Margen al costo 44,1 %» con USD 410,72
+de utilidad sobre USD 520,86 de costo. Willy echó la cuenta: **78,85 %**.
+
+La función `recalcular_totales_cotizacion` que corría en la base era la de la
+**004** (divide entre la venta), no la de la **023** (divide entre el costo).
+Las vistas de la 023 sí estaban. Es el segundo caso, tras la 031 (§4 del
+CLAUDE.md), de una migración escrita que la base no tiene.
+
+- La 107 vuelve a poner la función, recalcula las 3 cotizaciones y su
+  centinela dispara el trigger de verdad.
+- Las otras funciones que calculan margen están revisadas: es la única que
+  dividía entre la venta.
+- El margen sale con dos decimales en la ficha, el constructor y «Ver
+  precios». Con uno, 78,85 se mostraba como «78.8».
+- Efecto secundario: las 3 cotizaciones tienen `actualizado_en` del 07/10.
+
+**Sigue abierta la pregunta del CLAUDE.md: ¿cuántas más faltan?** Una
+auditoría que compare cada `create or replace function` de las migraciones con
+la definición viva diría cuáles están atrasadas.
+
+---
+
 ## §AU · 06/10 (reunión con Willy) — Excel de consumo, estado de cuenta, candado
 
 Dos reuniones el 06/10. Lo que era código:
