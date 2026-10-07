@@ -5,6 +5,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Input, SelectNativo } from "@rodatech/ui";
 
 import {
@@ -27,8 +29,8 @@ export function FiltrosBandejaBarra() {
   const params = useSearchParams();
   const [, iniciarTransicion] = React.useTransition();
 
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -37,11 +39,12 @@ export function FiltrosBandejaBarra() {
       else siguientes.delete(clave);
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       iniciarTransicion(() =>
         router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }),
       );
     },
-    [ruta, router],
+    [ruta, router, vigentes],
   );
 
   const [texto, setTexto] = React.useState(params.get("q") ?? "");
@@ -51,7 +54,7 @@ export function FiltrosBandejaBarra() {
     if (texto === actual) return;
     const t = setTimeout(() => aplicar("q", texto.trim()), ESPERA_MS);
     return () => clearTimeout(t);
-  }, [texto, aplicar]);
+  }, [texto, aplicar, vigentes]);
 
   const archivadas = params.get("ver") === "archivadas";
 

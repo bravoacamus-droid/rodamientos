@@ -20,6 +20,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Search } from "lucide-react";
 
 /**
@@ -46,8 +48,8 @@ export function BuscadorCotizaciones() {
     borra el filtro de estado que se acaba de pulsar. La ref siempre tiene lo
     último.
   */
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (valor: string) => {
@@ -59,9 +61,10 @@ export function BuscadorCotizaciones() {
       siguientes.delete("cursor");
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false });
     },
-    [ruta, router],
+    [ruta, router, vigentes],
   );
 
   React.useEffect(() => {
@@ -70,7 +73,7 @@ export function BuscadorCotizaciones() {
     if (texto === (vigentes.current.get("q") ?? "")) return;
     const t = setTimeout(() => aplicar(texto.trim()), ESPERA_MS);
     return () => clearTimeout(t);
-  }, [texto, aplicar]);
+  }, [texto, aplicar, vigentes]);
 
   return (
     <div className="relative flex-1 sm:max-w-sm">

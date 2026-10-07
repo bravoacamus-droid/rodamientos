@@ -6,6 +6,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Input, SelectNativo } from "@rodatech/ui";
 
 import { ETIQUETA_MOVIMIENTO } from "../dominio/tipos";
@@ -31,8 +33,8 @@ export function FiltrosKardexBarra({
   const params = useSearchParams();
   const [, iniciarTransicion] = React.useTransition();
 
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -44,11 +46,12 @@ export function FiltrosKardexBarra({
       siguientes.delete("cursor");
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       iniciarTransicion(() =>
         router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }),
       );
     },
-    [ruta, router],
+    [ruta, router, vigentes],
   );
 
   return (

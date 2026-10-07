@@ -4592,6 +4592,40 @@ de Defontana.
 
 ---
 
+## §AZ · 07/10 — Buscador en los desplegables, y filtros que no se pisan
+
+Luis, 07/10: *«todos los select que tengan datos tienen que tener un buscador
+inteligente, no voy a buscar a mano»*. Y después: *«¿los descargar Excel son
+dinámicos? Si selecciono de fecha a fecha, ¿se descarga solo eso?»*.
+
+**Buscador.** `Combobox` (`@rodatech/ui`, sin tildes, por cualquier palabra)
+en todo desplegable con datos: cliente de los reportes, proveedor de compras y
+recepciones, marca de proveedores, cliente del estado de cuenta, familia y
+marca del conteo, «Quién» de la bitácora, cotización de la factura y de la
+guía, compra de la recepción, vehículo de la guía y el ubigeo entero. Lleva
+`name` para formularios; `ComboboxEnFormulario` para páginas de servidor.
+Quedan como `<select>` las listas fijas y cortas (estado, moneda, medio).
+
+**La guía nueva ofrecía el histórico.** Cien CT02 «atendidas» como pendientes
+de despachar, y con el tope de cien escondían la aprobada de verdad
+(COT1-000005). Ahora una atendida solo entra si tiene guía en el ERP.
+
+**El Excel sí sigue a los filtros** (fechas y cliente; comprobado abriendo el
+archivo). Pero probándolo apareció un fallo de TODAS las barras de filtros: un
+segundo filtro puesto mientras cargaba la página partía de la URL vieja y
+borraba el primero («Desde» y enseguida «Hasta» → se perdía «Desde»; «Mes
+pasado» y enseguida buscar → se perdían las fechas). Arreglado en
+`lib/use-filtros-url.ts`, que usan las diecisiete barras:
+
+- la última URL pedida se guarda a nivel de módulo, compartida entre las
+  barras de una misma pantalla (fechas y cliente son dos componentes);
+- se olvida en un EFECTO, nunca al pintar: escribir interrumpe el render de
+  la página pedida y React lo tira, y si ese render ya la había borrado, el
+  buscador partía de la URL vieja;
+- se lee de `useSearchParams`, no de `window.location`: Next cambia la barra
+  de direcciones después de pintar;
+- una URL que nadie pidió (el botón «atrás») la descarta.
+
 ## §AY · 07/10 — Tablero de todo el negocio; cada reporte en su pantalla
 
 Luis, 07/10: *«el tablero va a ser un card de KPIs de todo el negocio,

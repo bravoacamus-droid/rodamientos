@@ -9,7 +9,9 @@
  */
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Search, X } from "lucide-react";
 import { campoBase } from "@rodatech/ui";
 
@@ -34,14 +36,13 @@ export function FiltrosKits({
 }) {
   const router = useRouter();
   const ruta = usePathname();
-  const params = useSearchParams();
   const [, iniciar] = React.useTransition();
 
   // Los parámetros vigentes en una ref y no en la clausura: es la corrección
   // que ya se hizo en el filtro de productos, porque un temporizador en vuelo
   // llevaba la copia vieja y borraba el filtro recién elegido.
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -53,9 +54,10 @@ export function FiltrosKits({
       siguientes.delete("p");
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       iniciar(() => router.replace(query ? `${ruta}?${query}` : ruta));
     },
-    [router, ruta],
+    [router, ruta, vigentes],
   );
 
   const [texto, setTexto] = React.useState(q ?? "");

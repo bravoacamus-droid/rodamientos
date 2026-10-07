@@ -6,6 +6,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Combobox, Input, SelectNativo } from "@rodatech/ui";
 
 import { ENTIDADES, ETIQUETA_ENTIDAD } from "../dominio/tipos";
@@ -20,8 +22,8 @@ export function FiltrosBarra({
   const params = useSearchParams();
   const [, iniciar] = React.useTransition();
 
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -32,9 +34,10 @@ export function FiltrosBarra({
       // significa nada.
       siguientes.delete("cursor");
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       iniciar(() => router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }));
     },
-    [router, ruta],
+    [router, ruta, vigentes],
   );
 
   return (

@@ -7,26 +7,16 @@
  */
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Combobox, SelectNativo } from "@rodatech/ui";
+
+import { useFiltrosUrl } from "@/lib/use-filtros-url";
 
 import { ETIQUETA_COMPARACION, type ModoComparacion } from "../../dominio/comparacion";
 
+/** Parte del último cambio pedido, no del último cargado (07/10). */
 function useAplicar() {
-  const router = useRouter();
-  const ruta = usePathname();
-  const params = useSearchParams();
-  const [, iniciar] = React.useTransition();
-  return React.useCallback(
-    (clave: string, valor: string | null) => {
-      const s = new URLSearchParams(params.toString());
-      if (valor) s.set(clave, valor);
-      else s.delete(clave);
-      const q = s.toString();
-      iniciar(() => router.replace(q ? `${ruta}?${q}` : ruta, { scroll: false }));
-    },
-    [params, ruta, router],
-  );
+  const { aplicar } = useFiltrosUrl();
+  return React.useCallback((clave: string, valor: string | null) => aplicar({ [clave]: valor }), [aplicar]);
 }
 
 export function FiltroComparar({ valor }: { valor: ModoComparacion }) {

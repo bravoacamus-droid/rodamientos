@@ -5,6 +5,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Input } from "@rodatech/ui";
 
 const ESPERA_MS = 300;
@@ -15,8 +17,8 @@ export function FiltrosImportacionesBarra() {
   const params = useSearchParams();
   const [, iniciarTransicion] = React.useTransition();
 
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -25,11 +27,12 @@ export function FiltrosImportacionesBarra() {
       else siguientes.delete(clave);
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       iniciarTransicion(() =>
         router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }),
       );
     },
-    [ruta, router],
+    [ruta, router, vigentes],
   );
 
   const [texto, setTexto] = React.useState(params.get("q") ?? "");
@@ -39,7 +42,7 @@ export function FiltrosImportacionesBarra() {
     if (texto === actual) return;
     const t = setTimeout(() => aplicar("q", texto.trim()), ESPERA_MS);
     return () => clearTimeout(t);
-  }, [texto, aplicar]);
+  }, [texto, aplicar, vigentes]);
 
   // El filtro arranca ENCENDIDO: sin parámetro en la URL, la pantalla enseña
   // solo lo abierto. Por eso `"0"` es lo que hay que escribir para verlo todo,

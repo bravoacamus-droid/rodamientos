@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CalendarDays, X } from "lucide-react";
 import { Input } from "@rodatech/ui";
+
+import { useFiltrosUrl } from "@/lib/use-filtros-url";
 
 /**
  * El periodo de una lista: atajos y dos fechas, igual en las cinco de ventas.
@@ -75,13 +76,11 @@ export function BarraPeriodo({
   /** Una frase de qué filtra, cuando no es evidente (cobranzas). */
   ayuda?: string;
 }) {
-  const router = useRouter();
-  const ruta = usePathname();
-  const params = useSearchParams();
-  const [, iniciar] = React.useTransition();
-
-  const desde = params.get("desde") ?? "";
-  const hasta = params.get("hasta") ?? "";
+  // Parte del último cambio pedido, no del último cargado (07/10): si no,
+  // «Hasta» puesto justo después de «Desde» lo borraba.
+  const { valores, aplicar: aplicarUrl } = useFiltrosUrl();
+  const desde = valores.get("desde") ?? "";
+  const hasta = valores.get("hasta") ?? "";
   const hoy = hoyEnLima();
 
   const activo = (Object.keys(ETIQUETA) as Atajo[]).find((a) => {
@@ -90,15 +89,8 @@ export function BarraPeriodo({
   });
 
   function aplicar(nuevo: { desde: string | null; hasta: string | null }) {
-    const s = new URLSearchParams(params.toString());
-    for (const [k, v] of Object.entries(nuevo)) {
-      if (v) s.set(k, v);
-      else s.delete(k);
-    }
-    s.delete("cursor");
-    s.delete("dir");
-    const q = s.toString();
-    iniciar(() => router.replace(q ? `${ruta}?${q}` : ruta, { scroll: false }));
+    // La página en la que se estaba deja de valer con otro periodo.
+    aplicarUrl(nuevo, ["cursor", "dir"]);
   }
 
   return (

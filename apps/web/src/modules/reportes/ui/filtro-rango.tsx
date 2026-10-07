@@ -9,8 +9,10 @@
  */
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
 import { Input, SelectNativo } from "@rodatech/ui";
+
+import { useFiltrosUrl } from "@/lib/use-filtros-url";
 
 import {
   ETIQUETA_ATAJO,
@@ -70,28 +72,13 @@ export function FiltroRango({
    */
   extra?: React.ReactNode;
 }) {
-  const router = useRouter();
-  const ruta = usePathname();
-  const params = useSearchParams();
-  const [, iniciarTransicion] = React.useTransition();
-
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
-
-  const aplicar = React.useCallback(
-    (cambios: Record<string, string | null>) => {
-      const siguientes = new URLSearchParams(vigentes.current.toString());
-      for (const [clave, valor] of Object.entries(cambios)) {
-        if (valor) siguientes.set(clave, valor);
-        else siguientes.delete(clave);
-      }
-      const query = siguientes.toString();
-      iniciarTransicion(() =>
-        router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }),
-      );
-    },
-    [ruta, router],
-  );
+  // Cada cambio parte del último pedido, no del último cargado: si no,
+  // «Hasta» puesto justo después de «Desde» lo borraba (07/10).
+  const { valores, aplicar: aplicarUrl, pendiente } = useFiltrosUrl();
+  const aplicar = (cambios: Record<string, string | null>) => aplicarUrl(cambios);
+  // Mientras carga, las cajas enseñan lo pedido y no vuelven atrás.
+  const desdeVisto = pendiente && valores.get("desde") ? (valores.get("desde") as string) : desde;
+  const hastaVisto = pendiente && valores.get("hasta") ? (valores.get("hasta") as string) : hasta;
 
   /**
    * Al elegir un atajo se BORRAN las fechas sueltas y la granularidad.
@@ -107,8 +94,8 @@ export function FiltroRango({
   const cambiarFecha = (clave: "desde" | "hasta", valor: string) =>
     aplicar({
       atajo: null,
-      desde: clave === "desde" ? valor : desde,
-      hasta: clave === "hasta" ? valor : hasta,
+      desde: clave === "desde" ? valor : desdeVisto,
+      hasta: clave === "hasta" ? valor : hastaVisto,
       grano: null,
     });
 
@@ -181,8 +168,8 @@ export function FiltroRango({
           <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
           <Input
             type="date"
-            value={desde}
-            max={hasta}
+            value={desdeVisto}
+            max={hastaVisto}
             onChange={(e) => cambiarFecha("desde", e.target.value)}
             className="w-full tabular sm:w-auto"
           />
@@ -192,8 +179,8 @@ export function FiltroRango({
           <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
           <Input
             type="date"
-            value={hasta}
-            min={desde}
+            value={hastaVisto}
+            min={desdeVisto}
             onChange={(e) => cambiarFecha("hasta", e.target.value)}
             className="w-full tabular sm:w-auto"
           />

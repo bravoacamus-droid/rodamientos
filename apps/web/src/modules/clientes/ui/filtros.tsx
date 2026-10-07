@@ -7,6 +7,8 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { useParamsVigentes } from "@/lib/use-filtros-url";
+
 import { ETIQUETA_CONDICION } from "../dominio/tipos";
 
 /**
@@ -29,8 +31,8 @@ export function FiltrosClientesBarra() {
   // VIEJA: al dispararse reconstruiría la URL sin el filtro recién elegido y lo
   // borraría solo. Con la ref, `aplicar` es estable y siempre parte del estado
   // actual, dispare cuando dispare.
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   /** Aplica un cambio de filtro. Siempre borra el cursor: al cambiar el
    *  criterio, seguir en la página 3 del resultado anterior no significa nada. */
@@ -42,6 +44,7 @@ export function FiltrosClientesBarra() {
       siguientes.delete("cursor");
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       const destino = query ? `${ruta}?${query}` : ruta;
       // Sin esto, cada render programaba una navegación al mismo sitio.
       if (destino === `${ruta}${params.toString() ? `?${params}` : ""}`) return;
@@ -50,7 +53,7 @@ export function FiltrosClientesBarra() {
         router.replace(destino, { scroll: false });
       });
     },
-    [params, ruta, router],
+    [params, ruta, router, vigentes],
   );
 
   const condicion = params.get("condicion") ?? "";

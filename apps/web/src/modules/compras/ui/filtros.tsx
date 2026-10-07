@@ -6,6 +6,8 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+import { useParamsVigentes } from "@/lib/use-filtros-url";
 import { Combobox, Input, SelectNativo } from "@rodatech/ui";
 
 import { ETIQUETA_ESTADO, type ProveedorOpcion } from "../dominio/tipos";
@@ -25,8 +27,8 @@ export function FiltrosComprasBarra({
   // Los parámetros vigentes se leen de una ref y no de la clausura: si no,
   // un temporizador de la búsqueda que ya estaba en vuelo llevaría la copia
   // vieja y borraría el filtro recién elegido al dispararse.
-  const vigentes = React.useRef(params);
-  vigentes.current = params;
+  // Parte del último filtro pedido, no del último cargado (07/10).
+  const vigentes = useParamsVigentes();
 
   const aplicar = React.useCallback(
     (clave: string, valor: string) => {
@@ -38,10 +40,11 @@ export function FiltrosComprasBarra({
       siguientes.delete("cursor");
 
       const query = siguientes.toString();
+      vigentes.current = siguientes;
       const destino = query ? `${ruta}?${query}` : ruta;
       iniciarTransicion(() => router.replace(destino, { scroll: false }));
     },
-    [ruta, router],
+    [ruta, router, vigentes],
   );
 
   const [texto, setTexto] = React.useState(params.get("q") ?? "");
@@ -53,7 +56,7 @@ export function FiltrosComprasBarra({
     if (texto === actual) return;
     const t = setTimeout(() => aplicar("q", texto.trim()), ESPERA_MS);
     return () => clearTimeout(t);
-  }, [texto, aplicar]);
+  }, [texto, aplicar, vigentes]);
 
   return (
     <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
