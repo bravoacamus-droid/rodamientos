@@ -91,6 +91,15 @@ describe("el tablero y la configuración", () => {
     expect(rutaActiva("/configuracion/usuarios")).toBe("/configuracion/usuarios");
   });
 
+  it("el tablero y sus reportes se encienden cada uno el suyo (07/10)", () => {
+    // Los reportes cuelgan de `/dashboard/…`: sin el «más específico gana»,
+    // el Tablero y el reporte se encenderían a la vez.
+    expect(rutaActiva("/dashboard")).toBe("/dashboard");
+    expect(rutaActiva("/dashboard/clientes")).toBe("/dashboard/clientes");
+    expect(rutaActiva("/dashboard/facturacion")).toBe("/dashboard/facturacion");
+    expect(rutaActiva("/reportes")).toBe("/reportes");
+  });
+
   it("el tablero no se repite dentro de un grupo", () => {
     // Salió del menú al sacarlo fuera; si alguien lo devuelve, aparecería dos
     // veces y el marcado de ruta activa encendería dos ítems.

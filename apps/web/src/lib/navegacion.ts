@@ -14,7 +14,8 @@ export type NombreIcono =
   | "inventario" | "kardex" | "recepcion" | "ajuste"
   | "compra" | "porcomprar" | "precios" | "importacion"
   | "reporte" | "alerta" | "bitacora" | "configuracion" | "transporte"
-  | "empresa" | "sunat" | "usuarios";
+  | "empresa" | "sunat" | "usuarios"
+  | "panelClientes" | "panelCotizaciones" | "panelFacturacion";
 
 export interface ItemNav {
   etiqueta: string;
@@ -124,6 +125,36 @@ export const CONFIGURACION: GrupoNav = {
 };
 
 export const NAVEGACION: readonly GrupoNav[] = [
+  {
+    /*
+      Los reportes, cada uno con su entrada (07/10).
+
+      Estaban como pestañas dentro del Tablero, y el informe de siempre en
+      «Gestión». Luis, 07/10: *«lo que está en gestión reportes es lo mismo
+      que el tablero […] cada uno tiene que tener su menú en el sidebar, para
+      que el cliente le dé clic, así como tenemos los demás módulos»*.
+
+      Una pestaña dentro de otra pantalla es exactamente el caso de CLAUDE.md
+      §2: la pieza existe y el camino no se ve. Arriba, justo debajo del
+      Tablero, que es su portada.
+
+      Con nombre de lo que enseñan y no «Clientes» a secas: «Clientes»,
+      «Cotizaciones» y «Facturación» ya son ítems del menú, y dos enlaces con
+      el mismo nombre llevando a pantallas distintas es lo que hace dudar a
+      Willy. Y cortos: «Reporte de cotizaciones» no cabía y salía con puntos
+      suspensivos.
+    */
+    titulo: "Reportes",
+    icono: "reporte",
+    items: [
+      { etiqueta: "Ventas por cliente", ruta: "/dashboard/clientes", icono: "panelClientes" },
+      { etiqueta: "Cotizado y ganado", ruta: "/dashboard/cotizaciones", icono: "panelCotizaciones" },
+      { etiqueta: "Lo facturado", ruta: "/dashboard/facturacion", icono: "panelFacturacion" },
+      // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
+      // solo para quien manda, como cuando vivía en «Gestión».
+      { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
+    ],
+  },
   {
     // «Ventas» y no «Operación»: es como lo llama Luis y como lo entiende
     // quien vende. «Operación» describe el software, no el trabajo.
@@ -244,7 +275,6 @@ export const NAVEGACION: readonly GrupoNav[] = [
     titulo: "Gestión",
     icono: "reporte",
     items: [
-      { etiqueta: "Reportes", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
       { etiqueta: "Alertas", ruta: "/alertas", icono: "alerta" },
       // Dice quién hizo qué, así que la ve quien responde de ello.
       { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", roles: ["gerencia", "admin"] },
@@ -272,7 +302,9 @@ export function rutaActiva(
   grupos: readonly GrupoNav[] = NAVEGACION,
 ): string | null {
   let mejor: string | null = null;
-  for (const grupo of grupos) {
+  // El Tablero va suelto, fuera de los grupos, y también se enciende. Con los
+  // reportes colgando de `/dashboard/…`, gana el más específico.
+  for (const grupo of [{ items: [TABLERO] }, ...grupos]) {
     for (const item of grupo.items) {
       const encaja = ruta === item.ruta || ruta.startsWith(item.ruta + "/");
       if (encaja && (mejor === null || item.ruta.length > mejor.length)) {

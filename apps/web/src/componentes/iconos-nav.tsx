@@ -28,6 +28,9 @@ import {
   Truck,
   User,
   Users,
+  ChartPie,
+  TrendingUp,
+  UsersRound,
 } from "lucide-react";
 import type { NombreIcono } from "@/lib/navegacion";
 
@@ -93,6 +96,11 @@ const ICONOS: Record<NombreIcono, LucideIcon> = {
   bitacora: History,
   // Reporte: barras.
   reporte: ChartColumn,
+  // Los tres reportes del tablero (07/10): distintos de los iconos de sus
+  // módulos, que están en el mismo menú, y todos con algo de gráfico.
+  panelClientes: UsersRound,
+  panelCotizaciones: ChartPie,
+  panelFacturacion: TrendingUp,
   // Alerta: campana.
   alerta: Bell,
   // Transporte: el vehículo de frente. Distinto del camión de perfil de la
