@@ -289,7 +289,7 @@ export function Dato({
  * La descarga del detalle en Excel, con los mismos filtros que la pantalla.
  *
  * Willy, 06/10 (4:51): *«filtro todo lo cotizado y hago un export»*. Un
- * enlace normal a la ruta `/dashboard/excel`, con aspecto de botón y una
+ * enlace normal a la ruta `/reportes/excel`, con aspecto de botón y una
  * frase que dice QUÉ se va a descargar, antes de pulsarlo.
  */
 export function BotonExcel({
@@ -310,7 +310,7 @@ export function BotonExcel({
     <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-base text-[var(--fg-muted)]">{explicacion}</p>
       <a
-        href={`/dashboard/excel?${q.toString()}`}
+        href={`/reportes/excel?${q.toString()}`}
         download
         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#1d6f42] px-4 text-base font-semibold text-white shadow-sm hover:bg-[#185c37]"
       >

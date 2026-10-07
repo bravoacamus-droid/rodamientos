@@ -95,8 +95,8 @@ describe("el tablero y la configuración", () => {
     // Los reportes cuelgan de `/dashboard/…`: sin el «más específico gana»,
     // el Tablero y el reporte se encenderían a la vez.
     expect(rutaActiva("/dashboard")).toBe("/dashboard");
-    expect(rutaActiva("/dashboard/clientes")).toBe("/dashboard/clientes");
-    expect(rutaActiva("/dashboard/facturacion")).toBe("/dashboard/facturacion");
+    expect(rutaActiva("/reportes/clientes")).toBe("/reportes/clientes");
+    expect(rutaActiva("/reportes/facturacion")).toBe("/reportes/facturacion");
     expect(rutaActiva("/reportes")).toBe("/reportes");
   });
 

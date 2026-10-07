@@ -125,7 +125,7 @@ export default async function PaginaFacturacionEjecutiva({
             Mirando solo a <strong>{nombreCliente}</strong>
           </p>
           <Link
-            href={conParams(sp, "/dashboard/facturacion", { cliente: null })}
+            href={conParams(sp, "/reportes/facturacion", { cliente: null })}
             className="inline-flex h-10 items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
           >
             <X className="size-4" aria-hidden="true" />
@@ -179,7 +179,7 @@ export default async function PaginaFacturacionEjecutiva({
           previo={comparar ? rp.clientes : undefined}
           etiquetaComparacion={frase}
           serie={a.serie.map((x) => x.clientes)}
-          href={conParams(sp, "/dashboard/clientes", { cliente: null })}
+          href={conParams(sp, "/reportes/clientes", { cliente: null })}
         />
       </div>
 
@@ -360,7 +360,7 @@ export default async function PaginaFacturacionEjecutiva({
               detalle: `${entero(c.documentos)} ${c.documentos === 1 ? "comprobante" : "comprobantes"} · ${pct(r.venta > 0 ? (c.venta / r.venta) * 100 : 0)} del total`,
               valor: c.venta,
               cifra: dinero(c.venta),
-              href: conParams(sp, "/dashboard/facturacion", { cliente: c.id }),
+              href: conParams(sp, "/reportes/facturacion", { cliente: c.id }),
             }))}
           />
         </Bloque>

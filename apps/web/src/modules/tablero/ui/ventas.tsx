@@ -40,9 +40,15 @@ const dolares = (n: number) =>
 export async function SeccionVentas({
   rango,
   hoy,
+  parte,
 }: {
   rango: Rango;
   hoy: string;
+  /**
+   * Las tarjetas y el gráfico por separado (07/10): en el Tablero, todas las
+   * tarjetas del negocio van juntas arriba y los gráficos debajo.
+   */
+  parte: "tarjetas" | "grafico";
 }) {
   const r = await kpisDeRango(rango);
   if (!r.ok) {
@@ -58,9 +64,8 @@ export async function SeccionVentas({
 
   const conMargen = margen.tipo === "completo" || margen.tipo === "parcial";
 
-  return (
-    <div className="@container flex flex-col gap-4">
-      {/*
+  if (parte === "tarjetas") return (
+      /*
         Una columna en el teléfono, dos en la tablet, cuatro en escritorio
         —por el ancho del contenedor, no de la ventana—.
 
@@ -68,7 +73,7 @@ export async function SeccionVentas({
         título largo se metía debajo del icono y «vs. el periodo anterior»
         salía en tres líneas. Willy dijo que el tablero «se ve feíto»; una
         cifra por fila, grande y entera, es lo que se lee de un vistazo.
-      */}
+      */
       <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
         <KpiCard
           etiqueta="Vendido"
@@ -150,7 +155,9 @@ export async function SeccionVentas({
           detalle="por cada comprobante"
         />
       </div>
+  );
 
+  return (
       <section className="card p-4">
         {/* El título dice lo que se dibuja: sin costo no hay línea de
             margen, y «Venta y margen» sobre una sola curva confundía. La
@@ -196,6 +203,5 @@ export async function SeccionVentas({
           />
         )}
       </section>
-    </div>
   );
 }

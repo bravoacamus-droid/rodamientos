@@ -147,9 +147,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
     titulo: "Reportes",
     icono: "reporte",
     items: [
-      { etiqueta: "Ventas por cliente", ruta: "/dashboard/clientes", icono: "panelClientes" },
-      { etiqueta: "Cotizado y ganado", ruta: "/dashboard/cotizaciones", icono: "panelCotizaciones" },
-      { etiqueta: "Lo facturado", ruta: "/dashboard/facturacion", icono: "panelFacturacion" },
+      { etiqueta: "Ventas por cliente", ruta: "/reportes/clientes", icono: "panelClientes" },
+      { etiqueta: "Cotizado y ganado", ruta: "/reportes/cotizaciones", icono: "panelCotizaciones" },
+      { etiqueta: "Lo facturado", ruta: "/reportes/facturacion", icono: "panelFacturacion" },
       // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
       // solo para quien manda, como cuando vivía en «Gestión».
       { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
@@ -303,7 +303,7 @@ export function rutaActiva(
 ): string | null {
   let mejor: string | null = null;
   // El Tablero va suelto, fuera de los grupos, y también se enciende. Con los
-  // reportes colgando de `/dashboard/…`, gana el más específico.
+  // reportes colgando de `/reportes/…`, gana el más específico.
   for (const grupo of [{ items: [TABLERO] }, ...grupos]) {
     for (const item of grupo.items) {
       const encaja = ruta === item.ruta || ruta.startsWith(item.ruta + "/");

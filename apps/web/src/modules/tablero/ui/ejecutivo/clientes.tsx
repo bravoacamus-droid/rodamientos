@@ -60,7 +60,7 @@ function enlace(sp: ParamsBusqueda, cambios: Record<string, string | null>) {
     else q.delete(k);
   }
   const s = q.toString();
-  return s ? `/dashboard/clientes?${s}` : "/dashboard/clientes";
+  return s ? `/reportes/clientes?${s}` : "/reportes/clientes";
 }
 
 /** El periodo y la comparación, para ir a la facturación de un cliente. */
@@ -71,7 +71,7 @@ function aFacturacion(sp: ParamsBusqueda, cliente: string) {
     if (v) q.set(k, v);
   }
   q.set("cliente", cliente);
-  return `/dashboard/facturacion?${q.toString()}`;
+  return `/reportes/facturacion?${q.toString()}`;
 }
 
 export default async function PaginaClientesEjecutiva({

@@ -5,6 +5,7 @@ import { FiltroRango, leerRango } from "@/modules/reportes";
 
 import { PanelAlertas } from "./panel-alertas";
 import { PanelCartera } from "./panel-cartera";
+import { CotizacionesEnQueQuedan, LosQueMas, TarjetasNegocio, VendidoComprado } from "./negocio";
 import { SeccionVentas } from "./ventas";
 
 /**
@@ -64,8 +65,16 @@ export default async function PaginaTablero({ searchParams }: Props) {
   const clave = `${rango.desde}|${rango.hasta}|${rango.grano}`;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* El título y las pestañas los pone `app/(erp)/dashboard/layout.tsx`. */}
+    // @container: las tarjetas pasan de una a cuatro por fila según el ancho
+    // del contenido, no de la ventana (con el menú abierto o recogido).
+    <div className="@container flex flex-col gap-5">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
+        <p className="text-base text-[var(--fg-muted)]">
+          Cómo va todo el negocio, de un vistazo. El detalle de cada parte está en Reportes.
+        </p>
+      </div>
+
       <FiltroRango
         desde={rango.desde}
         hasta={rango.hasta}
@@ -73,18 +82,34 @@ export default async function PaginaTablero({ searchParams }: Props) {
         atajo={rango.atajo}
       />
 
-      <Suspense key={clave} fallback={<Skeleton className="h-[26rem] w-full" />}>
-        <SeccionVentas rango={rango} hoy={hoy} />
+      {/* Todas las cifras arriba (07/10): primero las ventas, después el resto
+          del negocio. Los gráficos, debajo; el de lo vendido va junto a lo
+          comprado, que dice más que las ventas solas. */}
+      <Suspense key={`t${clave}`} fallback={<Skeleton className="h-44 w-full" />}>
+        <SeccionVentas rango={rango} hoy={hoy} parte="tarjetas" />
+      </Suspense>
+      <Suspense key={`n${clave}`} fallback={<Skeleton className="h-44 w-full" />}>
+        <TarjetasNegocio rango={rango} hoy={hoy} />
       </Suspense>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <Suspense key={`vc${clave}`} fallback={<Skeleton className="h-[22rem] w-full" />}>
+        <VendidoComprado rango={rango} />
+      </Suspense>
+      <Suspense key={`q${clave}`} fallback={<Skeleton className="h-80 w-full" />}>
+        <LosQueMas rango={rango} />
+      </Suspense>
+
+      <div className="grid gap-4 @4xl:grid-cols-2">
+        <Suspense key={`c${clave}`} fallback={<Skeleton className="h-72 w-full" />}>
+          <CotizacionesEnQueQuedan rango={rango} />
+        </Suspense>
         <Suspense fallback={<Skeleton className="h-72 w-full" />}>
           <PanelCartera />
         </Suspense>
-        <Suspense fallback={<Skeleton className="h-72 w-full" />}>
-          <PanelAlertas />
-        </Suspense>
       </div>
+      <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+        <PanelAlertas />
+      </Suspense>
     </div>
   );
 }

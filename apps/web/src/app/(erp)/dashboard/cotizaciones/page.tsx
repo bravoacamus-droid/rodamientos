@@ -1,5 +1,14 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Tablero · Cotizaciones" };
-
-export { PaginaCotizacionesEjecutiva as default } from "@/modules/tablero";
+/** Se mudó a /reportes/cotizaciones el 07/10; los enlaces guardados siguen llegando. */
+export default async function Pagina({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) if (typeof v === "string") q.set(k, v);
+  const s = q.toString();
+  redirect(s ? `/reportes/cotizaciones?${s}` : "/reportes/cotizaciones");
+}

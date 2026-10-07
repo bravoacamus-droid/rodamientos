@@ -170,7 +170,7 @@ export default async function PaginaDetalleCliente({
             // Willy, 06/10: el papel para mandarle cuando junta varias facturas.
             { href: `/cobranzas/estado-de-cuenta?cliente=${c.id}`, texto: "Su estado de cuenta", Icono: ScrollText },
             // Y cómo va: lo que compra mes a mes contra el año pasado.
-            { href: `/dashboard/facturacion?cliente=${c.id}&comparar=anio`, texto: "Cómo va, en el tablero", Icono: ChartColumn },
+            { href: `/reportes/facturacion?cliente=${c.id}&comparar=anio`, texto: "Cómo va, en reportes", Icono: ChartColumn },
           ].map(({ href, texto, Icono }) => (
             <Link
               key={href}
