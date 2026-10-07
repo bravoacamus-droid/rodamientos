@@ -34,6 +34,7 @@ import {
 import { Cobrador } from "./cobrador";
 import { FiltrosCarteraBarra } from "./filtros";
 import { Gestor } from "./gestor";
+import { VoucherDelPago } from "./voucher-del-pago";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -152,7 +153,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             key={`${periodo.desde}|${periodo.hasta}`}
             fallback={<Skeleton className="h-40 w-full" />}
           >
-            <ListaPagos periodo={periodo} />
+            <ListaPagos periodo={periodo} puedeSubir={puedeGestionar} />
           </Suspense>
         </section>
 
@@ -469,7 +470,13 @@ export function CarteraVista({
   );
 }
 
-async function ListaPagos({ periodo }: { periodo: { desde?: string; hasta?: string } }) {
+async function ListaPagos({
+  periodo,
+  puedeSubir,
+}: {
+  periodo: { desde?: string; hasta?: string };
+  puedeSubir: boolean;
+}) {
   const r = await ultimosPagos(15, periodo);
   if (!r.ok) return <EstadoError titulo="No se pudieron cargar los pagos" detalle={r.error} />;
 
@@ -488,7 +495,7 @@ async function ListaPagos({ periodo }: { periodo: { desde?: string; hasta?: stri
       {r.datos.map((p, i) => (
         <li
           key={p.id}
-          className="anim-entrada flex flex-wrap items-baseline justify-between gap-x-3 py-2 text-sm"
+          className="anim-entrada flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2 text-sm"
           style={{ animationDelay: `${Math.min(i, 6) * 24}ms` }}
         >
           <div className="min-w-0">
@@ -503,11 +510,14 @@ async function ListaPagos({ periodo }: { periodo: { desde?: string; hasta?: stri
               {p.referencia ? ` · ${p.referencia}` : ""}
             </span>
           </div>
-          <div className="text-right">
-            <Moneda valor={p.monto} tamano="sm" enfasis="fuerte" />
-            <span className="ml-2 tabular text-sm text-[var(--fg-subtle)]">
-              {formatearFecha(p.fecha)}
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-right">
+            <span>
+              <Moneda valor={p.monto} tamano="sm" enfasis="fuerte" />
+              <span className="ml-2 tabular text-sm text-[var(--fg-subtle)]">
+                {formatearFecha(p.fecha)}
+              </span>
             </span>
+            <VoucherDelPago pagoId={p.id} tiene={p.tiene_voucher} puedeSubir={puedeSubir} />
           </div>
         </li>
       ))}

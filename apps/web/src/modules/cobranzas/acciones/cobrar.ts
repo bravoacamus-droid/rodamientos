@@ -5,6 +5,8 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import type { Json } from "@rodatech/db/tipos";
 
+import { BUCKET_VOUCHERS, revisarVoucher, subirVoucher } from "./archivo-voucher";
+
 /**
  * Registra uno o varios pagos.
  *
@@ -75,6 +77,10 @@ export async function registrarCobro(
     return { ok: false, error: `Los datos no son válidos: ${detalle}.` };
   }
 
+  // El voucher es opcional (109); si viene y no vale, se dice antes de nada.
+  const archivo = revisarVoucher(formData.get("voucher"));
+  if (typeof archivo === "string") return { ok: false, error: archivo };
+
   try {
     const supabase = await clienteServidor();
 
@@ -117,10 +123,24 @@ export async function registrarCobro(
       }
     }
 
+    // Se sube ANTES de registrar: si el archivo falla, no queda un pago a
+    // medias; si falla el registro, se borra el archivo.
+    let voucher: Awaited<ReturnType<typeof subirVoucher>> | null = null;
+    if (archivo) {
+      voucher = await subirVoucher(supabase, archivo, ids[0] as string);
+      if (typeof voucher === "string") {
+        return { ok: false, error: `No se pudo subir el voucher: ${voucher}` };
+      }
+    }
+    const pagos = voucher ? datos.pagos.map((p) => ({ ...p, ...voucher })) : datos.pagos;
+
     const { data, error } = await supabase.rpc("registrar_pagos", {
-      p_pagos: datos.pagos as unknown as Json,
+      p_pagos: pagos as unknown as Json,
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) {
+      if (voucher) await supabase.storage.from(BUCKET_VOUCHERS).remove([voucher.voucher_ruta]);
+      return { ok: false, error: error.message };
+    }
 
     const r = data as unknown as { pagos: number };
 

@@ -4592,6 +4592,34 @@ de Defontana.
 
 ---
 
+## §AX · 07/10 — El voucher del cobro (109)
+
+Luis, 07/10: *«en cobranzas en cobrar falta botón de subir foto o pdf del
+voucher del pago»*.
+
+El proveedor tenía su papel `pago` desde la 076; el cliente, nada: el pago
+guardaba el número de operación y la prueba quedaba en el WhatsApp de alguien.
+
+- **109**: bucket privado `vouchers-cobro` (10 MB, PDF o foto), con la
+  puerta de `pagos` (gerencia, admin, cobranzas). Tres columnas en `pagos`
+  —`voucher_ruta`, `voucher_nombre`, `voucher_mime`— y no una tabla: un
+  cobro lleva como mucho un voucher. La ruta tiene que empezar por `cobros/`
+  (check). `registrar_pagos` las acepta; su centinela **la ejecuta** con un
+  pago de 0.01 y lo deshace.
+- **Al cobrar**: botón «Subir voucher» en el diálogo, opcional. Se sube antes
+  de registrar; si el registro falla, se borra el archivo.
+- **Después**: en «Lo cobrado», cada pago lleva «Subir voucher» o «Ver
+  voucher». Se ve dentro de la página (foto o PDF), con «Cambiar por otro»,
+  que borra el anterior. El voucher suele llegar por la tarde.
+
+Probado en pantalla el 07/10 (1440 y 390 px) con un cobro real de 0.01 sobre
+F002-00000559, subiendo, viendo y cambiando el voucher; después se borraron
+el pago y el archivo y la factura volvió a su saldo.
+
+**Ojo**: `pagos` está **vacía**. El histórico cargó lo cobrado directamente
+en `comprobantes.pagado`, sin filas de pago, así que «Lo cobrado» empieza en
+blanco y solo se llena con lo que se cobre desde el ERP.
+
 ## §AW · 07/10 — Las cinco listas de ventas, con sus cifras y su periodo (108)
 
 Luis, 07/10: *«mejorar los módulos de ventas, desde cotización hasta

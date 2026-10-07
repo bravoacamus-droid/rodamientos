@@ -2994,6 +2994,9 @@ export type Database = {
           observaciones: string | null
           referencia: string | null
           registrado_por: string | null
+          voucher_mime: string | null
+          voucher_nombre: string | null
+          voucher_ruta: string | null
         }
         Insert: {
           comprobante_id: string
@@ -3006,6 +3009,9 @@ export type Database = {
           observaciones?: string | null
           referencia?: string | null
           registrado_por?: string | null
+          voucher_mime?: string | null
+          voucher_nombre?: string | null
+          voucher_ruta?: string | null
         }
         Update: {
           comprobante_id?: string
@@ -3018,6 +3024,9 @@ export type Database = {
           observaciones?: string | null
           referencia?: string | null
           registrado_por?: string | null
+          voucher_mime?: string | null
+          voucher_nombre?: string | null
+          voucher_ruta?: string | null
         }
         Relationships: [
           {

@@ -20,7 +20,7 @@ import {
   buttonVariants,
   formatearFecha,
 } from "@rodatech/ui";
-import { HandCoins } from "lucide-react";
+import { FileUp, HandCoins, X } from "lucide-react";
 
 import { registrarCobro, type ResultadoCobro } from "../acciones/cobrar";
 import { cuotasDelComprobante } from "../acciones/gestionar";
@@ -36,6 +36,7 @@ import {
   type DocumentoPorCobrar,
   type MedioPago,
 } from "../dominio/tipos";
+import { TIPOS_VOUCHER } from "./voucher-del-pago";
 
 /**
  * Registrar el cobro de un documento.
@@ -66,12 +67,18 @@ export function Cobrador({
   const [referencia, setReferencia] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
   const [cuotas, setCuotas] = React.useState<CuotaComprobante[]>([]);
+  const entradaVoucher = React.useRef<HTMLInputElement>(null);
+  const [voucher, setVoucher] = React.useState<string | null>(null);
 
   const [resultado, cobrar, cobrando] = useActionState<
     ResultadoCobro | null,
     FormData
   >(async (previo, formData) => {
     const r = await registrarCobro(previo, formData);
+    // React 19 vacía el formulario al terminar la acción, y el selector de
+    // archivo con él: el nombre tiene que irse también, o diría que hay un
+    // voucher que ya no se va a mandar.
+    setVoucher(null);
     if (r.ok) {
       setAbierto(false);
       router.refresh();
@@ -120,6 +127,7 @@ export function Cobrador({
           // importe de antes ya no vale.
           setMonto(documento.saldo);
           setFecha(hoy);
+          setVoucher(null);
         }
       }}
     >
@@ -221,6 +229,57 @@ export function Cobrador({
                   placeholder="N.º de operación, cheque o depósito"
                 />
               </label>
+            </div>
+
+            {/* El voucher (109), opcional: la foto o el PDF de la transferencia.
+                Un botón con borde y no un «Elegir archivo» del navegador, que
+                cambia de idioma y de forma según el equipo (CLAUDE.md §1). */}
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Voucher del pago (foto o PDF)</span>
+              <input
+                ref={entradaVoucher}
+                type="file"
+                name="voucher"
+                accept={TIPOS_VOUCHER}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(e) => setVoucher(e.target.files?.[0]?.name ?? null)}
+              />
+              {voucher ? (
+                <div className="flex items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
+                  <FileUp className="size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-sm" title={voucher}>
+                    {voucher}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (entradaVoucher.current) entradaVoucher.current.value = "";
+                      setVoucher(null);
+                    }}
+                    className="gap-1"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                    Quitar
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => entradaVoucher.current?.click()}
+                  className="gap-1.5 self-start"
+                >
+                  <FileUp className="size-4" aria-hidden="true" />
+                  Subir voucher
+                </Button>
+              )}
+              <span className="text-sm text-[var(--fg-muted)]">
+                Opcional. También se puede subir después, desde «Lo cobrado».
+              </span>
             </div>
 
             <label className="flex flex-col gap-1">

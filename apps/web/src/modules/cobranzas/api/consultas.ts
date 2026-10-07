@@ -197,7 +197,7 @@ export async function ultimosPagos(
     const { data, error } = await supabase
       .from("pagos")
       .select(
-        `id, comprobante_id, fecha, monto, medio, referencia, observaciones,
+        `id, comprobante_id, fecha, monto, medio, referencia, observaciones, voucher_ruta,
          comprobantes(numero, clientes(razon_social)),
          perfiles(nombre)`,
       )
@@ -229,6 +229,7 @@ export async function ultimosPagos(
         referencia: (p.referencia as string | null) ?? null,
         observaciones: (p.observaciones as string | null) ?? null,
         registrado_por: p.perfiles?.nombre ?? null,
+        tiene_voucher: Boolean(p.voucher_ruta),
       })),
     };
   } catch (e) {

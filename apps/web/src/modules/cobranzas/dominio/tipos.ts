@@ -94,6 +94,8 @@ export interface PagoRegistrado {
   referencia: string | null;
   observaciones: string | null;
   registrado_por: string | null;
+  /** Si se subió la foto o el PDF de la transferencia (109). */
+  tiene_voucher: boolean;
 }
 
 /** Una cuota del cronograma, con lo que lleva pagado. */
