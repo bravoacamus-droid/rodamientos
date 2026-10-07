@@ -461,3 +461,70 @@ media hora de llamadas. Se le añadió la comprobación de lo ya cargado, y con
 eso la segunda pasada insertó solo las 3 que faltaban. **Un cargador de datos
 que no se puede reanudar está a medio hacer**, y es el tipo de cosa que solo
 se aprende cuando ya has esperado la media hora.
+
+## 11 · Segunda carga, 07/10: lo que faltaba de ventas y TODAS las cotizaciones
+
+Willy mandó dos exports nuevos de su sistema, del 07/10
+(`documentosrodamiento/respaldos/`). Antes de escribir se respaldó la base
+(`scripts/respaldar.mjs`). Los cargadores están en el scratchpad de la sesión
+(`cargar-ventas-2.mjs`, `cargar-cotizaciones.mjs`) y los dos son idempotentes:
+relanzados, saltan lo ya cargado.
+
+### 11.1 · Ventas: 47 documentos nuevos
+
+Las 518 de la primera carga **cuadran con el export nuevo**. Las únicas
+diferencias son dos de céntimos en soles y el signo de las notas, que en la
+base van en positivo. Entran las 47 que faltaban, F002-516 a F002-561 y la
+FC02-4: 128 líneas.
+
+- **Con el cobro que dice su sistema** (decisión de Luis, 07/10). Son
+  recientes y a crédito, a diferencia de la primera carga, que entró como
+  libro cerrado. Quedan **41 por cobrar, USD 18.392,87**, con vencimiento
+  supuesto a **30 días** («FACTURA 30 DIAS»). El 07/10 ya había
+  **USD 5.362,96 vencidos**. Si alguna está pagada, se registra el pago en
+  Cobranzas.
+- **La FC02-4 devuelve la F002-478**, no la F002-527, aunque esta sea del
+  mismo día y tenga las mismas líneas. La nota es de las 18:22, la F002-527 de
+  las 18:39 y está en **soles**. La F002-478 (01/08) suma exactamente
+  USD 1.165,02. Se anuló la de dólares y se reemitió en soles. **Conviene que
+  Willy lo confirme.**
+- F002 queda **del 1 al 561 sin un hueco** y la serie en 561.
+
+### 11.2 · Cotizaciones: las 1.261 de su CT02
+
+Del 14/09/2024 al 07/10/2026: 4.062 líneas. **Las 1.179 en dólares cuadran
+al céntimo** con su export. Las 82 en soles se convirtieron con el tipo de
+cambio de sus ventas en soles de la fecha más cercana, porque el export de
+cotizaciones no trae TC. Va escrito en cada una.
+
+- **El estado es DEDUCIDO** (decisión de Luis). Su export no lo trae.
+  - **631 atendidas**: al mismo cliente se le facturó alguno de los productos
+    cotizados en los 90 días siguientes.
+  - **609 vencidas**.
+  - **21 enviadas**, todavía en plazo.
+
+  Cada una lo dice en sus observaciones.
+- **16 clientes nuevos**: se les cotizó y nunca compraron. Entre ellos la
+  propia Rodatech (RUC 20562681206), a la que su sistema se cotizó. Tienen
+  documento y nombre; faltan dirección y contacto.
+- **1.808 líneas sin producto enlazado**: el código no está en el catálogo.
+  Entran con su código y su descripción. También las **20** cuyo precio
+  histórico está por debajo del precio mínimo de HOY: la base no deja guardar
+  esa línea enlazada (`cotiz_item_respeta_piso`), y el precio cotizado no se
+  toca.
+- **Sin vendedor**: el asesor (Willy, o Mary Esquivel en 56) va en
+  observaciones.
+
+### 11.3 · Lo que NO se hizo, a propósito
+
+- **La serie predeterminada sigue siendo COT1.** CT02 existe y está en 1261,
+  pero Willy **sigue cotizando en su sistema viejo** (la CT02-1261 es del
+  07/10). Si el ERP empezara ya a numerar CT02-1262, su sistema sacaría otra
+  CT02-1262 y la siguiente carga chocaría. El cambio se hace **el día que
+  deje el sistema viejo**:
+  1. un último export;
+  2. relanzar el cargador, que trae solo lo nuevo;
+  3. marcar CT02 como predeterminada en Configuración → SUNAT y numeración.
+- **«Ya facturado de estas» sale en cero** en el tablero, porque su sistema
+  no enlazaba factura y cotización. No se rellenó con lo deducido: la
+  deducción dice que hubo venta, no qué factura salió de qué cotización.
