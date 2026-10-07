@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { abreviaturaUnidad, importeConDescuento } from "@rodatech/config";
 import {
+  Combobox,
   Badge,
   Button,
   Input,
@@ -349,27 +350,30 @@ export function EmisorComprobante({
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* ------------------------------------------------- Cabecera */}
           <section className="card p-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="fac-cotizacion" className="text-sm font-medium">
                 Cotización aprobada <span className="text-[var(--danger)]">*</span>
-              </span>
-              <SelectNativo
-                value={cotizacionId}
-                onChange={(e) => setCotizacionId(e.target.value)}
-              >
-                <option value="">Elige una cotización…</option>
-                {cotizaciones.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.numero} · {c.cliente} · ${c.total.toFixed(2)}
-                  </option>
-                ))}
-              </SelectNativo>
+              </label>
+              {/* Con buscador (07/10): se encuentra por número o por cliente. */}
+              <Combobox
+                id="fac-cotizacion"
+                opciones={cotizaciones.map((c) => ({
+                  valor: c.id,
+                  etiqueta: `${c.numero} · ${c.cliente}`,
+                  detalle: `$\u00a0${c.total.toFixed(2)}`,
+                }))}
+                valor={cotizacionId || null}
+                onCambio={(v) => setCotizacionId(v ?? "")}
+                placeholder="Elige una cotización…"
+                placeholderBusqueda="Número o cliente…"
+                textoVacio="Ninguna cotización coincide."
+              />
               {cotizaciones.length === 0 ? (
                 <span className="text-sm text-[var(--fg-muted)]">
                   No hay cotizaciones aprobadas sin facturar. Aprueba una primero.
                 </span>
               ) : null}
-            </label>
+            </div>
 
             {cargando ? (
               <p className="anim-latido mt-3 text-sm text-[var(--fg-muted)]">

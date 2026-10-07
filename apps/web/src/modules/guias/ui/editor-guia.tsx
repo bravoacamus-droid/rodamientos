@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Campo, Input, SelectNativo, Textarea } from "@rodatech/ui";
+import { Combobox, Button, Campo, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
@@ -283,22 +283,24 @@ export function EditorGuia({
 
             {!aPie && vehiculos.length > 0 ? (
               <Campo id="g-vehiculo" label="Vehículo" className="sm:col-span-2">
-                <SelectNativo
+                {/* Con buscador (07/10). Elegir uno solo rellena la placa. */}
+                <Combobox
                   id="g-vehiculo"
-                  value=""
-                  onChange={(e) => {
-                    const v = vehiculos.find((x) => x.id === e.target.value);
+                  opciones={vehiculos.map((v) => ({
+                    valor: v.id,
+                    etiqueta: v.placa,
+                    detalle: v.descripcion ?? undefined,
+                  }))}
+                  valor={vehiculos.find((x) => x.placa === placa)?.id ?? null}
+                  onCambio={(id) => {
+                    const v = vehiculos.find((x) => x.id === id);
                     if (v) setPlaca(v.placa);
                   }}
-                >
-                  <option value="">Otro / a mano…</option>
-                  {vehiculos.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.placa}
-                      {v.descripcion ? ` · ${v.descripcion}` : ""}
-                    </option>
-                  ))}
-                </SelectNativo>
+                  limpiable={false}
+                  placeholder="Otro / a mano…"
+                  placeholderBusqueda="Placa o descripción…"
+                  textoVacio="Ningún vehículo coincide."
+                />
               </Campo>
             ) : null}
 

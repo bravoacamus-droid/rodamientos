@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Input, SelectNativo } from "@rodatech/ui";
+import { Combobox, Input, SelectNativo } from "@rodatech/ui";
 
 const ESPERA_MS = 300;
 
@@ -70,22 +70,21 @@ export function FiltrosProveedoresBarra({
           `grow` en el teléfono: cada desplegable va solo en su línea, y a
           media anchura dejaba un hueco a la derecha y los dos de distinto
           largo (revisión por módulos del 02/10). */}
-      <label className="flex min-w-44 grow flex-col gap-1 sm:grow-0">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">
+      <div className="flex w-full flex-col gap-1 sm:w-52">
+        <label htmlFor="f-marca-proveedor" className="text-sm font-medium text-[var(--fg-muted)]">
           Vende la marca
-        </span>
-        <SelectNativo
-          value={params.get("marca") ?? ""}
-          onChange={(e) => aplicar("marca", e.target.value)}
-        >
-          <option value="">Cualquiera</option>
-          {marcas.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.nombre}
-            </option>
-          ))}
-        </SelectNativo>
-      </label>
+        </label>
+        {/* Con buscador (07/10): las marcas son cientos. */}
+        <Combobox
+          id="f-marca-proveedor"
+          opciones={marcas.map((m) => ({ valor: m.id, etiqueta: m.nombre }))}
+          valor={params.get("marca") || null}
+          onCambio={(v) => aplicar("marca", v ?? "")}
+          placeholder="Cualquiera"
+          placeholderBusqueda="SKF, FAG, NTN…"
+          textoVacio="Ninguna marca coincide."
+        />
+      </div>
 
       <label className="flex min-w-40 grow flex-col gap-1 sm:grow-0">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Tipo</span>

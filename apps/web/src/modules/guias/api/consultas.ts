@@ -313,6 +313,16 @@ export async function motivosTraslado(): Promise<Resultado<MotivoTraslado[]>> {
  * Se excluyen las que ya se despacharon enteras. Una cotización aprobada de la
  * que ya salió todo no tiene por qué seguir ofreciéndose: es el camino más
  * corto a sacar el mismo material dos veces.
+ *
+ * Una «atendida» solo entra si tiene alguna guía en el ERP (07/10). Las 631
+ * CT02 del histórico entraron como atendidas —se vendieron en el sistema
+ * viejo, y su guía salió allí—, y sin guías aquí parecían enteras por
+ * despachar: la guía nueva ofrecía cien cotizaciones de 2024. En el ERP una
+ * cotización se atiende al facturarse, y sin guía no se factura (089), así
+ * que una atendida sin guía solo puede venir del histórico.
+ *
+ * Y las aprobadas van todas, sin el tope de cien: con el histórico delante
+ * —«CT02» ordena antes que «COT1»— el tope dejaba fuera las de verdad.
  */
 export async function cotizacionesDespachables(): Promise<
   Resultado<{ id: string; numero: string; fecha: string; cliente: string }[]>
@@ -320,22 +330,34 @@ export async function cotizacionesDespachables(): Promise<
   try {
     const supabase = await clienteServidor();
 
-    const [{ data, error }, { data: yaDespachado }] = await Promise.all([
-      supabase
-        .from("cotizaciones")
-        .select(
-          `id, numero, fecha, clientes(razon_social),
-           cotizacion_items(id, cantidad, cantidad_aprobada)`,
-        )
-        .in("estado", ["aprobada", "atendida"])
-        .order("numero", { ascending: false })
-        .limit(100),
-      // Las guías NO anuladas y sus líneas: es lo que ya salió del almacén.
-      supabase
-        .from("guias_remision")
-        .select("cotizacion_id, estado, guia_items(cotizacion_item_id, cantidad)")
-        .neq("estado", "anulada"),
-    ]);
+    // Las guías NO anuladas y sus líneas: es lo que ya salió del almacén.
+    const { data: yaDespachado, error: errorGuias } = await supabase
+      .from("guias_remision")
+      .select("cotizacion_id, estado, guia_items(cotizacion_item_id, cantidad)")
+      .neq("estado", "anulada");
+    if (errorGuias) return fallo(errorGuias);
+
+    const conGuia = [
+      ...new Set(
+        ((yaDespachado ?? []) as { cotizacion_id: string | null }[])
+          .map((g) => g.cotizacion_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .select(
+        `id, numero, fecha, clientes(razon_social),
+         cotizacion_items(id, cantidad, cantidad_aprobada)`,
+      )
+      .or(
+        conGuia.length > 0
+          ? `estado.eq.aprobada,and(estado.eq.atendida,id.in.(${conGuia.join(",")}))`
+          : "estado.eq.aprobada",
+      )
+      .order("fecha", { ascending: false })
+      .order("numero", { ascending: false });
 
     if (error) return fallo(error);
 

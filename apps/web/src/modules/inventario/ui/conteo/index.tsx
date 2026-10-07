@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useReducer, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Combobox,
   Button,
   Input,
   SelectNativo,
@@ -202,29 +203,31 @@ export function HojaDeConteo({
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-semibold">Qué vas a contar</h2>
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex min-w-44 flex-col gap-1">
-            <span className="text-sm font-medium text-[var(--fg-muted)]">Familia</span>
-            <SelectNativo value={familia} onChange={(e) => setFamilia(e.target.value)}>
-              <option value="">Todas</option>
-              {familias.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.nombre}
-                </option>
-              ))}
-            </SelectNativo>
-          </label>
+          <div className="flex w-full flex-col gap-1 sm:w-52">
+            <label htmlFor="conteo-familia" className="text-sm font-medium text-[var(--fg-muted)]">Familia</label>
+            <Combobox
+              id="conteo-familia"
+              opciones={familias.map((x) => ({ valor: x.id, etiqueta: x.nombre }))}
+              valor={familia || null}
+              onCambio={(v) => setFamilia(v ?? "")}
+              placeholder="Todas"
+              placeholderBusqueda="Escribe parte del nombre…"
+              textoVacio="Ninguna coincide."
+            />
+          </div>
 
-          <label className="flex min-w-44 flex-col gap-1">
-            <span className="text-sm font-medium text-[var(--fg-muted)]">Marca</span>
-            <SelectNativo value={marca} onChange={(e) => setMarca(e.target.value)}>
-              <option value="">Todas</option>
-              {marcas.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </SelectNativo>
-          </label>
+          <div className="flex w-full flex-col gap-1 sm:w-52">
+            <label htmlFor="conteo-marca" className="text-sm font-medium text-[var(--fg-muted)]">Marca</label>
+            <Combobox
+              id="conteo-marca"
+              opciones={marcas.map((x) => ({ valor: x.id, etiqueta: x.nombre }))}
+              valor={marca || null}
+              onCambio={(v) => setMarca(v ?? "")}
+              placeholder="Todas"
+              placeholderBusqueda="SKF, FAG, NTN…"
+              textoVacio="Ninguna coincide."
+            />
+          </div>
 
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input

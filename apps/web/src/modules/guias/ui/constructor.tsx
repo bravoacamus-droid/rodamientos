@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useReducer, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
+import { Combobox, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import { cargarCotizacion } from "../acciones/cargar";
 import { generarGuia, type ResultadoGuia } from "../acciones/generar";
@@ -211,27 +211,26 @@ export function ConstructorGuia({
                 </p>
               </div>
             ) : (
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="guia-cotizacion" className="text-sm font-medium">
                   Cotización aprobada <span className="text-[var(--danger)]">*</span>
-                </span>
-                <SelectNativo
-                  value={cotizacionId}
-                  onChange={(e) => setCotizacionId(e.target.value)}
-                >
-                  <option value="">Elige una cotización…</option>
-                  {cotizaciones.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.numero} · {c.cliente}
-                    </option>
-                  ))}
-                </SelectNativo>
+                </label>
+                {/* Con buscador (07/10): por número o por cliente. */}
+                <Combobox
+                  id="guia-cotizacion"
+                  opciones={cotizaciones.map((c) => ({ valor: c.id, etiqueta: `${c.numero} · ${c.cliente}` }))}
+                  valor={cotizacionId || null}
+                  onCambio={(v) => setCotizacionId(v ?? "")}
+                  placeholder="Elige una cotización…"
+                  placeholderBusqueda="Número o cliente…"
+                  textoVacio="Ninguna cotización coincide."
+                />
                 {cotizaciones.length === 0 ? (
                   <span className="text-sm text-[var(--fg-muted)]">
                     No hay cotizaciones aprobadas con mercadería pendiente de salir.
                   </span>
                 ) : null}
-              </label>
+              </div>
             )}
 
             {cargando ? (

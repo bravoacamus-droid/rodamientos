@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Input, SelectNativo } from "@rodatech/ui";
+import { Combobox, Input, SelectNativo } from "@rodatech/ui";
 
 import { ENTIDADES, ETIQUETA_ENTIDAD } from "../dominio/tipos";
 
@@ -54,20 +54,18 @@ export function FiltrosBarra({
         </SelectNativo>
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Quién</span>
-        <SelectNativo
-          value={params.get("usuario") ?? ""}
-          onChange={(e) => aplicar("usuario", e.target.value)}
-        >
-          <option value="">Cualquiera</option>
-          {personas.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </SelectNativo>
-      </label>
+      <div className="flex w-full flex-col gap-1 sm:w-52">
+        <label htmlFor="f-quien" className="text-sm font-medium text-[var(--fg-muted)]">Quién</label>
+        <Combobox
+          id="f-quien"
+          opciones={personas.map((p) => ({ valor: p.id, etiqueta: p.nombre }))}
+          valor={params.get("usuario") || null}
+          onCambio={(v) => aplicar("usuario", v ?? "")}
+          placeholder="Cualquiera"
+          placeholderBusqueda="Escribe el nombre…"
+          textoVacio="Nadie coincide."
+        />
+      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>

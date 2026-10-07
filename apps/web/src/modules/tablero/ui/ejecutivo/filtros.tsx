@@ -8,7 +8,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SelectNativo } from "@rodatech/ui";
+import { Combobox, SelectNativo } from "@rodatech/ui";
 
 import { ETIQUETA_COMPARACION, type ModoComparacion } from "../../dominio/comparacion";
 
@@ -58,21 +58,23 @@ export function FiltroCliente({
   clientes: { id: string; nombre: string }[];
 }) {
   const aplicar = useAplicar();
+  // Con buscador y no un `<select>` (07/10). Luis: *«tiene que tener un
+  // buscador, no voy a buscar a mano»* — son decenas de razones sociales.
   return (
-    <label className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
-      <span className="text-sm font-medium text-[var(--fg-muted)]">Cliente</span>
-      <SelectNativo
-        value={valor ?? ""}
-        onChange={(e) => aplicar("cliente", e.target.value || null)}
+    <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
+      <label htmlFor="f-cliente-reporte" className="text-sm font-medium text-[var(--fg-muted)]">
+        Cliente
+      </label>
+      <Combobox
+        id="f-cliente-reporte"
         className="w-full sm:w-72"
-      >
-        <option value="">Todos los clientes</option>
-        {clientes.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.nombre}
-          </option>
-        ))}
-      </SelectNativo>
-    </label>
+        opciones={clientes.map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+        valor={valor}
+        onCambio={(v) => aplicar("cliente", v)}
+        placeholder="Todos los clientes"
+        placeholderBusqueda="Escribe parte del nombre…"
+        textoVacio="Ningún cliente coincide."
+      />
+    </div>
   );
 }

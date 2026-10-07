@@ -4,7 +4,7 @@
 // servidor cuando cambia el anterior.
 
 import * as React from "react";
-import { Campo, SelectNativo } from "@rodatech/ui";
+import { Campo, Combobox } from "@rodatech/ui";
 
 /**
  * Compara nombres de sitio ignorando tildes y mayúsculas.
@@ -149,43 +149,33 @@ export function SelectorUbigeoCascada({
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
+      {/* Con buscador los tres (07/10): «lurigancho» se escribe, no se busca
+          entre 1.800 distritos. Luis: *«no voy a buscar a mano»*. */}
       <Campo id={`${id}-dep`} label="Departamento">
-        <SelectNativo
+        <Combobox
           id={`${id}-dep`}
-          className="h-11 md:h-control-md"
-          value={depSel}
-          onChange={(e) =>
-            // Cambiar de departamento invalida los dos de abajo: dejar puesta
-            // la provincia anterior guardaría un distrito de otro sitio.
-            onElegir({ codigo: "", departamento: e.target.value, provincia: "", distrito: "" })
-          }
-        >
-          <option value="">Elige…</option>
-          {departamentos.map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </SelectNativo>
+          opciones={departamentos.map((d) => ({ valor: d, etiqueta: d }))}
+          valor={depSel || null}
+          // Cambiar de departamento invalida los dos de abajo: dejar puesta la
+          // provincia anterior guardaría un distrito de otro sitio.
+          onCambio={(v) => onElegir({ codigo: "", departamento: v ?? "", provincia: "", distrito: "" })}
+          placeholder="Elige…"
+          placeholderBusqueda="Escribe el departamento…"
+          textoVacio="Ninguno coincide."
+        />
       </Campo>
 
       <Campo id={`${id}-prov`} label="Provincia">
-        <SelectNativo
+        <Combobox
           id={`${id}-prov`}
-          className="h-11 md:h-control-md"
-          value={provSel}
-          disabled={!depSel}
-          onChange={(e) =>
-            onElegir({ codigo: "", departamento: depSel, provincia: e.target.value, distrito: "" })
-          }
-        >
-          <option value="">{depSel ? "Elige…" : "Primero el departamento"}</option>
-          {provincias.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </SelectNativo>
+          opciones={provincias.map((p) => ({ valor: p, etiqueta: p }))}
+          valor={provSel || null}
+          deshabilitado={!depSel}
+          onCambio={(v) => onElegir({ codigo: "", departamento: depSel, provincia: v ?? "", distrito: "" })}
+          placeholder={depSel ? "Elige…" : "Primero el departamento"}
+          placeholderBusqueda="Escribe la provincia…"
+          textoVacio="Ninguna coincide."
+        />
       </Campo>
 
       <Campo
@@ -193,13 +183,13 @@ export function SelectorUbigeoCascada({
         label="Distrito"
         ayuda={cargando ? "Cargando…" : (ayudaDistrito ?? undefined)}
       >
-        <SelectNativo
+        <Combobox
           id={id}
-          className="h-11 md:h-control-md"
-          value={codigo}
-          disabled={!provSel}
-          onChange={(e) => {
-            const d = distritos.find((x) => x.codigo === e.target.value);
+          opciones={distritos.map((d) => ({ valor: d.codigo, etiqueta: d.distrito }))}
+          valor={codigo || null}
+          deshabilitado={!provSel}
+          onCambio={(v) => {
+            const d = distritos.find((x) => x.codigo === v);
             onElegir({
               codigo: d?.codigo ?? "",
               departamento: depSel,
@@ -207,14 +197,10 @@ export function SelectorUbigeoCascada({
               distrito: d?.distrito ?? "",
             });
           }}
-        >
-          <option value="">{provSel ? "Elige…" : "Primero la provincia"}</option>
-          {distritos.map((d) => (
-            <option key={d.codigo} value={d.codigo}>
-              {d.distrito}
-            </option>
-          ))}
-        </SelectNativo>
+          placeholder={provSel ? "Elige…" : "Primero la provincia"}
+          placeholderBusqueda="Escribe el distrito…"
+          textoVacio="Ninguno coincide."
+        />
       </Campo>
     </div>
   );

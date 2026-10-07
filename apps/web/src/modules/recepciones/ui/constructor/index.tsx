@@ -11,9 +11,9 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Combobox,
   Button,
   Input,
-  SelectNativo,
   Table,
   TableContenedor,
   TBody,
@@ -347,26 +347,30 @@ export function ConstructorRecepcion({
         {compras.length > 0 ? (
           <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
             <div className="flex flex-wrap items-end gap-3">
-              <label className="flex min-w-64 flex-1 flex-col gap-1">
-                <span className="text-sm font-medium">
+              <div className="flex min-w-64 flex-1 flex-col gap-1">
+                <label htmlFor="rec-compra" className="text-sm font-medium">
                   ¿Viene de una compra registrada?
-                </span>
-                <SelectNativo
-                  value={estado.compraId ?? ""}
-                  onChange={(e) => {
-                    const compra = compras.find((c) => c.id === e.target.value);
+                </label>
+                {/* Con buscador (07/10): por número o por proveedor. Sin
+                    elegir nada —o quitándola con la X— es recepción suelta. */}
+                <Combobox
+                  id="rec-compra"
+                  opciones={compras.map((c) => ({
+                    valor: c.id,
+                    etiqueta: `${c.numero} · ${c.proveedor}`,
+                    detalle: c.fecha,
+                  }))}
+                  valor={estado.compraId ?? null}
+                  onCambio={(v) => {
+                    const compra = compras.find((c) => c.id === v);
                     if (compra) despachar({ tipo: "cargarCompra", compra });
                     else despachar({ tipo: "soltarCompra" });
                   }}
-                >
-                  <option value="">No — recepción suelta</option>
-                  {compras.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.numero} · {c.proveedor} · {c.fecha}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </label>
+                  placeholder="No — recepción suelta"
+                  placeholderBusqueda="Número o proveedor…"
+                  textoVacio="Ninguna compra coincide."
+                />
+              </div>
 
               {compraElegida ? (
                 <p className="text-sm text-[var(--fg-muted)]">

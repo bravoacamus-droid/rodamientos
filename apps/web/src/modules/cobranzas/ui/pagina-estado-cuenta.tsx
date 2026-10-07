@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { EstadoError, SelectNativo, formatearFecha, formatearMoneda } from "@rodatech/ui";
+import { EstadoError, formatearFecha, formatearMoneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { BotonesDocumento } from "@/componentes/botones-documento";
+import { ComboboxEnFormulario } from "@/componentes/combobox-en-formulario";
 import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 import { Volver } from "@/componentes/volver";
@@ -63,20 +64,26 @@ export default async function PaginaEstadoDeCuenta({
       action="/cobranzas/estado-de-cuenta"
       className="card flex flex-col gap-3 p-4 no-print sm:flex-row sm:items-end"
     >
-      <label className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Cliente</span>
-        <SelectNativo name="cliente" defaultValue={clienteId ?? ""} required>
-          <option value="" disabled>
-            {deudores.length > 0 ? "Elige un cliente con saldo pendiente" : "Ningún cliente debe nada ahora mismo"}
-          </option>
-          {deudores.map((c) => (
-            <option key={c.cliente_id} value={c.cliente_id}>
-              {c.cliente} — {formatearMoneda(c.saldo)}
-              {c.vencido > 0 ? ` (vencido ${formatearMoneda(c.vencido)})` : ""}
-            </option>
-          ))}
-        </SelectNativo>
-      </label>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <label htmlFor="ec-cliente" className="text-sm font-medium text-[var(--fg-muted)]">
+          Cliente
+        </label>
+        {/* Con buscador (07/10): se escribe el nombre o el RUC. Lo que debe
+            va debajo del nombre, para elegir sin abrir la cuenta. */}
+        <ComboboxEnFormulario
+          id="ec-cliente"
+          name="cliente"
+          valorInicial={clienteId ?? null}
+          opciones={deudores.map((c) => ({
+            valor: c.cliente_id,
+            etiqueta: c.cliente,
+            detalle: `debe ${formatearMoneda(c.saldo)}${c.vencido > 0 ? ` · vencido ${formatearMoneda(c.vencido)}` : ""}`,
+          }))}
+          placeholder={deudores.length > 0 ? "Elige un cliente con saldo pendiente" : "Ningún cliente debe nada ahora mismo"}
+          placeholderBusqueda="Escribe parte del nombre…"
+          textoVacio="Ningún cliente con deuda coincide."
+        />
+      </div>
       <button
         type="submit"
         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-base font-semibold text-white hover:bg-brand-700"

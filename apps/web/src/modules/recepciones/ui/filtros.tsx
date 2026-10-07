@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Input, SelectNativo } from "@rodatech/ui";
+import { Combobox, Input } from "@rodatech/ui";
 
 import type { ProveedorOpcion } from "../dominio/tipos";
 
@@ -67,20 +67,21 @@ export function FiltrosRecepcionesBarra({
         />
       </label>
 
-      <label className="flex min-w-48 flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Proveedor</span>
-        <SelectNativo
-          value={params.get("proveedor") ?? ""}
-          onChange={(e) => aplicar("proveedor", e.target.value)}
-        >
-          <option value="">Todos</option>
-          {proveedores.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.razon_social}
-            </option>
-          ))}
-        </SelectNativo>
-      </label>
+      {/* Con buscador (07/10): son decenas de proveedores. */}
+      <div className="flex w-full flex-col gap-1 sm:w-64">
+        <label htmlFor="f-proveedor" className="text-sm font-medium text-[var(--fg-muted)]">
+          Proveedor
+        </label>
+        <Combobox
+          id="f-proveedor"
+          opciones={proveedores.map((p) => ({ valor: p.id, etiqueta: p.razon_social }))}
+          valor={params.get("proveedor") || null}
+          onCambio={(v) => aplicar("proveedor", v ?? "")}
+          placeholder="Todos"
+          placeholderBusqueda="Escribe parte del nombre…"
+          textoVacio="Ningún proveedor coincide."
+        />
+      </div>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>

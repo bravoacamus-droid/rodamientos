@@ -46,6 +46,11 @@ export interface ComboboxProps {
   invalido?: boolean;
   /** Permite borrar la selección con la X. */
   limpiable?: boolean;
+  /**
+   * Dentro de un `<form>`: el valor viaja en un campo oculto con este nombre,
+   * como viajaba el del `<select>` al que sustituye (07/10).
+   */
+  name?: string;
   className?: string;
 }
 
@@ -60,6 +65,7 @@ export function Combobox({
   deshabilitado,
   invalido,
   limpiable = true,
+  name,
   className,
 }: ComboboxProps) {
   const [abierto, setAbierto] = React.useState(false);
@@ -71,6 +77,7 @@ export function Combobox({
   return (
     <Popover open={abierto} onOpenChange={setAbierto}>
       <div className={cn("relative", className)}>
+        {name ? <input type="hidden" name={name} value={valor ?? ""} /> : null}
         <PopoverTrigger
           id={id}
           type="button"
