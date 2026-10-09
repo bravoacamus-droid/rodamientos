@@ -4637,8 +4637,28 @@ las cotizaciones **nuevas perdían la disponibilidad** de cada línea y la casil
 de imprimirla (solo se arreglaban al editar); y `contacto_id` viajaba en el
 payload desde la 035 y **zod lo quitaba**. Los dos, arreglados en la 111.
 
-**Sin probar con el botón:** «Generar órdenes de compra» de verdad (crea
-compras reales). Probado en el centinela y en pantalla hasta el diálogo.
+**Quién más pide lo mismo** (Luis, 09/10, tras la prueba de punta a punta):
+*«si justo dos o tres cotizaciones están pidiendo lo mismo […] diciendo "2 ítems
+de este producto están en otra cotización", con un botón de ver […] a la hora de
+comprar tiene que decirle cuántos ítems tiene que comprar, siempre y cuando se
+apruebe la cotización; si no, no: es como un borrador»*. Salió porque en la
+prueba se compraron 10 para REACTIVOS y el reparto por orden de confirmación le
+dio 6 a COFACO (COT1-000005, aprobada el 06/10).
+
+- En cada línea de la cotización, un botón pequeño **«6 más en otro pedido ·
+  Ver»** (ámbar si hay aprobadas; gris «En otra cotización» si solo hay
+  borradores o enviadas). Abre a qué cliente, en qué cotización, cuántas y su
+  estado, y la cuenta: aprobadas − stock − en camino = hay que comprar.
+  También dentro de «Analizar precio de compra».
+- En **«Generar órdenes de compra»**: «Otros pedidos aprobados necesitan 6
+  más» con **Ver** y **Sumar 6**. Solo cuentan las aprobadas; las vencidas no
+  salen.
+- El reparto por orden de confirmación NO se cambió: comprando para todos, ya
+  alcanza.
+
+**Probado de punta a punta el 09/10** con permiso de Luis: cotizar analizando,
+editar, aprobar, generar las dos órdenes (CMP-26-00013/14) y recibir una. Todo
+borrado después y devuelto el stock, los costos y los correlativos.
 
 ## §BB · 09/10 — La hoja de precios sabe lo que pasó antes
 

@@ -54,10 +54,13 @@ export function AnalizarCompra({
   linea,
   onCerrar,
   despachar,
+  otros,
 }: {
   linea: LineaConstructor;
   onCerrar: () => void;
   despachar: (a: Accion) => void;
+  /** «Este producto está en otras cotizaciones · Ver» (09/10). */
+  otros?: React.ReactNode;
 }) {
   const [filas, setFilas] = React.useState<ProveedorLinea[]>(linea.proveedores);
   const [precioVenta, setPrecioVenta] = React.useState(String(linea.valorUnitario || ""));
@@ -181,6 +184,7 @@ export function AnalizarCompra({
                 <span className="text-[var(--fg-muted)]">el {formatearFecha(ref.ultimaVenta.fecha)}</span>
               </li>
             ) : null}
+            {otros ? <li>{otros}</li> : null}
             {datos && !ref?.ultimaCompra && !ref?.ultimaVenta ? (
               <li className="text-[var(--fg-muted)]">Nunca se compró ni se vendió en el sistema.</li>
             ) : null}

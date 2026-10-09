@@ -4,6 +4,9 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { historialDeProducto, referenciasDeProductos, type HistorialProducto, type Referencias } from "@/modules/compras/api/hoja-precios";
 
+import { demandaDeProductos } from "../api/demanda";
+import type { DemandaProducto } from "../dominio/demanda";
+
 /**
  * Lo que hace falta para «Analizar precio de compra» de una línea (09/10).
  *
@@ -82,5 +85,27 @@ export async function datosParaAnalizar(
     };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer el producto." };
+  }
+}
+
+/**
+ * Quién más pide los productos de la cotización que se está armando (09/10).
+ * Para el aviso pequeño de cada línea y su «Ver».
+ */
+export async function demandaParaLineas(
+  productoIds: string[],
+): Promise<{ ok: true; datos: DemandaProducto[] } | { ok: false; error: string }> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (!(ROLES as readonly string[]).includes(perfil.rol) && perfil.rol !== "compras") {
+    return { ok: false, error: "Tu rol no puede ver los pedidos." };
+  }
+  if (!Array.isArray(productoIds) || productoIds.length > 200 || !productoIds.every((i) => typeof i === "string" && /^[0-9a-f-]{36}$/i.test(i))) {
+    return { ok: false, error: "Los productos no son válidos." };
+  }
+  try {
+    return { ok: true, datos: [...(await demandaDeProductos(productoIds)).values()] };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer." };
   }
 }

@@ -17,6 +17,7 @@ import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
+import { demandaDeProductos } from "../api/demanda";
 import { proveedoresGuardados } from "../dominio/compra-linea";
 import { perfilActual } from "@rodatech/db/servidor";
 import { YaFacturado } from "./detalle/ya-facturado";
@@ -197,9 +198,10 @@ export default async function PaginaDetalleCotizacion({
 
   // Las órdenes de compra (111): solo de un pedido confirmado.
   const confirmado = cabecera.estado === "aprobada" || cabecera.estado === "atendida";
-  const [ordenes, perfil] = confirmado
-    ? await Promise.all([ordenesDelPedido(cabecera.id), perfilActual()])
-    : [[], null];
+  const idsConProducto = lineas.map((l) => l.producto_id).filter((x): x is string => !!x);
+  const [ordenes, perfil, demanda] = confirmado
+    ? await Promise.all([ordenesDelPedido(cabecera.id), perfilActual(), demandaDeProductos(idsConProducto)])
+    : [[], null, new Map()];
   const lineasConfirmadas = lineas
     .filter((l) => l.producto_id !== null)
     .map((l) => ({
@@ -385,6 +387,7 @@ export default async function PaginaDetalleCotizacion({
             lineas={lineasConfirmadas}
             existentes={ordenes}
             puedeGenerar={!!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)}
+            demanda={[...demanda.values()]}
           />
         ) : null}
 

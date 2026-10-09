@@ -22,6 +22,8 @@ import {
 import { generarOrdenesDeCompra } from "../../acciones/ordenes";
 import type { OrdenDelPedido } from "../../api/consultas";
 import { proponerOrdenes, type LineaConfirmada, type OrdenPropuesta } from "../../dominio/compra-linea";
+import { faltanParaOtros, otrosPedidos, type DemandaProducto } from "../../dominio/demanda";
+import { OtrosPedidos } from "../otros-pedidos";
 
 const dinero = (n: number, moneda: string) =>
   n.toLocaleString("es-PE", { style: "currency", currency: moneda === "PEN" ? "PEN" : "USD" });
@@ -40,11 +42,14 @@ export function OrdenesDeCompra({
   lineas,
   existentes,
   puedeGenerar,
+  demanda,
 }: {
   cotizacionId: string;
   lineas: LineaConfirmada[];
   existentes: OrdenDelPedido[];
   puedeGenerar: boolean;
+  /** Quién más pide estos productos (09/10). */
+  demanda: DemandaProducto[];
 }) {
   const vivas = existentes.filter((o) => o.estado !== "anulada");
   const pedidos = new Set(vivas.flatMap((o) => o.productos.map((p) => `${o.proveedorId}:${p}`)));
@@ -65,7 +70,12 @@ export function OrdenesDeCompra({
           <h2 className="text-base font-semibold">Órdenes de compra</h2>
         </div>
         {puedeGenerar && propuestas.length > 0 ? (
-          <DialogoGenerar cotizacionId={cotizacionId} propuestas={propuestas} primera={vivas.length === 0} />
+          <DialogoGenerar
+            cotizacionId={cotizacionId}
+            propuestas={propuestas}
+            primera={vivas.length === 0}
+            demanda={new Map(demanda.map((d) => [d.productoId, d]))}
+          />
         ) : null}
       </header>
 
@@ -107,10 +117,12 @@ function DialogoGenerar({
   cotizacionId,
   propuestas,
   primera,
+  demanda,
 }: {
   cotizacionId: string;
   propuestas: OrdenPropuesta[];
   primera: boolean;
+  demanda: Map<string, DemandaProducto>;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
@@ -133,6 +145,16 @@ function DialogoGenerar({
           : { ...o, items: o.items.map((i) => (i.productoId === prod ? { ...i, cantidad: Math.max(0, Math.round(n)) } : i)) },
       ),
     );
+
+  /*
+    A la hora de comprar, cuántas en total (Luis, 09/10): si otros pedidos
+    APROBADOS esperan el mismo producto, se dice cuántos más hacen falta y se
+    suman con un clic. Los que no están aprobados no cuentan.
+  */
+  const pidiendo = (prod: string) =>
+    ordenes
+      .filter((o) => !fuera.has(o.proveedorId))
+      .reduce((s, o) => s + o.items.filter((i) => i.productoId === prod).reduce((t, i) => t + i.cantidad, 0), 0);
 
   const elegidas = ordenes
     .filter((o) => !fuera.has(o.proveedorId))
@@ -226,6 +248,33 @@ function DialogoGenerar({
                       <span className="tabular text-sm text-[var(--fg-muted)]">
                         a {dinero(i.costo, o.moneda)} + IGV
                       </span>
+                      {(() => {
+                        const d = demanda.get(i.productoId);
+                        const mas = Math.ceil(faltanParaOtros(d, pidiendo(i.productoId)));
+                        if (excluida || otrosPedidos(d, cotizacionId).aprobadas.length === 0) return null;
+                        return (
+                          <div className="flex w-full flex-wrap items-center gap-2 rounded-md bg-[var(--warn-bg)] px-2 py-1.5 text-sm">
+                            {mas > 0 ? (
+                              <span className="font-medium text-[var(--warn)]">
+                                Otros pedidos aprobados necesitan {mas} más.
+                              </span>
+                            ) : (
+                              <span className="text-[var(--fg-muted)]">Con esto alcanza también para los otros pedidos aprobados.</span>
+                            )}
+                            <OtrosPedidos demanda={d} actual={cotizacionId} codigo={i.codigo} />
+                            {mas > 0 ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cantidad(o.proveedorId, i.productoId, i.cantidad + mas)}
+                              >
+                                Sumar {mas}
+                              </Button>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                     </li>
                   ))}
                 </ul>

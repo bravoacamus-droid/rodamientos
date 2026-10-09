@@ -54,6 +54,8 @@ import { BuscadorClientes } from "./buscador-clientes";
 import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
+import { demandaParaLineas } from "../../acciones/analizar-compra";
+import type { DemandaProducto } from "../../dominio/demanda";
 
 /**
  * Constructor de cotizaciones.
@@ -205,6 +207,25 @@ export function Constructor({
     producto que está en el anaquel no hay que comprarlo.
   */
   const sinAnalizar = lineasSinAnalizar(estado);
+
+  /*
+    Quién más pide los mismos productos (09/10). Se lee cuando cambia QUÉ
+    productos hay, no con cada tecla: la clave es la lista de ids.
+  */
+  const idsProductos = [...new Set(estado.lineas.map((l) => l.productoId).filter((x): x is string => !!x))]
+    .sort()
+    .join(",");
+  const [demanda, setDemanda] = useState<Map<string, DemandaProducto>>(new Map());
+  useEffect(() => {
+    if (!idsProductos) return;
+    let vivo = true;
+    void demandaParaLineas(idsProductos.split(",")).then((r) => {
+      if (vivo && r.ok) setDemanda(new Map(r.datos.map((d) => [d.productoId, d])));
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [idsProductos]);
   const [preguntando, setPreguntando] = useState(false);
   // Un ref y no un estado: el clic de «Guardar igual» envía en el mismo turno.
   const guardarIgual = useRef(false);
@@ -625,6 +646,8 @@ export function Constructor({
                     despachar={despachar}
                     puedeEditarKit={puedeEditarKit}
                         puedeAjustarStock={puedeAjustarStock}
+                    demanda={l.productoId ? demanda.get(l.productoId) : undefined}
+                    cotizacionActual={editando?.id ?? null}
                   />
                 ))}
               </ul>
@@ -666,6 +689,8 @@ export function Constructor({
                         despachar={despachar}
                         puedeEditarKit={puedeEditarKit}
                         puedeAjustarStock={puedeAjustarStock}
+                        demanda={l.productoId ? demanda.get(l.productoId) : undefined}
+                        cotizacionActual={editando?.id ?? null}
                       />
                     ))}
                   </TBody>

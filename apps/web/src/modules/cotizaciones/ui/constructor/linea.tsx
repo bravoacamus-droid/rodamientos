@@ -53,6 +53,8 @@ import {
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
 import { AnalizarCompra } from "./analizar-compra";
+import { OtrosPedidos } from "../otros-pedidos";
+import type { DemandaProducto } from "../../dominio/demanda";
 import { EditarArticulo } from "./editar-articulo";
 import { PreciosYStock } from "./precios-y-stock";
 import { DialogoKit } from "./dialogo-kit";
@@ -98,6 +100,9 @@ interface PropsLinea {
   puedeEditarKit?: boolean;
   /** Gerencia y admin: los que pueden cuadrar el stock (06/10). */
   puedeAjustarStock?: boolean;
+  /** Quién más pide este producto (09/10). */
+  demanda?: DemandaProducto;
+  cotizacionActual?: string | null;
   /**
    * Fila de tabla o tarjeta (revisión de diseño del 02/10). Es el mismo
    * componente y no dos: la línea lleva sus diálogos, sus paneles y sus
@@ -121,6 +126,8 @@ export function FilaLinea({
   puedeEditarKit = false,
   puedeAjustarStock = false,
   vista = "fila",
+  demanda,
+  cotizacionActual = null,
 }: PropsLinea) {
   /** El cuadre de stock, sin salir de la cotización (06/10). */
   const [cuadrando, setCuadrando] = useState(false);
@@ -760,7 +767,12 @@ export function FilaLinea({
       </Dialog>
 
       {analizando ? (
-        <AnalizarCompra linea={linea} despachar={despachar} onCerrar={() => setAnalizando(false)} />
+        <AnalizarCompra
+          linea={linea}
+          despachar={despachar}
+          onCerrar={() => setAnalizando(false)}
+          otros={<OtrosPedidos demanda={demanda} actual={cotizacionActual} codigo={linea.codigo} />}
+        />
       ) : null}
     </>
   );
@@ -803,6 +815,9 @@ export function FilaLinea({
           <div className="shrink-0">{menuOpciones(true)}</div>
         </div>
         <p className="mt-1 text-sm">{linea.descripcion}</p>
+        <div className="mt-1">
+          <OtrosPedidos demanda={demanda} actual={cotizacionActual} codigo={linea.codigo} />
+        </div>
         <p className="text-sm">
           {linea.marca ?? (
             <span className="text-[var(--fg-subtle)]">sin marca</span>
@@ -950,6 +965,10 @@ export function FilaLinea({
         <td className="min-w-[6.5rem]">
           <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
           {textoStock}
+          {/* Si otros piden lo mismo (09/10): pequeño, con su «Ver». */}
+          <div className="mt-1">
+            <OtrosPedidos demanda={demanda} actual={cotizacionActual} codigo={linea.codigo} />
+          </div>
         </td>
 
         {/*
