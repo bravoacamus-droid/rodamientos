@@ -143,7 +143,7 @@ export function HojaPrecios({
   return (
     <div className="flex flex-col gap-4">
       {/* ------------------------------------------------ Barra de acciones */}
-      <div className="sticky top-0 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-sm">
+      <div className="sticky top-16 z-20 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-sm">
         <p className="flex items-center gap-2 text-base">
           {sucia ? (
             <>

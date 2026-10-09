@@ -4592,6 +4592,48 @@ de Defontana.
 
 ---
 
+## §BA · 07–09/10 — «Pedir precios» en una sola hoja (110)
+
+Luis, 07/10: *«tiene que ser sencillo, fácil de usar; recuerda que voy a pedir
+precio, no voy a comprar nada todavía. Yo quiero seleccionar mis proveedores y
+los productos […] registrar qué cantidad quiero comprar y el precio de compra
+[…] si no tiene, pues no pasa nada: algo para poner "no tiene" […] y mientras
+lleno, el análisis de margen, si me conviene comprar, a quién comprar»*. Y que
+se pueda *«jalar productos con precios»* del análisis de importación.
+
+**Antes**: armar la consulta en una pantalla («¿Cómo lo preguntas?», «Todo
+junto o cada producto por su lado», «¿Vas a esperar respuesta?») y apuntar los
+precios en otra, proveedor por proveedor, con «Ver o corregir».
+
+**Ahora**: una hoja, `ui/hoja-precios/`, la misma para la consulta nueva y la
+abierta. Productos en filas, proveedores en columnas, el precio o «No tiene»
+en cada casilla (con «Deshacer»). Mientras se llena (`dominio/hoja-precios.ts`,
+con tests):
+
+- el más barato de cada fila en verde, «Mejor»; «Comprar aquí» para elegir otro;
+- el margen sobre el costo contra el P.V., en rojo, ámbar o verde;
+- la columna «A quién comprar», fija a la derecha en escritorio;
+- por proveedor: cuántos tiene, todo con él, lo que se le compra;
+- «Lo que conviene»: con precio, comprando lo mejor, el margen y cuánto ahorra
+  repartir contra comprarle todo al que lo tiene todo.
+
+Se guarda entera con `guardar_hoja_precios` (110): crea o actualiza la
+consulta, en una transacción, y no deja quitar lo que ya se compró. Su
+centinela la ejecuta dos veces y repone la secuencia del CPR, que no vuelve
+atrás con el rollback. «Pasar a compras» usa `comprarDeLaRonda` de siempre.
+Las consultas cerradas siguen con la comparativa de antes.
+
+«Traer de un análisis de importación» trae la CANT. PEDIDO y, si se quiere, el
+proveedor del análisis con el **PU LIMA** como precio, no el FOB: contra un
+proveedor de Lima, el FOB haría ganar siempre a la importación. Lo que no está
+en el catálogo no entra, y se dice cuál.
+
+**Probado en pantalla** (1440 y 390 px): guardar, recargar, editar y volver a
+guardar (la consulta de prueba se borró y la secuencia volvió a 17); el
+diálogo de «Pasar a compras»; traer ANA-26-00001 con una línea enlazada al
+catálogo un momento (entra 6 × $ 8.72, su PU LIMA) y desenlazada después.
+**Sin probar**: confirmar «Pasar a compras» de verdad, porque crea compras.
+
 ## §AZ · 07/10 — Buscador en los desplegables, y filtros que no se pisan
 
 Luis, 07/10: *«todos los select que tengan datos tienen que tener un buscador
