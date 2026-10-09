@@ -9,7 +9,7 @@ import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 import { precargaDeCompra } from "../../api/por-comprar";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 
-import { referenciasDeProductos } from "../../api/hoja-precios";
+import { productosRecientes, referenciasDeProductos } from "../../api/hoja-precios";
 import { hojaVacia } from "../../dominio/hoja-precios";
 import { HojaPrecios } from "../hoja-precios/hoja";
 
@@ -65,7 +65,7 @@ export default async function PaginaPedirPrecio({
   */
   const ids = items.map((i) => i.producto.id);
 
-  const refs = await referenciasDeProductos(ids);
+  const [refs, recientes] = await Promise.all([referenciasDeProductos(ids), productosRecientes(6)]);
 
   const [proveedores] =
     ids.length === 0
@@ -114,8 +114,11 @@ export default async function PaginaPedirPrecio({
             cantidad: Math.max(1, Math.round(i.cantidad)),
             precioVenta: refs.get(i.producto.id)?.precioVenta ?? null,
             ultimoCosto: refs.get(i.producto.id)?.ultimoCosto ?? null,
+            ultimaCompra: refs.get(i.producto.id)?.ultimaCompra ?? null,
+            ultimaVenta: refs.get(i.producto.id)?.ultimaVenta ?? null,
           })),
         }}
+        recientes={recientes}
         sugeridos={(proveedores.ok ? proveedores.datos : [])
           .filter((p) => p.coincidencias > 0)
           .map((p) => ({ proveedorId: p.id, nombre: p.razon_social, coincidencias: p.coincidencias }))}

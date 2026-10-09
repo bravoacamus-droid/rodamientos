@@ -165,6 +165,41 @@ describe("la hoja: el análisis", () => {
   });
 });
 
+describe("la hoja: cuánto se gana", () => {
+  it("por unidad y en total, contra el P.V.", () => {
+    const a = analizar(hojaBase());
+    // x: vende 20, compra 10 → 10 por unidad, 10 unidades
+    expect(a.filas.x!.gananciaUnidad).toBe(10);
+    expect(a.filas.x!.gananciaTotal).toBe(100);
+    // 400 de venta − 220 de costo
+    expect(a.ganancia).toBe(180);
+  });
+
+  it("sin P.V., se mide contra la última venta", () => {
+    let h = hojaVacia();
+    h = reducir(h, {
+      tipo: "productos",
+      productos: [{ ...prod("x", 2), ultimaVenta: { precio: 15, fecha: "2026-09-01", cliente: "C" } }],
+    });
+    h = reducir(h, { tipo: "proveedor", proveedor: prov("a") });
+    h = reducir(h, { tipo: "precio", proveedorId: "a", productoId: "x", precio: 10 });
+    const a = analizar(h);
+    expect(a.filas.x!.margen).toBeCloseTo(0.5, 6);
+    expect(a.filas.x!.gananciaTotal).toBe(10);
+  });
+
+  it("dice si sale más caro que la última compra", () => {
+    let h = hojaVacia();
+    h = reducir(h, {
+      tipo: "productos",
+      productos: [{ ...prod("x", 1, 20), ultimaCompra: { costoUsd: 8, fecha: "2026-09-01", proveedor: "P" } }],
+    });
+    h = reducir(h, { tipo: "proveedor", proveedor: prov("a") });
+    h = reducir(h, { tipo: "precio", proveedorId: "a", productoId: "x", precio: 10 });
+    expect(analizar(h).filas.x!.contraUltimaCompra).toBeCloseTo(0.25, 6);
+  });
+});
+
 describe("la hoja: lo que sale", () => {
   it("una compra por proveedor, en su moneda y sin IGV", () => {
     let h = hojaBase();

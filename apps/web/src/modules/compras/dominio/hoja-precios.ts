@@ -30,6 +30,10 @@ export interface ProductoHoja {
   ultimoCosto: number | null;
   /** De dónde entró: «ANA-26-00001» si se trajo de un análisis. */
   origen?: string | null;
+  /** La última compra de verdad, en dólares sin IGV (07/10). */
+  ultimaCompra?: { costoUsd: number; fecha: string; proveedor: string } | null;
+  /** La última venta (factura), en dólares sin IGV. */
+  ultimaVenta?: { precio: number; fecha: string; cliente: string } | null;
 }
 
 export interface ProveedorHoja {
@@ -92,7 +96,13 @@ export type Accion =
   | { tipo: "elegir"; productoId: string; proveedorId: string | null }
   | { tipo: "nota"; nota: string }
   /** El precio de venta y el último costo, que llegan después de añadir el producto. */
-  | { tipo: "referencias"; datos: Record<string, { precioVenta: number | null; ultimoCosto: number | null }> }
+  | {
+      tipo: "referencias";
+      datos: Record<
+        string,
+        Pick<ProductoHoja, "precioVenta" | "ultimoCosto" | "ultimaCompra" | "ultimaVenta">
+      >;
+    }
   | {
       /** Lo que viene de un análisis de importación: sus productos y, si se quiere, su proveedor con sus precios. */
       tipo: "importar";
@@ -216,7 +226,15 @@ export function reducir(hoja: Hoja, a: Accion): Hoja {
         ...hoja,
         productos: hoja.productos.map((p) => {
           const r = a.datos[p.productoId];
-          return r ? { ...p, precioVenta: p.precioVenta ?? r.precioVenta, ultimoCosto: p.ultimoCosto ?? r.ultimoCosto } : p;
+          return r
+            ? {
+                ...p,
+                precioVenta: p.precioVenta ?? r.precioVenta,
+                ultimoCosto: p.ultimoCosto ?? r.ultimoCosto,
+                ultimaCompra: r.ultimaCompra ?? p.ultimaCompra ?? null,
+                ultimaVenta: r.ultimaVenta ?? p.ultimaVenta ?? null,
+              }
+            : p;
         }),
       };
     case "importar": {
@@ -237,6 +255,17 @@ export function reducir(hoja: Hoja, a: Accion): Hoja {
 // ---------------------------------------------------------------------------
 // El análisis, mientras se llena
 // ---------------------------------------------------------------------------
+
+/**
+ * Contra qué precio de venta se mide (07/10): el P.V. del catálogo y, si no
+ * tiene, a cuánto se vendió la última vez. Luis: *«cuánto le vendió la última
+ * vez […] cuánto va a ganar por cada venta»*.
+ */
+export function precioDeReferencia(p: Pick<ProductoHoja, "precioVenta" | "ultimaVenta">): number | null {
+  if (p.precioVenta && p.precioVenta > 0) return p.precioVenta;
+  if (p.ultimaVenta && p.ultimaVenta.precio > 0) return p.ultimaVenta.precio;
+  return null;
+}
 
 /** El margen sobre el COSTO, como todo el sistema (023): (venta − costo) ÷ costo. */
 export function margenSobreCosto(venta: number | null, costo: number | null): number | null {
@@ -267,6 +296,12 @@ export interface FilaAnalizada {
   sinRespuesta: number;
   /** Margen comprando al elegido. */
   margen: number | null;
+  /** Lo que se gana por unidad vendiendo al precio de referencia. */
+  gananciaUnidad: number | null;
+  /** Y por todas las que se compran. */
+  gananciaTotal: number | null;
+  /** El elegido contra la última compra: +0.1 = 10 % más caro. Null sin compra anterior. */
+  contraUltimaCompra: number | null;
   /** Costo de la fila con el elegido: cantidad × precio. */
   total: number;
   /** El elegido no tiene todas las que se piden. */
@@ -306,6 +341,8 @@ export interface Analisis {
   /** Costo de las filas que tienen precio de venta, para el margen global. */
   costoConVenta: number;
   margen: number | null;
+  /** Lo que se gana en dólares, de las filas con precio de venta. */
+  ganancia: number;
   /** El que da todo más barato, si alguno tiene todo. */
   todoAUno: { proveedorId: string; total: number } | null;
   /** Cuánto se ahorra repartiendo contra todo a ese uno. */
@@ -378,8 +415,9 @@ export function analizar(hoja: Hoja): Analisis {
       const col = columnas[elegido.proveedorId]!;
       col.productosElegidos++;
       col.totalElegido += filaTotal;
-      if (p.precioVenta && p.precioVenta > 0) {
-        venta += p.precioVenta * Math.min(elegido.puede, p.cantidad);
+      const ref = precioDeReferencia(p);
+      if (ref) {
+        venta += ref * Math.min(elegido.puede, p.cantidad);
         costoConVenta += filaTotal;
       }
     }
@@ -392,7 +430,17 @@ export function analizar(hoja: Hoja): Analisis {
       elegidoAMano: Boolean(elegido && masBarato && elegido.proveedorId !== masBarato.proveedorId),
       noTienen,
       sinRespuesta,
-      margen: margenSobreCosto(p.precioVenta, elegido?.usd ?? null),
+      margen: margenSobreCosto(precioDeReferencia(p), elegido?.usd ?? null),
+      gananciaUnidad:
+        elegido && precioDeReferencia(p) ? dos((precioDeReferencia(p) as number) - elegido.usd) : null,
+      gananciaTotal:
+        elegido && precioDeReferencia(p)
+          ? dos(((precioDeReferencia(p) as number) - elegido.usd) * Math.min(elegido.puede, p.cantidad))
+          : null,
+      contraUltimaCompra:
+        elegido && p.ultimaCompra && p.ultimaCompra.costoUsd > 0
+          ? (elegido.usd - p.ultimaCompra.costoUsd) / p.ultimaCompra.costoUsd
+          : null,
       total: dos(filaTotal),
       faltan: elegido ? Math.max(0, p.cantidad - elegido.puede) : 0,
       masCaroQueAntes: Boolean(elegido && p.ultimoCosto && p.ultimoCosto > 0 && elegido.usd > p.ultimoCosto * 1.005),
@@ -422,6 +470,7 @@ export function analizar(hoja: Hoja): Analisis {
     venta: dos(venta),
     costoConVenta: dos(costoConVenta),
     margen: margenSobreCosto(venta, costoConVenta),
+    ganancia: dos(venta - costoConVenta),
     todoAUno,
     ahorro: todoAUno ? dos(Math.max(0, todoAUno.total - total)) : 0,
     proveedoresElegidos: Object.values(columnas).filter((c) => c.productosElegidos > 0).length,

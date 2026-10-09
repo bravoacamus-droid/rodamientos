@@ -12,11 +12,11 @@ import {
   DialogTitle,
   formatearFecha,
 } from "@rodatech/ui";
-import { Ship, ShoppingCart, TriangleAlert, UserPlus } from "lucide-react";
+import { History, Ship, ShoppingCart, TriangleAlert, UserPlus } from "lucide-react";
 
 import { comprarDeLaRonda } from "../../acciones/comparar";
-import { datosDeProveedor, listaDeAnalisis, traerAnalisis } from "../../acciones/hoja-precios";
-import type { AnalisisParaHoja } from "../../api/hoja-precios";
+import { datosDeProveedor, historialParaHoja, listaDeAnalisis, traerAnalisis } from "../../acciones/hoja-precios";
+import type { AnalisisParaHoja, HistorialProducto } from "../../api/hoja-precios";
 import type { CompraDeLaHoja, ProveedorHoja } from "../../dominio/hoja-precios";
 import { BuscadorProveedor } from "../pedir-precio/anadir";
 
@@ -342,5 +342,127 @@ export function DialogoComprar({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * El historial de un producto: lo que te cotizaron, lo que compraste y lo que
+ * vendiste, con fecha (07/10).
+ *
+ * Luis: *«sé que le compré a uno, pero igual tiene que guardarse el precio del
+ * otro para ya no pedirle precio después, porque ya sé cuál es su precio»*.
+ * Cada casilla de cada consulta es una respuesta guardada; aquí se ven todas,
+ * se le comprara o no.
+ */
+export function DialogoHistorial({ productoId, codigo }: { productoId: string; codigo: string }) {
+  const [abierto, setAbierto] = React.useState(false);
+  const [datos, setDatos] = React.useState<HistorialProducto | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [, empezar] = React.useTransition();
+
+  function abrir() {
+    setAbierto(true);
+    setError(null);
+    empezar(async () => {
+      const r = await historialParaHoja(productoId);
+      if (!r.ok) setError(r.error);
+      else setDatos(r.datos);
+    });
+  }
+
+  return (
+    <Dialog open={abierto} onOpenChange={setAbierto}>
+      <button
+        type="button"
+        onClick={abrir}
+        className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm font-medium hover:bg-[var(--surface-2)]"
+      >
+        <History className="size-4" aria-hidden="true" />
+        Historial
+      </button>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Historial de {codigo}</DialogTitle>
+          <DialogDescription>Lo que te cotizaron, lo que compraste y lo que vendiste. En dólares sin IGV.</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
+          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {datos === null && !error ? (
+            <p className="anim-latido py-6 text-center text-sm text-[var(--fg-muted)]">Cargando el historial…</p>
+          ) : null}
+          {datos ? (
+            <>
+              <Apartado titulo="Te cotizaron" vacio="Nadie te ha dado precio de este producto todavía.">
+                {datos.cotizado.map((c, i) => (
+                  <Fila
+                    key={i}
+                    fecha={c.fecha}
+                    quien={c.proveedor}
+                    detalle={c.consulta}
+                    cifra={c.noTiene ? "no lo tenía" : c.costoUsd !== null ? dinero(c.costoUsd) : "—"}
+                    apagada={c.noTiene}
+                  />
+                ))}
+              </Apartado>
+              <Apartado titulo="Compraste" vacio="No hay compras registradas de este producto.">
+                {datos.comprado.map((c, i) => (
+                  <Fila key={i} fecha={c.fecha} quien={c.proveedor} detalle={`${c.numero} · ${c.cantidad} und.`} cifra={dinero(c.costoUsd)} />
+                ))}
+              </Apartado>
+              <Apartado titulo="Vendiste" vacio="No se ha vendido todavía.">
+                {datos.vendido.map((v, i) => (
+                  <Fila key={i} fecha={v.fecha} quien={v.cliente} detalle={`${v.documento} · ${v.cantidad} und.`} cifra={dinero(v.precio)} />
+                ))}
+              </Apartado>
+            </>
+          ) : null}
+        </DialogBody>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
+            Cerrar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Apartado({ titulo, vacio, children }: { titulo: string; vacio: string; children: React.ReactNode[] }) {
+  return (
+    <section className="flex flex-col gap-1">
+      <h3 className="text-base font-semibold">{titulo}</h3>
+      {children.length === 0 ? (
+        <p className="rounded-md bg-[var(--surface-2)] p-2.5 text-sm text-[var(--fg-muted)]">{vacio}</p>
+      ) : (
+        <ul className="divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">{children}</ul>
+      )}
+    </section>
+  );
+}
+
+function Fila({
+  fecha,
+  quien,
+  detalle,
+  cifra,
+  apagada = false,
+}: {
+  fecha: string;
+  quien: string;
+  detalle: string;
+  cifra: string;
+  apagada?: boolean;
+}) {
+  return (
+    <li className={`flex items-baseline gap-3 px-3 py-2 text-sm ${apagada ? "text-[var(--fg-muted)]" : ""}`}>
+      <span className="w-24 shrink-0 tabular text-[var(--fg-muted)]">{formatearFecha(fecha)}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-medium" title={quien}>
+          {quien}
+        </span>
+        <span className="block text-[var(--fg-subtle)]">{detalle}</span>
+      </span>
+      <span className="shrink-0 text-base font-semibold tabular">{cifra}</span>
+    </li>
   );
 }

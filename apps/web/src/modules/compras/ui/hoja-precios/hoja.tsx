@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input } from "@rodatech/ui";
-import { CircleCheck, Plus, Save, Trash2, TriangleAlert, X } from "lucide-react";
+import { Button, Input, formatearFecha } from "@rodatech/ui";
+import { CircleCheck, Plus, Save, Search, Trash2, TriangleAlert, X } from "lucide-react";
 
 import { datosDeProveedor, guardarHojaPrecios, referenciasParaHoja } from "../../acciones/hoja-precios";
 import type { AnalisisParaHoja } from "../../api/hoja-precios";
@@ -14,15 +14,18 @@ import {
   CASILLA_VACIA,
   clave,
   comprasDeLaHoja,
+  margenSobreCosto,
+  precioDeReferencia,
   reducir,
   type Hoja,
   type ProductoHoja,
 } from "../../dominio/hoja-precios";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 
+import type { ProductoComprable } from "../../acciones/buscar";
 import { BuscadorCompra } from "../constructor/buscador";
 import { CasillaPrecio } from "./casilla";
-import { DialogoAnalisis, DialogoComprar, DialogoProveedor } from "./dialogos";
+import { DialogoAnalisis, DialogoComprar, DialogoHistorial, DialogoProveedor } from "./dialogos";
 
 const usd = (n: number) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -53,11 +56,14 @@ export interface Sugerido {
 export function HojaPrecios({
   inicial,
   sugeridos = [],
+  recientes = [],
   soloLectura = false,
 }: {
   inicial: Hoja;
   /** Los que ya vendieron estos productos: se añaden con un clic. */
   sugeridos?: Sugerido[];
+  /** Los últimos comprados o preguntados, para el buscador vacío. */
+  recientes?: ProductoComprable[];
   soloLectura?: boolean;
 }) {
   const router = useRouter();
@@ -108,9 +114,8 @@ export function HojaPrecios({
   /** Productos nuevos: entran ya, y su precio de venta llega después. */
   function anadirProductos(productos: ProductoHoja[]) {
     despachar({ tipo: "productos", productos });
-    const sinReferencia = productos.filter((p) => p.precioVenta === null && p.ultimoCosto === null).map((p) => p.productoId);
-    if (sinReferencia.length === 0) return;
-    void referenciasParaHoja(sinReferencia).then((r) => {
+    // La última compra y la última venta llegan después, para todos.
+    void referenciasParaHoja(productos.map((p) => p.productoId)).then((r) => {
       if (r.ok) despachar({ tipo: "referencias", datos: r.datos });
     });
   }
@@ -202,8 +207,17 @@ export function HojaPrecios({
         <section className="card flex flex-col gap-3 p-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-sm font-medium">Añadir producto</span>
+              {/* Que se vea que AQUÍ se busca (07/10): Luis, *«tenemos que poner
+                  algo que diga que ahí se tiene que buscar productos»*. */}
+              <span className="flex items-center gap-1.5 text-base font-semibold">
+                <Search className="size-5 text-brand-600" aria-hidden="true" />
+                Busca aquí el producto que vas a pedir
+              </span>
+              <span className="text-sm text-[var(--fg-muted)]">
+                Escribe el código, la marca o la descripción. Al tocar la caja salen los últimos que compraste.
+              </span>
               <BuscadorCompra
+                recientes={recientes}
                 ultimosCostos={{}}
                 onElegir={(p) =>
                   anadirProductos([
@@ -295,18 +309,32 @@ export function HojaPrecios({
                               {p.marca ? `${p.marca} · ` : ""}
                               {p.descripcion}
                             </p>
-                            <p className="text-sm">
-                              {p.precioVenta ? (
-                                <>
-                                  vendes a <strong className="tabular">{usd(p.precioVenta)}</strong>
-                                </>
-                              ) : (
-                                <span className="text-[var(--fg-subtle)]">sin precio de venta</span>
-                              )}
-                              {p.ultimoCosto ? (
-                                <span className="text-[var(--fg-subtle)]"> · antes costó {usd(p.ultimoCosto)}</span>
+                            <ul className="mt-1 flex flex-col gap-0.5 text-sm">
+                              <li>
+                                {p.precioVenta ? (
+                                  <>
+                                    Lista: <strong className="tabular">{usd(p.precioVenta)}</strong>
+                                  </>
+                                ) : (
+                                  <span className="text-[var(--fg-subtle)]">Sin precio de lista</span>
+                                )}
+                              </li>
+                              {p.ultimaVenta ? (
+                                <li title={p.ultimaVenta.cliente}>
+                                  Lo vendiste a <strong className="tabular">{usd(p.ultimaVenta.precio)}</strong>{" "}
+                                  <span className="text-[var(--fg-subtle)]">el {formatearFecha(p.ultimaVenta.fecha)}</span>
+                                </li>
                               ) : null}
-                            </p>
+                              {p.ultimaCompra ? (
+                                <li title={p.ultimaCompra.proveedor}>
+                                  Lo compraste a <strong className="tabular">{usd(p.ultimaCompra.costoUsd)}</strong>{" "}
+                                  <span className="text-[var(--fg-subtle)]">el {formatearFecha(p.ultimaCompra.fecha)}</span>
+                                </li>
+                              ) : null}
+                            </ul>
+                            <div className="mt-1.5">
+                              <DialogoHistorial productoId={p.productoId} codigo={p.codigo} />
+                            </div>
                           </div>
                           {soloLectura ? null : (
                             <button
@@ -347,7 +375,7 @@ export function HojaPrecios({
                               mejor={fila.masBarato?.proveedorId === pv.proveedorId}
                               elegido={fila.elegido?.proveedorId === pv.proveedorId}
                               hayVarios={fila.ofertas.length > 1}
-                              margen={oferta ? (p.precioVenta ? (p.precioVenta - oferta.usd) / oferta.usd : null) : null}
+                              margen={oferta ? margenSobreCosto(precioDeReferencia(p), oferta.usd) : null}
                               soloLectura={soloLectura}
                               onPrecio={(precio) => despachar({ tipo: "precio", proveedorId: pv.proveedorId, productoId: p.productoId, precio })}
                               onNoTiene={(noTiene) => despachar({ tipo: "noTiene", proveedorId: pv.proveedorId, productoId: p.productoId, noTiene })}
@@ -366,13 +394,31 @@ export function HojaPrecios({
                               {Math.min(fila.elegido.puede, p.cantidad)} × {usd(fila.elegido.usd)} = <strong>{usd(fila.total)}</strong>
                             </span>
                             <span className={`text-sm font-semibold ${tonoMargen(fila.margen)}`}>
-                              {fila.margen === null ? "sin precio de venta" : `ganas ${pct(fila.margen)}`}
+                              {fila.margen === null
+                                ? "sin precio de venta"
+                                : (fila.gananciaUnidad ?? 0) < 0
+                                  ? `pierdes ${usd(-(fila.gananciaUnidad ?? 0))} c/u (${pct(fila.margen)})`
+                                  : `ganas ${usd(fila.gananciaUnidad ?? 0)} c/u (${pct(fila.margen)})`}
                             </span>
+                            {fila.gananciaTotal !== null && p.cantidad > 1 ? (
+                              <span className={`text-sm ${tonoMargen(fila.margen)}`}>
+                                {fila.gananciaTotal < 0 ? `pierdes ${usd(-fila.gananciaTotal)}` : usd(fila.gananciaTotal)} en las{" "}
+                                {Math.min(fila.elegido.puede, p.cantidad)}
+                              </span>
+                            ) : null}
+                            {fila.contraUltimaCompra !== null && Math.abs(fila.contraUltimaCompra) >= 0.005 ? (
+                              <span
+                                className={`text-sm ${fila.contraUltimaCompra > 0 ? "text-[var(--warn)]" : "text-[var(--ok)]"}`}
+                              >
+                                {pct(Math.abs(fila.contraUltimaCompra))} {fila.contraUltimaCompra > 0 ? "más caro" : "más barato"} que la
+                                última compra
+                              </span>
+                            ) : null}
                             {fila.faltan > 0 ? (
                               <span className="text-sm text-[var(--warn)]">le faltan {fila.faltan}: completa con otro</span>
                             ) : null}
-                            {fila.masCaroQueAntes ? (
-                              <span className="text-sm text-[var(--warn)]">más caro que la última vez</span>
+                            {fila.masCaroQueAntes && fila.contraUltimaCompra === null ? (
+                              <span className="text-sm text-[var(--warn)]">más caro que el último costo</span>
                             ) : null}
                             {fila.elegidoAMano && !soloLectura ? (
                               <button
@@ -451,10 +497,14 @@ export function HojaPrecios({
               detalle={`a ${analisis.proveedoresElegidos} ${analisis.proveedoresElegidos === 1 ? "proveedor" : "proveedores"}, sin IGV`}
             />
             <Cifra
-              etiqueta="Ganas"
-              valor={pct(analisis.margen)}
-              detalle={analisis.venta > 0 ? `vendiendo a ${usd(analisis.venta)}` : "falta el precio de venta"}
-              tono={analisis.margen === null ? undefined : analisis.margen < 0.15 ? "aviso" : "ok"}
+              etiqueta={analisis.ganancia < 0 ? "Pierdes" : "Ganas"}
+              valor={analisis.venta > 0 ? usd(Math.abs(analisis.ganancia)) : "—"}
+              detalle={
+                analisis.venta > 0
+                  ? `${pct(analisis.margen)} sobre el costo · vendiendo a ${usd(analisis.venta)}`
+                  : "falta el precio de venta"
+              }
+              tono={analisis.margen === null ? undefined : analisis.margen < 0 ? "mal" : analisis.margen < 0.15 ? "aviso" : "ok"}
             />
             <Cifra
               etiqueta="Repartir ahorra"
@@ -507,9 +557,10 @@ function Cifra({
   etiqueta: string;
   valor: string;
   detalle: string;
-  tono?: "ok" | "aviso";
+  tono?: "ok" | "aviso" | "mal";
 }) {
-  const color = tono === "ok" ? "text-[var(--ok)]" : tono === "aviso" ? "text-[var(--warn)]" : "";
+  const color =
+    tono === "ok" ? "text-[var(--ok)]" : tono === "aviso" ? "text-[var(--warn)]" : tono === "mal" ? "text-[var(--danger)]" : "";
   return (
     <div className="flex flex-col gap-0.5 rounded-lg bg-[var(--surface-2)] px-3 py-2.5">
       <span className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">{etiqueta}</span>

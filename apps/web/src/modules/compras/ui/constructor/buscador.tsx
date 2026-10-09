@@ -18,10 +18,17 @@ import { buscarParaComprar, type ProductoComprable } from "../../acciones/buscar
 export function BuscadorCompra({
   onElegir,
   ultimosCostos,
+  recientes = [],
 }: {
   onElegir: (p: ProductoComprable) => void;
   /** Último costo pagado a ESTE proveedor, por producto. */
   ultimosCostos: Record<string, { costo: number; numero: string; fecha: string }>;
+  /**
+   * Lo que se enseña al tocar la caja sin haber escrito nada (07/10). Luis:
+   * *«cuando doy clic en el input de añadir producto, que me aparezcan los
+   * cinco, seis últimos productos comprados»*.
+   */
+  recientes?: ProductoComprable[];
 }) {
   const [termino, setTermino] = useState("");
   const [abierto, setAbierto] = useState(false);
@@ -36,7 +43,9 @@ export function BuscadorCompra({
     termino,
     buscar: buscarParaComprar,
   });
-  const resultados = crudos ?? [];
+  // Sin nada escrito, los recientes; escribiendo, lo que encuentre.
+  const sinTexto = termino.trim().length < 2;
+  const resultados = sinTexto ? recientes : (crudos ?? []);
 
   // Resultados nuevos: el resaltado vuelve arriba y se abre la lista.
   useEffect(() => {
@@ -89,6 +98,7 @@ export function BuscadorCompra({
         value={termino}
         onChange={(e) => setTermino(e.target.value)}
         onFocus={() => resultados.length > 0 && setAbierto(true)}
+        onClick={() => resultados.length > 0 && setAbierto(true)}
         onKeyDown={teclas}
         placeholder="Buscar por código, marca o descripción…"
         aria-label="Buscar producto para comprar"
@@ -101,7 +111,7 @@ export function BuscadorCompra({
         </span>
       ) : null}
 
-      {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
+      {abierto && (resultados.length > 0 || (!sinTexto && (error || crudos?.length === 0))) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">
@@ -111,7 +121,9 @@ export function BuscadorCompra({
 
           {resultados.length > 0 ? (
             <p className="sticky top-0 z-10 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-1.5 text-sm text-[var(--fg-muted)]">
-              {resultados.length} {resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar
+              {sinTexto
+                ? "Los últimos que compraste o preguntaste · o escribe para buscar"
+                : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"} · ↑↓ para moverte, Enter para agregar`}
             </p>
           ) : null}
 

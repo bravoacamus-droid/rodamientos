@@ -7,7 +7,7 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { anotarFallo } from "@/lib/errores";
 
-import { analisisParaElegir, analisisParaHoja, referenciasDeProductos } from "../api/hoja-precios";
+import { analisisParaElegir, analisisParaHoja, historialDeProducto, referenciasDeProductos } from "../api/hoja-precios";
 
 /**
  * La hoja de precios (07/10): guardarla entera, y traerle un análisis.
@@ -122,6 +122,14 @@ export async function referenciasParaHoja(ids: string[]) {
   const validos = ids.filter((i) => uuid.safeParse(i).success).slice(0, 200);
   const m = await referenciasDeProductos(validos);
   return { ok: true as const, datos: Object.fromEntries(m) };
+}
+
+/** Lo cotizado, lo comprado y lo vendido de un producto, con fecha. */
+export async function historialParaHoja(productoId: string) {
+  const error = await puede();
+  if (error) return { ok: false as const, error };
+  if (!uuid.safeParse(productoId).success) return { ok: false as const, error: "Ese producto no vale." };
+  return historialDeProducto(productoId);
 }
 
 /** Los datos de un proveedor que la hoja necesita y el buscador no trae. */

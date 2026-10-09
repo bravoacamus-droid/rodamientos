@@ -4592,6 +4592,34 @@ de Defontana.
 
 ---
 
+## §BB · 09/10 — La hoja de precios sabe lo que pasó antes
+
+Luis, 09/10: *«poner algo que diga que ahí se tiene que buscar productos […]
+que me aparezcan los cinco, seis últimos productos comprados […] cuánto le
+vendió la última vez y ahora, aparte cuánto va a ganar por cada venta […] un
+botón de historial de compra […] si le compré a uno, igual tiene que guardarse
+el precio del otro para ya no pedirle precio después; el historial y la fecha,
+importante»*.
+
+- **El buscador** dice «Busca aquí el producto que vas a pedir» y, al tocarlo
+  vacío, enseña los seis últimos comprados o preguntados
+  (`productosRecientes`). `BuscadorCompra` acepta `recientes`; compras y
+  análisis no se los pasan todavía.
+- **Cada producto** enseña su precio de lista, **a cuánto se vendió la última
+  vez** y **a cuánto se compró la última vez**, con fecha
+  (`referenciasDeProductos`, tres lecturas para toda la hoja).
+- **«A quién comprar»** dice cuánto se gana por unidad y en total —o cuánto se
+  PIERDE— y si sale más caro o más barato que la última compra. El margen se
+  mide contra el P.V. y, sin él, contra la última venta (`precioDeReferencia`).
+- **«Historial»** en cada producto: lo que te cotizaron (también los que no
+  ganaron, y los «no lo tenía»), lo que compraste y lo que vendiste, con fecha.
+  Las respuestas se guardaban desde la 055 y ninguna pantalla de la hoja las
+  enseñaba.
+
+De paso: «Traer de un análisis» pedía `productos.unidad`, que no existe
+(`unidad_codigo`), y su consulta fallaba en silencio — el producto entraba con
+el código del análisis y no con el del catálogo.
+
 ## §BA · 07–09/10 — «Pedir precios» en una sola hoja (110)
 
 Luis, 07/10: *«tiene que ser sencillo, fácil de usar; recuerda que voy a pedir

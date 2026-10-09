@@ -6,7 +6,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { referenciasDeRonda, rondaDetalle } from "../../api/comparador";
 import { proveedoresParaPedir } from "@/modules/proveedores";
 
-import { hojaDeConsulta } from "../../api/hoja-precios";
+import { hojaDeConsulta, productosRecientes } from "../../api/hoja-precios";
 import { HojaPrecios } from "../hoja-precios/hoja";
 import { Comparativa } from "./comparativa";
 
@@ -59,9 +59,10 @@ export default async function PaginaComparativa({
     se pregunta, una sola pantalla.
   */
   if (ronda.estado === "abierta") {
-    const [cargada, proveedores] = await Promise.all([
+    const [cargada, proveedores, recientes] = await Promise.all([
       hojaDeConsulta(ronda.id),
       proveedoresParaPedir(ronda.items.map((i) => i.producto_id)),
+      productosRecientes(6),
     ]);
     if (!cargada.ok) {
       return <EstadoError titulo="No se pudo abrir la hoja" detalle={cargada.error} />;
@@ -77,6 +78,7 @@ export default async function PaginaComparativa({
         </div>
         <HojaPrecios
           inicial={cargada.datos.hoja}
+          recientes={recientes}
           sugeridos={(proveedores.ok ? proveedores.datos : [])
             .filter((p) => p.coincidencias > 0)
             .map((p) => ({ proveedorId: p.id, nombre: p.razon_social, coincidencias: p.coincidencias }))}
