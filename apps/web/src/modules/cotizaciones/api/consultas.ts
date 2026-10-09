@@ -325,6 +325,8 @@ export async function cotizacionPorId(id: string): Promise<
       mostrar_disponibilidad: boolean;
       orden_compra_cliente: string | null;
       contacto: string | null;
+      /** La ficha del contacto, si salió de la lista (035). */
+      contacto_id: string | null;
       condiciones: string | null;
       observaciones: string | null;
       mostrar_descuento: boolean;
@@ -373,6 +375,19 @@ export async function cotizacionPorId(id: string): Promise<
       /** Lo ya facturado de esta línea (047). Decide si queda algo por cobrar. */
       cantidad_atendida: number;
       importe: number;
+      /** A quién se le compraría y a cuánto (111). */
+      cotizacion_item_proveedores: {
+        proveedor_id: string;
+        orden: number;
+        cantidad: number;
+        costo_unitario: number;
+        moneda: "USD" | "PEN";
+        incluye_igv: boolean;
+        tipo_cambio: number | null;
+        costo_usd: number;
+        fecha: string;
+        proveedores: { razon_social: string } | null;
+      }[];
       /**
        * El producto, solo para saber si es un KIT y qué lleva (085).
        *
@@ -410,7 +425,7 @@ export async function cotizacionPorId(id: string): Promise<
         .from("cotizaciones")
         .select(
           `id, numero, estado, fecha, validez_dias, tiempo_entrega,
-           orden_compra_cliente, contacto, condiciones, observaciones,
+           orden_compra_cliente, contacto, contacto_id, condiciones, observaciones,
            mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
            igv, total, costo_total, margen_pct, cliente_id, token_publico,
            clientes!inner(razon_social, numero_documento, tipo_documento,
@@ -423,6 +438,9 @@ export async function cotizacionPorId(id: string): Promise<
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,
                             cantidad_aprobada, cantidad_atendida,
+                            cotizacion_item_proveedores(proveedor_id, orden, cantidad,
+                              costo_unitario, moneda, incluye_igv, tipo_cambio,
+                              costo_usd, fecha, proveedores(razon_social)),
                             productos(
                               es_kit,
                               kit_componentes!kit_componentes_kit_id_fkey(
@@ -782,5 +800,60 @@ export async function indicadoresCotizaciones(filtros: {
     };
   } catch (e) {
     return fallo(e);
+  }
+}
+
+export interface OrdenDelPedido {
+  id: string;
+  numero: string;
+  estado: string;
+  fecha: string;
+  moneda: string;
+  total: number;
+  proveedor: string;
+  proveedorId: string;
+  /** Qué productos lleva: para no proponer dos veces lo mismo. */
+  productos: string[];
+}
+
+/**
+ * Las órdenes de compra que salieron de esta cotización (111).
+ *
+ * Willy, en su hoja del 09/10: *«CONFIRMACIÓN → ÓRDENES DE COMPRA OC1, OC2,
+ * OC3»*, y Luis: *«por proveedores, pero enlazado al cliente y la
+ * cotización»*.
+ */
+export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPedido[]> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compras")
+      .select("id, numero, estado, fecha, moneda, total, proveedor_id, proveedores(razon_social), compra_items(producto_id)")
+      .eq("cotizacion_id", cotizacionId)
+      .order("numero");
+    if (error) return [];
+    return ((data ?? []) as unknown as {
+      id: string;
+      numero: string;
+      estado: string;
+      fecha: string;
+      moneda: string;
+      total: number;
+      proveedor_id: string;
+      proveedores: { razon_social: string } | null;
+      compra_items: { producto_id: string }[] | null;
+    }[]).map((c) => ({
+      id: c.id,
+      numero: c.numero,
+      estado: c.estado,
+      fecha: c.fecha,
+      moneda: c.moneda,
+      total: Number(c.total),
+      proveedor: c.proveedores?.razon_social ?? "—",
+      proveedorId: c.proveedor_id,
+      productos: (c.compra_items ?? []).map((i) => i.producto_id),
+    }));
+  } catch {
+    return [];
   }
 }

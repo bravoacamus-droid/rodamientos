@@ -1,3 +1,4 @@
+import { proveedoresAPayload, resumirCompra, type ProveedorLinea } from "./compra-linea";
 import { lineasBajoPiso, revisarPiso, type RevisionPiso } from "./piso";
 import { calcularTotales, redondear2, redondear4, type TotalesCotizacion } from "./totales";
 
@@ -96,6 +97,12 @@ export interface LineaConstructor {
    * lleva cosas dentro que hay que poder ver y cambiar sin salir de aquí.
    */
   esKit: boolean;
+  /**
+   * A quién se le compraría, cuántas y a cuánto (111). Willy, 09/10: antes de
+   * mandar la cotización llama a sus proveedores y con ESE costo pone el
+   * precio. Vacío = no se analizó; el costo es el de la ficha.
+   */
+  proveedores: ProveedorLinea[];
 }
 
 export interface EstadoConstructor {
@@ -226,6 +233,11 @@ export type Accion =
         precioLista: number;
       };
     }
+  /**
+   * «Analizar precio de compra» (09/10): los proveedores de la línea y, con
+   * ellos, su costo —el promedio ponderado— y el precio de venta elegido.
+   */
+  | { tipo: "compraAnalizada"; key: string; proveedores: ProveedorLinea[]; valorUnitario: number }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
@@ -335,6 +347,7 @@ function desdeProducto(
     stock: producto.stock ?? 0,
     disponibilidad: "inmediata",
     diasEntrega: null,
+    proveedores: [],
   };
 }
 
@@ -462,6 +475,20 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         // Igual: es lo que el cliente LEE para saber qué está comprando.
         descripcion: accion.valor.trim() ? accion.valor.trim() : l.descripcion,
       }));
+
+    case "compraAnalizada":
+      return mapear(estado, accion.key, (l) => {
+        const { costo } = resumirCompra(l.cantidad, accion.proveedores);
+        return {
+          ...l,
+          proveedores: accion.proveedores,
+          // El costo de ESTA compra manda sobre el de la ficha; sin nada
+          // comprable (solo precios apuntados) se queda el que había.
+          costoUnitario: costo ?? l.costoUnitario,
+          costoDelKardex: costo === null ? l.costoDelKardex : false,
+          valorUnitario: montoValido(accion.valorUnitario),
+        };
+      });
 
     case "fichaActualizada":
       return mapear(estado, accion.key, (l) => ({
@@ -613,7 +640,7 @@ export function revisionDe(linea: LineaConstructor): RevisionPiso {
 export interface Bloqueo {
   /** `costo` desde el 25/09: vender bajo costo no es lo mismo que bajar del
    *  piso, y puede pasar con el piso respetado (ver `avisosDeCosto`). */
-  campo: "cliente" | "lineas" | "piso" | "costo";
+  campo: "cliente" | "lineas" | "piso" | "costo" | "compra";
   mensaje: string;
 }
 
@@ -746,6 +773,36 @@ export function avisosDeCosto(estado: EstadoConstructor): Bloqueo[] {
   ];
 }
 
+/**
+ * Líneas del catálogo a las que no se les analizó la compra (09/10).
+ *
+ * Luis: *«primero tiene que registrar su precio de costo […] si no se analizó
+ * nada, antes de guardar darle avisos»*. Es AVISO y no puerta: hay productos
+ * que están en el anaquel y no hay que comprar. Los kits no entran: su costo
+ * es la suma de sus piezas.
+ */
+export function lineasSinAnalizar(estado: EstadoConstructor): LineaConstructor[] {
+  return estado.lineas.filter(
+    (l) => l.productoId !== null && !l.esKit && !l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null),
+  );
+}
+
+/** El aviso de las líneas sin analizar, con el mismo formato que los demás. */
+export function avisosDeCompra(estado: EstadoConstructor): Bloqueo[] {
+  const sin = lineasSinAnalizar(estado);
+  if (sin.length === 0) return [];
+  const codigos = sin.map((l) => l.codigo).join(", ");
+  return [
+    {
+      campo: "compra",
+      mensaje:
+        sin.length === 1
+          ? `A ${codigos} no le analizaste el precio de compra.`
+          : `A ${sin.length} productos no les analizaste el precio de compra: ${codigos}.`,
+    },
+  ];
+}
+
 /** Cuántas líneas se están cotizando sin stock suficiente. */
 export function lineasSinStock(estado: EstadoConstructor): LineaConstructor[] {
   return estado.lineas.filter((l) => l.productoId !== null && l.stock < l.cantidad);
@@ -783,6 +840,8 @@ export function aPayload(estado: EstadoConstructor) {
       // si mañana el exterior pasa a 20 días, las cotizaciones que no
       // pusieron plazo propio tienen que decir 20, no quedarse en 15.
       dias_entrega: l.diasEntrega,
+      // A quién se le compra (111). La base recalcula con esto el costo.
+      proveedores: proveedoresAPayload(l.proveedores),
       // OJO: `precio_minimo_ref` NO va aquí. Lo impone el trigger
       // `trg_cotiz_items_piso` desde el maestro. Mandarlo sería ofrecerle a
       // quien llame la posibilidad de desactivar el piso.

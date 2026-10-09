@@ -113,6 +113,7 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
     stock: l.stock,
     disponibilidad: "inmediata",
     diasEntrega: null,
+    proveedores: [],
   };
 }
 

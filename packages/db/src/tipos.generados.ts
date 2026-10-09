@@ -763,6 +763,7 @@ export type Database = {
           actualizado_en: string
           comprador_id: string | null
           consulta_precio_id: string | null
+          cotizacion_id: string | null
           courier: string | null
           creado_en: string
           documento_proveedor: string | null
@@ -789,6 +790,7 @@ export type Database = {
           actualizado_en?: string
           comprador_id?: string | null
           consulta_precio_id?: string | null
+          cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
           documento_proveedor?: string | null
@@ -815,6 +817,7 @@ export type Database = {
           actualizado_en?: string
           comprador_id?: string | null
           consulta_precio_id?: string | null
+          cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
           documento_proveedor?: string | null
@@ -858,6 +861,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_comparativa_precios"
             referencedColumns: ["consulta_id"]
+          },
+          {
+            foreignKeyName: "compras_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
           },
           {
             foreignKeyName: "compras_proveedor_id_fkey"
@@ -1814,6 +1831,70 @@ export type Database = {
             columns: ["creado_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cotizacion_item_proveedores: {
+        Row: {
+          cantidad: number
+          costo_unitario: number
+          costo_usd: number
+          cotizacion_item_id: string
+          fecha: string
+          id: string
+          incluye_igv: boolean
+          moneda: string
+          orden: number
+          proveedor_id: string
+          tipo_cambio: number | null
+        }
+        Insert: {
+          cantidad?: number
+          costo_unitario: number
+          costo_usd: number
+          cotizacion_item_id: string
+          fecha?: string
+          id?: string
+          incluye_igv?: boolean
+          moneda?: string
+          orden?: number
+          proveedor_id: string
+          tipo_cambio?: number | null
+        }
+        Update: {
+          cantidad?: number
+          costo_unitario?: number
+          costo_usd?: number
+          cotizacion_item_id?: string
+          fecha?: string
+          id?: string
+          incluye_igv?: boolean
+          moneda?: string
+          orden?: number
+          proveedor_id?: string
+          tipo_cambio?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_item_proveedores_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_item_proveedores_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_comprometido"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "cotizacion_item_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
@@ -5016,8 +5097,13 @@ export type Database = {
       }
       generar_alertas: { Args: never; Returns: Json }
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      generar_ordenes_de_compra: { Args: { p_datos: Json }; Returns: Json }
       guardar_analisis: { Args: { p_datos: Json }; Returns: Json }
       guardar_hoja_precios: { Args: { p_datos: Json }; Returns: Json }
+      guardar_proveedores_de_lineas: {
+        Args: { p_cotizacion: string; p_items: Json }
+        Returns: undefined
+      }
       guia_esta_facturada: { Args: { p_guia: string }; Returns: boolean }
       historial_precio_producto: {
         Args: { p_cliente?: string; p_limit?: number; p_producto: string }

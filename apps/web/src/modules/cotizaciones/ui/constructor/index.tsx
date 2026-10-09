@@ -1,9 +1,25 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useReducer, useState } from "react";
+import { useActionState, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
-import { Button, Input, SelectNativo, Table, TableContenedor, TBody, Textarea, THead } from "@rodatech/ui";
+import {
+  Button,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  SelectNativo,
+  Table,
+  TableContenedor,
+  TBody,
+  Textarea,
+  THead,
+} from "@rodatech/ui";
 
 import {
   actualizarCotizacion,
@@ -14,7 +30,9 @@ import {
 import type { ClienteOpcion } from "../../dominio/cliente";
 import {
   aPayload,
+  avisosDeCompra,
   avisosDeCosto,
+  lineasSinAnalizar,
   avisosDeVenta,
   bloqueos as calcularBloqueos,
   ENTREGAS,
@@ -176,13 +194,32 @@ export function Constructor({
      puede quedarse por debajo del costo cuando entra una compra más cara, y
      entonces el primero da el visto bueno a una venta que pierde dinero. */
   const avisos = useMemo(
-    () => [...avisosDeVenta(estado), ...avisosDeCosto(estado)],
+    () => [...avisosDeCompra(estado), ...avisosDeVenta(estado), ...avisosDeCosto(estado)],
     [estado],
   );
 
+  /*
+    Antes de guardar, la pregunta (09/10). Luis: *«puede guardar la cotización
+    igual, pero primero tiene que registrar su precio de costo […] si no se
+    analizó nada, antes de guardar darle avisos»*. Pregunta, no prohíbe: un
+    producto que está en el anaquel no hay que comprarlo.
+  */
+  const sinAnalizar = lineasSinAnalizar(estado);
+  const [preguntando, setPreguntando] = useState(false);
+  // Un ref y no un estado: el clic de «Guardar igual» envía en el mismo turno.
+  const guardarIgual = useRef(false);
+
   return (
     <form
+      id="form-cotizacion"
       action={guardar}
+      onSubmit={(e) => {
+        if (sinAnalizar.length > 0 && !guardarIgual.current) {
+          e.preventDefault();
+          setPreguntando(true);
+        }
+        guardarIgual.current = false;
+      }}
       className="flex flex-col gap-5 sm:p-6"
       /*
         Enter en un campo no guarda la cotización: se guarda con el botón.
@@ -549,6 +586,7 @@ export function Constructor({
                       <th className="text-right">Cant.</th>
                       <th className="text-left">U.M.</th>
                       <th className="text-left">Entrega</th>
+                      <th className="text-left">Costo</th>
                       <th className="text-right">Valor unit.</th>
                       {estado.mostrarDescuento ? (
                         <th className="text-right">Dscto. %</th>
@@ -562,7 +600,7 @@ export function Constructor({
                       <td className="py-3">1</td>
                       {/* El aviso va en la celda del código porque es la
                           primera que se rellena: ahí es donde hay que mirar. */}
-                      <td colSpan={estado.mostrarDescuento ? 10 : 9} className="py-3">
+                      <td colSpan={estado.mostrarDescuento ? 11 : 10} className="py-3">
                         Busca un producto arriba —por código, por el del
                         fabricante o por parte de la descripción— y aparecerá
                         en esta línea.
@@ -604,6 +642,7 @@ export function Constructor({
                       {/* Siempre visible, aunque no se imprima: es de donde
                           sale lo que hay que salir a comprar. */}
                       <th className="text-left">Entrega</th>
+                      <th className="text-left">Costo</th>
                       <th className="text-right">Valor unit.</th>
                       {estado.mostrarDescuento ? (
                         <th className="text-right">Dscto. %</th>
@@ -776,6 +815,48 @@ export function Constructor({
           <option key={m} value={m} />
         ))}
       </datalist>
+
+      <Dialog open={preguntando} onOpenChange={setPreguntando}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Falta analizar el precio de compra</DialogTitle>
+            <DialogDescription>
+              {sinAnalizar.length === 1
+                ? "Este producto lleva el costo de la ficha, que puede ser viejo:"
+                : `Estos ${sinAnalizar.length} productos llevan el costo de la ficha, que puede ser viejo:`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <ul className="flex flex-col gap-1">
+              {sinAnalizar.map((l) => (
+                <li key={l.key} className="flex items-baseline gap-2">
+                  <strong>{l.codigo}</strong>
+                  <span className="truncate text-sm text-[var(--fg-muted)]">{l.descripcion}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm text-[var(--fg-muted)]">
+              Si los tienes en el almacén o ya sabes su costo, puedes guardar igual.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPreguntando(false)}>
+              Volver y analizar
+            </Button>
+            <Button
+              type="button"
+              onClick={(e) => {
+                setPreguntando(false);
+                guardarIgual.current = true;
+                const formulario = e.currentTarget.ownerDocument.getElementById("form-cotizacion");
+                if (formulario instanceof HTMLFormElement) formulario.requestSubmit();
+              }}
+            >
+              Guardar igual
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {creando !== null ? (
         <AltaProducto

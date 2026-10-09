@@ -193,7 +193,15 @@ export async function productosRecientes(limite = 6): Promise<ProductoReciente[]
 
 export interface HistorialProducto {
   /** Lo que contestó cada proveedor en las consultas, se le comprara o no. */
-  cotizado: { fecha: string; consulta: string; proveedor: string; costoUsd: number | null; noTiene: boolean }[];
+  cotizado: {
+    fecha: string;
+    /** La consulta (CPR-…) o, desde la 111, la cotización (COT…) donde se apuntó. */
+    consulta: string;
+    proveedor: string;
+    proveedorId: string;
+    costoUsd: number | null;
+    noTiene: boolean;
+  }[];
   comprado: { fecha: string; numero: string; proveedor: string; cantidad: number; costoUsd: number }[];
   vendido: { fecha: string; documento: string; cliente: string; cantidad: number; precio: number }[];
 }
@@ -210,12 +218,20 @@ export interface HistorialProducto {
 export async function historialDeProducto(productoId: string): Promise<Resultado<HistorialProducto>> {
   try {
     const supabase = await clienteServidor();
-    const [cot, comp, vent] = await Promise.all([
+    const [cot, enCotizacion, comp, vent] = await Promise.all([
       supabase
         .from("v_comparativa_precios")
-        .select("fecha, consulta, proveedor, costo_usd, disponible")
+        .select("fecha, consulta, proveedor, proveedor_id, costo_usd, disponible")
         .eq("producto_id", productoId)
         .or("costo_usd.not.is.null,disponible.eq.false")
+        .order("fecha", { ascending: false })
+        .limit(30),
+      // Lo apuntado al cotizar (111): Willy pregunta precios ANTES de mandar
+      // la cotización, y ese precio vale para la próxima vez.
+      supabase
+        .from("cotizacion_item_proveedores")
+        .select("fecha, costo_usd, proveedor_id, proveedores(razon_social), cotizacion_items!inner(producto_id, cotizaciones(numero))")
+        .eq("cotizacion_items.producto_id", productoId)
         .order("fecha", { ascending: false })
         .limit(30),
       supabase
@@ -227,6 +243,7 @@ export async function historialDeProducto(productoId: string): Promise<Resultado
       supabase.rpc("historial_precio_producto", { p_producto: productoId, p_limit: 15 }),
     ]);
     if (cot.error) return { ok: false, error: cot.error.message };
+    if (enCotizacion.error) return { ok: false, error: enCotizacion.error.message };
     if (comp.error) return { ok: false, error: comp.error.message };
     if (vent.error) return { ok: false, error: vent.error.message };
 
@@ -252,13 +269,32 @@ export async function historialDeProducto(productoId: string): Promise<Resultado
     return {
       ok: true,
       datos: {
-        cotizado: (cot.data ?? []).map((f) => ({
-          fecha: String(f.fecha),
-          consulta: String(f.consulta),
-          proveedor: String(f.proveedor),
-          costoUsd: f.costo_usd === null ? null : Number(f.costo_usd),
-          noTiene: f.disponible === false,
-        })),
+        cotizado: [
+          ...(cot.data ?? []).map((f) => ({
+            fecha: String(f.fecha),
+            consulta: String(f.consulta),
+            proveedor: String(f.proveedor),
+            proveedorId: String(f.proveedor_id),
+            costoUsd: f.costo_usd === null ? null : Number(f.costo_usd),
+            noTiene: f.disponible === false,
+          })),
+          ...((enCotizacion.data ?? []) as unknown as {
+            fecha: string;
+            costo_usd: number;
+            proveedor_id: string;
+            proveedores: { razon_social: string } | null;
+            cotizacion_items: { cotizaciones: { numero: string } | null } | null;
+          }[]).map((f) => ({
+            fecha: String(f.fecha),
+            consulta: f.cotizacion_items?.cotizaciones?.numero ?? "cotización",
+            proveedor: f.proveedores?.razon_social ?? "—",
+            proveedorId: f.proveedor_id,
+            costoUsd: Number(f.costo_usd),
+            noTiene: false,
+          })),
+        ]
+          .sort((x, y) => (x.fecha < y.fecha ? 1 : -1))
+          .slice(0, 30),
         comprado,
         vendido: ((vent.data ?? []) as { fecha: string; documento: string; cliente: string; cantidad: number; valor_unitario: number }[]).map(
           (v) => ({

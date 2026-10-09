@@ -7,6 +7,7 @@ import {
   comprobantesDelPedido,
   cotizacionPorId,
   despachoDelPedido,
+  ordenesDelPedido,
   tieneGuia,
 } from "../api/consultas";
 import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
@@ -15,6 +16,9 @@ import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
+import { OrdenesDeCompra } from "./detalle/ordenes-compra";
+import { proveedoresGuardados } from "../dominio/compra-linea";
+import { perfilActual } from "@rodatech/db/servidor";
 import { YaFacturado } from "./detalle/ya-facturado";
 import { VistaPreviaDocumento } from "./detalle/vista-previa";
 import { unidadLegible } from "../dominio/unidades";
@@ -191,6 +195,22 @@ export default async function PaginaDetalleCotizacion({
         ])
       : [[], new Map<string, number>()];
 
+  // Las órdenes de compra (111): solo de un pedido confirmado.
+  const confirmado = cabecera.estado === "aprobada" || cabecera.estado === "atendida";
+  const [ordenes, perfil] = confirmado
+    ? await Promise.all([ordenesDelPedido(cabecera.id), perfilActual()])
+    : [[], null];
+  const lineasConfirmadas = lineas
+    .filter((l) => l.producto_id !== null)
+    .map((l) => ({
+      productoId: l.producto_id as string,
+      codigo: l.codigo,
+      cantidad: Number(l.cantidad),
+      confirmada: Number(l.cantidad_aprobada ?? 0),
+      unidad: l.unidad_codigo,
+      proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+    }));
+
   /** Por producto, para poder marcar cada fila de la tabla. */
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
@@ -358,6 +378,15 @@ export default async function PaginaDetalleCotizacion({
           confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
         */}
         <LoQueFalta falta={falta} />
+
+        {confirmado ? (
+          <OrdenesDeCompra
+            cotizacionId={cabecera.id}
+            lineas={lineasConfirmadas}
+            existentes={ordenes}
+            puedeGenerar={!!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)}
+          />
+        ) : null}
 
         {/*
           Y lo que ya salió facturado.

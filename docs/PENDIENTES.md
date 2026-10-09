@@ -4592,6 +4592,54 @@ de Defontana.
 
 ---
 
+## §BC · 09/10 — El costo se analiza AL COTIZAR (la hoja de Willy)
+
+Luis, 09/10, con una hoja que Willy le dibujó a mano: *«el sistema lo hemos
+estado entendiendo mal […] no se sabe a qué precio se va a vender, puede variar
+por el día o la semana»*. El flujo hecho era cotizar con el costo de la ficha y
+pedir precios solo si el cliente confirmaba sin stock. El de Willy es el
+contrario: **antes de mandar la cotización** llama a sus proveedores, apunta a
+cuánto le dan cada producto y con ese costo pone el precio.
+
+La hoja: el 6308 2RS se cotiza por 10; un proveedor tiene 7, otro 3, y el costo
+es **(PC2 × 7 + PC3 × 3) / 10**. Confirmado el pedido, **una orden de compra
+por proveedor** (OC1, OC2, OC3), enlazada al cliente y a la cotización.
+
+- **Migración 111.** `cotizacion_item_proveedores` (a quién, cuántas, a cuánto,
+  en su moneda y con o sin IGV). La base pasa cada precio a dólares sin IGV y
+  deja en la línea el **promedio ponderado**. Cantidad 0 = precio apuntado que
+  no se compra (sirve para la próxima vez). `compras.cotizacion_id` y
+  `generar_ordenes_de_compra`: todas o ninguna, solo productos de esa
+  cotización confirmada, y nunca dos veces lo mismo al mismo proveedor. El
+  centinela ejecuta todo —crear, editar, confirmar, generar— y lo deshace.
+- **En la cotización**, el ⋮ de cada línea abre arriba y en amarillo **«Analizar
+  precio de compra»**: proveedores con cantidad y precio (el segundo nace con lo
+  que falta: 8 de 10 → 2), «cubres / faltan / compras de más para stock», el
+  costo ponderado con su cuenta, y debajo el precio de venta con botones de
+  +20/30/40/50 %, cuánto se gana por unidad y en total, y **«Pierdes»** en rojo
+  por debajo del costo. Ofrece con un clic los precios que ya dieron otros
+  proveedores (consultas y cotizaciones anteriores) y los que ya se lo vendieron.
+- La tabla de líneas tiene columna **«Costo»** (costo, «ganas X %» y quién), con
+  el botón amarillo «Analizar» en las que falten.
+- **Al guardar**, si hay productos del catálogo sin analizar, **pregunta** («Volver
+  y analizar» / «Guardar igual»). Aviso y no puerta: lo del anaquel no se compra.
+- **En la ficha del pedido confirmado**, sección **«Órdenes de compra»**: propone
+  una por proveedor con lo confirmado (si el cliente confirma menos, deja de
+  comprar primero lo más caro; lo de más para stock se respeta), deja cambiar
+  cantidades y dejar fuera un proveedor, y luego lista las OC con su enlace.
+  La OC lleva en observaciones «Para COT… · cliente».
+- El historial de precios (Pedir precios y este diálogo) incluye lo apuntado al
+  cotizar.
+
+**Dos fallos que salieron al leer la base** (CLAUDE.md §4, «¿cuántas más
+faltan?»): `crear_cotizacion` era la de la 012/013 y no la de la 043, así que
+las cotizaciones **nuevas perdían la disponibilidad** de cada línea y la casilla
+de imprimirla (solo se arreglaban al editar); y `contacto_id` viajaba en el
+payload desde la 035 y **zod lo quitaba**. Los dos, arreglados en la 111.
+
+**Sin probar con el botón:** «Generar órdenes de compra» de verdad (crea
+compras reales). Probado en el centinela y en pantalla hasta el diálogo.
+
 ## §BB · 09/10 — La hoja de precios sabe lo que pasó antes
 
 Luis, 09/10: *«poner algo que diga que ahí se tiene que buscar productos […]

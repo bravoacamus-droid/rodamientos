@@ -31,6 +31,7 @@ import {
   SquareArrowOutUpRight,
   Trash2,
   PackageCheck,
+  Scale,
 } from "lucide-react";
 import {
   Badge,
@@ -51,12 +52,14 @@ import {
 } from "@rodatech/ui";
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
+import { AnalizarCompra } from "./analizar-compra";
 import { EditarArticulo } from "./editar-articulo";
 import { PreciosYStock } from "./precios-y-stock";
 import { DialogoKit } from "./dialogo-kit";
 import { DialogoStock } from "@/modules/productos/ui/dialogo-stock";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
+import { margenSobreCosto, resumirCompra } from "../../dominio/compra-linea";
 import {
   DIAS_POR_DEFECTO,
   DISPONIBILIDADES,
@@ -127,6 +130,8 @@ export function FilaLinea({
   const [viendoKit, setViendoKit] = useState<false | "ver" | "editar">(false);
   /** El diálogo de precios y stock (17/09). */
   const [viendo, setViendo] = useState(false);
+  /** «Analizar precio de compra» (09/10). */
+  const [analizando, setAnalizando] = useState(false);
 
   // Un kit se trata como kit, no como producto (Luis, 25/09).
   const esKit = Boolean(linea.esKit && linea.productoId);
@@ -137,6 +142,49 @@ export function FilaLinea({
   const [cargando, iniciar] = useTransition();
 
   const revision = revisionDe(linea);
+
+  /*
+    El costo de la línea y lo que deja, a la vista (09/10).
+
+    Luis: *«una vez que tenga todos los precios de costo de cada uno, podemos
+    poner una lista ahí, antes del final, el precio de costo, porque él después
+    le suma el margen de ganancia»*. Una línea del catálogo sin analizar lleva
+    el botón en color: es lo que hay que hacer antes de mandarla.
+  */
+  const puedeAnalizar = linea.productoId !== null && !esKit;
+  const compra = resumirCompra(linea.cantidad, linea.proveedores);
+  const analizada = compra.costo !== null;
+  const neto = linea.valorUnitario * (1 - linea.descuentoPct / 100);
+  const margenLinea = margenSobreCosto(neto, linea.costoUnitario > 0 ? linea.costoUnitario : null);
+  const celdaCosto = (
+    <div className="flex flex-col items-start gap-1">
+      {analizada || linea.costoUnitario > 0 ? (
+        <span className="tabular font-semibold">{dolar(linea.costoUnitario)}</span>
+      ) : null}
+      {margenLinea !== null ? (
+        <span
+          className={`text-sm font-medium ${margenLinea < 0 ? "text-[var(--danger)]" : margenLinea < 0.15 ? "text-[var(--warn)]" : "text-[var(--ok)]"}`}
+        >
+          {margenLinea < 0 ? "pierdes" : "ganas"} {Math.abs(Math.round(margenLinea * 1000) / 10)} %
+        </span>
+      ) : null}
+      {puedeAnalizar ? (
+        analizada ? (
+          <Button type="button" variant="link" onClick={() => setAnalizando(true)} className="text-sm">
+            {linea.proveedores.filter((p) => p.cantidad > 0).length === 1
+              ? linea.proveedores.find((p) => p.cantidad > 0)?.nombre.split(" ")[0]
+              : `${linea.proveedores.filter((p) => p.cantidad > 0).length} proveedores`}
+            {compra.falta > 0 ? ` · faltan ${compra.falta}` : ""}
+          </Button>
+        ) : (
+          <Button type="button" variant="accent" size="sm" onClick={() => setAnalizando(true)} className="gap-1 whitespace-nowrap">
+            <Scale className="size-4" aria-hidden="true" />
+            Analizar
+          </Button>
+        )
+      ) : null}
+    </div>
+  );
   const importe = importeLinea({
     cantidad: linea.cantidad,
     valorUnitario: linea.valorUnitario,
@@ -373,7 +421,23 @@ export function FilaLinea({
           {conTexto ? "Más opciones" : null}
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuContent align="end" className="w-64">
+          {/*
+            Lo PRIMERO y en color (Luis, 09/10: *«en los tres puntos tenemos
+            que poner arriba de todo, colorido, analizar precio compra»*).
+          */}
+          {puedeAnalizar ? (
+            <>
+              <DropdownMenuItem
+                onSelect={() => requestAnimationFrame(() => setAnalizando(true))}
+                className="bg-accent-400 font-semibold text-steel-950 focus:bg-accent-300 data-[highlighted]:bg-accent-300"
+              >
+                <Scale />
+                Analizar precio de compra
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           {/*
             Lo primero, lo que pidió Luis: *«en la opción de editar
             artículo deben aparecer todos los campos editables: código,
@@ -694,6 +758,10 @@ export function FilaLinea({
           </DialogBody>
         </DialogContent>
       </Dialog>
+
+      {analizando ? (
+        <AnalizarCompra linea={linea} despachar={despachar} onCerrar={() => setAnalizando(false)} />
+      ) : null}
     </>
   );
 
@@ -764,6 +832,13 @@ export function FilaLinea({
             {campoEntrega}
           </div>
         </div>
+
+        {puedeAnalizar || linea.costoUnitario > 0 ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2">
+            <span className="text-sm font-medium">Costo</span>
+            {celdaCosto}
+          </div>
+        ) : null}
 
         {!revision.ok ? <p className="mt-3 text-sm">{avisoPiso}</p> : null}
 
@@ -947,6 +1022,8 @@ export function FilaLinea({
         {/* C1: SOLO valor unitario. La columna "precio unitario" (valor x 1.18)
             desaparece del modelo, no solo del PDF: es la que le hizo perder
             ventas porque el cliente comparaba con IGV contra la competencia. */}
+        <td className="min-w-[7rem] align-top">{celdaCosto}</td>
+
         <td className="w-28">
           {campoPrecio}
         </td>
@@ -999,7 +1076,7 @@ export function FilaLinea({
       {!revision.ok ? (
         <tr className="bg-[var(--danger-bg)]">
           <td />
-          <td colSpan={mostrarDescuento ? 8 : 7} className="pb-2 text-sm">
+          <td colSpan={mostrarDescuento ? 9 : 8} className="pb-2 text-sm">
             {avisoPiso}
           </td>
         </tr>

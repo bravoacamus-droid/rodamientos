@@ -10,6 +10,7 @@ import {
   cotizacionPorId,
   type CompraAbierta,
 } from "../api/consultas";
+import { proveedoresGuardados } from "../dominio/compra-linea";
 import { estadoInicial, type EstadoConstructor } from "../dominio/constructor";
 import { entregaDelDocumento, esEntregaAutomatica } from "../dominio/disponibilidad";
 import { Constructor } from "./constructor";
@@ -119,7 +120,7 @@ export default async function PaginaEditarCotizacion({
     entregaAMano: !esEntregaAutomatica(cabecera.tiempo_entrega),
     ordenCompraCliente: cabecera.orden_compra_cliente ?? "",
     contacto: cabecera.contacto ?? "",
-    contactoId: null,
+    contactoId: cabecera.contacto_id ?? null,
     condiciones: cabecera.condiciones ?? "",
     observaciones: cabecera.observaciones ?? "",
     mostrarDescuento: cabecera.mostrar_descuento,
@@ -154,6 +155,7 @@ export default async function PaginaEditarCotizacion({
       stock: 0,
       disponibilidad: l.disponibilidad,
       diasEntrega: l.dias_entrega,
+      proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
     })),
     proximaKey: lineas.length + 1,
   };

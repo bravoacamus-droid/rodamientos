@@ -18,6 +18,28 @@ import { bloqueoQueImpide } from "@/lib/bloqueo";
 
 const ROLES = ["gerencia", "admin", "ventas"] as const;
 
+/**
+ * A quién se le compraría la línea (111). Cantidad 0 = solo se apunta el
+ * precio. La base convierte a dólares sin IGV y saca el costo ponderado.
+ */
+const esquemaProveedor = z
+  .object({
+    proveedor_id: z.string().uuid(),
+    cantidad: z.number().min(0).max(1_000_000).finite(),
+    costo_unitario: z.number().nonnegative().max(10_000_000).finite(),
+    moneda: z.enum(["USD", "PEN"]),
+    incluye_igv: z.boolean(),
+    tipo_cambio: z.number().positive().max(100).finite().nullable(),
+    fecha: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullable()
+      .default(null),
+  })
+  .refine((p) => p.moneda === "USD" || p.tipo_cambio !== null, {
+    message: "Un precio en soles necesita el tipo de cambio",
+  });
+
 const esquemaItem = z.object({
   producto_id: z.string().uuid().nullable(),
   orden: z.number().int().positive(),
@@ -36,6 +58,7 @@ const esquemaItem = z.object({
   // El check `cotiz_item_dias_ok` de la base es quien manda; esto solo acota
   // el rango para dar un mensaje entendible.
   dias_entrega: z.number().int().min(1).max(365).nullable().default(null),
+  proveedores: z.array(esquemaProveedor).max(10).default([]),
 });
 
 const esquema = z.object({
@@ -44,6 +67,9 @@ const esquema = z.object({
   tiempo_entrega: z.string().max(120).nullable(),
   orden_compra_cliente: z.string().max(60).nullable(),
   contacto: z.string().max(160).nullable(),
+  // Viajaba desde la 035 y zod lo quitaba: un `z.object` descarta lo que no
+  // conoce. La base comprueba que sea de este cliente.
+  contacto_id: z.string().uuid().nullable().default(null),
   condiciones: z.string().max(1000).nullable(),
   observaciones: z.string().max(2000).nullable(),
   mostrar_descuento: z.boolean(),

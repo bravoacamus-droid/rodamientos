@@ -245,8 +245,15 @@ existiera, esa es la primera hipótesis, no la última.
 ## 6 · El flujo, y dónde se puede tocar cada cosa
 
 ```
-Cotización → Pedido confirmado → [Compra → Recepción] → Guía → Factura → Cobro
+Cotización (con el costo analizado) → Pedido confirmado → [Órdenes de compra → Recepción] → Guía → Factura → Cobro
 ```
+
+**El costo se pregunta ANTES de mandar la cotización** (09/10, §BC). Willy
+llama a sus proveedores, apunta en cada línea a quién le compra, cuántas y a
+cuánto —«Analizar precio de compra»—, y el costo de la línea es el promedio
+ponderado. Confirmado el pedido, salen las órdenes de compra por proveedor
+desde la ficha, enlazadas a la cotización (`compras.cotizacion_id`). «Pedir
+precios» sigue para comprar para stock.
 
 **La guía va ANTES que la factura**, y es decisión de Willy: los productos
 técnicos se revisan, y con la guía sellada por el almacén del cliente es con lo
