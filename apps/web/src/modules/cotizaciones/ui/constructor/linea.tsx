@@ -32,6 +32,7 @@ import {
   Trash2,
   PackageCheck,
   Scale,
+  StickyNote,
 } from "lucide-react";
 import {
   Badge,
@@ -40,6 +41,7 @@ import {
   DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DropdownMenu,
@@ -49,6 +51,7 @@ import {
   DropdownMenuTrigger,
   Input,
   SelectNativo,
+  Textarea,
 } from "@rodatech/ui";
 
 import { historialDe, sustitutosPara, type Sustituto, type VentaAnterior } from "../../acciones/buscar";
@@ -815,6 +818,7 @@ export function FilaLinea({
           <div className="shrink-0">{menuOpciones(true)}</div>
         </div>
         <p className="mt-1 text-sm">{linea.descripcion}</p>
+        <NotaLinea linea={linea} despachar={despachar} />
         <div className="mt-1">
           <OtrosPedidos demanda={demanda} actual={cotizacionActual} codigo={linea.codigo} />
         </div>
@@ -997,7 +1001,10 @@ export function FilaLinea({
         </td>
 
         {/* C3: la descripción no repite el código. */}
-        <td className="text-sm">{linea.descripcion}</td>
+        <td className="text-sm">
+          {linea.descripcion}
+          <NotaLinea linea={linea} despachar={despachar} />
+        </td>
 
         {/*
           La cantidad, con un ancho que NO se puede aplastar.
@@ -1394,5 +1401,78 @@ function PanelHistorial({
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * La nota de la línea (Luis, 09/10: *«en cada producto falta poner un botón o
+ * enlace para que agreguen notas»*). Sale impresa debajo de la descripción.
+ * Sin nota, un botón pequeño con borde; con nota, la nota y «Cambiar».
+ */
+function NotaLinea({ linea, despachar }: { linea: LineaConstructor; despachar: (a: Accion) => void }) {
+  const [abierto, setAbierto] = useState(false);
+  const [texto, setTexto] = useState(linea.nota);
+  const abrir = () => {
+    setTexto(linea.nota);
+    setAbierto(true);
+  };
+  return (
+    <>
+      {linea.nota ? (
+        <p className="mt-1 text-sm italic text-[var(--fg-muted)]">
+          Nota: {linea.nota}{" "}
+          <Button type="button" variant="link" onClick={abrir} className="text-sm not-italic">
+            Cambiar
+          </Button>
+        </p>
+      ) : (
+        <Button type="button" variant="outline" size="sm" onClick={abrir} className="mt-1 h-auto gap-1 py-1">
+          <StickyNote className="size-4" aria-hidden="true" />
+          Añadir nota
+        </Button>
+      )}
+      <Dialog open={abierto} onOpenChange={setAbierto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nota de {linea.codigo}</DialogTitle>
+            <DialogDescription>Sale impresa debajo de la descripción, en la cotización que ve el cliente.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="flex flex-col gap-1">
+            <Textarea
+              value={texto}
+              maxLength={300}
+              rows={3}
+              autoFocus
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Ej. Marca alternativa, entrega parcial, con certificado…"
+            />
+            <span className="self-end text-sm text-[var(--fg-muted)]">{texto.length} / 300</span>
+          </DialogBody>
+          <DialogFooter>
+            {linea.nota ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  despachar({ tipo: "nota", key: linea.key, valor: "" });
+                  setAbierto(false);
+                }}
+              >
+                Quitar nota
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              onClick={() => {
+                despachar({ tipo: "nota", key: linea.key, valor: texto.trim() });
+                setAbierto(false);
+              }}
+            >
+              Guardar nota
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

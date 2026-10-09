@@ -18,7 +18,7 @@ import {
 } from "@rodatech/ui";
 import { Check, RotateCcw, X } from "lucide-react";
 
-import { aprobar, corregirConfirmado } from "../../acciones/gestionar";
+import { aprobar, corregirConfirmado, ponerOrdenCliente } from "../../acciones/gestionar";
 import { importeLinea } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
 
@@ -88,6 +88,8 @@ export function DialogoConfirmar({
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  /** La O/C del cliente, si ya la mandó (09/10: se pone al aprobar). */
+  const [ordenCliente, setOrdenCliente] = React.useState("");
 
   /** Lo confirmado por línea. Arranca en lo cotizado, que es el caso normal. */
   const [cantidades, setCantidades] = React.useState<Record<string, number>>(
@@ -174,6 +176,14 @@ export function DialogoConfirmar({
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
         return;
+      }
+      if (!corrigiendo && ordenCliente.trim()) {
+        const o = await ponerOrdenCliente(cotizacionId, ordenCliente);
+        if (!o.ok) {
+          setError(`Se aprobó, pero la orden de compra no se guardó: ${o.error}`);
+          router.refresh();
+          return;
+        }
       }
       onCerrar();
       router.refresh();
@@ -287,6 +297,18 @@ export function DialogoConfirmar({
               })}
             </ul>
           </div>
+
+          {corrigiendo ? null : (
+            <label className="flex flex-col gap-1">
+              <span className="text-sm font-medium">Orden de compra del cliente</span>
+              <Input
+                value={ordenCliente}
+                maxLength={60}
+                onChange={(e) => setOrdenCliente(e.target.value)}
+                placeholder="Si ya la mandó; si no, la pones después en la ficha"
+              />
+            </label>
+          )}
 
           {error ? (
             <p

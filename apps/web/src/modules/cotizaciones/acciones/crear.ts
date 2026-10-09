@@ -45,7 +45,9 @@ const esquemaItem = z.object({
   orden: z.number().int().positive(),
   codigo: z.string().min(1).max(60),
   marca: z.string().max(80).nullable(),
-  descripcion: z.string().min(1).max(300),
+  // 500: el límite de SUNAT para la descripción de un ítem (09/10, producto
+  // no registrado con «descripción larga»).
+  descripcion: z.string().min(1).max(500),
   cantidad: z.number().positive().finite(),
   unidad_codigo: z.string().min(2).max(4),
   valor_unitario: z.number().nonnegative().finite(),
@@ -59,6 +61,8 @@ const esquemaItem = z.object({
   // el rango para dar un mensaje entendible.
   dias_entrega: z.number().int().min(1).max(365).nullable().default(null),
   proveedores: z.array(esquemaProveedor).max(10).default([]),
+  // 112. La nota de la línea; la base la recorta y la limpia igual.
+  nota: z.string().max(300, "Una nota no puede pasar de 300 letras.").nullable().default(null),
 });
 
 const esquema = z.object({

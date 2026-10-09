@@ -1915,6 +1915,7 @@ export type Database = {
           id: string
           importe: number | null
           marca: string | null
+          nota: string | null
           orden: number
           precio_minimo_ref: number
           producto_id: string | null
@@ -1936,6 +1937,7 @@ export type Database = {
           id?: string
           importe?: number | null
           marca?: string | null
+          nota?: string | null
           orden?: number
           precio_minimo_ref?: number
           producto_id?: string | null
@@ -1957,6 +1959,7 @@ export type Database = {
           id?: string
           importe?: number | null
           marca?: string | null
+          nota?: string | null
           orden?: number
           precio_minimo_ref?: number
           producto_id?: string | null
@@ -5170,6 +5173,10 @@ export type Database = {
           recibido: number
           unidad_codigo: string
         }[]
+      }
+      poner_orden_compra_cliente: {
+        Args: { p_id: string; p_oc: string }
+        Returns: undefined
       }
       productos_pagina: {
         Args: {

@@ -161,7 +161,7 @@ export function Documento({
           cero se rechazan.
         */
         descripcion:
-          l.contiene.length > 0 ? (
+          l.contiene.length > 0 || l.nota ? (
             <>
               <span className="block">{l.descripcion}</span>
               {/*
@@ -170,9 +170,15 @@ export function Documento({
                 descripción a propósito —es información secundaria— pero no
                 tanto como para que haya que acercar la hoja.
               */}
-              <span className="mt-0.5 block text-[11.5px] leading-snug text-[#444]">
-                Contiene: {l.contiene.map((c) => `${c.cantidad} × ${c.texto}`).join(" · ")}
-              </span>
+              {l.contiene.length > 0 ? (
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-[#444]">
+                  Contiene: {l.contiene.map((c) => `${c.cantidad} × ${c.texto}`).join(" · ")}
+                </span>
+              ) : null}
+              {/* La nota de la línea (112): el mismo escalón que «Contiene». */}
+              {l.nota ? (
+                <span className="mt-0.5 block text-[11.5px] italic leading-snug text-[#444]">Nota: {l.nota}</span>
+              ) : null}
             </>
           ) : (
             l.descripcion

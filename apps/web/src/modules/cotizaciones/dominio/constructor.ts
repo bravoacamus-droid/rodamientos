@@ -103,6 +103,8 @@ export interface LineaConstructor {
    * precio. Vacío = no se analizó; el costo es el de la ficha.
    */
   proveedores: ProveedorLinea[];
+  /** Nota de la línea, impresa debajo de la descripción (112). Vacía = sin nota. */
+  nota: string;
 }
 
 export interface EstadoConstructor {
@@ -238,6 +240,8 @@ export type Accion =
    * ellos, su costo —el promedio ponderado— y el precio de venta elegido.
    */
   | { tipo: "compraAnalizada"; key: string; proveedores: ProveedorLinea[]; valorUnitario: number }
+  /** Luis, 09/10: *«en cada producto, un botón para que agreguen notas»*. */
+  | { tipo: "nota"; key: string; valor: string }
   | { tipo: "bajarAlPiso"; key: string }
   | { tipo: "volverALista"; key: string }
   | { tipo: "disponibilidad"; key: string; valor: Disponibilidad }
@@ -348,6 +352,7 @@ function desdeProducto(
     disponibilidad: "inmediata",
     diasEntrega: null,
     proveedores: [],
+    nota: "",
   };
 }
 
@@ -475,6 +480,9 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         // Igual: es lo que el cliente LEE para saber qué está comprando.
         descripcion: accion.valor.trim() ? accion.valor.trim() : l.descripcion,
       }));
+
+    case "nota":
+      return mapear(estado, accion.key, (l) => ({ ...l, nota: accion.valor.slice(0, 300) }));
 
     case "compraAnalizada":
       return mapear(estado, accion.key, (l) => {
@@ -842,6 +850,7 @@ export function aPayload(estado: EstadoConstructor) {
       dias_entrega: l.diasEntrega,
       // A quién se le compra (111). La base recalcula con esto el costo.
       proveedores: proveedoresAPayload(l.proveedores),
+      nota: l.nota.trim() || null,
       // OJO: `precio_minimo_ref` NO va aquí. Lo impone el trigger
       // `trg_cotiz_items_piso` desde el maestro. Mandarlo sería ofrecerle a
       // quien llame la posibilidad de desactivar el piso.

@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  SelectNativo,
   Table,
   TableContenedor,
   TBody,
@@ -35,17 +34,11 @@ import {
   lineasSinAnalizar,
   avisosDeVenta,
   bloqueos as calcularBloqueos,
-  ENTREGAS,
   estadoInicial,
   reducir,
   totalesDe,
   type EstadoConstructor,
 } from "../../dominio/constructor";
-import {
-  entregaDelDocumento,
-  entregaPrometeSinRespaldo,
-  entregaSeContradice,
-} from "../../dominio/disponibilidad";
 import { marcasConocidas } from "@/modules/productos/acciones/alta-rapida";
 
 import { AltaProducto } from "./alta-producto";
@@ -54,6 +47,7 @@ import { BuscadorClientes } from "./buscador-clientes";
 import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
+import { NoRegistrado } from "./no-registrado";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
 
@@ -124,16 +118,6 @@ export function Constructor({
     dispara con el estado que acaba de cambiar y vuelve a cambiarlo. Esto solo
     lee y pinta.
   */
-  const entregaPropuesta = useMemo(
-    () => entregaDelDocumento(estado.lineas),
-    [estado.lineas],
-  );
-
-  const entregaMiente = useMemo(
-    () => entregaSeContradice(estado.tiempoEntrega, estado.lineas),
-    [estado.tiempoEntrega, estado.lineas],
-  );
-
   /*
     El reverso, que faltaba: la cabecera promete una demora y ninguna línea la
     respalda.
@@ -169,11 +153,6 @@ export function Constructor({
       vivo = false;
     };
   }, []);
-
-  const entregaSinRespaldo = useMemo(
-    () => entregaPrometeSinRespaldo(estado.tiempoEntrega, estado.lineas),
-    [estado.tiempoEntrega, estado.lineas],
-  );
 
   // Editar y crear van a acciones distintas: crear inserta y devuelve un
   // número nuevo; editar reescribe la que ya existe y NO toca el número.
@@ -380,24 +359,6 @@ export function Constructor({
               COT1-000004 con «Stock inmediato» arriba y una línea a 15 días,
               y no llegó a verlo nunca.
             */}
-            {entregaMiente ? (
-              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-3">
-                <p className="min-w-0 flex-1 text-base">
-                  <strong>Arriba dice «{estado.tiempoEntrega}»</strong> y hay productos que
-                  tardan. El cliente leerá las dos cosas.
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    despachar({ tipo: "cabecera", campo: "tiempoEntrega", valor: entregaPropuesta })
-                  }
-                  className="inline-flex h-10 items-center rounded-md bg-[var(--warn)] px-3 text-sm font-semibold text-white hover:opacity-90"
-                >
-                  Poner «{entregaPropuesta}»
-                </button>
-              </div>
-            ) : null}
-
             <details className="group mt-3 border-t border-[var(--border-soft)] pt-3">
               {/* Con borde y la flecha de lucide. Era texto gris con un «›»
                   tipográfico: no parecía algo que se pudiera pulsar, y ahí
@@ -413,78 +374,13 @@ export function Constructor({
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Tiempo de entrega</span>
-                  <SelectNativo
-                    value={estado.tiempoEntrega}
-                    onChange={(e) => {
-                      // El reducer marca «a mano» solo al ver este campo.
-                      despachar({
-                        tipo: "cabecera",
-                        campo: "tiempoEntrega",
-                        valor: e.target.value,
-                      });
-                    }}
-                  >
-                    {/* La propuesta primero, y solo si no está ya en la lista
-                        fija: «Hasta 45 días» sale de una línea con plazo
-                        escrito a mano y no puede estar prevista. */}
-                    {ENTREGAS.includes(entregaPropuesta as (typeof ENTREGAS)[number]) ? null : (
-                      <option value={entregaPropuesta}>{entregaPropuesta}</option>
-                    )}
-                    {ENTREGAS.map((x) => (
-                      <option key={x} value={x}>
-                        {x}
-                      </option>
-                    ))}
-                  </SelectNativo>
-                  {entregaSinRespaldo ? (
-                    <span className="text-sm font-medium text-[var(--warn)]">
-                      Prometes una espera y las líneas están todas como
-                      inmediatas. Marca en su línea cuál tarda, o el cliente no
-                      sabrá por cuál está esperando.
-                    </span>
-                  ) : null}
-                  {entregaMiente ? (
-                    <span className="text-sm font-medium text-[var(--warn)]">
-                      Dice inmediato y hay líneas que tardan. Lo que cuadra:{" "}
-                      {/* Con borde, no subrayado (revisión por módulos del 02/10). */}
-                      <button
-                        type="button"
-                        className="mt-1 inline-flex min-h-8 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm font-medium text-[var(--fg)] hover:bg-[var(--surface-2)]"
-                        onClick={() => {
-                          despachar({
-                            tipo: "cabecera",
-                            campo: "tiempoEntrega",
-                            valor: entregaPropuesta,
-                          });
-                        }}
-                      >
-                        {entregaPropuesta}
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="text-sm text-[var(--fg-subtle)]">
-                      La promesa general del documento. Sale de las líneas.
-                    </span>
-                  )}
-                </label>
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Orden de compra del cliente</span>
-                  <Input
-                    value={estado.ordenCompraCliente}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "cabecera",
-                        campo: "ordenCompraCliente",
-                        valor: e.target.value,
-                      })
-                    }
-                    placeholder="Si ya la tienen"
-                  />
-                </label>
-
+                {/*
+                  Sin «Tiempo de entrega» ni «Orden de compra del cliente»
+                  (Luis, 09/10): *«saca eso de tiempo de entrega, porque se
+                  maneja dentro de cada producto; orden de cliente tampoco va,
+                  porque eso es cuando ya tenemos una orden»*. La entrega del
+                  documento sale sola de las líneas; la O/C se pone al aprobar.
+                */}
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Condiciones</span>
                   <Input
@@ -539,12 +435,16 @@ export function Constructor({
               en lo que más veces se repite de la pantalla.
             */}
             <div className="mb-3 flex flex-col gap-3">
-              <div>
-                <h2 className="text-base font-semibold">Productos</h2>
-                <p className="text-sm text-[var(--fg-muted)]">
-                  Agrega productos y revisa las alternativas y las ventas
-                  anteriores de cada uno.
-                </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold">Productos</h2>
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    Agrega productos y revisa las alternativas y las ventas
+                    anteriores de cada uno.
+                  </p>
+                </div>
+                {/* Arriba a la derecha (Luis, 09/10): lo que no está en el catálogo. */}
+                <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
               </div>
               {/*
                 Y la salida cuando el código no existe.

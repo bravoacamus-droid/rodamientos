@@ -17,6 +17,7 @@ import { AccionesCotizacion } from "./detalle/acciones";
 import { Documento } from "./detalle/documento";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
+import { OrdenCliente } from "./detalle/orden-cliente";
 import { demandaDeProductos } from "../api/demanda";
 import { proveedoresGuardados } from "../dominio/compra-linea";
 import { perfilActual } from "@rodatech/db/servidor";
@@ -102,6 +103,7 @@ export default async function PaginaDetalleCotizacion({
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
+      nota: l.nota,
       cantidad: l.cantidad,
       unidad: l.unidad_codigo,
       valorUnitario: l.valor_unitario,
@@ -329,6 +331,11 @@ export default async function PaginaDetalleCotizacion({
                 ? "la que mandó el cliente"
                 : "todavía no la han mandado"
             }
+            accion={
+              cabecera.estado === "anulada" ? null : (
+                <OrdenCliente cotizacionId={cabecera.id} actual={cabecera.orden_compra_cliente} />
+              )
+            }
           />
           <Resumen
             etiqueta="Validez"
@@ -457,7 +464,10 @@ export default async function PaginaDetalleCotizacion({
                         </span>
                       ) : null}
                     </td>
-                    <td className="px-3 py-2.5">{l.descripcion}</td>
+                    <td className="px-3 py-2.5">
+                      {l.descripcion}
+                      {l.nota ? <span className="mt-0.5 block text-sm italic text-[var(--fg-muted)]">Nota: {l.nota}</span> : null}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
                       {l.cantidad}{" "}
                       <span className="text-[var(--fg-subtle)]">{unidadLegible(l.unidad_codigo)}</span>
@@ -524,6 +534,7 @@ export default async function PaginaDetalleCotizacion({
                   ) : null}
                   {l.descripcion}
                 </p>
+                {l.nota ? <p className="text-sm italic text-[var(--fg-muted)]">Nota: {l.nota}</p> : null}
 
                 {/* La cuenta, dicha entera: «4 NIU × $ 25.40». En la tabla son
                     dos columnas separadas y aquí no hay cabecera que las
@@ -661,11 +672,14 @@ function Resumen({
   valor,
   detalle,
   tono,
+  accion,
 }: {
   etiqueta: string;
   valor: string;
   detalle: string;
   tono?: "ok" | "aviso" | "malo";
+  /** Un botón debajo, para cambiar el dato sin salir de la ficha. */
+  accion?: React.ReactNode;
 }) {
   const color =
     tono === "malo"
@@ -685,6 +699,7 @@ function Resumen({
         {valor}
       </p>
       <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{detalle}</p>
+      {accion}
     </div>
   );
 }

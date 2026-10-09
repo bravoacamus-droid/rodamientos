@@ -4592,6 +4592,37 @@ de Defontana.
 
 ---
 
+## §BD · 09/10 — La cotización, más corta: notas por producto y producto no registrado (112)
+
+Luis, 09/10, mirando «Nueva cotización»: *«saca eso de tiempo de entrega,
+porque se maneja dentro de cada producto; orden de cliente tampoco va, porque
+eso es cuando ya tenemos una orden; también en cada producto falta poner un
+botón o enlace para que agreguen notas […] y un botón arriba a la derecha de
+productos si quieres añadir un producto no registrado: a veces le piden un
+producto que no vende o no es habitual pero lo consigue, solo necesita poner
+descripción larga»*.
+
+- **«Más datos del documento»** solo tiene Condiciones. La entrega del
+  documento sale SIEMPRE de las líneas (también al editar una vieja).
+- **La O/C del cliente** se pone al **aprobar** (campo en el diálogo) o desde
+  la ficha («Poner orden» / «Cambiar»), con `poner_orden_compra_cliente`
+  (112). Era el único sitio donde se escribía: sin esto se perdía.
+- **Nota por producto**: «Añadir nota» en cada línea (300 letras). Sale en la
+  tabla de la ficha, en el papel (debajo de la descripción, como «Contiene») y
+  en el enlace público. `cotizacion_items.nota`; `cotizacion_por_token`
+  la devuelve y el centinela revisa la lista blanca con ella dentro.
+- **«Producto no registrado»**, arriba a la derecha de Productos: descripción
+  larga (hasta 500, el límite de SUNAT; antes 300), cantidad, unidad, precio,
+  y código y marca opcionales. **Entra al catálogo** como OTROS / POR
+  CLASIFICAR y SIN MARCA, con código «ACO-63110954» si no se escribe uno. No
+  puede quedarse como texto suelto: la guía exige producto del catálogo
+  (`guia_items.producto_id` NOT NULL), la factura exige la guía y la orden de
+  compra también. Lo pueden crear gerencia, administración y compras (la regla
+  del catálogo); **ventas no**.
+
+Probado en pantalla el 09/10 (cotización y producto de prueba borrados, el
+correlativo vuelto a 7).
+
 ## §BC · 09/10 — El costo se analiza AL COTIZAR (la hoja de Willy)
 
 Luis, 09/10, con una hoja que Willy le dibujó a mano: *«el sistema lo hemos

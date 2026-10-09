@@ -263,3 +263,26 @@ export async function corregirConfirmado(
     };
   }
 }
+
+/**
+ * La orden de compra del cliente (112). Ya no va en el formulario de la
+ * cotización —Luis, 09/10: *«eso es cuando ya tenemos una orden»*—, sino al
+ * aprobar o desde la ficha, cuando llegue.
+ */
+export async function ponerOrdenCliente(id: string, oc: string): Promise<ResultadoGestion> {
+  const sinPermiso = await exigirPermiso();
+  if (sinPermiso) return { ok: false, error: sinPermiso };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "La cotización no es válida." };
+  if (typeof oc !== "string" || oc.trim().length > 60) {
+    return { ok: false, error: "La orden de compra no puede pasar de 60 caracteres." };
+  }
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("poner_orden_compra_cliente", { p_id: id, p_oc: oc.trim() });
+    if (error) return { ok: false, error: error.message };
+    refrescar(id);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." };
+  }
+}

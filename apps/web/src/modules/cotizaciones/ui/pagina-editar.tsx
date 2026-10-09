@@ -12,7 +12,7 @@ import {
 } from "../api/consultas";
 import { proveedoresGuardados } from "../dominio/compra-linea";
 import { estadoInicial, type EstadoConstructor } from "../dominio/constructor";
-import { entregaDelDocumento, esEntregaAutomatica } from "../dominio/disponibilidad";
+import { entregaDelDocumento } from "../dominio/disponibilidad";
 import { Constructor } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `cotizaciones`. */
@@ -117,7 +117,9 @@ export default async function PaginaEditarCotizacion({
     // sistema habría propuesto, se sigue recalculando con las líneas: era
     // `true` siempre, y así la COT1-000004 quedó con «Stock inmediato» arriba
     // y una línea a 15 días debajo (06/10).
-    entregaAMano: !esEntregaAutomatica(cabecera.tiempo_entrega),
+    // Desde el 09/10 la entrega del documento ya no se elige a mano (Luis:
+    // *«se maneja dentro de cada producto»*): sale siempre de las líneas.
+    entregaAMano: false,
     ordenCompraCliente: cabecera.orden_compra_cliente ?? "",
     contacto: cabecera.contacto ?? "",
     contactoId: cabecera.contacto_id ?? null,
@@ -156,6 +158,7 @@ export default async function PaginaEditarCotizacion({
       disponibilidad: l.disponibilidad,
       diasEntrega: l.dias_entrega,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+      nota: l.nota ?? "",
     })),
     proximaKey: lineas.length + 1,
   };

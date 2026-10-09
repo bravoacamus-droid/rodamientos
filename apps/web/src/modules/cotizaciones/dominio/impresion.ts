@@ -69,6 +69,8 @@ export interface LineaCruda {
    * como líneas con importe 0. Un comprobante con líneas a cero se rechaza.
    */
   contiene?: { cantidad: number; codigo: string; descripcion: string }[];
+  /** La nota de la línea (112), debajo de la descripción. */
+  nota?: string | null;
 }
 
 export interface DatosImpresion {
@@ -111,6 +113,8 @@ export interface LineaImpresa {
   entrega: string;
   /** Lo que lleva dentro, si es un kit. Sin precios, a propósito. */
   contiene: { cantidad: number; texto: string }[];
+  /** La nota de la línea, o null. */
+  nota: string | null;
 }
 
 export interface CotizacionImpresa {
@@ -219,6 +223,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     // una sola función, y así el PDF y lo que se manda por WhatsApp dicen lo
     // mismo sin que nadie tenga que acordarse.
     entrega: textoEntrega(l.disponibilidad ?? "inmediata", l.diasEntrega ?? null),
+    nota: l.nota?.trim() || null,
   }));
 
   // Se suman importes YA redondeados, igual que la columna generada de la base

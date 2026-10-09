@@ -56,6 +56,8 @@ export interface CotizacionPublica {
     codigo: string;
     marca: string | null;
     descripcion: string;
+    /** 112. */
+    nota?: string | null;
     cantidad: number;
     unidad_codigo: string;
     valor_unitario: number;

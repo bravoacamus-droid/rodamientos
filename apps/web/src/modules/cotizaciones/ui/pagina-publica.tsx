@@ -95,6 +95,7 @@ export default async function PaginaCotizacionPublica({
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
+      nota: l.nota ?? null,
       cantidad: Number(l.cantidad),
       unidad: l.unidad_codigo,
       valorUnitario: Number(l.valor_unitario),

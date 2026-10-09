@@ -25,7 +25,9 @@ const esquema = z.object({
     .min(1, "El código es obligatorio")
     .max(60, "El código es demasiado largo"),
   codigo_fabricante: z.string().trim().max(60).nullable(),
-  descripcion: z.string().trim().min(3, "Falta la descripción").max(300),
+  // 500 y no 300 (09/10): el límite de SUNAT, para el producto no habitual
+  // que Willy cotiza con una descripción larga.
+  descripcion: z.string().trim().min(3, "Falta la descripción").max(500, "La descripción no puede pasar de 500 letras."),
   marca_id: z.string().uuid("Elige una marca"),
   familia_id: z.string().uuid("Elige una familia"),
   subfamilia_id: z.string().uuid("Elige una sub-familia"),
