@@ -421,7 +421,13 @@ export default async function PaginaDetalleCotizacion({
           no compre es ruido. Va antes de los productos porque, recién
           confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
         */}
-        <LoQueFalta falta={falta} />
+        <LoQueFalta
+          falta={falta}
+          analizados={lineasConfirmadas
+            .filter((l) => l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null))
+            .map((l) => l.productoId)}
+          puedeGenerar={!!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)}
+        />
 
         {confirmado ? (
           <OrdenesDeCompra

@@ -131,12 +131,25 @@ function DialogoGenerar({
   const [error, setError] = React.useState<string | null>(null);
   const [enviando, empezar] = React.useTransition();
 
-  const abrir = () => {
+  const abrir = React.useCallback(() => {
     setOrdenes(propuestas);
     setFuera(new Set());
     setError(null);
     setAbierto(true);
-  };
+  }, [propuestas]);
+
+  // «Registrar la compra» del aviso de arriba llega con #generar-ordenes y
+  // abre esto directamente, sin bajar a buscar el botón.
+  React.useEffect(() => {
+    const mirar = () => {
+      if (window.location.hash !== "#generar-ordenes") return;
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      abrir();
+    };
+    mirar();
+    window.addEventListener("hashchange", mirar);
+    return () => window.removeEventListener("hashchange", mirar);
+  }, [abrir]);
   const cantidad = (prov: string, prod: string, n: number) =>
     setOrdenes((os) =>
       os.map((o) =>

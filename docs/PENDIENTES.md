@@ -4592,6 +4592,24 @@ de Defontana.
 
 ---
 
+## §BL · 13/10 — Lo analizado al cotizar ya no se pregunta: se compra
+
+Luis, con la COT1-000009 aprobada: *«en análisis de compra ya se hizo en
+cotización lo que se iba a comprar y a quiénes; entonces ya no sería acá pedir
+precio, sino ya registrar la compra»*. El aviso «Falta comprar» seguía
+ofreciendo «Pedir precio de lo que falta» como botón principal.
+
+- En el aviso, cada producto con análisis dice **«ya sabes a quién»**, y el
+  botón principal es **«Registrar la compra»**: abre directamente el diálogo de
+  órdenes de compra (`#generar-ordenes`), con los proveedores apuntados al
+  cotizar.
+- «Pedir precio» y «Registrar a mano» quedan solo para lo que NO se analizó
+  («… lo no analizado»); si nada se analizó, el aviso es el de siempre.
+- Solo para quien puede generar órdenes (gerencia, administración, compras).
+
+Probado con la COT1-000009 (solo lectura): los tres productos dicen «ya sabes
+a quién» y «Registrar la compra» abre las 4 órdenes, sin el B-118.
+
 ## §BK · 13/10 — El pedido enseña lo que el cliente se lleva
 
 Luis aprobó la COT1-000009 marcando el B-118 como «No lo quiso», y la ficha lo

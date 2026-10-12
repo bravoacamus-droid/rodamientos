@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PackageX, ShoppingCart } from "lucide-react";
+import { ClipboardList, PackageX, ShoppingCart } from "lucide-react";
 
 import type { FaltaDelPedido } from "@/modules/compras";
 
@@ -31,7 +31,20 @@ import type { FaltaDelPedido } from "@/modules/compras";
  * confirmación. Dos pantallas que contestan lo mismo con cifras distintas es
  * peor que una pantalla de menos.
  */
-export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
+export function LoQueFalta({
+  falta,
+  analizados = [],
+  puedeGenerar = false,
+}: {
+  falta: readonly FaltaDelPedido[];
+  /**
+   * Los productos a los que se les analizó la compra al cotizar (111): ya se
+   * sabe a quién comprárselos y a cuánto.
+   */
+  analizados?: readonly string[];
+  /** Si quien mira puede generar las órdenes de compra. */
+  puedeGenerar?: boolean;
+}) {
   /*
     Lo que falta llega YA CALCULADO desde la página.
 
@@ -48,7 +61,17 @@ export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
   const porPedir = falta.filter((f) => !f.enCamino);
   const enCamino = falta.filter((f) => f.enCamino);
 
-  const items = porPedir.map((f) => `${f.producto_id}:${f.falta}`).join(",");
+  /*
+    Lo analizado al cotizar ya no se pregunta (Luis, 13/10: *«en análisis de
+    compra ya se hizo en cotización lo que se iba a comprar y a quiénes;
+    entonces ya no sería acá pedir precio, sino ya registrar la compra»*).
+    Para eso, «Registrar la compra» abre las órdenes por proveedor. «Pedir
+    precio» queda solo para lo que no se analizó.
+  */
+  const yaAnalizado = new Set(analizados);
+  const conAnalisis = porPedir.filter((f) => yaAnalizado.has(f.producto_id));
+  const sinAnalisis = porPedir.filter((f) => !yaAnalizado.has(f.producto_id));
+  const items = sinAnalisis.map((f) => `${f.producto_id}:${f.falta}`).join(",");
 
   return (
     <section className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 print:hidden">
@@ -70,6 +93,9 @@ export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
                 </span>
                 <span className="tabular font-semibold">
                   {f.falta}
+                  {!f.enCamino && yaAnalizado.has(f.producto_id) ? (
+                    <span className="ml-2 font-normal text-[var(--fg-muted)]">ya sabes a quién</span>
+                  ) : null}
                   {f.enCamino ? (
                     <span className="ml-2 font-normal text-[var(--fg-muted)]">
                       ya pedido
@@ -90,23 +116,36 @@ export function LoQueFalta({ falta }: { falta: readonly FaltaDelPedido[] }) {
 
         {porPedir.length > 0 ? (
           <div className="flex shrink-0 flex-col gap-2">
+            {conAnalisis.length > 0 && puedeGenerar ? (
+              <a
+                href="#generar-ordenes"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                <ClipboardList className="size-4" aria-hidden="true" />
+                Registrar la compra
+              </a>
+            ) : null}
+            {sinAnalisis.length > 0 ? (
+              <>
             {/* El primario es pedir precio y no comprar directo: el precio lo
                 pone el proveedor, y Willy pregunta antes de comprar. Registrar
                 la compra a ciegas se deja como la segunda opción, para cuando
                 ya se sabe a cuánto. */}
             <Link
               href={`/compras/pedir-precio?items=${items}`}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium ${conAnalisis.length > 0 ? "border border-[var(--border-strong)] hover:bg-[var(--surface)]" : "bg-brand-600 text-white hover:bg-brand-700"}`}
             >
               <ShoppingCart className="size-4" aria-hidden="true" />
-              Pedir precio de lo que falta
+              {conAnalisis.length > 0 ? "Pedir precio de lo no analizado" : "Pedir precio de lo que falta"}
             </Link>
             <Link
               href={`/compras/nueva?items=${items}`}
               className="inline-flex h-10 items-center justify-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface)]"
             >
-              Registrar la compra
+              {conAnalisis.length > 0 ? "Registrar a mano lo no analizado" : "Registrar la compra"}
             </Link>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
