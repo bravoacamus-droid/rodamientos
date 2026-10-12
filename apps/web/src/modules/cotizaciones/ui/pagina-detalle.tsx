@@ -14,7 +14,7 @@ import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
-import { Documento } from "./detalle/documento";
+import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
 import { OrdenCliente } from "./detalle/orden-cliente";
@@ -254,7 +254,7 @@ export default async function PaginaDetalleCotizacion({
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
   return (
-    <>
+    <MonedaDelPapel>
       {/* ------------------------------------------------ Ficha de trabajo */}
       {/*
         Lo que se mira para TRABAJAR, y no se imprime.
@@ -328,8 +328,8 @@ export default async function PaginaDetalleCotizacion({
               descuentoPct: l.descuento_pct,
             }))}
             vistaPrevia={
-              <VistaPreviaDocumento numero={cabecera.numero}>
-                <Documento c={impresa} cuentas={cuentas} />
+              <VistaPreviaDocumento numero={cabecera.numero} encima={<SelectorMonedaPapel />}>
+                <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
               </VistaPreviaDocumento>
             }
           />
@@ -684,9 +684,11 @@ export default async function PaginaDetalleCotizacion({
         tiempo. Al pulsar Imprimir sale esto y nada más.
       */}
       <div className="hidden print:block">
-        <Documento c={impresa} cuentas={cuentas} />
+        {/* En la moneda que se eligió en la vista previa (13/10): lo que se
+            ve ahí es lo que sale por la impresora. */}
+        <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
       </div>
-    </>
+    </MonedaDelPapel>
   );
 }
 

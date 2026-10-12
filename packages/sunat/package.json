@@ -10,7 +10,8 @@
     "./catalogos": "./src/catalogos/index.ts",
     "./dominio": "./src/dominio/index.ts",
     "./impresion": "./src/impresion/index.ts",
-    "./guia": "./src/dominio/guia.ts"
+    "./guia": "./src/dominio/guia.ts",
+    "./letras": "./src/ubl/numero-a-letras.ts"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.6",

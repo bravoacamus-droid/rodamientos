@@ -7516,3 +7516,28 @@ lado en `RUTAS_GRE`.
 
 16 KB de log del servidor de desarrollo en el repo, y sin entrada en
 `.gitignore`. Fuera del índice e ignorado.
+
+## §BO · 13/10 — La cotización en soles, solo en el papel
+
+Luis, de parte de Willy: *«en cotización a veces lo quieren en soles; ¿podemos
+poner un botón con el cambio del día traído por SUNAT para imprimir y ver en
+soles? Así, dinámicamente»*.
+
+- En **Vista previa** sale «Moneda del papel: Dólares ($) | Soles (S/)». Al
+  elegir soles se trae solo el **tipo de cambio venta de SUNAT de hoy** (el
+  mismo paquete que usa la compra en soles, con caché hasta medianoche: veinte
+  impresiones son una consulta). Se puede corregir a mano, y si SUNAT no
+  responde se escribe.
+- El papel convierte el **valor unitario** a céntimos y vuelve a sumar desde
+  ahí (`enSoles`, con tests): la columna y los totales cuadran entre sí. El
+  total puede diferir en céntimos de «total × cambio», a propósito.
+- El pie dice a qué cambio y de qué día: *«en soles, al tipo de cambio venta
+  de S/ 3.457 por dólar del 12/10/2026»*. El monto en letras sale en SOLES.
+- **Lo que se imprime es lo que se eligió**: el estado vive en un contexto que
+  comparten la previa y la hoja oculta de impresión. Comprobado con la
+  impresión emulada.
+- **No se guarda nada.** La cotización se aprueba, se factura y se cobra en
+  dólares (C6). Siguen en dólares la ficha, el mensaje de WhatsApp y el enlace
+  público `/ver` — si Willy los quiere en soles es otro paso.
+- El núcleo del tipo de cambio pasó a `lib/tipo-cambio.ts`; la compra y la
+  cotización ponen cada una su puerta (la del papel: tener sesión).

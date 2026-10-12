@@ -35,9 +35,12 @@ import { Button, Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } 
  */
 export function VistaPreviaDocumento({
   numero,
+  encima,
   children,
 }: {
   numero: string;
+  /** Lo que va sobre la hoja: en la cotización, la moneda del papel (13/10). */
+  encima?: React.ReactNode;
   /** El `<Documento>` ya montado en el servidor. */
   children: React.ReactNode;
 }) {
@@ -82,6 +85,7 @@ export function VistaPreviaDocumento({
             </Button>
           </DialogHeader>
           <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-4">
+            {encima ? <div className="mb-3">{encima}</div> : null}
             {/* `overflow-x-auto` y no `hidden`: en el teléfono la hoja es más
                 ancha que el diálogo y se cortaba la razón social y la
                 dirección de la empresa. Se desliza; la hoja no se toca

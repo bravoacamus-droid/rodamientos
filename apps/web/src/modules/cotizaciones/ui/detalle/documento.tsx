@@ -218,10 +218,22 @@ export function Documento({
           ) : null}
           {/* C6 y C1 juntas: la moneda y por qué el valor unitario no lleva
               IGV. Es la frase que evita la llamada del cliente preguntando. */}
-          <p className="mb-1">
-            Los precios están expresados en <strong>dólares americanos</strong> y no
-            incluyen IGV en la columna de valor unitario.
-          </p>
+          {/* En soles (13/10) se dice a qué cambio y de qué día: un precio
+              convertido sin su tipo de cambio no se puede comprobar, y el
+              cliente que vuelve a la semana tiene que saber de dónde salió. */}
+          {c.moneda === "PEN" && c.tipoCambio ? (
+            <p className="mb-1">
+              Los precios están expresados en <strong>soles</strong>, al tipo de cambio venta
+              de <strong>S/ {c.tipoCambio.valor.toFixed(3)}</strong> por dólar del{" "}
+              {formatoFecha(c.tipoCambio.fecha)}, y no incluyen IGV en la columna de valor
+              unitario.
+            </p>
+          ) : (
+            <p className="mb-1">
+              Los precios están expresados en <strong>dólares americanos</strong> y no
+              incluyen IGV en la columna de valor unitario.
+            </p>
+          )}
           <CuentasParaPagar cuentas={cuentas} />
 
           <div className="mt-3 flex items-end justify-between">

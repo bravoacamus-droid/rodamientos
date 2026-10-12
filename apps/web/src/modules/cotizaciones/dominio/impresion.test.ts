@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   armarCotizacionImpresa,
+  enSoles,
   limpiarDescripcion,
   sumarDias,
   type DatosImpresion,
@@ -481,5 +482,35 @@ describe("kits", () => {
   it("una línea normal no trae contenido, y no revienta", () => {
     const c = armarCotizacionImpresa(base());
     expect(c.lineas[0]?.contiene).toEqual([]);
+  });
+});
+
+describe("el papel en soles (13/10)", () => {
+  const tc = { valor: 3.745, fecha: "2026-10-12" };
+
+  it("convierte el valor unitario y vuelve a sumar desde ahí, así que cuadra", () => {
+    const c = enSoles(armarCotizacionImpresa(base()), tc);
+    // 12.84 × 3.745 = 48.0858 → 48.09 por unidad; 4 unidades = 192.36.
+    expect(c.lineas[0]?.valorUnitario).toBe(48.09);
+    expect(c.lineas[0]?.importe).toBe(192.36);
+    expect(c.subtotal).toBe(192.36);
+    expect(c.igv).toBe(34.62);
+    expect(c.total).toBe(226.98);
+    expect(c.moneda).toBe("PEN");
+    expect(c.simbolo).toBe("S/");
+    expect(c.tipoCambio).toEqual(tc);
+    expect(c.enLetras).toMatch(/SOLES$/);
+  });
+
+  it("en dólares no lleva tipo de cambio, y convertir dos veces no multiplica dos veces", () => {
+    const d = armarCotizacionImpresa(base());
+    expect(d.tipoCambio).toBeNull();
+    const s = enSoles(d, tc);
+    expect(enSoles(s, tc)).toBe(s);
+  });
+
+  it("un cambio vacío o en cero deja el papel en dólares", () => {
+    const d = armarCotizacionImpresa(base());
+    expect(enSoles(d, { valor: 0, fecha: "" })).toBe(d);
   });
 });

@@ -1,5 +1,7 @@
 import { IGV } from "@rodatech/config";
-import { montoEnLetras } from "@rodatech/sunat";
+// Por la ruta propia y no por la raíz del paquete: el papel se pinta también
+// en el navegador (en soles, 13/10), y la raíz arrastra la firma del XML.
+import { montoEnLetras } from "@rodatech/sunat/letras";
 
 import { textoEntrega, type Disponibilidad } from "./disponibilidad";
 import { importeLinea, redondear2 } from "./totales";
@@ -26,7 +28,9 @@ import { unidadLegible } from "./unidades";
  *       [Descuento] · Importe
  *   C5  El descuento es una casilla habilitable: si no se activó, la columna
  *       ni aparece.
- *   C6  Dólares siempre.
+ *   C6  Dólares siempre. Desde el 13/10, con una excepción solo de PAPEL:
+ *       verla e imprimirla en soles al tipo de cambio del día
+ *       ({@link enSoles}). Lo guardado sigue en dólares.
  */
 
 export interface EmisorImpreso {
@@ -131,9 +135,11 @@ export interface CotizacionImpresa {
   condiciones: string | null;
   observaciones: string | null;
   ordenCompraCliente: string | null;
-  /** C6: siempre dólares. */
-  moneda: "USD";
-  simbolo: "$";
+  /** C6: dólares, salvo que se pida el papel en soles ({@link enSoles}). */
+  moneda: "USD" | "PEN";
+  simbolo: "$" | "S/";
+  /** Solo en soles: a cuánto se convirtió y de qué día es. */
+  tipoCambio: { valor: number; fecha: string } | null;
   /** C5: si es false, la columna de descuento no se dibuja. */
   mostrarDescuento: boolean;
   /** C7: igual, para la columna de entrega. */
@@ -226,16 +232,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     nota: l.nota?.trim() || null,
   }));
 
-  // Se suman importes YA redondeados, igual que la columna generada de la base
-  // y que `calcularTotales`. Si aquí se sumara con todos los decimales, el
-  // total del papel no cuadraría con la suma de la columna que el cliente ve.
-  const subtotal = redondear2(lineas.reduce((a, l) => a + l.importe, 0));
-  const bruto = redondear2(
-    lineas.reduce((a, l) => a + redondear2(l.cantidad * l.valorUnitario), 0),
-  );
-  const descuento = redondear2(bruto - subtotal);
-  const igv = redondear2(subtotal * IGV);
-  const total = redondear2(subtotal + igv);
+  const { subtotal, descuento, igv, total } = totalesDe(lineas);
 
   // C5: la columna de descuento solo se dibuja si se activó Y hay algo que
   // mostrar. Activarla y que salga una columna de ceros es peor que no tenerla.
@@ -294,6 +291,7 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     ordenCompraCliente: d.ordenCompraCliente,
     moneda: "USD",
     simbolo: "$",
+    tipoCambio: null,
     mostrarDescuento: conDescuento,
     mostrarDisponibilidad: conEntrega,
     // C4, en este orden exacto. La entrega se cuela entre U.M. y el valor:
@@ -320,6 +318,66 @@ export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
     // código: pasar "USD" imprimía «SESENTA CON 60/100 USD». En un documento
     // peruano la leyenda va con el nombre de la moneda.
     enLetras: montoEnLetras(total, "DÓLARES AMERICANOS"),
+  };
+}
+
+/**
+ * Se suman importes YA redondeados, igual que la columna generada de la base
+ * y que `calcularTotales`. Si se sumara con todos los decimales, el total del
+ * papel no cuadraría con la suma de la columna que el cliente ve.
+ */
+function totalesDe(lineas: readonly Pick<LineaImpresa, "cantidad" | "valorUnitario" | "importe">[]) {
+  const subtotal = redondear2(lineas.reduce((a, l) => a + l.importe, 0));
+  const bruto = redondear2(
+    lineas.reduce((a, l) => a + redondear2(l.cantidad * l.valorUnitario), 0),
+  );
+  const descuento = redondear2(bruto - subtotal);
+  const igv = redondear2(subtotal * IGV);
+  const total = redondear2(subtotal + igv);
+  return { subtotal, descuento, igv, total };
+}
+
+/**
+ * La misma cotización, en soles (13/10).
+ *
+ * Luis: *«en cotización a veces lo quieren en soles; ¿podemos poner un botón
+ * con el cambio del día traído por SUNAT para imprimir y ver en soles?»*.
+ *
+ * Es solo el PAPEL: la cotización se guarda, se aprueba y se factura en
+ * dólares (C6). Se convierte el valor unitario —redondeado a céntimos, que es
+ * lo que el cliente lee— y lo demás se vuelve a sumar desde ahí, así que la
+ * columna de importes y los totales cuadran entre sí como en dólares. El
+ * total puede diferir en céntimos de «total en dólares × cambio»; lo que no
+ * puede es no cuadrar con su propia columna.
+ */
+export function enSoles(
+  c: CotizacionImpresa,
+  tipoCambio: { valor: number; fecha: string },
+): CotizacionImpresa {
+  if (c.moneda === "PEN" || !(tipoCambio.valor > 0)) return c;
+  const tc = tipoCambio.valor;
+  const lineas = c.lineas.map((l) => {
+    const valorUnitario = redondear2(l.valorUnitario * tc);
+    return {
+      ...l,
+      valorUnitario,
+      importe: importeLinea({ cantidad: l.cantidad, valorUnitario, descuentoPct: l.descuentoPct }),
+    };
+  });
+  const { subtotal, descuento, igv, total } = totalesDe(lineas);
+  return {
+    ...c,
+    moneda: "PEN",
+    simbolo: "S/",
+    tipoCambio: { valor: tc, fecha: tipoCambio.fecha },
+    lineas,
+    subtotal,
+    descuento,
+    opGravada: subtotal,
+    igv,
+    total,
+    mostrarDescuento: c.mostrarDescuento && descuento > 0,
+    enLetras: montoEnLetras(total, "SOLES"),
   };
 }
 
