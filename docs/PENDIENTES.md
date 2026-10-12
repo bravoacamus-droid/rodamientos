@@ -4609,6 +4609,9 @@ pero enlazado al cliente y la cotización»*.
   propósito: en manos del proveedor es la forma más corta de que le venda
   directo.
 
+La COT1-000005 de COFACO (06/10) era de prueba —Luis, 12/10— y se anuló:
+apartaba 6 unidades del 6308 en el reparto.
+
 Probado en pantalla a 1600 y 390 enlazando un momento CMP-26-00011 a
 COT1-000005 y desenlazándola después (con su `actualizado_en`).
 
@@ -4639,6 +4642,8 @@ descripción larga»*.
   (`guia_items.producto_id` NOT NULL), la factura exige la guía y la orden de
   compra también. Lo pueden crear gerencia, administración y compras (la regla
   del catálogo); **ventas no**.
+  Luis, 12/10: *«los vendedores no pueden crear un producto, no que yo sepa;
+  ya verá el día que se cree un rango Willy»*. Se queda así.
 
 Probado en pantalla el 09/10 (cotización y producto de prueba borrados, el
 correlativo vuelto a 7).
