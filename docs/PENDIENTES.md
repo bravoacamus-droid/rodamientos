@@ -4607,8 +4607,9 @@ ofreciendo «Pedir precio de lo que falta» como botón principal.
   («… lo no analizado»); si nada se analizó, el aviso es el de siempre.
 - Solo para quien puede generar órdenes (gerencia, administración, compras).
 
-Probado con la COT1-000009 (solo lectura): los tres productos dicen «ya sabes
-a quién» y «Registrar la compra» abre las 4 órdenes, sin el B-118.
+**Corregido el mismo día** (Luis: *«¿por qué tengo un botón de generar órdenes de compra y otro de registrar compra?»*): eran dos botones para lo mismo. Ahora hay UNO, «Registrar la compra», en la tarjeta «Órdenes de compra», con la lista de lo que falta pedir y a quién. El aviso amarillo solo sale para lo NO analizado (con «Pedir precio» y «Registrar la compra a mano») y para lo que ya viene en camino; si todo estaba analizado, no sale. Fuera también el «Sin proveedor apuntado» de la tarjeta, que repetía el aviso y nombraba productos que podían estar en almacén.
+
+Probado con la COT1-000009 (solo lectura): sin aviso amarillo, la tarjeta lista XPA2000 1 a Aplicativos, SPZ1212 1 a Balindustria, 55X75X10TC 2 a Barrientos y 1 a Baleno, y su único botón abre las 4 órdenes, sin el B-118.
 
 ## §BK · 13/10 — El pedido enseña lo que el cliente se lleva
 

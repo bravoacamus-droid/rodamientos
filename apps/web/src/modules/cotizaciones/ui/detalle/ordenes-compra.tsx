@@ -56,11 +56,8 @@ export function OrdenesDeCompra({
   const propuestas = proponerOrdenes(lineas)
     .map((o) => ({ ...o, items: o.items.filter((i) => !pedidos.has(`${o.proveedorId}:${i.productoId}`)) }))
     .filter((o) => o.items.length > 0);
-  const sinProveedor = lineas.filter(
-    (l) => l.confirmada > 0 && !l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null),
-  );
 
-  if (existentes.length === 0 && propuestas.length === 0 && sinProveedor.length === 0) return null;
+  if (existentes.length === 0 && propuestas.length === 0) return null;
 
   return (
     <section className="card flex flex-col gap-3 p-4">
@@ -93,22 +90,29 @@ export function OrdenesDeCompra({
             </li>
           ))}
         </ul>
-      ) : propuestas.length > 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
-          Al cotizar apuntaste a quién comprarle. Revisa las cantidades y genera una orden por proveedor.
-        </p>
       ) : null}
 
-      {sinProveedor.length > 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
-          Sin proveedor apuntado: <strong className="text-[var(--fg)]">{sinProveedor.map((l) => l.codigo).join(", ")}</strong>.
-          Si hay que comprarlos, analiza su precio de compra editando la cotización o regístralos en{" "}
-          <Link href="/compras/nueva" className="font-medium text-brand-700 underline underline-offset-4">
-            Nueva compra
-          </Link>
-          .
-        </p>
+      {/* Lo que falta comprar de lo analizado, aquí y no en el aviso de
+          arriba: un solo sitio y un solo botón (Luis, 13/10). */}
+      {propuestas.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-[var(--fg-muted)]">
+            {vivas.length > 0 ? "Falta pedir, a quien apuntaste al cotizar:" : "Al cotizar apuntaste a quién comprarle. Falta pedir:"}
+          </p>
+          <ul className="flex flex-col gap-0.5 text-sm">
+            {propuestas.flatMap((o) =>
+              o.items.map((i) => (
+                <li key={`${o.proveedorId}:${i.productoId}`} className="flex flex-wrap gap-x-2">
+                  <span className="font-medium tabular">{i.codigo}</span>
+                  <span className="tabular font-semibold">{i.cantidad}</span>
+                  <span className="text-[var(--fg-muted)]">a {o.nombre}</span>
+                </li>
+              )),
+            )}
+          </ul>
+        </div>
       ) : null}
+
     </section>
   );
 }
@@ -131,25 +135,12 @@ function DialogoGenerar({
   const [error, setError] = React.useState<string | null>(null);
   const [enviando, empezar] = React.useTransition();
 
-  const abrir = React.useCallback(() => {
+  const abrir = () => {
     setOrdenes(propuestas);
     setFuera(new Set());
     setError(null);
     setAbierto(true);
-  }, [propuestas]);
-
-  // «Registrar la compra» del aviso de arriba llega con #generar-ordenes y
-  // abre esto directamente, sin bajar a buscar el botón.
-  React.useEffect(() => {
-    const mirar = () => {
-      if (window.location.hash !== "#generar-ordenes") return;
-      history.replaceState(null, "", window.location.pathname + window.location.search);
-      abrir();
-    };
-    mirar();
-    window.addEventListener("hashchange", mirar);
-    return () => window.removeEventListener("hashchange", mirar);
-  }, [abrir]);
+  };
   const cantidad = (prov: string, prod: string, n: number) =>
     setOrdenes((os) =>
       os.map((o) =>
@@ -203,7 +194,7 @@ function DialogoGenerar({
     <Dialog open={abierto} onOpenChange={setAbierto}>
       <Button type="button" onClick={abrir} className="gap-1.5">
         <ShoppingCart className="size-4" aria-hidden="true" />
-        {primera ? "Generar órdenes de compra" : "Generar las que faltan"}
+        {primera ? "Registrar la compra" : "Registrar lo que falta"}
       </Button>
       <DialogContent ancho="max-w-3xl">
         <DialogHeader>
