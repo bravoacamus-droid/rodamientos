@@ -16,7 +16,7 @@ import {
   DialogTitle,
   Input,
 } from "@rodatech/ui";
-import { Check, RotateCcw, X } from "lucide-react";
+import { Check, RotateCcw, Trash2 } from "lucide-react";
 
 import { aprobar, corregirConfirmado, ponerOrdenCliente } from "../../acciones/gestionar";
 import { importeLinea } from "../../dominio/totales";
@@ -225,21 +225,24 @@ export function DialogoConfirmar({
                   // catálogo es siempre.
                   <li
                     key={l.id}
-                    className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:gap-4"
+                    className={`flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:gap-4 ${fuera ? "-mx-2 rounded-md bg-[var(--danger-bg)] px-2" : ""}`}
                   >
                     <div
-                      className={`min-w-0 flex-1 ${fuera ? "opacity-50" : ""}`}
+                      className="min-w-0 flex-1"
                     >
                       <p
-                        className={`text-sm font-semibold ${fuera ? "line-through" : ""}`}
+                        className={`text-sm font-semibold ${fuera ? "line-through opacity-60" : ""}`}
                       >
                         {l.codigo}
                       </p>
+                      {fuera ? (
+                        <p className="text-sm font-semibold text-[var(--danger)]">No lo lleva</p>
+                      ) : null}
                       {/* Dos líneas, no una cortada. En este catálogo lo que
                           distingue un producto de otro va al final de la
                           descripción —el espesor, la medida— y `truncate` se
                           comía justo eso. */}
-                      <p className="mt-0.5 line-clamp-2 text-sm text-[var(--fg-muted)]">
+                      <p className={`mt-0.5 line-clamp-2 text-sm text-[var(--fg-muted)] ${fuera ? "opacity-60" : ""}`}>
                         {l.descripcion}
                       </p>
                     </div>
@@ -269,12 +272,13 @@ export function DialogoConfirmar({
 
                       {/* Un atajo para el caso frecuente: «esta no la quiso».
                           Teclear el cero a mano en seis líneas es el trabajo
-                          que este botón ahorra. Con borde y no fantasma: sin
-                          él no parecía pulsable. */}
+                          que este botón ahorra. En rojo y con el tacho (Luis,
+                          13/10: *«ponerlo en tacho y de color rojo para que se
+                          diferencie»*); deshacerlo, en gris. */}
                       <Button
                         type="button"
                         variant="outline"
-                        className="ml-auto h-11 w-32 shrink-0 md:h-control-md"
+                        className={`ml-auto h-11 w-36 shrink-0 md:h-control-md ${fuera ? "" : "border-[var(--danger)] text-[var(--danger)] hover:border-[var(--danger)] hover:bg-[var(--danger-bg)]"}`}
                         onClick={() =>
                           poner(l.id, fuera ? l.cantidad : 0, l.cantidad)
                         }
@@ -286,8 +290,8 @@ export function DialogoConfirmar({
                           </>
                         ) : (
                           <>
-                            <X aria-hidden="true" />
-                            No la quiso
+                            <Trash2 aria-hidden="true" />
+                            No lo quiso
                           </>
                         )}
                       </Button>

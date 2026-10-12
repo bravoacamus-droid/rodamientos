@@ -4592,6 +4592,30 @@ de Defontana.
 
 ---
 
+## §BK · 13/10 — El pedido enseña lo que el cliente se lleva
+
+Luis aprobó la COT1-000009 marcando el B-118 como «No lo quiso», y la ficha lo
+seguía enseñando con su cantidad, «En almacén» y sumado al total: *«no es
+dinámico, no podemos equivocarnos así»*. La base estaba bien
+(`cantidad_aprobada` = 0, y ni «Falta comprar» ni las órdenes lo contaban);
+la ficha leía `cantidad`, lo cotizado.
+
+- **La ficha de un pedido confirmado** dice lo que se LLEVA: «1 UND» tachado y
+  «No lo quiso» en rojo con la fila en rojo claro y «No lo lleva» en almacén;
+  si confirmó menos, «2 UND · de 3 cotizadas». El importe es el de lo
+  confirmado (el de la línea no llevada, tachado).
+- **Los totales**: si lo confirmado no es todo, «Subtotal / IGV / Total
+  confirmado» y debajo, en pequeño, «Se había cotizado». La tarjeta «Margen al
+  costo» se calcula también sobre lo confirmado («… de utilidad en lo
+  confirmado»).
+- **En el diálogo de aprobar**, «No lo quiso» es un tacho rojo (Luis: *«ponerlo
+  en tacho y de color rojo para que se diferencie»*), la fila descartada se
+  pinta en rojo claro con «No lo lleva», y «Devolver» queda en gris.
+- El papel de la cotización no cambia: es lo que se le mandó.
+
+Probado a 1600 y 390 sobre la COT1-000009 (solo lectura) y con el diálogo
+abierto sobre la CT02-001261 sin aprobar.
+
 ## §BJ · 13/10 — Todas las listas, con la misma fila de desplegables
 
 Luis: *«pasa las demás listas a desplegables»* (tras §BF, que lo hizo en

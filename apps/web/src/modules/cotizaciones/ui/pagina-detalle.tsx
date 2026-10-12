@@ -215,6 +215,30 @@ export default async function PaginaDetalleCotizacion({
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
     }));
 
+  /*
+    Lo que el cliente se LLEVA (13/10). Luis aprobó marcando un producto como
+    «No lo quiso» y la ficha lo seguía enseñando con su cantidad, en almacén y
+    sumado al total: *«no es dinámico, no podemos equivocarnos así»*. La base
+    lo tenía bien (`cantidad_aprobada` = 0); la pantalla leía `cantidad`.
+  */
+  const lleva = (l: (typeof lineas)[number]) =>
+    confirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
+  const importeDe = (l: (typeof lineas)[number], cantidad: number) =>
+    Math.round(cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100) / 100;
+  const cambioAlConfirmar = confirmado && lineas.some((l) => lleva(l) !== Number(l.cantidad));
+  const subtotalConfirmado = Math.round(lineas.reduce((t, l) => t + importeDe(l, lleva(l)), 0) * 100) / 100;
+  const igvConfirmado = Math.round(subtotalConfirmado * 0.18 * 100) / 100;
+  // El margen, también sobre lo que se lleva.
+  const ventaMargen = cambioAlConfirmar ? subtotalConfirmado : cabecera.subtotal;
+  const costoMargen = cambioAlConfirmar
+    ? Math.round(lineas.reduce((t, l) => t + Number(l.costo_unitario) * lleva(l), 0) * 100) / 100
+    : cabecera.costo_total;
+  const margenPct = cambioAlConfirmar
+    ? costoMargen > 0
+      ? ((ventaMargen - costoMargen) / costoMargen) * 100
+      : 0
+    : cabecera.margen_pct;
+
   /** Por producto, para poder marcar cada fila de la tabla. */
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
@@ -356,22 +380,22 @@ export default async function PaginaDetalleCotizacion({
               // a mano (07/10: «debería salir 78.85»). Con uno salía «78.8»,
               // que además parece mal redondeado: 78,85 en coma flotante es
               // 78,8499… y `toFixed(1)` lo baja.
-              cabecera.costo_total > 0 ? `${cabecera.margen_pct.toFixed(2)}%` : "—"
+              costoMargen > 0 ? `${margenPct.toFixed(2)}%` : "—"
             }
             detalle={
-              cabecera.costo_total > 0
-                ? cabecera.subtotal >= cabecera.costo_total
-                  ? `${dolar(cabecera.subtotal - cabecera.costo_total)} de utilidad`
+              costoMargen > 0
+                ? ventaMargen >= costoMargen
+                  ? `${dolar(ventaMargen - costoMargen)} de utilidad${cambioAlConfirmar ? " en lo confirmado" : ""}`
                   : // «-USD 0.47 de utilidad» se lee al revés (02/10).
-                    `pierde ${dolar(cabecera.costo_total - cabecera.subtotal)}`
+                    `pierde ${dolar(costoMargen - ventaMargen)}`
                 : "sin costo cargado"
             }
             tono={
-              cabecera.costo_total <= 0
+              costoMargen <= 0
                 ? undefined
-                : cabecera.margen_pct < 12
+                : margenPct < 12
                   ? "malo"
-                  : cabecera.margen_pct < 20
+                  : margenPct < 20
                     ? "aviso"
                     : "ok"
             }
@@ -455,7 +479,10 @@ export default async function PaginaDetalleCotizacion({
               </thead>
               <tbody>
                 {lineas.map((l) => (
-                  <tr key={l.id} className="border-b border-[var(--border-soft)]">
+                  <tr
+                    key={l.id}
+                    className={`border-b border-[var(--border-soft)] ${lleva(l) === 0 ? "bg-[var(--danger-bg)]" : ""}`}
+                  >
                     <td className="whitespace-nowrap px-4 py-2.5">
                       <span className="block font-medium">{l.codigo}</span>
                       {l.marca ? (
@@ -469,8 +496,11 @@ export default async function PaginaDetalleCotizacion({
                       {l.nota ? <span className="mt-0.5 block text-sm italic text-[var(--fg-muted)]">Nota: {l.nota}</span> : null}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
-                      {l.cantidad}{" "}
-                      <span className="text-[var(--fg-subtle)]">{unidadLegible(l.unidad_codigo)}</span>
+                      <CantidadConfirmada
+                        cotizada={Number(l.cantidad)}
+                        lleva={lleva(l)}
+                        unidad={unidadLegible(l.unidad_codigo)}
+                      />
                     </td>
 
                     {/*
@@ -485,10 +515,14 @@ export default async function PaginaDetalleCotizacion({
                     */}
                     {cabecera.estado === "aprobada" ? (
                       <td className="whitespace-nowrap px-3 py-2.5">
-                        <EstadoDeLinea
-                          falta={faltaPorProducto.get(l.producto_id ?? "")}
-                          despachado={despachado.get(l.id) ?? 0}
-                        />
+                        {lleva(l) === 0 ? (
+                          <span className="text-sm font-semibold text-[var(--danger)]">No lo lleva</span>
+                        ) : (
+                          <EstadoDeLinea
+                            falta={faltaPorProducto.get(l.producto_id ?? "")}
+                            despachado={despachado.get(l.id) ?? 0}
+                          />
+                        )}
                       </td>
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
@@ -503,8 +537,12 @@ export default async function PaginaDetalleCotizacion({
                       ) : null}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right tabular font-medium">
-                      {dolar(
-                        Math.round(l.cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100) / 100,
+                      {lleva(l) === 0 ? (
+                        <span className="text-[var(--fg-subtle)] line-through">
+                          {dolar(importeDe(l, Number(l.cantidad)))}
+                        </span>
+                      ) : (
+                        dolar(importeDe(l, lleva(l)))
                       )}
                     </td>
                   </tr>
@@ -516,15 +554,16 @@ export default async function PaginaDetalleCotizacion({
           {/* --------------------------------------------------------- Móvil */}
           <ul className="flex flex-col divide-y divide-[var(--border-soft)] @2xl:hidden">
             {lineas.map((l) => (
-              <li key={l.id} className="flex flex-col gap-2 px-4 py-3">
+              <li
+                key={l.id}
+                className={`flex flex-col gap-2 px-4 py-3 ${lleva(l) === 0 ? "bg-[var(--danger-bg)]" : ""}`}
+              >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-mono text-sm font-semibold">{l.codigo}</span>
-                  <span className="shrink-0 tabular text-sm font-medium">
-                    {dolar(
-                      Math.round(
-                        l.cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100,
-                      ) / 100,
-                    )}
+                  <span
+                    className={`shrink-0 tabular text-sm font-medium ${lleva(l) === 0 ? "text-[var(--fg-subtle)] line-through" : ""}`}
+                  >
+                    {dolar(importeDe(l, lleva(l) === 0 ? Number(l.cantidad) : lleva(l)))}
                   </span>
                 </div>
 
@@ -540,7 +579,12 @@ export default async function PaginaDetalleCotizacion({
                     dos columnas separadas y aquí no hay cabecera que las
                     explique, así que se escribe la multiplicación. */}
                 <p className="text-sm text-[var(--fg-muted)]">
-                  <span className="tabular">{l.cantidad}</span> {unidadLegible(l.unidad_codigo)} ×{" "}
+                  <CantidadConfirmada
+                    cotizada={Number(l.cantidad)}
+                    lleva={lleva(l)}
+                    unidad={unidadLegible(l.unidad_codigo)}
+                  />{" "}
+                  ×{" "}
                   <span className="tabular">{dolar(l.valor_unitario)}</span>
                   {/* Con el descuento, o la cuenta no da el importe de arriba. */}
                   {l.descuento_pct > 0 ? (
@@ -549,10 +593,14 @@ export default async function PaginaDetalleCotizacion({
                 </p>
 
                 {cabecera.estado === "aprobada" ? (
-                  <EstadoDeLinea
-                    falta={faltaPorProducto.get(l.producto_id ?? "")}
-                    despachado={despachado.get(l.id) ?? 0}
-                  />
+                  lleva(l) === 0 ? (
+                    <span className="text-sm font-semibold text-[var(--danger)]">No lo lleva</span>
+                  ) : (
+                    <EstadoDeLinea
+                      falta={faltaPorProducto.get(l.producto_id ?? "")}
+                      despachado={despachado.get(l.id) ?? 0}
+                    />
+                  )
                 ) : null}
               </li>
             ))}
@@ -561,6 +609,28 @@ export default async function PaginaDetalleCotizacion({
           {/* Los totales al pie y a la derecha, como en el papel: es donde el
               ojo los busca después de leer la última línea. */}
           <div className="flex justify-end px-4 py-3">
+            {cambioAlConfirmar ? (
+              /* Lo que se lleva, que es lo que se va a facturar. Lo cotizado
+                 queda debajo, en pequeño: es lo que se le mandó. */
+              <dl className="w-full max-w-xs text-sm">
+                <div className="flex items-baseline justify-between py-1">
+                  <dt className="text-[var(--fg-muted)]">Subtotal confirmado (sin IGV)</dt>
+                  <dd className="tabular">{dolar(subtotalConfirmado)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between py-1">
+                  <dt className="text-[var(--fg-muted)]">IGV (18%)</dt>
+                  <dd className="tabular">{dolar(igvConfirmado)}</dd>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
+                  <dt className="font-semibold">Total confirmado</dt>
+                  <dd className="tabular text-lg font-semibold">{dolar(subtotalConfirmado + igvConfirmado)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between pt-1 text-[var(--fg-muted)]">
+                  <dt>Se había cotizado</dt>
+                  <dd className="tabular">{dolar(cabecera.total)}</dd>
+                </div>
+              </dl>
+            ) : (
             <dl className="w-full max-w-xs text-sm">
               <div className="flex items-baseline justify-between py-1">
                 <dt className="text-[var(--fg-muted)]">Subtotal (sin IGV)</dt>
@@ -583,6 +653,7 @@ export default async function PaginaDetalleCotizacion({
                 <dd className="tabular text-lg font-semibold">{dolar(cabecera.total)}</dd>
               </div>
             </dl>
+            )}
           </div>
         </section>
       </div>
@@ -708,4 +779,36 @@ function Resumen({
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.slice(0, 10).split("-");
   return d && m && a ? `${d}/${m}/${a}` : iso;
+}
+
+/**
+ * La cantidad de una línea de pedido: lo que se lleva y, si no es todo, lo
+ * cotizado al lado. «No lo quiso» en rojo cuando es cero.
+ */
+function CantidadConfirmada({ cotizada, lleva, unidad }: { cotizada: number; lleva: number; unidad: string }) {
+  if (lleva === cotizada) {
+    return (
+      <>
+        <span className="tabular">{cotizada}</span> <span className="text-[var(--fg-subtle)]">{unidad}</span>
+      </>
+    );
+  }
+  if (lleva === 0) {
+    return (
+      <span className="inline-flex flex-col items-end">
+        <span className="text-[var(--fg-subtle)] line-through">
+          {cotizada} {unidad}
+        </span>
+        <span className="text-sm font-semibold text-[var(--danger)]">No lo quiso</span>
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex flex-col items-end">
+      <span className="font-semibold tabular">
+        {lleva} <span className="font-normal text-[var(--fg-subtle)]">{unidad}</span>
+      </span>
+      <span className="text-sm text-[var(--warn)]">de {cotizada} cotizadas</span>
+    </span>
+  );
 }
