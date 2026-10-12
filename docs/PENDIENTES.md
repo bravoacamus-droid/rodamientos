@@ -4592,6 +4592,32 @@ de Defontana.
 
 ---
 
+## §BH · 12/10 — Condiciones: una lista que se elige y se mantiene (113)
+
+Luis, 12/10: *«¿no te había dicho eso de quitar el botón de más datos del
+documento? Sácalo de ahí, y esa condiciones va a hacer un select inteligente
+que va a guardar cosas ahí, añadir o eliminar […] factura por 30 días, 60, 90
+días […] para crear un nuevo o eliminar, un CRUD, editar todo eso»*.
+
+- **Fuera «Más datos del documento»**: dentro solo quedaban las condiciones, y
+  escondidas no se ponían. Ahora están a la vista en la caja del cliente.
+- **`condiciones_cotizacion` (113)**: la lista. Índice único sobre el texto
+  normalizado (no deja «Entrega  inmediata» y «ENTREGA INMEDIATA» a la vez);
+  RLS: la lee cualquiera con sesión y la cambia quien puede cotizar.
+- **`SelectorCondiciones`**: se busca escribiendo (sin tildes ni mayúsculas);
+  Enter elige si queda una sola o guarda la nueva; cada opción con lápiz y
+  papelera con borde; quitar pide confirmación en la misma fila. Si se edita
+  la opción que está puesta, la cotización toma el texto nuevo.
+- **La cotización guarda el TEXTO**, como siempre: editar o quitar una opción
+  no cambia lo ya mandado.
+- Arranca con 7, cargadas por SQL (son datos de Willy, CLAUDE.md §3): ENTREGA
+  INMEDIATA, STOCK DISPONIBLE SALVO VENTA PREVIA, ENTREGA EN SUS ALMACENES,
+  CONTADO y FACTURA A 30 / 60 / 90 DIAS. El histórico tenía «ENTREGA
+  INMEDIATA» escrita de siete maneras.
+
+Probado a 1600 y 390: elegir, crear, editar y quitar; la de prueba se borró y
+la lista quedó en las 7.
+
 ## §BG · 12/10 — Las listas, por fecha y hora: lo último arriba
 
 Luis, 12/10: *«si pongo todas me debería aparecer por fechas, pero las últimas

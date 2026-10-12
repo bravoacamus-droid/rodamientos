@@ -16,7 +16,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -1343,6 +1343,38 @@ export type Database = {
           {
             foreignKeyName: "comprobantes_vendedor_id_fkey"
             columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      condiciones_cotizacion: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          id: string
+          orden: number
+          texto: string
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          orden?: number
+          texto: string
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          id?: string
+          orden?: number
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condiciones_cotizacion_creado_por_fkey"
+            columns: ["creado_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]

@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -48,6 +47,7 @@ import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 import { NoRegistrado } from "./no-registrado";
+import { SelectorCondiciones } from "./selector-condiciones";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
 
@@ -359,44 +359,22 @@ export function Constructor({
               COT1-000004 con «Stock inmediato» arriba y una línea a 15 días,
               y no llegó a verlo nunca.
             */}
-            <details className="group mt-3 border-t border-[var(--border-soft)] pt-3">
-              {/* Con borde y la flecha de lucide. Era texto gris con un «›»
-                  tipográfico: no parecía algo que se pudiera pulsar, y ahí
-                  dentro están la orden de compra y las condiciones
-                  (revisión por módulos del 02/10). */}
-              <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] [&::-webkit-details-marker]:hidden">
-                <ChevronRight
-                  className="size-4 shrink-0 transition-transform group-open:rotate-90"
-                  aria-hidden="true"
-                />
-                Más datos del documento
-              </summary>
-
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-
-                {/*
-                  Sin «Tiempo de entrega» ni «Orden de compra del cliente»
-                  (Luis, 09/10): *«saca eso de tiempo de entrega, porque se
-                  maneja dentro de cada producto; orden de cliente tampoco va,
-                  porque eso es cuando ya tenemos una orden»*. La entrega del
-                  documento sale sola de las líneas; la O/C se pone al aprobar.
-                */}
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Condiciones</span>
-                  <Input
-                    value={estado.condiciones}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "cabecera",
-                        campo: "condiciones",
-                        valor: e.target.value,
-                      })
-                    }
-                    placeholder="Forma de pago, garantía…"
-                  />
-                </label>
-              </div>
-            </details>
+            {/*
+              Sin «Más datos del documento» (Luis, 12/10): lo único que
+              quedaba dentro eran las condiciones, y escondidas detrás de un
+              botón no se ponían. La entrega sale de las líneas y la O/C se
+              pone al aprobar (09/10).
+            */}
+            <div className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 sm:max-w-2xl">
+              <span className="text-sm font-medium">Condiciones</span>
+              <SelectorCondiciones
+                valor={estado.condiciones}
+                onCambiar={(texto) => despachar({ tipo: "cabecera", campo: "condiciones", valor: texto })}
+              />
+              <span className="text-sm text-[var(--fg-muted)]">
+                Sale impresa en la cotización. Elige de la lista, o escribe y guarda una nueva.
+              </span>
+            </div>
           </section>
 
           {/* --------------------------------------------------- Líneas */}
