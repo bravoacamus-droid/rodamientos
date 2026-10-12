@@ -47,6 +47,15 @@ import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 import { NoRegistrado } from "./no-registrado";
+import { History } from "lucide-react";
+import {
+  armarBorrador,
+  claveBorrador,
+  esDistinto,
+  leerBorrador,
+  valeLaPena,
+  type Borrador,
+} from "../../dominio/borrador";
 import { SelectorCondiciones } from "./selector-condiciones";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
@@ -106,6 +115,51 @@ export function Constructor({
   const [cliente, setCliente] = useState<ClienteOpcion | null>(clienteInicial);
 
   /*
+    El borrador en el navegador (12/10). Hasta pulsar «Guardar» no existía
+    nada, y cerrar la pestaña tiraba el análisis de compra entero. Se guarda
+    solo, 800 ms después del último cambio; al volver se ofrece recuperarlo.
+
+    Mientras hay uno pendiente de decidir NO se escribe encima: lo que se
+    teclea antes de contestar al aviso pisaría lo que se quiere recuperar.
+  */
+  const claveB = claveBorrador(editando?.id ?? null);
+  const [pendiente, setPendiente] = useState<Borrador | null>(null);
+  const decidido = useRef(false);
+  useEffect(() => {
+    try {
+      const b = leerBorrador(window.localStorage.getItem(claveB), new Date());
+      if (b && esDistinto(b, estado)) setPendiente(b);
+      else decidido.current = true;
+    } catch {
+      decidido.current = true;
+    }
+    // Solo al abrir: después manda lo que se teclea.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claveB]);
+  useEffect(() => {
+    if (pendiente || !decidido.current) return;
+    const t = setTimeout(() => {
+      try {
+        if (valeLaPena(estado)) {
+          window.localStorage.setItem(claveB, JSON.stringify(armarBorrador(estado, cliente, new Date())));
+        } else {
+          window.localStorage.removeItem(claveB);
+        }
+      } catch {
+        // Sin almacenamiento (ventana privada, disco lleno): se cotiza igual.
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [estado, cliente, pendiente, claveB]);
+  const olvidarBorrador = () => {
+    try {
+      window.localStorage.removeItem(claveB);
+    } catch {
+      // Igual que arriba.
+    }
+  };
+
+  /*
     El tiempo de entrega sale de las líneas, no de una caja que nadie mira.
 
     Nació antes que la disponibilidad por línea (040) y se quedó como un
@@ -163,7 +217,11 @@ export function Constructor({
     const r = editando
       ? await actualizarCotizacion(previo as ResultadoEdicion | null, formData)
       : await crearCotizacion(previo as ResultadoCreacion | null, formData);
-    if (r.ok) router.push(`/cotizaciones/${r.id}`);
+    if (r.ok) {
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
+      router.push(`/cotizaciones/${r.id}`);
+    }
     return r;
   }, null);
 
@@ -265,6 +323,47 @@ export function Constructor({
           {editando ? `Editar ${editando.numero}` : "Nueva cotización"}
         </h1>
       </header>
+
+      {pendiente ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-4">
+          <History className="size-6 shrink-0 text-[var(--warn)]" aria-hidden="true" />
+          <p className="min-w-0 flex-1 text-base">
+            <strong>Tienes una cotización sin guardar</strong> del{" "}
+            {new Date(pendiente.guardado).toLocaleString("es-PE", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+            {pendiente.cliente ? ` · ${pendiente.cliente.razon_social}` : ""} ·{" "}
+            {pendiente.estado.lineas.length === 1 ? "1 producto" : `${pendiente.estado.lineas.length} productos`}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={() => {
+                despachar({ tipo: "cargar", estado: pendiente.estado });
+                setCliente(pendiente.cliente);
+                decidido.current = true;
+                setPendiente(null);
+              }}
+            >
+              Recuperarla
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                olvidarBorrador();
+                decidido.current = true;
+                setPendiente(null);
+              }}
+            >
+              Descartar
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {resultado && !resultado.ok ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
@@ -685,9 +784,11 @@ export function Constructor({
               type="button"
               variant="outline"
               className="flex-1 sm:flex-none"
-              onClick={() =>
-                router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones")
-              }
+              onClick={() => {
+                // Cancelar es decidir no seguir: no se ofrece otra vez.
+                olvidarBorrador();
+                router.push(editando ? `/cotizaciones/${editando.id}` : "/cotizaciones");
+              }}
             >
               Cancelar
             </Button>

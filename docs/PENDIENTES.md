@@ -4592,6 +4592,30 @@ de Defontana.
 
 ---
 
+## §BI · 12/10 — La cotización a medio hacer se guarda sola
+
+Luis preguntó qué se guarda al cotizar, y la respuesta tenía un agujero: nada
+hasta pulsar «Guardar». El análisis de compra de diez productos —diez llamadas a
+proveedores— se perdía al cerrar la pestaña. *«Sí, justo eso también»*.
+
+- **En el navegador** (`localStorage`), 800 ms después del último cambio: una
+  clave para la nueva y una por cotización que se edita. Lleva todo el estado
+  —líneas, proveedores y precios del análisis, notas, condiciones— y el
+  cliente elegido entero, para pintar su ficha al recuperar.
+- **Al abrir**, si hay uno distinto de lo que hay en pantalla, un aviso ámbar
+  arriba: «Tienes una cotización sin guardar del 12/10 11:20 · CLIENTE · N
+  productos» con **Recuperarla** y **Descartar**. Mientras no se contesta no se
+  escribe encima.
+- **Se borra** al guardar en la base, al pulsar Cancelar y al descartarlo. Uno
+  de más de 14 días ya no se ofrece (los precios de hace dos semanas mienten),
+  ni uno roto o de otra versión; uno de antes de las notas se completa.
+- En el navegador y no en la base a propósito: es el borrador de una persona
+  en un equipo, no un documento que haya que numerar, listar y limpiar.
+- `dominio/borrador.ts`, con 6 tests.
+
+Probado: armar, recargar, recuperar (cliente, cantidad y nota vuelven), y
+descartar.
+
 ## §BH · 12/10 — Condiciones: una lista que se elige y se mantiene (113)
 
 Luis, 12/10: *«¿no te había dicho eso de quitar el botón de más datos del
