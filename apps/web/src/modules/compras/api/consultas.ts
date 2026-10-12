@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
 
@@ -91,12 +92,15 @@ export async function listarCompras(
     let consulta = supabase
       .from("compras")
       .select(
-        `id, numero, fecha, fecha_estimada, tipo, documento_proveedor, estado,
+        `id, creado_en, numero, fecha, fecha_estimada, tipo, documento_proveedor, estado,
          total, gastos_importacion, moneda,
          proveedores(razon_social),
          cotizacion:cotizaciones!compras_cotizacion_id_fkey(id, numero, clientes(razon_social)),
          compra_items(cantidad, cantidad_recibida)`,
       )
+      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
+      .order("fecha", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
@@ -106,11 +110,8 @@ export async function listarCompras(
       al array. Faltaba desde siempre — `cursorAnterior` se pasaba como
       `null` en las diez tablas del ERP.
     */
-    if (filtros.cursor) {
-      consulta = atras
-        ? consulta.gt("numero", filtros.cursor)
-        : consulta.lt("numero", filtros.cursor);
-    }
+    const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha");
+    if (desdeCursor) consulta = consulta.or(desdeCursor);
     if (filtros.proveedor) consulta = consulta.eq("proveedor_id", filtros.proveedor);
     // Estado y tipo llegan de la URL, o sea de fuera. Se contrastan contra la
     // lista real antes de tocar la consulta: un valor inventado haría fallar
@@ -181,8 +182,11 @@ export async function listarCompras(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const primera = filas[0]?.numero ?? null;
-    const ultima = filas[filas.length - 1]?.numero ?? null;
+    const claves = new Map(
+      crudas.map((c) => [String(c.id), { fecha: String(c.fecha), creado: String(c.creado_en), numero: String(c.numero) }]),
+    );
+    const primera = cursorDe(claves.get(filas[0]?.id ?? ""));
+    const ultima = cursorDe(claves.get(filas[filas.length - 1]?.id ?? ""));
 
     return {
       ok: true,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
 
@@ -63,12 +64,15 @@ export async function listarGuias(
     let consulta = supabase
       .from("guias_remision")
       .select(
-        `id, numero, fecha_emision, fecha_traslado, motivo_descripcion,
+        `id, creado_en, numero, fecha_emision, fecha_traslado, motivo_descripcion,
          direccion_llegada, peso_bruto_kg, numero_bultos, estado, estado_sunat,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
          guia_items(id)`,
       )
+      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
+      .order("fecha_emision", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
@@ -78,11 +82,8 @@ export async function listarGuias(
       al array. Faltaba desde siempre — `cursorAnterior` se pasaba como
       `null` en las diez tablas del ERP.
     */
-    if (filtros.cursor) {
-      consulta = atras
-        ? consulta.gt("numero", filtros.cursor)
-        : consulta.lt("numero", filtros.cursor);
-    }
+    const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha_emision");
+    if (desdeCursor) consulta = consulta.or(desdeCursor);
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     // La serie llega de la URL: solo letras y cifras, o no se filtra.
     if (filtros.serie && /^[A-Z0-9]{2,4}$/.test(filtros.serie)) consulta = consulta.eq("serie", filtros.serie);
@@ -149,8 +150,11 @@ export async function listarGuias(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const primera = filas[0]?.numero ?? null;
-    const ultima = filas[filas.length - 1]?.numero ?? null;
+    const claves = new Map(
+      crudas.map((c) => [String(c.id), { fecha: String(c.fecha_emision), creado: String(c.creado_en), numero: String(c.numero) }]),
+    );
+    const primera = cursorDe(claves.get(filas[0]?.id ?? ""));
+    const ultima = cursorDe(claves.get(filas[filas.length - 1]?.id ?? ""));
 
     return {
       ok: true,

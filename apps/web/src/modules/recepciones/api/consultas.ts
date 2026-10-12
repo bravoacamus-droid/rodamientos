@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
 import { repartoDeCompra } from "../dominio/costeo";
@@ -52,12 +53,15 @@ export async function listarRecepciones(
     let consulta = supabase
       .from("recepciones")
       .select(
-        `id, numero, fecha, guia_proveedor, factura_proveedor, anulada,
+        `id, creado_en, numero, fecha, guia_proveedor, factura_proveedor, anulada,
          proveedores(razon_social),
          compras(numero),
          perfiles(nombre),
          recepcion_items(cantidad, costo_unitario)`,
       )
+      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
+      .order("fecha", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
@@ -66,11 +70,8 @@ export async function listarRecepciones(
       ENCIMA del cursor, en orden ascendente, y al final se le da la vuelta al
       array. Mismo arreglo que en guías, facturación, compras y cotizaciones.
     */
-    if (filtros.cursor) {
-      consulta = atras
-        ? consulta.gt("numero", filtros.cursor)
-        : consulta.lt("numero", filtros.cursor);
-    }
+    const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha");
+    if (desdeCursor) consulta = consulta.or(desdeCursor);
     if (filtros.proveedor) consulta = consulta.eq("proveedor_id", filtros.proveedor);
     if (filtros.desde) consulta = consulta.gte("fecha", filtros.desde);
     if (filtros.hasta) consulta = consulta.lte("fecha", filtros.hasta);
@@ -141,8 +142,11 @@ export async function listarRecepciones(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const primera = filas[0]?.numero ?? null;
-    const ultima = filas[filas.length - 1]?.numero ?? null;
+    const claves = new Map(
+      crudas.map((c) => [String(c.id), { fecha: String(c.fecha), creado: String(c.creado_en), numero: String(c.numero) }]),
+    );
+    const primera = cursorDe(claves.get(filas[0]?.id ?? ""));
+    const ultima = cursorDe(claves.get(filas[filas.length - 1]?.id ?? ""));
 
     return {
       ok: true,

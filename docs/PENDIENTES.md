@@ -4592,6 +4592,26 @@ de Defontana.
 
 ---
 
+## §BG · 12/10 — Las listas, por fecha y hora: lo último arriba
+
+Luis, 12/10: *«si pongo todas me debería aparecer por fechas, pero las últimas
+que creé son de COT1 y aparecen al último; debería ser por fecha y hora el
+orden de todas las listas»*. Cotizaciones, compras, guías y recepciones se
+ordenaban por NÚMERO, y con dos series vivas manda el texto: «CT02-…» va antes
+que «COT1-…», así que las nuevas COT1 quedaban debajo de 1 261 CT02.
+
+- **El orden de las cinco listas** (cotizaciones, facturación, compras,
+  recepciones, guías): fecha del documento → hora de creación → número, de lo
+  más nuevo a lo más viejo. La fecha va primero porque el histórico trae la
+  hora de la CARGA (los 561 comprobantes dicen 28/08); el número desempata los
+  del histórico, que tienen todos la misma hora.
+- **La paginación** sigue siendo por clave, con las tres columnas:
+  `lib/orden-reciente.ts` (`cursorDe`, `filtroCursor`, con tests). Un
+  enlace guardado con el cursor viejo vuelve a la primera página.
+
+Probado: cotizaciones abre con COT1-000008, 07 y 06 arriba; «Siguiente» y
+«Anterior» van y vuelven sin repetir filas en cotizaciones y facturación.
+
 ## §BF · 12/10 — Los filtros, en una fila de desplegables, y la serie
 
 Luis, 12/10, con la barra de otro sistema delante: *«¿por qué los filtros con

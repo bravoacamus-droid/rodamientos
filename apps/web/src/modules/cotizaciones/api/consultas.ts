@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
 // La regla de a quién se le habla vive en `clientes` y la usan los dos
@@ -51,12 +52,15 @@ export async function listarCotizaciones(
     let consulta = supabase
       .from("cotizaciones")
       .select(
-        `id, numero, fecha, fecha_vencimiento, cliente_id,
+        `id, creado_en, numero, fecha, fecha_vencimiento, cliente_id,
          orden_compra_cliente, subtotal, igv, total, costo_total, margen_pct, estado,
          clientes!inner(razon_social, numero_documento),
          perfiles!cotizaciones_vendedor_id_fkey(nombre),
          cotizacion_items(count)`,
       )
+      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
+      .order("fecha", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
@@ -66,11 +70,8 @@ export async function listarCotizaciones(
       al array. Faltaba desde siempre — `cursorAnterior` se pasaba como
       `null` en las diez tablas del ERP.
     */
-    if (filtros.cursor) {
-      consulta = atras
-        ? consulta.gt("numero", filtros.cursor)
-        : consulta.lt("numero", filtros.cursor);
-    }
+    const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha");
+    if (desdeCursor) consulta = consulta.or(desdeCursor);
     if (filtros.estado) consulta = consulta.eq("estado", filtros.estado);
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     // La serie llega de la URL: solo letras y cifras, o no se filtra.
@@ -134,8 +135,11 @@ export async function listarCotizaciones(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const primera = filas[0]?.numero ?? null;
-    const ultima = filas[filas.length - 1]?.numero ?? null;
+    const claves = new Map(
+      crudas.map((c) => [String(c.id), { fecha: String(c.fecha), creado: String(c.creado_en), numero: String(c.numero) }]),
+    );
+    const primera = cursorDe(claves.get(filas[0]?.id ?? ""));
+    const ultima = cursorDe(claves.get(filas[filas.length - 1]?.id ?? ""));
 
     return {
       ok: true,

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { redondear2 } from "@rodatech/config";
+import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
@@ -99,25 +100,20 @@ export async function listarComprobantes(
     let consulta = supabase
       .from("comprobantes")
       .select(
-        `id, tipo, numero, fecha_emision, fecha_vencimiento, total, pagado, saldo,
+        `id, creado_en, tipo, numero, fecha_emision, fecha_vencimiento, total, pagado, saldo,
          estado, estado_sunat,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
       )
+      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
       .order("fecha_emision", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    // El cursor es «fecha|número». Uno viejo, solo con el número (de antes del
-    // 07/10, en un enlace guardado), se ignora: vuelve a la primera página.
-    const [cFecha, cNumero] = (filtros.cursor ?? "").split("|");
-    if (cFecha && cNumero && /^\d{4}-\d{2}-\d{2}$/.test(cFecha) && /^[A-Z0-9-]+$/.test(cNumero)) {
-      const op = atras ? "gt" : "lt";
-      consulta = consulta.or(
-        `fecha_emision.${op}.${cFecha},and(fecha_emision.eq.${cFecha},numero.${op}.${cNumero})`,
-      );
-    }
+    const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha_emision");
+    if (desdeCursor) consulta = consulta.or(desdeCursor);
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     // La serie llega de la URL: solo letras y cifras, o no se filtra.
     if (filtros.serie && /^[A-Z0-9]{2,4}$/.test(filtros.serie)) consulta = consulta.eq("serie", filtros.serie);
@@ -184,9 +180,11 @@ export async function listarComprobantes(
     */
     const filas = atras ? [...recortadas].reverse() : recortadas;
 
-    const cursorDe = (c?: ComprobanteLista) => (c ? `${c.fecha_emision}|${c.numero}` : null);
-    const primera = cursorDe(filas[0]);
-    const ultima = cursorDe(filas[filas.length - 1]);
+    const claves = new Map(
+      crudas.map((c) => [String(c.id), { fecha: String(c.fecha_emision), creado: String(c.creado_en), numero: String(c.numero) }]),
+    );
+    const primera = cursorDe(claves.get(filas[0]?.id ?? ""));
+    const ultima = cursorDe(claves.get(filas[filas.length - 1]?.id ?? ""));
 
     return {
       ok: true,
