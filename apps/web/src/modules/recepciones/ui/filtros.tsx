@@ -1,108 +1,42 @@
 "use client";
 
 // Cliente: escribe los filtros en la URL conforme se usan. La lectura sigue
-// pasando en el servidor — la URL es el estado, y así un filtro se puede
-// compartir por enlace y sobrevive a recargar la página.
+// pasando en el servidor — la URL es el estado.
 
-import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
-import { useParamsVigentes } from "@/lib/use-filtros-url";
-import { Combobox, Input } from "@rodatech/ui";
+import { BarraPeriodo } from "@/componentes/barra-periodo";
+import { CajaBuscar, FiltroBuscable, FilaFiltros, LimpiarFiltros, useBarraFiltros } from "@/componentes/filtros";
 
 import type { ProveedorOpcion } from "../dominio/tipos";
 
-const ESPERA_MS = 300;
-
-export function FiltrosRecepcionesBarra({
-  proveedores,
-}: {
-  proveedores: ProveedorOpcion[];
-}) {
-  const router = useRouter();
-  const ruta = usePathname();
-  const params = useSearchParams();
-  const [, iniciarTransicion] = React.useTransition();
-
-  // Los parámetros vigentes se leen de una ref y no de la clausura: si no,
-  // un temporizador de la búsqueda que ya estaba en vuelo llevaría la copia
-  // vieja y borraría el filtro recién elegido al dispararse.
-  // Parte del último filtro pedido, no del último cargado (07/10).
-  const vigentes = useParamsVigentes();
-
-  const aplicar = React.useCallback(
-    (clave: string, valor: string) => {
-      const siguientes = new URLSearchParams(vigentes.current.toString());
-      if (valor) siguientes.set(clave, valor);
-      else siguientes.delete(clave);
-      // Al cambiar el criterio, seguir en la página 3 del resultado anterior
-      // no significa nada.
-      siguientes.delete("cursor");
-
-      const query = siguientes.toString();
-      vigentes.current = siguientes;
-      const destino = query ? `${ruta}?${query}` : ruta;
-      iniciarTransicion(() => router.replace(destino, { scroll: false }));
-    },
-    [ruta, router, vigentes],
-  );
-
-  const [texto, setTexto] = React.useState(params.get("q") ?? "");
-
-  // La caja de texto se escribe letra a letra; sin espera serían diez
-  // navegaciones por término.
-  React.useEffect(() => {
-    const actual = vigentes.current.get("q") ?? "";
-    if (texto === actual) return;
-    const t = setTimeout(() => aplicar("q", texto.trim()), ESPERA_MS);
-    return () => clearTimeout(t);
-  }, [texto, aplicar, vigentes]);
+/**
+ * Recepciones (13/10): el periodo arriba y una fila debajo, como el resto de
+ * listas. Las fechas sueltas pasan al grupo de periodo común.
+ */
+export function FiltrosRecepcionesBarra({ proveedores }: { proveedores: ProveedorOpcion[] }) {
+  const { valor, aplicar, limpiar, texto, setTexto } = useBarraFiltros();
+  const hay = ["q", "proveedor", "desde", "hasta"].some((k) => valor(k));
 
   return (
-    <div className="flex flex-wrap items-end gap-3 px-4 pb-4">
-      <label className="flex min-w-56 flex-1 flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Buscar</span>
-        <Input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
+    <div className="flex flex-col gap-3 px-4 pb-4">
+      <BarraPeriodo />
+      <FilaFiltros>
+        <CajaBuscar
+          valor={texto}
+          onCambiar={setTexto}
           placeholder="Número, guía o factura del proveedor"
-          autoComplete="off"
+          etiqueta="Buscar recepciones"
         />
-      </label>
-
-      {/* Con buscador (07/10): son decenas de proveedores. */}
-      <div className="flex w-full flex-col gap-1 sm:w-64">
-        <label htmlFor="f-proveedor" className="text-sm font-medium text-[var(--fg-muted)]">
-          Proveedor
-        </label>
-        <Combobox
+        <FiltroBuscable
           id="f-proveedor"
+          etiqueta="Proveedor"
+          todos="Todos los proveedores"
+          buscar="Escribe parte del nombre…"
+          valor={valor("proveedor")}
           opciones={proveedores.map((p) => ({ valor: p.id, etiqueta: p.razon_social }))}
-          valor={params.get("proveedor") || null}
-          onCambio={(v) => aplicar("proveedor", v ?? "")}
-          placeholder="Todos"
-          placeholderBusqueda="Escribe parte del nombre…"
-          textoVacio="Ningún proveedor coincide."
+          onCambiar={(v) => aplicar("proveedor", v)}
         />
-      </div>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Desde</span>
-        <Input
-          type="date"
-          value={params.get("desde") ?? ""}
-          onChange={(e) => aplicar("desde", e.target.value)}
-        />
-      </label>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-[var(--fg-muted)]">Hasta</span>
-        <Input
-          type="date"
-          value={params.get("hasta") ?? ""}
-          onChange={(e) => aplicar("hasta", e.target.value)}
-        />
-      </label>
+        <LimpiarFiltros visible={hay} onLimpiar={limpiar} />
+      </FilaFiltros>
     </div>
   );
 }

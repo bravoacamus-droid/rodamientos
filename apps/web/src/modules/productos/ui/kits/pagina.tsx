@@ -135,7 +135,7 @@ export async function PaginaKits({
         />
       </div>
 
-      <FiltrosKits q={q} estado={estado} archivados={verArchivados} />
+      <FiltrosKits />
 
       {filtrados.length === 0 ? (
         <EstadoVacio

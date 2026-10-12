@@ -3,8 +3,8 @@
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { Search } from "lucide-react";
-import { Input, SelectNativo } from "@rodatech/ui";
+import { Search, X } from "lucide-react";
+import { Combobox, Input, SelectNativo, type OpcionCombobox } from "@rodatech/ui";
 
 import { useParamsVigentes } from "@/lib/use-filtros-url";
 
@@ -22,11 +22,15 @@ export function useBarraFiltros() {
   const [, iniciar] = React.useTransition();
   const vigentes = useParamsVigentes();
 
-  const aplicar = React.useCallback(
-    (clave: string, valor: string) => {
+  // Varios a la vez: «Mostrar: todos» toca dos claves, y dos navegaciones
+  // seguidas se pisarían.
+  const aplicarVarios = React.useCallback(
+    (cambios: Record<string, string>) => {
       const siguientes = new URLSearchParams(vigentes.current.toString());
-      if (valor) siguientes.set(clave, valor);
-      else siguientes.delete(clave);
+      for (const [clave, valor] of Object.entries(cambios)) {
+        if (valor) siguientes.set(clave, valor);
+        else siguientes.delete(clave);
+      }
       // Con otro criterio, la página en la que se estaba deja de valer.
       siguientes.delete("cursor");
       siguientes.delete("dir");
@@ -36,6 +40,10 @@ export function useBarraFiltros() {
     },
     [ruta, router, vigentes],
   );
+  const aplicar = React.useCallback(
+    (clave: string, valor: string) => aplicarVarios({ [clave]: valor }),
+    [aplicarVarios],
+  );
 
   const [texto, setTexto] = React.useState(params.get("q") ?? "");
   React.useEffect(() => {
@@ -44,7 +52,16 @@ export function useBarraFiltros() {
     return () => clearTimeout(t);
   }, [texto, aplicar, vigentes]);
 
-  return { valor: (clave: string) => params.get(clave) ?? "", aplicar, texto, setTexto };
+  /** Quita todos los filtros y deja solo cuántas filas se ven. */
+  const limpiar = React.useCallback(() => {
+    const n = vigentes.current.get("n");
+    const siguientes = new URLSearchParams(n ? { n } : {});
+    vigentes.current = siguientes;
+    setTexto("");
+    iniciar(() => router.replace(n ? `${ruta}?n=${n}` : ruta, { scroll: false }));
+  }, [ruta, router, vigentes]);
+
+  return { valor: (clave: string) => params.get(clave) ?? "", aplicar, aplicarVarios, limpiar, texto, setTexto };
 }
 
 /**
@@ -143,4 +160,62 @@ export function CajaBuscar({
 /** La fila: se reparte el ancho y baja de línea sola en el teléfono. */
 export function FilaFiltros({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap items-center gap-2">{children}</div>;
+}
+
+/**
+ * Un filtro con buscador dentro (proveedor, marca, usuario…): cuando la lista
+ * es larga, un desplegable normal obliga a bajar por cien nombres.
+ */
+export function FiltroBuscable({
+  id,
+  etiqueta,
+  todos,
+  buscar,
+  valor,
+  opciones,
+  onCambiar,
+}: {
+  id: string;
+  etiqueta: string;
+  todos: string;
+  buscar: string;
+  valor: string;
+  opciones: readonly OpcionCombobox[];
+  onCambiar: (valor: string) => void;
+}) {
+  return (
+    <div className="min-w-0 flex-[1.5_1_12rem]">
+      <label htmlFor={id} className="sr-only">
+        {etiqueta}
+      </label>
+      <Combobox
+        id={id}
+        opciones={opciones}
+        valor={valor || null}
+        onCambio={(v) => onCambiar(v ?? "")}
+        placeholder={todos}
+        placeholderBusqueda={buscar}
+        className={
+          valor
+            ? "[&>button:first-of-type]:border-brand-300 [&>button:first-of-type]:bg-brand-50 [&>button:first-of-type]:font-medium"
+            : undefined
+        }
+      />
+    </div>
+  );
+}
+
+/** «Limpiar», solo cuando hay algo que limpiar. */
+export function LimpiarFiltros({ visible, onLimpiar }: { visible: boolean; onLimpiar: () => void }) {
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      onClick={onLimpiar}
+      className="inline-flex h-control-md shrink-0 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] hover:bg-[var(--surface-2)]"
+    >
+      <X className="size-4" aria-hidden="true" />
+      Limpiar
+    </button>
+  );
 }

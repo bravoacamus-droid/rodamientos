@@ -4592,6 +4592,35 @@ de Defontana.
 
 ---
 
+## §BJ · 13/10 — Todas las listas, con la misma fila de desplegables
+
+Luis: *«pasa las demás listas a desplegables»* (tras §BF, que lo hizo en
+cotizaciones, facturas y guías).
+
+Las once barras que quedaban, sobre las mismas piezas de
+`componentes/filtros.tsx`: compras, recepciones, proveedores, clientes,
+importaciones, alertas, la bitácora («Qué ha pasado»), cobranzas, kárdex,
+productos y kits.
+
+- **Lo que eran casillas o botones, ahora es un desplegable** que se pinta en
+  azul cuando está puesto: clientes («Ver bloqueados» + «Ver desactivados» →
+  «Mostrar», con las dos claves de siempre en la URL), proveedores y productos
+  (desactivados / dados de baja), kits (los dos estados y los de baja),
+  importaciones («En camino / Todas»), alertas («Ver archivadas») y cobranzas
+  («Solo vencido»).
+- **Las listas largas siguen con buscador** (`FiltroBuscable`, sobre el
+  Combobox): proveedor, marca, familia, subfamilia, quién.
+- **Las fechas sueltas** de compras, recepciones, bitácora y kárdex pasan al
+  grupo de periodo común (`BarraPeriodo`).
+- **«Limpiar»** común (`LimpiarFiltros`), y el hook gana `aplicarVarios` (para
+  «Mostrar» y para que cambiar de familia quite la subfamilia en una sola
+  navegación) y `limpiar` (conserva solo cuántas filas se ven).
+
+Probado a 1600 y 390: las once cargan sin errores ni desplazamiento lateral;
+«Mostrar: Todos» en clientes escribe las dos claves y «Solo activos» las quita;
+compras con tipo + «Este año» y «Limpiar»; familia en productos quita la
+subfamilia.
+
 ## §BI · 12/10 — La cotización a medio hacer se guarda sola
 
 Luis preguntó qué se guarda al cotizar, y la respuesta tenía un agujero: nada

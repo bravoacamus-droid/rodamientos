@@ -1,197 +1,67 @@
 "use client";
 
 // Cliente: escribe los filtros en la URL conforme se usan. La lectura sigue
-// pasando en el servidor — la URL es el estado, y así un filtro se puede
-// compartir por enlace y sobrevive a recargar la página.
+// pasando en el servidor — la URL es el estado.
 
-import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Eye, Wallet } from "lucide-react";
 
-import { useParamsVigentes } from "@/lib/use-filtros-url";
+import { CajaBuscar, FiltroDesplegable, FilaFiltros, LimpiarFiltros, useBarraFiltros } from "@/componentes/filtros";
 
 import { ETIQUETA_CONDICION } from "../dominio/tipos";
 
 /**
- * Barra de filtros de la cartera.
+ * Clientes (13/10): una fila de desplegables, como el resto de listas.
  *
- * No recibe catálogos: los únicos filtros son el texto, la condición de pago y
- * dos interruptores de visibilidad. Todo sale del contrato, así que la barra no
- * depende de ninguna consulta y puede pintarse antes que la tabla.
+ * Las dos casillas «Ver bloqueados» y «Ver desactivados» pasan a UN
+ * desplegable «Mostrar» con las cuatro combinaciones; en la URL siguen siendo
+ * las dos claves de siempre, así que los enlaces viejos valen.
  */
 export function FiltrosClientesBarra() {
-  const router = useRouter();
-  const ruta = usePathname();
-  const params = useSearchParams();
-  const [pendiente, iniciarTransicion] = React.useTransition();
-
-  // Los parámetros vigentes se leen de una ref y no de la clausura.
-  //
-  // Si `aplicar` capturara `params`, se recrearía con cada cambio y un
-  // temporizador de la búsqueda que ya estuviera en vuelo llevaría la copia
-  // VIEJA: al dispararse reconstruiría la URL sin el filtro recién elegido y lo
-  // borraría solo. Con la ref, `aplicar` es estable y siempre parte del estado
-  // actual, dispare cuando dispare.
-  // Parte del último filtro pedido, no del último cargado (07/10).
-  const vigentes = useParamsVigentes();
-
-  /** Aplica un cambio de filtro. Siempre borra el cursor: al cambiar el
-   *  criterio, seguir en la página 3 del resultado anterior no significa nada. */
-  const aplicar = React.useCallback(
-    (clave: string, valor: string) => {
-      const siguientes = new URLSearchParams(vigentes.current.toString());
-      if (valor) siguientes.set(clave, valor);
-      else siguientes.delete(clave);
-      siguientes.delete("cursor");
-
-      const query = siguientes.toString();
-      vigentes.current = siguientes;
-      const destino = query ? `${ruta}?${query}` : ruta;
-      // Sin esto, cada render programaba una navegación al mismo sitio.
-      if (destino === `${ruta}${params.toString() ? `?${params}` : ""}`) return;
-
-      iniciarTransicion(() => {
-        router.replace(destino, { scroll: false });
-      });
-    },
-    [params, ruta, router, vigentes],
-  );
-
-  const condicion = params.get("condicion") ?? "";
-  const bloqueados = params.get("bloqueados") === "1";
-  const inactivos = params.get("inactivos") === "1";
-  const hayFiltros =
-    Boolean(params.get("q")) || Boolean(condicion) || bloqueados || inactivos;
-
-  // 44 px de alto en móvil, la altura de control del ERP a partir de `md`. Un
-  // desplegable de 38 px se falla con el pulgar.
-  const claseControl =
-    "h-11 min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-sm text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] sm:flex-none md:h-control-md";
+  const { valor, aplicar, aplicarVarios, limpiar, texto, setTexto } = useBarraFiltros();
+  const bloqueados = valor("bloqueados") === "1";
+  const inactivos = valor("inactivos") === "1";
+  const mostrar = bloqueados && inactivos ? "todos" : bloqueados ? "bloqueados" : inactivos ? "inactivos" : "";
+  const hay = ["q", "condicion", "bloqueados", "inactivos"].some((k) => valor(k));
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-2 px-4 pb-4 sm:px-6"
-      data-pendiente={pendiente ? "" : undefined}
-    >
-      <BuscadorConRetardo valorEnUrl={params.get("q") ?? ""} aplicar={aplicar} />
-
-      <label className="sr-only" htmlFor="f-condicion">
-        Condición de pago
-      </label>
-      <select
-        id="f-condicion"
-        className={claseControl}
-        // Controlado por la URL, no `defaultValue`: al volver atrás en el
-        // navegador o al limpiar los filtros, el desplegable tiene que
-        // reflejar lo que de verdad está aplicado.
-        value={condicion}
-        onChange={(e) => aplicar("condicion", e.target.value)}
-      >
-        <option value="">Contado y crédito</option>
-        <option value="contado">{ETIQUETA_CONDICION.contado}</option>
-        <option value="credito">{ETIQUETA_CONDICION.credito}</option>
-      </select>
-
-      {hayFiltros ? (
-        <button
-          type="button"
-          onClick={() => iniciarTransicion(() => router.replace(ruta, { scroll: false }))}
-          // Con borde: un «Limpiar» gris subrayado no parece un botón
-          // (revisión por módulos del 02/10).
-          className="h-11 shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] hover:bg-[var(--surface-2)] md:h-control-md"
-        >
-          Limpiar
-        </button>
-      ) : null}
-
-      {/* Los dos interruptores se agrupan y bajan a su propia línea en móvil:
-          en 360 px no caben junto a la búsqueda sin que algo se corte. */}
-      <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 sm:ml-auto sm:w-auto">
-        <Interruptor
-          etiqueta="Ver bloqueados"
-          activo={bloqueados}
-          onCambio={(v) => aplicar("bloqueados", v ? "1" : "")}
+    <div className="px-4 pb-4 sm:px-6">
+      <FilaFiltros>
+        <CajaBuscar
+          valor={texto}
+          onCambiar={setTexto}
+          placeholder="Razón social, RUC o código"
+          etiqueta="Buscar clientes"
         />
-        <Interruptor
-          etiqueta="Ver desactivados"
-          activo={inactivos}
-          onCambio={(v) => aplicar("inactivos", v ? "1" : "")}
+        <FiltroDesplegable
+          icono={Wallet}
+          etiqueta="Condición de pago"
+          todos="Contado y crédito"
+          valor={valor("condicion")}
+          opciones={[
+            { valor: "contado", etiqueta: ETIQUETA_CONDICION.contado },
+            { valor: "credito", etiqueta: ETIQUETA_CONDICION.credito },
+          ]}
+          onCambiar={(v) => aplicar("condicion", v)}
         />
-      </div>
+        <FiltroDesplegable
+          icono={Eye}
+          etiqueta="Mostrar"
+          todos="Solo activos"
+          valor={mostrar}
+          opciones={[
+            { valor: "bloqueados", etiqueta: "También bloqueados" },
+            { valor: "inactivos", etiqueta: "También desactivados" },
+            { valor: "todos", etiqueta: "Todos" },
+          ]}
+          onCambiar={(v) =>
+            aplicarVarios({
+              bloqueados: v === "bloqueados" || v === "todos" ? "1" : "",
+              inactivos: v === "inactivos" || v === "todos" ? "1" : "",
+            })
+          }
+        />
+        <LimpiarFiltros visible={hay} onLimpiar={limpiar} />
+      </FilaFiltros>
     </div>
-  );
-}
-
-/** Casilla con área táctil de 44 px: el `<label>` entero es el objetivo. */
-function Interruptor({
-  etiqueta,
-  activo,
-  onCambio,
-}: {
-  etiqueta: string;
-  activo: boolean;
-  onCambio: (valor: boolean) => void;
-}) {
-  return (
-    <label className="flex min-h-11 items-center gap-2 text-sm text-[var(--fg-muted)] md:min-h-0">
-      <input
-        type="checkbox"
-        checked={activo}
-        onChange={(e) => onCambio(e.target.checked)}
-        className="size-4 accent-[var(--ring)]"
-      />
-      {etiqueta}
-    </label>
-  );
-}
-
-/**
- * Caja de búsqueda con retardo.
- *
- * Sin él, cada tecla dispararía una consulta contra la cartera entera.
- *
- * Recibe `aplicar` directamente en vez de un `onBuscar` en línea: una función
- * nueva en cada render hacía que el efecto se reprogramara siempre y escribiera
- * la URL sin que nadie hubiera tecleado nada.
- */
-function BuscadorConRetardo({
-  valorEnUrl,
-  aplicar,
-}: {
-  valorEnUrl: string;
-  aplicar: (clave: string, valor: string) => void;
-}) {
-  const [texto, setTexto] = React.useState(valorEnUrl);
-
-  // Si la URL cambia por fuera —atrás del navegador, botón de limpiar— la caja
-  // tiene que seguirla.
-  React.useEffect(() => {
-    setTexto(valorEnUrl);
-  }, [valorEnUrl]);
-
-  React.useEffect(() => {
-    const limpio = texto.trim();
-    // Solo se navega si de verdad cambió respecto a lo que ya está aplicado.
-    if (limpio === valorEnUrl) return;
-    const id = setTimeout(() => aplicar("q", limpio), 300);
-    return () => clearTimeout(id);
-  }, [texto, valorEnUrl, aplicar]);
-
-  return (
-    <>
-      <label className="sr-only" htmlFor="f-buscar">
-        Buscar cliente
-      </label>
-      <input
-        id="f-buscar"
-        type="search"
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="RUC, razón social, nombre comercial o contacto…"
-        // A lo ancho en el teléfono, en su propia línea: compartiéndola con el
-        // desplegable se quedaba en «RUC, razón social,» y el desplegable en
-        // «Contado y crédit» (revisión por módulos del 02/10).
-        className="h-11 w-full min-w-0 grow basis-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm text-[var(--fg)] placeholder:text-[var(--fg-subtle)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] sm:basis-64 md:h-control-md"
-      />
-    </>
   );
 }
