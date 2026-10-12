@@ -129,7 +129,12 @@ export type Accion =
    * Lo que dijo el catálogo del código escrito en una fila: el producto, o
    * null si no está. Llega del servidor al salir del campo.
    */
-  | { tipo: "enlazar"; key: string; producto: ProductoParaAnalizar | null };
+  | { tipo: "enlazar"; key: string; producto: ProductoParaAnalizar | null }
+  /**
+   * Un estado entero, tal cual: el borrador que se dejó a medias (13/10).
+   * Como el `cargar` de la compra y de la recepción.
+   */
+  | { tipo: "cargar"; estado: EstadoAnalisis };
 
 export function estadoInicial(fecha: string): EstadoAnalisis {
   return {
@@ -171,6 +176,9 @@ function nuevaLinea(key: string, parcial: Partial<LineaAnalisis>): LineaAnalisis
 
 export function reducir(estado: EstadoAnalisis, accion: Accion): EstadoAnalisis {
   switch (accion.tipo) {
+    case "cargar":
+      return accion.estado;
+
     case "cabecera": {
       const v = accion.valor;
       if (

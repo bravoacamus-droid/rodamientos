@@ -39,6 +39,7 @@ import {
 import { BuscadorCompra } from "../constructor/buscador";
 import { AltaEnBloque } from "./alta-en-bloque";
 import { Volver } from "@/componentes/volver";
+import { useBorrador } from "@/componentes/borrador";
 
 // Espacio de NO separación entre el signo y la cifra: en el teléfono «$ 11.58»
 // se partía en dos líneas (revisión del 02/10).
@@ -159,6 +160,31 @@ export function ConstructorAnalisis({
   const actual = JSON.stringify(aPayload(estado, inicial?.id));
   const sinGuardar = guardado !== actual;
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador. Luis, 13/10:
+    *«quiero volver donde me quedé»*. Va el estado del reducer y la ficha
+    del proveedor, que es lo que pinta el buscador.
+
+    Solo vale la pena si hay algo escrito Y no está ya en la base: un
+    análisis abierto para editar ya tiene filas, y guardarlo como borrador
+    sin tocar nada ofrecería «seguir» la próxima vez sobre lo mismo. Al
+    VER, la clave es otra: si fuera la misma, abrir la ficha borraría el
+    borrador de la edición (el hook quita lo que no vale la pena).
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: soloLectura ? "analisis-ver" : "analisis",
+    id: inicial?.id ?? null,
+    datos: { estado, proveedor },
+    valeLaPena: (d) =>
+      !soloLectura &&
+      Boolean(d.estado.proveedorId || d.estado.lineas.some((l) => !enBlanco(l))) &&
+      JSON.stringify(aPayload(d.estado, inicial?.id)) !== guardado,
+    recuperar: (d) => {
+      despachar({ tipo: "cargar", estado: d.estado });
+      setProveedor(d.proveedor);
+    },
+  });
+
   const c = React.useMemo(() => calcular(estado), [estado]);
 
   /*
@@ -223,6 +249,8 @@ export function ConstructorAnalisis({
       }
       toast.success(`${r.numero} guardado.`);
       setGuardado(JSON.stringify(aPayload(estado, r.id)));
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
       // A la ficha, a verlo guardado (y `refresh` para que la lea de nuevo).
       router.replace(`/compras/analisis/${r.id}`);
       router.refresh();
@@ -293,6 +321,8 @@ export function ConstructorAnalisis({
           {inicial && !soloLectura ? (
             <Link
               href={`/compras/analisis/${inicial.id}`}
+              // Salir sin guardar es decidir no seguir: no se ofrece otra vez.
+              onClick={olvidarBorrador}
               className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
             >
               {sinGuardar ? "Salir sin guardar" : "Ver la ficha"}
@@ -310,6 +340,8 @@ export function ConstructorAnalisis({
           )}
         </div>
       </header>
+
+      {avisoBorrador}
 
       {inicial?.comprado ? (
         <p className="rounded-md border border-[var(--ok)] bg-[var(--ok-bg)] p-3 text-sm">

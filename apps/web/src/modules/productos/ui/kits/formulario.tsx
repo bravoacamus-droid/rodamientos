@@ -30,6 +30,7 @@ import {
 } from "@rodatech/ui";
 import { abreviaturaUnidad } from "@rodatech/config";
 
+import { useBorrador } from "@/componentes/borrador";
 import { Volver } from "@/componentes/volver";
 import { sinEnvioConEnter } from "@/lib/formularios";
 
@@ -373,6 +374,28 @@ export function FormularioKit({
   const listo =
     codigo.trim().length > 0 && descripcion.trim().length >= 3 && lineas.length > 0;
 
+  /*
+    Lo que se está armando, guardado solo en el navegador (13/10). Luis:
+    «quiero volver donde me quedé». Entra lo que se escribe y se elige —código,
+    descripción, piezas, descuento y precio—; no los diálogos abiertos ni los
+    «otros kits», que se vuelven a pedir solos. El stock y los precios de cada
+    pieza vuelven como estaban al guardar el borrador.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "kit",
+    id: kit?.id ?? null,
+    datos: { codigo, descripcion, lineas, conDescuento, precio, precioAMano },
+    valeLaPena: (d) => Boolean(d.codigo.trim() || d.descripcion.trim() || d.lineas.length > 0),
+    recuperar: (d) => {
+      setCodigo(d.codigo);
+      setDescripcion(d.descripcion);
+      setLineas(d.lineas);
+      setConDescuento(d.conDescuento);
+      setPrecio(d.precio);
+      setPrecioAMano(d.precioAMano);
+    },
+  });
+
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     if (!listo) return;
@@ -413,6 +436,8 @@ export function FormularioKit({
         return;
       }
       toast.success(`${r.codigo} guardado.`);
+      // Ya está en la base: el borrador sobra. También dentro del modal.
+      olvidarBorrador();
       if (alGuardar) {
         alGuardar({ id: r.id, codigo: r.codigo });
         return;
@@ -540,6 +565,8 @@ export function FormularioKit({
           </p>
         </header>
       )}
+
+      {avisoBorrador}
 
       <section className="card p-4">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -1173,7 +1200,12 @@ export function FormularioKit({
             <Button
               type="button"
               variant="outline"
-              onClick={() => (alCancelar ? alCancelar() : router.back())}
+              onClick={() => {
+                // Cancelar es decidir no seguir: no se ofrece otra vez.
+                olvidarBorrador();
+                if (alCancelar) alCancelar();
+                else router.back();
+              }}
             >
               Cancelar
             </Button>

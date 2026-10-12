@@ -7,6 +7,7 @@ import { useActionState, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Combobox, Input } from "@rodatech/ui";
 
+import { useBorrador } from "@/componentes/borrador";
 import { ProveedorRapido } from "@/modules/proveedores/ui/rapido";
 
 import {
@@ -99,7 +100,11 @@ export function FormularioProducto({
       const r = await guardarProducto(previo, formData);
       // A la ficha del producto: después de crearlo o editarlo lo que se
       // quiere es verlo, no volver a buscarlo en el listado.
-      if (r.ok) router.push(`/productos/${r.id}`);
+      if (r.ok) {
+        // Ya está en la base: el borrador sobra.
+        olvidarBorrador();
+        router.push(`/productos/${r.id}`);
+      }
       return r;
     },
     null,
@@ -249,9 +254,28 @@ export function FormularioProducto({
   const errorDe = (campo: string) =>
     resultado && !resultado.ok && resultado.campo === campo ? resultado.error : undefined;
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Luis:
+    «quiero volver donde me quedé». Las marcas, familias y proveedores creados
+    aquí mismo (`nuevas`) no entran: ya están en la base, y al volver a abrir
+    la pantalla llegan en los catálogos del servidor.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "producto",
+    id: producto?.id ?? null,
+    datos: { f, pvManual },
+    valeLaPena: (d) => Boolean(d.f.codigo.trim() || d.f.descripcion.trim()),
+    recuperar: (d) => {
+      setF(d.f);
+      setPvManual(d.pvManual);
+    },
+  });
+
   return (
     <form action={guardar} className="flex flex-col gap-4">
       <input type="hidden" name="producto" value={JSON.stringify(payload)} />
+
+      {avisoBorrador}
 
       {resultado && !resultado.ok && !resultado.campo ? (
         <p
@@ -727,7 +751,11 @@ export function FormularioProducto({
           type="button"
           variant="outline"
           className="h-11 w-full sm:w-auto md:h-control-md"
-          onClick={() => router.push(producto ? `/productos/${producto.id}` : "/productos")}
+          onClick={() => {
+            // Cancelar es decidir no seguir: no se ofrece otra vez.
+            olvidarBorrador();
+            router.push(producto ? `/productos/${producto.id}` : "/productos");
+          }}
         >
           Cancelar
         </Button>

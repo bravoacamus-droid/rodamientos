@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button, Combobox, Input, SelectNativo, Textarea } from "@rodatech/ui";
 import { Check, ChevronDown } from "lucide-react";
 
+import { useBorrador } from "@/componentes/borrador";
 import { Volver } from "@/componentes/volver";
 import {
   departamentosUbigeo,
@@ -220,6 +221,8 @@ export function FormularioProveedor({
       fd.set("proveedor", JSON.stringify(datos));
       const r = await guardarProveedor(null, fd);
       if (r.ok) {
+        // Ya está en la base: el borrador sobra.
+        olvidarBorrador();
         router.push(`/proveedores/${r.id}`);
         return;
       }
@@ -230,6 +233,29 @@ export function FormularioProveedor({
 
   const marcado = (campo: string) =>
     campoMalo === campo ? "border-[var(--danger)]" : "";
+
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Luis:
+    «quiero volver donde me quedé». Todo lo que se escribe ya vive en `datos`;
+    «Más datos» abierto o cerrado no es dato, pero se abre al recuperar para
+    que se vea lo que vuelve.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "proveedor",
+    id: inicial?.id ?? null,
+    datos,
+    valeLaPena: (d) =>
+      Boolean(
+        (d.numero_documento ?? "").trim() ||
+          d.razon_social.trim() ||
+          d.marca_ids.length > 0 ||
+          (d.notas ?? "").trim(),
+      ),
+    recuperar: (d) => {
+      setDatos(d);
+      setMasDatos(true);
+    },
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -250,6 +276,8 @@ export function FormularioProveedor({
             : "Con el documento y la razón social basta para empezar."}
         </p>
       </header>
+
+      {avisoBorrador}
 
       {error ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
@@ -593,7 +621,11 @@ export function FormularioProveedor({
           type="button"
           variant="outline"
           className="h-11 w-full sm:w-auto md:h-control-md"
-          onClick={() => router.back()}
+          onClick={() => {
+            // Cancelar es decidir no seguir: no se ofrece otra vez.
+            olvidarBorrador();
+            router.back();
+          }}
         >
           Cancelar
         </Button>

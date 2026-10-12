@@ -10,6 +10,7 @@ import { actualizarGuia } from "../acciones/actualizar";
 import type { GuiaDetalle } from "../dominio/tipos";
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado } from "../dominio/tipos";
 import { Volver } from "@/componentes/volver";
+import { useBorrador } from "@/componentes/borrador";
 
 /**
  * Corregir un borrador de guía.
@@ -65,6 +66,41 @@ export function EditorGuia({
 
   const esPublico = modalidad === "01";
 
+  /*
+    Lo que se está corrigiendo, guardado solo en el navegador (13/10). Luis:
+    *«cuando esté creando un usuario o rellenando algo, que me salga seguir o
+    comenzar desde cero»*.
+
+    `valeLaPena` siempre: el hook ya compara con lo que trajo la guía, así que
+    solo se guarda si de verdad se cambió algo.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "guia-editar",
+    id: guia.id,
+    datos: {
+      fechaTraslado, direccion, ubigeo, peso, bultos, modalidad, aPie,
+      ruc, razon, placa, conductor, dni, licencia, celular, observaciones,
+    },
+    valeLaPena: () => true,
+    recuperar: (d) => {
+      setFechaTraslado(d.fechaTraslado);
+      setDireccion(d.direccion);
+      setUbigeo(d.ubigeo);
+      setPeso(d.peso);
+      setBultos(d.bultos);
+      setModalidad(d.modalidad);
+      setAPie(d.aPie);
+      setRuc(d.ruc);
+      setRazon(d.razon);
+      setPlaca(d.placa);
+      setConductor(d.conductor);
+      setDni(d.dni);
+      setLicencia(d.licencia);
+      setCelular(d.celular);
+      setObservaciones(d.observaciones);
+    },
+  });
+
   function guardar() {
     setError(null);
     const pesoNum = Number(peso);
@@ -101,6 +137,8 @@ export function EditorGuia({
         setError(r.error);
         return;
       }
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
       router.push(`/guias/${guia.id}`);
       router.refresh();
     });
@@ -120,7 +158,11 @@ export function EditorGuia({
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push(`/guias/${guia.id}`)}
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push(`/guias/${guia.id}`);
+            }}
           >
             Cancelar
           </Button>
@@ -129,6 +171,8 @@ export function EditorGuia({
           </Button>
         </div>
       </header>
+
+      {avisoBorrador}
 
       {error ? (
         <p

@@ -24,6 +24,7 @@ import {
 } from "../../dominio/ajuste";
 import { TIPOS_AJUSTE, type ProductoContable } from "../../dominio/tipos";
 import { FilaConteo, TarjetaConteo } from "./linea";
+import { useBorrador } from "@/componentes/borrador";
 
 /**
  * Hoja de conteo del cuadre de inventario.
@@ -62,9 +63,74 @@ export function HojaDeConteo({
     FormData
   >(async (previo, formData) => {
     const r = await registrarCuadre(previo, formData);
-    if (r.ok) router.push("/inventario/kardex?referencia=ajuste");
+    if (r.ok) {
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
+      router.push("/inventario/kardex?referencia=ajuste");
+    }
     return r;
   }, null);
+
+  /*
+    El conteo a medias, guardado solo en el navegador (13/10). Luis: *«cuando
+    esté creando un usuario o rellenando algo, que me salga seguir o comenzar
+    desde cero»*. Una hoja de conteo es justo lo que se deja a medias: se
+    cuenta una estantería, suena el teléfono, se cierra la pestaña.
+
+    La FECHA no entra: arranca en la de hoy, que la fija el servidor. Un
+    cuadre de ayer recuperado hoy se registraría con un día que nadie miró.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "ajuste-inventario",
+    id: null,
+    datos: {
+      tipo: estado.tipo,
+      motivo: estado.motivo,
+      lineas: estado.lineas,
+      familia,
+      marca,
+      soloConStock,
+    },
+    // Solo si se contó algo o se explicó el porqué: cargar la hoja sin más se
+    // rehace con un clic.
+    valeLaPena: (d) =>
+      Boolean(d.motivo.trim()) || d.lineas.some((l) => l.cantidadFisica !== null),
+    recuperar: (d) => {
+      setFamilia(d.familia);
+      setMarca(d.marca);
+      setSoloConStock(d.soloConStock);
+      despachar({ tipo: "cabecera", campo: "tipo", valor: d.tipo });
+      despachar({ tipo: "cabecera", campo: "motivo", valor: d.motivo });
+      // La hoja tal como quedó, y encima lo contado. «cargar» conserva lo ya
+      // contado de lo que está en pantalla, así que primero se vacía.
+      despachar({ tipo: "limpiar" });
+      despachar({
+        tipo: "cargar",
+        productos: d.lineas.map((l) => ({
+          id: l.productoId,
+          codigo: l.codigo,
+          descripcion: l.descripcion,
+          marca: l.marca,
+          subfamilia: l.subfamilia,
+          unidad: l.unidad,
+          stock: l.cantidadSistema,
+          costo_promedio: l.costoUnitario,
+        })),
+      });
+      for (const l of d.lineas) {
+        if (l.cantidadFisica !== null) {
+          despachar({ tipo: "contar", productoId: l.productoId, valor: l.cantidadFisica });
+        }
+      }
+      // El saldo del sistema es el de cuando se dejó. Al registrar manda el de
+      // la base, pero la diferencia en pantalla podría no casar: se dice.
+      if (d.lineas.length > 0) {
+        setAvisoCarga(
+          "Lo que dice el sistema es de cuando lo dejaste. Pulsa «Cargar hoja» para ponerlo al día: lo contado se conserva.",
+        );
+      }
+    },
+  });
 
   const impacto = useMemo(() => impactoDe(estado), [estado]);
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
@@ -132,7 +198,11 @@ export function HojaDeConteo({
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/inventario")}
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push("/inventario");
+            }}
           >
             Cancelar
           </Button>
@@ -141,6 +211,8 @@ export function HojaDeConteo({
           </Button>
         </div>
       </header>
+
+      {avisoBorrador}
 
       {resultado && !resultado.ok ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">

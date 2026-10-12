@@ -6,6 +6,7 @@
 // local y eventos: no hay forma de hacerlo en el servidor.
 
 import * as React from "react";
+import { useBorrador } from "@/componentes/borrador";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Pencil, Plus } from "lucide-react";
 import {
@@ -110,7 +111,11 @@ export function FormularioCliente({
     const r = await guardarCliente(previo, formData);
     // A la ficha: después de crearlo o editarlo lo que se quiere es verlo, no
     // volver a buscarlo en el listado.
-    if (r.ok) router.push(`/clientes/${r.id}`);
+    if (r.ok) {
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
+      router.push(`/clientes/${r.id}`);
+    }
     return r;
   }, null);
 
@@ -403,9 +408,35 @@ export function FormularioCliente({
   const errorDe = (campo: string) =>
     resultado && !resultado.ok && resultado.campo === campo ? resultado.error : undefined;
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Si se
+    cierra la página, al volver se ofrece seguir donde se quedó.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "cliente",
+    id: cliente?.id ?? null,
+    datos: { tipoDocumento, condicionPago, f, diasAMano, conTope, contactos, ubigeoNombre, ubigeoDep, ubigeoProv, ubigeoDist },
+    valeLaPena: (d) => Boolean(d.f.numero_documento || d.f.razon_social || d.contactos.length > 0),
+    recuperar: (d) => {
+      setTipoDocumento(d.tipoDocumento);
+      setCondicionPago(d.condicionPago);
+      setF(d.f);
+      setDiasAMano(d.diasAMano);
+      setConTope(d.conTope);
+      setContactos(d.contactos);
+      setUbigeoNombre(d.ubigeoNombre);
+      setUbigeoDep(d.ubigeoDep);
+      setUbigeoProv(d.ubigeoProv);
+      setUbigeoDist(d.ubigeoDist);
+      setMasDatos(true);
+    },
+  });
+
   return (
     <form action={guardar} className="flex flex-col gap-4">
       <input type="hidden" name="cliente" value={JSON.stringify(payload)} />
+
+      {avisoBorrador}
 
       {resultado && !resultado.ok && !resultado.campo ? (
         <p
@@ -1014,7 +1045,11 @@ export function FormularioCliente({
           type="button"
           variant="outline"
           className="h-11 w-full sm:w-auto md:h-control-md"
-          onClick={() => router.push(cliente ? `/clientes/${cliente.id}` : "/clientes")}
+          onClick={() => {
+            // Cancelar es decidir no seguir: no se ofrece otra vez.
+            olvidarBorrador();
+            router.push(cliente ? `/clientes/${cliente.id}` : "/clientes");
+          }}
         >
           Cancelar
         </Button>

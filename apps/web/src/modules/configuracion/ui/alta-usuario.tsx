@@ -1,9 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { clave } from "@/lib/borrador";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Input, SelectNativo, toast } from "@rodatech/ui";
 import { Check, Copy, UserPlus, X } from "lucide-react";
+
+import { useBorrador } from "@/componentes/borrador";
 
 import { crearUsuario } from "../acciones/usuarios";
 import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol } from "../dominio/tipos";
@@ -23,6 +26,18 @@ import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol } from "../dominio/tipos";
 export function AltaUsuario({ hayClave }: { hayClave: boolean }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
+  /*
+    Si quedó un alta a medio llenar (13/10), el formulario se abre solo: está
+    detrás de «Dar de alta a alguien», y cerrado el aviso de seguir donde se
+    quedó no se vería nunca.
+  */
+  React.useEffect(() => {
+    try {
+      if (window.localStorage.getItem(clave("usuario"))) setAbierto(true);
+    } catch {
+      // Sin almacenamiento: se abre a mano, como siempre.
+    }
+  }, []);
   const [creada, setCreada] = React.useState<{
     nombre: string;
     email: string;
@@ -84,6 +99,29 @@ function Formulario({
   const [rol, setRol] = React.useState<Rol>("ventas");
   const [enviando, empezar] = React.useTransition();
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Luis:
+    *«cuando esté creando un usuario o rellenando algo, que me salga seguir o
+    comenzar desde cero»* — el alta de usuario es su ejemplo literal.
+
+    No hay contraseña que guardar: la genera el servidor al crear la cuenta y
+    no pasa nunca por este formulario.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "usuario",
+    id: null,
+    datos: { nombre, email, cargo, telefono, rol },
+    valeLaPena: (d) =>
+      Boolean(d.nombre.trim() || d.email.trim() || d.cargo.trim() || d.telefono.trim()),
+    recuperar: (d) => {
+      setNombre(d.nombre);
+      setEmail(d.email);
+      setCargo(d.cargo);
+      setTelefono(d.telefono);
+      setRol(d.rol);
+    },
+  });
+
   const listo = nombre.trim().length >= 3 && email.includes("@") && !enviando;
 
   function enviar(e: React.FormEvent) {
@@ -100,6 +138,8 @@ function Formulario({
         toast.error(r.error);
         return;
       }
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
       onCreada({ nombre: r.nombre, email: r.email, contrasena: r.contrasena });
     });
   }
@@ -107,6 +147,8 @@ function Formulario({
   return (
     <form onSubmit={enviar} className="rounded-lg border border-[var(--border)] p-4">
       <h3 className="mb-3 text-base font-semibold">Dar de alta a alguien</h3>
+
+      {avisoBorrador ? <div className="mb-3">{avisoBorrador}</div> : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Campo id="alta-nombre" label="Nombre y apellidos" requerido>
@@ -176,7 +218,16 @@ function Formulario({
         <Button type="submit" disabled={!listo}>
           {enviando ? "Creando…" : "Crear la cuenta"}
         </Button>
-        <Button type="button" variant="outline" onClick={onCancelar} disabled={enviando}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            // Cancelar es decidir no seguir: no se ofrece otra vez.
+            olvidarBorrador();
+            onCancelar();
+          }}
+          disabled={enviando}
+        >
           Cancelar
         </Button>
       </div>

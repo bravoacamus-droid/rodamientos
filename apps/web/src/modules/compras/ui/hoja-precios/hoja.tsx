@@ -21,6 +21,7 @@ import {
   type ProductoHoja,
 } from "../../dominio/hoja-precios";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
+import { useBorrador } from "@/componentes/borrador";
 
 import type { ProductoComprable } from "../../acciones/buscar";
 import { BuscadorCompra } from "../constructor/buscador";
@@ -78,6 +79,28 @@ export function HojaPrecios({
   const bloqueos = bloqueosAlGuardar(hoja);
   const sucia = JSON.stringify(aPayload(hoja)) !== guardada;
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador. Luis, 13/10:
+    *«quiero volver donde me quedé»*. Va la hoja entera: productos,
+    proveedores y lo que cada uno dijo.
+
+    Solo si hay algo Y no está ya guardado: una consulta abierta de nuevo
+    tiene filas, y ofrecer «seguir» sobre lo mismo que hay en la base sería
+    ruido. En solo lectura la clave es otra, para que mirarla no borre el
+    borrador de quien la estaba llenando (el hook quita lo que no vale la
+    pena).
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: soloLectura ? "precios-ver" : "precios",
+    id: inicial.consultaId ?? null,
+    datos: hoja,
+    valeLaPena: (d) =>
+      !soloLectura &&
+      (d.productos.length > 0 || d.proveedores.length > 0) &&
+      JSON.stringify(aPayload(d)) !== guardada,
+    recuperar: (d) => despachar({ tipo: "reemplazar", hoja: d }),
+  });
+
   // Al salir con cambios sin guardar, el navegador pregunta.
   React.useEffect(() => {
     if (!sucia) return;
@@ -102,6 +125,8 @@ export function HojaPrecios({
       return null;
     }
     setGuardada(JSON.stringify({ ...payload, consulta_id: r.id }));
+    // Ya está en la base: el borrador sobra.
+    olvidarBorrador();
     if (!hoja.consultaId) {
       despachar({ tipo: "reemplazar", hoja: { ...hoja, consultaId: r.id, numero: r.numero } });
       router.replace(`/compras/precios/${r.id}`);
@@ -186,6 +211,8 @@ export function HojaPrecios({
           </div>
         )}
       </div>
+
+      {avisoBorrador}
 
       {error ? (
         <p role="alert" className="flex gap-2 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-base">

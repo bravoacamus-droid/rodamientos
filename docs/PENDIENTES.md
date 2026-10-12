@@ -4592,6 +4592,39 @@ de Defontana.
 
 ---
 
+## §BN · 13/10 — «Seguir donde me quedé» en todos los formularios
+
+Luis, 13/10: *«cuando también esté creando un usuario o rellenando algo, que
+me salga seguir o comenzar desde cero; seguro se me salió o se cerró, y lo que
+estaba llenando se borró. Nada de eso: quiero volver donde me quedé»*. Lo de la
+cotización (§BI), para todo.
+
+- **Pieza común**: `componentes/borrador.tsx` (`useBorrador` +
+  `AvisoBorrador`) sobre `lib/borrador.ts` (puro, con tests). Guarda en el
+  navegador 800 ms después del último cambio; al volver: «Dejaste esto a medio
+  llenar el … — ¿sigues donde te quedaste?» con **Seguir donde me quedé** y
+  **Empezar de cero**. Se borra al guardar, al cancelar y a los 14 días.
+- **Lo que la pantalla rellena sola no cuenta**: hasta la primera tecla, clic o
+  cambio de la persona, el punto de partida sigue a la pantalla (precargas de
+  «Recibir mercadería», sugerencias del análisis). Un primer intento con «el
+  primer segundo y medio» se tragaba lo que se escribe rápido al abrir; se
+  cambió por la primera interacción.
+- **Conectado en**: clientes, proveedores, productos y kits (crear y editar),
+  nueva compra, recepción (una por compra), análisis de importación, Pedir
+  precios, nueva guía (una por cotización) y editar guía, emitir comprobante
+  (una por cotización) y nota de crédito/débito, ajuste de inventario y alta de
+  usuario (el formulario se abre solo si hay uno). Lo hicieron tres agentes en
+  paralelo sobre el patrón de clientes; revisado y probado en pantalla después.
+- **Lo que no se guarda, a propósito**: archivos (la factura adjunta de una
+  compra: no cabe en el navegador), contraseñas, y las **fechas de emisión** de
+  comprobantes y notas (son fiscales: siempre arrancan en hoy). Lo recuperado
+  con stock o precios de entonces se enseña como era; la base revisa al guardar.
+- La cotización mantiene su borrador propio (§BI).
+
+Probado: abrir y salir de los 12 formularios no deja borrador; producto,
+ajuste, proveedor, usuario y cliente recuperan lo escrito y «Empezar de cero»
+lo borra.
+
 ## §BM · 13/10 — Editar un pedido aprobado respeta lo que el cliente no quiso (114)
 
 Luis: *«al editar me sigue saliendo los 4, pero debería salir como desactivado

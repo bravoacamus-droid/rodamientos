@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { abreviaturaUnidad, importeConDescuento } from "@rodatech/config";
@@ -30,6 +30,31 @@ import {
 } from "../dominio/emision";
 import type { CotizacionFacturable, TipoComprobante } from "../dominio/tipos";
 import { sinEnvioConEnter } from "@/lib/formularios";
+import { useBorrador } from "@/componentes/borrador";
+import { distinto } from "@/lib/borrador";
+
+/** Lo que se teclea o se elige al emitir; lo que guarda el borrador. */
+interface DatosEmision {
+  cotizacionId: string;
+  tipo: TipoComprobante;
+  condicion: "contado" | "credito";
+  dias: number;
+  observaciones: string;
+  ordenCompra: string;
+  cantidades: number[];
+  opciones: OpcionesEmision;
+}
+
+/** Lo que propone la carga de la cotización, para no guardar lo no tocado. */
+interface BaseEmision {
+  cotizacionId: string;
+  tipo: TipoComprobante;
+  condicion: "contado" | "credito";
+  dias: number;
+  ordenCompra: string;
+  cantidades: number[];
+  guias: string[];
+}
 
 /**
  * Emisión de un comprobante a partir de una cotización aprobada.
@@ -165,11 +190,89 @@ export function EmisorComprobante({
         un clic. El comprobante está emitido en los dos casos: eso no
         depende del envío.
       */
+      // Emitido es emitido, aunque SUNAT no lo haya aceptado: el borrador sobra
+      // y ofrecerlo otra vez invitaría a gastar un segundo número.
+      if (r.ok) olvidarBorrador();
       if (r.ok && !(r.envio && !r.envio.ok)) router.push(`/facturacion/${r.id}`);
       return r;
     },
     null,
   );
+
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Luis:
+    *«cuando esté creando un usuario o rellenando algo, que me salga seguir o
+    comenzar desde cero»*.
+
+    La FECHA no entra: es fiscal, y un borrador de hace tres días la traería
+    de vuelta sin que nadie la mire. Arranca en hoy, como siempre.
+
+    La cotización en sí tampoco: se relee del servidor, porque los importes
+    que van a un documento fiscal no se toman de una copia. Lo recuperado se
+    aplica encima cuando llega (`recuperadoPendiente`), en lugar de lo que la
+    carga propone por defecto.
+
+    `base` es lo que propuso la carga: lo que coincida con eso no es nada que
+    se pierda, y no se guarda.
+  */
+  const base = useRef<BaseEmision | null>(null);
+  const recuperadoPendiente = useRef<DatosEmision | null>(null);
+  const datosBorrador: DatosEmision = {
+    cotizacionId,
+    tipo,
+    condicion,
+    dias,
+    observaciones,
+    ordenCompra,
+    cantidades,
+    opciones,
+  };
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "comprobante",
+    id: cotizacionInicial ?? null,
+    datos: datosBorrador,
+    valeLaPena: (d) => {
+      const b = base.current;
+      // Al abrir todavía no hay carga con la que comparar: si se guardó, valía.
+      if (!b) return true;
+      return (
+        d.cotizacionId !== b.cotizacionId ||
+        d.tipo !== b.tipo ||
+        d.condicion !== b.condicion ||
+        d.dias !== b.dias ||
+        d.ordenCompra !== b.ordenCompra ||
+        d.observaciones.trim() !== "" ||
+        distinto(d.cantidades, b.cantidades) ||
+        distinto(d.opciones.guias, b.guias) ||
+        !d.opciones.mostrarCuenta ||
+        d.opciones.retencion ||
+        d.opciones.enviarSunat !== puedeEnviar
+      );
+    },
+    recuperar: (d) => {
+      if (d.cotizacionId === cotizacionId && cot?.id === d.cotizacionId && !cargando) {
+        // La cotización ya está en pantalla: se aplica directamente.
+        aplicarRecuperado(d, cot.lineas.length);
+      } else {
+        // Se aplica cuando llegue la cotización (la que ya va en camino, o la
+        // que dispara el cambio de `cotizacionId`).
+        recuperadoPendiente.current = d;
+        setCotizacionId(d.cotizacionId);
+      }
+    },
+  });
+
+  function aplicarRecuperado(d: DatosEmision, lineas: number) {
+    setTipo(d.tipo);
+    setCondicion(d.condicion);
+    setDias(d.dias);
+    setObservaciones(d.observaciones);
+    setOrdenCompra(d.ordenCompra);
+    // Si la cotización cambió de líneas desde entonces, las cantidades guardadas
+    // ya no casan con ellas: se quedan las que propone la carga.
+    if (d.cantidades.length === lineas) setCantidades(d.cantidades);
+    setOpciones(d.opciones);
+  }
 
   // Al elegir cotización se trae entera del servidor. No se fía de lo que
   // tenga el listado: los importes que van a un documento fiscal se releen.
@@ -213,6 +316,23 @@ export function EmisorComprobante({
       */
       const ids = r.datos.guias.map((g) => g.id);
       setOpciones((o) => ({ ...o, guias: ids }));
+
+      base.current = {
+        cotizacionId,
+        tipo: tipoSugerido(r.datos.cliente_tipo_documento),
+        condicion: r.datos.condicion_pago === "credito" ? "credito" : "contado",
+        dias: r.datos.dias_credito ?? 0,
+        ordenCompra: r.datos.orden_compra_cliente ?? "",
+        cantidades: r.datos.lineas.map((l) => l.cantidad),
+        guias: ids,
+      };
+
+      // «Seguir donde me quedé» llegó antes que la cotización: va encima.
+      const pendiente = recuperadoPendiente.current;
+      if (pendiente && pendiente.cotizacionId === cotizacionId) {
+        recuperadoPendiente.current = null;
+        aplicarRecuperado(pendiente, r.datos.lineas.length);
+      }
     });
   }, [cotizacionId]);
 
@@ -297,7 +417,15 @@ export function EmisorComprobante({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => router.push("/facturacion")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push("/facturacion");
+            }}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={!listo}>
@@ -305,6 +433,8 @@ export function EmisorComprobante({
           </Button>
         </div>
       </header>
+
+      {avisoBorrador}
 
       {/*
         Emitido, pero SUNAT no lo aceptó.

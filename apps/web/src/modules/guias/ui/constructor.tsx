@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useReducer, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useReducer, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Combobox, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
@@ -12,6 +12,7 @@ import {
   bloqueosBorrador,
   bloqueosEmision,
   estadoInicial,
+  type EstadoGuiaEnCurso,
   faltaPeso,
   pesoCalculado,
   pesoEfectivo,
@@ -22,6 +23,7 @@ import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { DialogoAgencia } from "./dialogo-agencia";
 import { sinEnvioConEnter } from "@/lib/formularios";
+import { useBorrador } from "@/componentes/borrador";
 
 /**
  * Preparación de una guía de remisión.
@@ -116,17 +118,58 @@ export function ConstructorGuia({
   const [resultado, guardar, guardando] = useActionState<ResultadoGuia | null, FormData>(
     async (previo, formData) => {
       const r = await generarGuia(previo, formData);
-      if (r.ok) router.push(`/guias/${r.id}`);
+      if (r.ok) {
+        // Ya está en la base: el borrador sobra.
+        olvidarBorrador();
+        router.push(`/guias/${r.id}`);
+      }
       return r;
     },
     null,
   );
 
+  /*
+    Lo que se está preparando, guardado solo en el navegador (13/10). Luis:
+    *«cuando esté creando un usuario o rellenando algo, que me salga seguir o
+    comenzar desde cero»*.
+
+    La clave lleva la cotización de la que se vino: un borrador de la guía de
+    la COT A no tiene nada que hacer al abrir la de la COT B.
+
+    `valeLaPena` no mira las líneas a secas: al venir de una cotización se
+    cargan solas, y eso no es algo que se pierda. Mira lo que se TECLEA.
+  */
+  const saltarCarga = useRef(false);
+  const cargaVigente = useRef(0);
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "guia",
+    id: cotizacionInicial ?? null,
+    datos: { estado, cotizacionId, agenciaId, vehiculoId, conductorId },
+    valeLaPena: (d) => guiaTocada(d.estado),
+    recuperar: (d) => {
+      // Que la carga de la cotización no pise lo recuperado: ni la que dispare
+      // el cambio de `cotizacionId`, ni una que ya estuviera en vuelo.
+      cargaVigente.current += 1;
+      if (d.cotizacionId !== cotizacionId) saltarCarga.current = true;
+      setCotizacionId(d.cotizacionId);
+      setAgenciaId(d.agenciaId);
+      setVehiculoId(d.vehiculoId);
+      setConductorId(d.conductorId);
+      despachar({ tipo: "cargar", estado: d.estado });
+    },
+  });
+
   useEffect(() => {
     if (!cotizacionId) return;
+    if (saltarCarga.current) {
+      saltarCarga.current = false;
+      return;
+    }
     setErrorCarga(null);
+    const esta = cargaVigente.current;
     cargar(async () => {
       const r = await cargarCotizacion(cotizacionId);
+      if (esta !== cargaVigente.current) return;
       if (!r.ok) {
         setErrorCarga(r.error);
         return;
@@ -166,7 +209,15 @@ export function ConstructorGuia({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" onClick={() => router.push("/guias")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push("/guias");
+            }}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
@@ -174,6 +225,8 @@ export function ConstructorGuia({
           </Button>
         </div>
       </header>
+
+      {avisoBorrador}
 
       {resultado && !resultado.ok ? (
         <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
@@ -967,6 +1020,32 @@ export function ConstructorGuia({
         }}
       />
     </form>
+  );
+}
+
+/**
+ * Si hay algo tecleado que se perdería. La dirección y el ubigeo no cuentan:
+ * los rellena la cotización al cargarse, y sin la de partida no se distingue
+ * si se corrigieron.
+ */
+function guiaTocada(e: EstadoGuiaEnCurso): boolean {
+  return Boolean(
+    e.transportistaDocumento ||
+      e.transportistaRazonSocial ||
+      e.transportistaPlaca ||
+      e.conductorNombre ||
+      e.conductorDocumento ||
+      e.conductorLicencia ||
+      e.conductorTelefono ||
+      e.observaciones ||
+      e.aPie ||
+      e.modalidad !== "02" ||
+      e.motivoCodigo !== "01" ||
+      e.pesoDeclarado !== null ||
+      e.numeroBultos !== 1 ||
+      e.fechaTraslado !== e.fechaEmision ||
+      // Una cantidad cambiada: al cargar, cada línea propone todo lo que falta.
+      e.lineas.some((l) => Math.abs(l.cantidad - (l.pedido - l.despachado)) > 0.005),
   );
 }
 

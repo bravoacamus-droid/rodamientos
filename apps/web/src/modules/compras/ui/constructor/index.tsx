@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useReducer, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useBorrador } from "@/componentes/borrador";
 import {
   Button,
   Input,
@@ -160,6 +161,23 @@ export function ConstructorCompra({
   // La factura del proveedor (PDF o foto), hasta que exista la compra.
   const [factura, setFactura] = useState<File | null>(null);
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador. Luis, 13/10:
+    *«quiero volver donde me quedé»*. Va el estado entero del reducer y la
+    ficha del proveedor, que es lo que pinta el buscador. La factura NO: un
+    `File` no cabe en el almacenamiento del navegador, y hay que volver a
+    elegirla.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "compra",
+    datos: { estado, proveedor },
+    valeLaPena: (d) => Boolean(d.estado.proveedorId || d.estado.lineas.length > 0),
+    recuperar: (d) => {
+      despachar({ tipo: "cargar", estado: d.estado });
+      setProveedor(d.proveedor);
+    },
+  });
+
   const [resultado, guardar, guardando] = useActionState<ResultadoCompra | null, FormData>(
     async (previo, formData) => {
       const r = await registrarCompra(previo, formData);
@@ -182,6 +200,8 @@ export function ConstructorCompra({
             toast.error(`La compra se guardó, pero la factura no se subió: ${subida.error} Súbela desde la ficha.`);
           }
         }
+        // Ya está en la base: el borrador sobra.
+        olvidarBorrador();
         router.push(`/compras/${r.id}`);
       }
       return r;
@@ -309,6 +329,8 @@ export function ConstructorCompra({
     >
       <input type="hidden" name="compra" value={JSON.stringify(aPayload(estado))} />
 
+      {avisoBorrador}
+
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Registrar compra</h1>
@@ -376,7 +398,15 @@ export function ConstructorCompra({
               Comparar precios antes
             </Button>
           ) : null}
-          <Button type="button" variant="outline" onClick={() => router.push("/compras")}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push("/compras");
+            }}
+          >
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>

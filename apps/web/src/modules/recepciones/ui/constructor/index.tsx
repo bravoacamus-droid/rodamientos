@@ -10,6 +10,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useBorrador } from "@/componentes/borrador";
 import {
   Combobox,
   Button,
@@ -94,12 +95,37 @@ export function ConstructorRecepcion({
   // directo: recargar la página significaría perder la recepción a medias.
   const [proveedor, setProveedor] = useState<ProveedorOpcion | null>(null);
 
+  /*
+    Lo que se está llenando, guardado solo en el navegador. Luis, 13/10:
+    *«quiero volver donde me quedé»*. Va el estado entero del reducer y la
+    ficha del proveedor, que es lo que pinta el buscador.
+
+    El borrador va por compra: al llegar con «Recibir mercadería» de la
+    compra B no se ofrece lo que quedó a medias de la compra A, que
+    pisaría las líneas precargadas con las de otra.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "recepcion",
+    id: compraInicial ?? null,
+    datos: { estado, proveedor },
+    valeLaPena: (d) =>
+      Boolean(d.estado.proveedorId || d.estado.compraId || d.estado.lineas.length > 0),
+    recuperar: (d) => {
+      despachar({ tipo: "cargar", estado: d.estado });
+      setProveedor(d.proveedor);
+    },
+  });
+
   const [resultado, guardar, guardando] = useActionState<
     ResultadoRecepcion | null,
     FormData
   >(async (previo, formData) => {
     const r = await registrarRecepcion(previo, formData);
-    if (r.ok) router.push(`/recepciones/${r.id}`);
+    if (r.ok) {
+      // Ya está en la base: el borrador sobra.
+      olvidarBorrador();
+      router.push(`/recepciones/${r.id}`);
+    }
     return r;
   }, null);
 
@@ -203,6 +229,8 @@ export function ConstructorRecepcion({
     >
       <input type="hidden" name="recepcion" value={JSON.stringify(aPayload(estado))} />
 
+      {avisoBorrador}
+
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Recibir mercadería</h1>
@@ -214,7 +242,11 @@ export function ConstructorRecepcion({
           <Button
             type="button"
             variant="outline"
-            onClick={() => router.push("/recepciones")}
+            onClick={() => {
+              // Cancelar es decidir no seguir: no se ofrece otra vez.
+              olvidarBorrador();
+              router.push("/recepciones");
+            }}
           >
             Cancelar
           </Button>

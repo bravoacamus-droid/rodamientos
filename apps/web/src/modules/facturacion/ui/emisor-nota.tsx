@@ -33,6 +33,7 @@ import {
 } from "../dominio/nota";
 import type { ComprobanteDetalle } from "../dominio/tipos";
 import { sinEnvioConEnter } from "@/lib/formularios";
+import { useBorrador } from "@/componentes/borrador";
 
 /**
  * Emitir una nota de crédito o de débito sobre un comprobante.
@@ -79,6 +80,8 @@ export function EmisorNota({
   >(async (previo, formData) => {
     const r = await emitirNota(previo, formData);
     if (r.ok) {
+      // Ya está emitida: el borrador sobra.
+      olvidarBorrador();
       setAbierto(false);
       router.push(`/facturacion/${r.id}`);
     }
@@ -94,6 +97,28 @@ export function EmisorNota({
   React.useEffect(() => {
     if (total || esCorreccionSinImporte(motivo)) setMonto(disponible);
   }, [motivo, total, disponible]);
+
+  /*
+    Lo que se está llenando, guardado solo en el navegador (13/10). Luis:
+    *«cuando esté creando un usuario o rellenando algo, que me salga seguir o
+    comenzar desde cero»*. Uno por comprobante.
+
+    La FECHA no entra: es fiscal, y el diálogo la pone en hoy cada vez que se
+    abre. Traerla de un borrador viejo sería colarla sin que nadie la mire.
+  */
+  const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
+    formulario: "nota",
+    id: documento.id,
+    datos: { tipo, motivo, monto, concepto, observaciones },
+    valeLaPena: (d) => Boolean(d.motivo || d.concepto.trim() || d.observaciones.trim()),
+    recuperar: (d) => {
+      setTipo(d.tipo);
+      setMotivo(d.motivo);
+      setMonto(d.monto);
+      setConcepto(d.concepto);
+      setObservaciones(d.observaciones);
+    },
+  });
 
   const bloqueos = bloqueosNota(
     documento,
@@ -152,6 +177,8 @@ export function EmisorNota({
         <form action={emitir} onKeyDown={sinEnvioConEnter}>
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="nota" value={payload} />
+
+            {avisoBorrador}
 
             {/* Uno debajo de otro en el teléfono: a 390 px el desplegable se
                 cortaba en «Nota de crédito» y no se leía qué hace cada una
@@ -325,7 +352,12 @@ export function EmisorNota({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setAbierto(false)}
+              onClick={() => {
+                // Cancelar es decidir no seguir: no se ofrece otra vez. Cerrar
+                // con la X o con Esc no lo borra: eso puede ser un despiste.
+                olvidarBorrador();
+                setAbierto(false);
+              }}
             >
               Cancelar
             </Button>
