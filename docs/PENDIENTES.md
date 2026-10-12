@@ -4611,7 +4611,7 @@ la ficha leía `cantidad`, lo cotizado.
 - **En el diálogo de aprobar**, «No lo quiso» es un tacho rojo (Luis: *«ponerlo
   en tacho y de color rojo para que se diferencie»*), la fila descartada se
   pinta en rojo claro con «No lo lleva», y «Devolver» queda en gris.
-- El papel de la cotización no cambia: es lo que se le mandó.
+- **El papel también** (corregido el mismo 13/10, Luis: *«para imprimir su cotización sigue saliendo los 4»*): en un pedido aprobado o atendido imprime solo lo confirmado, con su cantidad, y sus totales salen de esas líneas. Se arregló la tabla y no el papel, que se arma en el mismo archivo con los mismos datos: revisar TODO lo que pinta un dato antes de darlo por arreglado. La guía y la factura ya trabajaban con lo confirmado. El enlace público (`/ver`) sigue enseñando lo cotizado.
 
 Probado a 1600 y 390 sobre la COT1-000009 (solo lectura) y con el diálogo
 abierto sobre la CT02-001261 sin aprobar.

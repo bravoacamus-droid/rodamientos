@@ -69,6 +69,17 @@ export default async function PaginaDetalleCotizacion({
     despachoDelPedido(cabecera.id),
   ]);
 
+  /*
+    El papel de un pedido confirmado lleva lo que el cliente se LLEVA (13/10).
+    Luis: *«para imprimir su cotización sigue saliendo los 4»* — había
+    confirmado 3. Las líneas en cero no salen y las demás van con su cantidad
+    confirmada; los totales del papel salen de sus líneas, así que cuadran
+    solos. Mientras no esté aprobada, el papel es la cotización tal cual.
+  */
+  const papelConfirmado = cabecera.estado === "aprobada" || cabecera.estado === "atendida";
+  const cantidadEnPapel = (l: (typeof lineas)[number]) =>
+    papelConfirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
+
   const impresa = armarCotizacionImpresa({
     emisor: {
       razonSocial: emisor.razon_social,
@@ -99,12 +110,12 @@ export default async function PaginaDetalleCotizacion({
     ordenCompraCliente: cabecera.orden_compra_cliente,
     mostrarDescuento: cabecera.mostrar_descuento,
     mostrarDisponibilidad: cabecera.mostrar_disponibilidad,
-    lineas: lineas.map((l) => ({
+    lineas: lineas.filter((l) => cantidadEnPapel(l) > 0).map((l) => ({
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
       nota: l.nota,
-      cantidad: l.cantidad,
+      cantidad: cantidadEnPapel(l),
       unidad: l.unidad_codigo,
       valorUnitario: l.valor_unitario,
       descuentoPct: l.descuento_pct,
