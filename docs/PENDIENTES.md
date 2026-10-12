@@ -4592,6 +4592,38 @@ de Defontana.
 
 ---
 
+## §BF · 12/10 — Los filtros, en una fila de desplegables, y la serie
+
+Luis, 12/10, con la barra de otro sistema delante: *«¿por qué los filtros con
+botones y no más podemos por select, así desplegable? Porque se ve feo […]
+aparte en cotizaciones, facturas o también en guías tiene el número, algunos
+COT1, CT02; por eso también tenemos que filtrar»*.
+
+- **Piezas comunes** en `componentes/filtros.tsx`: `FiltroDesplegable` (icono
+  dentro, «Estado: todos», azul cuando hay algo elegido), `CajaBuscar`,
+  `FilaFiltros` y `useBarraFiltros` (escribir en la URL partiendo del último
+  filtro pedido, y la espera de 300 ms de la caja, que estaban copiados en
+  cada barra). `FiltroCliente` gana `compacto` (sin etiqueta encima).
+- **El periodo** (`BarraPeriodo`, en las cinco listas que lo usan) es un solo
+  grupo enmarcado con la opción elegida en blanco y azul, no cinco botones.
+- **Cotizaciones**: fuera los seis botones de estado; ahora buscar, cliente
+  (nuevo aquí), estado —con cuántas hay: «Enviada (22)»— y serie, en una fila.
+  `buscador.tsx` se borró.
+- **Facturación y guías**: la misma fila; la serie es nueva en las tres
+  (`seriesDe` lee `series_documento` y marca «(de prueba)» las de
+  `es_prueba`). La consulta solo acepta `^[A-Z0-9]{2,4}$`.
+- Las cuatro cifras de arriba siguen respondiendo al periodo y al cliente, no a
+  la serie ni al estado.
+
+Probado a 1600, 1280 y 390: COT1 + Enviada + Este mes se combinan en la URL y
+FC02 deja sus 4 notas de crédito. Al borrar `buscador.tsx` el servidor de
+desarrollo se quedó con la caché vieja (500 en todo): se limpia
+`.next-dev/cache/webpack` y se arranca otra vez.
+
+**Visto y sin tocar:** Facturación tiene un aviso de hidratación (ids de Radix
+y `useId` distintos entre servidor y cliente, desde el menú de usuario hacia
+abajo). Ya estaba antes de este cambio.
+
 ## §BE · 12/10 — La orden de compra dice para quién es, y se imprime
 
 Cierra la hoja de Willy del 09/10 (§BC): *«órdenes de compra por proveedores,

@@ -73,6 +73,9 @@ export async function listarCotizaciones(
     }
     if (filtros.estado) consulta = consulta.eq("estado", filtros.estado);
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
+    // La serie llega de la URL: solo letras y cifras, o no se filtra.
+    if (filtros.serie && /^[A-Z0-9]{2,4}$/.test(filtros.serie)) consulta = consulta.eq("serie", filtros.serie);
+
     if (filtros.desde) consulta = consulta.gte("fecha", filtros.desde);
     if (filtros.hasta) consulta = consulta.lte("fecha", filtros.hasta);
     if (filtros.q) {

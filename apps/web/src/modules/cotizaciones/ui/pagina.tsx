@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { seriesDe } from "@/lib/series";
+import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
 import { CircleCheck, FileText, Hourglass, Target } from "lucide-react";
 import { Skeleton, formatearMoneda, leerTamano } from "@rodatech/ui";
 
@@ -8,12 +10,11 @@ import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/i
 
 import { conteoPorEstado, indicadoresCotizaciones } from "../api/consultas";
 import {
-  ETIQUETA_ESTADO,
   esEstadoCotizacion,
   type EstadoCotizacion,
   type FiltrosCotizaciones,
 } from "../dominio/tipos";
-import { BuscadorCotizaciones } from "./buscador";
+import { FiltrosCotizacionesBarra } from "./filtros";
 import { TablaCotizaciones } from "./tabla";
 
 interface Props {
@@ -28,63 +29,6 @@ function uno(v: string | string[] | undefined): string | undefined {
 function estadoDeUrl(v: string | string[] | undefined): EstadoCotizacion | undefined {
   const valor = uno(v);
   return esEstadoCotizacion(valor) ? valor : undefined;
-}
-
-/**
- * Pastillas de estado. Son enlaces, no botones: filtrar es navegar.
- *
- * Conservan el resto de filtros (07/10): llevaban a `/cotizaciones?estado=…`
- * a secas, y pulsar «Enviadas» borraba el periodo y la búsqueda que se
- * acababan de poner. Y con borde y a 40 px, como el resto de botones.
- */
-async function FiltroEstados({
-  activo,
-  sp,
-}: {
-  activo?: EstadoCotizacion;
-  sp: Record<string, string | string[] | undefined>;
-}) {
-  const resultado = await conteoPorEstado();
-  const conteo: Partial<Record<EstadoCotizacion, number>> = resultado.ok
-    ? resultado.datos
-    : {};
-  // Los que se miran a diario, y desde el 07/10 también «Vencida»: con el
-  // histórico cargado son 609, y son las que se pueden volver a ofrecer.
-  const estados = ["borrador", "enviada", "aprobada", "atendida", "vencida"] as const;
-
-  const enlace = (estado: EstadoCotizacion | null) => {
-    const q = new URLSearchParams();
-    for (const k of ["q", "cliente", "desde", "hasta", "n"]) {
-      const v = uno(sp[k]);
-      if (v) q.set(k, v);
-    }
-    if (estado) q.set("estado", estado);
-    const s = q.toString();
-    return s ? `/cotizaciones?${s}` : "/cotizaciones";
-  };
-
-  const clase = (seleccionado: boolean) =>
-    `inline-flex h-10 items-center rounded-md border px-3 text-sm font-semibold transition-colors ${
-      seleccionado
-        ? "border-brand-600 bg-brand-600 text-white"
-        : "border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
-    }`;
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Link href={enlace(null)} className={clase(!activo)}>
-        Todas
-      </Link>
-      {estados.map((e) => (
-        <Link key={e} href={enlace(e)} className={clase(activo === e)}>
-          {ETIQUETA_ESTADO[e]}
-          {conteo[e] ? (
-            <span className="ml-1.5 tabular opacity-75">{conteo[e]}</span>
-          ) : null}
-        </Link>
-      ))}
-    </div>
-  );
 }
 
 /** Las cuatro cifras de arriba (108). */
@@ -150,12 +94,19 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
     // llegar a la consulta.
     estado: estadoDeUrl(sp.estado),
     cliente: uno(sp.cliente),
+    serie: uno(sp.serie),
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
     direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
   };
+
+  const [conteo, series, cliente] = await Promise.all([
+    conteoPorEstado(),
+    seriesDe(["cotizacion"]),
+    filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -181,17 +132,18 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
         <Indicadores filtros={filtros} />
       </Suspense>
 
-      {/* Buscar y filtrar, en una caja: primero lo que se sabe —un número, un
-          cliente—, luego el periodo, luego el estado. */}
-      <section className="card flex flex-col gap-4 p-4">
-        <Suspense fallback={<Skeleton className="h-11 w-full max-w-sm" />}>
-          <BuscadorCotizaciones />
-        </Suspense>
-        <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+      {/* El periodo arriba y una fila de filtros debajo (12/10), como la
+          barra que Luis enseñó de otro sistema. */}
+      <section className="card flex flex-col gap-3 p-4">
+        <Suspense fallback={<Skeleton className="h-11 w-full" />}>
           <BarraPeriodo />
         </Suspense>
-        <Suspense fallback={<Skeleton className="h-10 w-full max-w-xl" />}>
-          <FiltroEstados activo={filtros.estado} sp={sp} />
+        <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+          <FiltrosCotizacionesBarra
+            nombreCliente={cliente?.ok ? cliente.nombre : null}
+            conteo={conteo.ok ? conteo.datos : {}}
+            series={series}
+          />
         </Suspense>
       </section>
 

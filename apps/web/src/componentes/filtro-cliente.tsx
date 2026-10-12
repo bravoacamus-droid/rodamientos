@@ -51,12 +51,18 @@ export function FiltroCliente({
   valor,
   nombre,
   onCambiar,
+  compacto = false,
 }: {
   /** El id que hay en la URL, o `null`. */
   valor: string | null;
   /** Su razón social, para pintarla sin volver a buscar. */
   nombre: string | null;
   onCambiar: (id: string | null) => void;
+  /**
+   * En la fila de filtros (12/10): sin etiqueta encima —la dice dentro,
+   * «Todos los clientes»— y repartiendo el ancho con los demás.
+   */
+  compacto?: boolean;
 }) {
   const id = React.useId();
   const [abierto, setAbierto] = React.useState(false);
@@ -96,8 +102,8 @@ export function FiltroCliente({
   };
 
   return (
-    <div ref={caja} className="relative flex min-w-0 flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-[var(--fg-muted)]">
+    <div ref={caja} className={`relative flex min-w-0 flex-col gap-1 ${compacto ? "flex-[1.5_1_12rem]" : ""}`}>
+      <label htmlFor={id} className={compacto ? "sr-only" : "text-sm font-medium text-[var(--fg-muted)]"}>
         Cliente
       </label>
 
@@ -132,7 +138,7 @@ export function FiltroCliente({
             value={termino}
             onChange={(e) => setTermino(e.target.value)}
             onFocus={() => setAbierto(true)}
-            placeholder="Todos"
+            placeholder={compacto ? "Todos los clientes" : "Todos"}
             className="pl-8"
             autoComplete="off"
           />

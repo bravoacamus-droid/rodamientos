@@ -155,6 +155,8 @@ export interface ComprobanteDetalle {
 
 /** Filtros del listado. Viajan en los search params, así que todo es texto. */
 export interface FiltrosComprobantes {
+  /** La serie (COT1, CT02, F002…). Luis, 12/10: hay dos de cada una. */
+  serie?: string;
   q?: string;
   cliente?: string;
   tipo?: string;

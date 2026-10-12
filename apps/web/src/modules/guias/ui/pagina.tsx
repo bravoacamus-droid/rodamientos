@@ -7,6 +7,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
+import { seriesDe } from "@/lib/series";
 
 import { indicadoresGuias } from "../api/consultas";
 
@@ -36,6 +37,7 @@ export default async function PaginaGuias({ searchParams }: Props) {
   const filtros: FiltrosGuias = {
     q: uno(sp.q),
     cliente: uno(sp.cliente),
+    serie: uno(sp.serie),
     estado: uno(sp.estado),
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
@@ -47,9 +49,10 @@ export default async function PaginaGuias({ searchParams }: Props) {
   /* Ya no se traen 500 clientes en cada carga para llenar un desplegable:
      el filtro busca contra el servidor. De aquí solo sale el nombre del que
      esté filtrado, para poder pintarlo. */
-  const [perfil, cliente] = await Promise.all([
+  const [perfil, cliente, series] = await Promise.all([
     perfilActual(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
+    seriesDe(["guia_remision"]),
   ]);
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -93,11 +96,12 @@ export default async function PaginaGuias({ searchParams }: Props) {
       </Suspense>
 
       <section className="card pt-4">
-        <FiltrosGuiasBarra nombreCliente={cliente?.ok ? cliente.nombre : null} />
-        <div className="border-t border-[var(--border-soft)] px-4 py-4">
-          <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+        {/* El periodo arriba y una fila de filtros debajo (12/10). */}
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          <Suspense fallback={<Skeleton className="h-11 w-full" />}>
             <BarraPeriodo />
           </Suspense>
+          <FiltrosGuiasBarra nombreCliente={cliente?.ok ? cliente.nombre : null} series={series} />
         </div>
 
         <Suspense

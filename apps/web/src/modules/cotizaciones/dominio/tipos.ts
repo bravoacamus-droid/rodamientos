@@ -102,6 +102,8 @@ export interface CotizacionDetalle {
 }
 
 export interface FiltrosCotizaciones {
+  /** La serie (COT1, CT02, F002…). Luis, 12/10: hay dos de cada una. */
+  serie?: string;
   q?: string;
   estado?: EstadoCotizacion;
   cliente?: string;

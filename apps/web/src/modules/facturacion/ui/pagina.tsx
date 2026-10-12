@@ -7,6 +7,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
+import { seriesDe } from "@/lib/series";
 
 import { estadoConfiguracion } from "../api/configuracion";
 import { indicadoresFacturacion } from "../api/consultas";
@@ -36,6 +37,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
   const filtros: FiltrosComprobantes = {
     q: uno(sp.q),
     cliente: uno(sp.cliente),
+    serie: uno(sp.serie),
     tipo: uno(sp.tipo),
     estado: uno(sp.estado),
     sunat: uno(sp.sunat),
@@ -55,10 +57,11 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     filtrado —una fila— para poder pintarlo sin que el chip diga «cliente
     8f3a…».
   */
-  const [perfil, config, cliente] = await Promise.all([
+  const [perfil, config, cliente, series] = await Promise.all([
     perfilActual(),
     estadoConfiguracion(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
+    seriesDe(["factura", "boleta", "nota_credito", "nota_debito"]),
   ]);
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -167,13 +170,15 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
       {/* `@container`: la tabla y los filtros se deciden por el ancho de esta
           caja, no de la pantalla (revisión por módulos del 02/10). */}
       <section className="card @container pt-4">
-        <FiltrosFacturacionBarra
-          nombreCliente={cliente?.ok ? cliente.nombre : null}
-        />
-        <div className="border-t border-[var(--border-soft)] px-4 py-4">
-          <Suspense fallback={<Skeleton className="h-16 w-full" />}>
+        {/* El periodo arriba y una fila de filtros debajo (12/10). */}
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          <Suspense fallback={<Skeleton className="h-11 w-full" />}>
             <BarraPeriodo />
           </Suspense>
+          <FiltrosFacturacionBarra
+            nombreCliente={cliente?.ok ? cliente.nombre : null}
+            series={series}
+          />
         </div>
 
         <Suspense

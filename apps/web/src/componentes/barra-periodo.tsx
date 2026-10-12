@@ -94,53 +94,56 @@ export function BarraPeriodo({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--fg-muted)]">
-          <CalendarDays className="size-4" aria-hidden="true" />
-          {titulo}
-        </span>
-        {ayuda ? <span className="text-sm text-[var(--fg-subtle)]">{ayuda}</span> : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
+    /*
+      Un solo grupo, no cinco botones sueltos (Luis, 12/10: *«se ve feo»*,
+      con la barra de otro sistema delante). Sigue pareciendo pulsable —un
+      marco con las opciones dentro y la elegida en blanco y azul— y ocupa una
+      fila en vez de dos.
+    */
+    <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="group"
+        aria-label={titulo}
+        className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-1"
+      >
+        <CalendarDays className="mx-1.5 size-4 text-[var(--fg-subtle)]" aria-hidden="true" />
         {(Object.keys(ETIQUETA) as Atajo[]).map((a) => (
           <button
             key={a}
             type="button"
             aria-pressed={activo === a}
             onClick={() => aplicar(rangoDe(a, hoy))}
-            className={`inline-flex h-10 items-center rounded-md border px-3 text-sm font-semibold transition-colors ${
+            className={`inline-flex h-9 items-center rounded-md px-3 text-sm transition-colors ${
               activo === a
-                ? "border-brand-600 bg-brand-600 text-white dark:border-brand-500 dark:bg-brand-500"
-                : "border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-2)]"
+                ? "bg-[var(--surface)] font-semibold text-brand-700 elev-1 dark:text-brand-300"
+                : "font-medium text-[var(--fg-muted)] hover:bg-[var(--surface)] hover:text-[var(--fg)]"
             }`}
           >
             {ETIQUETA[a]}
           </button>
         ))}
+      </div>
 
-        <span className="mx-1 hidden h-6 w-px bg-[var(--border)] sm:block" aria-hidden="true" />
-
-        <label className="flex items-center gap-2">
-          <span className="text-sm text-[var(--fg-muted)]">Desde</span>
-          <Input
-            type="date"
-            value={desde}
-            max={hasta || undefined}
-            onChange={(e) => aplicar({ desde: e.target.value || null, hasta: hasta || null })}
-            className="w-[10.5rem] tabular"
-          />
-        </label>
-        <label className="flex items-center gap-2">
-          <span className="text-sm text-[var(--fg-muted)]">Hasta</span>
-          <Input
-            type="date"
-            value={hasta}
-            min={desde || undefined}
-            onChange={(e) => aplicar({ desde: desde || null, hasta: e.target.value || null })}
-            className="w-[10.5rem] tabular"
-          />
-        </label>
+      <label className="flex items-center gap-2">
+        <span className="text-sm text-[var(--fg-muted)]">Desde</span>
+        <Input
+          type="date"
+          value={desde}
+          max={hasta || undefined}
+          onChange={(e) => aplicar({ desde: e.target.value || null, hasta: hasta || null })}
+          className="w-[10.5rem] tabular"
+        />
+      </label>
+      <label className="flex items-center gap-2">
+        <span className="text-sm text-[var(--fg-muted)]">Hasta</span>
+        <Input
+          type="date"
+          value={hasta}
+          min={desde || undefined}
+          onChange={(e) => aplicar({ desde: desde || null, hasta: e.target.value || null })}
+          className="w-[10.5rem] tabular"
+        />
+      </label>
         {desde || hasta ? (
           <button
             type="button"
@@ -151,7 +154,7 @@ export function BarraPeriodo({
             Quitar fechas
           </button>
         ) : null}
-      </div>
+      {ayuda ? <span className="text-sm text-[var(--fg-subtle)]">{ayuda}</span> : null}
     </div>
   );
 }
