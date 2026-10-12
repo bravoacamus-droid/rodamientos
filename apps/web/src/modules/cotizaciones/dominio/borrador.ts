@@ -53,6 +53,7 @@ function completarLinea(l: LineaConstructor): LineaConstructor {
     ...l,
     proveedores: Array.isArray(l.proveedores) ? l.proveedores : [],
     nota: typeof l.nota === "string" ? l.nota : "",
+    confirmada: typeof l.confirmada === "number" ? l.confirmada : null,
   };
 }
 

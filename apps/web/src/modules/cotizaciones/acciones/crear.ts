@@ -63,6 +63,8 @@ const esquemaItem = z.object({
   proveedores: z.array(esquemaProveedor).max(10).default([]),
   // 112. La nota de la línea; la base la recorta y la limpia igual.
   nota: z.string().max(300, "Una nota no puede pasar de 300 letras.").nullable().default(null),
+  // 114. Lo confirmado de la línea al editar un pedido aprobado.
+  cantidad_aprobada: z.number().min(0).finite().nullable().default(null),
 });
 
 const esquema = z.object({

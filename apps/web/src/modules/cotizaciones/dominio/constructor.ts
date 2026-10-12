@@ -105,6 +105,13 @@ export interface LineaConstructor {
   proveedores: ProveedorLinea[];
   /** Nota de la línea, impresa debajo de la descripción (112). Vacía = sin nota. */
   nota: string;
+  /**
+   * Cuánto confirmó el cliente, al editar un pedido APROBADO (114). Null en
+   * todo lo demás: una cotización sin aprobar, o una línea nueva añadida al
+   * editar (entra confirmada entera). 0 = «No lo quiso»: sale apagada y se
+   * puede volver a incluir (Luis, 13/10: *«seguro se animó a última hora»*).
+   */
+  confirmada: number | null;
 }
 
 export interface EstadoConstructor {
@@ -240,6 +247,8 @@ export type Accion =
    * ellos, su costo —el promedio ponderado— y el precio de venta elegido.
    */
   | { tipo: "compraAnalizada"; key: string; proveedores: ProveedorLinea[]; valorUnitario: number }
+  /** «No lo quiso» / «Volver a incluir», al editar un pedido aprobado (114). */
+  | { tipo: "incluir"; key: string; incluida: boolean }
   /** Luis, 09/10: *«en cada producto, un botón para que agreguen notas»*. */
   | { tipo: "nota"; key: string; valor: string }
   | { tipo: "bajarAlPiso"; key: string }
@@ -353,6 +362,7 @@ function desdeProducto(
     diasEntrega: null,
     proveedores: [],
     nota: "",
+    confirmada: null,
   };
 }
 
@@ -428,10 +438,18 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
       };
 
     case "cantidad":
-      return mapear(estado, accion.key, (l) => ({
-        ...l,
-        cantidad: cantidadValida(accion.valor),
-      }));
+      return mapear(estado, accion.key, (l) => {
+        const cantidad = cantidadValida(accion.valor);
+        // En un pedido aprobado, lo confirmado sigue a la cantidad si iba
+        // entera, y nunca la pasa. Una línea fuera (0) sigue fuera.
+        const confirmada =
+          l.confirmada === null || l.confirmada === 0
+            ? l.confirmada
+            : l.confirmada === l.cantidad
+              ? cantidad
+              : Math.min(l.confirmada, cantidad);
+        return { ...l, cantidad, confirmada };
+      });
 
     // El precio y el descuento NO se recortan al piso mientras se teclea:
     // se deja escribir y se avisa. Impedir la tecla obliga al vendedor a
@@ -480,6 +498,11 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         // Igual: es lo que el cliente LEE para saber qué está comprando.
         descripcion: accion.valor.trim() ? accion.valor.trim() : l.descripcion,
       }));
+
+    case "incluir":
+      return mapear(estado, accion.key, (l) =>
+        l.confirmada === null ? l : { ...l, confirmada: accion.incluida ? l.cantidad : 0 },
+      );
 
     case "nota":
       return mapear(estado, accion.key, (l) => ({ ...l, nota: accion.valor.slice(0, 300) }));
@@ -625,10 +648,15 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
 // Selectores
 // ---------------------------------------------------------------------------
 
+/** Lo que la línea lleva: lo confirmado en un pedido aprobado, si no lo cotizado. */
+export function cantidadQueLleva(l: LineaConstructor): number {
+  return l.confirmada === null ? l.cantidad : l.confirmada;
+}
+
 export function totalesDe(estado: EstadoConstructor): TotalesCotizacion {
   return calcularTotales(
     estado.lineas.map((l) => ({
-      cantidad: l.cantidad,
+      cantidad: cantidadQueLleva(l),
       valorUnitario: l.valorUnitario,
       descuentoPct: l.descuentoPct,
       costoUnitario: l.costoUnitario,
@@ -791,7 +819,11 @@ export function avisosDeCosto(estado: EstadoConstructor): Bloqueo[] {
  */
 export function lineasSinAnalizar(estado: EstadoConstructor): LineaConstructor[] {
   return estado.lineas.filter(
-    (l) => l.productoId !== null && !l.esKit && !l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null),
+    (l) =>
+      l.productoId !== null &&
+      !l.esKit &&
+      l.confirmada !== 0 &&
+      !l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null),
   );
 }
 
@@ -851,6 +883,8 @@ export function aPayload(estado: EstadoConstructor) {
       // A quién se le compra (111). La base recalcula con esto el costo.
       proveedores: proveedoresAPayload(l.proveedores),
       nota: l.nota.trim() || null,
+      // Solo al editar un pedido aprobado; la base no deja pasar de lo cotizado.
+      cantidad_aprobada: l.confirmada,
       // OJO: `precio_minimo_ref` NO va aquí. Lo impone el trigger
       // `trg_cotiz_items_piso` desde el maestro. Mandarlo sería ofrecerle a
       // quien llame la posibilidad de desactivar el piso.

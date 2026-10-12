@@ -115,6 +115,7 @@ function comoLineaDeCotizacion(l: Linea): LineaConstructor {
     diasEntrega: null,
     proveedores: [],
     nota: "",
+    confirmada: null,
   };
 }
 

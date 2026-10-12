@@ -4592,6 +4592,33 @@ de Defontana.
 
 ---
 
+## §BM · 13/10 — Editar un pedido aprobado respeta lo que el cliente no quiso (114)
+
+Luis: *«al editar me sigue saliendo los 4, pero debería salir como desactivado
+o algo así; si queremos volver a activarlo, seguro se animó a última hora, o
+seguro quiere agregar otro ítem más»*. Y antes: *«¿no estás revisando o sí?»*
+— tras arreglar la ficha (§BK) no se revisó la pantalla de editar.
+
+Al revisarla salió algo peor: **`actualizar_cotizacion` (070) ponía
+`cantidad_aprobada = cantidad` en todas las líneas al guardar una aprobada.**
+Editar y guardar volvía a aprobar lo rechazado: el B-118 habría entrado en
+compras y factura.
+
+- **114**: la pantalla manda `cantidad_aprobada` por línea y la base la
+  respeta (0 para lo no querido, lo confirmado a medias tal cual, nunca más que
+  lo cotizado). Una línea nueva —sin el dato— entra confirmada entera. El
+  centinela ejecuta el caso de la COT1-000009 y lo deshace.
+- **El editor** lleva `confirmada` por línea (null fuera de un pedido
+  aprobado). La que no quiso sale apagada en rojo claro con «No lo quiso: no se
+  compra, no se despacha ni se factura» y **«Volver a incluir»**; el menú de la
+  línea tiene **«No lo quiso»** para sacarla sin borrarla. No cuenta en el total
+  ni en el aviso de análisis. Lo confirmado sigue a la cantidad si iba entero.
+- Tests en `dominio/confirmada.test.ts`; el borrador viejo se completa.
+
+Probado en pantalla sobre la COT1-000009 sin guardar: B-118 apagada, total USD
+41.81, «Volver a incluir» y «No lo quiso» van y vuelven. El candado de edición
+que quedó era de Luis (abierta desde las 17:43, antes de la prueba): no se tocó.
+
 ## §BL · 13/10 — Lo analizado al cotizar ya no se pregunta: se compra
 
 Luis, con la COT1-000009 aprobada: *«en análisis de compra ya se hizo en

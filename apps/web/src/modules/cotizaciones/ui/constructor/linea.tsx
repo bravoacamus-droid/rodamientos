@@ -30,7 +30,9 @@ import {
   Pencil,
   SquareArrowOutUpRight,
   Trash2,
+  Ban,
   PackageCheck,
+  RotateCcw,
   Scale,
   StickyNote,
 } from "lucide-react";
@@ -152,6 +154,25 @@ export function FilaLinea({
   const [cargando, iniciar] = useTransition();
 
   const revision = revisionDe(linea);
+  /** Al editar un pedido aprobado, la línea que el cliente no quiso (114). */
+  const excluida = linea.confirmada === 0;
+  const avisoExcluida = (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-sm font-semibold text-[var(--danger)]">
+        No lo quiso: no se compra, no se despacha ni se factura.
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => despachar({ tipo: "incluir", key: linea.key, incluida: true })}
+        className="gap-1.5"
+      >
+        <RotateCcw className="size-4" aria-hidden="true" />
+        Volver a incluir
+      </Button>
+    </div>
+  );
 
   /*
     El costo de la línea y lo que deja, a la vista (09/10).
@@ -580,6 +601,16 @@ export function FilaLinea({
           {/* «Quitar de la cotización» y no «Eliminar»: no se borra nada,
               sale de este papel. La misma distinción que «dar de baja» en
               el catálogo (24:21). */}
+          {/* En un pedido aprobado: que no lo quiere, sin borrarlo (114). */}
+          {linea.confirmada !== null && linea.confirmada > 0 ? (
+            <DropdownMenuItem
+              destructivo
+              onSelect={() => despachar({ tipo: "incluir", key: linea.key, incluida: false })}
+            >
+              <Ban />
+              No lo quiso
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
             destructivo
             onSelect={() => despachar({ tipo: "quitar", key: linea.key })}
@@ -859,6 +890,8 @@ export function FilaLinea({
           </div>
         ) : null}
 
+        {excluida ? <div className="mt-3 rounded-md bg-[var(--danger-bg)] p-2">{avisoExcluida}</div> : null}
+
         {!revision.ok ? <p className="mt-3 text-sm">{avisoPiso}</p> : null}
 
         <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm">
@@ -913,7 +946,7 @@ export function FilaLinea({
 
   return (
     <>
-      <tr className={revision.ok ? "" : "bg-[var(--danger-bg)]"}>
+      <tr className={excluida ? "bg-[var(--danger-bg)] opacity-60" : revision.ok ? "" : "bg-[var(--danger-bg)]"}>
         {/*
           El número de línea y las flechas que lo cambian, juntos.
 
@@ -1097,6 +1130,15 @@ export function FilaLinea({
           {menuOpciones(false)}
         </td>
       </tr>
+
+      {excluida ? (
+        <tr className="bg-[var(--danger-bg)]">
+          <td />
+          <td colSpan={mostrarDescuento ? 10 : 9} className="pb-2">
+            {avisoExcluida}
+          </td>
+        </tr>
+      ) : null}
 
       {/* Aviso del piso: con el número que hace falta, no un "no puedes". */}
       {!revision.ok ? (

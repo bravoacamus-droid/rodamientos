@@ -159,6 +159,8 @@ export default async function PaginaEditarCotizacion({
       diasEntrega: l.dias_entrega,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
       nota: l.nota ?? "",
+      // 114: en un pedido aprobado, lo que el cliente confirmó de cada línea.
+      confirmada: cabecera.estado === "aprobada" ? Number(l.cantidad_aprobada ?? l.cantidad) : null,
     })),
     proximaKey: lineas.length + 1,
   };
