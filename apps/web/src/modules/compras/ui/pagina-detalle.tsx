@@ -14,6 +14,9 @@ import { GastosFicha } from "./gastos-ficha";
 import { ParaQuienEs } from "./para-quien";
 import { ETIQUETA_MODALIDAD, costeoEstimado } from "../dominio/gastos";
 import { Volver } from "@/componentes/volver";
+import { emisorParaImprimir } from "@/lib/emisor";
+import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
+import { DocumentoOrdenCompra } from "./documento-orden";
 
 /**
  * Ficha de una compra.
@@ -29,7 +32,7 @@ export default async function PaginaDetalleCompra({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil] = await Promise.all([detalleCompra(id), perfilActual()]);
+  const [resultado, perfil, emisor] = await Promise.all([detalleCompra(id), perfilActual(), emisorParaImprimir()]);
 
   if (!resultado.ok) {
     return (
@@ -96,7 +99,8 @@ export default async function PaginaDetalleCompra({
   const editableGastos = c.estado === "registrada";
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    <div className="flex flex-col gap-5 print:hidden">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Volver href="/compras">Volver a compras</Volver>
@@ -123,6 +127,12 @@ export default async function PaginaDetalleCompra({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* La orden en papel, para mandársela al proveedor (12/10). */}
+          {c.estado !== "anulada" ? (
+            <VistaPreviaDocumento numero={c.numero}>
+              <DocumentoOrdenCompra c={c} emisor={emisor} />
+            </VistaPreviaDocumento>
+          ) : null}
           {c.estado !== "anulada" && falta.length > 0 ? (
             <Link
               href={`/recepciones/nueva?compra=${c.id}`}
@@ -156,6 +166,21 @@ export default async function PaginaDetalleCompra({
           ) : null}
         </div>
       </header>
+
+      {/*
+        Para quién es (Luis, 09/10: *«enlazado al cliente y la cotización»*).
+        Antes solo lo decían las observaciones, en gris y al final.
+      */}
+      {c.para ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800 dark:bg-brand-950">
+          <p className="text-base">
+            Para el pedido <strong>{c.para.numero}</strong> de <strong>{c.para.cliente}</strong>
+          </p>
+          <Button asChild variant="outline">
+            <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver el pedido</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {c.estado === "anulada" && c.motivo_anulacion ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
@@ -488,6 +513,12 @@ export default async function PaginaDetalleCompra({
         </div>
       </div>
     </div>
+
+    {/* El papel: montado siempre, visible solo al imprimir (como la cotización). */}
+    <div className="hidden print:block">
+      <DocumentoOrdenCompra c={c} emisor={emisor} />
+    </div>
+    </>
   );
 }
 

@@ -44,6 +44,13 @@ export const ETIQUETA_ESTADO: Record<EstadoCompra, string> = {
 /** Una fila del listado. */
 export interface CompraLista {
   id: string;
+  /**
+   * El pedido para el que se compra (111), o null si es para stock. Luis,
+   * 09/10: *«órdenes de compra por proveedores, pero enlazado al cliente y la
+   * cotización»*.
+   */
+  para: { cotizacionId: string; numero: string; cliente: string } | null;
+
   numero: string;
   fecha: string;
   fecha_estimada: string | null;
@@ -85,6 +92,14 @@ export interface LineaCompra {
 /** La ficha completa. */
 export interface CompraDetalle {
   id: string;
+  /**
+   * El pedido para el que se compra (111), o null si es para stock. Luis,
+   * 09/10: *«órdenes de compra por proveedores, pero enlazado al cliente y la
+   * cotización»*.
+   */
+  para: { cotizacionId: string; numero: string; cliente: string } | null;
+  /** Para imprimir la orden (09/10). */
+  proveedor_direccion: string | null;
   numero: string;
   fecha: string;
   fecha_estimada: string | null;

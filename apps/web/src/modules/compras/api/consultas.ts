@@ -94,6 +94,7 @@ export async function listarCompras(
         `id, numero, fecha, fecha_estimada, tipo, documento_proveedor, estado,
          total, gastos_importacion, moneda,
          proveedores(razon_social),
+         cotizacion:cotizaciones!compras_cotizacion_id_fkey(id, numero, clientes(razon_social)),
          compra_items(cantidad, cantidad_recibida)`,
       )
       .order("numero", { ascending: atras })
@@ -143,6 +144,10 @@ export async function listarCompras(
       const items = c.compra_items ?? [];
       return {
         id: String(c.id),
+        para: (() => {
+          const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
+          return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
+        })(),
         numero: String(c.numero),
         fecha: String(c.fecha),
         fecha_estimada: (c.fecha_estimada as string | null) ?? null,
@@ -213,7 +218,8 @@ export async function detalleCompra(
          motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda,
          gastos_importacion_detalle:gastos_importacion(id, concepto, monto, reparto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
-         proveedores(razon_social, numero_documento),
+         proveedores(razon_social, numero_documento, direccion),
+         cotizacion:cotizaciones!compras_cotizacion_id_fkey(id, numero, clientes(razon_social)),
          perfiles(nombre),
          compra_items(
            id, producto_id, cantidad, cantidad_recibida, costo_unitario,
@@ -230,7 +236,7 @@ export async function detalleCompra(
     if (!data) return { ok: true, datos: null };
 
     const c = data as unknown as Record<string, unknown> & {
-      proveedores: { razon_social: string; numero_documento: string | null } | null;
+      proveedores: { razon_social: string; numero_documento: string | null; direccion: string | null } | null;
       perfiles: { nombre: string } | null;
       compra_items: ItemCrudo[] | null;
       recepciones: { id: string; numero: string; fecha: string }[] | null;
@@ -266,6 +272,12 @@ export async function detalleCompra(
         proveedor_id: String(c.proveedor_id),
         proveedor: c.proveedores?.razon_social ?? null,
         proveedor_documento: c.proveedores?.numero_documento ?? null,
+        proveedor_direccion: c.proveedores?.direccion ?? null,
+        para: (() => {
+          const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
+          return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
+        })(),
+
         tipo: (c.tipo as TipoCompra) ?? "local",
         documento_proveedor: (c.documento_proveedor as string | null) ?? null,
         guia_proveedor: (c.guia_proveedor as string | null) ?? null,

@@ -113,6 +113,12 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 </td>
                 <td className="max-w-xs px-4 py-2.5">
                   <span className="block truncate">{c.proveedor ?? "—"}</span>
+                  {/* Para quién (111): la orden salió de un pedido. */}
+                  {c.para ? (
+                    <span className="block truncate text-sm text-[var(--fg-muted)]" title={c.para.cliente}>
+                      para {c.para.numero} · {c.para.cliente}
+                    </span>
+                  ) : null}
                 </td>
                 {/* El número de factura del proveedor es por lo que se busca
                     una compra —así está escrito en el marcador del buscador de
@@ -196,6 +202,11 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
 
             <div>
               <p className="text-sm font-medium">{c.proveedor ?? "—"}</p>
+              {c.para ? (
+                <p className="text-sm text-[var(--fg-muted)]">
+                  para {c.para.numero} · {c.para.cliente}
+                </p>
+              ) : null}
               {c.documento_proveedor ? (
                 <p className="text-sm text-[var(--fg-subtle)]">
                   {c.documento_proveedor}

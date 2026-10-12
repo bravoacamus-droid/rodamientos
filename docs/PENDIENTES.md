@@ -4592,6 +4592,26 @@ de Defontana.
 
 ---
 
+## §BE · 12/10 — La orden de compra dice para quién es, y se imprime
+
+Cierra la hoja de Willy del 09/10 (§BC): *«órdenes de compra por proveedores,
+pero enlazado al cliente y la cotización»*.
+
+- **Ficha de la compra**: si salió de un pedido, arriba en azul «Para el pedido
+  COT… de CLIENTE» con «Ver el pedido». Antes solo lo decían las
+  observaciones, en gris y al final.
+- **Lista de compras**: «para COT… · cliente» debajo del proveedor (sin columna
+  nueva: la tabla ya es ancha).
+- **La orden en papel**: «Vista previa» → Imprimir (o Guardar como PDF), con la
+  misma hoja que la cotización y la factura. Señores, dirección, RUC, fecha,
+  moneda; código, marca, descripción, cantidad, precio sin IGV e importe; y
+  subtotal, IGV y total. **No lleva el cliente ni el precio de venta**, a
+  propósito: en manos del proveedor es la forma más corta de que le venda
+  directo.
+
+Probado en pantalla a 1600 y 390 enlazando un momento CMP-26-00011 a
+COT1-000005 y desenlazándola después (con su `actualizado_en`).
+
 ## §BD · 09/10 — La cotización, más corta: notas por producto y producto no registrado (112)
 
 Luis, 09/10, mirando «Nueva cotización»: *«saca eso de tiempo de entrega,
