@@ -7919,3 +7919,10 @@ Queda, sin tocar: pasar de privado a público y volver borra vehículo y
 conductor; el buscador de cotización a 390 corta nombres largos (no hay
 ninguna cotización pendiente para verlo); el vehículo «HDC452 · camioneta
 prueba» en el maestro, que lo decide Luis.
+
+**Limpieza (14/10, pedido de Luis).** Borrados de la base del cliente, con
+respaldo JSON fuera del repo: el vehículo de prueba «HDC452 · camioneta
+prueba», las **9 cotizaciones COT1** (COT1-000001 a 000011, del 25/09 al
+13/10, con sus líneas) y la guía de prueba **T001-00000001** (borrador, no
+había movido stock). Ninguna tenía factura ni compra. Quedan intactas las
+1261 CT02 del histórico. Las listas cargan sin error.
