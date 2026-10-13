@@ -7568,3 +7568,27 @@ qué motivo, qué día»*):
 Probado con KR52PPA (dos recepciones) y 6205-2RSH/C3 (sin movimientos), a
 1600 y 390 sin scroll lateral. La pantalla del kardex con datos de verdad
 queda por revisar cuando exista el conteo.
+
+## §BQ · 14/10 — Todo margen, con dos decimales
+
+Luis, de parte de Willy: *«en todos los márgenes el señor Willy lo quiere con
+dos decimales, porque le dice que es error así de cálculo»*.
+
+Tenía razón y no era manía: la base calcula y guarda el margen con dos
+decimales (`round(…, 2)` en cotizaciones, vistas y RPC de reportes), y cada
+pantalla lo recortaba a su manera — sin decimales (hoja de precios, análisis
+de importación), con uno (ficha y formulario del producto, kits, lista de
+cotizaciones, constructor, reportes, tablero, trazabilidad, impacto de una
+recepción) o crudo (`17.5` y no `17.50`). El caso del test lo enseña: un
+margen de **4.35 %** se leía «4.3 %», y la cuenta a mano no cuadraba.
+
+- 19 archivos: todo margen sale con dos decimales fijos.
+- `margenSi` (comparador de compras) redondeaba a UNO en el cálculo; ahora a
+  dos.
+- No se tocaron porcentajes que no son margen: variación contra el periodo
+  anterior, «se gana el 51 %», cuánto encarece el flete, el IGV.
+
+Comprobado en cotizaciones (lista, ficha, editar), producto, reportes y
+tablero. Ojo, que salta a la vista en reportes y no es de esto: hay márgenes
+de **372 779 %** en el histórico, por productos con un costo casi en cero
+cargado del Excel. Es dato, no formato.

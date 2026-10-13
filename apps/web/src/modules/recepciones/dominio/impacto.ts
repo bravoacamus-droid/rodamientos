@@ -106,7 +106,7 @@ export function explicar(i: Impacto): string | null {
   const cuanto = Math.abs(i.variacionPct ?? 0).toFixed(1);
 
   if (i.margenAntes !== null && i.margenAhora !== null) {
-    return `El costo ${sube ? "subió" : "bajó"} un ${cuanto} %: el margen pasa de ${i.margenAntes.toFixed(1)} % a ${i.margenAhora.toFixed(1)} %.`;
+    return `El costo ${sube ? "subió" : "bajó"} un ${cuanto} %: el margen pasa de ${i.margenAntes.toFixed(2)} % a ${i.margenAhora.toFixed(2)} %.`;
   }
   return `El costo ${sube ? "subió" : "bajó"} un ${cuanto} % respecto a la vez anterior.`;
 }

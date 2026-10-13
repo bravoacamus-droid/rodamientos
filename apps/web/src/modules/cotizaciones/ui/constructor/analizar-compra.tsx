@@ -32,7 +32,9 @@ import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { unidadLegible } from "../../dominio/unidades";
 
 const usd = (n: number) => n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
-const pct = (n: number) => `${(n * 100).toLocaleString("es-PE", { maximumFractionDigits: 1 })} %`;
+// Dos decimales en todo margen (Willy, 14/10).
+const pct = (n: number) =>
+  `${(n * 100).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %`;
 const numero = (v: string): number | null => {
   const n = Number(v.replace(",", "."));
   return v.trim() === "" || !Number.isFinite(n) ? null : n;

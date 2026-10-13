@@ -311,7 +311,7 @@ export function AjustarVenta({
             <>
               <span className="text-[var(--fg-muted)]">Te queda un </span>
               <strong className={margen < 10 ? "text-[var(--warn)]" : ""}>
-                {margen}% de margen
+                {margen.toFixed(2)}% de margen
               </strong>
               <span className="text-[var(--fg-muted)]"> sobre el costo.</span>
               {/*

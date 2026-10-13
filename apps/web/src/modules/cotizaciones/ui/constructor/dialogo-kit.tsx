@@ -275,7 +275,7 @@ function VistaKit({
                 linea.valorUnitario < kit.sumaCosto ? "text-[var(--danger)]" : "text-[var(--ok)]"
               }`}
             >
-              {(((linea.valorUnitario - kit.sumaCosto) / kit.sumaCosto) * 100).toFixed(1)} %
+              {(((linea.valorUnitario - kit.sumaCosto) / kit.sumaCosto) * 100).toFixed(2)} %
             </span>
             <span className="text-[var(--fg-muted)]"> a {dolar(linea.valorUnitario)}</span>
           </p>

@@ -618,12 +618,12 @@ export function FormularioProducto({
                     : "text-[var(--ok)]"
               }`}
             >
-              {margen.toFixed(1)}%
+              {margen.toFixed(2)}%
             </span>
             {pm > 0 && costo > 0 ? (
               <>
                 {" "}· en el mínimo baja a{" "}
-                <span className="tabular">{(((pm - costo) / costo) * 100).toFixed(1)}%</span>
+                <span className="tabular">{(((pm - costo) / costo) * 100).toFixed(2)}%</span>
               </>
             ) : null}
           </p>

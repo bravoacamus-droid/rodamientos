@@ -121,7 +121,7 @@ export function CasillaPrecio({
           <>
             {margen !== null ? (
               <span className={`text-sm font-semibold tabular ${tono}`} title="Margen sobre el costo contra tu precio de venta">
-                gana {Math.round(margen * 100)} %
+                gana {(margen * 100).toFixed(2)} %
               </span>
             ) : (
               <span className="text-sm text-[var(--fg-subtle)]">sin P.V.</span>

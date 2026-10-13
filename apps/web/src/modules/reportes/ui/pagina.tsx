@@ -238,7 +238,7 @@ async function Indicadores({ hoy }: { hoy: string }) {
           etiqueta="Margen del mes"
           valor={d.margenPct}
           sufijo=" %"
-          decimales={1}
+          decimales={2}
           pie="sobre el costo"
           tono={d.margenPct >= 15 ? "ok" : d.margenPct > 0 ? "aviso" : undefined}
         />
@@ -353,7 +353,7 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
             ciento: es que no se sabe. El histórico se cargó sin costo, así que
             este es el caso normal mirando hacia atrás. */}
         {costo > 0
-          ? `costo ${dinero(costo)} · margen ${margenPct.toFixed(1)} % sobre el costo`
+          ? `costo ${dinero(costo)} · margen ${margenPct.toFixed(2)} % sobre el costo`
           : "sin costo registrado, así que no hay margen que calcular"}
       </p>
     </>
@@ -451,7 +451,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
                       : ""
                 }`}
               >
-                {p.costo > 0 ? `${p.margenPct} % de margen` : "sin costo"}
+                {p.costo > 0 ? `${p.margenPct.toFixed(2)} % de margen` : "sin costo"}
               </span>
             </div>
 
@@ -531,7 +531,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
               >
                 {/* Sin costo no hay margen que decir. «0 %» en ámbar se leía
                     como «se vende sin ganar nada» (revisión del 02/10). */}
-                {p.costo > 0 ? `${p.margenPct} %` : "—"}
+                {p.costo > 0 ? `${p.margenPct.toFixed(2)} %` : "—"}
               </td>
               <td className="py-1.5">
                 {p.clientePrincipal ? (
@@ -630,7 +630,7 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
                       : "text-[var(--fg)]"
                 }`}
               >
-                {c.costo > 0 ? `${c.margenPct} %` : "sin costo"}
+                {c.costo > 0 ? `${c.margenPct.toFixed(2)} %` : "sin costo"}
               </span>
               {c.costo > 0 ? " de margen" : ""}
             </p>
@@ -685,7 +685,7 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
                       : ""
                 }`}
               >
-                {c.costo > 0 ? `${c.margenPct} %` : "—"}
+                {c.costo > 0 ? `${c.margenPct.toFixed(2)} %` : "—"}
               </td>
               <td className="py-1.5 pr-3 text-right tabular">
                 {c.diasEntreCompras === null ? (

@@ -176,7 +176,7 @@ async function Respuestas({ id }: { id: string }) {
                   : "text-[var(--ok)]"
           }`}
         >
-          {margen === null ? "—" : `${margen.toFixed(1)} %`}
+          {margen === null ? "—" : `${margen.toFixed(2)} %`}
         </p>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           {margen === null

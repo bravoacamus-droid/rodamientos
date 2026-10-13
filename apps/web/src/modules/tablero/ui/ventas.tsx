@@ -132,8 +132,8 @@ export async function SeccionVentas({
               margen.tipo === "parcial"
                 ? // Sobre qué parte se calcula, o el número se lee como si
                   // cubriera toda la venta.
-                  `${margen.pct.toFixed(1)}% sobre el costo · solo de ${margen.cubrePct}% de la venta`
-                : `${margen.pct.toFixed(1)}% sobre el costo`
+                  `${margen.pct.toFixed(2)}% sobre el costo · solo de ${margen.cubrePct}% de la venta`
+                : `${margen.pct.toFixed(2)}% sobre el costo`
             }
           />
         )}

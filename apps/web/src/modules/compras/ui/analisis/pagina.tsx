@@ -27,7 +27,7 @@ function InsigniaK({ k }: { k: number | null }) {
         K {k.toFixed(2)}
       </Badge>
       <span className="text-sm text-[var(--fg-muted)]">
-        {margen >= 0 ? `gana ${Math.round(margen * 100)} %` : `pierde ${Math.round(-margen * 100)} %`}
+        {margen >= 0 ? `gana ${(margen * 100).toFixed(2)} %` : `pierde ${(-margen * 100).toFixed(2)} %`}
       </span>
     </span>
   );

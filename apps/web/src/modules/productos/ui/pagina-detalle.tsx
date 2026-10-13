@@ -154,7 +154,7 @@ export default async function PaginaDetalleProducto({
         />
         <Tarjeta
           etiqueta="Margen"
-          valor={margen !== null ? `${margen.toFixed(1)}%` : "—"}
+          valor={margen !== null ? `${margen.toFixed(2)}%` : "—"}
           // Los cortes suben con el denominador (023): sobre el costo, 12 y 20
           // son el equivalente de los 10 y 15 de cuando se medía sobre la venta.
           tono={

@@ -197,7 +197,9 @@ export function porcentajeQueDiceAlgo(p: number): number | null {
 export function margenSi(costoUsd: number | null, precioVenta: number | null): number | null {
   if (costoUsd === null || costoUsd <= 0) return null;
   if (precioVenta === null || precioVenta <= 0) return null;
-  return redondear(((precioVenta - costoUsd) / costoUsd) * 100, 1);
+  // Dos decimales (Willy, 14/10): con uno, el margen de la pantalla no
+  // cuadraba con la cuenta que él hace a mano.
+  return redondear(((precioVenta - costoUsd) / costoUsd) * 100, 2);
 }
 
 /**

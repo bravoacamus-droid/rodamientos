@@ -1169,7 +1169,7 @@ export function Comparativa({
                               : "text-[var(--ok)]"
                         }`}
                       >
-                        {margen === null ? "sin margen" : `${margen}%`}
+                        {margen === null ? "sin margen" : `${margen.toFixed(2)}%`}
                       </span>
                       <span className="text-sm text-brand-600 underline">
                         {desplegado ? "cerrar" : "cambiar"}

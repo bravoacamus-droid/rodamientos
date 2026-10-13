@@ -30,7 +30,8 @@ import { DialogoAnalisis, DialogoComprar, DialogoHistorial, DialogoProveedor } f
 
 const usd = (n: number) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const pct = (n: number | null) => (n === null ? "—" : `${Math.round(n * 100)} %`);
+// Dos decimales en todo margen (Willy, 14/10).
+const pct = (n: number | null) => (n === null ? "—" : `${(n * 100).toFixed(2)} %`);
 const tonoMargen = (m: number | null) =>
   m === null ? "" : m < 0 ? "text-[var(--danger)]" : m < 0.15 ? "text-[var(--warn)]" : "text-[var(--ok)]";
 

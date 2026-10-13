@@ -47,7 +47,8 @@ const dolar = (n: number, dec = 2) =>
   `$\u00a0${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
 const kg = (n: number, dec = 2) =>
   `${n.toLocaleString("es-PE", { minimumFractionDigits: dec, maximumFractionDigits: dec })}\u00a0kg`;
-const pct = (n: number) => `${Math.round(n * 100)}\u00a0%`;
+// Dos decimales en todo margen (Willy, 14/10).
+const pct = (n: number) => `${(n * 100).toFixed(2)}\u00a0%`;
 const soles = (n: number) =>
   `S/\u00a0${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 

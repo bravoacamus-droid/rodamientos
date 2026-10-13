@@ -1063,7 +1063,7 @@ export function FormularioKit({
                         : "text-[var(--ok)]"
                   }`}
                 >
-                  {(((Number(precio) - sumaCosto) / sumaCosto) * 100).toFixed(1)}%
+                  {(((Number(precio) - sumaCosto) / sumaCosto) * 100).toFixed(2)}%
                 </span>
               </span>
             ) : null}

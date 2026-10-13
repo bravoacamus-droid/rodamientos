@@ -393,7 +393,7 @@ function Margen({ valor, costo }: { valor: number; costo: number }) {
         ? "text-[var(--warn)]"
         : "text-[var(--ok)]";
   return (
-    <span className={`tabular font-medium ${tono}`}>{valor.toFixed(1)}%</span>
+    <span className={`tabular font-medium ${tono}`}>{valor.toFixed(2)}%</span>
   );
 }
 

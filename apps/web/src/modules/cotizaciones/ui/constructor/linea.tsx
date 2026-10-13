@@ -196,7 +196,7 @@ export function FilaLinea({
         <span
           className={`text-sm font-medium ${margenLinea < 0 ? "text-[var(--danger)]" : margenLinea < 0.15 ? "text-[var(--warn)]" : "text-[var(--ok)]"}`}
         >
-          {margenLinea < 0 ? "pierdes" : "ganas"} {Math.abs(Math.round(margenLinea * 1000) / 10)} %
+          {margenLinea < 0 ? "pierdes" : "ganas"} {Math.abs(margenLinea * 100).toFixed(2)} %
         </span>
       ) : null}
       {puedeAnalizar ? (

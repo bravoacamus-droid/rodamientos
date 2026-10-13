@@ -60,7 +60,7 @@ describe("el efecto en el margen", () => {
     expect(i.margenAntes).toBe(20);
     expect(i.margenAhora).toBe(4.35);
     expect(explicar(i)).toBe(
-      "El costo subió un 15.0 %: el margen pasa de 20.0 % a 4.3 %.",
+      "El costo subió un 15.0 %: el margen pasa de 20.00 % a 4.35 %.",
     );
   });
 

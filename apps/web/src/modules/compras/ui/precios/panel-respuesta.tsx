@@ -702,7 +702,7 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
           */
           pie={
             margen !== null
-              ? `${margen}% de margen`
+              ? `${margen.toFixed(2)}% de margen`
               : ref.precioVenta === null
                 ? "sin precio cargado"
                 : "el margen sale al saber el costo"
@@ -830,7 +830,7 @@ function Veredicto({ usd, referencia: ref }: { usd: number | null; referencia: R
               un costo que es casi cero. Se dice que es alto y se deja ahí. */}
           {porcentajeQueDiceAlgo(margen) === null
             ? "margen alto"
-            : `margen ${margen}%`}
+            : `margen ${margen.toFixed(2)}%`}
         </span>
       ) : null}
     </span>
