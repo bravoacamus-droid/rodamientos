@@ -34,7 +34,7 @@ const esquema = z.object({
   fecha_emision: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   fecha_traslado: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha de traslado no es válida."),
   motivo_codigo: z.string().length(2),
-  orden_compra_cliente: z.string().trim().max(300).nullable().default(null),
+  orden_compra_cliente: z.string().trim().max(100).nullable().default(null),
   direccion_llegada: z.string().min(1, "Falta la dirección de entrega.").max(300),
   ubigeo_llegada: z.string().regex(/^\d{6}$/).nullable(),
   peso_bruto_kg: z.number().positive("El peso bruto tiene que ser mayor que cero."),

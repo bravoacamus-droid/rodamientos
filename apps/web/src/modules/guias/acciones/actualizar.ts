@@ -64,7 +64,7 @@ const esquema = z.object({
   observaciones: z.string().trim().max(2000).nullable(),
   entregado_por: z.string().trim().max(200).nullable().optional(),
   // 14/10 (115): lo que antes no se podía corregir en un borrador.
-  orden_compra_cliente: z.string().trim().max(300).nullable().default(null),
+  orden_compra_cliente: z.string().trim().max(100).nullable().default(null),
   motivo_codigo: z.string().length(2).optional(),
   /** Los productos. Sin ellos, las líneas no se tocan. */
   items: z

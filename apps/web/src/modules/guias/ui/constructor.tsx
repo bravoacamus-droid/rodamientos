@@ -7,7 +7,7 @@ import { Combobox, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 import { cargarCotizacion } from "../acciones/cargar";
 import { generarGuia, type ResultadoGuia } from "../acciones/generar";
 import { actualizarGuia } from "../acciones/actualizar";
-import { OrdenesCompra } from "./ordenes-compra";
+import { OrdenCompra } from "./orden-compra";
 import {
   aPayload,
   aPayloadEdicion,
@@ -513,9 +513,9 @@ export function ConstructorGuia({
                     compra, yo emito mi guía»* — es el papel con el que sale. */}
                 <div className="flex flex-col gap-1 sm:col-span-2">
                   <label htmlFor="guia-oc" className="text-sm font-medium">
-                    Órdenes de compra del cliente
+                    Orden de compra del cliente
                   </label>
-                  <OrdenesCompra
+                  <OrdenCompra
                     id="guia-oc"
                     valor={estado.ordenCompra}
                     onCambio={(v) => despachar({ tipo: "campo", campo: "ordenCompra", valor: v })}

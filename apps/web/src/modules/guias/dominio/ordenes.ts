@@ -1,41 +1,30 @@
 /**
- * Las órdenes de compra del cliente, como lista (14/10).
+ * La orden de compra del cliente en la guía (14/10).
  *
- * Luis: varias O/C por guía, con chips. Se siguen guardando en la MISMA
- * columna de texto (`orden_compra_cliente`), separadas por «, »: así salen
- * tal cual en el papel de la guía y de la factura, y en el buscador de las
- * listas, sin tocar ni una consulta ni un documento.
+ * UNA por guía. Luis lo corrigió el mismo día: *«solo puede tener un número
+ * de orden de compra de cliente, no puede tener varios; pero sí un número de
+ * orden de cliente puede estar en varias guías»*. Por eso lo útil es SUGERIR
+ * las que ya usó ese cliente: la segunda guía de un pedido lleva la misma O/C
+ * que la primera, y así no se teclea dos veces (ni se teclea distinto).
  */
 
-/** «OC-345, OC-346» → ["OC-345", "OC-346"], sin vacías ni repetidas. */
-export function partirOrdenes(texto: string | null | undefined): string[] {
+const normal = (s: string) => s.trim().toUpperCase().replace(/\s+/g, "");
+
+/** Las ya usadas, sin repetir, en el orden en que llegan (las recientes primero). */
+export function distintas(lista: readonly (string | null | undefined)[]): string[] {
   const vistas = new Set<string>();
   const salida: string[] = [];
-  for (const crudo of (texto ?? "").split(/[,;\n]/)) {
-    const o = crudo.trim().replace(/\s+/g, " ");
-    if (!o) continue;
-    const clave = o.toUpperCase();
-    if (vistas.has(clave)) continue;
-    vistas.add(clave);
+  for (const crudo of lista) {
+    const o = (crudo ?? "").trim().replace(/\s+/g, " ");
+    if (!o || vistas.has(normal(o))) continue;
+    vistas.add(normal(o));
     salida.push(o);
   }
   return salida;
 }
 
-/** La lista, como se guarda e imprime. */
-export function juntarOrdenes(lista: readonly string[]): string {
-  return partirOrdenes(lista.join(",")).join(", ");
-}
-
-/** Las sugerencias que todavía no están puestas y coinciden con lo tecleado. */
-export function sugerenciasPara(
-  sugeridas: readonly string[],
-  puestas: readonly string[],
-  tecleado: string,
-): string[] {
-  const ya = new Set(puestas.map((p) => p.toUpperCase()));
-  const q = tecleado.trim().toUpperCase().replace(/\s+/g, "");
-  return sugeridas.filter(
-    (s) => !ya.has(s.toUpperCase()) && (!q || s.toUpperCase().replace(/\s+/g, "").includes(q)),
-  );
+/** Las que conviene ofrecer: no la que ya está puesta, y que coincidan con lo tecleado. */
+export function sugerenciasPara(usadas: readonly string[], actual: string): string[] {
+  const q = normal(actual);
+  return usadas.filter((u) => normal(u) !== q && (!q || normal(u).includes(q)));
 }

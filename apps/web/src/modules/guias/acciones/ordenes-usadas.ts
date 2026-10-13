@@ -2,14 +2,14 @@
 
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
-import { partirOrdenes } from "../dominio/ordenes";
+import { distintas } from "../dominio/ordenes";
 
 /**
  * Las órdenes de compra que ya usó un cliente, para sugerirlas (14/10).
  *
  * De la cotización, de sus guías y de sus facturas: es el mismo número el que
- * viaja por los tres documentos, y al preparar la segunda guía de un pedido
- * lo normal es que la O/C sea la de la primera. Las más recientes primero.
+ * viaja por los tres documentos, y una O/C puede ir en varias guías —la
+ * segunda guía de un pedido lleva la de la primera—. Las recientes primero.
  *
  * Solo lectura y bajo RLS: lo que el rol no puede ver, no sale.
  */
@@ -47,7 +47,7 @@ export async function ordenesUsadas(clienteId: string): Promise<string[]> {
     const filas = [...(cot.data ?? []), ...(gui.data ?? []), ...(fac.data ?? [])].sort((a, b) =>
       String(b.creado_en).localeCompare(String(a.creado_en)),
     );
-    return partirOrdenes(filas.map((f) => f.orden_compra_cliente ?? "").join(",")).slice(0, 20);
+    return distintas(filas.map((f) => f.orden_compra_cliente)).slice(0, 20);
   } catch {
     // Son sugerencias: sin ellas se escribe igual.
     return [];

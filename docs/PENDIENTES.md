@@ -7715,3 +7715,19 @@ cliente sugeridas**.
 Probado sobre la T001-00000001: dos O/C (Enter y botón), 55X75X10TC de 3 a 2,
 guardado → «OC-PRUEBA-1, OC-PRUEBA-2» en la base; quitar una la vuelve a
 sugerir y teclear «2» la filtra; 1600 y 390. Guía restaurada byte a byte.
+
+### §BT.3 · 14/10 — Una sola O/C por guía (Luis se corrige)
+
+*«Me equivoqué: solo puede tener un número de orden de compra de cliente, no
+puede tener varios; pero sí un número de orden de cliente puede estar en
+varias guías.»*
+
+- Fuera las etiquetas de §BT.2. `OrdenCompra` es UNA casilla, con «Quitar»,
+  y debajo «Ya usadas con este cliente» (las de sus cotizaciones, guías y
+  facturas, filtradas por lo que se teclea): pulsar una la pone. Es lo que
+  sirve para la segunda guía del mismo pedido.
+- `dominio/ordenes.ts` queda en `distintas` y `sugerenciasPara`; el tope del
+  texto vuelve a 100.
+
+Probado sobre la T001-00000001: escribir y guardar «OC-PRUEBA-1», reabrir,
+quitarla → la sugiere → un clic la pone. Guía restaurada byte a byte.
