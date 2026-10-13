@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download, Printer } from "lucide-react";
+import { Printer } from "lucide-react";
 import {
   Badge,
   EstadoBadge,
@@ -19,6 +19,12 @@ import { EmisorNota } from "./emisor-nota";
 import { EnviarASunat } from "./enviar-sunat";
 import { abreviaturaUnidad } from "@rodatech/config";
 import { Volver } from "@/componentes/volver";
+import { BotonDescargarPdf } from "@/componentes/boton-pdf";
+import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
+import { nombreArchivo } from "@/lib/pdf-hoja";
+import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
+import { DocumentoComprobante } from "./documento";
+import { hojaDeComprobante } from "./papel";
 
 /**
  * Ficha de un comprobante.
@@ -34,12 +40,14 @@ export default async function PaginaDetalleComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, config, motivos, acreditado] = await Promise.all([
+  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas] = await Promise.all([
     detalleComprobante(id),
     perfilActual(),
     estadoConfiguracion(),
     motivosNota(),
     yaAcreditadoDe(id),
+    emisorParaImprimir(),
+    cuentasParaCobrar(),
   ]);
 
   if (!resultado.ok) {
@@ -54,6 +62,9 @@ export default async function PaginaDetalleComprobante({
   if (!resultado.datos) notFound();
 
   const c = resultado.datos;
+  // El PDF, armado aquí con lo mismo que pinta el papel (14/10).
+  const hoja = hojaDeComprobante(c, emisor, cuentas);
+  const archivo = nombreArchivo(c.numero, c.cliente);
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeEnviar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
 
@@ -64,7 +75,12 @@ export default async function PaginaDetalleComprobante({
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    {/*
+      La ficha, en pantalla; al imprimir, solo el papel (14/10). El «Imprimir»
+      de la vista previa saca la PÁGINA, y sin esto sacaba la ficha.
+    */}
+    <div className="flex flex-col gap-5 print:hidden">
       <header className="anim-entrada flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <Volver href="/facturacion">Volver a facturación</Volver>
@@ -102,13 +118,13 @@ export default async function PaginaDetalleComprobante({
               «Imprimir» llevaba el borde fuerte y «Emitir nota» el suave, y
               al lado parecían de dos familias distintas.
             */}
-            <Link
-              href={`/facturacion/${c.id}/imprimir?auto=1`}
-              className={cn(buttonVariants({ variant: "primary" }), "px-3")}
-            >
-              <IconoDescargar />
-              Descargar
-            </Link>
+            {/* Vista previa y «Descargar PDF» de verdad, como en la
+                cotización (14/10). «Descargar» llevaba a la ventana de
+                imprimir del navegador. */}
+            <VistaPreviaDocumento numero={c.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
+              <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
+            </VistaPreviaDocumento>
+            <BotonDescargarPdf hoja={hoja} nombre={archivo} variante="primary" />
             <Link
               href={`/facturacion/${c.id}/imprimir?auto=1`}
               className={cn(buttonVariants({ variant: "outline" }), "px-3")}
@@ -405,6 +421,10 @@ export default async function PaginaDetalleComprobante({
         </div>
       </div>
     </div>
+    <div className="hidden print:block">
+      <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
+    </div>
+    </>
   );
 }
 
@@ -452,10 +472,6 @@ function CodigoLinea({ id, codigo }: { id: string | null; codigo: string }) {
   ) : (
     <span className="min-w-0 break-all font-mono text-sm font-semibold">{codigo}</span>
   );
-}
-
-function IconoDescargar() {
-  return <Download aria-hidden="true" className="size-[18px] shrink-0" />;
 }
 
 function IconoImprimir() {

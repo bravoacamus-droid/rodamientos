@@ -7731,3 +7731,33 @@ varias guías.»*
 
 Probado sobre la T001-00000001: escribir y guardar «OC-PRUEBA-1», reabrir,
 quitarla → la sugiere → un clic la pone. Guía restaurada byte a byte.
+
+## §BU · 14/10 — Vista previa y «Descargar PDF» en guía y factura
+
+Luis: *«tanto en facturas y guías de remisión falta vista previa antes de
+emitir, así como en cotización la vista previa y el botón directo, también
+descargar PDF directo»*.
+
+- **Ficha de guía y de factura**: «Vista previa» (el mismo diálogo de la
+  cotización, con el papel de verdad) y «Descargar PDF» de verdad, también
+  dentro de la previa. «Descargar» llevaba a la ventana de imprimir del
+  navegador. En una guía en BORRADOR la previa es justo lo pedido: ver el
+  papel antes de «Emitir y despachar».
+- Los datos de cada papel salen de `guias/ui/papel.ts` y
+  `facturacion/ui/papel.ts` (los usan el papel y el PDF); el PDF lo arma el
+  servidor (`hojaDeGuia`, `hojaDeComprobante`) y `BotonDescargarPdf` lo baja.
+  `pdf-hoja` aprendió tres bloques: `campos` (el transporte en dos columnas),
+  `tabla` (las cuotas) y `sello` (la raya de «Sello y firma de recepción»).
+- Las dos fichas imprimen SOLO el papel (`print:hidden` + el documento
+  oculto): el «Imprimir» de la previa saca la página, y sin esto sacaba la
+  ficha.
+- **Factura antes de emitir**: la previa existía («Ver cómo va a quedar»),
+  pero al final de la columna derecha. Ahora hay «Vista previa» ARRIBA, junto
+  a «Emitir», que abre la misma ventana. No lleva «Descargar PDF» a propósito:
+  sin emitir no tiene número, y un PDF de factura sin número que circula es
+  peor que ninguno.
+
+Probado: T001-00000001 y F002-00000561 (previa, PDF bajado y abierto,
+impresión emulada → solo el papel), a 1600 y 390. **Sin ver en pantalla:**
+el botón de arriba del emisor —solo sale sin bloqueos, y hoy ninguna
+cotización se puede facturar (no hay guía emitida)—.

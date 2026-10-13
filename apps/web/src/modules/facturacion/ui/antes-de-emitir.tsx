@@ -111,6 +111,8 @@ export function AntesDeEmitir({
   puedeEnviar,
   opciones,
   onCambiar,
+  previaAbierta,
+  onPrevia,
 }: {
   cot: CotizacionFacturable;
   /** Lo que se va a emitir de verdad, ya recortado a lo pendiente. */
@@ -146,8 +148,17 @@ export function AntesDeEmitir({
   puedeEnviar: boolean;
   opciones: OpcionesEmision;
   onCambiar: (o: OpcionesEmision) => void;
+  /**
+   * La previa la puede abrir también el botón de ARRIBA (14/10). Luis: *«en
+   * facturas falta vista previa antes de emitir»* — estaba, pero aquí abajo,
+   * al final de la columna, y no se encontraba.
+   */
+  previaAbierta?: boolean;
+  onPrevia?: (abierta: boolean) => void;
 }) {
-  const [viendo, setViendo] = React.useState(false);
+  const [viendoPropio, setViendoPropio] = React.useState(false);
+  const viendo = previaAbierta ?? viendoPropio;
+  const setViendo = onPrevia ?? setViendoPropio;
 
   /*
     Las guías que se añaden A MANO, además de las de esta cotización.

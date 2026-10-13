@@ -14,6 +14,7 @@ import {
   Textarea,
   formatearFecha,
 } from "@rodatech/ui";
+import { Eye } from "lucide-react";
 
 import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
@@ -145,6 +146,7 @@ export function EmisorComprobante({
     todas. `enviarSunat` arranca en lo que se pueda hacer — marcarlo por
     defecto cuando no hay certificado sería ofrecer algo que no va a pasar.
   */
+  const [previaAbierta, setPreviaAbierta] = useState(false);
   const [opciones, setOpciones] = useState<OpcionesEmision>({
     mostrarCuenta: true,
     // Apagada por defecto: la mayoría de clientes NO son agentes de retención,
@@ -416,7 +418,7 @@ export function EmisorComprobante({
             Nace de una cotización aprobada. El stock sale con la guía, no aquí.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -428,6 +430,18 @@ export function EmisorComprobante({
           >
             Cancelar
           </Button>
+          {/*
+            Ver el papel ANTES de gastar el correlativo, a la vista (14/10).
+            Luis: *«en facturas falta vista previa antes de emitir»*. La
+            previa existía, pero al final de la columna de la derecha y solo
+            cuando ya no faltaba nada: no se encontraba.
+          */}
+          {cot && bloqueos.length === 0 ? (
+            <Button type="button" variant="outline" onClick={() => setPreviaAbierta(true)}>
+              <Eye className="size-[18px] shrink-0" aria-hidden="true" />
+              Vista previa
+            </Button>
+          ) : null}
           <Button type="submit" disabled={!listo}>
             {emitiendo ? "Emitiendo…" : `Emitir ${serie}`}
           </Button>
@@ -907,6 +921,8 @@ export function EmisorComprobante({
                 puedeEnviar={puedeEnviar}
                 opciones={opciones}
                 onCambiar={setOpciones}
+                previaAbierta={previaAbierta}
+                onPrevia={setPreviaAbierta}
               />
             </div>
           ) : null}

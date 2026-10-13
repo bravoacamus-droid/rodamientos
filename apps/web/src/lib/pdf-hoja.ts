@@ -46,7 +46,13 @@ export type TrozoPdf = { texto: string; negrita?: boolean };
 export type BloquePiePdf =
   | { tipo: "parrafo"; trozos: TrozoPdf[] }
   | { tipo: "cuentas"; titulo: string; filas: [string, string, string, string][] }
-  | { tipo: "firma"; izquierda: string; derecha: string };
+  | { tipo: "firma"; izquierda: string; derecha: string }
+  /** «Etiqueta: valor» en dos columnas (el transporte de la guía). */
+  | { tipo: "campos"; campos: { etiqueta: string; valor: string }[] }
+  /** Una tabla chica con título (las cuotas de la factura). */
+  | { tipo: "tabla"; titulo: string; cabecera: string[]; filas: string[][]; derecha?: number[] }
+  /** La raya para el sello y la firma del que recibe. */
+  | { tipo: "sello"; texto: string };
 
 export interface HojaPdf {
   emisor: EmisorHoja;
@@ -399,6 +405,52 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
           tableLineWidth: 0.2,
         });
         y = finalY() + 5;
+      } else if (b.tipo === "campos") {
+        // «Placa: AUE169» en dos columnas, como el pie de la guía.
+        const filas = Math.ceil(b.campos.length / 2);
+        y = quedaSitio(y, filas * 4.2 + 2);
+        const mitadPie = util / 2;
+        b.campos.forEach((c, i) => {
+          const x = MARGEN + (i % 2) * mitadPie;
+          const yc = y + Math.floor(i / 2) * 4.2;
+          doc.setFont("helvetica", "bold");
+          const etiqueta = `${textoPdf(c.etiqueta)}: `;
+          // Se mide en negrita, que es como se escribe: medida en normal, el
+          // valor se montaba encima («ConductorWILLY…»).
+          const ancho = doc.getTextWidth(etiqueta);
+          doc.text(etiqueta, x, yc);
+          doc.setFont("helvetica", "normal");
+          doc.text(textoPdf(c.valor), x + ancho, yc, { maxWidth: mitadPie - ancho - 2 });
+        });
+        y += filas * 4.2 + 1;
+      } else if (b.tipo === "tabla") {
+        y = quedaSitio(y, 8 + b.filas.length * 5);
+        doc.setFont("helvetica", "bold");
+        doc.text(textoPdf(b.titulo), MARGEN, y);
+        doc.setFont("helvetica", "normal");
+        autoTable(doc, {
+          startY: y + 1.5,
+          margin: { left: MARGEN, right: MARGEN },
+          tableWidth: "wrap",
+          head: [b.cabecera.map(textoPdf)],
+          body: b.filas.map((f) => f.map(textoPdf)),
+          theme: "plain",
+          styles: { fontSize: CHICO, textColor: NEGRO, cellPadding: { top: 0.6, bottom: 0.6, left: 3, right: 3 } },
+          headStyles: { fontStyle: "bold" },
+          columnStyles: Object.fromEntries((b.derecha ?? []).map((i) => [i, { halign: "right" as const }])),
+          tableLineColor: [153, 153, 153],
+          tableLineWidth: 0.2,
+        });
+        y = finalY() + 4;
+      } else if (b.tipo === "sello") {
+        // Sitio en blanco para el sello del que recibe, con su raya.
+        y = quedaSitio(y + 14, 8);
+        doc.setDrawColor(102, 102, 102);
+        doc.setLineWidth(0.3);
+        const x0 = MARGEN + util / 2;
+        doc.line(x0, y, anchoPagina - MARGEN, y);
+        doc.text(textoPdf(b.texto), x0 + util / 4, y + 4, { align: "center" });
+        y += 8;
       } else {
         y = quedaSitio(y, 6) + 2;
         doc.text(textoPdf(b.izquierda), MARGEN, y);

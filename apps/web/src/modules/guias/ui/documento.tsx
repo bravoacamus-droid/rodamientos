@@ -1,6 +1,7 @@
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
-import { ETIQUETA_MODALIDAD, type GuiaDetalle } from "../dominio/tipos";
+import type { GuiaDetalle } from "../dominio/tipos";
+import { datosDeGuia } from "./papel";
 
 /**
  * La guía de remisión, en papel.
@@ -16,11 +17,6 @@ import { ETIQUETA_MODALIDAD, type GuiaDetalle } from "../dominio/tipos";
  * que mira quien la para en la carretera.
  */
 
-const fecha = (f: string) => {
-  const [a, m, d] = f.slice(0, 10).split("-");
-  return d && m && a ? `${d}/${m}/${a}` : f;
-};
-
 export function DocumentoGuia({
   g,
   emisor,
@@ -35,60 +31,7 @@ export function DocumentoGuia({
       emisor={emisor}
       titulo="Guía de remisión · Remitente"
       numero={g.numero}
-      datos={[
-        { etiqueta: "Destinatario", valor: g.cliente ?? "—" },
-        { etiqueta: "Fecha de emisión", valor: fecha(g.fecha_emision) },
-        { etiqueta: "RUC / DNI", valor: g.cliente_documento ?? "—" },
-        // «Inicio de traslado» y no «fecha de traslado». Willy, 40:34:
-        // *«inicio de traslado, porque puede que lo prepare ahora, pero lo
-        // llegue mañana»*. Es el día que sale la mercadería, no el día que se
-        // escribió el papel — y son dos fechas distintas que estaban con el
-        // mismo nombre.
-        { etiqueta: "Inicio de traslado", valor: fecha(g.fecha_traslado) },
-        {
-          etiqueta: "Motivo",
-          valor: g.motivo_descripcion ?? `Código ${g.motivo_codigo}`,
-        },
-        { etiqueta: "Modalidad", valor: ETIQUETA_MODALIDAD[g.modalidad_traslado] },
-        {
-          etiqueta: "Punto de partida",
-          valor: [g.direccion_partida, g.ubigeo_partida].filter(Boolean).join(" · ") || "—",
-        },
-        {
-          etiqueta: "Punto de llegada",
-          valor: [g.direccion_llegada, g.ubigeo_llegada].filter(Boolean).join(" · ") || "—",
-        },
-        {
-          etiqueta: "Peso bruto",
-          valor: `${g.peso_bruto_kg} ${g.unidad_peso}`,
-        },
-        {
-          etiqueta: "Bultos",
-          valor: String(g.numero_bultos),
-        },
-        /*
-          Los tres documentos que atan esta guía a la venta, como en el
-          formato de Willy: «COMPROBANTE DE PAGO · N° DE COTIZACIÓN · ORDEN DE
-          COMPRA».
-
-          El comprobante suele ir vacío cuando la guía se imprime, y es
-          correcto: la guía va ANTES que la factura (33:00). *«Los productos
-          están sujetos a revisión: yo lo llevo con guía, y si todo está
-          conforme me ponen un sello y firma de almacén, y con la guía sellada
-          recién puedo facturar»*. Sale cuando se reimprime después de
-          facturar, que es cuando alguien quiere saber qué factura salió de
-          esta entrega.
-        */
-        g.comprobante
-          ? { etiqueta: "Comprobante", valor: g.comprobante.numero }
-          : null,
-        g.cotizacion_numero
-          ? { etiqueta: "Cotización", valor: g.cotizacion_numero }
-          : null,
-        g.orden_compra_cliente
-          ? { etiqueta: "O/C del cliente", valor: g.orden_compra_cliente }
-          : null,
-      ]}
+      datos={datosDeGuia(g)}
       /*
         Sin columna de peso por línea. Willy, 41:44, repasando el impreso:
         *«los pesos parciales, ahí sí está un problema: debería ser el peso

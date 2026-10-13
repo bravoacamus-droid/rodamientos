@@ -1,14 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download, Printer, Pencil } from "lucide-react";
+import { Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+
+import { BotonDescargarPdf } from "@/componentes/boton-pdf";
+import { emisorParaImprimir } from "@/lib/emisor";
+import { nombreArchivo } from "@/lib/pdf-hoja";
+import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
 import { detalleGuia } from "../api/consultas";
 import { ETIQUETA_ESTADO, ETIQUETA_MODALIDAD } from "../dominio/tipos";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { AnularGuia } from "./anular-guia";
 import { EmitirGuia } from "./emitir-guia";
+import { DocumentoGuia } from "./documento";
+import { hojaDeGuia } from "./papel";
 import { Volver } from "@/componentes/volver";
 
 /**
@@ -27,7 +34,11 @@ export default async function PaginaDetalleGuia({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil] = await Promise.all([detalleGuia(id), perfilActual()]);
+  const [resultado, perfil, emisor] = await Promise.all([
+    detalleGuia(id),
+    perfilActual(),
+    emisorParaImprimir(),
+  ]);
 
   if (!resultado.ok) {
     return (
@@ -48,8 +59,17 @@ export default async function PaginaDetalleGuia({
 
   const unidades = g.lineas.reduce((a, l) => a + l.cantidad, 0);
 
+  // El PDF, armado aquí con lo mismo que pinta el papel (14/10).
+  const hoja = hojaDeGuia(g, emisor);
+  const archivo = nombreArchivo(g.numero, g.cliente);
+
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    {/*
+      La ficha, en pantalla; al imprimir, solo el papel (14/10). El «Imprimir»
+      de la vista previa saca la PÁGINA, y sin esto sacaba la ficha.
+    */}
+    <div className="flex flex-col gap-5 print:hidden">
       <header className="anim-entrada flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="no-print">
@@ -89,13 +109,17 @@ export default async function PaginaDetalleGuia({
             —mandarla por WhatsApp al cliente o al transportista— y en el
             diálogo del navegador «Guardar como PDF» es uno de los destinos.
           */}
-          <Link
-            href={`/guias/${g.id}/imprimir?auto=1`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-          >
-            <IconoDescargar />
-            Descargar
-          </Link>
+          {/*
+            Vista previa y «Descargar PDF» de verdad (14/10). Luis: *«tanto
+            en facturas y guías de remisión falta vista previa antes de
+            emitir, así como en cotización, y el botón directo también de
+            descargar PDF»*. Con la guía en borrador, la previa es justo eso:
+            ver el papel antes de pulsar «Emitir y despachar».
+          */}
+          <VistaPreviaDocumento numero={g.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
+            <DocumentoGuia g={g} emisor={emisor} />
+          </VistaPreviaDocumento>
+          <BotonDescargarPdf hoja={hoja} nombre={archivo} variante="primary" />
           <Link
             href={`/guias/${g.id}/imprimir?auto=1`}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
@@ -327,6 +351,10 @@ export default async function PaginaDetalleGuia({
         </div>
       </div>
     </div>
+    <div className="hidden print:block">
+      <DocumentoGuia g={g} emisor={emisor} />
+    </div>
+    </>
   );
 }
 
@@ -367,10 +395,6 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
   );
-}
-
-function IconoDescargar() {
-  return <Download aria-hidden="true" className="size-[18px] shrink-0" />;
 }
 
 function IconoImprimir() {

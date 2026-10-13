@@ -2,6 +2,7 @@ import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-pa
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
+import { datosDeComprobante } from "./papel";
 
 /**
  * La factura, la boleta y las notas, en papel.
@@ -42,8 +43,6 @@ export function DocumentoComprobante({
    */
   cuentas?: readonly CuentaParaPagar[];
 }) {
-  const esNota = c.tipo === "nota_credito" || c.tipo === "nota_debito";
-  const alCredito = c.condicion_pago === "credito";
   // Un descuento en cero no merece una fila: en un documento fiscal, cada
   // línea de más es una pregunta de más de quien lo revisa.
   const hayDescuento = c.descuento_global > 0;
@@ -55,50 +54,7 @@ export function DocumentoComprobante({
       // SUNAT espera, y lo que distingue a este papel de uno preimpreso.
       titulo={`${ETIQUETA_TIPO[c.tipo]} electrónica`}
       numero={c.numero}
-      datos={[
-        { etiqueta: "Señores", valor: c.cliente ?? "—" },
-        { etiqueta: "Fecha de emisión", valor: fecha(c.fecha_emision) },
-        {
-          etiqueta: c.cliente_tipo_documento ?? "Doc.",
-          valor: c.cliente_documento ?? "—",
-        },
-        {
-          etiqueta: "Condición",
-          valor: alCredito ? `Crédito a ${c.dias_credito} días` : "Contado",
-        },
-        c.cliente_direccion
-          ? { etiqueta: "Dirección", valor: c.cliente_direccion }
-          : null,
-        alCredito && c.fecha_vencimiento
-          ? { etiqueta: "Vence", valor: fecha(c.fecha_vencimiento) }
-          : null,
-        // Una nota sin decir qué corrige no sirve de nada: es el dato por el
-        // que se busca, tanto en el ERP como en la contabilidad del cliente.
-        esNota && c.referencia_numero
-          ? { etiqueta: "Modifica a", valor: c.referencia_numero }
-          : null,
-        c.orden_compra_cliente
-          ? { etiqueta: "O/C del cliente", valor: c.orden_compra_cliente }
-          : null,
-        c.cotizacion_numero
-          ? { etiqueta: "Cotización", valor: c.cotizacion_numero }
-          : null,
-        // Con qué guía salió la mercadería. Su formato la imprime, y es la
-        // que ata el papel que firmó el almacén del cliente con la factura
-        // que tiene que pagar: la guía sellada es lo que autoriza a facturar.
-        c.guia_numero
-          ? {
-              // En plural cuando ampara varias (084). Willy, 16/09: «a veces
-              // hay que hacer una factura de dos guías».
-              etiqueta: c.guia_numero.includes(",")
-                ? "Guías de remisión"
-                : "Guía de remisión",
-              valor: c.guia_numero,
-              // A lo ancho: tres números de guía no caben en media columna.
-              ancho: c.guia_numero.includes(","),
-            }
-          : null,
-      ]}
+      datos={datosDeComprobante(c)}
       columnas={[
         { clave: "n", titulo: "#", alinear: "centro" },
         { clave: "codigo", titulo: "Código" },
