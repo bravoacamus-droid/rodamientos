@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Combobox, Button, Campo, Input, SelectNativo, Textarea } from "@rodatech/ui";
+import { Button, Campo, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { actualizarGuia } from "../acciones/actualizar";
+import { TransportePropio } from "./transporte-propio";
 import type { GuiaDetalle } from "../dominio/tipos";
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado } from "../dominio/tipos";
 import { Volver } from "@/componentes/volver";
@@ -325,108 +326,29 @@ export function EditorGuia({
               <span className="text-sm font-medium">Va a pie, sin vehículo</span>
             </label>
 
-            {!aPie && vehiculos.length > 0 ? (
-              <Campo id="g-vehiculo" label="Vehículo" className="sm:col-span-2">
-                {/* Con buscador (07/10). Elegir uno solo rellena la placa. */}
-                <Combobox
-                  id="g-vehiculo"
-                  opciones={vehiculos.map((v) => ({
-                    valor: v.id,
-                    etiqueta: v.placa,
-                    detalle: v.descripcion ?? undefined,
-                  }))}
-                  valor={vehiculos.find((x) => x.placa === placa)?.id ?? null}
-                  onCambio={(id) => {
-                    const v = vehiculos.find((x) => x.id === id);
-                    if (v) setPlaca(v.placa);
-                  }}
-                  limpiable={false}
-                  placeholder="Otro / a mano…"
-                  placeholderBusqueda="Placa o descripción…"
-                  textoVacio="Ningún vehículo coincide."
-                />
-              </Campo>
-            ) : null}
-
-            {!aPie ? (
-              <Campo id="g-placa" label="Placa del vehículo" requerido>
-                <Input
-                  id="g-placa"
-                  value={placa}
-                  onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-                  className="font-mono"
-                  placeholder="ABC-123"
-                />
-              </Campo>
-            ) : null}
-
-            {conductores.length > 0 ? (
-              <Campo
-                id="g-quien"
-                label={aPie ? "Quién la lleva (de la lista)" : "Quién conduce"}
-                className="sm:col-span-2"
-              >
-                <SelectNativo
-                  id="g-quien"
-                  value=""
-                  onChange={(e) => {
-                    const c = conductores.find((x) => x.id === e.target.value);
-                    if (!c) return;
-                    setConductor(c.nombre);
-                    setDni(c.numero_documento ?? "");
-                    setCelular(c.telefono ?? "");
-                    if (!aPie) setLicencia(c.licencia ?? "");
-                  }}
-                >
-                  <option value="">Otro / a mano…</option>
-                  {conductores.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                      {c.licencia ? ` · ${c.licencia}` : ""}
-                    </option>
-                  ))}
-                </SelectNativo>
-              </Campo>
-            ) : null}
-
-            <Campo id="g-conductor" label={aPie ? "Quién la lleva" : "Conductor"}>
-              <Input
-                id="g-conductor"
-                value={conductor}
-                onChange={(e) => setConductor(e.target.value)}
+            {/* Elegidos del maestro, con «Nuevo» y «Editar» al lado (14/10):
+                lo mismo que al crear la guía. */}
+            <div className="sm:col-span-2">
+              <TransportePropio
+                aPie={aPie}
+                vehiculos={vehiculos}
+                conductores={conductores}
+                valor={{
+                  placa,
+                  conductorNombre: conductor,
+                  conductorDocumento: dni,
+                  conductorLicencia: licencia,
+                  conductorTelefono: celular,
+                }}
+                onCambio={(p) => {
+                  if (p.placa !== undefined) setPlaca(p.placa);
+                  if (p.conductorNombre !== undefined) setConductor(p.conductorNombre);
+                  if (p.conductorDocumento !== undefined) setDni(p.conductorDocumento);
+                  if (p.conductorLicencia !== undefined) setLicencia(p.conductorLicencia);
+                  if (p.conductorTelefono !== undefined) setCelular(p.conductorTelefono);
+                }}
               />
-            </Campo>
-
-            <Campo id="g-dni" label={aPie ? "Su DNI" : "DNI del conductor"} requerido={aPie}>
-              <Input
-                id="g-dni"
-                value={dni}
-                onChange={(e) => setDni(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                className="tabular"
-                inputMode="numeric"
-              />
-            </Campo>
-
-            {aPie ? (
-              <Campo id="g-celular" label="Su celular">
-                <Input
-                  id="g-celular"
-                  value={celular}
-                  onChange={(e) => setCelular(e.target.value)}
-                  inputMode="tel"
-                  placeholder="9XX XXX XXX"
-                />
-              </Campo>
-            ) : (
-              <Campo id="g-licencia" label="Licencia">
-                <Input
-                  id="g-licencia"
-                  value={licencia}
-                  onChange={(e) => setLicencia(e.target.value.toUpperCase())}
-                  className="font-mono"
-                />
-              </Campo>
-            )}
+            </div>
           </>
         )}
 

@@ -22,6 +22,7 @@ import { ETIQUETA_MODALIDAD, type ModalidadTraslado, type MotivoTraslado } from 
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { DialogoAgencia } from "./dialogo-agencia";
+import { TransportePropio } from "./transporte-propio";
 import { sinEnvioConEnter } from "@/lib/formularios";
 import { useBorrador } from "@/componentes/borrador";
 
@@ -103,11 +104,6 @@ export function ConstructorGuia({
   const [agenciasNuevas, setAgenciasNuevas] = useState<AgenciaOpcion[]>([]);
   const [altaAgencia, setAltaAgencia] = useState(false);
 
-  // Igual que la agencia: solo controlan el desplegable. Lo que viaja a la
-  // guía son la placa y los datos del conductor ya copiados, no el id.
-  const [vehiculoId, setVehiculoId] = useState("");
-  const [conductorId, setConductorId] = useState("");
-
   const listaAgencias = useMemo(() => {
     const vistas = new Set(agencias.map((a) => a.id));
     return [...agencias, ...agenciasNuevas.filter((a) => !vistas.has(a.id))];
@@ -144,7 +140,7 @@ export function ConstructorGuia({
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "guia",
     id: cotizacionInicial ?? null,
-    datos: { estado, cotizacionId, agenciaId, vehiculoId, conductorId },
+    datos: { estado, cotizacionId, agenciaId },
     valeLaPena: (d) => guiaTocada(d.estado),
     recuperar: (d) => {
       // Que la carga de la cotización no pise lo recuperado: ni la que dispare
@@ -153,8 +149,6 @@ export function ConstructorGuia({
       if (d.cotizacionId !== cotizacionId) saltarCarga.current = true;
       setCotizacionId(d.cotizacionId);
       setAgenciaId(d.agenciaId);
-      setVehiculoId(d.vehiculoId);
-      setConductorId(d.conductorId);
       despachar({ tipo: "cargar", estado: d.estado });
     },
   });
@@ -737,176 +731,37 @@ export function ConstructorGuia({
                       </span>
                     </label>
 
-                    {/* El maestro de vehículos propios (060). Rellena la placa,
-                        que sigue siendo editable: la guía guarda lo que diga
-                        ella el día que se emite, no una referencia. */}
-                    {!estado.aPie && vehiculos.length > 0 ? (
-                      <label className="flex flex-col gap-1">
-                        <span className="text-sm font-medium">Vehículo</span>
-                        <SelectNativo
-                          value={vehiculoId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            setVehiculoId(id);
-                            const v = vehiculos.find((x) => x.id === id);
-                            if (!v) return;
-                            despachar({
-                              tipo: "campo",
-                              campo: "transportistaPlaca",
-                              valor: v.placa,
-                            });
-                          }}
-                        >
-                          <option value="">Otro / a mano…</option>
-                          {vehiculos.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {v.placa}
-                              {v.descripcion ? ` · ${v.descripcion}` : ""}
-                            </option>
-                          ))}
-                        </SelectNativo>
-                      </label>
-                    ) : null}
-
-                    {estado.aPie ? null : (
-                      <label className="flex flex-col gap-1">
-                        <span className="text-sm font-medium">Placa del vehículo</span>
-                        <Input
-                          value={estado.transportistaPlaca}
-                          onChange={(e) =>
-                            despachar({
-                              tipo: "campo",
-                              campo: "transportistaPlaca",
-                              valor: e.target.value.toUpperCase(),
-                            })
-                          }
-                          placeholder="ABC-123"
-                          className="font-mono"
-                        />
-                      </label>
-                    )}
                   </>
                 )}
               </div>
 
               {/*
-                El chofer, solo en transporte privado.
-
-                Luis (07/09): *«en transporte público, ya sea de las agencias,
-                no es necesario poner conductor, DNI del conductor, licencia,
-                si esos datos no se pueden saber»*. Y es literal: cuando
-                despacha Shalom, quién conduce lo declara ella en su propia
-                guía de transportista. Pedírselos al remitente es pedirle que
-                se los invente, en un documento que fiscaliza SUNAT.
+                El vehículo y quién la lleva, ELEGIDOS del maestro (14/10), con
+                «Nuevo» y «Editar» al lado. Solo en transporte privado: en el
+                público lo declara la agencia en su propia guía (Luis, 07/09).
               */}
               {esPublico ? null : (
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                {/* El maestro de conductores (060). Rellena los tres campos de
-                    golpe, que es donde se cuela el error: la licencia tecleada
-                    a mano en cada guía acaba impresa mal sin que nada la
-                    compare con la vez anterior. */}
-                {conductores.length > 0 ? (
-                  <label className="flex flex-col gap-1 sm:col-span-3">
-                    <span className="text-sm font-medium">Quién conduce</span>
-                    <SelectNativo
-                      value={conductorId}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        setConductorId(id);
-                        const c = conductores.find((x) => x.id === id);
-                        if (!c) return;
-                        despachar({ tipo: "campo", campo: "conductorNombre", valor: c.nombre });
-                        despachar({
-                          tipo: "campo",
-                          campo: "conductorDocumento",
-                          valor: c.numero_documento ?? "",
-                        });
-                        despachar({
-                          tipo: "campo",
-                          campo: "conductorLicencia",
-                          valor: c.licencia ?? "",
-                        });
-                      }}
-                    >
-                      <option value="">Otro / a mano…</option>
-                      {conductores.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.nombre}
-                          {c.licencia ? ` · ${c.licencia}` : ""}
-                        </option>
-                      ))}
-                    </SelectNativo>
-                  </label>
-                ) : null}
-
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">
-                    {estado.aPie ? "Quién la lleva" : "Conductor"}
-                  </span>
-                  <Input
-                    value={estado.conductorNombre}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "campo",
-                        campo: "conductorNombre",
-                        valor: e.target.value,
-                      })
-                    }
+                <div className="mt-3">
+                  <TransportePropio
+                    aPie={estado.aPie}
+                    vehiculos={vehiculos}
+                    conductores={conductores}
+                    valor={{
+                      placa: estado.transportistaPlaca,
+                      conductorNombre: estado.conductorNombre,
+                      conductorDocumento: estado.conductorDocumento,
+                      conductorLicencia: estado.conductorLicencia,
+                      conductorTelefono: estado.conductorTelefono,
+                    }}
+                    onCambio={(p) => {
+                      if (p.placa !== undefined) despachar({ tipo: "campo", campo: "transportistaPlaca", valor: p.placa });
+                      if (p.conductorNombre !== undefined) despachar({ tipo: "campo", campo: "conductorNombre", valor: p.conductorNombre });
+                      if (p.conductorDocumento !== undefined) despachar({ tipo: "campo", campo: "conductorDocumento", valor: p.conductorDocumento });
+                      if (p.conductorLicencia !== undefined) despachar({ tipo: "campo", campo: "conductorLicencia", valor: p.conductorLicencia });
+                      if (p.conductorTelefono !== undefined) despachar({ tipo: "campo", campo: "conductorTelefono", valor: p.conductorTelefono });
+                    }}
                   />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">
-                    {estado.aPie ? "Su DNI" : "DNI del conductor"}
-                  </span>
-                  <Input
-                    value={estado.conductorDocumento}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "campo",
-                        campo: "conductorDocumento",
-                        valor: e.target.value.replace(/\D/g, "").slice(0, 8),
-                      })
-                    }
-                    className="tabular"
-                    inputMode="numeric"
-                  />
-                </label>
-                {estado.aPie ? (
-                  /* A pie no hay licencia que pedir: no conduce nada. En su
-                     sitio va el celular, que es lo que Willy pidió apuntar
-                     (38:41): «nombre, celular y DNI». */
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium">Su celular</span>
-                    <Input
-                      value={estado.conductorTelefono}
-                      onChange={(e) =>
-                        despachar({
-                          tipo: "campo",
-                          campo: "conductorTelefono",
-                          valor: e.target.value,
-                        })
-                      }
-                      inputMode="tel"
-                      placeholder="9XX XXX XXX"
-                    />
-                  </label>
-                ) : (
-                  <label className="flex flex-col gap-1">
-                    <span className="text-sm font-medium">Licencia</span>
-                    <Input
-                      value={estado.conductorLicencia}
-                      onChange={(e) =>
-                        despachar({
-                          tipo: "campo",
-                          campo: "conductorLicencia",
-                          valor: e.target.value.toUpperCase(),
-                        })
-                      }
-                      className="font-mono"
-                    />
-                  </label>
-                )}
-              </div>
+                </div>
               )}
 
               <label className="mt-3 flex flex-col gap-1">

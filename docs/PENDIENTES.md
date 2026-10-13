@@ -7623,3 +7623,31 @@ esa PC, no en el ERP.
 Probado: COT1-000008 en dólares y en soles, CT02-000890 (38 líneas, dos
 hojas) y una de 45 líneas sintética con kits y notas en los tests. Queda
 llevarlo a factura, guía y orden de compra, que usan la misma hoja.
+
+## §BS · 14/10 — El transporte propio de la guía, elegido del maestro
+
+Luis, con capturas: *«si va a pie no debería salirme quién conduce»*, y
+*«falta en los select, al costado, poner el + para registrar un vehículo,
+también conductor; entonces los datos de los input están de más: esos son
+datos maestros, que se puede hacer CRUD ahí mismo»*.
+
+- `guias/ui/transporte-propio.tsx`, el MISMO en «Nueva guía» y «Editar
+  guía»: **Vehículo** y **Quién conduce** (a pie: solo **Quién la lleva**)
+  se ELIGEN del maestro, cada uno con **Nuevo** y **Editar** al lado. Fuera
+  las cajas sueltas de placa, nombre, DNI, licencia y celular.
+- Debajo de la persona elegida, lo que irá en la guía («DNI · Licencia ·
+  Cel.») y lo que le falta, con el aviso de que sin DNI o licencia no se
+  emite. Editar corrige el MAESTRO, no solo esta guía.
+- Al dar de alta a alguien, el DNI va primero con «Traer nombre» (RENIEC por
+  `consultarDniPersona`, misma cuota y misma regla que el RUC de la agencia:
+  atajo, nunca puerta).
+- Volver de «a pie» a vehículo repone la licencia de la persona elegida (el
+  reducer la borra al pasar a pie).
+- Una guía vieja con placa o persona escritas a mano que no están en la
+  lista: se dice, y «Nuevo» sale relleno con esos datos.
+- La guía sigue guardando una COPIA (placa, nombre, DNI, licencia), no el id.
+
+Probado en «Nueva guía» a 1600 y 390: con vehículo, a pie, alta de persona
+y de vehículo y edición de la licencia — filas de prueba borradas después
+(1 conductor y 1 vehículo, como estaba). «Editar guía» no se pudo abrir: no
+hay ninguna guía en borrador; usa el mismo componente.
