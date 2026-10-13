@@ -25,7 +25,15 @@ export function ResumenConstructor({
   onMostrarDisponibilidad,
   hayNoInmediatos,
   guardando,
+  sinAnalizar = 0,
 }: {
+  /**
+   * Líneas cuyo costo todavía es el del CATÁLOGO, no el analizado (14/10).
+   * Willy, 13/10: le salió un 230 % *«antes de que se cargue el precio de
+   * costo»* y un 39 % después. No era un error de cuenta: era el costo del
+   * maestro, viejo o bajo. Ahora se dice.
+   */
+  sinAnalizar?: number;
   totales: TotalesCotizacion;
   bloqueos: Bloqueo[];
   /** Lo que conviene mirar, pero no impide guardar (17/09). */
@@ -92,6 +100,12 @@ export function ResumenConstructor({
                 {totales.margenPct.toFixed(2)}%
               </span>
             </div>
+            {sinAnalizar > 0 ? (
+              <p className="mt-1 text-sm text-[var(--warn)]">
+                Provisional: {sinAnalizar === 1 ? "1 producto usa" : `${sinAnalizar} productos usan`} el
+                costo del catálogo. Analiza su precio de compra para ver el margen real.
+              </p>
+            ) : null}
             <div className="mt-0.5 flex items-baseline justify-between">
               {/* Con su nombre: la cifra iba sola y no decía que era la
                   ganancia (revisión por módulos del 02/10). */}

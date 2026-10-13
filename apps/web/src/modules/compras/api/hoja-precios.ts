@@ -202,7 +202,15 @@ export interface HistorialProducto {
     costoUsd: number | null;
     noTiene: boolean;
   }[];
-  comprado: { fecha: string; numero: string; proveedor: string; cantidad: number; costoUsd: number }[];
+  comprado: {
+    fecha: string;
+    numero: string;
+    proveedor: string;
+    /** Para poder añadirlo con un clic en «Analizar precio de compra» (14/10). */
+    proveedorId: string | null;
+    cantidad: number;
+    costoUsd: number;
+  }[];
   vendido: { fecha: string; documento: string; cliente: string; cantidad: number; precio: number }[];
 }
 
@@ -236,7 +244,7 @@ export async function historialDeProducto(productoId: string): Promise<Resultado
         .limit(30),
       supabase
         .from("compra_items")
-        .select("cantidad, costo_unitario, compras!inner(numero, fecha, moneda, tipo_cambio, estado, proveedores(razon_social))")
+        .select("cantidad, costo_unitario, compras!inner(numero, fecha, moneda, tipo_cambio, estado, proveedor_id, proveedores(razon_social))")
         .eq("producto_id", productoId)
         .neq("compras.estado", "anulada")
         .limit(100),
@@ -250,7 +258,14 @@ export async function historialDeProducto(productoId: string): Promise<Resultado
     const comprado = ((comp.data ?? []) as unknown as {
       cantidad: number;
       costo_unitario: number;
-      compras: { numero: string; fecha: string; moneda: string; tipo_cambio: number | null; proveedores: { razon_social: string } | null };
+      compras: {
+        numero: string;
+        fecha: string;
+        moneda: string;
+        tipo_cambio: number | null;
+        proveedor_id: string | null;
+        proveedores: { razon_social: string } | null;
+      };
     }[])
       .map((c) => {
         const tc = Number(c.compras.tipo_cambio) || 0;
@@ -259,6 +274,7 @@ export async function historialDeProducto(productoId: string): Promise<Resultado
           fecha: c.compras.fecha,
           numero: c.compras.numero,
           proveedor: c.compras.proveedores?.razon_social ?? "—",
+          proveedorId: c.compras.proveedor_id ?? null,
           cantidad: Number(c.cantidad),
           costoUsd: Math.round(usd * 100) / 100,
         };

@@ -23,6 +23,7 @@ import {
 import { FileUp, HandCoins, X } from "lucide-react";
 
 import { registrarCobro, type ResultadoCobro } from "../acciones/cobrar";
+import { tipoCambioDelPago } from "../acciones/tipo-cambio";
 import { cuotasDelComprobante } from "../acciones/gestionar";
 import {
   avisosPago,
@@ -66,6 +67,31 @@ export function Cobrador({
   const [fecha, setFecha] = React.useState(hoy);
   const [referencia, setReferencia] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
+  /*
+    Pagó en soles (14/10). Willy, 13/10: *«generalmente [en dólares]… uno que
+    otro en soles; 99 % son dólares»*. Se registra en dólares —la deuda es en
+    dólares—, convertido al tipo de cambio que se diga, y la nota deja escrito
+    cuántos soles fueron y a cuánto.
+  */
+  const [enSoles, setEnSoles] = React.useState(false);
+  const [soles, setSoles] = React.useState("");
+  const [tc, setTc] = React.useState("");
+  const [trayendoTc, traerTc] = React.useTransition();
+  const [avisoTc, setAvisoTc] = React.useState<string | null>(null);
+  const solesNum = Number(soles.replace(",", "."));
+  const tcNum = Number(tc.replace(",", "."));
+  const conversion =
+    enSoles && solesNum > 0 && tcNum > 0 ? Math.round((solesNum / tcNum) * 100) / 100 : null;
+  const pedirTc = () => {
+    setAvisoTc(null);
+    traerTc(async () => {
+      const t = await tipoCambioDelPago(fecha);
+      if (t.ok) {
+        setTc(String(t.venta));
+        if (solesNum > 0) setMonto(Math.round((solesNum / t.venta) * 100) / 100);
+      } else setAvisoTc(`${t.error} Escríbelo a mano.`);
+    });
+  };
   const [cuotas, setCuotas] = React.useState<CuotaComprobante[]>([]);
   const entradaVoucher = React.useRef<HTMLInputElement>(null);
   const [voucher, setVoucher] = React.useState<string | null>(null);
@@ -112,7 +138,15 @@ export function Cobrador({
         monto,
         medio,
         referencia: referencia.trim() || null,
-        observaciones: observaciones.trim() || null,
+        observaciones:
+          [
+            conversion !== null
+              ? `Pagó S/ ${solesNum.toFixed(2)} al tipo de cambio ${tcNum.toFixed(3)} (= $ ${conversion.toFixed(2)}).`
+              : null,
+            observaciones.trim() || null,
+          ]
+            .filter(Boolean)
+            .join(" ") || null,
       },
     ],
   });
@@ -195,6 +229,63 @@ export function Cobrador({
                   </span>
                 )}
               </label>
+
+              {/* En soles: se escribe lo que pagó y a cuánto, y el importe en
+                  dólares se calcula solo. */}
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={enSoles}
+                    onChange={(e) => {
+                      setEnSoles(e.target.checked);
+                      if (e.target.checked && !tc) pedirTc();
+                    }}
+                  />
+                  El cliente pagó en soles
+                </label>
+                {enSoles ? (
+                  <div className="flex flex-wrap items-end gap-2">
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm">Pagó (S/)</span>
+                      <Input
+                        inputMode="decimal"
+                        value={soles}
+                        onChange={(e) => {
+                          setSoles(e.target.value);
+                          const n = Number(e.target.value.replace(",", "."));
+                          if (n > 0 && tcNum > 0) setMonto(Math.round((n / tcNum) * 100) / 100);
+                        }}
+                        className="w-32 tabular"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm">Tipo de cambio</span>
+                      <Input
+                        inputMode="decimal"
+                        value={tc}
+                        onChange={(e) => {
+                          setTc(e.target.value);
+                          const t = Number(e.target.value.replace(",", "."));
+                          if (solesNum > 0 && t > 0) setMonto(Math.round((solesNum / t) * 100) / 100);
+                        }}
+                        className="w-28 tabular"
+                        placeholder={trayendoTc ? "Consultando…" : "3.450"}
+                      />
+                    </label>
+                    <Button type="button" variant="outline" onClick={pedirTc} disabled={trayendoTc}>
+                      Traer de SUNAT
+                    </Button>
+                    {conversion !== null ? (
+                      <span className="text-sm">
+                        = <strong className="tabular">$ {conversion.toFixed(2)}</strong>
+                      </span>
+                    ) : null}
+                    {avisoTc ? <span className="w-full text-sm text-[var(--warn)]">{avisoTc}</span> : null}
+                  </div>
+                ) : null}
+              </div>
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Forma de pago</span>

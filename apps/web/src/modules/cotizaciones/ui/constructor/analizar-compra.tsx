@@ -132,8 +132,10 @@ export function AnalizarCompra({
     return [...vistos.values()];
   }, [datos]);
   const cotizadosLibres = yaCotizados.filter((c) => !yaEstan.has(c.proveedorId));
+  // Los que ya salen en «Lo que pagaste las últimas veces» no se repiten aquí.
+  const yaPagados = new Set((datos?.historial.comprado ?? []).slice(0, 6).map((c) => c.proveedorId));
   const sugeridos = (datos?.sugeridos ?? []).filter(
-    (s) => !yaEstan.has(s.id) && !yaCotizados.some((c) => c.proveedorId === s.id),
+    (s) => !yaEstan.has(s.id) && !yaCotizados.some((c) => c.proveedorId === s.id) && !yaPagados.has(s.id),
   );
 
   const incompleta = filas.find((f) => costoUsd(f) === null);
@@ -359,6 +361,43 @@ export function AnalizarCompra({
               </Button>
             )}
 
+            {/*
+              Lo que PAGÓ las últimas veces (14/10). Willy, 13/10: *«quiero
+              saber cuánto me costó, por ejemplo, el KR52… los últimos nada
+              más, para no hacerlo tan engorroso… los últimos seis»*. Es lo
+              comprado de verdad (compras no anuladas), no lo cotizado; con un
+              clic entra como proveedor con ese precio.
+            */}
+            {(datos?.historial.comprado.length ?? 0) > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-[var(--fg-muted)]">
+                  Lo que pagaste las últimas veces
+                </span>
+                <ul className="flex flex-col divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">
+                  {(datos?.historial.comprado ?? []).slice(0, 6).map((c, i) => (
+                    <li key={`${c.numero}-${i}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                      <span className="tabular text-[var(--fg-muted)]">{formatearFecha(c.fecha)}</span>
+                      <span className="min-w-0 flex-1 font-medium">{c.proveedor}</span>
+                      <span className="tabular text-[var(--fg-muted)]">{c.cantidad} und</span>
+                      <strong className="tabular">{usd(c.costoUsd)}</strong>
+                      {c.proveedorId && !yaEstan.has(c.proveedorId) ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => anadir({ id: c.proveedorId!, nombre: c.proveedor, precio: c.costoUsd })}
+                        >
+                          <Plus className="size-4" aria-hidden="true" />
+                          Usar
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {/* Lo que ya se sabía: con un clic, con su precio. */}
             {cotizadosLibres.length > 0 || sugeridos.length > 0 ? (
               <div className="flex flex-col gap-1.5">
@@ -446,6 +485,22 @@ export function AnalizarCompra({
                   className="w-40 text-lg font-semibold tabular text-right"
                 />
               </label>
+              {/*
+                El precio de LISTA, siempre a la vista (14/10). Willy, 13/10:
+                *«tiene que aparecer un precio fijo… siempre como precio de
+                lista; uno ve si le puede subir o bajar»*. Lo que se ponga aquí
+                vale solo para esta cotización: el de lista no se toca.
+              */}
+              {linea.precioLista > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setPrecioVenta(String(linea.precioLista))}
+                  aria-label={`Usar el precio de lista, ${usd(linea.precioLista)}`}
+                >
+                  Precio de lista: {usd(linea.precioLista)}
+                </Button>
+              ) : null}
               {resumen.costo !== null ? (
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                   {MARGENES_RAPIDOS.map((m) => (

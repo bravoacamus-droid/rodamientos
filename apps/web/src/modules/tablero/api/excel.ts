@@ -137,9 +137,18 @@ export async function libroDetalle(opciones: {
   cliente: string | null;
   nombreCliente: string | null;
   descripcionRango: string;
+  /**
+   * Los filtros de la lista de cotizaciones (14/10): el botón «Exportar a
+   * Excel» baja lo que se está viendo. Se filtra aquí, sobre lo que trae la
+   * RPC, para no tocar `detalle_cotizaciones`.
+   */
+  estado?: string | null;
+  serie?: string | null;
 }): Promise<{ libro: Buffer; lineas: number }> {
-  const { tipo, desde, hasta, cliente, nombreCliente, descripcionRango } = opciones;
-  const lineas = await leerLineas(tipo, desde, hasta, cliente);
+  const { tipo, desde, hasta, cliente, nombreCliente, descripcionRango, estado, serie } = opciones;
+  const lineas = (await leerLineas(tipo, desde, hasta, cliente)).filter(
+    (l) => (!estado || l.estado === estado) && (!serie || l.numero.startsWith(`${serie}-`)),
+  );
 
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();

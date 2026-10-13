@@ -28,6 +28,9 @@ export async function GET(req: Request) {
     { desde: p("desde"), hasta: p("hasta"), atajo: p("atajo") ?? (p("desde") ? undefined : "12_meses") },
     hoy,
   );
+  // Desde la lista de cotizaciones llegan también el estado y la serie (14/10).
+  const estado = /^[a-z_]{3,20}$/.test(p("estado") ?? "") ? p("estado")! : null;
+  const serie = /^[A-Z0-9]{2,6}$/.test(p("serie") ?? "") ? p("serie")! : null;
   const clienteParam = p("cliente");
   const cliente = clienteParam && UUID.test(clienteParam) ? clienteParam : null;
 
@@ -48,6 +51,8 @@ export async function GET(req: Request) {
       cliente,
       nombreCliente,
       descripcionRango: describirRango(rango, hoy),
+      estado,
+      serie,
     });
 
     const quien = nombreCliente ? ` ${nombreCliente.replace(/[^\p{L}\p{N} .-]/gu, "").slice(0, 40)}` : "";

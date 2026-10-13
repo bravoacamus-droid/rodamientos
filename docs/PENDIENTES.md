@@ -7808,3 +7808,35 @@ ventana de emitir de T001-00000001 a 1600 y 390, sin emitir. **Sin ver en
 pantalla:** el cuadro de retención en un papel real —no hay factura con
 retención— y la factura «con retención» de punta a punta (no hay cotización
 que llegue a S/ 700 y tenga guía emitida).
+
+## §BW · 14/10 — Reunión del 13/10 (II): Excel, análisis, margen provisional y cobro en soles
+
+- **Exportar a Excel desde la lista de cotizaciones.** Willy, filtrando por
+  cliente: *«y ahora ahí no hay la opción para exportarlo a Excel»*. Botón
+  junto a «Nueva cotización» que baja el libro de Reportes (cotizaciones
+  línea por línea) con el cliente, el periodo, el ESTADO y la SERIE de la
+  lista (`libroDetalle` aprendió a filtrar estado y serie). Sin periodo, los
+  últimos 12 meses. Probado: con serie COT1 el libro trae solo COT1.
+- **Analizar precio de compra:**
+  - «Lo que pagaste las últimas veces»: las 6 últimas COMPRAS del producto
+    (fecha · proveedor · cantidad · costo en USD), cada una con «Usar».
+    Willy: *«quiero saber cuánto me costó el KR52… los últimos seis»*. El
+    dato llegaba (`historial.comprado`) y no se pintaba; ahora trae también
+    el proveedor para poder añadirlo. «Precios que ya te dieron» deja de
+    repetir lo que ya sale arriba.
+  - El precio de LISTA siempre a la vista, como botón para volver a él
+    (*«tiene que aparecer un precio fijo… siempre como precio de lista»*).
+    Lo que se ponga ahí sigue valiendo solo para la cotización.
+- **El 230 %.** No era un fallo de cuenta: la base cuadra (margen guardado =
+  margen de las líneas en todas las COT1). Era la pantalla mostrando el
+  margen con el costo del CATÁLOGO mientras la línea no estaba analizada.
+  Ahora el resumen lo dice: «Provisional: 1 producto usa el costo del
+  catálogo. Analiza su precio de compra para ver el margen real».
+- **Cobro en soles** (*«99 % son dólares, uno que otro en soles»*): casilla
+  «El cliente pagó en soles» en «Cobrar»: soles + tipo de cambio (SUNAT del
+  día, editable) → el importe en dólares se calcula solo, y la nota dice
+  «Pagó S/ 1000.00 al tipo de cambio 3.448 (= $ 290.02)». Los pagos
+  parciales ya existían. Probado en F002-00000561 sin registrar.
+
+Queda, no es código: la retención que el cliente se queda (3 %) deja ese
+saldo abierto hasta que se registre con el medio «Retención» —ya existe—.

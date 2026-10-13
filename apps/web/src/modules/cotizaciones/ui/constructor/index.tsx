@@ -725,6 +725,7 @@ export function Constructor({
           }
           hayNoInmediatos={estado.lineas.some((l) => l.disponibilidad !== "inmediata")}
           guardando={guardando}
+          sinAnalizar={sinAnalizar.length}
         />
 
       {/*
