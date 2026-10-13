@@ -15,6 +15,15 @@ import {
   formatearFecha,
 } from "@rodatech/ui";
 import { Eye } from "lucide-react";
+import { tipoCambioParaFacturar } from "../acciones/tipo-cambio";
+import {
+  alcanzaUmbral,
+  conLeyendaSpot,
+  montoRetencion,
+  netoAPagar,
+  RETENCION_PCT,
+  UMBRAL_RETENCION_SOLES,
+} from "../dominio/retencion";
 
 import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
@@ -25,7 +34,7 @@ import { emitirComprobante, type ResultadoEmision } from "../acciones/emitir";
 import {
   bloqueosEmision,
   cuotasDe,
-  tipoSugerido,
+
   totalesDe,
   vencimientoDe,
 } from "../dominio/emision";
@@ -44,6 +53,8 @@ interface DatosEmision {
   ordenCompra: string;
   cantidades: number[];
   opciones: OpcionesEmision;
+  /** Con o sin retención (14/10). Ausente en borradores de antes. */
+  eleccion?: "con" | "sin" | null;
 }
 
 /** Lo que propone la carga de la cotización, para no guardar lo no tocado. */
@@ -141,14 +152,24 @@ export function EmisorComprobante({
   /*
     Lo que se decide antes de gastar el correlativo.
 
-    `mostrarCuenta` arranca en `true` porque es como se ha impreso desde la
-    029: lo que se añade es poder decir «esta no», no cambiar el papel de
-    todas. `enviarSunat` arranca en lo que se pueda hacer — marcarlo por
+    `mostrarCuenta` arranca APAGADA desde el 14/10. Willy, 13/10: *«esas
+    cuentas de banco deben ser un botón que se puede activar o no»* — que
+    salgan cuando se piden, no siempre. `enviarSunat` arranca en lo que se pueda hacer — marcarlo por
     defecto cuando no hay certificado sería ofrecer algo que no va a pasar.
   */
   const [previaAbierta, setPreviaAbierta] = useState(false);
+  /*
+    Con o sin retención, LO PRIMERO (14/10). Willy, 13/10: *«cuando entro a
+    la factura, lo primero que tengo que activar es el botón con retención o
+    sin retención, porque si no lo hago primero no me deja hacer todo lo
+    demás»*. Sin elegir, lo de abajo queda apagado y no se emite.
+  */
+  const [eleccion, setEleccion] = useState<"con" | "sin" | null>(null);
+  // El tipo de cambio venta del día de la factura: la retención va desde S/ 700.
+  const [tc, setTc] = useState<number | null>(null);
+  const [tcAviso, setTcAviso] = useState<string | null>(null);
   const [opciones, setOpciones] = useState<OpcionesEmision>({
-    mostrarCuenta: true,
+    mostrarCuenta: false,
     // Apagada por defecto: la mayoría de clientes NO son agentes de retención,
     // y marcarla de más le haría cobrar un 3 % menos sin que nadie se lo pida.
     retencion: false,
@@ -228,6 +249,7 @@ export function EmisorComprobante({
     ordenCompra,
     cantidades,
     opciones,
+    eleccion,
   };
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "comprobante",
@@ -246,7 +268,8 @@ export function EmisorComprobante({
         d.observaciones.trim() !== "" ||
         distinto(d.cantidades, b.cantidades) ||
         distinto(d.opciones.guias, b.guias) ||
-        !d.opciones.mostrarCuenta ||
+        d.opciones.mostrarCuenta ||
+        d.eleccion != null ||
         d.opciones.retencion ||
         d.opciones.enviarSunat !== puedeEnviar
       );
@@ -265,7 +288,10 @@ export function EmisorComprobante({
   });
 
   function aplicarRecuperado(d: DatosEmision, lineas: number) {
-    setTipo(d.tipo);
+    // Las boletas se quitaron (14/10): un borrador viejo de boleta vuelve
+    // como factura.
+    setTipo(d.tipo === "boleta" ? "factura" : d.tipo);
+    setEleccion(d.eleccion ?? null);
     setCondicion(d.condicion);
     setDias(d.dias);
     setObservaciones(d.observaciones);
@@ -301,7 +327,8 @@ export function EmisorComprobante({
       setCantidades(r.datos.lineas.map((l) => l.cantidad));
       // El tipo y la condición se proponen desde el cliente, que es quien los
       // determina. Se pueden cambiar, pero por defecto aciertan.
-      setTipo(tipoSugerido(r.datos.cliente_tipo_documento));
+      // Solo facturas (14/10). Willy: *«boletas no emito… sáquelo»*.
+      setTipo("factura");
       setCondicion(r.datos.condicion_pago === "credito" ? "credito" : "contado");
       setDias(r.datos.dias_credito ?? 0);
       setOrdenCompra(r.datos.orden_compra_cliente ?? "");
@@ -321,7 +348,7 @@ export function EmisorComprobante({
 
       base.current = {
         cotizacionId,
-        tipo: tipoSugerido(r.datos.cliente_tipo_documento),
+        tipo: "factura",
         condicion: r.datos.condicion_pago === "credito" ? "credito" : "contado",
         dias: r.datos.dias_credito ?? 0,
         ordenCompra: r.datos.orden_compra_cliente ?? "",
@@ -369,6 +396,34 @@ export function EmisorComprobante({
   );
 
   const serie = tipo === "factura" ? serieFactura : serieBoleta;
+
+  const llegaAlUmbral = alcanzaUmbral(totales.total, tc);
+
+  function elegirRetencion(e: "con" | "sin") {
+    setEleccion(e);
+    setOpciones((o) => ({ ...o, retencion: e === "con" }));
+    // La frase de observaciones va sola (Willy: «literalmente debe salir
+    // esa frase»), arriba, y se cambia si se cambia de opinión.
+    setObservaciones((o) => conLeyendaSpot(o, e === "con"));
+  }
+
+  // El tipo de cambio del día de la factura, al cargar y al cambiar la fecha.
+  useEffect(() => {
+    if (!cot) return;
+    let vigente = true;
+    setTcAviso(null);
+    void tipoCambioParaFacturar(fecha).then((r) => {
+      if (!vigente) return;
+      if (r.ok) setTc(r.venta);
+      else {
+        setTc(null);
+        setTcAviso(`Sin tipo de cambio (${r.error}). Revisa tú si llega a S/ ${UMBRAL_RETENCION_SOLES}.`);
+      }
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [cot, fecha]);
   const alCredito = condicion === "credito" && dias > 0;
   const vencimiento = alCredito ? vencimientoDe(fecha, dias) : null;
   const cuotas = alCredito ? cuotasDe(totales.total, dias, fecha) : [];
@@ -405,7 +460,12 @@ export function EmisorComprobante({
     enviar_sunat: opciones.enviarSunat && puedeEnviar,
   });
 
-  const listo = Boolean(cot) && bloqueos.length === 0 && !emitiendo;
+  const listo =
+    Boolean(cot) &&
+    bloqueos.length === 0 &&
+    !emitiendo &&
+    eleccion !== null &&
+    !(eleccion === "con" && llegaAlUmbral === false);
 
   return (
     <form action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
@@ -533,19 +593,14 @@ export function EmisorComprobante({
 
             {cot ? (
               <div className="anim-entrada mt-4 grid gap-3 border-t border-[var(--border-soft)] pt-4 sm:grid-cols-4">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Tipo</span>
-                  <SelectNativo
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value as TipoComprobante)}
-                  >
-                    <option value="factura">Factura</option>
-                    <option value="boleta">Boleta</option>
-                  </SelectNativo>
+                {/* Solo facturas (14/10): Willy no emite boletas. */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Comprobante</span>
+                  <p className="flex h-control-md items-center text-base font-semibold">Factura</p>
                   <span className="text-sm text-[var(--fg-muted)]">
                     Serie <strong className="font-mono font-semibold text-[var(--fg)]">{serie}</strong>
                   </span>
-                </label>
+                </div>
 
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Fecha</span>
@@ -599,6 +654,65 @@ export function EmisorComprobante({
             ) : null}
           </section>
 
+          {/* ------------------------------------------------ Retención */}
+          {cot ? (
+            <section
+              className={`anim-entrada card p-4 ${eleccion ? "" : "border-2 border-brand-600"}`}
+              aria-labelledby="fac-retencion"
+            >
+              <h2 id="fac-retencion" className="text-base font-semibold">
+                ¿El cliente retiene el IGV?
+              </h2>
+              <p className="mb-3 text-sm text-[var(--fg-muted)]">
+                Elígelo primero. Con retención, el cliente te paga el total menos el {RETENCION_PCT} % y te da un
+                comprobante de retención. Aplica desde S/ {UMBRAL_RETENCION_SOLES}.
+              </p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Retención del IGV">
+                <Button
+                  type="button"
+                  variant={eleccion === "sin" ? "primary" : "outline"}
+                  aria-pressed={eleccion === "sin"}
+                  onClick={() => elegirRetencion("sin")}
+                >
+                  Sin retención
+                </Button>
+                <Button
+                  type="button"
+                  variant={eleccion === "con" ? "primary" : "outline"}
+                  aria-pressed={eleccion === "con"}
+                  disabled={llegaAlUmbral === false}
+                  onClick={() => elegirRetencion("con")}
+                >
+                  Con retención ({RETENCION_PCT} %)
+                </Button>
+              </div>
+              <p className="mt-2 text-sm">
+                {tc
+                  ? <>Total $ {totales.total.toFixed(2)} ≈ <strong>S/ {(totales.total * tc).toFixed(2)}</strong> al tipo de cambio venta de SUNAT ({tc.toFixed(3)}).</>
+                  : tcAviso ?? "Consultando el tipo de cambio…"}
+                {llegaAlUmbral === false ? (
+                  <span className="block text-[var(--fg-muted)]">
+                    No llega a S/ {UMBRAL_RETENCION_SOLES}: esta factura no se retiene.
+                  </span>
+                ) : null}
+              </p>
+              {eleccion === "con" ? (
+                <p className="mt-2 rounded-md bg-[var(--surface-2)] p-3 text-sm">
+                  Retención: <strong>$ {montoRetencion(totales.total).toFixed(2)}</strong> · Te pagan:{" "}
+                  <strong>$ {netoAPagar(totales.total).toFixed(2)}</strong>
+                  {llegaAlUmbral === false ? (
+                    <span className="block text-[var(--danger)]">
+                      Con estas cantidades ya no llega a S/ {UMBRAL_RETENCION_SOLES}: elige «Sin retención».
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {/* Lo de abajo, apagado hasta elegir (Willy: «si no lo hago
+              primero, no me deja hacer todo lo demás»). */}
+          <div inert={cot && !eleccion ? true : undefined} className={`flex flex-col gap-5 ${cot && !eleccion ? "opacity-40" : ""}`}>
           {/* --------------------------------------------------- Líneas */}
           {cot ? (
             <section className="anim-entrada card @container p-4">
@@ -771,6 +885,7 @@ export function EmisorComprobante({
               </label>
             </section>
           ) : null}
+          </div>
         </div>
 
         {/* -------------------------------------------------- Resumen */}

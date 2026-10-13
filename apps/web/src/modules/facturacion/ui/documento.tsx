@@ -2,7 +2,7 @@ import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-pa
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
-import { datosDeComprobante } from "./papel";
+import { cuadroRetencion, datosDeComprobante } from "./papel";
 
 /**
  * La factura, la boleta y las notas, en papel.
@@ -108,12 +108,6 @@ export function DocumentoComprobante({
               resto en la cuenta de detracciones.
             </p>
           ) : null}
-          {c.retencion_aplica ? (
-            <p className="mb-1">
-              <strong>Retención:</strong> $ {dinero(c.retencion_monto)}. Sujeto al
-              régimen de retenciones del IGV.
-            </p>
-          ) : null}
           {c.observaciones ? (
             <p className="mb-1 whitespace-pre-line">{c.observaciones}</p>
           ) : null}
@@ -158,6 +152,37 @@ export function DocumentoComprobante({
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {/*
+            El cuadro de la retención, encima de las cuentas (14/10). Willy,
+            13/10, con su factura delante: *«debe ser indicado el monto de
+            retención y en un cuadrito aparte la cuota, la fecha de pago y el
+            monto neto a pagar… y debajo las cuentas de banco»*.
+          */}
+          {c.retencion_aplica ? (
+            <div className="mb-2 break-inside-avoid">
+              <table className="border-collapse border border-[#999]">
+                <thead>
+                  <tr className="uppercase">
+                    {cuadroRetencion(c).cabecera.map((t) => (
+                      <th key={t} className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">
+                        {t}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="whitespace-nowrap">
+                    {cuadroRetencion(c).fila.map((v, i) => (
+                      <td key={i} className="px-3 py-0.5 text-center tabular">
+                        {v}
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>

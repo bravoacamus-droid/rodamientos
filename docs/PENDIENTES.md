@@ -7761,3 +7761,50 @@ Probado: T001-00000001 y F002-00000561 (previa, PDF bajado y abierto,
 impresión emulada → solo el papel), a 1600 y 390. **Sin ver en pantalla:**
 el botón de arriba del emisor —solo sale sin bloqueos, y hoy ninguna
 cotización se puede facturar (no hay guía emitida)—.
+
+## §BV · 14/10 — Reunión del 13/10 (I): retención, boletas, cuentas y emitir guía
+
+Tres reuniones con Willy el 13/10 (cotizaciones, guía + factura, retención).
+Lo ya resuelto antes de ellas: márgenes a dos decimales (§BQ), PDF directo
+(§BR, §BU), una O/C por guía (§BT.3).
+
+**Retención del IGV en la factura.** Willy: *«lo primero que tengo que
+activar es el botón con retención o sin retención, porque si no lo hago
+primero no me deja hacer todo lo demás»*; 3 %, *«por ley para montos
+mayores o iguales a 700 soles, equivalente en dólares»*; y en observaciones,
+*«así tal cual»*, «OPERACIÓN SUJETA SPOT, RETENCIÓN 3%» u «OPERACIÓN NO
+SUJETA SPOT».
+- Tarjeta «¿El cliente retiene el IGV?» arriba del emisor: Sin / Con
+  retención. Hasta elegir, lo de abajo queda `inert` y no se emite. Enseña el
+  total en soles al tipo de cambio venta de SUNAT del día de la factura
+  (`tipoCambioParaFacturar`); por debajo de S/ 700, «Con retención» no se
+  puede elegir. Sin tipo de cambio no se impide nada: se avisa.
+- La frase va sola al primer renglón de observaciones y se cambia, no se
+  duplica (`conLeyendaSpot`, con tests).
+- En el papel y el PDF, el cuadro que pidió con su factura delante:
+  Retención IGV (3 %) · Cuotas · Fecha de pago · Monto neto a pagar, encima
+  de las cuentas (`cuadroRetencion`). La casilla vieja de abajo se quitó.
+- La base ya calculaba la retención (`emitir_comprobante`); no hizo falta
+  migración. El umbral lo vigila la pantalla, no la base.
+
+**Boletas fuera** (*«boletas no emito… sáquelo»*): el emisor solo hace
+facturas; el filtro de la lista y las series ya no las ofrecen. Un borrador
+viejo de boleta vuelve como factura. El tipo sigue en la base.
+
+**Cuentas bancarias apagadas por defecto** (*«deben ser un botón que se
+puede activar o no»*).
+
+**Emitir guía.** Willy: *«la guía necesita indicar la cotización y la orden
+de compra»* → sin O/C no se emite (`faltaParaEmitir`, la usan la ventana y la
+Server Action; y `bloqueosEmision` al prepararla). Y de paso un fallo de
+verdad: la ventana de emitir volvía a pedir el transporte en cajas sueltas y
+exigía placa SIEMPRE — **una guía a pie no se podía emitir**. Ahora confirma
+lo que la guía ya dice (O/C, transporte, peso) y si falta algo manda a
+«Editar».
+
+Probado: emisor con COT1-000009 ($ 41.81 ≈ S/ 144.16: «Con retención»
+bloqueado y explicado; «Sin retención» pone la frase y enciende el resto);
+ventana de emitir de T001-00000001 a 1600 y 390, sin emitir. **Sin ver en
+pantalla:** el cuadro de retención en un papel real —no hay factura con
+retención— y la factura «con retención» de punta a punta (no hay cotización
+que llegue a S/ 700 y tenga guía emitida).

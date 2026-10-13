@@ -2,6 +2,7 @@ import { siglaBanco, type CuentaParaPagar } from "@/componentes/cuentas-para-pag
 import type { EmisorHoja } from "@/componentes/hoja-documento";
 import type { BloquePiePdf, HojaPdf } from "@/lib/pdf-hoja";
 
+import { RETENCION_PCT } from "../dominio/retencion";
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
 
 /**
@@ -69,6 +70,23 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
   ];
 }
 
+/**
+ * El cuadro de la retención: cuánto se retiene, en cuántas cuotas, cuándo se
+ * paga y cuánto llega de verdad (14/10). Lo usan el papel y el PDF.
+ */
+export function cuadroRetencion(c: ComprobanteDetalle): { cabecera: string[]; fila: string[] } {
+  const neto = Math.round((c.total - c.retencion_monto) * 100) / 100;
+  return {
+    cabecera: [`Retención IGV (${RETENCION_PCT}%)`, "Cuotas", "Fecha de pago", "Monto neto a pagar"],
+    fila: [
+      `$ ${dinero(c.retencion_monto)}`,
+      String(Math.max(c.cuotas.length, 1)),
+      fecha(c.fecha_vencimiento ?? c.fecha_emision),
+      `$ ${dinero(neto)}`,
+    ],
+  };
+}
+
 const MONEDA_CUENTA: Record<string, string> = { USD: "DÓLARES", PEN: "SOLES" };
 
 export function hojaDeComprobante(
@@ -85,15 +103,6 @@ export function hojaDeComprobante(
         {
           texto: `$ ${dinero(c.detraccion_monto)}${c.detraccion_codigo ? ` (código ${c.detraccion_codigo})` : ""}. El cliente paga $ ${dinero(c.total - c.detraccion_monto)} y deposita el resto en la cuenta de detracciones.`,
         },
-      ],
-    });
-  }
-  if (c.retencion_aplica) {
-    pie.push({
-      tipo: "parrafo",
-      trozos: [
-        { texto: "Retención: ", negrita: true },
-        { texto: `$ ${dinero(c.retencion_monto)}. Sujeto al régimen de retenciones del IGV.` },
       ],
     });
   }
@@ -115,6 +124,10 @@ export function hojaDeComprobante(
       filas: c.cuotas.map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `$ ${dinero(q.monto)}`]),
       derecha: [2],
     });
+  }
+  if (c.retencion_aplica) {
+    const cuadro = cuadroRetencion(c);
+    pie.push({ tipo: "tabla", titulo: "", cabecera: cuadro.cabecera, filas: [cuadro.fila] });
   }
   if (c.mostrar_cuenta && cuentas.length > 0) {
     const orden = (m: string) => ({ USD: 0, PEN: 1 } as Record<string, number>)[m.toUpperCase()] ?? 9;

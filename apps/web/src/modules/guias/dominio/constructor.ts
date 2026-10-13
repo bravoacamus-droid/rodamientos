@@ -314,7 +314,8 @@ export interface Bloqueo {
     | "destino"
     | "peso"
     | "fecha"
-    | "transporte";
+    | "transporte"
+    | "ordenCompra";
   mensaje: string;
 }
 
@@ -375,6 +376,14 @@ export function bloqueosBorrador(estado: EstadoGuiaEnCurso): Bloqueo[] {
  */
 export function bloqueosEmision(estado: EstadoGuiaEnCurso): Bloqueo[] {
   const lista = bloqueosBorrador(estado);
+
+  // La O/C del cliente (Willy, 13/10): sin ella no se emite (ver `faltaParaEmitir`).
+  if (!estado.ordenCompra.trim()) {
+    lista.push({
+      campo: "ordenCompra",
+      mensaje: "Falta la orden de compra del cliente: sin ella la guía no se emite.",
+    });
+  }
 
   if (estado.modalidad === "01") {
     if (!estado.transportistaDocumento.trim()) {

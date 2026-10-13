@@ -48,7 +48,10 @@ export function FiltrosFacturacionBarra({
         etiqueta="Tipo"
         todos="Tipo: todos"
         valor={valor("tipo")}
-        opciones={Object.entries(ETIQUETA_TIPO).map(([v, t]) => ({ valor: v, etiqueta: t }))}
+        // Sin boletas: Willy no las emite (14/10).
+        opciones={Object.entries(ETIQUETA_TIPO)
+          .filter(([v]) => v !== "boleta")
+          .map(([v, t]) => ({ valor: v, etiqueta: t }))}
         onCambiar={(v) => aplicar("tipo", v)}
       />
       <FiltroDesplegable

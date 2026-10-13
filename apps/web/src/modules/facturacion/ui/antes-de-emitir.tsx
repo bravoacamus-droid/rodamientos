@@ -191,13 +191,6 @@ export function AntesDeEmitir({
   const puedeRetener = tipo === "factura";
   const retiene = puedeRetener && opciones.retencion;
 
-  /** Como en el documento: la moneda la pone el rótulo, no el número. */
-  const dinero = (n: number) =>
-    `USD ${n.toLocaleString("es-PE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-
   /*
     El 3 % está fijo en la pantalla y sale de la configuración al emitir.
 
@@ -401,35 +394,9 @@ export function AntesDeEmitir({
         </div>
       ) : null}
 
-      {/*
-        La retención, primero: es la única de las tres que cambia el DINERO.
-
-        Willy, 16/09 (45:03): *«si hay detracción… digo la retención. Para mi
-        caso es retención porque yo vendo productos»*.
-
-        Las otras dos casillas deciden cómo se imprime y si se manda; esta
-        decide cuánto va a cobrar. Y no se puede corregir después: la
-        retención va en el comprobante, y un comprobante emitido solo se
-        arregla con una nota de crédito.
-
-        Solo en facturas. En boletas ni se enseña — ver `puedeRetener`.
-      */}
-      {puedeRetener ? (
-        <Casilla
-          marcada={opciones.retencion}
-          onCambiar={(v) => onCambiar({ ...opciones, retencion: v })}
-          titulo={`Sujeta a retención del IGV (${retencionPct} %)`}
-          detalle={
-            opciones.retencion
-              ? `El cliente retiene ${dinero(
-                  Math.round(totales.total * retencionPct) / 100,
-                )} y te paga ${dinero(
-                  totales.total - Math.round(totales.total * retencionPct) / 100,
-                )}. Sale impreso en el documento.`
-              : "Márcalo si el cliente es agente de retención designado por SUNAT. Te pagará el total menos el 3 %."
-          }
-        />
-      ) : null}
+      {/* La retención ya no se marca aquí: se elige ARRIBA, lo primero
+          (14/10, Willy: «lo primero que tengo que activar es el botón con
+          retención o sin retención»). La previa de abajo la respeta. */}
 
       <Casilla
         marcada={opciones.mostrarCuenta}

@@ -61,7 +61,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     perfilActual(),
     estadoConfiguracion(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
-    seriesDe(["factura", "boleta", "nota_credito", "nota_debito"]),
+    seriesDe(["factura", "nota_credito", "nota_debito"]),
   ]);
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -74,7 +74,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Facturación</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Facturas y boletas electrónicas. Cierran el ciclo comercial.
+            Facturas y notas electrónicas. Cierran el ciclo comercial.
           </p>
         </div>
 
