@@ -469,6 +469,21 @@ export function ConstructorGuia({
                   </SelectNativo>
                 </label>
 
+                {/* La orden de compra del cliente (14/10). Willy, 42:27:
+                    *«una vez que me confirman, me envían una orden de
+                    compra, yo emito mi guía»* — es el papel con el que sale. */}
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-medium">Orden de compra del cliente</span>
+                  <Input
+                    value={estado.ordenCompra}
+                    onChange={(e) =>
+                      despachar({ tipo: "campo", campo: "ordenCompra", valor: e.target.value })
+                    }
+                    placeholder="OC-4471 (si la mandó)"
+                    maxLength={100}
+                  />
+                </label>
+
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Fecha de traslado</span>
                   <Input

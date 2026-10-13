@@ -51,6 +51,12 @@ export interface EstadoGuiaEnCurso {
   fechaEmision: string;
   fechaTraslado: string;
   motivoCodigo: string;
+  /**
+   * La orden de compra del cliente (14/10). Sale de la cotización si ya la
+   * tenía, y se escribe aquí si llegó después. Luis: *«¿por qué no puedo
+   * poner las órdenes de compra?»*.
+   */
+  ordenCompra: string;
   direccionLlegada: string;
   ubigeoLlegada: string;
   modalidad: ModalidadTraslado;
@@ -91,6 +97,7 @@ export type CampoTexto =
   | "fechaEmision"
   | "fechaTraslado"
   | "motivoCodigo"
+  | "ordenCompra"
   | "direccionLlegada"
   | "ubigeoLlegada"
   | "transportistaDocumento"
@@ -122,6 +129,7 @@ export function estadoInicial(hoy: string): EstadoGuiaEnCurso {
     fechaTraslado: hoy,
     // 01 = Venta. Es lo que hace Willy el 99 % de las veces.
     motivoCodigo: "01",
+    ordenCompra: "",
     direccionLlegada: "",
     ubigeoLlegada: "",
     // 02 = transporte privado: reparte él con su propio vehículo.
@@ -256,6 +264,7 @@ export function reducir(
         // oficina fiscal.
         direccionLlegada: c.cliente_direccion ?? "",
         ubigeoLlegada: c.cliente_ubigeo ?? "",
+        ordenCompra: c.orden_compra_cliente ?? "",
         lineas: pendientes.map((l) => ({
           key: l.cotizacion_item_id,
           cotizacionItemId: l.cotizacion_item_id,
@@ -471,6 +480,7 @@ export function aPayload(estado: EstadoGuiaEnCurso) {
     fecha_emision: estado.fechaEmision,
     fecha_traslado: estado.fechaTraslado,
     motivo_codigo: estado.motivoCodigo,
+    orden_compra_cliente: estado.ordenCompra.trim() || null,
     direccion_llegada: estado.direccionLlegada.trim() || null,
     ubigeo_llegada: estado.ubigeoLlegada.trim() || null,
     // Se manda SIEMPRE el peso efectivo. Dejar que la función lo calcule

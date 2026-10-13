@@ -5052,6 +5052,10 @@ export type Database = {
         Args: { p_id: string; p_lineas: Json }
         Returns: Json
       }
+      corregir_lineas_guia: {
+        Args: { p_guia: string; p_items: Json }
+        Returns: Json
+      }
       cotizacion_por_token: { Args: { p_token: string }; Returns: Json }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_consulta_precio: { Args: { p_datos: Json }; Returns: Json }
@@ -5065,6 +5069,13 @@ export type Database = {
       crear_tipo: {
         Args: { p_nombre: string; p_subfamilia: string }
         Returns: Json
+      }
+      despacho_por_item: {
+        Args: { p_cotizacion: string; p_excluir_guia?: string }
+        Returns: {
+          cotizacion_item_id: string
+          despachado: number
+        }[]
       }
       detalle_cotizaciones: {
         Args: { p_cliente?: string; p_desde: string; p_hasta: string }

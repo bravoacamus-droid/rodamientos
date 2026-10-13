@@ -4,7 +4,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { transportePropioActivo } from "@/modules/transporte";
 
-import { detalleGuia } from "../api/consultas";
+import { detalleGuia, lineasParaCorregir, motivosTraslado } from "../api/consultas";
 import { EditorGuia } from "./editor-guia";
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
@@ -62,11 +62,20 @@ export default async function PaginaEditarGuia({
   // dejar entrar.
   if (g.estado !== "borrador") redirect(`/guias/${g.id}`);
 
+  // Los productos con su tope y los motivos (14/10, 115): un borrador se
+  // corrige entero.
+  const [lineas, motivos] = await Promise.all([
+    g.cotizacion_id ? lineasParaCorregir(g.id, g.cotizacion_id) : Promise.resolve(null),
+    motivosTraslado(),
+  ]);
+
   return (
     <EditorGuia
       guia={g}
       vehiculos={propio.ok ? propio.datos.vehiculos : []}
       conductores={propio.ok ? propio.datos.conductores : []}
+      lineas={lineas?.ok ? lineas.datos : []}
+      motivos={motivos.ok ? motivos.datos : []}
     />
   );
 }

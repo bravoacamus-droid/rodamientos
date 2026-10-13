@@ -8,7 +8,8 @@ import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { actualizarGuia } from "../acciones/actualizar";
 import { TransportePropio } from "./transporte-propio";
-import type { GuiaDetalle } from "../dominio/tipos";
+import type { GuiaDetalle, MotivoTraslado } from "../dominio/tipos";
+import type { LineaCorregible } from "../api/consultas";
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado } from "../dominio/tipos";
 import { Volver } from "@/componentes/volver";
 import { useBorrador } from "@/componentes/borrador";
@@ -22,23 +23,28 @@ import { useBorrador } from "@/componentes/borrador";
  * ---------------------------------------------------------------------------
  * Qué se toca y qué no
  * ---------------------------------------------------------------------------
- * La cabecera: el inicio de traslado, a dónde llega, el peso, los bultos, el
- * transporte y las observaciones. Es lo que cambia entre que se prepara la
- * guía y el día que sale el camión.
+ * Todo lo que no es el número ni el cliente (14/10). Luis: *«¿por qué en
+ * guía no puedo editar todos los datos, y por qué no puedo poner las órdenes
+ * de compra?»*.
  *
- * Las LÍNEAS no. Cambiar qué sale y cuánto obliga a revalidar contra lo que ya
- * despacharon otras guías de la misma cotización, y equivocarse ahí deja el
- * kardex diciendo que salió algo que nunca se vendió. Un borrador con las
- * cantidades mal se anula y se rehace: todavía no existe para nadie.
- *
- * Se dice en pantalla en vez de dejar los campos ahí sin funcionar.
+ * Hasta ese día las LÍNEAS no se tocaban: un borrador con las cantidades mal
+ * se anulaba y se rehacía, y la anulada se quedaba con su número. No había
+ * motivo de fondo —el stock no se mueve hasta EMITIR—, solo faltaba revalidar
+ * contra lo que llevan las otras guías de la misma cotización. Eso lo hace
+ * ahora la base (`corregir_lineas_guia`, 115), y la pantalla enseña el tope
+ * de cada línea para que no haya que descubrirlo al guardar.
  */
 export function EditorGuia({
   guia,
   vehiculos = [],
   conductores = [],
+  lineas = [],
+  motivos = [],
 }: {
   guia: GuiaDetalle;
+  /** Las líneas de la cotización con su tope (115). Vacía si no viene de una. */
+  lineas?: LineaCorregible[];
+  motivos?: MotivoTraslado[];
   vehiculos?: VehiculoMaestro[];
   conductores?: ConductorMaestro[];
 }) {
@@ -61,6 +67,17 @@ export function EditorGuia({
   const [licencia, setLicencia] = React.useState(guia.conductor_licencia ?? "");
   const [celular, setCelular] = React.useState(guia.conductor_telefono ?? "");
   const [observaciones, setObservaciones] = React.useState(guia.observaciones ?? "");
+  const [ordenCompra, setOrdenCompra] = React.useState(guia.orden_compra_cliente ?? "");
+  const [motivo, setMotivo] = React.useState(guia.motivo_codigo);
+  // Lo que sale en esta guía de cada línea, como texto mientras se escribe.
+  const [cantidades, setCantidades] = React.useState<Record<string, string>>(() =>
+    Object.fromEntries(lineas.map((l) => [l.cotizacion_item_id, l.enEsta > 0 ? String(l.enEsta) : ""])),
+  );
+  const conLineas = lineas.length > 0;
+  const cantidadDe = (id: string) => {
+    const n = Number((cantidades[id] ?? "").replace(",", "."));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
 
   const [error, setError] = React.useState<string | null>(null);
   const [guardando, empezar] = React.useTransition();
@@ -81,6 +98,7 @@ export function EditorGuia({
     datos: {
       fechaTraslado, direccion, ubigeo, peso, bultos, modalidad, aPie,
       ruc, razon, placa, conductor, dni, licencia, celular, observaciones,
+      ordenCompra, motivo, cantidades,
     },
     valeLaPena: () => true,
     recuperar: (d) => {
@@ -99,6 +117,9 @@ export function EditorGuia({
       setLicencia(d.licencia);
       setCelular(d.celular);
       setObservaciones(d.observaciones);
+      setOrdenCompra(d.ordenCompra ?? "");
+      if (d.motivo) setMotivo(d.motivo);
+      if (d.cantidades) setCantidades(d.cantidades);
     },
   });
 
@@ -113,6 +134,22 @@ export function EditorGuia({
     if (!Number.isFinite(bultosNum) || bultosNum < 1) {
       setError("Los bultos son al menos uno.");
       return;
+    }
+    const items = lineas
+      .map((l) => ({ l, cantidad: cantidadDe(l.cotizacion_item_id) }))
+      .filter((x) => x.cantidad > 0);
+    if (conLineas) {
+      if (items.length === 0) {
+        setError("La guía tiene que llevar al menos un producto.");
+        return;
+      }
+      const pasada = items.find((x) => x.cantidad > x.l.confirmado - x.l.otras);
+      if (pasada) {
+        setError(
+          `${pasada.l.codigo}: salen ${pasada.cantidad} y solo quedan ${pasada.l.confirmado - pasada.l.otras} por despachar.`,
+        );
+        return;
+      }
     }
 
     empezar(async () => {
@@ -133,6 +170,11 @@ export function EditorGuia({
         conductor_licencia: licencia,
         conductor_telefono: celular,
         observaciones,
+        orden_compra_cliente: ordenCompra,
+        motivo_codigo: motivo,
+        ...(conLineas
+          ? { items: items.map((x) => ({ cotizacion_item_id: x.l.cotizacion_item_id, cantidad: x.cantidad })) }
+          : {}),
       });
       if (!r.ok) {
         setError(r.error);
@@ -184,8 +226,88 @@ export function EditorGuia({
         </p>
       ) : null}
 
+      {conLineas ? (
+        <section className="card p-4">
+          <h2 className="text-base font-semibold">Productos</h2>
+          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+            Lo que sale en esta guía. Déjalo vacío para que no vaya. Cada uno tiene su tope: lo que el cliente
+            confirmó menos lo que ya llevan otras guías.
+          </p>
+          <div className="scroll-x">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border)] text-left text-[var(--fg-muted)]">
+                  <th className="py-2 pr-3 font-medium">Código</th>
+                  <th className="py-2 pr-3 font-medium">Descripción</th>
+                  <th className="py-2 pr-3 text-right font-medium">Confirmó</th>
+                  <th className="py-2 pr-3 text-right font-medium">En otras guías</th>
+                  <th className="py-2 text-right font-medium">Sale en esta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lineas.map((l) => {
+                  const tope = Math.max(l.confirmado - l.otras, 0);
+                  const pasada = cantidadDe(l.cotizacion_item_id) > tope;
+                  return (
+                    <tr key={l.cotizacion_item_id} className="border-b border-[var(--border-soft)]">
+                      <td className="py-2 pr-3 font-mono font-medium">{l.codigo}</td>
+                      <td className="py-2 pr-3">{l.descripcion}</td>
+                      <td className="py-2 pr-3 text-right tabular">{l.confirmado}</td>
+                      <td className="py-2 pr-3 text-right tabular">{l.otras > 0 ? l.otras : "—"}</td>
+                      <td className="py-2 text-right">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <Input
+                            aria-label={`Cuántos ${l.codigo} salen en esta guía`}
+                            numerico
+                            inputMode="decimal"
+                            value={cantidades[l.cotizacion_item_id] ?? ""}
+                            onChange={(e) =>
+                              setCantidades((p) => ({ ...p, [l.cotizacion_item_id]: e.target.value }))
+                            }
+                            placeholder="0"
+                            className="w-24"
+                            aria-invalid={pasada || undefined}
+                          />
+                          <span className={`text-sm ${pasada ? "text-[var(--danger)]" : "text-[var(--fg-subtle)]"}`}>
+                            máx. {tope}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
       <section className="card grid gap-3 p-4 sm:grid-cols-2">
         <h2 className="text-base font-semibold sm:col-span-2">El traslado</h2>
+
+        {motivos.length > 0 ? (
+          <Campo id="g-motivo" label="Motivo">
+            <SelectNativo id="g-motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+              {motivos.map((m) => (
+                <option key={m.codigo} value={m.codigo}>
+                  {m.descripcion}
+                </option>
+              ))}
+            </SelectNativo>
+          </Campo>
+        ) : null}
+
+        {/* La orden de compra del cliente (14/10): llega muchas veces
+            después de preparar la guía, y es el papel con el que sale. */}
+        <Campo id="g-oc" label="Orden de compra del cliente">
+          <Input
+            id="g-oc"
+            value={ordenCompra}
+            onChange={(e) => setOrdenCompra(e.target.value)}
+            placeholder="OC-4471 (si la mandó)"
+            maxLength={100}
+          />
+        </Campo>
 
         <Campo
           id="g-fecha"
@@ -363,18 +485,6 @@ export function EditorGuia({
         </Campo>
       </section>
 
-      {/*
-        Dicho en voz alta en vez de dejar los campos ahí sin funcionar.
-
-        Cambiar qué sale y cuánto obliga a revalidar contra lo que ya
-        despacharon otras guías de la misma cotización, y equivocarse deja el
-        kardex diciendo que salió algo que nunca se vendió.
-      */}
-      <p className="rounded-md bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
-        Los productos y las cantidades no se cambian desde aquí. Si están mal,
-        anula el borrador y prepara la guía otra vez: todavía no existe para
-        nadie.
-      </p>
     </div>
   );
 }

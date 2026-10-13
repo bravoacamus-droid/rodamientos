@@ -273,7 +273,7 @@ hay que replantear es la regla, no volver a poner la casilla.
 |---|---|---|
 | Cotización | todo | borrador, enviada **o aprobada sin guía ni factura** (070) |
 | Pedido confirmado | solo cantidades, con tres topes | mientras no se facture |
-| Guía | la cabecera | mientras sea borrador |
+| Guía | todo menos el número y el cliente: productos y cantidades con su tope, O/C, motivo, transporte (115) | mientras sea borrador |
 | Recepción | nada; se le cuelgan papeles | siempre |
 
 La regla es la misma en las cuatro: **hasta donde el documento todavía no es un

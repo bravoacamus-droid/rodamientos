@@ -505,7 +505,7 @@ export async function cotizacionParaFacturar(
            cantidad, cantidad_aprobada, cantidad_atendida,
            valor_unitario, descuento_pct, importe
          ),
-         guias_remision(id, numero, fecha_emision, estado)`,
+         guias_remision(id, numero, fecha_emision, estado, orden_compra_cliente)`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -570,7 +570,12 @@ export async function cotizacionParaFacturar(
         cliente: c.clientes?.razon_social ?? "—",
         cliente_documento: c.clientes?.numero_documento ?? null,
         cliente_tipo_documento: c.clientes?.tipo_documento ?? null,
-        orden_compra_cliente: (c.orden_compra_cliente as string | null) ?? null,
+        /*
+          La de la GUÍA primero (14/10): la O/C llega cuando el cliente
+          confirma, y desde ese día se escribe en la guía —que va antes que
+          la factura—. Sin esto había que teclearla dos veces.
+        */
+        orden_compra_cliente: ocDeLasGuias(c.guias_remision) ?? (c.orden_compra_cliente as string | null) ?? null,
         condicion_pago: c.clientes?.condicion_pago ?? "contado",
         dias_credito: Number(c.clientes?.dias_credito ?? 0),
         total: Number(c.total ?? 0),
@@ -829,4 +834,17 @@ export async function indicadoresFacturacion(filtros: {
   } catch (e) {
     return fallo(e);
   }
+}
+
+/** La orden de compra de la guía más reciente que la lleve (no anulada). */
+function ocDeLasGuias(guias: unknown): string | null {
+  const lista = (Array.isArray(guias) ? guias : []) as Array<{
+    estado: string;
+    fecha_emision: string | null;
+    orden_compra_cliente: string | null;
+  }>;
+  const con = lista
+    .filter((g) => g.estado !== "anulada" && g.orden_compra_cliente?.trim())
+    .sort((a, b) => String(b.fecha_emision ?? "").localeCompare(String(a.fecha_emision ?? "")));
+  return con[0]?.orden_compra_cliente?.trim() ?? null;
 }

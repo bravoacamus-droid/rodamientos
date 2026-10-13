@@ -469,3 +469,18 @@ describe("va a pie", () => {
     expect(estado.aPie).toBe(false);
   });
 });
+
+describe("la orden de compra del cliente (14/10)", () => {
+  it("sale de la cotización y viaja en el payload", () => {
+    const estado = conCotizacion();
+    expect(estado.ordenCompra).toBe("OC-4471");
+    expect(aPayload(estado).orden_compra_cliente).toBe("OC-4471");
+  });
+
+  it("si llegó después se escribe en la guía, y vacía no manda nada", () => {
+    const conOtra = reducir(conCotizacion(), { tipo: "campo", campo: "ordenCompra", valor: " OC-9001 " });
+    expect(aPayload(conOtra).orden_compra_cliente).toBe("OC-9001");
+    const vacia = reducir(conCotizacion(), { tipo: "campo", campo: "ordenCompra", valor: "  " });
+    expect(aPayload(vacia).orden_compra_cliente).toBeNull();
+  });
+});

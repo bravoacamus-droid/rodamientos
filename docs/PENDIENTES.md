@@ -7651,3 +7651,40 @@ Probado en «Nueva guía» a 1600 y 390: con vehículo, a pie, alta de persona
 y de vehículo y edición de la licencia — filas de prueba borradas después
 (1 conductor y 1 vehículo, como estaba). «Editar guía» no se pudo abrir: no
 hay ninguna guía en borrador; usa el mismo componente.
+
+## §BT · 14/10 — La guía en borrador se corrige entera, con su orden de compra
+
+Luis: *«¿por qué en guía no puedo editar todos los datos, y por qué no puedo
+poner las órdenes de compra?»*.
+
+**La O/C:** la guía tenía la columna, pero ni «Nueva guía» ni «Editar guía»
+la pedían; solo se copiaba de la cotización si ya estaba puesta. Y la O/C
+llega cuando el cliente confirma (Willy, 42:27), casi siempre después.
+- Casilla «Orden de compra del cliente» en las dos pantallas (rellena con la
+  de la cotización si la hay).
+- La factura ahora la toma de la GUÍA más reciente que la lleve, y si no, de
+  la cotización: antes había que teclearla dos veces.
+
+**Editar:** un borrador solo dejaba tocar la cabecera; los productos se
+anulaban y rehacían, quemando el número. No había motivo de fondo: el stock
+no se mueve hasta EMITIR.
+- Migración **115**: `despacho_por_item(cotización, excluir_guía)` —lo que ya
+  va en guías no anuladas, contando los KITS en kits (la 086 los guarda como
+  piezas, y la suma por línea contaba 2 kits de 3 piezas como 6; la guía
+  nueva ya la usa)— y `corregir_lineas_guia(guía, items)`, que valida cada
+  cantidad contra lo confirmado menos lo de las OTRAS guías y vuelve a grabar
+  las líneas. Centinela que ejecuta y deshace (dos guías, corregir, pasarse,
+  emitida intocable); correlativos intactos.
+- «Editar guía»: tabla de **Productos** (confirmó · en otras guías · sale en
+  esta, con «máx.»), **Motivo** y **O/C**. Lo que el cliente no quiso no se
+  ofrece.
+
+Probado sobre la T001-00000001 (borrador de COT1-000009): intentar 4 de 3 lo
+rechaza con el motivo, la O/C se guarda y sale en la ficha, una cantidad baja
+de 3 a 2. Después se restauró la guía byte a byte (líneas con sus ids y
+`actualizado_en`). La casilla de «Nueva guía» no se vio en pantalla —no hay
+cotización con algo pendiente— y la cubren dos tests.
+
+Queda: `cotizacionesDespachables` sigue sumando piezas de kit para decidir qué
+cotizaciones ofrecer (una con un kit a medio despachar podría no salir en la
+lista). Raro hoy; se arregla igual que la guía nueva.

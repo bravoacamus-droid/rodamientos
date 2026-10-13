@@ -62,6 +62,20 @@ const esquema = z.object({
   conductor_licencia: z.string().trim().max(20).nullable(),
   conductor_telefono: z.string().trim().max(40).nullable(),
   observaciones: z.string().trim().max(2000).nullable(),
+  // 14/10 (115): lo que antes no se podía corregir en un borrador.
+  orden_compra_cliente: z.string().trim().max(100).nullable().default(null),
+  motivo_codigo: z.string().length(2).optional(),
+  /** Los productos. Sin ellos, las líneas no se tocan. */
+  items: z
+    .array(
+      z.object({
+        cotizacion_item_id: z.string().uuid(),
+        cantidad: z.number().positive("Cada producto sale con una cantidad mayor que cero.").finite(),
+      }),
+    )
+    .min(1, "La guía tiene que llevar al menos un producto.")
+    .max(500)
+    .optional(),
 });
 
 export type ResultadoActualizar = { ok: true } | { ok: false; error: string };
@@ -124,10 +138,25 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
       };
     }
 
+    /*
+      Los productos PRIMERO: es lo que puede rechazarse (el tope de cada
+      línea lo vigila la base, contando lo que llevan las otras guías), y si
+      falla no conviene haber cambiado ya la cabecera.
+    */
+    if (d.items) {
+      const { error: errorLineas } = await supabase.rpc("corregir_lineas_guia", {
+        p_guia: d.id,
+        p_items: d.items,
+      });
+      if (errorLineas) return { ok: false, error: errorLineas.message };
+    }
+
     const { error, count } = await supabase
       .from("guias_remision")
       .update(
         {
+          orden_compra_cliente: limpio(d.orden_compra_cliente),
+          ...(d.motivo_codigo ? { motivo_codigo: d.motivo_codigo } : {}),
           fecha_traslado: d.fecha_traslado,
           direccion_llegada: d.direccion_llegada.trim(),
           ubigeo_llegada: d.ubigeo_llegada,
@@ -166,6 +195,8 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
 
     revalidatePath("/guias");
     revalidatePath(`/guias/${d.id}`);
+    // Lo despachado de la cotización cambia si cambiaron los productos.
+    if (d.items) revalidatePath("/cotizaciones", "layout");
     return { ok: true };
   } catch (e) {
     return {

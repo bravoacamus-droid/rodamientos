@@ -488,7 +488,7 @@ export async function cotizacionParaDespachar(
   try {
     const supabase = await clienteServidor();
 
-    const [{ data, error }, { data: guias }] = await Promise.all([
+    const [{ data, error }, { data: despacho }] = await Promise.all([
       supabase
         .from("cotizaciones")
         .select(
@@ -502,27 +502,20 @@ export async function cotizacionParaDespachar(
         )
         .eq("id", id)
         .maybeSingle(),
-      supabase
-        .from("guias_remision")
-        .select("guia_items(cotizacion_item_id, cantidad)")
-        .eq("cotizacion_id", id)
-        .neq("estado", "anulada"),
+      /*
+        Lo que ya va en guías no anuladas, por línea (115). Antes se sumaba
+        aquí `guia_items.cantidad`, y un kit se guarda como sus piezas
+        (086): 2 kits de 3 piezas contaban como 6 despachados.
+      */
+      supabase.rpc("despacho_por_item", { p_cotizacion: id }),
     ]);
 
     if (error) return fallo(error);
     if (!data) return { ok: true, datos: null };
 
     const despachado = new Map<string, number>();
-    for (const g of (guias ?? []) as unknown as Array<{
-      guia_items: { cotizacion_item_id: string | null; cantidad: number }[] | null;
-    }>) {
-      for (const i of g.guia_items ?? []) {
-        if (!i.cotizacion_item_id) continue;
-        despachado.set(
-          i.cotizacion_item_id,
-          dos((despachado.get(i.cotizacion_item_id) ?? 0) + Number(i.cantidad ?? 0)),
-        );
-      }
+    for (const d of despacho ?? []) {
+      if (d.cotizacion_item_id) despachado.set(String(d.cotizacion_item_id), Number(d.despachado ?? 0));
     }
 
     const c = data as unknown as Record<string, unknown> & {
@@ -663,6 +656,83 @@ export async function indicadoresGuias(filtros: {
         sinSunat: n("sin_sunat"),
       },
     };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Una línea de la cotización, vista desde la guía que se corrige (115). */
+export interface LineaCorregible {
+  cotizacion_item_id: string;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  /** Lo que confirmó el cliente. */
+  confirmado: number;
+  /** Lo que llevan las OTRAS guías no anuladas. */
+  otras: number;
+  /** Lo que lleva esta guía hoy. */
+  enEsta: number;
+  peso_kg: number;
+}
+
+/**
+ * Los productos que se pueden poner en una guía en borrador (14/10).
+ *
+ * Luis: *«¿por qué en guía no puedo editar todos los datos?»*. El tope de
+ * cada línea es lo confirmado menos lo que llevan las otras guías; lo cuenta
+ * `despacho_por_item` (115), que sabe contar los kits.
+ */
+export async function lineasParaCorregir(
+  guiaId: string,
+  cotizacionId: string,
+): Promise<Resultado<LineaCorregible[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const [items, otras, todas] = await Promise.all([
+      supabase
+        .from("cotizacion_items")
+        .select("id, orden, codigo, descripcion, unidad_codigo, cantidad, cantidad_aprobada, productos(peso_kg)")
+        .eq("cotizacion_id", cotizacionId)
+        .order("orden"),
+      supabase.rpc("despacho_por_item", { p_cotizacion: cotizacionId, p_excluir_guia: guiaId }),
+      supabase.rpc("despacho_por_item", { p_cotizacion: cotizacionId }),
+    ]);
+    if (items.error) return fallo(items.error);
+    if (otras.error) return fallo(otras.error);
+    if (todas.error) return fallo(todas.error);
+
+    const mapa = (filas: { cotizacion_item_id: string | null; despachado: number | null }[] | null) =>
+      new Map((filas ?? []).map((f) => [String(f.cotizacion_item_id), Number(f.despachado ?? 0)]));
+    const deOtras = mapa(otras.data);
+    const deTodas = mapa(todas.data);
+
+    const lineas = ((items.data ?? []) as unknown as Array<{
+      id: string;
+      codigo: string | null;
+      descripcion: string | null;
+      unidad_codigo: string | null;
+      cantidad: number;
+      cantidad_aprobada: number | null;
+      productos: { peso_kg: number | null } | null;
+    }>).map((i) => {
+      const id = String(i.id);
+      const o = deOtras.get(id) ?? 0;
+      return {
+        cotizacion_item_id: id,
+        codigo: i.codigo ?? "—",
+        descripcion: i.descripcion ?? "—",
+        unidad: i.unidad_codigo ?? "NIU",
+        confirmado: Number(i.cantidad_aprobada ?? i.cantidad),
+        otras: o,
+        enEsta: dos((deTodas.get(id) ?? 0) - o),
+        peso_kg: Number(i.productos?.peso_kg ?? 0),
+      };
+    });
+
+    // Lo que el cliente no quiso (confirmado 0) no se ofrece; lo que ya salió
+    // entero en otras guías, tampoco, salvo que esta también lo lleve.
+    return { ok: true, datos: lineas.filter((l) => l.confirmado > 0 && (l.enEsta > 0 || l.confirmado - l.otras > 0)) };
   } catch (e) {
     return fallo(e);
   }
