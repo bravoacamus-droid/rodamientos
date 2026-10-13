@@ -171,7 +171,13 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
           cambian, cambian para todo el mundo el mismo día.
         </p>
 
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/*
+          Sin detracción (14/10). Willy, 13/10: vende productos, así que lo que
+          le aplica el cliente es la RETENCIÓN, nunca la detracción. Los tres
+          campos —desde, % y cuenta del Banco de la Nación— se quitan de la
+          pantalla; las columnas siguen en la base y se guardan tal cual.
+        */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Campo id="igv" label="IGV %">
             <Input
               id="igv"
@@ -182,27 +188,11 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
               disabled={!puedeEditar}
             />
           </Campo>
-          <Campo id="det_min" label="Detracción desde" ayuda="Importe en soles a partir del cual se aplica.">
-            <Input
-              id="det_min"
-              type="number"
-              step="0.01"
-              value={datos.detraccion_monto_minimo}
-              onChange={numero("detraccion_monto_minimo")}
-              disabled={!puedeEditar}
-            />
-          </Campo>
-          <Campo id="det_pct" label="Detracción %">
-            <Input
-              id="det_pct"
-              type="number"
-              step="0.01"
-              value={datos.detraccion_porcentaje}
-              onChange={numero("detraccion_porcentaje")}
-              disabled={!puedeEditar}
-            />
-          </Campo>
-          <Campo id="ret_pct" label="Retención %">
+          <Campo
+            id="ret_pct"
+            label="Retención %"
+            ayuda="La que aplica el cliente en facturas desde S/ 700."
+          >
             <Input
               id="ret_pct"
               type="number"
@@ -215,14 +205,6 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </div>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <Campo id="cuenta_det" label="Cuenta de detracción" ayuda="Banco de la Nación.">
-            <Input
-              id="cuenta_det"
-              value={datos.cuenta_detraccion ?? ""}
-              onChange={texto("cuenta_detraccion")}
-              disabled={!puedeEditar}
-            />
-          </Campo>
           <SwitchCampo
             id="agente_ret"
             label="Somos agente de retención"

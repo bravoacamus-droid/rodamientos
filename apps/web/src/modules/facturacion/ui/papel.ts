@@ -2,7 +2,7 @@ import { siglaBanco, type CuentaParaPagar } from "@/componentes/cuentas-para-pag
 import type { EmisorHoja } from "@/componentes/hoja-documento";
 import type { BloquePiePdf, HojaPdf } from "@/lib/pdf-hoja";
 
-import { RETENCION_PCT } from "../dominio/retencion";
+import { cuotasNetas, RETENCION_PCT } from "../dominio/retencion";
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
 
 /**
@@ -74,6 +74,19 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
  * El cuadro de la retención: cuánto se retiene, en cuántas cuotas, cuándo se
  * paga y cuánto llega de verdad (14/10). Lo usan el papel y el PDF.
  */
+/**
+ * El renglón «Información de la retención», como lo imprime su F002-564:
+ * base imponible (el total), porcentaje y monto.
+ */
+export function infoRetencion(c: ComprobanteDetalle): string {
+  return `Base imponible de la retención: $ ${dinero(c.total)} · Porcentaje: ${RETENCION_PCT}% · Monto: $ ${dinero(c.retencion_monto)}`;
+}
+
+/** Las cuotas que se imprimen: con retención, lo pendiente (total − retenido). */
+export function cuotasDelPapel(c: ComprobanteDetalle) {
+  return cuotasNetas(c.cuotas, c.retencion_aplica ? c.retencion_monto : 0);
+}
+
 export function cuadroRetencion(c: ComprobanteDetalle): { cabecera: string[]; fila: string[] } {
   const neto = Math.round((c.total - c.retencion_monto) * 100) / 100;
   return {
@@ -121,12 +134,16 @@ export function hojaDeComprobante(
       tipo: "tabla",
       titulo: "Cuotas",
       cabecera: ["Cuota", "Vence", "Importe"],
-      filas: c.cuotas.map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `$ ${dinero(q.monto)}`]),
+      filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `$ ${dinero(q.monto)}`]),
       derecha: [2],
     });
   }
   if (c.retencion_aplica) {
     const cuadro = cuadroRetencion(c);
+    pie.push({
+      tipo: "parrafo",
+      trozos: [{ texto: "Información de la retención: ", negrita: true }, { texto: infoRetencion(c) }],
+    });
     pie.push({ tipo: "tabla", titulo: "", cabecera: cuadro.cabecera, filas: [cuadro.fila] });
   }
   if (c.mostrar_cuenta && cuentas.length > 0) {

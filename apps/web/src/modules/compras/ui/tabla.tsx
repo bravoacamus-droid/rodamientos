@@ -63,21 +63,21 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-              <th className="px-4 py-2.5 font-medium">Número</th>
-              <th className="px-4 py-2.5 font-medium">Fecha</th>
-              <th className="px-4 py-2.5 font-medium">Proveedor</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Documento</th>
-              <th className="px-4 py-2.5 text-right font-medium">Líneas</th>
-              <th className="px-4 py-2.5 font-medium">Recibido</th>
-              <th className="px-4 py-2.5 text-right font-medium">Total</th>
-              <th className="px-4 py-2.5 font-medium">Estado</th>
+              <th className="px-3 py-2.5 font-medium">Número</th>
+              <th className="px-3 py-2.5 font-medium">Fecha</th>
+              <th className="px-3 py-2.5 font-medium">Proveedor</th>
+              <th className="hidden px-3 py-2.5 font-medium 2xl:table-cell">Documento</th>
+              <th className="hidden px-3 py-2.5 text-right font-medium 2xl:table-cell">Líneas</th>
+              <th className="px-3 py-2.5 font-medium">Recibido</th>
+              <th className="px-3 py-2.5 text-right font-medium">Total</th>
+              <th className="px-3 py-2.5 font-medium">Estado</th>
               {/*
                 Pegada a la derecha, igual que la columna del producto en el
-                comparador: la tabla necesita 1313 px y en un portátil de 1366
+                comparador: la tabla necesitaba 1313 px (1537 el 14/10, cuando se recortó: sin «Líneas» ni «Documento» por debajo de 1536 y el botón en «Recibir») y en un portátil de 1366
                 el botón cae justo fuera de la vista. Uno al que hay que
                 desplazarse está tan escondido como el que no estaba.
               */}
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5">
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5">
                 <span className="sr-only">Acciones</span>
               </th>
             </tr>
@@ -90,7 +90,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   c.estado === "anulada" ? "opacity-60" : ""
                 }`}
               >
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-2.5">
                   <Link
                     href={`/compras/${c.id}`}
                     className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
@@ -98,12 +98,12 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     {c.numero}
                   </Link>
                   {c.tipo === "importacion" ? (
-                    <span className="ml-2 rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
+                    <span className="mt-1 block w-fit rounded-sm bg-[var(--surface-2)] px-1.5 py-0.5 text-sm text-[var(--fg-muted)]">
                       Importación
                     </span>
                   ) : null}
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5 tabular">
+                <td className="whitespace-nowrap px-3 py-2.5 tabular">
                   {c.fecha}
                   {c.fecha_estimada ? (
                     <span className="block text-sm text-[var(--fg-subtle)]">
@@ -111,7 +111,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     </span>
                   ) : null}
                 </td>
-                <td className="max-w-xs px-4 py-2.5">
+                <td className="max-w-[12rem] px-3 py-2.5">
                   <span className="block truncate">{c.proveedor ?? "—"}</span>
                   {/* Para quién (111): la orden salió de un pedido. */}
                   {c.para ? (
@@ -123,14 +123,17 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 {/* El número de factura del proveedor es por lo que se busca
                     una compra —así está escrito en el marcador del buscador de
                     esta misma pantalla—, así que se lee: en 14, no en 12. */}
-                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] lg:table-cell">
+                {/* Desde 1536 px (auditoría 14/10): a 1280 la tabla medía 1537 y
+                    el total y el estado quedaban detrás del scroll. El
+                    número de factura sigue en la ficha y en el buscador. */}
+                <td className="hidden px-3 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
                   {c.documento_proveedor ?? "—"}
                 </td>
-                <td className="px-4 py-2.5 text-right tabular">{c.items}</td>
-                <td className="px-4 py-2.5">
+                <td className="hidden px-3 py-2.5 text-right tabular 2xl:table-cell">{c.items}</td>
+                <td className="px-3 py-2.5">
                   <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} />
                 </td>
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-3 py-2.5 text-right">
                   <Moneda valor={c.total} moneda={c.moneda} tamano="sm" />
                   {c.gastos_importacion > 0 ? (
                     <span className="block text-sm text-[var(--fg-subtle)]">
@@ -142,17 +145,17 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     </span>
                   ) : null}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-2.5">
                   {/* El mismo badge que guías y cotizaciones: con punto —el
                       segundo canal, para quien no distingue verde de rojo— y
                       con las anuladas tachadas. */}
                   <EstadoBadge estado={c.estado} size="xs" />
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
+                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
                   {faltaRecibir(c.estado) ? (
                     <Button asChild variant="outline">
                       <Link href={`/recepciones/nueva?compra=${c.id}`}>
-                        Recibir mercadería
+                        Recibir
                       </Link>
                     </Button>
                   ) : null}

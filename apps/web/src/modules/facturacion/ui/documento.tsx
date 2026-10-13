@@ -2,7 +2,7 @@ import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-pa
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
-import { cuadroRetencion, datosDeComprobante } from "./papel";
+import { cuadroRetencion, cuotasDelPapel, datosDeComprobante, infoRetencion } from "./papel";
 
 /**
  * La factura, la boleta y las notas, en papel.
@@ -143,7 +143,7 @@ export function DocumentoComprobante({
                   </tr>
                 </thead>
                 <tbody>
-                  {c.cuotas.map((q) => (
+                  {cuotasDelPapel(c).map((q) => (
                     <tr key={q.numero}>
                       <td className="py-0.5 tabular">{q.numero}</td>
                       <td className="py-0.5 tabular">{fecha(q.fecha_vencimiento)}</td>
@@ -165,6 +165,9 @@ export function DocumentoComprobante({
           */}
           {c.retencion_aplica ? (
             <div className="mb-2 break-inside-avoid">
+              <p className="mb-1">
+                <strong>Información de la retención:</strong> {infoRetencion(c)}
+              </p>
               <table className="border-collapse border border-[#999]">
                 <thead>
                   <tr className="uppercase">

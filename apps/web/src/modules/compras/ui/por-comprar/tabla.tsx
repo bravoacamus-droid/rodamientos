@@ -260,7 +260,9 @@ export function TablaPorComprar({
                           botón y `justify-end` para que queden pegados al
                           borde, como en las otras tablas.
                         */
-                        <span className="flex items-center justify-end gap-2">
+                        // Uno encima del otro hasta 1536 px (auditoría 14/10): en fila
+                        // ocupaban 231 px y a 1280 dejaban el producto en 151.
+                        <span className="flex flex-col items-stretch gap-2 2xl:flex-row 2xl:items-center 2xl:justify-end">
                           {/*
                             «Pedir precio» va en COLOR y «Comprar» en outline.
 
@@ -273,13 +275,13 @@ export function TablaPorComprar({
                           */}
                           <Link
                             href={enlacePedir([f])}
-                            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                            className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700"
                           >
                             Pedir precio
                           </Link>
                           <Link
                             href={enlaceCompra([f])}
-                            className="inline-flex h-9 shrink-0 items-center whitespace-nowrap rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                            className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
                           >
                             Comprar
                           </Link>

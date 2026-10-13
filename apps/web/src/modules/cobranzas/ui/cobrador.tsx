@@ -293,7 +293,11 @@ export function Cobrador({
                   value={medio}
                   onChange={(e) => setMedio(e.target.value as MedioPago)}
                 >
-                  {Object.entries(ETIQUETA_MEDIO).map(([v, t]) => (
+                  {/* Sin «Detracción» (14/10): Willy vende productos y a él
+                      solo le retienen. Se sigue leyendo en el historial. */}
+                  {Object.entries(ETIQUETA_MEDIO)
+                    .filter(([v]) => v !== "detraccion")
+                    .map(([v, t]) => (
                     <option key={v} value={v}>
                       {t}
                     </option>

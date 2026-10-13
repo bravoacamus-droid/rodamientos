@@ -8,6 +8,8 @@ import { Plus, Search, X } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 import { buscarProveedores } from "@/modules/proveedores/acciones/buscar";
+import { ProveedorRapido } from "@/modules/proveedores/ui/rapido";
+import { digitosDe, pareceDocumento } from "@/lib/texto-busqueda";
 import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
 
 /**
@@ -63,10 +65,34 @@ export function BuscadorProveedor({
 
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
 
+      {/*
+        Sin coincidencias, el alta ahí mismo (14/10), con lo tecleado ya puesto
+        —RUC o nombre—. Es el mismo diálogo del buscador de la compra: el
+        proveedor nuevo es justo al que más se le pide precio.
+      */}
       {termino.trim().length >= 2 && !buscando && visibles.length === 0 && !error ? (
-        <p className="mt-2 text-sm text-[var(--fg-muted)]">
-          Nadie con eso. Se busca por razón social, RUC o marca.
-        </p>
+        <div className="mt-2 flex flex-col items-start gap-2">
+          <p className="text-sm text-[var(--fg-muted)]">
+            Nadie con eso. Se busca por razón social, RUC o marca. Si es nuevo, dalo de alta:
+          </p>
+          <ProveedorRapido
+            documentoInicial={pareceDocumento(termino.trim()) ? digitosDe(termino.trim()) : ""}
+            nombreInicial={pareceDocumento(termino.trim()) ? "" : termino.trim()}
+            onCreado={(p) => {
+              onElegir({
+                id: p.id,
+                razon_social: p.razon_social,
+                telefono: p.telefono,
+                whatsapp: p.whatsapp,
+                email: p.email,
+                coincidencias: 0,
+                ultimoCostoUsd: null,
+              });
+              setTermino("");
+              limpiar();
+            }}
+          />
+        </div>
       ) : null}
 
       {visibles.length > 0 ? (

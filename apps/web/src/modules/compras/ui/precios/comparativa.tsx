@@ -661,9 +661,9 @@ export function Comparativa({
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ronda.compras.map((c) => (
-              <div key={c.id} className="card flex flex-col gap-2 p-4">
+              <div key={c.id} className="card flex min-w-0 flex-col gap-2 p-4">
                 <span className="font-mono text-base font-semibold">
                   {c.numero}
                 </span>
@@ -698,7 +698,7 @@ export function Comparativa({
       ) : null}
 
       {/* -------------------------------------------------- Los proveedores */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {resumenes.map((r) => {
           const p = proveedores.find(
             (x) => x.consulta_proveedor_id === r.consulta_proveedor_id,
@@ -728,7 +728,7 @@ export function Comparativa({
               La aplicación la usa gente mayor. Un botón que parece un botón no
               hay que explicarlo.
             */
-            <div key={r.consulta_proveedor_id} className="card flex flex-col gap-2 p-3">
+            <div key={r.consulta_proveedor_id} className="card flex min-w-0 flex-col gap-2 p-3">
               <div className="flex items-start justify-between gap-2">
                 {/* El nombre entero al pasar por encima: «CAFAMER LOGISTICA
                     INDUSTRIAL S.A.C. - CAFAMER S.A.C.» no cabe en una tarjeta,
@@ -1164,15 +1164,19 @@ export function Comparativa({
                         className={`tabular text-sm font-semibold ${
                           margen === null
                             ? "text-[var(--fg-subtle)]"
-                            : margen < 12
-                              ? "text-[var(--warn)]"
+                            : margen < 0
+                              ? "text-[var(--danger)]"
+                              : margen < 12
+                                ? "text-[var(--warn)]"
                               : "text-[var(--ok)]"
                         }`}
                       >
                         {margen === null ? "sin margen" : `${margen.toFixed(2)}%`}
                       </span>
-                      <span className="text-sm text-brand-600 underline">
-                        {desplegado ? "cerrar" : "cambiar"}
+                      {/* Que parezca un botón (auditoría 14/10): antes era la
+                          palabra «cambiar» azul y subrayada. */}
+                      <span className="inline-flex items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1 text-sm font-medium">
+                        {desplegado ? "Cerrar" : "Cambiar precio"}
                       </span>
                     </button>
 

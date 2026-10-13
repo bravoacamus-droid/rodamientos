@@ -11,6 +11,7 @@ import {
   Input,
   Moneda,
   SelectNativo,
+  Switch,
   Textarea,
   formatearFecha,
 } from "@rodatech/ui";
@@ -19,9 +20,11 @@ import { tipoCambioParaFacturar } from "../acciones/tipo-cambio";
 import {
   alcanzaUmbral,
   conLeyendaSpot,
+  cuotasNetas,
   montoRetencion,
   netoAPagar,
   RETENCION_PCT,
+  seRetiene,
   UMBRAL_RETENCION_SOLES,
 } from "../dominio/retencion";
 
@@ -159,10 +162,15 @@ export function EmisorComprobante({
   */
   const [previaAbierta, setPreviaAbierta] = useState(false);
   /*
-    Con o sin retención, LO PRIMERO (14/10). Willy, 13/10: *«cuando entro a
-    la factura, lo primero que tengo que activar es el botón con retención o
-    sin retención, porque si no lo hago primero no me deja hacer todo lo
-    demás»*. Sin elegir, lo de abajo queda apagado y no se emite.
+    La retención, un INTERRUPTOR que se enciende solo (14/10). Primero fueron
+    dos botones a elegir antes que nada (§BV); Luis, al verlo: *«yo quería un
+    botón así movible, como encendido/apagado… si pasa los 700 soles o
+    convertido a dólares se le aplica retención… debería aparecer activado
+    por defecto; si no, igual puedes desactivarlo»*.
+
+    `eleccion` es solo lo que la persona TOCÓ; `null` = lo que diga el
+    umbral. Por debajo de S/ 700 no se retiene nunca (es la ley), así que ahí
+    el interruptor queda apagado y no se puede encender.
   */
   const [eleccion, setEleccion] = useState<"con" | "sin" | null>(null);
   // El tipo de cambio venta del día de la factura: la retención va desde S/ 700.
@@ -398,14 +406,19 @@ export function EmisorComprobante({
   const serie = tipo === "factura" ? serieFactura : serieBoleta;
 
   const llegaAlUmbral = alcanzaUmbral(totales.total, tc);
+  const retiene = seRetiene(llegaAlUmbral, eleccion);
 
-  function elegirRetencion(e: "con" | "sin") {
-    setEleccion(e);
-    setOpciones((o) => ({ ...o, retencion: e === "con" }));
-    // La frase de observaciones va sola (Willy: «literalmente debe salir
-    // esa frase»), arriba, y se cambia si se cambia de opinión.
-    setObservaciones((o) => conLeyendaSpot(o, e === "con"));
-  }
+  /*
+    La frase de observaciones sigue al interruptor, sola y arriba (Willy:
+    «literalmente debe salir esa frase»): «OPERACION SUJETA A SPOT: RETENCION
+    (3%)» o «OPERACION NO SUJETA A SPOT.», como en su F002-564 y F002-565. Lo
+    que se escriba debajo se respeta. Solo con una cotización elegida.
+  */
+  useEffect(() => {
+    if (!cot) return;
+    setObservaciones((o) => conLeyendaSpot(o, retiene));
+    setOpciones((o) => (o.retencion === retiene ? o : { ...o, retencion: retiene }));
+  }, [cot, retiene]);
 
   // El tipo de cambio del día de la factura, al cargar y al cambiar la fecha.
   useEffect(() => {
@@ -440,7 +453,7 @@ export function EmisorComprobante({
     descargar_stock: descargarStock,
     cantidades,
     mostrar_cuenta: opciones.mostrarCuenta,
-    retencion_aplica: opciones.retencion,
+    retencion_aplica: retiene,
     /*
       Las guías que ampara. ESTE ERA EL CABLE QUE FALTABA.
 
@@ -463,9 +476,7 @@ export function EmisorComprobante({
   const listo =
     Boolean(cot) &&
     bloqueos.length === 0 &&
-    !emitiendo &&
-    eleccion !== null &&
-    !(eleccion === "con" && llegaAlUmbral === false);
+    !emitiendo;
 
   return (
     <form action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
@@ -656,63 +667,58 @@ export function EmisorComprobante({
 
           {/* ------------------------------------------------ Retención */}
           {cot ? (
-            <section
-              className={`anim-entrada card p-4 ${eleccion ? "" : "border-2 border-brand-600"}`}
-              aria-labelledby="fac-retencion"
-            >
-              <h2 id="fac-retencion" className="text-base font-semibold">
-                ¿El cliente retiene el IGV?
-              </h2>
-              <p className="mb-3 text-sm text-[var(--fg-muted)]">
-                Elígelo primero. Con retención, el cliente te paga el total menos el {RETENCION_PCT} % y te da un
-                comprobante de retención. Aplica desde S/ {UMBRAL_RETENCION_SOLES}.
-              </p>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Retención del IGV">
-                <Button
-                  type="button"
-                  variant={eleccion === "sin" ? "primary" : "outline"}
-                  aria-pressed={eleccion === "sin"}
-                  onClick={() => elegirRetencion("sin")}
-                >
-                  Sin retención
-                </Button>
-                <Button
-                  type="button"
-                  variant={eleccion === "con" ? "primary" : "outline"}
-                  aria-pressed={eleccion === "con"}
-                  disabled={llegaAlUmbral === false}
-                  onClick={() => elegirRetencion("con")}
-                >
-                  Con retención ({RETENCION_PCT} %)
-                </Button>
+            <section className="anim-entrada card p-4" aria-labelledby="fac-retencion">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor="fac-retencion-sw" id="fac-retencion" className="cursor-pointer text-base font-semibold">
+                    Retención del IGV ({RETENCION_PCT} %)
+                  </label>
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    Se enciende sola cuando la factura llega a S/ {UMBRAL_RETENCION_SOLES}. Si este cliente no
+                    retiene, apágala.
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`text-sm font-semibold ${retiene ? "text-brand-700 dark:text-brand-300" : "text-[var(--fg-muted)]"}`}
+                  >
+                    {retiene ? "Con retención" : "Sin retención"}
+                  </span>
+                  <Switch
+                    id="fac-retencion-sw"
+                    tamano="lg"
+                    checked={retiene}
+                    disabled={llegaAlUmbral === false}
+                    onCheckedChange={(v) => setEleccion(v ? "con" : "sin")}
+                  />
+                </div>
               </div>
               <p className="mt-2 text-sm">
-                {tc
-                  ? <>Total $ {totales.total.toFixed(2)} ≈ <strong>S/ {(totales.total * tc).toFixed(2)}</strong> al tipo de cambio venta de SUNAT ({tc.toFixed(3)}).</>
-                  : tcAviso ?? "Consultando el tipo de cambio…"}
+                {tc ? (
+                  <>
+                    Total $ {totales.total.toFixed(2)} ≈ <strong>S/ {(totales.total * tc).toFixed(2)}</strong> al tipo
+                    de cambio venta de SUNAT ({tc.toFixed(3)}).
+                  </>
+                ) : (
+                  (tcAviso ?? "Consultando el tipo de cambio…")
+                )}
                 {llegaAlUmbral === false ? (
                   <span className="block text-[var(--fg-muted)]">
                     No llega a S/ {UMBRAL_RETENCION_SOLES}: esta factura no se retiene.
                   </span>
                 ) : null}
               </p>
-              {eleccion === "con" ? (
+              {retiene ? (
                 <p className="mt-2 rounded-md bg-[var(--surface-2)] p-3 text-sm">
-                  Retención: <strong>$ {montoRetencion(totales.total).toFixed(2)}</strong> · Te pagan:{" "}
+                  Retención: <strong>$ {montoRetencion(totales.total).toFixed(2)}</strong>
+                  {tc ? <> (S/ {(montoRetencion(totales.total) * tc).toFixed(2)})</> : null} · Te pagan:{" "}
                   <strong>$ {netoAPagar(totales.total).toFixed(2)}</strong>
-                  {llegaAlUmbral === false ? (
-                    <span className="block text-[var(--danger)]">
-                      Con estas cantidades ya no llega a S/ {UMBRAL_RETENCION_SOLES}: elige «Sin retención».
-                    </span>
-                  ) : null}
                 </p>
               ) : null}
             </section>
           ) : null}
 
-          {/* Lo de abajo, apagado hasta elegir (Willy: «si no lo hago
-              primero, no me deja hacer todo lo demás»). */}
-          <div inert={cot && !eleccion ? true : undefined} className={`flex flex-col gap-5 ${cot && !eleccion ? "opacity-40" : ""}`}>
+          <div className="flex flex-col gap-5">
           {/* --------------------------------------------------- Líneas */}
           {cot ? (
             <section className="anim-entrada card @container p-4">
@@ -900,6 +906,15 @@ export function EmisorComprobante({
               ) : null}
               <Fila etiqueta="IGV (18 %)" valor={`$\u00a0${totales.igv.toFixed(2)}`} />
               <Fila etiqueta="Total" valor={`$\u00a0${totales.total.toFixed(2)}`} fuerte />
+              {retiene ? (
+                <>
+                  <Fila
+                    etiqueta={`Retenci\u00f3n (${RETENCION_PCT} %)`}
+                    valor={`\u2212\u00a0$\u00a0${montoRetencion(totales.total).toFixed(2)}`}
+                  />
+                  <Fila etiqueta="Te pagan" valor={`$\u00a0${netoAPagar(totales.total).toFixed(2)}`} fuerte />
+                </>
+              ) : null}
             </dl>
 
             {cuotas.length > 0 ? (
@@ -910,7 +925,9 @@ export function EmisorComprobante({
                     qué es, no para quién (revisión por módulos del 02/10). */}
                 <p className="mb-1 text-sm font-medium">Cuotas de pago</p>
                 <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
-                  {cuotas.map((q) => (
+                  {/* Con retención, lo PENDIENTE: el total menos lo retenido,
+                      como su F002-564. */}
+                  {cuotasNetas(cuotas, retiene ? montoRetencion(totales.total) : 0).map((q) => (
                     <li key={q.numero} className="flex justify-between gap-2">
                       <span>Cuota {q.numero}</span>
                       <span className="tabular">

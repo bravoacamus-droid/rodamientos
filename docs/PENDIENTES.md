@@ -7840,3 +7840,47 @@ que llegue a S/ 700 y tenga guía emitida).
 
 Queda, no es código: la retención que el cliente se queda (3 %) deja ese
 saldo abierto hasta que se registre con el medio «Retención» —ya existe—.
+
+---
+
+## §BX · 14/10 — Retención con interruptor, sin detracción, y compras repasado
+
+**La retención, un interruptor.** Luis, viendo los dos botones de §BV: *«yo
+quería un botón así movible, como encendido/apagado… debería aparecer
+activado por defecto; si no, igual puedes desactivarlo»*. Ahora es un
+`Switch` grande (`tamano="lg"`, nuevo en `@rodatech/ui`) que se enciende solo
+si el total llega a S/ 700 al TC venta de SUNAT, se puede apagar, y por
+debajo de S/ 700 queda apagado y bloqueado. La regla es `seRetiene()` en
+`dominio/retencion.ts`, con tests. Ya no se apaga el resto del formulario.
+
+Calcado de sus facturas F002-564 (con) y F002-565 (sin), del 12/10:
+- Observaciones: `OPERACION SUJETA A SPOT: RETENCION (3%)` /
+  `OPERACION NO SUJETA A SPOT.`, letra por letra.
+- Papel y PDF: «Información de la retención: base imponible · 3% · monto», y
+  las cuotas por lo PENDIENTE (242.21 − 7.27 = 234.94), con `cuotasNetas()`.
+- Envío a SUNAT: `pendiente` y cuotas netos de retención.
+
+Sin probar: una factura que llegue a S/ 700 (ninguna cotización facturable
+llega). Falta en el XML el bloque de información de la retención que SUNAT
+espera; se hace con el certificado, cuando se pueda probar. Tampoco va el
+monto en soles de la retención en el papel: la factura no guarda el TC.
+
+**Sin detracción.** Willy vende productos: solo le retienen. Fuera de
+«Datos de la empresa» los tres campos de detracción y de Cobranzas la forma
+de pago «Detracción». Las columnas siguen en la base.
+
+**Compras.** Pregunta de Luis: *«¿ya todo funcionando, select inteligente,
+se puede agregar, responsivo total?»*. Auditoría en pantalla a 390/1280/1600:
+- El buscador de productos (compra, pedir precio, análisis) ofrece «Crear el
+  producto» cuando no encuentra nada (el diálogo de la cotización). Probado
+  hasta abrir el diálogo, sin guardar.
+- El buscador de proveedores de «Pedir precios» ofrece el alta rápida. Sin
+  ver en pantalla: no hay ninguna ronda abierta.
+- A 390: la ficha de una ronda medía 744 px (rejilla sin `grid-cols-1` y
+  tarjetas sin `min-w-0`); las filas del buscador dejaban la descripción en
+  0 px; el panel de respuesta cortaba «Te costó / Lo vendes / Mínimo».
+- A 1280: la lista de compras medía 1537 en 955 y escondía total y estado
+  (ahora 957/957); «Por comprar» 964 en 955 (ahora cabe).
+- «cambiar» azul subrayado → botón «Cambiar precio»; margen negativo en rojo.
+- Quedan sin tocar: la jerga de la hoja de importación («K», «PU LIMA»), que
+  copia el Excel de Willy a propósito.

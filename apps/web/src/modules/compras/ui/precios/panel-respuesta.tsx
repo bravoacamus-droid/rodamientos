@@ -676,7 +676,7 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
 
   return (
     <div className="mt-2 rounded-md bg-[var(--surface-2)] p-3 text-sm">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Dato
           etiqueta="Te costó"
           valor={ref.ultimoCosto === null ? null : moneda2(ref.ultimoCosto)}
@@ -721,7 +721,7 @@ function LoQueYaSabes({ referencia: ref }: { referencia: Referencia }) {
           {antes.map((a, i) => (
             <p key={`${a.quien}-${i}`} className="flex flex-wrap items-baseline gap-x-2">
               <strong className="tabular-nums">{moneda2(a.costo)}</strong>
-              <span className="min-w-0 flex-1 truncate text-[var(--fg-muted)]">
+              <span className="min-w-0 flex-1 basis-40 text-[var(--fg-muted)]">
                 {a.quien}
               </span>
               <span className="text-[var(--fg-subtle)]">

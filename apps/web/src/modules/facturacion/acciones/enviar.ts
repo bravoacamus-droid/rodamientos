@@ -11,6 +11,7 @@ import type { Json } from "@rodatech/db/tipos";
 import { conectorSunat } from "../api/configuracion";
 import { detalleComprobante } from "../api/consultas";
 import { cuotasDe, docSunatDe, unidadSunat } from "../dominio/emision";
+import { cuotasNetas } from "../dominio/retencion";
 
 /**
  * Envío de un comprobante ya emitido a SUNAT.
@@ -149,8 +150,19 @@ export async function enviarASunat(
     formaPago: alCredito
       ? {
           tipo: "credito",
-          pendiente: c.saldo,
-          cuotas: cuotasDe(c.total, c.dias_credito, c.fecha_emision).map((q) => ({
+          /*
+            Con retención, el pendiente y las cuotas son el total MENOS lo
+            retenido (14/10): así lo pide SUNAT y así lo imprime su F002-564.
+            La base guarda las cuotas sobre el total porque la retención entra
+            luego como un cobro.
+          */
+          pendiente: c.retencion_aplica
+            ? Math.round((c.total - c.retencion_monto) * 100) / 100
+            : c.saldo,
+          cuotas: cuotasNetas(
+            cuotasDe(c.total, c.dias_credito, c.fecha_emision),
+            c.retencion_aplica ? c.retencion_monto : 0,
+          ).map((q) => ({
             numero: q.numero,
             monto: q.monto,
             vencimiento: q.vencimiento,

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge, Input } from "@rodatech/ui";
+import { Badge, Button, Input } from "@rodatech/ui";
+import { Plus } from "lucide-react";
+
+import { AltaProducto } from "@/modules/cotizaciones/ui/constructor/alta-producto";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 
@@ -34,6 +37,14 @@ export function BuscadorCompra({
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
   const contenedor = useRef<HTMLDivElement>(null);
+  /*
+    Crear el producto sin salir de la compra (14/10). Lo que se compra es justo
+    lo que todavía no está en el catálogo —el repuesto nuevo, la marca que no se
+    trabajaba—, y hasta hoy aquí solo salía «Sin resultados». Es el mismo
+    diálogo de la cotización (Willy, 16/09: *«digito un código que no está
+    creado y no me sale la opción para crearlo»*).
+  */
+  const [creando, setCreando] = useState<string | null>(null);
 
   // La espera al teclear y el DESCARTE DE RESPUESTAS TARDÍAS viven en el hook.
   // Sin lo segundo, la respuesta de «620» puede llegar después que la de
@@ -114,9 +125,25 @@ export function BuscadorCompra({
       {abierto && (resultados.length > 0 || (!sinTexto && (error || crudos?.length === 0))) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {resultados.length === 0 ? (
-            <p className="p-3 text-sm text-[var(--fg-muted)]">
-              {error ?? "Sin resultados."}
-            </p>
+            <div className="flex flex-col items-start gap-2 p-3">
+              <p className="text-sm text-[var(--fg-muted)]">
+                {error ?? `Ningún producto coincide con «${termino.trim()}».`}
+              </p>
+              {error ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setCreando(termino.trim());
+                    setAbierto(false);
+                  }}
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  Crear el producto «{termino.trim()}»
+                </Button>
+              )}
+            </div>
           ) : null}
 
           {resultados.length > 0 ? (
@@ -137,19 +164,23 @@ export function BuscadorCompra({
                 onMouseEnter={() => setResaltado(i)}
                 // 48 px de alto y el resaltado ocupando la fila entera: fallar
                 // el clic parece que la búsqueda no funciona.
-                className={`flex min-h-12 w-full items-center gap-3 border-b border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
+                className={`flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-1 border-b sm:flex-nowrap border-[var(--border-soft)] px-3 py-2 text-left transition-colors last:border-0 ${
                   i === resaltado
                     ? "bg-brand-50 dark:bg-brand-950"
                     : "hover:bg-[var(--surface-2)]"
                 }`}
               >
-                <span className="w-40 shrink-0 font-mono text-sm font-semibold">
+                <span className="shrink-0 font-mono text-sm font-semibold sm:w-40">
                   {p.codigo}
                 </span>
                 <span className="w-14 shrink-0 text-sm text-[var(--fg-muted)]">
                   {p.marca}
                 </span>
-                <span className="flex-1 truncate text-sm">{p.descripcion}</span>
+                {/* A 390 la descripción baja a su propia línea: con los anchos
+                    fijos se quedaba en 0 px (auditoría 14/10). */}
+                <span className="order-last min-w-0 basis-full truncate text-sm sm:order-none sm:flex-1 sm:basis-auto">
+                  {p.descripcion}
+                </span>
 
                 {/* En una compra lo que importa no es cuánto hay, sino si
                     falta: el stock se enseña contra su mínimo. */}
@@ -166,7 +197,7 @@ export function BuscadorCompra({
                   {p.stock ?? 0}
                 </Badge>
 
-                <span className="w-28 shrink-0 text-right text-sm">
+                <span className="ml-auto shrink-0 text-right text-sm sm:ml-0 sm:w-28">
                   {ultimo ? (
                     <>
                       <span className="tabular block font-medium">
@@ -189,6 +220,29 @@ export function BuscadorCompra({
             );
           })}
         </div>
+      ) : null}
+
+      {creando !== null ? (
+        <AltaProducto
+          codigoInicial={creando}
+          onCerrar={() => setCreando(null)}
+          onCreado={(p) => {
+            setCreando(null);
+            // Nace sin stock ni costo: el costo lo pone esta misma compra.
+            elegir({
+              id: p.id,
+              codigo: p.codigo,
+              descripcion: p.descripcion,
+              marca: p.marca,
+              unidad: p.unidad,
+              stock: 0,
+              costo_promedio: 0,
+              ultimo_costo: 0,
+              codigo_fabricante: null,
+              estado_stock: "sin_stock",
+            });
+          }}
+        />
       ) : null}
     </div>
   );
