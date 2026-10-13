@@ -17,6 +17,8 @@ import {
 } from "@rodatech/ui";
 
 import { cambiarEstado, type TipoTransporte } from "../acciones/guardar";
+import { consultarDniPersona } from "@/modules/guias/acciones/consultar-dni";
+import { consultarRucAgencia } from "@/modules/guias/acciones/consultar-ruc";
 
 /**
  * Una lista de maestro con su alta, su edición y su baja.
@@ -41,6 +43,13 @@ export interface CampoMaestro {
   /** Ocupa la fila entera en vez de media. */
   ancho?: "completo" | "medio";
   mono?: boolean;
+  /**
+   * Botón al lado para traer el dato del padrón (auditoría 14/10): los
+   * diálogos de la guía lo tenían y los de esta pantalla no. `rellena` es la
+   * clave del campo donde va el nombre; con RUC, la dirección va a `direccion`
+   * si existe y está vacía.
+   */
+  consulta?: { tipo: "ruc" | "dni"; rellena: string; boton: string };
 }
 
 /**
@@ -277,6 +286,33 @@ function EditorMaestro({
   const [texto, setTexto] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [guardando, empezar] = React.useTransition();
+  const [consultando, consultar] = React.useTransition();
+  const [aviso, setAviso] = React.useState<string | null>(null);
+
+  function traer(c: CampoMaestro) {
+    const q = c.consulta;
+    if (!q) return;
+    setAviso(null);
+    consultar(async () => {
+      const numero = (texto[c.clave] ?? "").trim();
+      const r = q.tipo === "ruc" ? await consultarRucAgencia(numero) : await consultarDniPersona(numero);
+      if (!r.ok) {
+        setAviso(
+          r.agotada
+            ? "Se agotó la cuota de consultas de este mes. Escríbelo a mano y guarda igual."
+            : `${r.error} Escríbelo a mano y guarda igual.`,
+        );
+        return;
+      }
+      setTexto((t) => ({
+        ...t,
+        [q.rellena]: r.datos.razon_social,
+        ...(q.tipo === "ruc" && campos.some((x) => x.clave === "direccion") && !(t.direccion ?? "").trim() && r.datos.direccion
+          ? { direccion: r.datos.direccion }
+          : {}),
+      }));
+    });
+  }
 
   /*
     Se rellena al ABRIR, no en el render.
@@ -295,6 +331,7 @@ function EditorMaestro({
     }
     setTexto(inicial);
     setError(null);
+    setAviso(null);
   }, [abierto, campos, valores]);
 
   function alEscribir(c: CampoMaestro, bruto: string) {
@@ -342,16 +379,33 @@ function EditorMaestro({
               requerido={c.requerido}
               className={c.ancho === "medio" ? "" : "sm:col-span-2"}
             >
-              <Input
-                id={`m-${c.clave}`}
-                value={texto[c.clave] ?? ""}
-                onChange={(e) => alEscribir(c, e.target.value)}
-                placeholder={c.placeholder}
-                inputMode={c.modo === "digitos" ? "numeric" : undefined}
-                className={c.mono ? "font-mono" : undefined}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id={`m-${c.clave}`}
+                  value={texto[c.clave] ?? ""}
+                  onChange={(e) => alEscribir(c, e.target.value)}
+                  placeholder={c.placeholder}
+                  inputMode={c.modo === "digitos" ? "numeric" : undefined}
+                  className={`min-w-0 flex-1 ${c.mono ? "font-mono" : ""}`}
+                />
+                {c.consulta ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={consultando || (texto[c.clave] ?? "").length !== (c.consulta.tipo === "ruc" ? 11 : 8)}
+                    onClick={() => traer(c)}
+                  >
+                    {consultando ? "Buscando…" : c.consulta.boton}
+                  </Button>
+                ) : null}
+              </div>
             </Campo>
           ))}
+
+          {aviso ? (
+            <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm sm:col-span-2">{aviso}</p>
+          ) : null}
 
           {error ? (
             <p

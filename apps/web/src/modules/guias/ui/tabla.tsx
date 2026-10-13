@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Eye, Printer } from "lucide-react";
-import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
+import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset, formatearFecha } from "@rodatech/ui";
 
 import { listarGuias } from "../api/consultas";
 import type { FiltrosGuias } from "../dominio/tipos";
@@ -68,17 +68,17 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-              <th className="px-4 py-2.5 font-medium">Número</th>
-              <th className="px-4 py-2.5 font-medium">Traslado</th>
-              <th className="px-4 py-2.5 font-medium">Cliente</th>
-              <th className="hidden px-4 py-2.5 font-medium lg:table-cell">Entrega</th>
-              <th className="px-4 py-2.5 text-right font-medium">Bultos</th>
-              <th className="px-4 py-2.5 text-right font-medium">Peso</th>
-              <th className="px-4 py-2.5 font-medium">Estado</th>
+              <th className="px-3 py-2.5 font-medium">Número</th>
+              <th className="px-3 py-2.5 font-medium">Traslado</th>
+              <th className="px-3 py-2.5 font-medium">Cliente</th>
+              <th className="hidden px-3 py-2.5 font-medium 2xl:table-cell">Entrega</th>
+              <th className="px-3 py-2.5 text-right font-medium">Bultos</th>
+              <th className="px-3 py-2.5 text-right font-medium">Peso</th>
+              <th className="px-3 py-2.5 font-medium">Estado</th>
               {/* La columna de acciones tenía cabecera vacía. Con una fila sola
                   no se nota; con veinte, los dos botones flotan sin decir de
                   qué son. */}
-              <th className="px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="px-3 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -90,7 +90,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
-                <td className="whitespace-nowrap px-4 py-2.5">
+                <td className="whitespace-nowrap px-3 py-2.5">
                   <Link
                     href={`/guias/${g.id}`}
                     className="font-mono text-sm font-medium text-brand-600 hover:underline"
@@ -107,8 +107,8 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     `Dato` a tamaño de dato, y aquí era la letra pequeña de la
                     celda de la fecha. La misma cifra no puede leerse en dos
                     tamaños según el ancho de la pantalla. */}
-                <td className="whitespace-nowrap px-4 py-2.5 tabular">
-                  {g.fecha_traslado}
+                <td className="whitespace-nowrap px-3 py-2.5 tabular">
+                  {formatearFecha(g.fecha_traslado)}
                   <span className="block text-sm text-[var(--fg-subtle)]">
                     {g.motivo ?? "—"}
                   </span>
@@ -116,7 +116,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 {/* El RUC bajo el nombre: dos clientes se llaman casi igual, y
                     en una guía equivocarse de destinatario es un viaje
                     perdido. */}
-                <td className="max-w-xs px-4 py-2.5">
+                <td className="max-w-xs px-3 py-2.5">
                   <span className="block truncate font-medium">{g.cliente ?? "—"}</span>
                   {g.cliente_documento ? (
                     <span className="block font-mono text-sm text-[var(--fg-subtle)]">
@@ -124,15 +124,17 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     </span>
                   ) : null}
                 </td>
-                <td className="hidden max-w-xs px-4 py-2.5 text-sm text-[var(--fg-muted)] lg:table-cell">
+                {/* Desde 1536 (auditoría 14/10): a 1280 la tabla medía 1338 en 957
+                    y escondía el estado y los botones. */}
+                <td className="hidden max-w-[14rem] px-3 py-2.5 text-sm text-[var(--fg-muted)] 2xl:table-cell">
                   <span className="block truncate">{g.direccion_llegada ?? "—"}</span>
                 </td>
-                <td className="px-4 py-2.5 text-right tabular">{g.numero_bultos}</td>
-                <td className="px-4 py-2.5 text-right tabular">
+                <td className="px-3 py-2.5 text-right tabular">{g.numero_bultos}</td>
+                <td className="px-3 py-2.5 text-right tabular">
                   {g.peso_bruto_kg.toFixed(3)}
                   <span className="ml-1 text-sm text-[var(--fg-subtle)]">kg</span>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-2.5">
                   {/*
                     El mismo badge que el resto del ERP.
 
@@ -157,7 +159,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                   ventana abierta (`auto=1`): el almacén saca la guía y la mete
                   en la caja sin entrar a la ficha.
                 */}
-                <td className="px-4 py-2.5">
+                <td className="px-3 py-2.5">
                   <div className="ml-auto grid w-[210px] grid-cols-[84px_1fr] gap-1.5">
                     <Link href={`/guias/${g.id}`} className={`${SECUNDARIO} w-full justify-center`}>
                       <IconoVer />
@@ -248,7 +250,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
             </div>
 
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-              <Dato etiqueta="Traslado">{g.fecha_traslado}</Dato>
+              <Dato etiqueta="Traslado">{formatearFecha(g.fecha_traslado)}</Dato>
               {/* El peso primero de los dos números: es lo que Willy llamó «lo
                   más importante» (02:46), porque es lo que el transportista
                   necesita antes de cargar. */}

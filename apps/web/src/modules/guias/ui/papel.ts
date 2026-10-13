@@ -102,7 +102,8 @@ export function hojaDeGuia(g: GuiaDetalle, emisor: EmisorHoja): HojaPdf {
   pie.push({ tipo: "sello", texto: "Sello y firma de recepción" });
   return {
     emisor,
-    titulo: "Guía de remisión · Remitente",
+    // Un borrador no puede salir igual que una guía emitida (auditoría 14/10).
+    titulo: g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión · Remitente",
     numero: g.numero,
     datos: datosDeGuia(g),
     columnas: [

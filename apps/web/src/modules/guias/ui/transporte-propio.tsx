@@ -115,9 +115,16 @@ export function TransportePropio({
     elegida una persona con licencia en el maestro y la guía sin ella.
   */
   const aPieAntes = React.useRef(aPie);
+  // La placa también vuelve (auditoría 14/10): marcar y desmarcar «a pie»
+  // dejaba el vehículo en «Elige el vehículo…».
+  const ultimaPlaca = React.useRef(valor.placa);
+  if (valor.placa) ultimaPlaca.current = valor.placa;
   React.useEffect(() => {
-    if (aPieAntes.current && !aPie && persona?.licencia && !valor.conductorLicencia) {
-      onCambio({ conductorLicencia: persona.licencia });
+    if (aPieAntes.current && !aPie) {
+      const vuelve: Partial<DatosTransportePropio> = {};
+      if (persona?.licencia && !valor.conductorLicencia) vuelve.conductorLicencia = persona.licencia;
+      if (!valor.placa && ultimaPlaca.current) vuelve.placa = ultimaPlaca.current;
+      if (Object.keys(vuelve).length > 0) onCambio(vuelve);
     }
     aPieAntes.current = aPie;
     // Solo cuando cambia «a pie».

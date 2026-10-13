@@ -78,6 +78,11 @@ export interface LineaGuia {
   unidad: string;
   cantidad: number;
   peso_kg: number;
+  /**
+   * Lo que hay ahora en el almacén, para avisar al emitir si queda en
+   * negativo (auditoría 14/10). `null` en un kit: sale por sus piezas (086).
+   */
+  stock?: number | null;
 }
 
 /** La ficha completa. */

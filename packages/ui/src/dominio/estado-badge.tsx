@@ -79,7 +79,7 @@ interface Definicion {
 }
 
 const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
-  borrador: { etiqueta: "Borrador", tono: "gris", forma: "hueco", matiz: "no enviada al cliente" },
+  borrador: { etiqueta: "Borrador", tono: "gris", forma: "hueco", matiz: "todavía sin emitir" },
   enviada: { etiqueta: "Enviada", tono: "azul", forma: "relleno" },
   aprobada: { etiqueta: "Aprobada", tono: "verde", forma: "relleno" },
   rechazada: { etiqueta: "Rechazada", tono: "rojo", forma: "raya" },

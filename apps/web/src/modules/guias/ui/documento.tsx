@@ -29,7 +29,7 @@ export function DocumentoGuia({
   return (
     <HojaDocumento
       emisor={emisor}
-      titulo="Guía de remisión · Remitente"
+      titulo={g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión · Remitente"}
       numero={g.numero}
       datos={datosDeGuia(g)}
       /*

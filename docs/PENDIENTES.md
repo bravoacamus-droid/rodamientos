@@ -7884,3 +7884,38 @@ se puede agregar, responsivo total?»*. Auditoría en pantalla a 390/1280/1600:
 - «cambiar» azul subrayado → botón «Cambiar precio»; margen negativo en rojo.
 - Quedan sin tocar: la jerga de la hoja de importación («K», «PU LIMA»), que
   copia el Excel de Willy a propósito.
+
+---
+
+## §BY · 14/10 — Guías repasadas en pantalla
+
+Pregunta de Luis: *«¿y cómo está guías, ya todo funcionando, responsivo
+total?»*. Auditoría a 390/1280/1600 (iframes, sin guardar ni emitir nada).
+
+Funcionaba ya: la O/C con sus sugerencias, «a pie» quitando el vehículo y
+cambiando a «Quién la lleva», los selects de vehículo y persona con su «+» y
+«Editar», «Nueva agencia», y todos los diálogos caben a 390.
+
+Arreglado:
+- **Lista a 1280 y 1600**: medía 1338 en 957 y escondía el estado y los
+  botones. «Entrega» solo desde 1536 y celdas más estrechas: 967/967 y
+  1287/1287.
+- **El motivo nunca salía** (otra pieza sin cable): `motivo_descripcion` no
+  lo escribe nadie desde la 002; la lista decía «—» y el papel «Código 01».
+  Ahora se lee del catálogo (`motivos_traslado`) por su FK. Visto: «Venta».
+- **Un borrador ya no sale como guía válida**: la vista previa y el PDF dicen
+  «Guía de remisión · BORRADOR, sin validez». «Descargar PDF» en azul solo
+  si ya está emitida.
+- **Emitir avisa del stock en negativo** (no bloquea, 002), cuenta unidades y
+  no líneas, y el peso va con tres decimales.
+- Fechas en 13/10/2026, «Ubigeo» → «Código del distrito», y la placa vuelve
+  al desmarcar «a pie».
+- **/transporte**: «Traer datos» por RUC (agencia) y «Traer nombre» por DNI
+  (conductor), como en la guía, con el documento primero.
+- `EstadoBadge` decía «no enviada al cliente» de cualquier borrador: ahora
+  «todavía sin emitir».
+
+Queda, sin tocar: pasar de privado a público y volver borra vehículo y
+conductor; el buscador de cotización a 390 corta nombres largos (no hay
+ninguna cotización pendiente para verlo); el vehículo «HDC452 · camioneta
+prueba» en el maestro, que lo decide Luis.

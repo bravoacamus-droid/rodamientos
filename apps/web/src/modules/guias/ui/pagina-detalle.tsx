@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Printer, Pencil } from "lucide-react";
-import { EstadoBadge, EstadoError } from "@rodatech/ui";
+import { EstadoBadge, EstadoError, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
@@ -119,7 +119,9 @@ export default async function PaginaDetalleGuia({
           <VistaPreviaDocumento numero={g.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
             <DocumentoGuia g={g} emisor={emisor} />
           </VistaPreviaDocumento>
-          <BotonDescargarPdf hoja={hoja} nombre={archivo} variante="primary" />
+          {/* En azul solo ya emitida: en un borrador lo principal es
+              «Emitir y despachar», y dos botones azules no dicen cuál. */}
+          <BotonDescargarPdf hoja={hoja} nombre={archivo} variante={g.estado === "borrador" ? "outline" : "primary"} />
           <Link
             href={`/guias/${g.id}/imprimir?auto=1`}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
@@ -181,7 +183,7 @@ export default async function PaginaDetalleGuia({
           valor={unidades.toLocaleString("es-PE")}
           pie={`${g.lineas.length} ${g.lineas.length === 1 ? "línea" : "líneas"}`}
         />
-        <Tarjeta etiqueta="Traslado" valor={g.fecha_traslado} pie={g.motivo_descripcion ?? ""} />
+        <Tarjeta etiqueta="Traslado" valor={formatearFecha(g.fecha_traslado)} pie={g.motivo_descripcion ?? ""} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -272,8 +274,8 @@ export default async function PaginaDetalleGuia({
             <dl className="flex flex-col gap-2 text-sm">
               <Dato etiqueta="Parte de" valor={g.direccion_partida ?? "—"} />
               <Dato etiqueta="Llega a" valor={g.direccion_llegada ?? "—"} />
-              <Dato etiqueta="Ubigeo" valor={g.ubigeo_llegada ?? "—"} />
-              <Dato etiqueta="Emisión" valor={g.fecha_emision} />
+              <Dato etiqueta="Código del distrito" valor={g.ubigeo_llegada ?? "—"} />
+              <Dato etiqueta="Emisión" valor={formatearFecha(g.fecha_emision)} />
               <Dato etiqueta="Cotización" valor={g.cotizacion_numero ?? "—"} />
               <Dato etiqueta="Orden de compra" valor={g.orden_compra_cliente ?? "—"} />
             </dl>

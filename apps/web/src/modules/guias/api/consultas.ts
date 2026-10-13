@@ -68,6 +68,7 @@ export async function listarGuias(
          direccion_llegada, peso_bruto_kg, numero_bultos, estado, estado_sunat,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
+         motivos_traslado(descripcion),
          guia_items(id)`,
       )
       // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
@@ -123,7 +124,15 @@ export async function listarGuias(
       // guía equivocarse de destinatario es un viaje perdido.
       cliente_documento: g.clientes?.numero_documento ?? null,
       cotizacion_numero: g.cotizaciones?.numero ?? null,
-      motivo: (g.motivo_descripcion as string | null) ?? null,
+      /*
+        El motivo en texto, del catálogo (auditoría 14/10). `motivo_descripcion`
+        no lo escribe nadie desde la 002 —ni la RPC ni «Editar»—, así que la
+        lista decía «—» y el papel «Código 01». Lo guardado manda si lo hay.
+      */
+      motivo:
+        (g.motivo_descripcion as string | null) ??
+        (g.motivos_traslado as { descripcion: string } | null)?.descripcion ??
+        null,
       direccion_llegada: (g.direccion_llegada as string | null) ?? null,
       peso_bruto_kg: Number(g.peso_bruto_kg ?? 0),
       numero_bultos: Number(g.numero_bultos ?? 0),
@@ -184,7 +193,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
       .select(
         `id, serie, correlativo, numero, cliente_id, cotizacion_id,
          orden_compra_cliente, fecha_emision, fecha_traslado,
-         motivo_codigo, motivo_descripcion,
+         motivo_codigo, motivo_descripcion, motivos_traslado(descripcion),
          ubigeo_partida, direccion_partida, ubigeo_llegada, direccion_llegada,
          peso_bruto_kg, unidad_peso, numero_bultos, modalidad_traslado,
          transportista_documento, transportista_razon_social, transportista_placa,
@@ -194,7 +203,8 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
-         guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg)`,
+         guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg,
+                    productos(es_kit, stock(cantidad)))`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -214,6 +224,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         cantidad: number;
         unidad_codigo: string | null;
         peso_kg: number | null;
+        productos: { es_kit: boolean | null; stock: { cantidad: number }[] | { cantidad: number } | null } | null;
       }> | null;
     };
 
@@ -239,6 +250,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         unidad: i.unidad_codigo ?? "NIU",
         cantidad: Number(i.cantidad ?? 0),
         peso_kg: Number(i.peso_kg ?? 0),
+        stock: i.productos?.es_kit ? null : stockDe(i.productos?.stock ?? null),
       }));
 
     return {
@@ -257,7 +269,10 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         fecha_emision: String(g.fecha_emision),
         fecha_traslado: String(g.fecha_traslado),
         motivo_codigo: String(g.motivo_codigo ?? "01"),
-        motivo_descripcion: (g.motivo_descripcion as string | null) ?? null,
+        motivo_descripcion:
+          (g.motivo_descripcion as string | null) ??
+          (g.motivos_traslado as { descripcion: string } | null)?.descripcion ??
+          null,
         ubigeo_partida: (g.ubigeo_partida as string | null) ?? null,
         direccion_partida: (g.direccion_partida as string | null) ?? null,
         ubigeo_llegada: (g.ubigeo_llegada as string | null) ?? null,

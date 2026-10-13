@@ -24,29 +24,32 @@ import { Maestro, type CampoMaestro, type FilaMaestro } from "./maestro";
  * Se ordena como la guía: primero público, después privado.
  */
 
+// El RUC primero y con «Traer datos», en el mismo orden que el alta desde
+// la guía (auditoría 14/10).
 const CAMPOS_AGENCIA: readonly CampoMaestro[] = [
   {
-    clave: "nombre_corto",
-    etiqueta: "Nombre corto",
-    ayuda: "Como la llamas: «Shalom», «Olva». Es lo que verás en la lista.",
-    maximo: 60,
+    clave: "numero_documento",
+    etiqueta: "RUC",
+    ayuda: "Escríbelo y pulsa «Traer datos». Sin él la guía se guarda, pero no se puede emitir.",
+    modo: "digitos",
+    maximo: 11,
+    mono: true,
+    consulta: { tipo: "ruc", rellena: "razon_social", boton: "Traer datos" },
   },
   {
     clave: "razon_social",
     etiqueta: "Razón social",
     requerido: true,
-    ayuda: "La que sale impresa en la guía. Cópiala tal cual del papel.",
+    ayuda: "La que sale impresa en la guía.",
     placeholder: "SHALOM EMPRESARIAL S.A.C.",
     maximo: 200,
   },
   {
-    clave: "numero_documento",
-    etiqueta: "RUC",
-    ayuda: "Sin él la guía se guarda, pero no se puede emitir.",
-    modo: "digitos",
-    maximo: 11,
+    clave: "nombre_corto",
+    etiqueta: "Nombre corto",
+    ayuda: "Como la llamas: «Shalom», «Olva». Es lo que verás en la lista.",
+    maximo: 60,
     ancho: "medio",
-    mono: true,
   },
   { clave: "telefono", etiqueta: "Teléfono", maximo: 40, ancho: "medio" },
   { clave: "direccion", etiqueta: "Dirección", maximo: 200 },
@@ -75,19 +78,20 @@ const CAMPOS_VEHICULO: readonly CampoMaestro[] = [
 
 const CAMPOS_CONDUCTOR: readonly CampoMaestro[] = [
   {
+    clave: "numero_documento",
+    etiqueta: "DNI",
+    ayuda: "Escríbelo y pulsa «Traer nombre».",
+    modo: "digitos",
+    maximo: 8,
+    mono: true,
+    consulta: { tipo: "dni", rellena: "nombre", boton: "Traer nombre" },
+  },
+  {
     clave: "nombre",
     etiqueta: "Nombre",
     requerido: true,
     ayuda: "Como sale impreso en la guía.",
     maximo: 160,
-  },
-  {
-    clave: "numero_documento",
-    etiqueta: "DNI",
-    modo: "digitos",
-    maximo: 8,
-    ancho: "medio",
-    mono: true,
   },
   {
     clave: "licencia",

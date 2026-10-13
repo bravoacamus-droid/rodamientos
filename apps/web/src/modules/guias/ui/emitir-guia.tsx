@@ -34,6 +34,8 @@ import { ETIQUETA_MODALIDAD, type GuiaDetalle } from "../dominio/tipos";
  * contrario y solo lo puede hacer gerencia.
  */
 export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
+  const unidades = guia.lineas.reduce((a, l) => a + l.cantidad, 0);
+  const enNegativo = guia.lineas.filter((l) => l.stock != null && l.cantidad > l.stock);
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -83,15 +85,16 @@ export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
         if (!v) setError(null);
       }}
     >
-      <DialogTrigger className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700">
+      <DialogTrigger className="inline-flex h-9 items-center rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700">
         Emitir y despachar
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Emitir {guia.numero}</DialogTitle>
           <DialogDescription>
-            Al emitir, <strong>{guia.lineas.length}</strong>{" "}
-            {guia.lineas.length === 1 ? "producto sale" : "productos salen"} del almacén y el kardex registra la
+            Al emitir salen del almacén <strong>{unidades.toLocaleString("es-PE")}</strong>{" "}
+            {unidades === 1 ? "unidad" : "unidades"} ({guia.lineas.length}{" "}
+            {guia.lineas.length === 1 ? "producto" : "productos"}) y el kardex registra la
             salida. Deshacerlo es anular la guía, y eso solo lo puede hacer Gerencia.
           </DialogDescription>
         </DialogHeader>
@@ -107,8 +110,26 @@ export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
               etiqueta="Transporte"
               valor={transporte}
             />
-            <Fila ok={guia.peso_bruto_kg > 0} etiqueta="Peso bruto" valor={`${guia.peso_bruto_kg} kg`} />
+            <Fila ok={guia.peso_bruto_kg > 0} etiqueta="Peso bruto" valor={`${guia.peso_bruto_kg.toFixed(3)} kg`} />
           </ul>
+
+          {/*
+            El stock que queda en negativo, también aquí (auditoría 14/10): el
+            constructor lo avisaba, y en el momento de emitir —que es cuando
+            sale de verdad— no. No bloquea: el negativo es deliberado (002).
+          */}
+          {enNegativo.length > 0 ? (
+            <div className="mt-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
+              <p className="font-medium">El stock quedará en negativo:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {enNegativo.map((l) => (
+                  <li key={l.id}>
+                    <span className="font-mono">{l.codigo}</span>: salen {l.cantidad}, hay {l.stock}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {falta.length > 0 ? (
             <div className="mt-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
