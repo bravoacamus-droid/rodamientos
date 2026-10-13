@@ -23,6 +23,8 @@ const FACTURA: ComprobanteDetalle = {
   correlativo: 1,
   numero: "F001-00000001",
   moneda: "USD",
+  tipo_cambio: null,
+  pen: null,
   mostrar_cuenta: true,
   guia_numero: null,
   cuotas: [],

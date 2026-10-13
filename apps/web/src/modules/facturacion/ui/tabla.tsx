@@ -149,7 +149,7 @@ export async function TablaComprobantes({
                 </td>
 
                 <td className="px-3 py-2.5 text-right">
-                  <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                  <Moneda moneda={c.moneda} valor={c.total} tamano="sm" enfasis="fuerte" />
                   <Saldo c={c} hoy={hoy} />
                 </td>
 
@@ -245,7 +245,7 @@ export async function TablaComprobantes({
                   </Dato>
                 ) : null}
                 <Dato etiqueta="Total">
-                  <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                  <Moneda moneda={c.moneda} valor={c.total} tamano="sm" enfasis="fuerte" />
                 </Dato>
                 <Dato etiqueta="Saldo">
                   {c.estado === "anulado" ? (
@@ -255,6 +255,7 @@ export async function TablaComprobantes({
                   ) : (
                     <>
                       <Moneda
+                        moneda={c.moneda}
                         valor={c.saldo}
                         tamano="sm"
                         className={vencida ? "font-medium text-danger" : ""}
@@ -364,7 +365,7 @@ function Saldo({ c, hoy }: { c: ComprobanteLista; hoy: string }) {
   const color = vencida ? "font-medium text-danger" : "text-warn";
   return (
     <span className={`block whitespace-nowrap text-sm ${color}`}>
-      Debe <Moneda valor={c.saldo} tamano="sm" className={color} />
+      Debe <Moneda moneda={c.moneda} valor={c.saldo} tamano="sm" className={color} />
       {c.fecha_vencimiento ? (
         <span className="block">
           {vencida ? "venció" : "vence"} {formatearFecha(c.fecha_vencimiento)}

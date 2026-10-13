@@ -12,6 +12,7 @@ import { conectorSunat } from "../api/configuracion";
 import { detalleComprobante } from "../api/consultas";
 import { cuotasDe, docSunatDe, unidadSunat } from "../dominio/emision";
 import { cuotasNetas } from "../dominio/retencion";
+import { enMonedaDelDocumento } from "../dominio/moneda-documento";
 
 /**
  * Envío de un comprobante ya emitido a SUNAT.
@@ -64,7 +65,9 @@ export async function enviarASunat(
   if (!ficha.ok) return { ok: false, error: ficha.error };
   if (!ficha.datos) return { ok: false, error: "El comprobante no existe." };
 
-  const c = ficha.datos;
+  // En la moneda en que se emitió (116): una factura en soles va a SUNAT en
+  // soles, con las líneas, los totales y las cuotas en soles.
+  const c = enMonedaDelDocumento(ficha.datos);
 
   if (c.estado === "anulado") {
     return { ok: false, error: "El comprobante está anulado: no se envía." };
@@ -122,8 +125,8 @@ export async function enviarASunat(
     serie: c.serie,
     correlativo: c.correlativo,
     fechaEmision: new Date(`${c.fecha_emision}T00:00:00`),
-    // La moneda es constante del negocio: Willy cotiza y factura en dólares.
-    moneda: "USD",
+    // Casi siempre dólares; en soles si la venta se aprobó en soles (116).
+    moneda: c.moneda,
     emisor: {
       ruc: empresa.ruc,
       razonSocial: empresa.razon_social,

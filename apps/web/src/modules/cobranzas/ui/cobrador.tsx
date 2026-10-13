@@ -36,6 +36,7 @@ import {
   type CuotaComprobante,
   type DocumentoPorCobrar,
   type MedioPago,
+  saldoEnMoneda,
 } from "../dominio/tipos";
 import { TIPOS_VOUCHER } from "./voucher-del-pago";
 
@@ -73,22 +74,32 @@ export function Cobrador({
     dólares—, convertido al tipo de cambio que se diga, y la nota deja escrito
     cuántos soles fueron y a cuánto.
   */
-  const [enSoles, setEnSoles] = React.useState(false);
-  const [soles, setSoles] = React.useState("");
-  const [tc, setTc] = React.useState("");
+  /*
+    Una factura EN SOLES (116) se cobra en soles, al cambio de su factura —el
+    que se congeló al aprobar la cotización—, no al del día del pago. Así lo
+    que el cliente paga entero salda entero: si paga todo lo pendiente en
+    soles, se aplica exacto el saldo en dólares, sin el céntimo suelto que
+    dejaría dividir.
+  */
+  const esPen = documento.moneda === "PEN" && Boolean(documento.tipo_cambio);
+  const saldoPen = saldoEnMoneda(documento);
+  const [enSoles, setEnSoles] = React.useState(esPen);
+  const [soles, setSoles] = React.useState(esPen ? saldoPen.toFixed(2) : "");
+  const [tc, setTc] = React.useState(esPen ? String(documento.tipo_cambio) : "");
   const [trayendoTc, traerTc] = React.useTransition();
   const [avisoTc, setAvisoTc] = React.useState<string | null>(null);
   const solesNum = Number(soles.replace(",", "."));
   const tcNum = Number(tc.replace(",", "."));
-  const conversion =
-    enSoles && solesNum > 0 && tcNum > 0 ? Math.round((solesNum / tcNum) * 100) / 100 : null;
+  const aDolares = (s: number, t: number) =>
+    esPen && s >= saldoPen - 0.005 ? documento.saldo : Math.round((s / t) * 100) / 100;
+  const conversion = enSoles && solesNum > 0 && tcNum > 0 ? aDolares(solesNum, tcNum) : null;
   const pedirTc = () => {
     setAvisoTc(null);
     traerTc(async () => {
       const t = await tipoCambioDelPago(fecha);
       if (t.ok) {
         setTc(String(t.venta));
-        if (solesNum > 0) setMonto(Math.round((solesNum / t.venta) * 100) / 100);
+        if (solesNum > 0) setMonto(aDolares(solesNum, t.venta));
       } else setAvisoTc(`${t.error} Escríbelo a mano.`);
     });
   };
@@ -160,6 +171,11 @@ export function Cobrador({
           // Al reabrir se vuelve al saldo vigente: si ya se cobró algo, el
           // importe de antes ya no vale.
           setMonto(documento.saldo);
+          if (esPen) {
+            setEnSoles(true);
+            setSoles(saldoPen.toFixed(2));
+            setTc(String(documento.tipo_cambio));
+          }
           setFecha(hoy);
           setVoucher(null);
         }
@@ -179,8 +195,14 @@ export function Cobrador({
           <DialogDescription>
             {documento.cliente} · saldo{" "}
             <strong>
-              <Moneda valor={documento.saldo} tamano="sm" className="text-inherit" />
+              <Moneda
+                valor={esPen ? saldoPen : documento.saldo}
+                moneda={esPen ? "PEN" : "USD"}
+                tamano="sm"
+                className="text-inherit"
+              />
             </strong>
+            {esPen ? ` · factura en soles, al cambio ${documento.tipo_cambio?.toFixed(3)}` : ""}
             {documento.dias_vencido > 0
               ? ` · vencido hace ${documento.dias_vencido} días`
               : ""}
@@ -218,7 +240,10 @@ export function Cobrador({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setMonto(documento.saldo)}
+                    onClick={() => {
+                      setMonto(documento.saldo);
+                      if (enSoles && esPen) setSoles(saldoPen.toFixed(2));
+                    }}
                     className="self-start"
                   >
                     Poner el saldo completo
@@ -255,7 +280,7 @@ export function Cobrador({
                         onChange={(e) => {
                           setSoles(e.target.value);
                           const n = Number(e.target.value.replace(",", "."));
-                          if (n > 0 && tcNum > 0) setMonto(Math.round((n / tcNum) * 100) / 100);
+                          if (n > 0 && tcNum > 0) setMonto(aDolares(n, tcNum));
                         }}
                         className="w-32 tabular"
                       />
@@ -265,18 +290,24 @@ export function Cobrador({
                       <Input
                         inputMode="decimal"
                         value={tc}
+                        // El de la factura, fijo: es el que convierte su deuda.
+                        readOnly={esPen}
                         onChange={(e) => {
                           setTc(e.target.value);
                           const t = Number(e.target.value.replace(",", "."));
-                          if (solesNum > 0 && t > 0) setMonto(Math.round((solesNum / t) * 100) / 100);
+                          if (solesNum > 0 && t > 0) setMonto(aDolares(solesNum, t));
                         }}
                         className="w-28 tabular"
                         placeholder={trayendoTc ? "Consultando…" : "3.450"}
                       />
                     </label>
-                    <Button type="button" variant="outline" onClick={pedirTc} disabled={trayendoTc}>
-                      Traer de SUNAT
-                    </Button>
+                    {esPen ? (
+                      <span className="pb-2 text-sm text-[var(--fg-muted)]">el de la factura</span>
+                    ) : (
+                      <Button type="button" variant="outline" onClick={pedirTc} disabled={trayendoTc}>
+                        Traer de SUNAT
+                      </Button>
+                    )}
                     {conversion !== null ? (
                       <span className="text-sm">
                         = <strong className="tabular">$ {conversion.toFixed(2)}</strong>
@@ -450,7 +481,11 @@ export function Cobrador({
               Cancelar
             </Button>
             <Button type="submit" disabled={bloqueos.length > 0 || cobrando}>
-              {cobrando ? "Registrando…" : `Registrar $\u00a0${monto.toFixed(2)}`}
+              {cobrando
+                ? "Registrando…"
+                : enSoles && esPen && solesNum > 0
+                  ? `Registrar S/\u00a0${solesNum.toFixed(2)}`
+                  : `Registrar $\u00a0${monto.toFixed(2)}`}
             </Button>
           </DialogFooter>
         </form>

@@ -9,7 +9,7 @@ import {
   repartoEnCuotas,
   tonoTramo,
 } from "./cobro";
-import type { CuotaComprobante, DocumentoPorCobrar } from "./tipos";
+import { saldoEnMoneda, type CuotaComprobante, type DocumentoPorCobrar } from "./tipos";
 
 const HOY = "2026-08-25";
 
@@ -35,6 +35,9 @@ const DOC: DocumentoPorCobrar = {
   detraccion_monto: 0,
   retencion_aplica: false,
   retencion_monto: 0,
+  moneda: "USD",
+  tipo_cambio: null,
+  pen_total: null,
 };
 
 describe("bloqueosPago", () => {
@@ -241,5 +244,15 @@ describe("tonoTramo", () => {
     expect(tonoTramo("61_90")).toBe("danger");
     expect(tonoTramo("mas_90")).toBe("danger");
     expect(tonoTramo("sin_vencimiento")).toBe("neutral");
+  });
+});
+
+describe("lo que se debe en soles (116)", () => {
+  it("al cambio de la factura, sin pasarse del total; pagada, cero", () => {
+    const pen = { moneda: "PEN" as const, tipo_cambio: 3.448, pen_total: 132.68 };
+    expect(saldoEnMoneda({ ...pen, saldo: 38.48 })).toBe(132.68);
+    expect(saldoEnMoneda({ ...pen, saldo: 10 })).toBe(34.48);
+    expect(saldoEnMoneda({ ...pen, saldo: 0 })).toBe(0);
+    expect(saldoEnMoneda({ moneda: "USD", tipo_cambio: null, pen_total: null, saldo: 12.5 })).toBe(12.5);
   });
 });

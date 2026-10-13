@@ -2,6 +2,7 @@ import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-pa
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
+import { enMonedaDelDocumento, nombreMoneda, simboloDe } from "../dominio/moneda-documento";
 import { cuadroRetencion, cuotasDelPapel, datosDeComprobante, infoRetencion } from "./papel";
 
 /**
@@ -26,7 +27,7 @@ const fecha = (f: string) => {
 };
 
 export function DocumentoComprobante({
-  c,
+  c: original,
   emisor,
   cuentas = [],
 }: {
@@ -43,6 +44,9 @@ export function DocumentoComprobante({
    */
   cuentas?: readonly CuentaParaPagar[];
 }) {
+  // En soles, todo en soles (116): líneas, totales y cuotas.
+  const c = enMonedaDelDocumento(original);
+  const sim = simboloDe(c.moneda);
   // Un descuento en cero no merece una fila: en un documento fiscal, cada
   // línea de más es una pregunta de más de quien lo revisa.
   const hayDescuento = c.descuento_global > 0;
@@ -80,18 +84,18 @@ export function DocumentoComprobante({
         importe: <span className="tabular">{dinero(l.importe)}</span>,
       }))}
       totales={[
-        { etiqueta: "Op. gravada", valor: `$ ${dinero(c.op_gravada)}` },
+        { etiqueta: "Op. gravada", valor: `${sim} ${dinero(c.op_gravada)}` },
         ...(c.op_exonerada > 0
-          ? [{ etiqueta: "Op. exonerada", valor: `$ ${dinero(c.op_exonerada)}` }]
+          ? [{ etiqueta: "Op. exonerada", valor: `${sim} ${dinero(c.op_exonerada)}` }]
           : []),
         ...(c.op_inafecta > 0
-          ? [{ etiqueta: "Op. inafecta", valor: `$ ${dinero(c.op_inafecta)}` }]
+          ? [{ etiqueta: "Op. inafecta", valor: `${sim} ${dinero(c.op_inafecta)}` }]
           : []),
         ...(hayDescuento
-          ? [{ etiqueta: "Descuento", valor: `$ − ${dinero(c.descuento_global)}` }]
+          ? [{ etiqueta: "Descuento", valor: `${sim} − ${dinero(c.descuento_global)}` }]
           : []),
-        { etiqueta: "IGV (18%)", valor: `$ ${dinero(c.igv)}` },
-        { etiqueta: "Total", valor: `$ ${dinero(c.total)}`, destacado: true },
+        { etiqueta: "IGV (18%)", valor: `${sim} ${dinero(c.igv)}` },
+        { etiqueta: "Total", valor: `${sim} ${dinero(c.total)}`, destacado: true },
       ]}
       enLetras={c.total_letras}
       pie={
@@ -104,7 +108,7 @@ export function DocumentoComprobante({
               <strong>Detracción {c.detraccion_porcentaje}%:</strong> ${" "}
               {dinero(c.detraccion_monto)}
               {c.detraccion_codigo ? ` (código ${c.detraccion_codigo})` : ""}. El
-              cliente paga $ {dinero(c.total - c.detraccion_monto)} y deposita el
+              cliente paga {sim} {dinero(c.total - c.detraccion_monto)} y deposita el
               resto en la cuenta de detracciones.
             </p>
           ) : null}
@@ -112,7 +116,7 @@ export function DocumentoComprobante({
             <p className="mb-1 whitespace-pre-line">{c.observaciones}</p>
           ) : null}
           <p className="mb-1">
-            Los importes están expresados en <strong>dólares americanos</strong>.
+            Los importes están expresados en <strong>{nombreMoneda(c.moneda)}</strong>.
           </p>
           {/* La leyenda que exige SUNAT para el documento impreso. */}
           <p className="mb-1">
@@ -148,7 +152,7 @@ export function DocumentoComprobante({
                       <td className="py-0.5 tabular">{q.numero}</td>
                       <td className="py-0.5 tabular">{fecha(q.fecha_vencimiento)}</td>
                       <td className="py-0.5 text-right tabular">
-                        $ {dinero(q.monto)}
+                        {sim} {dinero(q.monto)}
                       </td>
                     </tr>
                   ))}

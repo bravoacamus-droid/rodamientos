@@ -26,6 +26,14 @@ export interface DocumentoCuenta {
   pagado: number;
   saldo: number;
   dias_vencido: number;
+  /**
+   * En la moneda del documento (116): una factura en soles se le enseña al
+   * cliente en soles. Los de arriba siguen en dólares para sumar.
+   */
+  moneda: "USD" | "PEN";
+  total_doc: number;
+  pagado_doc: number;
+  saldo_doc: number;
 }
 
 export interface PagoCuenta {
@@ -90,6 +98,22 @@ export async function estadoDeCuenta(
     if (docs.error) return fallo(docs.error, "cobranzas/estado-de-cuenta");
     if (pagos.error) return fallo(pagos.error, "cobranzas/estado-de-cuenta");
 
+    // Las en soles (116), aparte: `v_cartera` no trae la moneda.
+    const enSoles = new Map<string, { tc: number; total: number }>();
+    const ids = (docs.data ?? []).map((d) => String(d.id));
+    if (ids.length > 0) {
+      const { data: pen } = await supabase
+        .from("comprobantes")
+        .select("id, tipo_cambio, pen_total")
+        .in("id", ids)
+        .eq("moneda", "PEN");
+      for (const p of pen ?? []) {
+        if (p.pen_total != null && Number(p.tipo_cambio) > 0) {
+          enSoles.set(String(p.id), { tc: Number(p.tipo_cambio), total: Number(p.pen_total) });
+        }
+      }
+    }
+
     const c = cli.data;
     return {
       ok: true,
@@ -113,6 +137,20 @@ export async function estadoDeCuenta(
           pagado: Number(d.pagado ?? 0),
           saldo: Number(d.saldo ?? 0),
           dias_vencido: Number(d.dias_vencido ?? 0),
+          ...(() => {
+            const pen = enSoles.get(String(d.id));
+            const saldo = Number(d.saldo ?? 0);
+            if (!pen) {
+              return { moneda: "USD" as const, total_doc: Number(d.total ?? 0), pagado_doc: Number(d.pagado ?? 0), saldo_doc: saldo };
+            }
+            const saldoDoc = saldo <= 0 ? 0 : Math.min(pen.total, Math.round(saldo * pen.tc * 100) / 100);
+            return {
+              moneda: "PEN" as const,
+              total_doc: pen.total,
+              pagado_doc: Math.round((pen.total - saldoDoc) * 100) / 100,
+              saldo_doc: saldoDoc,
+            };
+          })(),
         })),
         pagos: (pagos.data ?? []).map((p) => {
           const comp = (Array.isArray(p.comprobantes) ? p.comprobantes[0] : p.comprobantes) as

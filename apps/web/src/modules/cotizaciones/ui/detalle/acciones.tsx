@@ -45,9 +45,12 @@ export function AccionesCotizacion({
   despachable,
   guias,
   vistaPrevia,
+  enSoles = false,
 }: {
   id: string;
   estado: EstadoCotizacion;
+  /** Venta en soles (116): el diálogo de aprobar avisa que fija el cambio. */
+  enSoles?: boolean;
   /**
    * Con qué se arma el mensaje que se manda.
    *
@@ -150,6 +153,7 @@ export function AccionesCotizacion({
         abierto={confirmando}
         onCerrar={() => setConfirmando(false)}
         corrigiendo={estado === "aprobada"}
+        enSoles={enSoles}
       />
 
       {/*

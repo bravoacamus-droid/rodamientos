@@ -1120,6 +1120,7 @@ export type Database = {
           guia_id: string | null
           id: string
           igv: number
+          moneda: string
           mostrar_cuenta: boolean
           motivo_anulacion: string | null
           motivo_nota_codigo: string | null
@@ -1130,6 +1131,11 @@ export type Database = {
           op_inafecta: number
           orden_compra_cliente: string | null
           pagado: number
+          pen_descuento: number | null
+          pen_gravada: number | null
+          pen_igv: number | null
+          pen_retencion: number | null
+          pen_total: number | null
           referencia_id: string | null
           retencion_aplica: boolean
           retencion_monto: number
@@ -1145,6 +1151,7 @@ export type Database = {
           sunat_ticket: string | null
           sunat_xml_firmado: string | null
           tipo: Database["public"]["Enums"]["tipo_documento"]
+          tipo_cambio: number | null
           total: number
           total_letras: string | null
           vendedor_id: string | null
@@ -1173,6 +1180,7 @@ export type Database = {
           guia_id?: string | null
           id?: string
           igv?: number
+          moneda?: string
           mostrar_cuenta?: boolean
           motivo_anulacion?: string | null
           motivo_nota_codigo?: string | null
@@ -1183,6 +1191,11 @@ export type Database = {
           op_inafecta?: number
           orden_compra_cliente?: string | null
           pagado?: number
+          pen_descuento?: number | null
+          pen_gravada?: number | null
+          pen_igv?: number | null
+          pen_retencion?: number | null
+          pen_total?: number | null
           referencia_id?: string | null
           retencion_aplica?: boolean
           retencion_monto?: number
@@ -1198,6 +1211,7 @@ export type Database = {
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
           tipo?: Database["public"]["Enums"]["tipo_documento"]
+          tipo_cambio?: number | null
           total?: number
           total_letras?: string | null
           vendedor_id?: string | null
@@ -1226,6 +1240,7 @@ export type Database = {
           guia_id?: string | null
           id?: string
           igv?: number
+          moneda?: string
           mostrar_cuenta?: boolean
           motivo_anulacion?: string | null
           motivo_nota_codigo?: string | null
@@ -1236,6 +1251,11 @@ export type Database = {
           op_inafecta?: number
           orden_compra_cliente?: string | null
           pagado?: number
+          pen_descuento?: number | null
+          pen_gravada?: number | null
+          pen_igv?: number | null
+          pen_retencion?: number | null
+          pen_total?: number | null
           referencia_id?: string | null
           retencion_aplica?: boolean
           retencion_monto?: number
@@ -1251,6 +1271,7 @@ export type Database = {
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
           tipo?: Database["public"]["Enums"]["tipo_documento"]
+          tipo_cambio?: number | null
           total?: number
           total_letras?: string | null
           vendedor_id?: string | null
@@ -2063,6 +2084,7 @@ export type Database = {
           id: string
           igv: number
           margen_pct: number
+          moneda: string
           mostrar_descuento: boolean
           mostrar_disponibilidad: boolean
           motivo_rechazo: string | null
@@ -2072,6 +2094,7 @@ export type Database = {
           serie: string
           subtotal: number
           tiempo_entrega: string | null
+          tipo_cambio: number | null
           token_publico: string
           total: number
           validez_dias: number
@@ -2096,6 +2119,7 @@ export type Database = {
           id?: string
           igv?: number
           margen_pct?: number
+          moneda?: string
           mostrar_descuento?: boolean
           mostrar_disponibilidad?: boolean
           motivo_rechazo?: string | null
@@ -2105,6 +2129,7 @@ export type Database = {
           serie?: string
           subtotal?: number
           tiempo_entrega?: string | null
+          tipo_cambio?: number | null
           token_publico?: string
           total?: number
           validez_dias?: number
@@ -2129,6 +2154,7 @@ export type Database = {
           id?: string
           igv?: number
           margen_pct?: number
+          moneda?: string
           mostrar_descuento?: boolean
           mostrar_disponibilidad?: boolean
           motivo_rechazo?: string | null
@@ -2138,6 +2164,7 @@ export type Database = {
           serie?: string
           subtotal?: number
           tiempo_entrega?: string | null
+          tipo_cambio?: number | null
           token_publico?: string
           total?: number
           validez_dias?: number
@@ -4867,9 +4894,10 @@ export type Database = {
         Returns: Json
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
-      aprobar_cotizacion:
-        | { Args: { p_id: string }; Returns: Json }
-        | { Args: { p_id: string; p_lineas?: Json }; Returns: Json }
+      aprobar_cotizacion: {
+        Args: { p_id: string; p_lineas?: Json; p_tipo_cambio?: number }
+        Returns: Json
+      }
       asegurar_ubigeo: {
         Args: {
           p_codigo: string
@@ -5216,6 +5244,10 @@ export type Database = {
           recibido: number
           unidad_codigo: string
         }[]
+      }
+      poner_moneda_cotizacion: {
+        Args: { p_id: string; p_moneda: string }
+        Returns: undefined
       }
       poner_orden_compra_cliente: {
         Args: { p_id: string; p_oc: string }

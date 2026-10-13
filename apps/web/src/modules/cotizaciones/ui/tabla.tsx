@@ -176,6 +176,7 @@ export async function TablaCotizaciones({
 
                 <td className="px-4 py-2.5 text-right">
                   <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                  {c.enSoles ? <span className="block text-sm text-[var(--fg-muted)]">venta en soles</span> : null}
                 </td>
 
                 <td className="px-4 py-2.5 text-right">
@@ -258,7 +259,10 @@ export async function TablaCotizaciones({
                 <span className="font-mono text-sm font-semibold text-brand-700">
                   {c.numero}
                 </span>
-                <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                <span className="text-right">
+                  <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                  {c.enSoles ? <span className="block text-sm text-[var(--fg-muted)]">en soles</span> : null}
+                </span>
               </div>
 
               <p className="mt-0.5 truncate text-sm">{c.cliente}</p>

@@ -1,4 +1,5 @@
 import { cuentasParaCobrar } from "@/lib/emisor";
+import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { EstadoBadge } from "@rodatech/ui";
@@ -11,11 +12,12 @@ import {
   tieneGuia,
 } from "../api/consultas";
 import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
-import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
+import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
 import { DescargarPdf } from "./detalle/descargar-pdf";
+import { MonedaVenta } from "./detalle/moneda-venta";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
 import { OrdenCliente } from "./detalle/orden-cliente";
@@ -155,10 +157,26 @@ export default async function PaginaDetalleCotizacion({
     ? `${protocolo}://${host}/ver/${cabecera.token_publico}`
     : null;
 
+  /*
+    La venta en soles (116). Aprobada, con el cambio congelado: lo que se
+    factura y se cobra. Antes de aprobar, el papel sale en soles al del día.
+  */
+  const moneda = cabecera.moneda === "PEN" ? "PEN" : "USD";
+  const tcFijo = Number(cabecera.tipo_cambio) > 0 ? Number(cabecera.tipo_cambio) : null;
+  const fechaTc = cabecera.aprobada_en ? cabecera.aprobada_en.slice(0, 10) : "";
+  const enSolesFijo =
+    moneda === "PEN" && tcFijo ? enSoles(impresa, { valor: tcFijo, fecha: fechaTc }) : null;
+  // En soles y sin aprobar: al cambio de hoy, para el mensaje y la tarjeta.
+  const tcHoy = moneda === "PEN" && !tcFijo ? await consultarTipoCambio() : null;
+  const enSolesHoy =
+    tcHoy && tcHoy.ok ? enSoles(impresa, { valor: tcHoy.venta, fecha: tcHoy.fecha }) : null;
+  const enSolesVer = enSolesFijo ?? enSolesHoy;
+
   const datosMensaje = {
     numero: impresa.numero,
     cliente: impresa.cliente.razonSocial,
-    total: impresa.total,
+    total: enSolesVer ? enSolesVer.total : impresa.total,
+    moneda: enSolesVer ? ("PEN" as const) : ("USD" as const),
     validaHasta: impresa.validaHasta,
     emisor: emisor.nombre_comercial,
     enlace,
@@ -255,7 +273,10 @@ export default async function PaginaDetalleCotizacion({
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
   return (
-    <MonedaDelPapel>
+    <MonedaDelPapel
+      key={`${moneda}-${tcFijo ?? ""}`}
+      inicial={{ enSoles: moneda === "PEN", tipoCambio: tcFijo, fecha: fechaTc, fijo: tcFijo !== null }}
+    >
       {/* ------------------------------------------------ Ficha de trabajo */}
       {/*
         Lo que se mira para TRABAJAR, y no se imprime.
@@ -318,6 +339,7 @@ export default async function PaginaDetalleCotizacion({
             editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
             despachable={despacho.pendiente}
             guias={despacho.guias}
+            enSoles={moneda === "PEN"}
             lineas={lineas.map((l) => ({
               id: l.id,
               codigo: l.codigo,
@@ -354,7 +376,25 @@ export default async function PaginaDetalleCotizacion({
           imprime» — ahora nada de esta mitad se imprime, así que esa
           advertencia sobra y el dato puede estar donde toca.
         */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          <Resumen
+            etiqueta="Moneda de la venta"
+            valor={moneda === "PEN" ? "Soles" : "Dólares"}
+            detalle={
+              enSolesFijo && tcFijo
+                ? `S/ ${enSolesFijo.total.toFixed(2)} · cambio ${tcFijo.toFixed(3)} fijado al aprobar`
+                : moneda === "PEN"
+                  ? enSolesHoy && tcHoy?.ok
+                    ? `≈ S/ ${enSolesHoy.total.toFixed(2)} al cambio de hoy (${tcHoy.venta.toFixed(3)}); se fija al aprobar`
+                    : "el tipo de cambio se fija al aprobar"
+                  : "factura y cobro en dólares"
+            }
+            accion={
+              cabecera.estado === "borrador" || cabecera.estado === "enviada" ? (
+                <MonedaVenta id={cabecera.id} moneda={moneda} />
+              ) : null
+            }
+          />
           <Resumen
             etiqueta="Condición de pago"
             valor={
@@ -679,6 +719,12 @@ export default async function PaginaDetalleCotizacion({
                 <dt className="font-semibold">Total</dt>
                 <dd className="tabular text-lg font-semibold">{dolar(cabecera.total)}</dd>
               </div>
+              {enSolesFijo && tcFijo ? (
+                <div className="flex items-baseline justify-between pt-1">
+                  <dt className="font-semibold">En soles (cambio {tcFijo.toFixed(3)})</dt>
+                  <dd className="tabular text-lg font-semibold">S/ {enSolesFijo.total.toFixed(2)}</dd>
+                </div>
+              ) : null}
             </dl>
             )}
           </div>

@@ -74,6 +74,23 @@ export async function cartera(
     const { data, error } = await consulta;
     if (error) return fallo(error, "cobranzas/cartera");
 
+    // La moneda de cada documento (116), aparte: `v_cartera` no la trae y
+    // tocar la vista arrastra a los reportes. Solo interesan las en soles.
+    const enSoles = new Map<string, { tipo_cambio: number; pen_total: number }>();
+    const ids = (data ?? []).map((d) => String(d.id));
+    if (ids.length > 0) {
+      const { data: pen } = await supabase
+        .from("comprobantes")
+        .select("id, tipo_cambio, pen_total")
+        .in("id", ids)
+        .eq("moneda", "PEN");
+      for (const p of pen ?? []) {
+        if (p.pen_total != null && Number(p.tipo_cambio) > 0) {
+          enSoles.set(String(p.id), { tipo_cambio: Number(p.tipo_cambio), pen_total: Number(p.pen_total) });
+        }
+      }
+    }
+
     return {
       ok: true,
       datos: (data ?? []).map((d) => ({
@@ -98,6 +115,9 @@ export async function cartera(
         detraccion_monto: Number(d.detraccion_monto ?? 0),
         retencion_aplica: Boolean(d.retencion_aplica),
         retencion_monto: Number(d.retencion_monto ?? 0),
+        moneda: enSoles.has(String(d.id)) ? ("PEN" as const) : ("USD" as const),
+        tipo_cambio: enSoles.get(String(d.id))?.tipo_cambio ?? null,
+        pen_total: enSoles.get(String(d.id))?.pen_total ?? null,
       })),
     };
   } catch (e) {

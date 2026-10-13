@@ -53,7 +53,7 @@ export async function listarCotizaciones(
       .from("cotizaciones")
       .select(
         `id, creado_en, numero, fecha, fecha_vencimiento, cliente_id,
-         orden_compra_cliente, subtotal, igv, total, costo_total, margen_pct, estado,
+         orden_compra_cliente, subtotal, igv, total, costo_total, margen_pct, estado, moneda,
          clientes!inner(razon_social, numero_documento),
          perfiles!cotizaciones_vendedor_id_fkey(nombre),
          cotizacion_items(count)`,
@@ -110,6 +110,7 @@ export async function listarCotizaciones(
       subtotal: Number(c.subtotal ?? 0),
       igv: Number(c.igv ?? 0),
       total: Number(c.total ?? 0),
+      enSoles: c.moneda === "PEN",
       costo_total: Number(c.costo_total ?? 0),
       margen_pct: Number(c.margen_pct ?? 0),
       estado: c.estado as CotizacionLista["estado"],
@@ -343,6 +344,13 @@ export async function cotizacionPorId(id: string): Promise<
       total: number;
       costo_total: number;
       margen_pct: number;
+      /**
+       * En qué se vende (116). Los importes siguen en dólares; en soles se
+       * convierten con `tipo_cambio`, que se congela al aprobar.
+       */
+      moneda: "USD" | "PEN";
+      tipo_cambio: number | null;
+      aprobada_en: string | null;
       /** El de la URL que se le manda al cliente (072). */
       token_publico: string;
       cliente_id: string;
@@ -437,6 +445,7 @@ export async function cotizacionPorId(id: string): Promise<
            orden_compra_cliente, contacto, contacto_id, condiciones, observaciones,
            mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
            igv, total, costo_total, margen_pct, cliente_id, token_publico,
+           moneda, tipo_cambio, aprobada_en,
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, whatsapp, telefono,
                           condicion_pago, dias_credito, email,

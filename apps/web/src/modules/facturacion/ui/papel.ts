@@ -3,6 +3,7 @@ import type { EmisorHoja } from "@/componentes/hoja-documento";
 import type { BloquePiePdf, HojaPdf } from "@/lib/pdf-hoja";
 
 import { cuotasNetas, RETENCION_PCT } from "../dominio/retencion";
+import { enMonedaDelDocumento, nombreMoneda, simboloDe } from "../dominio/moneda-documento";
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
 
 /**
@@ -79,7 +80,7 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
  * base imponible (el total), porcentaje y monto.
  */
 export function infoRetencion(c: ComprobanteDetalle): string {
-  return `Base imponible de la retención: $ ${dinero(c.total)} · Porcentaje: ${RETENCION_PCT}% · Monto: $ ${dinero(c.retencion_monto)}`;
+  return `Base imponible de la retención: ${simboloDe(c.moneda)} ${dinero(c.total)} · Porcentaje: ${RETENCION_PCT}% · Monto: ${simboloDe(c.moneda)} ${dinero(c.retencion_monto)}`;
 }
 
 /** Las cuotas que se imprimen: con retención, lo pendiente (total − retenido). */
@@ -92,10 +93,10 @@ export function cuadroRetencion(c: ComprobanteDetalle): { cabecera: string[]; fi
   return {
     cabecera: [`Retención IGV (${RETENCION_PCT}%)`, "Cuotas", "Fecha de pago", "Monto neto a pagar"],
     fila: [
-      `$ ${dinero(c.retencion_monto)}`,
+      `${simboloDe(c.moneda)} ${dinero(c.retencion_monto)}`,
       String(Math.max(c.cuotas.length, 1)),
       fecha(c.fecha_vencimiento ?? c.fecha_emision),
-      `$ ${dinero(neto)}`,
+      `${simboloDe(c.moneda)} ${dinero(neto)}`,
     ],
   };
 }
@@ -103,10 +104,12 @@ export function cuadroRetencion(c: ComprobanteDetalle): { cabecera: string[]; fi
 const MONEDA_CUENTA: Record<string, string> = { USD: "DÓLARES", PEN: "SOLES" };
 
 export function hojaDeComprobante(
-  c: ComprobanteDetalle,
+  original: ComprobanteDetalle,
   emisor: EmisorHoja,
   cuentas: readonly CuentaParaPagar[] = [],
 ): HojaPdf {
+  // En soles, todo en soles (116): las líneas, los totales y las cuotas.
+  const c = enMonedaDelDocumento(original);
   const pie: BloquePiePdf[] = [];
   if (c.detraccion_aplica) {
     pie.push({
@@ -114,7 +117,7 @@ export function hojaDeComprobante(
       trozos: [
         { texto: `Detracción ${c.detraccion_porcentaje}%: `, negrita: true },
         {
-          texto: `$ ${dinero(c.detraccion_monto)}${c.detraccion_codigo ? ` (código ${c.detraccion_codigo})` : ""}. El cliente paga $ ${dinero(c.total - c.detraccion_monto)} y deposita el resto en la cuenta de detracciones.`,
+          texto: `${simboloDe(c.moneda)} ${dinero(c.detraccion_monto)}${c.detraccion_codigo ? ` (código ${c.detraccion_codigo})` : ""}. El cliente paga ${simboloDe(c.moneda)} ${dinero(c.total - c.detraccion_monto)} y deposita el resto en la cuenta de detracciones.`,
         },
       ],
     });
@@ -122,7 +125,7 @@ export function hojaDeComprobante(
   if (c.observaciones) pie.push({ tipo: "parrafo", trozos: [{ texto: c.observaciones }] });
   pie.push({
     tipo: "parrafo",
-    trozos: [{ texto: "Los importes están expresados en " }, { texto: "dólares americanos", negrita: true }, { texto: "." }],
+    trozos: [{ texto: "Los importes están expresados en " }, { texto: nombreMoneda(c.moneda), negrita: true }, { texto: "." }],
   });
   pie.push({
     tipo: "parrafo",
@@ -134,7 +137,7 @@ export function hojaDeComprobante(
       tipo: "tabla",
       titulo: "Cuotas",
       cabecera: ["Cuota", "Vence", "Importe"],
-      filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `$ ${dinero(q.monto)}`]),
+      filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `${simboloDe(c.moneda)} ${dinero(q.monto)}`]),
       derecha: [2],
     });
   }
@@ -184,12 +187,12 @@ export function hojaDeComprobante(
       importe: dinero(l.importe),
     })),
     totales: [
-      { etiqueta: "Op. gravada", valor: `$ ${dinero(c.op_gravada)}` },
-      ...(c.op_exonerada > 0 ? [{ etiqueta: "Op. exonerada", valor: `$ ${dinero(c.op_exonerada)}` }] : []),
-      ...(c.op_inafecta > 0 ? [{ etiqueta: "Op. inafecta", valor: `$ ${dinero(c.op_inafecta)}` }] : []),
-      ...(hayDescuento ? [{ etiqueta: "Descuento", valor: `$ - ${dinero(c.descuento_global)}` }] : []),
-      { etiqueta: "IGV (18%)", valor: `$ ${dinero(c.igv)}` },
-      { etiqueta: "Total", valor: `$ ${dinero(c.total)}`, destacado: true },
+      { etiqueta: "Op. gravada", valor: `${simboloDe(c.moneda)} ${dinero(c.op_gravada)}` },
+      ...(c.op_exonerada > 0 ? [{ etiqueta: "Op. exonerada", valor: `${simboloDe(c.moneda)} ${dinero(c.op_exonerada)}` }] : []),
+      ...(c.op_inafecta > 0 ? [{ etiqueta: "Op. inafecta", valor: `${simboloDe(c.moneda)} ${dinero(c.op_inafecta)}` }] : []),
+      ...(hayDescuento ? [{ etiqueta: "Descuento", valor: `${simboloDe(c.moneda)} - ${dinero(c.descuento_global)}` }] : []),
+      { etiqueta: "IGV (18%)", valor: `${simboloDe(c.moneda)} ${dinero(c.igv)}` },
+      { etiqueta: "Total", valor: `${simboloDe(c.moneda)} ${dinero(c.total)}`, destacado: true },
     ],
     enLetras: c.total_letras,
     pie,

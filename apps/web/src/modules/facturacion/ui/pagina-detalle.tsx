@@ -25,6 +25,7 @@ import { nombreArchivo } from "@/lib/pdf-hoja";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 import { DocumentoComprobante } from "./documento";
 import { hojaDeComprobante } from "./papel";
+import { enMonedaDelDocumento } from "../dominio/moneda-documento";
 
 /**
  * Ficha de un comprobante.
@@ -61,7 +62,8 @@ export default async function PaginaDetalleComprobante({
   }
   if (!resultado.datos) notFound();
 
-  const c = resultado.datos;
+  // En la moneda en que se emitió (116): en soles, todo lo de abajo en soles.
+  const c = enMonedaDelDocumento(resultado.datos);
   // El PDF, armado aquí con lo mismo que pinta el papel (14/10).
   const hoja = hojaDeComprobante(c, emisor, cuentas);
   const archivo = nombreArchivo(c.numero, c.cliente);
@@ -136,7 +138,9 @@ export default async function PaginaDetalleComprobante({
                 Por eso el botón vive aquí, junto al documento que corrige. */}
             {puedeEnviar ? (
               <EmisorNota
-                documento={c}
+                // El original, en dólares: la nota se arma en dólares y la
+                // base la pasa a soles (116). El diálogo enseña en soles.
+                documento={resultado.datos}
                 motivos={motivos.ok ? motivos.datos : []}
                 hoy={hoy}
                 yaAcreditado={acreditado}
@@ -157,12 +161,12 @@ export default async function PaginaDetalleComprobante({
         «$ 1,018.17 · pagado 0.00», que se lee como una deuda viva.
       */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Gravada" valor={<Moneda valor={c.op_gravada} tamano="lg" className="text-lg" />} />
+        <Tarjeta etiqueta="Gravada" valor={<Moneda moneda={c.moneda} valor={c.op_gravada} tamano="lg" className="text-lg" />} />
         <Tarjeta
           etiqueta="IGV"
-          valor={<Moneda valor={c.igv} tamano="lg" enfasis="suave" className="text-lg" />}
+          valor={<Moneda moneda={c.moneda} valor={c.igv} tamano="lg" enfasis="suave" className="text-lg" />}
         />
-        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} tamano="lg" className="text-lg" />} />
+        <Tarjeta etiqueta="Total" valor={<Moneda moneda={c.moneda} valor={c.total} tamano="lg" className="text-lg" />} />
         {c.estado === "anulado" ? (
           <Tarjeta
             etiqueta="Saldo"
@@ -174,12 +178,13 @@ export default async function PaginaDetalleComprobante({
             etiqueta="Saldo"
             valor={
               <Moneda
+                moneda={c.moneda}
                 valor={c.saldo}
                 tamano="lg"
                 className={`text-lg ${c.saldo <= 0 ? "text-ok" : "text-warn"}`}
               />
             }
-            pie={c.saldo <= 0 ? "Cobrado" : <>Pagado <Moneda valor={c.pagado} tamano="sm" enfasis="suave" /></>}
+            pie={c.saldo <= 0 ? "Cobrado" : <>Pagado <Moneda moneda={c.moneda} valor={c.pagado} tamano="sm" enfasis="suave" /></>}
           />
         )}
       </div>
@@ -251,7 +256,7 @@ export default async function PaginaDetalleComprobante({
                       </span>
                     </td>
                     <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
-                      {l.valor_unitario.toFixed(4)}
+                      {l.valor_unitario.toFixed(c.moneda === "PEN" ? 2 : 4)}
                       {l.descuento_pct > 0 ? (
                         <span className="block text-sm text-[var(--fg-subtle)]">
                           −{l.descuento_pct}%
@@ -259,7 +264,7 @@ export default async function PaginaDetalleComprobante({
                       ) : null}
                     </td>
                     <td className="py-2 text-right">
-                      <Moneda valor={l.importe} tamano="sm" enfasis="fuerte" />
+                      <Moneda moneda={c.moneda} valor={l.importe} tamano="sm" enfasis="fuerte" />
                     </td>
                   </tr>
                 ))}
@@ -274,6 +279,7 @@ export default async function PaginaDetalleComprobante({
                 <div className="flex items-baseline justify-between gap-2">
                   <CodigoLinea id={l.producto_id} codigo={l.codigo} />
                   <Moneda
+                    moneda={c.moneda}
                     valor={l.importe}
                     tamano="sm"
                     enfasis="fuerte"
@@ -287,7 +293,7 @@ export default async function PaginaDetalleComprobante({
                     explique las columnas, se escribe la multiplicación. */}
                 <p className="text-sm text-[var(--fg-muted)]">
                   <span className="tabular">{l.cantidad}</span> {abreviaturaUnidad(l.unidad)} ×{" "}
-                  <span className="tabular">{l.valor_unitario.toFixed(4)}</span>
+                  <span className="tabular">{l.valor_unitario.toFixed(c.moneda === "PEN" ? 2 : 4)}</span>
                   {l.descuento_pct > 0 ? (
                     <span className="text-[var(--fg-subtle)]">
                       {" "}
@@ -402,11 +408,11 @@ export default async function PaginaDetalleComprobante({
               <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
                 <p className="font-medium">
                   Detracción {c.detraccion_porcentaje}% ·{" "}
-                  <Moneda valor={c.detraccion_monto} tamano="sm" />
+                  <Moneda moneda={c.moneda} valor={c.detraccion_monto} tamano="sm" />
                 </p>
                 <p className="mt-0.5 text-[var(--fg-muted)]">
                   El cliente paga{" "}
-                  <Moneda valor={c.total - c.detraccion_monto} tamano="sm" enfasis="suave" /> y
+                  <Moneda moneda={c.moneda} valor={c.total - c.detraccion_monto} tamano="sm" enfasis="suave" /> y
                   deposita el resto en la cuenta de detracciones.
                 </p>
               </div>

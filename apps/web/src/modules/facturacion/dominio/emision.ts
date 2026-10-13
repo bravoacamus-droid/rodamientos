@@ -302,3 +302,19 @@ export function unidadSunat(codigo: string | null): string {
   const c = (codigo ?? "").trim().toUpperCase();
   return c.length >= 2 ? c : "NIU";
 }
+
+/**
+ * Las líneas en la moneda del documento (116).
+ *
+ * En soles, el valor unitario a céntimos —`round(valor × cambio, 2)`— y de ahí
+ * los totales con `totalesDe`. Es la misma cuenta que hace
+ * `emitir_comprobante` en la base y que el papel de la cotización en soles
+ * (`enSoles`): si se separan, la factura impresa no cuadra con la emitida.
+ */
+export function enMonedaDocumento<T extends { valor_unitario: number }>(
+  lineas: readonly T[],
+  tipoCambio: number | null,
+): T[] {
+  if (!tipoCambio || !(tipoCambio > 0)) return [...lineas];
+  return lineas.map((l) => ({ ...l, valor_unitario: redondear2(l.valor_unitario * tipoCambio) }));
+}

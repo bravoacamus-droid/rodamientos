@@ -37,7 +37,7 @@ import { emitirComprobante, type ResultadoEmision } from "../acciones/emitir";
 import {
   bloqueosEmision,
   cuotasDe,
-
+  enMonedaDocumento,
   totalesDe,
   vencimientoDe,
 } from "../dominio/emision";
@@ -389,6 +389,21 @@ export function EmisorComprobante({
     [aEmitir],
   );
 
+  /*
+    La venta en soles (116): la factura sale en soles con el cambio que se
+    congeló al aprobar la cotización. Aquí todo se ENSEÑA en la moneda del
+    documento; lo que viaja sigue en dólares y la base lo convierte con la
+    misma cuenta (`enMonedaDocumento`).
+  */
+  const tcDoc = cot?.moneda === "PEN" && cot.tipo_cambio ? cot.tipo_cambio : null;
+  const monedaDoc: "USD" | "PEN" = tcDoc ? "PEN" : "USD";
+  const sim = tcDoc ? "S/" : "$";
+  const totalesDoc = useMemo(
+    () => (tcDoc ? totalesDe(enMonedaDocumento(aEmitir, tcDoc)) : totales),
+    [aEmitir, tcDoc, totales],
+  );
+  const unitDoc = (u: number) => (tcDoc ? Math.round(u * tcDoc * 100) / 100 : u);
+
   const bloqueos = useMemo(
     () =>
       cot
@@ -405,7 +420,8 @@ export function EmisorComprobante({
 
   const serie = tipo === "factura" ? serieFactura : serieBoleta;
 
-  const llegaAlUmbral = alcanzaUmbral(totales.total, tc);
+  // En soles el umbral se mira directo; en dólares, al cambio del día.
+  const llegaAlUmbral = tcDoc ? totalesDoc.total >= UMBRAL_RETENCION_SOLES : alcanzaUmbral(totales.total, tc);
   const retiene = seRetiene(llegaAlUmbral, eleccion);
 
   /*
@@ -440,6 +456,8 @@ export function EmisorComprobante({
   const alCredito = condicion === "credito" && dias > 0;
   const vencimiento = alCredito ? vencimientoDe(fecha, dias) : null;
   const cuotas = alCredito ? cuotasDe(totales.total, dias, fecha) : [];
+  // Las que se enseñan, en la moneda del documento.
+  const cuotasVista = alCredito ? cuotasDe(totalesDoc.total, dias, fecha) : [];
 
   const payload = JSON.stringify({
     cotizacion_id: cotizacionId,
@@ -694,7 +712,12 @@ export function EmisorComprobante({
                 </div>
               </div>
               <p className="mt-2 text-sm">
-                {tc ? (
+                {tcDoc ? (
+                  <>
+                    Venta en soles: total <strong>S/ {totalesDoc.total.toFixed(2)}</strong>, al cambio{" "}
+                    {tcDoc.toFixed(3)} fijado al aprobar la cotización.
+                  </>
+                ) : tc ? (
                   <>
                     Total $ {totales.total.toFixed(2)} ≈ <strong>S/ {(totales.total * tc).toFixed(2)}</strong> al tipo
                     de cambio venta de SUNAT ({tc.toFixed(3)}).
@@ -710,9 +733,9 @@ export function EmisorComprobante({
               </p>
               {retiene ? (
                 <p className="mt-2 rounded-md bg-[var(--surface-2)] p-3 text-sm">
-                  Retención: <strong>$ {montoRetencion(totales.total).toFixed(2)}</strong>
-                  {tc ? <> (S/ {(montoRetencion(totales.total) * tc).toFixed(2)})</> : null} · Te pagan:{" "}
-                  <strong>$ {netoAPagar(totales.total).toFixed(2)}</strong>
+                  Retención: <strong>{sim} {montoRetencion(totalesDoc.total).toFixed(2)}</strong>
+                  {tc && !tcDoc ? <> (S/ {(montoRetencion(totales.total) * tc).toFixed(2)})</> : null} · Te pagan:{" "}
+                  <strong>{sim} {netoAPagar(totalesDoc.total).toFixed(2)}</strong>
                 </p>
               ) : null}
             </section>
@@ -768,15 +791,16 @@ export function EmisorComprobante({
                       </div>
                       <div className="text-right text-sm">
                         <span className="block text-[var(--fg-muted)]">
-                          × <span className="tabular">{l.valor_unitario.toFixed(4)}</span>
+                          × <span className="tabular">{tcDoc ? unitDoc(l.valor_unitario).toFixed(2) : l.valor_unitario.toFixed(4)}</span>
                           {l.descuento_pct > 0 ? ` −${l.descuento_pct}%` : ""}
                         </span>
                         <Moneda
                           valor={importeConDescuento(
                             cantidades[i] ?? l.cantidad,
-                            l.valor_unitario,
+                            unitDoc(l.valor_unitario),
                             l.descuento_pct,
                           )}
+                          moneda={monedaDoc}
                           className="text-base font-semibold"
                         />
                       </div>
@@ -814,7 +838,7 @@ export function EmisorComprobante({
                           />
                         </td>
                         <td className="whitespace-nowrap py-2 pr-3 text-right tabular">
-                          {l.valor_unitario.toFixed(4)}
+                          {tcDoc ? unitDoc(l.valor_unitario).toFixed(2) : l.valor_unitario.toFixed(4)}
                           {l.descuento_pct > 0 ? (
                             <span className="block text-sm text-[var(--fg-subtle)]">
                               −{l.descuento_pct}%
@@ -828,9 +852,10 @@ export function EmisorComprobante({
                           <Moneda
                             valor={importeConDescuento(
                               cantidades[i] ?? l.cantidad,
-                              l.valor_unitario,
+                              unitDoc(l.valor_unitario),
                               l.descuento_pct,
                             )}
+                            moneda={monedaDoc}
                             tamano="sm"
                             enfasis="fuerte"
                           />
@@ -900,19 +925,19 @@ export function EmisorComprobante({
             <h2 className="text-sm font-semibold">Resumen</h2>
 
             <dl className="flex flex-col gap-1.5 text-sm">
-              <Fila etiqueta="Gravada" valor={`$\u00a0${totales.gravada.toFixed(2)}`} />
-              {totales.descuento > 0 ? (
-                <Fila etiqueta="Descuento" valor={`−\u00a0$\u00a0${totales.descuento.toFixed(2)}`} />
+              <Fila etiqueta="Gravada" valor={`${sim}\u00a0${totalesDoc.gravada.toFixed(2)}`} />
+              {totalesDoc.descuento > 0 ? (
+                <Fila etiqueta="Descuento" valor={`−\u00a0${sim}\u00a0${totalesDoc.descuento.toFixed(2)}`} />
               ) : null}
-              <Fila etiqueta="IGV (18 %)" valor={`$\u00a0${totales.igv.toFixed(2)}`} />
-              <Fila etiqueta="Total" valor={`$\u00a0${totales.total.toFixed(2)}`} fuerte />
+              <Fila etiqueta="IGV (18 %)" valor={`${sim}\u00a0${totalesDoc.igv.toFixed(2)}`} />
+              <Fila etiqueta="Total" valor={`${sim}\u00a0${totalesDoc.total.toFixed(2)}`} fuerte />
               {retiene ? (
                 <>
                   <Fila
                     etiqueta={`Retenci\u00f3n (${RETENCION_PCT} %)`}
-                    valor={`\u2212\u00a0$\u00a0${montoRetencion(totales.total).toFixed(2)}`}
+                    valor={`\u2212\u00a0${sim}\u00a0${montoRetencion(totalesDoc.total).toFixed(2)}`}
                   />
-                  <Fila etiqueta="Te pagan" valor={`$\u00a0${netoAPagar(totales.total).toFixed(2)}`} fuerte />
+                  <Fila etiqueta="Te pagan" valor={`${sim}\u00a0${netoAPagar(totalesDoc.total).toFixed(2)}`} fuerte />
                 </>
               ) : null}
             </dl>
@@ -927,11 +952,11 @@ export function EmisorComprobante({
                 <ul className="flex flex-col gap-0.5 text-sm text-[var(--fg-muted)]">
                   {/* Con retención, lo PENDIENTE: el total menos lo retenido,
                       como su F002-564. */}
-                  {cuotasNetas(cuotas, retiene ? montoRetencion(totales.total) : 0).map((q) => (
+                  {cuotasNetas(cuotasVista, retiene ? montoRetencion(totalesDoc.total) : 0).map((q) => (
                     <li key={q.numero} className="flex justify-between gap-2">
                       <span>Cuota {q.numero}</span>
                       <span className="tabular">
-                        <Moneda valor={q.monto} tamano="sm" className="text-inherit" /> · vence{" "}
+                        <Moneda valor={q.monto} moneda={monedaDoc} tamano="sm" className="text-inherit" /> · vence{" "}
                         {formatearFecha(q.vencimiento)}
                       </span>
                     </li>

@@ -30,6 +30,7 @@ import {
   ETIQUETA_MEDIO,
   type DocumentoPorCobrar,
   type FiltrosCartera,
+  saldoEnMoneda,
 } from "../dominio/tipos";
 import { Cobrador } from "./cobrador";
 import { FiltrosCarteraBarra } from "./filtros";
@@ -351,7 +352,7 @@ export function CarteraVista({
               </Link>
               {/* Con su «$»: era «1250.00» a secas, la única cifra del
                   ERP sin moneda (revisión por módulos del 02/10). */}
-              <Moneda valor={d.saldo} className="text-lg font-semibold" />
+              <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
             </div>
 
             <p className="mt-1 text-sm">{d.cliente}</p>
@@ -372,8 +373,8 @@ export function CarteraVista({
 
             {d.pagado > 0 ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-                De <Moneda valor={d.total} tamano="sm" className="text-inherit" />, ya
-                pagó <Moneda valor={d.pagado} tamano="sm" className="text-inherit" />
+                De <Moneda moneda={d.moneda} valor={d.pen_total ?? d.total} tamano="sm" className="text-inherit" />, ya
+                pagó <Moneda moneda={d.moneda} valor={Math.round(((d.pen_total ?? d.total) - saldoEnMoneda(d)) * 100) / 100} tamano="sm" className="text-inherit" />
               </p>
             ) : null}
 
@@ -444,13 +445,13 @@ export function CarteraVista({
               </td>
 
               <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                <Moneda valor={d.saldo} className="text-base font-semibold" />
+                <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-base font-semibold" />
                 <span className="block text-sm text-[var(--fg-subtle)]">
-                  de <Moneda valor={d.total} tamano="sm" className="text-inherit" />
+                  de <Moneda moneda={d.moneda} valor={d.pen_total ?? d.total} tamano="sm" className="text-inherit" />
                 </span>
                 {d.pagado > 0 ? (
                   <span className="block text-sm text-[var(--fg-subtle)]">
-                    ya pagó <Moneda valor={d.pagado} tamano="sm" className="text-inherit" />
+                    ya pagó <Moneda moneda={d.moneda} valor={Math.round(((d.pen_total ?? d.total) - saldoEnMoneda(d)) * 100) / 100} tamano="sm" className="text-inherit" />
                   </span>
                 ) : null}
               </td>

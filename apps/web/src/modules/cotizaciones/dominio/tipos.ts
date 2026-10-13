@@ -27,6 +27,8 @@ export interface CotizacionLista {
   subtotal: number;
   igv: number;
   total: number;
+  /** Venta en soles (116): el total sigue en dólares; la ficha lo da en soles. */
+  enSoles: boolean;
   /** Para saber si el margen se puede calcular: sin costo, no se sabe. */
   costo_total: number;
   margen_pct: number;

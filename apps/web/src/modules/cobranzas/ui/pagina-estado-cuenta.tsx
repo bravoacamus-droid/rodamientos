@@ -235,9 +235,10 @@ export function HojaEstadoCuenta({
                     {plazoEnPapel(d.dias_vencido, d.fecha_vencimiento)}
                   </span>
                 ),
-                total: formatearMoneda(d.total),
-                pagado: d.pagado > 0 ? formatearMoneda(d.pagado) : "—",
-                saldo: <span className="font-semibold">{formatearMoneda(d.saldo)}</span>,
+                // En la moneda de cada factura (116).
+                total: formatearMoneda(d.total_doc, d.moneda),
+                pagado: d.pagado_doc > 0 ? formatearMoneda(d.pagado_doc, d.moneda) : "—",
+                saldo: <span className="font-semibold">{formatearMoneda(d.saldo_doc, d.moneda)}</span>,
               };
             })
       }
@@ -248,6 +249,12 @@ export function HojaEstadoCuenta({
       ]}
       pie={
         <div className="flex flex-col gap-4">
+          {/* Con alguna en soles (116), el total en dólares lo dice. */}
+          {documentos.some((d) => d.moneda === "PEN") ? (
+            <p className="text-sm text-[#111]">
+              Los totales están en dólares: las facturas en soles suman a su tipo de cambio.
+            </p>
+          ) : null}
           {r.vencido > 0 ? (
             <p className="text-sm text-[#111]">
               Le agradeceremos regularizar el saldo vencido de{" "}

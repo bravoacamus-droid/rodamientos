@@ -7926,3 +7926,50 @@ prueba», las **9 cotizaciones COT1** (COT1-000001 a 000011, del 25/09 al
 13/10, con sus líneas) y la guía de prueba **T001-00000001** (borrador, no
 había movido stock). Ninguna tenía factura ni compra. Quedan intactas las
 1261 CT02 del histórico. Las listas cargan sin error.
+
+---
+
+## §BZ · 14/10 — La venta en soles, de la cotización al cobro (116)
+
+Luis, 14/10: *«algunos cobros, rara vez, como dijo Willy, se pagan en soles;
+entonces si lo convertimos a soles y se hace la guía, el cobro tiene que ser
+en soles»*. En su histórico son 82 de 1261 cotizaciones y 31 de 561 facturas.
+
+**Decisión de Luis: el tipo de cambio se congela AL APROBAR la cotización.**
+
+**El diseño: los importes de siempre siguen en dólares.** Los suman 15
+funciones y 8 vistas de reportes, el tablero y la cartera, y el histórico en
+soles ya entró convertido. Lo nuevo (migración 116):
+
+- `cotizaciones.moneda` / `tipo_cambio`. Se elige en la ficha («Moneda de la
+  venta», Dólares | Soles) mientras es borrador o enviada
+  (`poner_moneda_cotizacion`). `aprobar_cotizacion` pide el cambio si es en
+  soles y lo congela; la Server Action trae el venta de SUNAT del día, y si
+  SUNAT no contesta el diálogo deja escribirlo.
+- `comprobantes.moneda` / `tipo_cambio` / `pen_*`. `emitir_comprobante` toma la
+  moneda de la cotización (o de la factura, si es nota) —no la dice quien
+  llama— y calcula los importes en soles con el mismo redondeo que el papel de
+  la cotización (`enSoles`): unitario a céntimos y se vuelve a sumar.
+- `enMonedaDelDocumento()` pasa un comprobante a su moneda para la ficha, el
+  papel, el PDF, la lista y el envío a SUNAT. Es idempotente.
+- Cobro: una factura en soles se cobra en soles AL CAMBIO DE SU FACTURA. Si
+  paga todo lo pendiente, se aplica exacto el saldo en dólares (sin céntimo
+  suelto). Cartera, cobrador y estado de cuenta enseñan cada documento en su
+  moneda; los totales siguen en dólares y el estado de cuenta lo dice.
+
+Y de paso, una rota: **las notas de crédito no se podían emitir desde la
+089** —`emitir_comprobante` exigía guía a todo comprobante—. Ahora solo a
+factura y boleta.
+
+Probado: el centinela de la 116 crea una cotización en soles, prueba que
+aprobar sin cambio falla y con cambio lo congela, emite la factura en soles
+(10.87 × 3 a 3.448 → S/ 132.68, retención S/ 3.98, «… SOLES» en letras) y una
+nota que hereda la moneda, y lo deshace. En pantalla: la tarjeta, el papel en
+soles («DOCE CON 13/100 SOLES») y el aviso del diálogo de aprobar sobre la
+COT1-000012, devuelta a dólares.
+
+**Sin probar en pantalla**: aprobar de verdad en soles, emitir la factura en
+soles, su ficha y su PDF, y cobrarla —hace falta una guía emitida, y eso mueve
+stock en la base del cliente—. **Falta**: el enlace público `/ver` sigue en
+dólares (`cotizacion_por_token` no trae la moneda), y el XML a SUNAT en soles
+se verá con el certificado.

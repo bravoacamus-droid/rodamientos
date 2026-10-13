@@ -30,6 +30,11 @@ interface Estado {
   tipoCambio: number | null;
   /** De qué día es (AAAA-MM-DD). Escrito a mano es el de hoy. */
   fecha: string;
+  /**
+   * Congelado al aprobar una venta en soles (116): es el de la factura y no
+   * se toca desde aquí.
+   */
+  fijo: boolean;
 }
 
 const Contexto = React.createContext<{
@@ -37,8 +42,31 @@ const Contexto = React.createContext<{
   setEstado: React.Dispatch<React.SetStateAction<Estado>>;
 } | null>(null);
 
-export function MonedaDelPapel({ children }: { children: React.ReactNode }) {
-  const [estado, setEstado] = React.useState<Estado>({ enSoles: false, tipoCambio: null, fecha: "" });
+/**
+ * `inicial`: una venta en soles (116) abre el papel en soles; aprobada, con
+ * su cambio congelado. Quien lo monta le pone `key` con la moneda: el estado
+ * no se vuelve a leer de las props.
+ */
+export function MonedaDelPapel({
+  children,
+  inicial,
+}: {
+  children: React.ReactNode;
+  inicial?: { enSoles: boolean; tipoCambio: number | null; fecha: string; fijo: boolean };
+}) {
+  const [estado, setEstado] = React.useState<Estado>(
+    inicial ?? { enSoles: false, tipoCambio: null, fecha: "", fijo: false },
+  );
+  // En soles y sin aprobar: el del día, solo, para que el papel no salga en
+  // dólares de una venta en soles.
+  const pedido = React.useRef(false);
+  React.useEffect(() => {
+    if (pedido.current || !estado.enSoles || estado.tipoCambio || estado.fijo) return;
+    pedido.current = true;
+    void tipoCambioParaElPapel().then((r) => {
+      if (r.ok) setEstado((e) => (e.tipoCambio ? e : { ...e, tipoCambio: r.venta, fecha: r.fecha }));
+    });
+  }, [estado.enSoles, estado.tipoCambio, estado.fijo]);
   const valor = React.useMemo(() => ({ estado, setEstado }), [estado]);
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
@@ -135,7 +163,12 @@ export function SelectorMonedaPapel() {
         </button>
       </div>
 
-      {estado.enSoles ? (
+      {estado.enSoles && estado.fijo ? (
+        <span className="text-base">
+          Tipo de cambio <strong className="tabular">{estado.tipoCambio?.toFixed(3)}</strong>, fijado al aprobar
+          {estado.fecha ? ` el ${fechaCorta(estado.fecha)}` : ""}
+        </span>
+      ) : estado.enSoles ? (
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="tc-papel" className="text-base">
             Tipo de cambio

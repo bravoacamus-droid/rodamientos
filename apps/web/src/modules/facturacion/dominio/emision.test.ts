@@ -6,6 +6,7 @@ import {
   bloqueosEmision,
   cuotasDe,
   docSunatDe,
+  enMonedaDocumento,
   montoDetraccion,
   tipoSugerido,
   totalesDe,
@@ -26,6 +27,8 @@ const COT: CotizacionFacturable = {
   condicion_pago: "credito",
   dias_credito: 30,
   total: 1000,
+  moneda: "USD",
+  tipo_cambio: null,
   lineas_ya_facturadas: 0,
   // Con guía, que es el caso normal: primero sale la mercadería y luego se
   // factura. Sin ella no se puede emitir (17/09).
@@ -334,5 +337,22 @@ describe("unidadSunat", () => {
 
   it("normaliza a mayúsculas", () => {
     expect(unidadSunat("niu")).toBe("NIU");
+  });
+});
+
+describe("la factura en soles (116)", () => {
+  it("convierte el unitario a céntimos y suma como emitir_comprobante", () => {
+    // El caso del centinela de la 116: 3 × 10.87 a 3.448.
+    const pen = enMonedaDocumento([{ cantidad: 3, valor_unitario: 10.87, descuento_pct: 0 }], 3.448);
+    expect(pen[0]?.valor_unitario).toBe(37.48);
+    const t = totalesDe(pen);
+    expect(t.gravada).toBe(112.44);
+    expect(t.igv).toBe(20.24);
+    expect(t.total).toBe(132.68);
+  });
+
+  it("en dólares no toca nada", () => {
+    const l = [{ cantidad: 1, valor_unitario: 10.8765 }];
+    expect(enMonedaDocumento(l, null)).toEqual(l);
   });
 });

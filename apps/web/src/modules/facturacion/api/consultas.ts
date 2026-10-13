@@ -101,7 +101,7 @@ export async function listarComprobantes(
       .from("comprobantes")
       .select(
         `id, creado_en, tipo, numero, fecha_emision, fecha_vencimiento, total, pagado, saldo,
-         estado, estado_sunat,
+         estado, estado_sunat, moneda, tipo_cambio, pen_total,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
@@ -145,7 +145,13 @@ export async function listarComprobantes(
       }
     >;
 
-    const todas: ComprobanteLista[] = crudas.map((c) => ({
+    const todas: ComprobanteLista[] = crudas.map((c) => {
+      // En soles (116), la fila en soles: total guardado y saldo al mismo cambio.
+      const tc = c.moneda === "PEN" && c.pen_total != null ? Number(c.tipo_cambio) : 0;
+      const totalDoc = tc > 0 ? Number(c.pen_total) : Number(c.total ?? 0);
+      const saldoDoc =
+        tc > 0 ? (Number(c.saldo ?? 0) <= 0 ? 0 : Math.min(totalDoc, Math.round(Number(c.saldo) * tc * 100) / 100)) : Number(c.saldo ?? 0);
+      return {
       id: String(c.id),
       tipo: c.tipo as TipoComprobante,
       numero: String(c.numero),
@@ -154,13 +160,15 @@ export async function listarComprobantes(
       cliente: c.clientes?.razon_social ?? null,
       cliente_documento: c.clientes?.numero_documento ?? null,
       cotizacion_numero: c.cotizaciones?.numero ?? null,
-      total: Number(c.total ?? 0),
-      pagado: Number(c.pagado ?? 0),
-      saldo: Number(c.saldo ?? 0),
+      total: totalDoc,
+      pagado: Math.round((totalDoc - saldoDoc) * 100) / 100,
+      saldo: saldoDoc,
+      moneda: tc > 0 ? "PEN" : "USD",
       estado: c.estado as EstadoComprobante,
       estado_sunat: c.estado_sunat as EstadoSunat,
       vendedor: c.perfiles?.nombre ?? null,
-    }));
+      };
+    });
 
     /*
       El corte usa el MISMO número que el límite.
@@ -230,6 +238,7 @@ export async function detalleComprobante(
          sunat_codigo_respuesta, sunat_mensaje, sunat_enviado_en, sunat_hash_cdr,
          detraccion_aplica, detraccion_porcentaje, detraccion_monto, detraccion_codigo,
          retencion_aplica, retencion_monto,
+         moneda, tipo_cambio, pen_gravada, pen_descuento, pen_igv, pen_total, pen_retencion,
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento, tipo_documento, direccion, email),
          cotizaciones(numero),
@@ -327,12 +336,20 @@ export async function detalleComprobante(
         fecha_emision: String(c.fecha_emision),
         fecha_vencimiento: (c.fecha_vencimiento as string | null) ?? null,
         condicion_pago: String(c.condicion_pago ?? "contado"),
-        // Siempre dólares: `comprobantes` NO tiene columna de moneda -este
-        // ERP factura solo en USD- y pedirla al select rompía la consulta
-        // ENTERA, no solo ese campo. El campo se queda para que el pie sepa
-        // qué cuenta enseñar primero; el día que haya soles saldrá de una
-        // columna de verdad.
-        moneda: "USD",
+        // La moneda del documento, desde la 116 (antes era siempre "USD": la
+        // columna no existía). El pie la usa para ordenar las cuentas.
+        moneda: c.moneda === "PEN" ? "PEN" : "USD",
+        tipo_cambio: Number(c.tipo_cambio) > 0 ? Number(c.tipo_cambio) : null,
+        pen:
+          c.moneda === "PEN" && c.pen_total != null
+            ? {
+                gravada: Number(c.pen_gravada ?? 0),
+                descuento: Number(c.pen_descuento ?? 0),
+                igv: Number(c.pen_igv ?? 0),
+                total: Number(c.pen_total ?? 0),
+                retencion: Number(c.pen_retencion ?? 0),
+              }
+            : null,
         // Por defecto SÍ, como decidió la 029: Willy dijo que es «una
         // práctica recomendable que ya lleve pre-impresa la cuenta».
         mostrar_cuenta: c.mostrar_cuenta !== false,
@@ -498,7 +515,7 @@ export async function cotizacionParaFacturar(
     const { data, error } = await supabase
       .from("cotizaciones")
       .select(
-        `id, numero, fecha, cliente_id, orden_compra_cliente, total,
+        `id, numero, fecha, cliente_id, orden_compra_cliente, total, moneda, tipo_cambio,
          clientes(razon_social, numero_documento, tipo_documento, condicion_pago, dias_credito),
          cotizacion_items(
            producto_id, orden, codigo, descripcion, unidad_codigo,
@@ -579,6 +596,8 @@ export async function cotizacionParaFacturar(
         condicion_pago: c.clientes?.condicion_pago ?? "contado",
         dias_credito: Number(c.clientes?.dias_credito ?? 0),
         total: Number(c.total ?? 0),
+        moneda: c.moneda === "PEN" ? "PEN" : "USD",
+        tipo_cambio: Number(c.tipo_cambio) > 0 ? Number(c.tipo_cambio) : null,
         lineas_ya_facturadas: lineasCrudas.filter((l) => pendienteDe(l) <= 0).length,
         /*
           Solo las EMITIDAS. Una guía en borrador no tiene número todavía, y

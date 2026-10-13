@@ -63,9 +63,11 @@ export interface ComprobanteLista {
   cliente: string | null;
   cliente_documento: string | null;
   cotizacion_numero: string | null;
+  /** En la moneda del documento (116). */
   total: number;
   pagado: number;
   saldo: number;
+  moneda: "USD" | "PEN";
   estado: EstadoComprobante;
   estado_sunat: EstadoSunat;
   vendedor: string | null;
@@ -117,8 +119,15 @@ export interface ComprobanteDetalle {
   fecha_vencimiento: string | null;
   condicion_pago: string;
   dias_credito: number;
-  /** `PEN` o `USD`: decide qué cuenta bancaria sale primero al pie. */
-  moneda: string;
+  /**
+   * La moneda del DOCUMENTO (116). `PEN` o `USD`; también decide qué cuenta
+   * bancaria sale primero al pie. Los importes de abajo siguen en dólares —los
+   * suman los reportes—; en soles, lo impreso y lo enviado sale de `pen` con
+   * `enMonedaDelDocumento`.
+   */
+  moneda: "USD" | "PEN";
+  tipo_cambio: number | null;
+  pen: { gravada: number; descuento: number; igv: number; total: number; retencion: number } | null;
   /** Si la factura imprime las cuentas para pagar (029). */
   mostrar_cuenta: boolean;
   /** La guía con la que salió la mercadería. Su formato la imprime. */
@@ -221,6 +230,12 @@ export interface CotizacionFacturable {
   condicion_pago: string;
   dias_credito: number;
   total: number;
+  /**
+   * La moneda de la venta y su cambio congelado al aprobar (116). En soles,
+   * la factura sale en soles: `emitir_comprobante` la toma de la cotización.
+   */
+  moneda: "USD" | "PEN";
+  tipo_cambio: number | null;
   /**
    * Cuántas líneas de la cotización ya se facturaron ENTERAS y por eso no
    * salen abajo. Sirve para distinguir «esta cotización no tiene líneas»

@@ -80,6 +80,21 @@ export interface DocumentoPorCobrar {
   detraccion_monto: number;
   retencion_aplica: boolean;
   retencion_monto: number;
+  /**
+   * La moneda del documento (116). Los importes de arriba siguen en dólares
+   * —la cartera suma en dólares—; una factura en soles se cobra en soles al
+   * cambio de su factura (`tipo_cambio`), y `pen_total` es su total impreso.
+   */
+  moneda: "USD" | "PEN";
+  tipo_cambio: number | null;
+  pen_total: number | null;
+}
+
+/** Lo que se debe en la moneda del documento: en soles, al cambio de la factura. */
+export function saldoEnMoneda(d: Pick<DocumentoPorCobrar, "moneda" | "saldo" | "tipo_cambio" | "pen_total">): number {
+  if (d.moneda !== "PEN" || !d.tipo_cambio || d.pen_total == null) return d.saldo;
+  if (d.saldo <= 0) return 0;
+  return Math.min(d.pen_total, Math.round(d.saldo * d.tipo_cambio * 100) / 100);
 }
 
 /** Un pago ya registrado. */

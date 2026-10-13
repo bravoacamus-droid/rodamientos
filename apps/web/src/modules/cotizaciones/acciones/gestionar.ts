@@ -5,6 +5,8 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import type { Json } from "@rodatech/db/tipos";
 
+import { consultarTipoCambio } from "@/lib/tipo-cambio";
+
 /**
  * Lo que le pasa a una cotización después de emitirla: aprobarla, rechazarla,
  * o clonarla para volver a cotizar.
@@ -15,7 +17,8 @@ const uuid = z.string().uuid();
 
 export type ResultadoGestion =
   | { ok: true; id?: string; numero?: string }
-  | { ok: false; error: string };
+  /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
+  | { ok: false; error: string; pideTipoCambio?: boolean };
 
 async function exigirPermiso(): Promise<string | null> {
   const perfil = await perfilActual();
@@ -54,6 +57,8 @@ const esquemaLinea = z.object({
 export async function aprobar(
   id: string,
   lineas?: { item_id: string; cantidad: number }[],
+  /** Solo si SUNAT no contestó y la cotización es en soles. */
+  tipoCambioManual?: number,
 ): Promise<ResultadoGestion> {
   const problema = await exigirPermiso();
   if (problema) return { ok: false, error: problema };
@@ -73,9 +78,39 @@ export async function aprobar(
 
   try {
     const supabase = await clienteServidor();
+
+    /*
+      En soles, el tipo de cambio se CONGELA aquí (116, Luis 14/10): es lo que
+      el cliente aceptó, y con él sale la factura. El venta de SUNAT de hoy; si
+      SUNAT no contesta, el que escriban.
+    */
+    let tipoCambio: number | null = null;
+    const { data: cab, error: errorCab } = await supabase
+      .from("cotizaciones")
+      .select("moneda")
+      .eq("id", id)
+      .maybeSingle();
+    if (errorCab) return { ok: false, error: errorCab.message };
+    if (cab?.moneda === "PEN") {
+      if (typeof tipoCambioManual === "number" && tipoCambioManual > 0 && tipoCambioManual < 100) {
+        tipoCambio = tipoCambioManual;
+      } else {
+        const tc = await consultarTipoCambio();
+        if (!tc.ok) {
+          return {
+            ok: false,
+            error: `Es una venta en soles y no se pudo traer el tipo de cambio de SUNAT (${tc.error}). Escríbelo a mano.`,
+            pideTipoCambio: true,
+          };
+        }
+        tipoCambio = tc.venta;
+      }
+    }
+
     const { error } = await supabase.rpc("aprobar_cotizacion", {
       p_id: id,
       p_lineas: detalle,
+      ...(tipoCambio ? { p_tipo_cambio: tipoCambio } : {}),
     });
     if (error) return { ok: false, error: error.message };
     refrescar(id);
@@ -284,5 +319,27 @@ export async function ponerOrdenCliente(id: string, oc: string): Promise<Resulta
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." };
+  }
+}
+
+/**
+ * Dólares o soles (116). Willy cotiza casi todo en dólares; una venta en
+ * soles lo es de punta a punta —cotización, factura y cobro—, y se elige
+ * antes de aprobar: al aprobar se congela el tipo de cambio.
+ */
+export async function ponerMoneda(id: string, moneda: "USD" | "PEN"): Promise<ResultadoGestion> {
+  const problema = await exigirPermiso();
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  if (moneda !== "USD" && moneda !== "PEN") return { ok: false, error: "Moneda no válida." };
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("poner_moneda_cotizacion", { p_id: id, p_moneda: moneda });
+    if (error) return { ok: false, error: error.message };
+    refrescar(id);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo cambiar la moneda." };
   }
 }

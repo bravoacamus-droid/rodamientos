@@ -89,6 +89,15 @@ export function EmisorNota({
   }, null);
 
   const disponible = Math.round((documento.total - yaAcreditado) * 100) / 100;
+  /*
+    Una factura en soles (116): la nota va por dentro en dólares, como todo,
+    y la base la pasa a soles con el cambio de su factura. Aquí se ENSEÑA y se
+    teclea en soles.
+  */
+  const tcDoc = documento.moneda === "PEN" && documento.tipo_cambio ? documento.tipo_cambio : null;
+  const ver = (usd: number) => (tcDoc ? Math.round(usd * tcDoc * 100) / 100 : usd);
+  const monedaDoc = tcDoc ? "PEN" : "USD";
+  const [enSoles, setEnSoles] = React.useState("");
   const delTipo = motivos.filter((m) => m.tipo === tipo);
   const total = esMotivoTotal(motivo);
   const importeFijo = total || esCorreccionSinImporte(motivo);
@@ -163,11 +172,11 @@ export function EmisorNota({
         <DialogHeader>
           <DialogTitle>Nota sobre {documento.numero}</DialogTitle>
           <DialogDescription>
-            {documento.cliente} · total <Dolares valor={documento.total} />
+            {documento.cliente} · total <Dolares moneda={monedaDoc} valor={documento.pen?.total ?? ver(documento.total)} />
             {yaAcreditado > 0 ? (
               <>
-                {" "}· ya acreditados <Dolares valor={yaAcreditado} />, quedan{" "}
-                <Dolares valor={disponible} />
+                {" "}· ya acreditados <Dolares moneda={monedaDoc} valor={ver(yaAcreditado)} />, quedan{" "}
+                <Dolares moneda={monedaDoc} valor={ver(disponible)} />
               </>
             ) : null}
           </DialogDescription>
@@ -241,7 +250,7 @@ export function EmisorNota({
               {importeFijo ? (
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Importe con IGV</span>
-                  <Dolares valor={monto} className="text-lg font-semibold" />
+                  <Dolares moneda={monedaDoc} valor={ver(monto)} className="text-lg font-semibold" />
                   <span className="text-sm text-[var(--fg-muted)]">
                     {total
                       ? "Con este motivo va por el total pendiente."
@@ -258,8 +267,13 @@ export function EmisorNota({
                     type="number"
                     min={0}
                     step="0.01"
-                    value={monto}
-                    onChange={(e) => setMonto(Number(e.target.value))}
+                    value={tcDoc ? enSoles : monto}
+                    onChange={(e) => {
+                      if (tcDoc) {
+                        setEnSoles(e.target.value);
+                        setMonto(Math.round((Number(e.target.value) / tcDoc) * 100) / 100);
+                      } else setMonto(Number(e.target.value));
+                    }}
                     className="tabular"
                   />
                 </label>
@@ -273,9 +287,9 @@ export function EmisorNota({
                 <div className="anim-entrada self-end rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2 text-sm">
                   Saldrá por{" "}
                   <strong>
-                    <Dolares valor={totalReal} />
+                    <Dolares moneda={monedaDoc} valor={ver(totalReal)} />
                   </strong>
-                  , no <Dolares valor={monto} />: el IGV se calcula sobre la
+                  , no <Dolares moneda={monedaDoc} valor={ver(monto)} />: el IGV se calcula sobre la
                   base redondeada.
                 </div>
               ) : null}
@@ -381,6 +395,15 @@ export function EmisorNota({
  * acreditados 300.00», sin moneda. `Moneda` además no parte el signo de la
  * cifra. Hereda el color de la frase en la que va.
  */
-function Dolares({ valor, className = "" }: { valor: number; className?: string }) {
-  return <Moneda valor={valor} tamano="sm" className={`text-inherit ${className}`} />;
+function Dolares({
+  valor,
+  moneda = "USD",
+  className = "",
+}: {
+  valor: number;
+  /** La del documento (116): una factura en soles se lee en soles. */
+  moneda?: "USD" | "PEN";
+  className?: string;
+}) {
+  return <Moneda valor={valor} moneda={moneda} tamano="sm" className={`text-inherit ${className}`} />;
 }

@@ -68,6 +68,8 @@ import type {
   TipoComprobante,
 } from "../dominio/tipos";
 import { DocumentoComprobante } from "./documento";
+import { enMonedaDocumento, totalesDe } from "../dominio/emision";
+import { montoRetencion } from "../dominio/retencion";
 
 export interface OpcionesEmision {
   mostrarCuenta: boolean;
@@ -236,7 +238,20 @@ export function AntesDeEmitir({
     fecha_vencimiento: vencimiento,
     condicion_pago: condicion,
     dias_credito: dias,
-    moneda: "USD",
+    // En soles (116), los totales en soles con la misma cuenta que la base.
+    moneda: cot.moneda,
+    tipo_cambio: cot.tipo_cambio,
+    pen: (() => {
+      if (cot.moneda !== "PEN" || !cot.tipo_cambio) return null;
+      const t = totalesDe(enMonedaDocumento(lineas, cot.tipo_cambio));
+      return {
+        gravada: t.gravada,
+        descuento: 0,
+        igv: t.igv,
+        total: t.total,
+        retencion: retiene ? montoRetencion(t.total) : 0,
+      };
+    })(),
     mostrar_cuenta: opciones.mostrarCuenta,
     // En la previa se arman los números de las marcadas; al emitir salen de
     // la base. El documento los pinta igual en los dos casos.

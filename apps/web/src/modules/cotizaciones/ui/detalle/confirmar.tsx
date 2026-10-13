@@ -65,6 +65,7 @@ export function DialogoConfirmar({
   abierto,
   onCerrar,
   corrigiendo = false,
+  enSoles = false,
 }: {
   cotizacionId: string;
   lineas: LineaParaConfirmar[];
@@ -84,12 +85,17 @@ export function DialogoConfirmar({
    * tocar nada lo subiría de vuelta a 10 sin que nadie lo pidiera.
    */
   corrigiendo?: boolean;
+  /** Venta en soles (116): al aprobar se congela el tipo de cambio. */
+  enSoles?: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   /** La O/C del cliente, si ya la mandó (09/10: se pone al aprobar). */
   const [ordenCliente, setOrdenCliente] = React.useState("");
+  /** Si SUNAT no contestó, el tipo de cambio escrito a mano. */
+  const [pideTc, setPideTc] = React.useState(false);
+  const [tcManual, setTcManual] = React.useState("");
 
   /** Lo confirmado por línea. Arranca en lo cotizado, que es el caso normal. */
   const [cantidades, setCantidades] = React.useState<Record<string, number>>(
@@ -172,9 +178,11 @@ export function DialogoConfirmar({
             // deja registrado que fue una confirmación completa, no una parcial
             // que casualmente coincidió.
             completa ? undefined : detalle,
+            pideTc ? Number(tcManual.replace(",", ".")) : undefined,
           );
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
+        if ("pideTipoCambio" in r && r.pideTipoCambio) setPideTc(true);
         return;
       }
       if (!corrigiendo && ordenCliente.trim()) {
@@ -313,6 +321,28 @@ export function DialogoConfirmar({
               />
             </label>
           )}
+
+          {enSoles && !corrigiendo ? (
+            <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm">
+              <p>
+                <strong>Venta en soles.</strong> Al aprobar se fija el tipo de cambio venta de SUNAT de hoy, y con él
+                salen la factura y el cobro.
+              </p>
+              {pideTc ? (
+                <label className="mt-2 flex items-center gap-2">
+                  <span className="font-medium">Tipo de cambio</span>
+                  <Input
+                    numerico
+                    inputMode="decimal"
+                    value={tcManual}
+                    onChange={(e) => setTcManual(e.target.value)}
+                    placeholder="3.450"
+                    className="w-28"
+                  />
+                </label>
+              ) : null}
+            </div>
+          ) : null}
 
           {error ? (
             <p

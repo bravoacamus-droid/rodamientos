@@ -48,6 +48,8 @@ export interface DatosMensaje {
   numero: string;
   cliente: string;
   total: number;
+  /** En soles si la venta es en soles (116). Sin decir, dólares. */
+  moneda?: "USD" | "PEN";
   validaHasta: string;
   emisor: string;
   /** Enlace a la ficha, si el cliente lo puede abrir. */
@@ -64,7 +66,7 @@ export interface DatosMensaje {
 export function mensajeCotizacion(d: DatosMensaje): string {
   const monto = d.total.toLocaleString("es-PE", {
     style: "currency",
-    currency: "USD",
+    currency: d.moneda ?? "USD",
   });
 
   const lineas = [
