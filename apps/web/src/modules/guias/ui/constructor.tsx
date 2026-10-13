@@ -6,8 +6,11 @@ import { Combobox, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
 import { cargarCotizacion } from "../acciones/cargar";
 import { generarGuia, type ResultadoGuia } from "../acciones/generar";
+import { actualizarGuia } from "../acciones/actualizar";
+import { OrdenesCompra } from "./ordenes-compra";
 import {
   aPayload,
+  aPayloadEdicion,
   avisos as calcularAvisos,
   bloqueosBorrador,
   bloqueosEmision,
@@ -54,6 +57,7 @@ export function ConstructorGuia({
   conductores = [],
   hoy,
   cotizacionInicial,
+  edicion,
 }: {
   cotizaciones: { id: string; numero: string; fecha: string; cliente: string }[];
   motivos: MotivoTraslado[];
@@ -73,9 +77,21 @@ export function ConstructorGuia({
   /** La fecha la fija el servidor: el dominio no lee reloj. */
   hoy: string;
   cotizacionInicial?: string | null;
+  /**
+   * Editar una guía en borrador con ESTE mismo formulario (14/10). Luis: *«en
+   * vez de corregir, ¿no sería editar, y mandar el mismo formato como se creó
+   * la guía? Más fácil»*. Llega con el estado ya armado
+   * (`estadoParaEditar`) y guarda con `actualizarGuia`.
+   */
+  edicion?: {
+    guiaId: string;
+    numero: string;
+    cotizacion: { numero: string; cliente: string };
+    estado: EstadoGuiaEnCurso;
+  };
 }) {
   const router = useRouter();
-  const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
+  const [estado, despachar] = useReducer(reducir, edicion?.estado ?? estadoInicial(hoy));
 
   const [cotizacionId, setCotizacionId] = useState(cotizacionInicial ?? "");
 
@@ -86,9 +102,11 @@ export function ConstructorGuia({
     estuviera —porque ya se despachó entera—, aquí no se llega: la pantalla lo
     resuelve antes y lo explica (`pagina-nueva.tsx`).
   */
-  const laDeLaQueVengo = cotizacionInicial
-    ? (cotizaciones.find((c) => c.id === cotizacionInicial) ?? null)
-    : null;
+  const laDeLaQueVengo = edicion
+    ? edicion.cotizacion
+    : cotizacionInicial
+      ? (cotizaciones.find((c) => c.id === cotizacionInicial) ?? null)
+      : null;
   // Qué agencia se eligió. Solo controla el desplegable: lo que viaja a la
   // guía son el RUC y la razón social ya copiados, no el id.
   const [agenciaId, setAgenciaId] = useState("");
@@ -113,11 +131,23 @@ export function ConstructorGuia({
 
   const [resultado, guardar, guardando] = useActionState<ResultadoGuia | null, FormData>(
     async (previo, formData) => {
-      const r = await generarGuia(previo, formData);
+      let r: ResultadoGuia;
+      if (edicion) {
+        // Editar: la misma pantalla, otra acción. Lo que viaja lo arma el
+        // dominio (`aPayloadEdicion`), con los productos incluidos.
+        const crudo = formData.get("edicion");
+        const a = await actualizarGuia(typeof crudo === "string" ? JSON.parse(crudo) : null);
+        r = a.ok
+          ? { ok: true, id: edicion.guiaId, numero: edicion.numero, pesoBrutoKg: 0 }
+          : { ok: false, error: a.error };
+      } else {
+        r = await generarGuia(previo, formData);
+      }
       if (r.ok) {
         // Ya está en la base: el borrador sobra.
         olvidarBorrador();
         router.push(`/guias/${r.id}`);
+        if (edicion) router.refresh();
       }
       return r;
     },
@@ -138,8 +168,10 @@ export function ConstructorGuia({
   const saltarCarga = useRef(false);
   const cargaVigente = useRef(0);
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
-    formulario: "guia",
-    id: cotizacionInicial ?? null,
+    // Al editar, su propia clave: el borrador de la guía T001-… no tiene nada
+    // que hacer al preparar una nueva, ni al revés.
+    formulario: edicion ? "guia-edicion" : "guia",
+    id: edicion ? edicion.guiaId : (cotizacionInicial ?? null),
     datos: { estado, cotizacionId, agenciaId },
     valeLaPena: (d) => guiaTocada(d.estado),
     recuperar: (d) => {
@@ -194,12 +226,19 @@ export function ConstructorGuia({
   return (
     <form action={guardar} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="guia" value={JSON.stringify(aPayload(estado))} />
+      {edicion ? (
+        <input type="hidden" name="edicion" value={JSON.stringify(aPayloadEdicion(edicion.guiaId, estado))} />
+      ) : null}
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Preparar guía de remisión</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {edicion ? `Editar guía ${edicion.numero}` : "Preparar guía de remisión"}
+          </h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Se guarda como borrador. El stock sale al emitirla, no ahora.
+            {edicion
+              ? "Sigue siendo un borrador: la mercadería no ha salido del almacén."
+              : "Se guarda como borrador. El stock sale al emitirla, no ahora."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -209,13 +248,13 @@ export function ConstructorGuia({
             onClick={() => {
               // Cancelar es decidir no seguir: no se ofrece otra vez.
               olvidarBorrador();
-              router.push("/guias");
+              router.push(edicion ? `/guias/${edicion.guiaId}` : "/guias");
             }}
           >
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Guardando…" : "Guardar borrador"}
+            {guardando ? "Guardando…" : edicion ? "Guardar cambios" : "Guardar borrador"}
           </Button>
         </div>
       </header>
@@ -315,7 +354,7 @@ export function ConstructorGuia({
                           <dd className="tabular">{l.pedido}</dd>
                         </div>
                         <div>
-                          <dt className="text-[var(--fg-muted)]">Ya salió</dt>
+                          <dt className="text-[var(--fg-muted)]">{edicion ? "En otras guías" : "Ya salió"}</dt>
                           <dd className="tabular">{l.despachado || "—"}</dd>
                         </div>
                         <div>
@@ -364,7 +403,7 @@ export function ConstructorGuia({
                       <th className="py-2 pr-3 font-medium">Código</th>
                       <th className="py-2 pr-3 font-medium">Descripción</th>
                       <th className="py-2 pr-3 text-right font-medium">Pedido</th>
-                      <th className="py-2 pr-3 text-right font-medium">Ya salió</th>
+                      <th className="py-2 pr-3 text-right font-medium">{edicion ? "En otras guías" : "Ya salió"}</th>
                       {/* «Hay» y no «Stock»: es la palabra que se usa
                           hablando —«¿hay?»— y cabe en menos sitio. */}
                       <th className="py-2 pr-3 text-right font-medium">Hay</th>
@@ -472,17 +511,17 @@ export function ConstructorGuia({
                 {/* La orden de compra del cliente (14/10). Willy, 42:27:
                     *«una vez que me confirman, me envían una orden de
                     compra, yo emito mi guía»* — es el papel con el que sale. */}
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Orden de compra del cliente</span>
-                  <Input
-                    value={estado.ordenCompra}
-                    onChange={(e) =>
-                      despachar({ tipo: "campo", campo: "ordenCompra", valor: e.target.value })
-                    }
-                    placeholder="OC-4471 (si la mandó)"
-                    maxLength={100}
+                <div className="flex flex-col gap-1 sm:col-span-2">
+                  <label htmlFor="guia-oc" className="text-sm font-medium">
+                    Órdenes de compra del cliente
+                  </label>
+                  <OrdenesCompra
+                    id="guia-oc"
+                    valor={estado.ordenCompra}
+                    onCambio={(v) => despachar({ tipo: "campo", campo: "ordenCompra", valor: v })}
+                    clienteId={estado.clienteId}
                   />
-                </label>
+                </div>
 
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Fecha de traslado</span>

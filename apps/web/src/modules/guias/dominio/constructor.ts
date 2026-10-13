@@ -1,6 +1,6 @@
 import { redondear2 } from "@rodatech/config";
 
-import type { CotizacionDespachable, ModalidadTraslado } from "./tipos";
+import type { CotizacionDespachable, GuiaDetalle, ModalidadTraslado } from "./tipos";
 
 /**
  * El estado de la guía en preparación, como reducer PURO.
@@ -525,5 +525,99 @@ export function aPayload(estado: EstadoGuiaEnCurso) {
         unidad_codigo: l.unidad,
         peso_kg: redondear3(l.pesoUnitario * l.cantidad),
       })),
+  };
+}
+
+/** Una línea de la cotización vista desde la guía que se edita (115). */
+export interface LineaParaEditar {
+  cotizacion_item_id: string;
+  producto_id: string;
+  codigo: string;
+  descripcion: string;
+  unidad: string;
+  confirmado: number;
+  /** Lo que llevan las OTRAS guías no anuladas. */
+  otras: number;
+  /** Lo que lleva esta guía hoy. */
+  enEsta: number;
+  peso_kg: number;
+  stock: number;
+}
+
+/**
+ * El formulario de «Nueva guía», relleno con una guía en borrador (14/10).
+ *
+ * Luis: *«en vez de corregir, ¿no sería editar, y mandar el mismo formato
+ * como se creó la guía? Más fácil»*. La pantalla de editar ES la de crear;
+ * esto es lo que la rellena.
+ *
+ * El tope de cada línea sale solo: `pedido − despachado`, con «despachado» =
+ * lo que llevan las OTRAS guías. Así la misma acción `cantidad` del reducer
+ * que limita al crear limita al editar, sin un caso aparte.
+ */
+export function estadoParaEditar(g: GuiaDetalle, lineas: LineaParaEditar[]): EstadoGuiaEnCurso {
+  return {
+    cotizacionId: g.cotizacion_id,
+    clienteId: g.cliente_id,
+    fechaEmision: g.fecha_emision,
+    fechaTraslado: g.fecha_traslado,
+    motivoCodigo: g.motivo_codigo,
+    ordenCompra: g.orden_compra_cliente ?? "",
+    direccionLlegada: g.direccion_llegada ?? "",
+    ubigeoLlegada: g.ubigeo_llegada ?? "",
+    modalidad: g.modalidad_traslado,
+    transportistaDocumento: g.transportista_documento ?? "",
+    transportistaRazonSocial: g.transportista_razon_social ?? "",
+    transportistaPlaca: g.transportista_placa ?? "",
+    conductorDocumento: g.conductor_documento ?? "",
+    conductorNombre: g.conductor_nombre ?? "",
+    conductorLicencia: g.conductor_licencia ?? "",
+    conductorTelefono: g.conductor_telefono ?? "",
+    aPie: g.a_pie,
+    numeroBultos: g.numero_bultos,
+    // El peso que se declaró se respeta: puede no ser la suma del maestro.
+    pesoDeclarado: g.peso_bruto_kg > 0 ? g.peso_bruto_kg : null,
+    entregadoPor: g.entregado_por ?? "",
+    observaciones: g.observaciones ?? "",
+    lineas: lineas.map((l) => ({
+      key: l.cotizacion_item_id,
+      cotizacionItemId: l.cotizacion_item_id,
+      productoId: l.producto_id,
+      codigo: l.codigo,
+      descripcion: l.descripcion,
+      unidad: l.unidad,
+      pedido: l.confirmado,
+      despachado: l.otras,
+      cantidad: l.enEsta,
+      pesoUnitario: l.peso_kg,
+      stock: l.stock,
+    })),
+  };
+}
+
+/** Lo que espera `actualizarGuia` al guardar la edición. */
+export function aPayloadEdicion(guiaId: string, estado: EstadoGuiaEnCurso) {
+  const p = aPayload(estado);
+  return {
+    id: guiaId,
+    fecha_traslado: p.fecha_traslado,
+    direccion_llegada: p.direccion_llegada ?? "",
+    ubigeo_llegada: p.ubigeo_llegada ?? "",
+    peso_bruto_kg: p.peso_bruto_kg,
+    numero_bultos: p.numero_bultos,
+    modalidad_traslado: p.modalidad_traslado,
+    a_pie: p.a_pie,
+    transportista_documento: p.transportista_documento,
+    transportista_razon_social: p.transportista_razon_social,
+    transportista_placa: p.transportista_placa,
+    conductor_documento: p.conductor_documento,
+    conductor_nombre: p.conductor_nombre,
+    conductor_licencia: p.conductor_licencia,
+    conductor_telefono: p.conductor_telefono,
+    entregado_por: p.entregado_por,
+    observaciones: p.observaciones,
+    orden_compra_cliente: p.orden_compra_cliente,
+    motivo_codigo: p.motivo_codigo,
+    items: p.items.map((i) => ({ cotizacion_item_id: i.cotizacion_item_id, cantidad: i.cantidad })),
   };
 }

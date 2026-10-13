@@ -7688,3 +7688,30 @@ cotización con algo pendiente— y la cubren dos tests.
 Queda: `cotizacionesDespachables` sigue sumando piezas de kit para decidir qué
 cotizaciones ofrecer (una con un kit a medio despachar podría no salir en la
 lista). Raro hoy; se arregla igual que la guía nueva.
+
+### §BT.2 · 14/10 — «Editar» es el mismo formulario que crear, y las O/C van como etiquetas
+
+Luis, con la ficha delante: *«en vez de corregir, ¿no sería editar, y mandar
+el mismo formato como se creó la guía? Más fácil, y poder anotar las órdenes
+de compra con buscador inteligente bien hecho»*. A la pregunta de qué
+buscador: **varias O/C por guía, como etiquetas, con las ya usadas por ese
+cliente sugeridas**.
+
+- El botón de la ficha se llama **Editar** (con su lápiz) y abre
+  `ConstructorGuia` con `edicion`: el estado lo arma `estadoParaEditar`
+  (dominio, puro) desde la guía y `lineasParaCorregir`; el tope de cada línea
+  sale del mismo reducer (`pedido − despachado`, con «despachado» = lo que
+  llevan las OTRAS guías, rotulado «En otras guías»). Guarda con
+  `actualizarGuia` (`aPayloadEdicion`). Se borró `editor-guia.tsx`: no hay
+  dos pantallas que puedan separarse.
+- `OrdenesCompra`: etiquetas con su ×, Enter / coma / «Agregar» para añadir,
+  y debajo «Ya usadas con este cliente» (`ordenesUsadas`: cotizaciones, guías
+  y facturas del cliente, más recientes primero) filtradas por lo que se
+  teclea. Se guardan en la misma columna, separadas por «, »: el papel, la
+  factura y el buscador de las listas no cambian.
+- El borrador del navegador al editar usa otra clave (`guia-edicion`): la del
+  editor viejo tenía otra forma de datos.
+
+Probado sobre la T001-00000001: dos O/C (Enter y botón), 55X75X10TC de 3 a 2,
+guardado → «OC-PRUEBA-1, OC-PRUEBA-2» en la base; quitar una la vuelve a
+sugerir y teclear «2» la filtra; 1600 y 390. Guía restaurada byte a byte.

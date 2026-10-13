@@ -664,6 +664,8 @@ export async function indicadoresGuias(filtros: {
 /** Una línea de la cotización, vista desde la guía que se corrige (115). */
 export interface LineaCorregible {
   cotizacion_item_id: string;
+  producto_id: string;
+  stock: number;
   codigo: string;
   descripcion: string;
   unidad: string;
@@ -692,7 +694,7 @@ export async function lineasParaCorregir(
     const [items, otras, todas] = await Promise.all([
       supabase
         .from("cotizacion_items")
-        .select("id, orden, codigo, descripcion, unidad_codigo, cantidad, cantidad_aprobada, productos(peso_kg)")
+        .select("id, orden, producto_id, codigo, descripcion, unidad_codigo, cantidad, cantidad_aprobada, productos(peso_kg, stock(cantidad))")
         .eq("cotizacion_id", cotizacionId)
         .order("orden"),
       supabase.rpc("despacho_por_item", { p_cotizacion: cotizacionId, p_excluir_guia: guiaId }),
@@ -709,17 +711,23 @@ export async function lineasParaCorregir(
 
     const lineas = ((items.data ?? []) as unknown as Array<{
       id: string;
+      producto_id: string;
       codigo: string | null;
       descripcion: string | null;
       unidad_codigo: string | null;
       cantidad: number;
       cantidad_aprobada: number | null;
-      productos: { peso_kg: number | null } | null;
+      productos: {
+        peso_kg: number | null;
+        stock: { cantidad: number }[] | { cantidad: number } | null;
+      } | null;
     }>).map((i) => {
       const id = String(i.id);
       const o = deOtras.get(id) ?? 0;
       return {
         cotizacion_item_id: id,
+        producto_id: String(i.producto_id),
+        stock: stockDe(i.productos?.stock ?? null),
         codigo: i.codigo ?? "—",
         descripcion: i.descripcion ?? "—",
         unidad: i.unidad_codigo ?? "NIU",

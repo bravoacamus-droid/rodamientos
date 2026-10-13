@@ -62,8 +62,9 @@ const esquema = z.object({
   conductor_licencia: z.string().trim().max(20).nullable(),
   conductor_telefono: z.string().trim().max(40).nullable(),
   observaciones: z.string().trim().max(2000).nullable(),
+  entregado_por: z.string().trim().max(200).nullable().optional(),
   // 14/10 (115): lo que antes no se podía corregir en un borrador.
-  orden_compra_cliente: z.string().trim().max(100).nullable().default(null),
+  orden_compra_cliente: z.string().trim().max(300).nullable().default(null),
   motivo_codigo: z.string().length(2).optional(),
   /** Los productos. Sin ellos, las líneas no se tocan. */
   items: z
@@ -177,6 +178,7 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
           conductor_licencia: esPublico || aPie ? null : limpio(d.conductor_licencia),
           conductor_telefono: esPublico ? null : limpio(d.conductor_telefono),
           observaciones: limpio(d.observaciones),
+          ...(d.entregado_por !== undefined ? { entregado_por: limpio(d.entregado_por) } : {}),
         },
         { count: "exact" },
       )

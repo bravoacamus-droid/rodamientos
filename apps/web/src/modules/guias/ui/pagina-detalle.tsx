@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -104,7 +104,9 @@ export default async function PaginaDetalleGuia({
             Imprimir
           </Link>
           {/*
-            Corregir, solo en borrador.
+            Editar, solo en borrador. Se llamó «Corregir» hasta el 14/10; Luis:
+            *«en vez de corregir, ¿no sería editar?»*. Abre el mismo formulario
+            con el que se preparó la guía.
 
             Willy, 40:43, al ver que el inicio de traslado se había quedado en
             hoy: *«tengo que poner aquí un botón también de editar la guía,
@@ -115,9 +117,10 @@ export default async function PaginaDetalleGuia({
           {puedeEmitir && g.estado === "borrador" ? (
             <Link
               href={`/guias/${g.id}/editar`}
-              className="inline-flex h-9 items-center rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
             >
-              Corregir
+              <Pencil className="size-4" aria-hidden="true" />
+              Editar
             </Link>
           ) : null}
           {puedeEmitir ? <EmitirGuia guia={g} /> : null}
