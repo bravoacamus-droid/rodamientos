@@ -8,6 +8,10 @@ export { default as PaginaInventario } from "./ui/pagina";
 export { default as PaginaKardex } from "./ui/pagina-kardex";
 export { default as PaginaAjusteInventario } from "./ui/pagina-ajuste";
 
+// Los últimos movimientos de un producto, para su ficha (13/10).
+export { kardex } from "./api/consultas";
+export { enlaceDeReferencia } from "./dominio/enlaces";
+
 // La hoja de conteo es un reducer PURO: se puede probar sin React, y el
 // impacto valorizado lo va a querer el módulo de reportes.
 export {

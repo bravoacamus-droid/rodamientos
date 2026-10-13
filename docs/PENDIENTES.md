@@ -7541,3 +7541,30 @@ soles? Así, dinámicamente»*.
   público `/ver` — si Willy los quiere en soles es otro paso.
 - El núcleo del tipo de cambio pasó a `lib/tipo-cambio.ts`; la compra y la
   cotización ponen cada una su puerta (la del papel: tener sesión).
+
+## §BP · 13/10 — El kardex visto desde el producto
+
+Luis preguntó para qué le sirve el kardex a Willy y si había que mejorarlo. La
+respuesta corta: sirve (de dónde sale cada unidad del stock, quién la movió,
+el costo promedio que alimenta el margen, el respaldo para el contador), pero
+**hoy está casi vacío**: 6 movimientos en toda la base, todos recepciones del
+25/09, y 5 productos con stock de 790. Falta el **conteo inicial** del
+almacén, y eso no es código: lo tiene que hacer Willy, por «Ajuste de
+inventario» (que ya acepta hoja).
+
+Lo que sí era código, y Willy lo había pedido el 06/10 (§E.5, *«qué ajuste,
+qué motivo, qué día»*):
+
+- **«Movimientos del stock» en la ficha del producto**, a lo ancho debajo de
+  las cifras: los últimos seis, en palabras («Entraron 10 und a $ 42.00 c/u»,
+  «Ajuste: se restaron 2»), con día y hora de Lima, el documento enlazado,
+  quién lo hizo y cuánto quedó. El motivo sale cuando dice algo (los que pone
+  la base sola, «Recepción de mercadería», se omiten). Botón a la pantalla del
+  kardex filtrada por el producto. Sin movimientos, lo dice.
+- En la pantalla del kardex, **«Ajuste +» / «Ajuste −» pasan a «Ajuste que
+  suma» / «Ajuste que resta»**, y la fecha sale en hora de Lima: se cortaba el
+  ISO y lo recibido después de las 7 p. m. salía con el día siguiente.
+
+Probado con KR52PPA (dos recepciones) y 6205-2RSH/C3 (sin movimientos), a
+1600 y 390 sin scroll lateral. La pantalla del kardex con datos de verdad
+queda por revisar cuando exista el conteo.

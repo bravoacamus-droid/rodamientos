@@ -17,8 +17,14 @@ const COLOR: Record<TipoMovimiento, string> = {
  * hay que leerlo al revés (revisión por módulos del 02/10).
  */
 function fechaCorta(iso: string): string {
-  const [a, m, d] = iso.slice(0, 10).split("-");
-  return `${d}/${m}/${a}`;
+  // En hora de Lima (13/10). Cortar el ISO daba el día de UTC: lo recibido
+  // a las 8 de la noche salía con la fecha de mañana.
+  return new Date(iso).toLocaleDateString("es-PE", {
+    timeZone: "America/Lima",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 /**

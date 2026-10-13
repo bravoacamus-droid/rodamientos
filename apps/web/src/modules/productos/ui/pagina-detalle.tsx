@@ -12,6 +12,8 @@ import { comprasDelProducto, preciosPorProveedor } from "../api/compras";
 import { AQuienPreguntar } from "./a-quien-preguntar";
 import { ComprasAnteriores } from "./compras-anteriores";
 import { QuienLoVende } from "./quien-lo-vende";
+import { MovimientosDelProducto } from "./movimientos";
+import { kardex } from "@/modules/inventario";
 import { Volver } from "@/componentes/volver";
 import { UNIDADES, abreviaturaUnidad } from "@rodatech/config";
 
@@ -32,13 +34,15 @@ export default async function PaginaDetalleProducto({
   // Un kit tiene su propia ficha: la de kits, que es donde se ve y se cambia
   // lo que lleva dentro. Desde el listado del catálogo se llegaba aquí.
   if (await esKit(id)) redirect(`/productos/kits/${id}`);
-  const [resultado, perfil, quienVende, compras, precios] = await Promise.all([
+  const [resultado, perfil, quienVende, compras, precios, movimientos] = await Promise.all([
     productoConDetalle(id),
     perfilActual(),
     proveedoresDeProducto(id),
     comprasDelProducto(id),
     // A cuánto te lo deja cada uno, juntando lo pagado y lo cotizado (21/09).
     preciosPorProveedor(id),
+    // Lo que movió su stock, los últimos seis (13/10).
+    kardex({ producto: id, limite: 6 }),
   ]);
 
   if (!resultado.ok) {
@@ -159,6 +163,19 @@ export default async function PaginaDetalleProducto({
           pie={margen === null ? "falta el costo" : "sobre el costo"}
         />
       </div>
+
+      {/*
+        Debajo de las cifras, a lo ancho: es la explicación de la primera
+        (el stock). Willy, 06/10: el kardex visto desde el producto —qué
+        ajuste, qué motivo, qué día—.
+      */}
+      <MovimientosDelProducto
+        productoId={p.id}
+        filas={movimientos.ok ? movimientos.datos.filas : []}
+        hayMas={movimientos.ok && movimientos.datos.siguiente !== null}
+        unidad={abreviaturaUnidad(p.unidad)}
+        error={movimientos.ok ? null : movimientos.error}
+      />
 
       {/* `grid-cols-1` explícito: sin él la columna implícita se mide por su
           contenido, y las tablas de proveedores la estiraban más allá del

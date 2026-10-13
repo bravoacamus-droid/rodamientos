@@ -138,8 +138,9 @@ export interface ProductoContable {
 export const ETIQUETA_MOVIMIENTO: Record<TipoMovimiento, string> = {
   ingreso: "Ingreso",
   salida: "Salida",
-  ajuste_positivo: "Ajuste +",
-  ajuste_negativo: "Ajuste −",
+  // En palabras (13/10): «Ajuste +» es jerga de libro contable.
+  ajuste_positivo: "Ajuste que suma",
+  ajuste_negativo: "Ajuste que resta",
 };
 
 /** Los cuatro motivos que admite `tipo_ajuste` en la base. */
