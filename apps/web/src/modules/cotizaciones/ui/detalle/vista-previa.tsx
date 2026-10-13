@@ -36,11 +36,14 @@ import { Button, Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } 
 export function VistaPreviaDocumento({
   numero,
   encima,
+  junto,
   children,
 }: {
   numero: string;
   /** Lo que va sobre la hoja: en la cotización, la moneda del papel (13/10). */
   encima?: React.ReactNode;
+  /** Junto a «Imprimir»: en la cotización, «Descargar PDF» (14/10). */
+  junto?: React.ReactNode;
   /** El `<Documento>` ya montado en el servidor. */
   children: React.ReactNode;
 }) {
@@ -73,16 +76,19 @@ export function VistaPreviaDocumento({
               navegador la captura con el velo gris por encima. El latido es
               para que React termine de desmontarlo.
             */}
-            <Button
-              variant="outline"
-              onClick={() => {
-                setAbierta(false);
-                setTimeout(() => window.print(), 150);
-              }}
-            >
-              <Printer className="size-[18px] shrink-0" />
-              Imprimir
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAbierta(false);
+                  setTimeout(() => window.print(), 150);
+                }}
+              >
+                <Printer className="size-[18px] shrink-0" />
+                Imprimir
+              </Button>
+              {junto}
+            </div>
           </DialogHeader>
           <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-4">
             {encima ? <div className="mb-3">{encima}</div> : null}

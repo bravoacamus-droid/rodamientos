@@ -15,6 +15,7 @@ import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
+import { DescargarPdf } from "./detalle/descargar-pdf";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
 import { OrdenCliente } from "./detalle/orden-cliente";
@@ -328,9 +329,18 @@ export default async function PaginaDetalleCotizacion({
               descuentoPct: l.descuento_pct,
             }))}
             vistaPrevia={
-              <VistaPreviaDocumento numero={cabecera.numero} encima={<SelectorMonedaPapel />}>
-                <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
-              </VistaPreviaDocumento>
+              <>
+                <VistaPreviaDocumento
+                  numero={cabecera.numero}
+                  encima={<SelectorMonedaPapel />}
+                  junto={<DescargarPdf c={impresa} cuentas={cuentas} />}
+                >
+                  <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
+                </VistaPreviaDocumento>
+                {/* Al lado de la vista previa (14/10): un clic y baja el
+                    archivo, sin pasar por la ventana de imprimir. */}
+                <DescargarPdf c={impresa} cuentas={cuentas} />
+              </>
             }
           />
         </header>

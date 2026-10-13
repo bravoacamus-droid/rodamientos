@@ -57,12 +57,15 @@ export function DocumentoEnMoneda({
   c: CotizacionImpresa;
   cuentas?: readonly CuentaParaPagar[];
 }) {
+  return <Documento c={useEnLaMonedaElegida(c)} cuentas={cuentas} />;
+}
+
+/** La cotización en la moneda que se eligió: el papel y el PDF, iguales. */
+export function useEnLaMonedaElegida(c: CotizacionImpresa): CotizacionImpresa {
   const { estado } = useMoneda();
-  const papel =
-    estado.enSoles && estado.tipoCambio && estado.tipoCambio > 0
-      ? enSoles(c, { valor: estado.tipoCambio, fecha: estado.fecha })
-      : c;
-  return <Documento c={papel} cuentas={cuentas} />;
+  return estado.enSoles && estado.tipoCambio && estado.tipoCambio > 0
+    ? enSoles(c, { valor: estado.tipoCambio, fecha: estado.fecha })
+    : c;
 }
 
 const hoyEnLima = () => new Date(Date.now() - 5 * 3_600_000).toISOString().slice(0, 10);

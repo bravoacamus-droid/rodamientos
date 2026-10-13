@@ -7592,3 +7592,34 @@ Comprobado en cotizaciones (lista, ficha, editar), producto, reportes y
 tablero. Ojo, que salta a la vista en reportes y no es de esto: hay márgenes
 de **372 779 %** en el histórico, por productos con un costo casi en cero
 cargado del Excel. Es dato, no formato.
+
+## §BR · 14/10 — «Descargar PDF» en la cotización
+
+Luis: el PDF que sacaba Willy («Imprimir → Guardar como PDF» de Chrome) no
+se veía en la vista previa de Windows, y *«él quiere un botón para que se
+descargue directo en PDF, no como la imagen que te pasé»*.
+
+**Lo de la vista previa no era el archivo.** Desde la actualización de
+seguridad de Windows de octubre de 2025, el Explorador NO previsualiza los
+archivos marcados como venidos de internet (Mark of the Web). Luis lo
+comprobó en la PC de Willy: Propiedades → «Desbloquear», y se ve. Le pasa a
+cualquier PDF descargado, también al de este botón: si molesta, se ajusta en
+esa PC, no en el ERP.
+
+**El botón sí era una mejora real:**
+- «Descargar PDF» junto a «Vista previa» en la ficha, y junto a «Imprimir»
+  dentro de la previa. Un clic y baja `COT1-000011 - GRUPO KLAUS S.A.C.pdf`
+  (con «- en soles» si se eligió soles).
+- Se arma en el navegador con jsPDF + autotable (el camino de Kassara): sin
+  Chromium en Vercel, texto de verdad que se busca y se copia.
+- `lib/pdf-hoja.ts` es el calco de `HojaDocumento` (membrete, recuadro del
+  número, datos en dos columnas, tabla azul, totales, «Son:», pie con
+  condiciones, cuentas y firma). Varias hojas: la cabecera de la tabla se
+  repite y lleva «1 de 2». Kits y notas, en gris y cursiva bajo la
+  descripción, sin cortarse.
+- Los datos y las columnas salen de `papel.ts`, que ahora usan los DOS
+  (`Documento` y el PDF): no pueden decir cosas distintas.
+
+Probado: COT1-000008 en dólares y en soles, CT02-000890 (38 líneas, dos
+hojas) y una de 45 líneas sintética con kits y notas en los tests. Queda
+llevarlo a factura, guía y orden de compra, que usan la misma hoja.
