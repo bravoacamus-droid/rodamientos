@@ -531,6 +531,7 @@ export type Database = {
         Row: {
           activo: boolean
           actualizado_en: string
+          agente_retencion: boolean
           bloqueado: boolean
           busq_documento: string | null
           busq_razon_social: string | null
@@ -560,6 +561,7 @@ export type Database = {
         Insert: {
           activo?: boolean
           actualizado_en?: string
+          agente_retencion?: boolean
           bloqueado?: boolean
           busq_documento?: string | null
           busq_razon_social?: string | null
@@ -589,6 +591,7 @@ export type Database = {
         Update: {
           activo?: boolean
           actualizado_en?: string
+          agente_retencion?: boolean
           bloqueado?: boolean
           busq_documento?: string | null
           busq_razon_social?: string | null

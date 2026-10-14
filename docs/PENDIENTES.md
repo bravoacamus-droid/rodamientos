@@ -8027,3 +8027,19 @@ Comprobado contra el servidor: F002-00000478 ↔ FC02-00000004 enlazadas en los
 dos sentidos, «Registrar cobro» en la F002-00000561, la anulada marcada, la
 búsqueda «OVOSUR». Sin ver: el estado vacío de «Emitir comprobante» (hoy hay
 algo que facturar) y una factura con cuotas o retención (no hay ninguna).
+
+**La retención, solo si el cliente es agente (118, 15/10).** Luis: *«solo es
+si el cliente es agente de retención; si no lo es, así haya pasado [los 700],
+lo voy a poder desactivar»*. `clientes.agente_retencion` (nace en false para
+los 97): casilla «Es agente de retención» en el formulario del cliente,
+insignia en su ficha, y «Traer datos» la marca si la consulta del RUC lo
+afirma (el plan básico no trae el dato). En la factura la retención se
+enciende sola solo si es agente Y llega a S/ 700; si no, sale apagada y se
+puede encender a mano. La frase de observaciones sigue al interruptor.
+**Willy tiene que marcar a sus clientes agentes**: hoy no hay ninguno.
+
+**Soles y dólares, confirmado (15/10).** Luis: documentos en soles con su
+tipo de cambio, reportes en dólares. Es como está desde la 116. Decidido
+otra vez: la factura usa el cambio congelado al aprobar la cotización.
+Pendiente de su permiso: marcar en soles las 17 facturas F002 del histórico
+que se emitieron en soles (su sistema las enseña en S/, el ERP en $).

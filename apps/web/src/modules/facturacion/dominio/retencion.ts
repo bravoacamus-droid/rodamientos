@@ -88,11 +88,16 @@ export function cuotasNetas<T extends { monto: number }>(cuotas: readonly T[], r
  * ¿Se retiene? El interruptor de la factura (14/10).
  *
  * Por debajo del umbral, nunca (la ley). Si la persona lo tocó, manda lo que
- * tocó. Si no, se enciende solo al llegar a S/ 700; sin tipo de cambio
- * (`null`) queda apagado y la pantalla avisa.
+ * tocó. Si no, se enciende solo al llegar a S/ 700 Y si el cliente es agente
+ * de retención (118, Luis 15/10: «solo es si el cliente es agente de
+ * retención»). Sin tipo de cambio (`null`) queda apagado y la pantalla avisa.
  */
-export function seRetiene(llegaAlUmbral: boolean | null, eleccion: "con" | "sin" | null): boolean {
+export function seRetiene(
+  llegaAlUmbral: boolean | null,
+  eleccion: "con" | "sin" | null,
+  clienteEsAgente: boolean,
+): boolean {
   if (llegaAlUmbral === false) return false;
   if (eleccion) return eleccion === "con";
-  return llegaAlUmbral === true;
+  return llegaAlUmbral === true && clienteEsAgente;
 }

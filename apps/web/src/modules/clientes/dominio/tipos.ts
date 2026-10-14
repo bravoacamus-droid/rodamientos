@@ -69,6 +69,8 @@ export interface ClienteDetalle extends ClienteLista {
   /** Su gente, la principal primero. */
   contactos_lista: ContactoCliente[];
   dias_gracia: number;
+  /** Le retiene el 3 % a sus proveedores (118). */
+  agente_retencion: boolean;
   motivo_bloqueo: string | null;
   vendedor_id: string | null;
   vendedor_nombre: string | null;
@@ -135,6 +137,7 @@ export interface ClienteEditable {
   linea_credito: number;
   dias_credito: number;
   dias_gracia: number;
+  agente_retencion: boolean;
   vendedor_id: string | null;
   notas: string | null;
 }
@@ -163,6 +166,8 @@ export interface DatosDocumento {
   estado: string | null;
   /** HABIDO / NO HABIDO. Importa: a un NO HABIDO no se le factura tranquilo. */
   condicion: string | null;
+  /** Agente de retención, si la consulta lo afirma (118). */
+  agente_retencion?: boolean;
 }
 
 export type ResultadoDocumento =

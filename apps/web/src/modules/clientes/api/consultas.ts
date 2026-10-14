@@ -255,7 +255,7 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
       .from("clientes")
       .select(
         `${COLUMNAS_LISTA_LEFT}, direccion, ubigeo_codigo, referencia_direccion, sector,
-         dias_gracia, motivo_bloqueo, vendedor_id, notas, creado_en,
+         dias_gracia, agente_retencion, motivo_bloqueo, vendedor_id, notas, creado_en,
          ubigeo(departamento, provincia, distrito),
          perfiles(nombre)`,
       )

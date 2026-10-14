@@ -51,6 +51,11 @@ export interface DatosSunat {
   estado: string | null;
   /** HABIDO / NO HABIDO. Importa: a un NO HABIDO no se le factura tranquilo. */
   condicion: string | null;
+  /**
+   * Agente de retención, si la consulta lo dice (118). Solo vale su `true`:
+   * el plan básico no trae el dato y llega `false` aunque lo sea.
+   */
+  agente_retencion: boolean;
 }
 
 export type ResultadoSunat =
@@ -135,6 +140,7 @@ export async function consultarDocumentoSunat(
           ubigeo_distrito: r.datos.distrito,
           estado: r.datos.estado,
           condicion: r.datos.condicion,
+          agente_retencion: Boolean(r.datos.esAgenteRetencion),
         },
         // Solo `api` gastó una consulta; caché y caché rancia no tocaron la red.
         consumioCuota: r.origen === "api",
@@ -158,6 +164,7 @@ export async function consultarDocumentoSunat(
         ubigeo_distrito: null,
         estado: null,
         condicion: null,
+        agente_retencion: false,
       },
       consumioCuota: r.origen === "api",
     };

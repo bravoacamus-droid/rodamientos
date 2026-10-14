@@ -128,6 +128,8 @@ export function FormularioCliente({
   const [condicionPago, setCondicionPago] = React.useState<CondicionPago>(
     cliente?.condicion_pago ?? "contado",
   );
+  /** Agente de retención (118): enciende sola la retención en sus facturas. */
+  const [agenteRetencion, setAgenteRetencion] = React.useState(cliente?.agente_retencion ?? false);
 
   const [f, setF] = React.useState({
     numero_documento: cliente?.numero_documento ?? "",
@@ -263,6 +265,8 @@ export function FormularioCliente({
 
       const d = r.datos;
       setPadron(d);
+      // Solo si la consulta lo AFIRMA: el plan básico no trae el dato.
+      if (d.agente_retencion) setAgenteRetencion(true);
       setF((x) => ({
         ...x,
         razon_social: d.razon_social || x.razon_social,
@@ -372,6 +376,7 @@ export function FormularioCliente({
     linea_credito: aCredito ? num(f.linea_credito) : 0,
     dias_credito: aCredito ? num(f.dias_credito) : 0,
     dias_gracia: aCredito ? num(f.dias_gracia) : 0,
+    agente_retencion: agenteRetencion,
     vendedor_id: f.vendedor_id || null,
     notas: f.notas.trim() || null,
     // Los tres nombres del distrito, para que el servidor pueda darlo de alta
@@ -861,6 +866,26 @@ export function FormularioCliente({
             )}
           </div>
         ) : null}
+
+        {/*
+          Agente de retención (118). Luis, 15/10: la retención del 3 % se
+          enciende sola en la factura desde S/ 700 «solo si el cliente es
+          agente de retención». Aquí es donde se dice si lo es.
+        */}
+        <label className="flex items-start gap-3 rounded-md border border-[var(--border)] p-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 size-5 shrink-0"
+            checked={agenteRetencion}
+            onChange={(e) => setAgenteRetencion(e.target.checked)}
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Es agente de retención</span>
+            <span className="text-sm text-[var(--fg-muted)]">
+              SUNAT lo designó: en sus facturas desde S/ 700 te retiene el 3 % y la retención se pone sola.
+            </span>
+          </span>
+        </label>
       </section>
 
       {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════

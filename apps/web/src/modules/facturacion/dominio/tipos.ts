@@ -236,6 +236,8 @@ export interface CotizacionFacturable {
    */
   moneda: "USD" | "PEN";
   tipo_cambio: number | null;
+  /** El cliente es agente de retención (118): la retención se enciende sola. */
+  cliente_agente_retencion: boolean;
   /**
    * Cuántas líneas de la cotización ya se facturaron ENTERAS y por eso no
    * salen abajo. Sirve para distinguir «esta cotización no tiene líneas»

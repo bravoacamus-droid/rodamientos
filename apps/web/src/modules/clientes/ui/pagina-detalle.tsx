@@ -61,6 +61,12 @@ export default async function PaginaDetalleCliente({
             <Badge tone={c.condicion_pago === "credito" ? "info" : "neutral"} size="xs">
               {ETIQUETA_CONDICION[c.condicion_pago]}
             </Badge>
+            {/* 118: en sus facturas desde S/ 700 la retención se pone sola. */}
+            {c.agente_retencion ? (
+              <Badge tone="info" size="xs">
+                Agente de retención
+              </Badge>
+            ) : null}
             {c.bloqueado ? (
               <Badge tone="danger" size="xs">
                 Bloqueado

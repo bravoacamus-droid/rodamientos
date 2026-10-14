@@ -44,12 +44,15 @@ describe("la retención del IGV (14/10)", () => {
     expect(cuotasNetas([{ monto: 10 }], 0)).toEqual([{ monto: 10 }]);
   });
 
-  it("el interruptor: solo desde S/ 700, encendido por defecto, se puede apagar", () => {
-    expect(seRetiene(true, null)).toBe(true);
-    expect(seRetiene(true, "sin")).toBe(false);
-    expect(seRetiene(false, null)).toBe(false);
-    expect(seRetiene(false, "con")).toBe(false);
-    expect(seRetiene(null, null)).toBe(false);
-    expect(seRetiene(null, "con")).toBe(true);
+  it("el interruptor: solo desde S/ 700, encendido solo si el cliente es agente, se puede apagar", () => {
+    expect(seRetiene(true, null, true)).toBe(true);
+    expect(seRetiene(true, "sin", true)).toBe(false);
+    // No es agente: aunque pase los 700, sale apagado; se puede encender.
+    expect(seRetiene(true, null, false)).toBe(false);
+    expect(seRetiene(true, "con", false)).toBe(true);
+    expect(seRetiene(false, null, true)).toBe(false);
+    expect(seRetiene(false, "con", true)).toBe(false);
+    expect(seRetiene(null, null, true)).toBe(false);
+    expect(seRetiene(null, "con", false)).toBe(true);
   });
 });

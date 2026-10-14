@@ -528,7 +528,7 @@ export async function cotizacionParaFacturar(
       .from("cotizaciones")
       .select(
         `id, numero, fecha, cliente_id, orden_compra_cliente, total, moneda, tipo_cambio,
-         clientes(razon_social, numero_documento, tipo_documento, condicion_pago, dias_credito),
+         clientes(razon_social, numero_documento, tipo_documento, condicion_pago, dias_credito, agente_retencion),
          cotizacion_items(
            producto_id, orden, codigo, descripcion, unidad_codigo,
            cantidad, cantidad_aprobada, cantidad_atendida,
@@ -549,6 +549,7 @@ export async function cotizacionParaFacturar(
         tipo_documento: string | null;
         condicion_pago: string;
         dias_credito: number;
+        agente_retencion: boolean | null;
       } | null;
       cotizacion_items: Array<{
         producto_id: string;
@@ -610,6 +611,7 @@ export async function cotizacionParaFacturar(
         total: Number(c.total ?? 0),
         moneda: c.moneda === "PEN" ? "PEN" : "USD",
         tipo_cambio: Number(c.tipo_cambio) > 0 ? Number(c.tipo_cambio) : null,
+        cliente_agente_retencion: Boolean(c.clientes?.agente_retencion),
         lineas_ya_facturadas: lineasCrudas.filter((l) => pendienteDe(l) <= 0).length,
         /*
           Solo las EMITIDAS. Una guía en borrador no tiene número todavía, y

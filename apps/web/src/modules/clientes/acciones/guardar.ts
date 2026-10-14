@@ -106,6 +106,8 @@ const esquema = z.object({
   linea_credito: numero(99_999_999, "La línea de crédito"),
   dias_credito: numero(365, "Los días de crédito"),
   dias_gracia: numero(365, "Los días de gracia"),
+  // 118: decide si la retención se enciende sola en sus facturas.
+  agente_retencion: z.boolean().default(false),
 
   vendedor_id: opcional(36, "El vendedor").refine(
     (v) => v === null || z.string().uuid().safeParse(v).success,
@@ -283,6 +285,7 @@ export async function guardarCliente(
     linea_credito: datos.linea_credito,
     dias_credito: datos.dias_credito,
     dias_gracia: datos.dias_gracia,
+    agente_retencion: datos.agente_retencion,
     vendedor_id: datos.vendedor_id,
     notas: datos.notas,
   };

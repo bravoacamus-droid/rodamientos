@@ -422,7 +422,8 @@ export function EmisorComprobante({
 
   // En soles el umbral se mira directo; en dólares, al cambio del día.
   const llegaAlUmbral = tcDoc ? totalesDoc.total >= UMBRAL_RETENCION_SOLES : alcanzaUmbral(totales.total, tc);
-  const retiene = seRetiene(llegaAlUmbral, eleccion);
+  const clienteEsAgente = Boolean(cot?.cliente_agente_retencion);
+  const retiene = seRetiene(llegaAlUmbral, eleccion, clienteEsAgente);
 
   /*
     La frase de observaciones sigue al interruptor, sola y arriba (Willy:
@@ -692,8 +693,17 @@ export function EmisorComprobante({
                     Retención del IGV ({RETENCION_PCT} %)
                   </label>
                   <p className="text-sm text-[var(--fg-muted)]">
-                    Se enciende sola cuando la factura llega a S/ {UMBRAL_RETENCION_SOLES}. Si este cliente no
-                    retiene, apágala.
+                    {clienteEsAgente ? (
+                      <>
+                        <strong>Este cliente es agente de retención:</strong> se enciende sola desde S/{" "}
+                        {UMBRAL_RETENCION_SOLES}. Si esta vez no retiene, apágala.
+                      </>
+                    ) : (
+                      <>
+                        Este cliente <strong>no está marcado como agente de retención</strong>, así que sale apagada.
+                        Si te retiene, enciéndela (y márcalo en su ficha).
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

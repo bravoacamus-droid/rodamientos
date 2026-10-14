@@ -29,6 +29,7 @@ const COT: CotizacionFacturable = {
   total: 1000,
   moneda: "USD",
   tipo_cambio: null,
+  cliente_agente_retencion: false,
   lineas_ya_facturadas: 0,
   // Con guía, que es el caso normal: primero sale la mercadería y luego se
   // factura. Sin ella no se puede emitir (17/09).
