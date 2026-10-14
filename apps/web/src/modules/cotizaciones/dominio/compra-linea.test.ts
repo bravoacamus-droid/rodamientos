@@ -5,6 +5,7 @@ import {
   margenSobreCosto,
   precioConMargen,
   proponerOrdenes,
+  proponerPendientes,
   proveedoresAPayload,
   resumirCompra,
   type ProveedorLinea,
@@ -108,5 +109,33 @@ describe("las órdenes de compra", () => {
     expect(o?.moneda).toBe("PEN");
     expect(o?.tipoCambio).toBe(3.5);
     expect(o?.items[0]?.costo).toBe(42);
+  });
+});
+
+describe("otro pedido con la misma cotización (121)", () => {
+  const linea = (cantidad: number, confirmada: number, proveedores: ProveedorLinea[]) => ({
+    productoId: "prod",
+    codigo: "6308 2RS",
+    cantidad,
+    confirmada,
+    unidad: "NIU",
+    proveedores,
+  });
+
+  it("20 cotizados, 20 ya pedidos y 20 más confirmados: propone los 20 nuevos al mismo proveedor y precio", () => {
+    const o = proponerPendientes([linea(20, 40, [prov("p2", 20, 10)])], new Map([["p2:prod", 20]]));
+    expect(o).toHaveLength(1);
+    expect(o[0]?.items[0]?.cantidad).toBe(20);
+    expect(o[0]?.items[0]?.costo).toBe(10);
+  });
+
+  it("ya pedido todo: no propone nada", () => {
+    expect(proponerPendientes([linea(20, 20, [prov("p2", 20, 10)])], new Map([["p2:prod", 20]]))).toEqual([]);
+  });
+
+  it("sin nada pedido, lo de siempre", () => {
+    expect(proponerPendientes([linea(10, 8, [prov("p2", 7, 10), prov("p3", 3, 12)])], new Map())).toEqual(
+      proponerOrdenes([linea(10, 8, [prov("p2", 7, 10), prov("p3", 3, 12)])]),
+    );
   });
 });

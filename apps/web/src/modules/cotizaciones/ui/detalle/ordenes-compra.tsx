@@ -21,7 +21,7 @@ import {
 
 import { generarOrdenesDeCompra } from "../../acciones/ordenes";
 import type { OrdenDelPedido } from "../../api/consultas";
-import { proponerOrdenes, type LineaConfirmada, type OrdenPropuesta } from "../../dominio/compra-linea";
+import { proponerPendientes, type LineaConfirmada, type OrdenPropuesta } from "../../dominio/compra-linea";
 import { faltanParaOtros, otrosPedidos, type DemandaProducto } from "../../dominio/demanda";
 import { OtrosPedidos } from "../otros-pedidos";
 
@@ -52,10 +52,16 @@ export function OrdenesDeCompra({
   demanda: DemandaProducto[];
 }) {
   const vivas = existentes.filter((o) => o.estado !== "anulada");
-  const pedidos = new Set(vivas.flatMap((o) => o.productos.map((p) => `${o.proveedorId}:${p}`)));
-  const propuestas = proponerOrdenes(lineas)
-    .map((o) => ({ ...o, items: o.items.filter((i) => !pedidos.has(`${o.proveedorId}:${i.productoId}`)) }))
-    .filter((o) => o.items.length > 0);
+  // Lo ya pedido a cada proveedor, en unidades (121): con otro pedido de la
+  // misma cotización se propone solo lo que falta, no se repite la primera.
+  const pedido = new Map<string, number>();
+  for (const o of vivas) {
+    for (const i of o.items) {
+      const k = `${o.proveedorId}:${i.productoId}`;
+      pedido.set(k, (pedido.get(k) ?? 0) + i.cantidad);
+    }
+  }
+  const propuestas = proponerPendientes(lineas, pedido);
 
   if (existentes.length === 0 && propuestas.length === 0) return null;
 

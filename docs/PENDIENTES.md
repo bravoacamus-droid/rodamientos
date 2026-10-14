@@ -8097,3 +8097,13 @@ ninguna factura con retención), «Atender otro pedido» (no hay cotización
 atendida) y la hoja «Facturas» abierta en Excel. **No hecho**: medio de pago
 en el papel (no se guarda), y el XML/CDR de las notas, que llegan con el
 certificado.
+
+**La orden de compra del pedido repetido (122, 15/10).** Luis: *«al hacer
+otro pedido, si no tiene stock, se tiene que hacer orden de compra»*. Fallaba
+por dos lados: la ficha no proponía nada al proveedor ya usado, y
+`generar_ordenes_de_compra` lo rechazaba («Ya se le pidió…»). Ahora la ficha
+propone LO QUE FALTA a cada proveedor —el análisis escalado a lo confirmado,
+mismos costos, menos lo ya pedido (`proponerPendientes`)— y la base solo
+rechaza el duplicado cuando ya está pedido todo lo confirmado. El centinela
+pide 20, ve rechazado el segundo intento y, tras otro pedido de 20, acepta la
+segunda orden; y lo deshace.

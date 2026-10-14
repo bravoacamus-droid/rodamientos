@@ -832,6 +832,8 @@ export interface OrdenDelPedido {
   proveedorId: string;
   /** Qué productos lleva: para no proponer dos veces lo mismo. */
   productos: string[];
+  /** Y cuánto de cada uno (121): con otro pedido se propone solo lo que falta. */
+  items: { productoId: string; cantidad: number }[];
 }
 
 /**
@@ -846,7 +848,7 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("compras")
-      .select("id, numero, estado, fecha, moneda, total, proveedor_id, proveedores(razon_social), compra_items(producto_id)")
+      .select("id, numero, estado, fecha, moneda, total, proveedor_id, proveedores(razon_social), compra_items(producto_id, cantidad)")
       .eq("cotizacion_id", cotizacionId)
       .order("numero");
     if (error) return [];
@@ -859,7 +861,7 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
       total: number;
       proveedor_id: string;
       proveedores: { razon_social: string } | null;
-      compra_items: { producto_id: string }[] | null;
+      compra_items: { producto_id: string; cantidad: number | string }[] | null;
     }[]).map((c) => ({
       id: c.id,
       numero: c.numero,
@@ -870,6 +872,7 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
       proveedor: c.proveedores?.razon_social ?? "—",
       proveedorId: c.proveedor_id,
       productos: (c.compra_items ?? []).map((i) => i.producto_id),
+      items: (c.compra_items ?? []).map((i) => ({ productoId: i.producto_id, cantidad: Number(i.cantidad) })),
     }));
   } catch {
     return [];

@@ -239,3 +239,41 @@ export function proveedoresGuardados(
       fecha: f.fecha,
     }));
 }
+
+/**
+ * Lo que FALTA pedir a cada proveedor, contando lo ya pedido (121).
+ *
+ * Con «Atender otro pedido» lo confirmado pasa de lo cotizado: 20 cotizados,
+ * 20 + 20 confirmados. El análisis dice a quién y a cuánto se compraba para
+ * 20; para 40 se escala con las mismas proporciones y los mismos costos, y se
+ * resta lo que ya se le pidió a cada proveedor. Así sale la orden del pedido
+ * nuevo y no se repite la del primero. Sin pedido repetido, es lo de siempre:
+ * `proponerOrdenes` menos lo ya pedido.
+ *
+ * `pedido` va por «proveedor:producto», en unidades.
+ */
+export function proponerPendientes(
+  lineas: readonly LineaConfirmada[],
+  pedido: ReadonlyMap<string, number>,
+  igv = 0.18,
+): OrdenPropuesta[] {
+  const escaladas = lineas.map((l) => {
+    if (!(l.confirmada > l.cantidad)) return l;
+    const total = l.proveedores.filter((p) => p.cantidad > 0).reduce((a, p) => a + p.cantidad, 0);
+    if (!(total > 0)) return l;
+    const factor = l.confirmada / total;
+    return {
+      ...l,
+      cantidad: l.confirmada,
+      proveedores: l.proveedores.map((p) => ({ ...p, cantidad: p.cantidad * factor })),
+    };
+  });
+  return proponerOrdenes(escaladas, igv)
+    .map((o) => ({
+      ...o,
+      items: o.items
+        .map((i) => ({ ...i, cantidad: i.cantidad - (pedido.get(`${o.proveedorId}:${i.productoId}`) ?? 0) }))
+        .filter((i) => i.cantidad > 0),
+    }))
+    .filter((o) => o.items.length > 0);
+}
