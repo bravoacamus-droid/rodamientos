@@ -367,7 +367,6 @@ export async function ponerMoneda(id: string, moneda: "USD" | "PEN"): Promise<Re
 export async function repetirPedido(
   id: string,
   lineas: { item_id: string; cantidad: number }[],
-  ordenCompra: string,
 ): Promise<ResultadoGestion> {
   const problema = await exigirPermiso();
   if (problema) return { ok: false, error: problema };
@@ -381,7 +380,7 @@ export async function repetirPedido(
     const { error } = await supabase.rpc("repetir_pedido", {
       p_id: id,
       p_lineas: revision.data as unknown as Json,
-      p_oc: ordenCompra.trim().slice(0, 60) || undefined,
+      // Sin O/C: la del pedido anterior se vacía y la nueva se pone en la guía (123).
     });
     if (error) return { ok: false, error: error.message };
     refrescar(id);

@@ -25,21 +25,20 @@ import { unidadLegible } from "../../dominio/unidades";
  * Willy, 14/10: *«ese producto me pide 20 unidades cada cierto tiempo… cojo
  * de una misma cotización, le vuelvo a hacer la guía y la factura»*. Viene
  * todo marcado con lo cotizado —lo normal es que repita—, se cambia lo que
- * no, se pone la O/C nueva y se va directo a hacer la guía. La guía y la
+ * no, y se va directo a hacer la guía. La O/C del cliente NO se pide aquí:
+ * se pone en la guía (Luis, 15/10), y la vieja se vacía al registrar (123). La guía y la
  * factura salen con su propio número, colgando de esta cotización.
  */
 export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lineas: LineaParaConfirmar[] }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
   const [cantidades, setCantidades] = React.useState<Record<string, number>>({});
-  const [oc, setOc] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [pendiente, iniciar] = React.useTransition();
 
   React.useEffect(() => {
     if (!abierto) return;
     setCantidades(Object.fromEntries(lineas.map((l) => [l.id, l.cantidad])));
-    setOc("");
     setError(null);
   }, [abierto, lineas]);
 
@@ -49,7 +48,6 @@ export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lin
       const r = await repetirPedido(
         cotizacionId,
         lineas.map((l) => ({ item_id: l.id, cantidad: cantidades[l.id] ?? 0 })),
-        oc,
       );
       if (!r.ok) {
         setError(r.error);
@@ -71,7 +69,8 @@ export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lin
           <DialogHeader>
             <DialogTitle>Otro pedido con esta cotización</DialogTitle>
             <DialogDescription>
-              Al mismo precio. La guía y la factura salen con su propio número; pon cuánto pide esta vez.
+              Al mismo precio. Pon cuánto pide esta vez; la orden de compra del cliente la pones en la guía, que sale
+              con su propio número, igual que la factura.
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="flex flex-col gap-4">
@@ -100,10 +99,6 @@ export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lin
                 </li>
               ))}
             </ul>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Orden de compra de este pedido</span>
-              <Input value={oc} maxLength={60} onChange={(e) => setOc(e.target.value)} placeholder="La que mandó el cliente" />
-            </label>
             {error ? (
               <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
                 {error}
