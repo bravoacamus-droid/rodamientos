@@ -8107,3 +8107,24 @@ mismos costos, menos lo ya pedido (`proponerPendientes`)— y la base solo
 rechaza el duplicado cuando ya está pedido todo lo confirmado. El centinela
 pide 20, ve rechazado el segundo intento y, tras otro pedido de 20, acepta la
 segunda orden; y lo deshace.
+
+## §CC · 15/10 — La pantalla SUNAT, las notas y las bajas (124-125)
+
+Luis: *«un módulo para que me avise ahí las que todavía no manda… y ver los
+estados si fue rechazado o así; más que todo es para el cliente»*.
+
+- **`/sunat`**, en el menú bajo Facturación con número rojo: por enviar (con
+  el plazo de 3 días), rechazados (qué pasó y qué hacer, `clasificarRechazo`),
+  bajas por comunicar y las últimas aceptadas. «Enviar todas» manda de uno en
+  uno, facturas antes que notas, por el mismo `enviarASunat` de la ficha.
+- **Las notas no llegaban nunca a SUNAT**: `enviarASunat` las rechazaba
+  («se envían desde su propia pantalla», que no existía) y `emitirNota` del
+  conector no lo llamaba nadie. Ahora van, y exigen su factura aceptada.
+- **La comunicación de baja** (RA) estaba escrita desde la fase C y sin
+  camino: anular dejaba `baja_solicitada` y ahí moría. Tabla `sunat_bajas`
+  (125) con ticket y correlativo del día; una por fecha de emisión;
+  «Preguntar a SUNAT» consulta el ticket. Solo gerencia la comunica.
+- Motivo 08 «Bonificación» (124) y nota por producto (05/07).
+
+**Sin probar contra SUNAT**: no hay certificado ni usuario SOL. Lo siguiente
+es la prueba en beta (MODDATOS) y después el envío de la GRE.

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { clasificarRechazo, sePuedeReenviar } from "@rodatech/sunat";
-import type { Comprobante, ItemComprobante } from "@rodatech/sunat";
+import type { Comprobante, ItemComprobante, NotaComprobante } from "@rodatech/sunat";
 import type { Json } from "@rodatech/db/tipos";
 
 import { conectorSunat } from "../api/configuracion";
@@ -75,12 +75,12 @@ export async function enviarASunat(
   if (c.estado_sunat === "aceptado") {
     return { ok: false, error: `${c.numero} ya fue aceptado por SUNAT.` };
   }
-  if (c.tipo !== "factura" && c.tipo !== "boleta") {
-    return {
-      ok: false,
-      error: "Las notas se envían desde su propia pantalla, no desde aquí.",
-    };
-  }
+  /*
+    Las notas también (15/10). Aquí decía «las notas se envían desde su propia
+    pantalla», y esa pantalla no existía: `emitirNota` del conector estaba
+    escrito y nadie lo llamaba, así que ninguna nota llegaba a SUNAT.
+  */
+  const esNota = c.tipo === "nota_credito" || c.tipo === "nota_debito";
 
   const conector = await conectorSunat();
   if (!conector.ok) return { ok: false, error: conector.error };
@@ -98,6 +98,31 @@ export async function enviarASunat(
   }
 
   const tasaIgv = Number(empresa.igv_porcentaje ?? 18) / 100;
+
+  // De una nota, lo que SUNAT pide además: el documento que corrige y el motivo.
+  let afectado: { tipoDocumento: "01" | "03"; serie: string; correlativo: number } | null = null;
+  let descripcionMotivo = "";
+  if (esNota) {
+    if (!c.referencia_id || !c.motivo_nota_codigo) {
+      return { ok: false, error: "A esta nota le falta el documento que corrige o su motivo." };
+    }
+    const [{ data: ref }, { data: mot }] = await Promise.all([
+      supabase.from("comprobantes").select("tipo, serie, correlativo, estado_sunat").eq("id", c.referencia_id).maybeSingle(),
+      supabase
+        .from("motivos_nota")
+        .select("descripcion")
+        .eq("tipo", c.tipo)
+        .eq("codigo", c.motivo_nota_codigo)
+        .maybeSingle(),
+    ]);
+    if (!ref) return { ok: false, error: "No se encontró el documento que corrige esta nota." };
+    // SUNAT rechaza la nota de un documento que no conoce.
+    if (!["aceptado", "observado"].includes(String(ref.estado_sunat))) {
+      return { ok: false, error: `Primero tiene que estar aceptado en SUNAT el documento que corrige (${c.referencia_numero ?? ""}).` };
+    }
+    afectado = { tipoDocumento: ref.tipo === "boleta" ? "03" : "01", serie: ref.serie, correlativo: ref.correlativo };
+    descripcionMotivo = mot?.descripcion ?? "Corrección";
+  }
 
   const items: ItemComprobante[] = c.lineas.map((l) => {
     const neto = l.valor_unitario * (1 - l.descuento_pct / 100);
@@ -121,7 +146,7 @@ export async function enviarASunat(
   const alCredito = c.condicion_pago === "credito" && c.dias_credito > 0;
 
   const comprobante: Comprobante = {
-    tipoDocumento: c.tipo === "factura" ? "01" : "03",
+    tipoDocumento: c.tipo === "boleta" ? "03" : "01",
     serie: c.serie,
     correlativo: c.correlativo,
     fechaEmision: new Date(`${c.fecha_emision}T00:00:00`),
@@ -185,7 +210,18 @@ export async function enviarASunat(
     .eq("id", c.id);
 
   try {
-    const cdr = await conector.datos.emitir(comprobante);
+    const cdr =
+      esNota && afectado
+        ? await conector.datos.emitirNota({
+            ...comprobante,
+            tipoDocumento: c.tipo === "nota_debito" ? "08" : "07",
+            motivo: c.motivo_nota_codigo as NotaComprobante["motivo"],
+            descripcionMotivo,
+            documentoAfectado: afectado,
+            // Una nota va al contado: ajusta una deuda, no abre otra a plazo.
+            formaPago: { tipo: "contado" },
+          })
+        : await conector.datos.emitir(comprobante);
 
     // `clasificarRechazo` traduce el código a algo que pueda leer quien vende;
     // `sePuedeReenviar` responde lo único que importa en ese momento: si vale

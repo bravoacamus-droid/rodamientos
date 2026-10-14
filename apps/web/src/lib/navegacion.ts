@@ -169,6 +169,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
       { etiqueta: "Listos para entregar", ruta: "/cotizaciones/listos", icono: "listos" },
       { etiqueta: "Guías de remisión", ruta: "/guias", icono: "guia" },
       { etiqueta: "Facturación", ruta: "/facturacion", icono: "factura" },
+      // Justo debajo: lo que la factura espera de SUNAT (15/10). Con número
+      // rojo cuando hay algo por enviar, rechazado o por dar de baja.
+      { etiqueta: "SUNAT", ruta: "/sunat", icono: "sunat", roles: ["gerencia", "admin", "ventas"] },
       { etiqueta: "Cobranzas", ruta: "/cobranzas", icono: "cobranza", roles: ["gerencia", "admin", "cobranzas"] },
     ],
   },

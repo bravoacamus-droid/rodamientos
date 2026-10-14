@@ -4095,6 +4095,62 @@ export type Database = {
           },
         ]
       }
+      sunat_bajas: {
+        Row: {
+          actualizado_en: string
+          codigo: string | null
+          comprobantes: string[]
+          correlativo: number
+          creado_en: string
+          creado_por: string | null
+          estado: string
+          fecha_comunicacion: string
+          fecha_documentos: string
+          id: string
+          identificador: string
+          mensaje: string | null
+          ticket: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          codigo?: string | null
+          comprobantes: string[]
+          correlativo: number
+          creado_en?: string
+          creado_por?: string | null
+          estado?: string
+          fecha_comunicacion: string
+          fecha_documentos: string
+          id?: string
+          identificador: string
+          mensaje?: string | null
+          ticket?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          codigo?: string | null
+          comprobantes?: string[]
+          correlativo?: number
+          creado_en?: string
+          creado_por?: string | null
+          estado?: string
+          fecha_comunicacion?: string
+          fecha_documentos?: string
+          id?: string
+          identificador?: string
+          mensaje?: string | null
+          ticket?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sunat_bajas_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos: {
         Row: {
           activo: boolean

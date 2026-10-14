@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { pendientesSunat } from "@/modules/sunat/api/consultas";
+
 import { fallo } from "./errores";
 
 /**
@@ -42,9 +44,15 @@ export interface PendientesDelMenu {
   "/cotizaciones": number;
   /** Alertas que nadie ha abierto. */
   "/alertas": number;
+  /**
+   * Lo que espera de SUNAT: por enviar, rechazado o por dar de baja (15/10).
+   * Entra aunque arriba se diga «solo dos»: es dinero declarado, y Willy no
+   * va a entrar a buscarlo si nada le avisa.
+   */
+  "/sunat": number;
 }
 
-const VACIO: PendientesDelMenu = { "/cotizaciones": 0, "/alertas": 0 };
+const VACIO: PendientesDelMenu = { "/cotizaciones": 0, "/alertas": 0, "/sunat": 0 };
 
 /** Un número que siempre es un número, venga lo que venga. */
 const n = (v: unknown): number => {
@@ -56,18 +64,20 @@ export async function pendientesDelMenu(): Promise<PendientesDelMenu> {
   try {
     const supabase = await clienteServidor();
 
-    const [cotizaciones, alertas] = await Promise.all([
+    const [cotizaciones, alertas, sunat] = await Promise.all([
       // `head: true`: solo se quiere el número, no las filas.
       supabase
         .from("cotizaciones")
         .select("id", { count: "exact", head: true })
         .eq("estado", "enviada"),
       supabase.from("v_resumen_alertas").select("sin_leer").maybeSingle(),
+      pendientesSunat().catch(() => 0),
     ]);
 
     return {
       "/cotizaciones": n(cotizaciones.count),
       "/alertas": n(alertas.data?.sin_leer),
+      "/sunat": n(sunat),
     };
   } catch (e) {
     fallo(e, "lib/pendientesDelMenu");
