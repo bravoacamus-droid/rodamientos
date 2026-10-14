@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Printer, Pencil } from "lucide-react";
-import { EstadoBadge, EstadoError, formatearFecha } from "@rodatech/ui";
+import { FileText, Printer, Pencil } from "lucide-react";
+import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
@@ -56,6 +56,10 @@ export default async function PaginaDetalleGuia({
   const puedeEmitir =
     rol !== null && ["gerencia", "admin", "ventas", "almacen"].includes(rol);
   const esGerencia = rol !== null && ["gerencia", "admin"].includes(rol);
+  // Los mismos roles que pueden emitir comprobantes (facturacion/pagina-nueva).
+  const puedeFacturar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
+  // Emitida, sin factura y de una cotización: lo siguiente es facturarla.
+  const porFacturar = g.estado === "emitida" && !g.comprobante && Boolean(g.cotizacion_id);
 
   const unidades = g.lineas.reduce((a, l) => a + l.cantidad, 0);
 
@@ -121,7 +125,26 @@ export default async function PaginaDetalleGuia({
           </VistaPreviaDocumento>
           {/* En azul solo ya emitida: en un borrador lo principal es
               «Emitir y despachar», y dos botones azules no dicen cuál. */}
-          <BotonDescargarPdf hoja={hoja} nombre={archivo} variante={g.estado === "borrador" ? "outline" : "primary"} />
+          {/*
+            «Facturar» desde la guía (Luis, 15/10: *«una vez en la guía ponemos
+            el botón de facturar por ahí también»*). Es el paso que sigue —la
+            guía va antes que la factura— y abre la factura con ESTA guía
+            marcada. Con él, el azul es suyo y el PDF pasa a contorno.
+          */}
+          {puedeFacturar && porFacturar ? (
+            <Link
+              href={`/facturacion/nueva?cotizacion=${g.cotizacion_id}&guia=${g.id}`}
+              className={cn(buttonVariants(), "px-3")}
+            >
+              <FileText className="size-4" aria-hidden="true" />
+              Facturar
+            </Link>
+          ) : null}
+          <BotonDescargarPdf
+            hoja={hoja}
+            nombre={archivo}
+            variante={g.estado === "borrador" || (puedeFacturar && porFacturar) ? "outline" : "primary"}
+          />
           <Link
             href={`/guias/${g.id}/imprimir?auto=1`}
             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"

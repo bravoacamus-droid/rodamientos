@@ -29,6 +29,8 @@ interface Props {
 export default async function PaginaNuevoComprobante({ searchParams }: Props) {
   const sp = await searchParams;
   const crudo = Array.isArray(sp.cotizacion) ? sp.cotizacion[0] : sp.cotizacion;
+  // Desde el botón «Facturar» de una guía: esa guía y no todas (15/10).
+  const guia = Array.isArray(sp.guia) ? sp.guia[0] : sp.guia;
 
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
@@ -111,6 +113,7 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         serieFactura={config.ok ? config.datos.serie_factura : "F001"}
         serieBoleta={config.ok ? config.datos.serie_boleta : "B001"}
         cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
+        guiaInicial={guia && guia.length > 0 ? guia : null}
         emisor={emisor}
         cuentas={cuentas}
         // Sin certificado ni credenciales SOL no se puede mandar nada. Se

@@ -69,6 +69,7 @@ import type {
 } from "../dominio/tipos";
 import { DocumentoComprobante } from "./documento";
 import { enMonedaDocumento, totalesDe } from "../dominio/emision";
+import { montoEnLetras } from "@rodatech/sunat/letras";
 import { montoRetencion } from "../dominio/retencion";
 
 export interface OpcionesEmision {
@@ -226,7 +227,7 @@ export function AntesDeEmitir({
     cliente: cot.cliente,
     cliente_documento: cot.cliente_documento,
     cliente_tipo_documento: cot.cliente_tipo_documento,
-    cliente_direccion: null,
+    cliente_direccion: cot.cliente_direccion,
     cliente_email: null,
     cotizacion_id: cot.id,
     cotizacion_numero: cot.numero,
@@ -272,9 +273,18 @@ export function AntesDeEmitir({
     descuento_global: totales.descuento,
     igv: totales.igv,
     total: totales.total,
-    // Lo pone `numero_a_letras` en Postgres al emitir. Traducirlo aquí sería
-    // una segunda implementación de la misma regla, y las dos se separarían.
-    total_letras: null,
+    /*
+      Al emitir lo pone `numero_a_letras` en Postgres. En la previa salía en
+      blanco y Luis lo echó en falta (15/10): se usa `montoEnLetras`, el que
+      ya va en el XML de SUNAT y escribe igual que la base
+      («… CON 83/100 DOLARES AMERICANOS»).
+    */
+    total_letras: montoEnLetras(
+      cot.moneda === "PEN" && cot.tipo_cambio
+        ? totalesDe(enMonedaDocumento(lineas, cot.tipo_cambio)).total
+        : totales.total,
+      cot.moneda === "PEN" ? "SOLES" : "DOLARES AMERICANOS",
+    ),
     pagado: 0,
     saldo: totales.total,
     estado: "emitido",

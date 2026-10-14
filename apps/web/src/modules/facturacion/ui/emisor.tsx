@@ -93,6 +93,7 @@ export function EmisorComprobante({
   serieFactura,
   serieBoleta,
   cotizacionInicial,
+  guiaInicial,
   emisor,
   cuentas,
   puedeEnviar,
@@ -103,6 +104,12 @@ export function EmisorComprobante({
   serieFactura: string;
   serieBoleta: string;
   cotizacionInicial?: string | null;
+  /**
+   * Se llega desde «Facturar» en una guía: se marca SOLO esa. Con «Atender
+   * otro pedido» (121) la cotización tiene guías de pedidos ya facturados,
+   * y marcarlas todas volvería a poner en esta factura las de antes.
+   */
+  guiaInicial?: string | null;
   /** Para la vista previa: es la misma hoja que se imprime. */
   emisor: EmisorHoja;
   cuentas: readonly CuentaParaPagar[];
@@ -351,7 +358,9 @@ export function EmisorComprobante({
         `guias` ya viene filtrada a las EMITIDAS: una en borrador no tiene
         número, y lo que la factura ampara es un número.
       */
-      const ids = r.datos.guias.map((g) => g.id);
+      const todas = r.datos.guias.map((g) => g.id);
+      const ids =
+        cotizacionId === cotizacionInicial && guiaInicial && todas.includes(guiaInicial) ? [guiaInicial] : todas;
       setOpciones((o) => ({ ...o, guias: ids }));
 
       base.current = {
@@ -371,7 +380,7 @@ export function EmisorComprobante({
         aplicarRecuperado(pendiente, r.datos.lineas.length);
       }
     });
-  }, [cotizacionId]);
+  }, [cotizacionId, cotizacionInicial, guiaInicial]);
 
   // Lo que se va a emitir de verdad. El servidor lo vuelve a recortar
   // contra lo pendiente: esto es para que los totales de la pantalla

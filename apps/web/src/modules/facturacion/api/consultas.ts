@@ -539,7 +539,7 @@ export async function cotizacionParaFacturar(
       .from("cotizaciones")
       .select(
         `id, numero, fecha, cliente_id, orden_compra_cliente, total, moneda, tipo_cambio,
-         clientes(razon_social, numero_documento, tipo_documento, condicion_pago, dias_credito, agente_retencion),
+         clientes(razon_social, numero_documento, tipo_documento, direccion, condicion_pago, dias_credito, agente_retencion),
          cotizacion_items(
            producto_id, orden, codigo, descripcion, unidad_codigo,
            cantidad, cantidad_aprobada, cantidad_atendida,
@@ -558,6 +558,7 @@ export async function cotizacionParaFacturar(
         razon_social: string;
         numero_documento: string | null;
         tipo_documento: string | null;
+        direccion: string | null;
         condicion_pago: string;
         dias_credito: number;
         agente_retencion: boolean | null;
@@ -611,6 +612,7 @@ export async function cotizacionParaFacturar(
         cliente: c.clientes?.razon_social ?? "—",
         cliente_documento: c.clientes?.numero_documento ?? null,
         cliente_tipo_documento: c.clientes?.tipo_documento ?? null,
+        cliente_direccion: c.clientes?.direccion ?? null,
         /*
           La de la GUÍA primero (14/10): la O/C llega cuando el cliente
           confirma, y desde ese día se escribe en la guía —que va antes que

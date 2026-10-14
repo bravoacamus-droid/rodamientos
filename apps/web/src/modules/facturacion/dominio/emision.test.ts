@@ -23,6 +23,7 @@ const COT: CotizacionFacturable = {
   cliente: "MINERA LOS ANDES S.A.C.",
   cliente_documento: "20100070970",
   cliente_tipo_documento: "RUC",
+  cliente_direccion: null,
   orden_compra_cliente: null,
   condicion_pago: "credito",
   dias_credito: 30,

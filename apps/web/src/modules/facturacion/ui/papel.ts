@@ -49,28 +49,27 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
     esNota && c.referencia_numero
       ? { etiqueta: "Modifica a", valor: c.referencia_numero }
       : null,
-    c.orden_compra_cliente
-      ? { etiqueta: "O/C del cliente", valor: c.orden_compra_cliente }
-      : null,
-    c.cotizacion_numero
-      ? { etiqueta: "Cotización", valor: c.cotizacion_numero }
-      : null,
-    // Con qué guía salió la mercadería. Su formato la imprime, y es la
-    // que ata el papel que firmó el almacén del cliente con la factura
-    // que tiene que pagar: la guía sellada es lo que autoriza a facturar.
+  ];
+}
+
+/**
+ * Los documentos que atan la factura a la venta, debajo del importe en
+ * letras y con sus nombres, como su F002-564 (Luis, 15/10: *«pero te pasé
+ * cómo lo tiene»*). Arriba, mezclados con el cliente, no se encontraban.
+ */
+export function referenciasDelPapel(c: ComprobanteDetalle): { etiqueta: string; valor: string }[] {
+  return [
+    c.orden_compra_cliente ? { etiqueta: "Orden de compra/servicio", valor: c.orden_compra_cliente } : null,
+    c.cotizacion_numero ? { etiqueta: "Cotización", valor: c.cotizacion_numero } : null,
+    // Con qué guía salió la mercadería: la guía sellada es lo que autoriza a
+    // facturar. En plural cuando ampara varias (084).
     c.guia_numero
       ? {
-          // En plural cuando ampara varias (084). Willy, 16/09: «a veces
-          // hay que hacer una factura de dos guías».
-          etiqueta: c.guia_numero.includes(",")
-            ? "Guías de remisión"
-            : "Guía de remisión",
+          etiqueta: c.guia_numero.includes(",") ? "Guías de remisión remitente" : "Guía de remisión remitente",
           valor: c.guia_numero,
-          // A lo ancho: tres números de guía no caben en media columna.
-          ancho: c.guia_numero.includes(","),
         }
       : null,
-  ];
+  ].filter((r): r is { etiqueta: string; valor: string } => r !== null);
 }
 
 /**
@@ -118,42 +117,46 @@ export function totalesDelPapel(c: ComprobanteDetalle): { etiqueta: string; valo
 
 /**
  * Las cuotas se imprimen siempre que es a crédito —«DETALLE CUOTAS PAGO
- * PENDIENTE», como su formato—, aunque sea una sola. Con retención ya las
- * dice el cuadro de la retención (cuota, fecha y neto), y no se repiten.
+ * PENDIENTE», como su formato—, aunque sea una sola. Con retención, netas:
+ * es el «cuadrito aparte con la cuota, la fecha de pago y el monto neto» que
+ * pidió Willy el 13/10, y en su F002-564 es esta misma tabla. Por eso ya no
+ * hay un cuadro de la retención aparte (15/10).
  */
 export function imprimeCuotas(c: ComprobanteDetalle): boolean {
-  return c.condicion_pago === "credito" && c.cuotas.length > 0 && !c.retencion_aplica;
+  return c.condicion_pago === "credito";
 }
 
-/**
- * El cuadro de la retención: cuánto se retiene, en cuántas cuotas, cuándo se
- * paga y cuánto llega de verdad (14/10). Lo usan el papel y el PDF.
- */
 /**
  * El renglón «Información de la retención», como lo imprime su F002-564:
  * base imponible (el total), porcentaje y monto.
  */
-export function infoRetencion(c: ComprobanteDetalle): string {
-  return `Base imponible de la retención: ${simboloDe(c.moneda)} ${dinero(c.total)} · Porcentaje: ${RETENCION_PCT}% · Monto: ${simboloDe(c.moneda)} ${dinero(c.retencion_monto)}`;
+export function infoRetencion(c: ComprobanteDetalle): string[] {
+  // «USD» y no «$», como su F002-564: es el bloque que copia el cliente al declarar.
+  const sim = c.moneda === "PEN" ? "S/" : "USD";
+  // En dólares, el monto también en soles: así lo declara el cliente.
+  const enSoles =
+    c.moneda !== "PEN" && c.tipo_cambio ? ` - S/ ${dinero(Math.round(c.retencion_monto * c.tipo_cambio * 100) / 100)}` : "";
+  return [
+    `Base imponible de la retención: ${sim} ${dinero(c.total)}`,
+    `Porcentaje: ${RETENCION_PCT}% - Monto: ${sim} ${dinero(c.retencion_monto)}${enSoles}`,
+  ];
 }
 
 /** Las cuotas que se imprimen: con retención, lo pendiente (total − retenido). */
 export function cuotasDelPapel(c: ComprobanteDetalle) {
-  return cuotasNetas(c.cuotas, c.retencion_aplica ? c.retencion_monto : 0);
+  // A crédito sin filas de cuotas (un solo pago): una, al vencimiento.
+  const cuotas = c.cuotas.length > 0
+    ? c.cuotas
+    : [{ numero: 1, fecha_vencimiento: c.fecha_vencimiento ?? c.fecha_emision, monto: c.total, pagado: 0 }];
+  return cuotasNetas(cuotas, c.retencion_aplica ? c.retencion_monto : 0);
 }
 
-export function cuadroRetencion(c: ComprobanteDetalle): { cabecera: string[]; fila: string[] } {
-  const neto = Math.round((c.total - c.retencion_monto) * 100) / 100;
-  return {
-    cabecera: [`Retención IGV (${RETENCION_PCT}%)`, "Cuotas", "Fecha de pago", "Monto neto a pagar"],
-    fila: [
-      `${simboloDe(c.moneda)} ${dinero(c.retencion_monto)}`,
-      String(Math.max(c.cuotas.length, 1)),
-      fecha(c.fecha_vencimiento ?? c.fecha_emision),
-      `${simboloDe(c.moneda)} ${dinero(neto)}`,
-    ],
-  };
+/** «DETALLE CUOTAS PAGO PENDIENTE (USD 234.94)», como su formato. */
+export function tituloCuotas(c: ComprobanteDetalle): string {
+  const total = cuotasDelPapel(c).reduce((a, q) => a + q.monto, 0);
+  return `Detalle cuotas pago pendiente (${c.moneda === "PEN" ? "S/" : "USD"} ${dinero(total)})`;
 }
+
 
 const MONEDA_CUENTA: Record<string, string> = { USD: "DÓLARES", PEN: "SOLES" };
 
@@ -177,7 +180,29 @@ export function hojaDeComprobante(
       ],
     });
   }
-  if (c.observaciones) pie.push({ tipo: "parrafo", trozos: [{ texto: c.observaciones }] });
+  // En el orden de su F002-564: referencias, retención, observaciones, el QR
+  // con el hash, las cuotas, y abajo las leyendas y las cuentas.
+  for (const r of referenciasDelPapel(c)) {
+    pie.push({ tipo: "parrafo", trozos: [{ texto: `${r.etiqueta}: `, negrita: true }, { texto: r.valor }] });
+  }
+  if (c.retencion_aplica) {
+    pie.push({ tipo: "parrafo", trozos: [{ texto: "Información de la retención:", negrita: true }] });
+    for (const l of infoRetencion(c)) pie.push({ tipo: "parrafo", trozos: [{ texto: l }] });
+  }
+  if (c.observaciones) {
+    pie.push({ tipo: "parrafo", trozos: [{ texto: "OBSERVACIONES:", negrita: true }] });
+    pie.push({ tipo: "parrafo", trozos: [{ texto: c.observaciones }] });
+  }
+  if (qr) pie.push({ tipo: "qr", dato: qr.png, hash: qr.hash });
+  if (imprimeCuotas(c)) {
+    pie.push({
+      tipo: "tabla",
+      titulo: tituloCuotas(c).toUpperCase(),
+      cabecera: ["Cuota", "Fecha", "Total"],
+      filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `${c.moneda === "PEN" ? "S/" : "USD"} ${dinero(q.monto)}`]),
+      derecha: [2],
+    });
+  }
   pie.push({
     tipo: "parrafo",
     trozos: [{ texto: "Los importes están expresados en " }, { texto: nombreMoneda(c.moneda), negrita: true }, { texto: "." }],
@@ -186,24 +211,6 @@ export function hojaDeComprobante(
     tipo: "parrafo",
     trozos: [{ texto: "Representación impresa del comprobante electrónico. Consulte su validez en el portal de SUNAT." }],
   });
-  // Las cuotas, solo si hay más de una (igual que el papel).
-  if (imprimeCuotas(c)) {
-    pie.push({
-      tipo: "tabla",
-      titulo: `Detalle de cuotas · pago pendiente (${simboloDe(c.moneda)} ${dinero(cuotasDelPapel(c).reduce((a, q) => a + q.monto, 0))})`,
-      cabecera: ["Cuota", "Vence", "Importe"],
-      filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `${simboloDe(c.moneda)} ${dinero(q.monto)}`]),
-      derecha: [2],
-    });
-  }
-  if (c.retencion_aplica) {
-    const cuadro = cuadroRetencion(c);
-    pie.push({
-      tipo: "parrafo",
-      trozos: [{ texto: "Información de la retención: ", negrita: true }, { texto: infoRetencion(c) }],
-    });
-    pie.push({ tipo: "tabla", titulo: "", cabecera: cuadro.cabecera, filas: [cuadro.fila] });
-  }
   if (c.mostrar_cuenta && cuentas.length > 0) {
     const orden = (m: string) => ({ USD: 0, PEN: 1 } as Record<string, number>)[m.toUpperCase()] ?? 9;
     pie.push({
@@ -215,7 +222,6 @@ export function hojaDeComprobante(
     });
   }
 
-  if (qr) pie.push({ tipo: "qr", dato: qr.png, hash: qr.hash });
   return {
     emisor,
     // Anulado, que se vea en el papel y en el PDF (auditoría 14/10).

@@ -231,6 +231,8 @@ export interface CotizacionFacturable {
   cliente: string;
   cliente_documento: string | null;
   cliente_tipo_documento: string | null;
+  /** Para la vista previa: la factura la imprime bajo «Señores». */
+  cliente_direccion: string | null;
   orden_compra_cliente: string | null;
   condicion_pago: string;
   dias_credito: number;

@@ -3,7 +3,7 @@ import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
 import { enMonedaDelDocumento, nombreMoneda, simboloDe } from "../dominio/moneda-documento";
-import { COLUMNAS_COMPROBANTE, imprimeCuotas, precioConIgv, totalesDelPapel, cuadroRetencion, cuotasDelPapel, datosDeComprobante, infoRetencion } from "./papel";
+import { COLUMNAS_COMPROBANTE, imprimeCuotas, precioConIgv, totalesDelPapel, cuotasDelPapel, datosDeComprobante, infoRetencion, referenciasDelPapel, tituloCuotas } from "./papel";
 
 /**
  * La factura, la boleta y las notas, en papel.
@@ -88,49 +88,69 @@ export function DocumentoComprobante({
               resto en la cuenta de detracciones.
             </p>
           ) : null}
-          {c.observaciones ? (
-            <p className="mb-1 whitespace-pre-line">{c.observaciones}</p>
-          ) : null}
-          <p className="mb-1">
-            Los importes están expresados en <strong>{nombreMoneda(c.moneda)}</strong>.
-          </p>
-          {/* La leyenda que exige SUNAT para el documento impreso. */}
-          <p className="mb-1">
-            Representación impresa del comprobante electrónico. Consulte su validez
-            en el portal de SUNAT.
-          </p>
           {/*
-            Cuándo vence cada parte de lo que debe.
-
-            El formato de Willy la lleva —«DETALLE CUOTAS PAGO PENDIENTE»— y
-            nosotros guardábamos las cuotas en `comprobante_cuotas` desde el
-            principio sin imprimirlas nunca. El cliente veía «Crédito a 30
-            días» y ninguna fecha.
-
-            Solo si hay MÁS DE UNA. Con una sola cuota, la tabla repite el
-            vencimiento y el total que ya están arriba, y en un documento
-            fiscal cada línea de más es una pregunta de más de quien lo revisa.
+            En el orden de su F002-564 (Luis, 15/10: *«pero te pasé cómo lo
+            tiene»*): debajo del importe en letras, los documentos de la venta,
+            la retención y las observaciones a la izquierda; el hash y el QR a
+            la derecha. Luego las cuotas, y abajo las cuentas.
           */}
+          <div className="mb-2 flex break-inside-avoid flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:flex-row">
+            <div className="min-w-0 flex-1 space-y-0.5">
+              {referenciasDelPapel(c).map((r) => (
+                <p key={r.etiqueta}>
+                  <strong>{r.etiqueta}:</strong> {r.valor}
+                </p>
+              ))}
+              {c.retencion_aplica ? (
+                <>
+                  <p className="pt-1">
+                    <strong>Información de la retención:</strong>
+                  </p>
+                  {infoRetencion(c).map((l) => (
+                    <p key={l}>{l}</p>
+                  ))}
+                </>
+              ) : null}
+              {c.observaciones ? (
+                <>
+                  <p className="pt-1">
+                    <strong>OBSERVACIONES:</strong>
+                  </p>
+                  <p className="whitespace-pre-line">{c.observaciones}</p>
+                </>
+              ) : null}
+            </div>
+            {/* El QR y el hash, a la derecha, como su formato (15/10). */}
+            {qr ? (
+              <div className="flex shrink-0 flex-col items-start gap-1 sm:max-w-[16rem] sm:items-end print:max-w-[16rem] print:items-end">
+                {qr.hash ? (
+                  <p className="break-all text-[#333]">
+                    <strong>Hash:</strong> {qr.hash}
+                  </p>
+                ) : null}
+                <div className="size-28 [&_svg]:size-full" dangerouslySetInnerHTML={{ __html: qr.svg }} />
+              </div>
+            ) : null}
+          </div>
+
           {imprimeCuotas(c) ? (
             <div className="mb-2 break-inside-avoid">
-              <p className="mb-1 font-semibold">
-                Detalle de cuotas · pago pendiente ({sim} {dinero(cuotasDelPapel(c).reduce((a, q) => a + q.monto, 0))})
-              </p>
-              <table className="w-full max-w-xs">
+              <p className="mb-1 uppercase">{tituloCuotas(c)}:</p>
+              <table className="w-full max-w-sm border-collapse border border-[#ccc]">
                 <thead>
-                  <tr className="border-b border-[#ccc] text-left">
-                    <th className="py-0.5 font-medium">Cuota</th>
-                    <th className="py-0.5 font-medium">Vence</th>
-                    <th className="py-0.5 text-right font-medium">Importe</th>
+                  <tr className="bg-[#eee] text-left uppercase">
+                    <th className="px-2 py-0.5 font-semibold">Cuota</th>
+                    <th className="px-2 py-0.5 font-semibold">Fecha</th>
+                    <th className="px-2 py-0.5 text-right font-semibold">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cuotasDelPapel(c).map((q) => (
-                    <tr key={q.numero}>
-                      <td className="py-0.5 tabular">{q.numero}</td>
-                      <td className="py-0.5 tabular">{fecha(q.fecha_vencimiento)}</td>
-                      <td className="py-0.5 text-right tabular">
-                        {sim} {dinero(q.monto)}
+                    <tr key={q.numero} className="border-t border-[#ccc]">
+                      <td className="px-2 py-0.5 tabular">{q.numero}</td>
+                      <td className="px-2 py-0.5 tabular">{fecha(q.fecha_vencimiento)}</td>
+                      <td className="px-2 py-0.5 text-right tabular">
+                        {c.moneda === "PEN" ? "S/" : "USD"} {dinero(q.monto)}
                       </td>
                     </tr>
                   ))}
@@ -139,56 +159,17 @@ export function DocumentoComprobante({
             </div>
           ) : null}
 
-          {/*
-            El cuadro de la retención, encima de las cuentas (14/10). Willy,
-            13/10, con su factura delante: *«debe ser indicado el monto de
-            retención y en un cuadrito aparte la cuota, la fecha de pago y el
-            monto neto a pagar… y debajo las cuentas de banco»*.
-          */}
-          {c.retencion_aplica ? (
-            <div className="mb-2 break-inside-avoid">
-              <p className="mb-1">
-                <strong>Información de la retención:</strong> {infoRetencion(c)}
-              </p>
-              <table className="border-collapse border border-[#999]">
-                <thead>
-                  <tr className="uppercase">
-                    {cuadroRetencion(c).cabecera.map((t) => (
-                      <th key={t} className="border-b border-[#999] px-3 py-0.5 text-center font-semibold">
-                        {t}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="whitespace-nowrap">
-                    {cuadroRetencion(c).fila.map((v, i) => (
-                      <td key={i} className="px-3 py-0.5 text-center tabular">
-                        {v}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          ) : null}
+          <p className="mb-1">
+            Los importes están expresados en <strong>{nombreMoneda(c.moneda)}</strong>.
+          </p>
+          {/* La leyenda que exige SUNAT para el documento impreso. */}
+          <p className="mb-1">
+            Representación impresa del comprobante electrónico. Consulte su validez
+            en el portal de SUNAT.
+          </p>
 
           {c.mostrar_cuenta ? (
             <CuentasParaPagar cuentas={cuentas} />
-          ) : null}
-
-          {/* El QR y el hash, abajo a la derecha, como su formato (15/10). */}
-          {qr ? (
-            <div className="mt-3 flex break-inside-avoid items-end justify-between gap-4">
-              <p className="min-w-0 break-all text-[#333]">
-                {qr.hash ? (
-                  <>
-                    <strong>Hash:</strong> {qr.hash}
-                  </>
-                ) : null}
-              </p>
-              <div className="size-28 shrink-0 [&_svg]:size-full" dangerouslySetInnerHTML={{ __html: qr.svg }} />
-            </div>
           ) : null}
 
           {/*
