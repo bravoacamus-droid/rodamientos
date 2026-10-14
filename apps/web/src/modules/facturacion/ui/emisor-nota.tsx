@@ -27,11 +27,11 @@ import {
   bloqueosNota,
   esCorreccionSinImporte,
   esMotivoTotal,
-  serieDeNota,
   totalDeNota,
   type TipoNota,
 } from "../dominio/nota";
 import type { ComprobanteDetalle } from "../dominio/tipos";
+import type { SeriesDeNota } from "../api/consultas";
 import { sinEnvioConEnter } from "@/lib/formularios";
 import { useBorrador } from "@/componentes/borrador";
 
@@ -43,8 +43,8 @@ import { useBorrador } from "@/componentes/borrador";
  *
  * Tres cosas que la pantalla decide sola porque no son del operador:
  *
- *  · **La serie.** Sale del tipo del documento afectado. Una nota sobre boleta
- *    va en serie B, y cruzarla es un rechazo con el correlativo ya gastado.
+ *  · **La serie.** La predeterminada de su tipo en «SUNAT y numeración»
+ *    (14/10); antes era «FC01» fijo, la de prueba.
  *  · **El importe con los motivos totales.** «Anulación» va por el total
  *    pendiente, no por una parte.
  *  · **Qué líneas lleva.** Con motivo total espeja el documento; con uno
@@ -56,8 +56,11 @@ export function EmisorNota({
   motivos,
   hoy,
   yaAcreditado,
+  series,
 }: {
   documento: ComprobanteDetalle;
+  /** La serie predeterminada de cada tipo de nota, y si es de prueba. */
+  series: SeriesDeNota;
   /** El catálogo, ya filtrado por tipo. */
   motivos: { codigo: string; descripcion: string; tipo: string }[];
   hoy: string;
@@ -138,7 +141,8 @@ export function EmisorNota({
     yaAcreditado,
   );
   const avisos = avisosNota(documento, tipo, motivo, monto);
-  const serie = serieDeNota(documento.tipo, tipo);
+  const serieNota = series[tipo];
+  const serie = serieNota?.serie ?? "—";
   const totalReal = totalDeNota(monto);
 
   const payload = JSON.stringify({
@@ -210,6 +214,7 @@ export function EmisorNota({
                 <span className="text-sm text-[var(--fg-muted)]">
                   Se emitirá con la serie{" "}
                   <strong className="font-mono font-semibold text-[var(--fg)]">{serie}</strong>
+                  {serieNota?.prueba ? " (de prueba)" : ""}
                 </span>
               </label>
 
@@ -230,7 +235,17 @@ export function EmisorNota({
               </span>
               <SelectNativo
                 value={motivo}
-                onChange={(e) => setMotivo(e.target.value)}
+                onChange={(e) => {
+                  setMotivo(e.target.value);
+                  // Al elegir un motivo PARCIAL, el importe se vacía (auditoría
+                  // 14/10): se quedaba el total entero precargado, y en soles la
+                  // casilla salía vacía con el total detrás. Aquí y no en el
+                  // efecto: recuperar un borrador no debe borrar su importe.
+                  if (!esMotivoTotal(e.target.value) && !esCorreccionSinImporte(e.target.value)) {
+                    setMonto(0);
+                    setEnSoles("");
+                  }
+                }}
               >
                 <option value="">Elige el motivo…</option>
                 {delTipo.map((m) => (
@@ -309,8 +324,15 @@ export function EmisorNota({
               </label>
             ) : (
               <p className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
-                La nota copiará las <strong>{documento.lineas.length}</strong>{" "}
-                {documento.lineas.length === 1 ? "línea" : "líneas"} del
+                La nota copiará{" "}
+                {documento.lineas.length === 1 ? (
+                  "la única línea"
+                ) : (
+                  <>
+                    las <strong>{documento.lineas.length}</strong> líneas
+                  </>
+                )}{" "}
+                del
                 documento original: con este motivo se está corrigiendo la
                 operación entera.
               </p>

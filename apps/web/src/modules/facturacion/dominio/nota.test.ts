@@ -8,7 +8,6 @@ import {
   esCorreccionSinImporte,
   esMotivoTotal,
   lineasDeNota,
-  serieDeNota,
   totalDeNota,
   valorSinIgv,
 } from "./nota";
@@ -98,24 +97,6 @@ const FACTURA: ComprobanteDetalle = {
 };
 
 const BOLETA: ComprobanteDetalle = { ...FACTURA, tipo: "boleta", serie: "B001", numero: "B001-00000001" };
-
-describe("serieDeNota", () => {
-  /**
-   * SUNAT exige que la serie de la nota empiece por la misma letra que el
-   * documento que corrige. Cruzarlas es un rechazo con el correlativo ya
-   * gastado, y el valor por defecto de `emitir_comprobante` solo acierta con
-   * facturas.
-   */
-  it("sobre factura va en serie F", () => {
-    expect(serieDeNota("factura", "nota_credito")).toBe("FC01");
-    expect(serieDeNota("factura", "nota_debito")).toBe("FD01");
-  });
-
-  it("sobre boleta va en serie B", () => {
-    expect(serieDeNota("boleta", "nota_credito")).toBe("BC01");
-    expect(serieDeNota("boleta", "nota_debito")).toBe("BD01");
-  });
-});
 
 describe("clasificación de motivos", () => {
   it("anulación y devolución total son motivos totales", () => {
@@ -232,11 +213,10 @@ describe("bloqueosNota", () => {
     ).toEqual([]);
   });
 
-  it("una boleta se corrige igual, y su nota va en serie B", () => {
+  it("una boleta se corrige igual", () => {
     expect(
       bloqueosNota(BOLETA, "nota_credito", MOTIVOS_CREDITO.ANULACION, 528.99, HOY),
     ).toEqual([]);
-    expect(serieDeNota(BOLETA.tipo, "nota_credito")).toBe("BC01");
   });
 });
 

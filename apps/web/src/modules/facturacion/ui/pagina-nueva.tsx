@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EstadoError, EstadoVacio } from "@rodatech/ui";
+import { EstadoError, EstadoVacio, buttonVariants, cn } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
@@ -67,12 +67,19 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         titulo="No hay nada que facturar"
         descripcion="Un comprobante nace de una cotización aprobada que ya tiene su guía emitida y todavía no se ha facturado. Emite primero la guía y vuelve."
         accion={
-          <Link
-            href="/cotizaciones"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            Ver cotizaciones
-          </Link>
+          // Lo que dice el texto —emitir la guía—, y a la cotización como
+          // segunda vía (auditoría 14/10: solo había esta, hecha a mano).
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/guias" className={cn(buttonVariants({ variant: "primary" }), "px-3")}>
+              Ir a las guías
+            </Link>
+            <Link href="/cotizaciones" className={cn(buttonVariants({ variant: "outline" }), "px-3")}>
+              Ver cotizaciones
+            </Link>
+            <Link href="/facturacion" className={cn(buttonVariants({ variant: "outline" }), "px-3")}>
+              Volver a facturación
+            </Link>
+          </div>
         }
       />
     );

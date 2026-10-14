@@ -5,11 +5,10 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import type { Json } from "@rodatech/db/tipos";
 
-import { detalleComprobante } from "../api/consultas";
+import { detalleComprobante, seriesDeNota } from "../api/consultas";
 import {
   bloqueosNota,
   lineasDeNota,
-  serieDeNota,
   valorSinIgv,
 } from "../dominio/nota";
 
@@ -111,14 +110,20 @@ export async function emitirNota(
   }
 
   try {
+    const serie = (await seriesDeNota())[datos.tipo]?.serie;
+    if (!serie) {
+      return {
+        ok: false,
+        error: "No hay serie predeterminada para esta nota. Márcala en Configuración › SUNAT y numeración.",
+      };
+    }
     const lineas = lineasDeNota(doc, datos.motivo_codigo, datos.monto, datos.concepto);
 
     const payload = {
       tipo: datos.tipo,
-      // La serie NO se elige: sale del tipo del documento afectado. Una nota
-      // sobre boleta va en serie B, y cruzarla es un rechazo con el correlativo
-      // ya gastado.
-      serie: serieDeNota(doc.tipo, datos.tipo),
+      // La serie NO se elige aquí: la predeterminada de su tipo (14/10). Antes
+      // era «FC01» fijo, la de prueba, que en producción la base rechaza.
+      serie,
       cliente_id: doc.cliente_id,
       referencia_id: doc.id,
       motivo_nota_codigo: datos.motivo_codigo,

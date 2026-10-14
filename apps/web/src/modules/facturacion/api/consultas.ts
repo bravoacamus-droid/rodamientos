@@ -129,8 +129,20 @@ export async function listarComprobantes(
     if (sunat) consulta = consulta.eq("estado_sunat", sunat);
 
     if (filtros.q) {
+      /*
+        También por el NOMBRE del cliente (auditoría 14/10): «OVOSUR» no
+        encontraba nada, y es lo primero que escribe Willy. PostgREST no deja
+        un `or` sobre la tabla embebida, así que se buscan antes los clientes.
+      */
+      const q = filtros.q.replace(/[,()]/g, " ").trim();
+      const { data: clientes } = await supabase
+        .from("clientes")
+        .select("id")
+        .ilike("razon_social", `%${q}%`)
+        .limit(50);
+      const ids = (clientes ?? []).map((c) => c.id as string);
       consulta = consulta.or(
-        `numero.ilike.%${filtros.q}%,orden_compra_cliente.ilike.%${filtros.q}%`,
+        [`numero.ilike.%${q}%`, `orden_compra_cliente.ilike.%${q}%`, ...(ids.length > 0 ? [`cliente_id.in.(${ids.join(",")})`] : [])].join(","),
       );
     }
 
@@ -705,6 +717,80 @@ export async function yaAcreditadoDe(comprobanteId: string): Promise<number> {
     );
   } catch {
     return 0;
+  }
+}
+
+/** La serie con la que sale cada tipo de nota, y si es de prueba. */
+export type SeriesDeNota = Partial<Record<"nota_credito" | "nota_debito", { serie: string; prueba: boolean }>>;
+
+/**
+ * Las series PREDETERMINADAS de nota (auditoría 14/10).
+ *
+ * La nota salía siempre en «FC01» —escrito en el código—, que es la serie de
+ * prueba: en producción la base la rechaza (093) y no se habría podido emitir
+ * ni una. Ahora sale la que se marque en «SUNAT y numeración», igual que la
+ * factura. Solo series de factura (F…): las boletas se quitaron.
+ */
+export async function seriesDeNota(): Promise<SeriesDeNota> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("series_documento")
+      .select("tipo, serie, es_prueba")
+      .in("tipo", ["nota_credito", "nota_debito"])
+      .eq("predeterminada", true)
+      .eq("activo", true)
+      .like("serie", "F%");
+    const r: SeriesDeNota = {};
+    for (const s of data ?? []) {
+      r[s.tipo as "nota_credito" | "nota_debito"] = { serie: String(s.serie), prueba: Boolean(s.es_prueba) };
+    }
+    return r;
+  } catch {
+    return {};
+  }
+}
+
+/** Una nota emitida sobre un comprobante, para enlazarla desde su ficha. */
+export interface NotaDelComprobante {
+  id: string;
+  numero: string;
+  tipo: string;
+  fecha_emision: string;
+  total: number;
+  moneda: "USD" | "PEN";
+  pen_total: number | null;
+  estado: string;
+}
+
+/**
+ * Las notas que corrigen a un comprobante (auditoría 14/10).
+ *
+ * La ficha de la factura decía «Cobrado» sin nombrar la nota que la dejó en
+ * cero, y desde la nota «Corrige a» era texto plano: el camino solo iba de la
+ * nota a la factura, y ni eso se podía pulsar.
+ */
+export async function notasDe(comprobanteId: string): Promise<NotaDelComprobante[]> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("comprobantes")
+      .select("id, numero, tipo, fecha_emision, total, moneda, pen_total, estado")
+      .eq("referencia_id", comprobanteId)
+      .order("fecha_emision");
+    if (error) return [];
+    return (data ?? []).map((n) => ({
+      id: String(n.id),
+      numero: String(n.numero),
+      tipo: String(n.tipo),
+      fecha_emision: String(n.fecha_emision),
+      total: Number(n.total ?? 0),
+      moneda: n.moneda === "PEN" ? "PEN" : "USD",
+      pen_total: n.pen_total == null ? null : Number(n.pen_total),
+      estado: String(n.estado),
+    }));
+  } catch {
+    return [];
   }
 }
 

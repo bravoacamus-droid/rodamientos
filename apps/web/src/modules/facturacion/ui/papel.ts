@@ -163,7 +163,8 @@ export function hojaDeComprobante(
   const hayDescuento = c.descuento_global > 0;
   return {
     emisor,
-    titulo: `${ETIQUETA_TIPO[c.tipo]} electrónica`,
+    // Anulado, que se vea en el papel y en el PDF (auditoría 14/10).
+    titulo: `${ETIQUETA_TIPO[c.tipo]} electrónica${c.estado === "anulado" ? " · ANULADA, sin validez" : ""}`,
     numero: c.numero,
     datos: datosDeComprobante(c),
     columnas: [

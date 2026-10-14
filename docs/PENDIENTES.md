@@ -7992,3 +7992,38 @@ aprobada—, con un aviso encima: «Precios en soles al tipo de cambio 3.439
 (venta SUNAT de hoy, 14/10/2026). Se fija al aprobar». Debajo del total, «En
 dólares» como referencia. El margen sigue en dólares (los costos lo están).
 Visto en pantalla con la COT1-000012, devuelta a dólares.
+
+---
+
+## §CA · 15/10 — Facturación repasada en pantalla
+
+Pregunta de Luis: *«¿y cómo está facturación, ya todo funcionando, responsivo
+total?»*. Auditoría a 390/1280/1600 sin emitir nada. **El responsive estaba
+bien** (lista, ficha, vista previa, diálogo de nota, /imprimir); lo que faltaba
+eran CAMINOS:
+
+- **La serie de las notas era «FC01» escrita en el código** —la de prueba—.
+  En producción la base la rechaza (093): no se habría podido emitir ni una
+  nota. Ahora sale la predeterminada de «SUNAT y numeración», como la factura,
+  y el diálogo dice «(de prueba)» si lo es. **Al pasar a producción hay que
+  marcar FC02 como predeterminada, y no hay serie FD02 para notas de débito.**
+- La ficha de una factura lleva a su **cobro** («Registrar cobro» →
+  Cobranzas filtrada por su número) y a las **notas que la corrigen**; ya
+  acreditada entera no ofrece «Emitir nota».
+- La ficha de una **nota** dice su motivo y enlaza «Corrige a»; ya no enseña
+  saldo, forma de pago, guía ni O/C, que no le tocan.
+- **Retención y cuotas** también en la ficha (solo estaban en el papel).
+- Un comprobante **anulado** lo dice en el papel y el PDF («ANULADA, sin
+  validez») y su PDF no va en azul.
+- El diálogo de nota vacía el importe al elegir un motivo parcial (se quedaba
+  el total precargado).
+- `/imprimir` (factura y guía) baja el PDF de verdad.
+- El buscador encuentra por **nombre del cliente**.
+- «Todo aceptado» junto a «nada llega a SUNAT» → «Nada pendiente»; «Ir a
+  configurarlo» es un botón; sin series de boleta en el filtro; «hoy» y la
+  hora de SUNAT en hora de Lima; la nota de «1 línea».
+
+Comprobado contra el servidor: F002-00000478 ↔ FC02-00000004 enlazadas en los
+dos sentidos, «Registrar cobro» en la F002-00000561, la anulada marcada, la
+búsqueda «OVOSUR». Sin ver: el estado vacío de «Emitir comprobante» (hoy hay
+algo que facturar) y una factura con cuotas o retención (no hay ninguna).

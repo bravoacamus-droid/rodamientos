@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Printer } from "lucide-react";
+import { HandCoins, Printer } from "lucide-react";
 import {
   Badge,
   EstadoBadge,
@@ -13,7 +13,8 @@ import {
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
-import { detalleComprobante, motivosNota, yaAcreditadoDe } from "../api/consultas";
+import { detalleComprobante, motivosNota, notasDe, seriesDeNota, yaAcreditadoDe } from "../api/consultas";
+import { cuotasNetas } from "../dominio/retencion";
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
 import { EmisorNota } from "./emisor-nota";
 import { EnviarASunat } from "./enviar-sunat";
@@ -41,7 +42,7 @@ export default async function PaginaDetalleComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas] = await Promise.all([
+  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series] = await Promise.all([
     detalleComprobante(id),
     perfilActual(),
     estadoConfiguracion(),
@@ -49,6 +50,8 @@ export default async function PaginaDetalleComprobante({
     yaAcreditadoDe(id),
     emisorParaImprimir(),
     cuentasParaCobrar(),
+    notasDe(id),
+    seriesDeNota(),
   ]);
 
   if (!resultado.ok) {
@@ -69,6 +72,21 @@ export default async function PaginaDetalleComprobante({
   const archivo = nombreArchivo(c.numero, c.cliente);
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeEnviar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
+  const puedeCobrar = rol !== null && ["gerencia", "admin", "ventas", "cobranzas"].includes(rol);
+
+  /*
+    Auditoría del 14/10: la ficha de una NOTA enseñaba saldo, forma de pago,
+    guía y O/C —que no le tocan— y no decía su motivo; y la de una factura no
+    llevaba a su cobro ni a las notas que la corrigen.
+  */
+  const esNota = c.tipo === "nota_credito" || c.tipo === "nota_debito";
+  const anulado = c.estado === "anulado";
+  const motivoNota = c.motivo_nota_codigo
+    ? ((motivos.ok ? motivos.datos : []).find((m) => m.codigo === c.motivo_nota_codigo)?.descripcion ??
+      `Código ${c.motivo_nota_codigo}`)
+    : null;
+  // Con todo ya acreditado no queda nada que corregir: el botón sobra.
+  const quedaPorAcreditar = resultado.datos.total - acreditado > 0.005;
 
   // La fecha del servidor con la zona de Lima: acaba en un documento fiscal,
   // así que no puede depender del reloj del equipo.
@@ -126,7 +144,19 @@ export default async function PaginaDetalleComprobante({
             <VistaPreviaDocumento numero={c.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
               <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
             </VistaPreviaDocumento>
-            <BotonDescargarPdf hoja={hoja} nombre={archivo} variante="primary" />
+            {/* Anulado, el PDF no va en azul: no es lo que se le manda a nadie. */}
+            <BotonDescargarPdf hoja={hoja} nombre={archivo} variante={anulado ? "outline" : "primary"} />
+            {/* El cobro, desde la factura (auditoría 14/10): solo se llegaba
+                desde la tarjeta «Falta cobrar» de la lista. */}
+            {puedeCobrar && !esNota && !anulado && c.saldo > 0 ? (
+              <Link
+                href={`/cobranzas?q=${encodeURIComponent(c.numero)}`}
+                className={cn(buttonVariants({ variant: "outline" }), "px-3")}
+              >
+                <HandCoins className="size-4" aria-hidden="true" />
+                Registrar cobro
+              </Link>
+            ) : null}
             <Link
               href={`/facturacion/${c.id}/imprimir?auto=1`}
               className={cn(buttonVariants({ variant: "outline" }), "px-3")}
@@ -136,7 +166,7 @@ export default async function PaginaDetalleComprobante({
             </Link>
             {/* Corregir una factura emitida es emitir una nota, no editarla.
                 Por eso el botón vive aquí, junto al documento que corrige. */}
-            {puedeEnviar ? (
+            {puedeEnviar && !esNota && !anulado && quedaPorAcreditar ? (
               <EmisorNota
                 // El original, en dólares: la nota se arma en dólares y la
                 // base la pasa a soles (116). El diálogo enseña en soles.
@@ -144,6 +174,7 @@ export default async function PaginaDetalleComprobante({
                 motivos={motivos.ok ? motivos.datos : []}
                 hoy={hoy}
                 yaAcreditado={acreditado}
+                series={series}
               />
             ) : null}
           </div>
@@ -167,7 +198,13 @@ export default async function PaginaDetalleComprobante({
           valor={<Moneda moneda={c.moneda} valor={c.igv} tamano="lg" enfasis="suave" className="text-lg" />}
         />
         <Tarjeta etiqueta="Total" valor={<Moneda moneda={c.moneda} valor={c.total} tamano="lg" className="text-lg" />} />
-        {c.estado === "anulado" ? (
+        {esNota ? (
+          <Tarjeta
+            etiqueta="Motivo"
+            valor={<span className="text-base font-semibold">{motivoNota ?? "—"}</span>}
+            pie={c.referencia_numero ? `Corrige a ${c.referencia_numero}` : undefined}
+          />
+        ) : c.estado === "anulado" ? (
           <Tarjeta
             etiqueta="Saldo"
             valor={<span className="text-[var(--fg-muted)]">No se cobra</span>}
@@ -332,7 +369,7 @@ export default async function PaginaDetalleComprobante({
                 <p className="font-medium">Aceptado.</p>
                 {c.sunat_enviado_en ? (
                   <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-                    {new Date(c.sunat_enviado_en).toLocaleString("es-PE")}
+                    {new Date(c.sunat_enviado_en).toLocaleString("es-PE", { timeZone: "America/Lima" })}
                   </p>
                 ) : null}
                 {c.sunat_hash_cdr ? (
@@ -368,6 +405,22 @@ export default async function PaginaDetalleComprobante({
                   propia línea: a 390 px «vence 2026-07-20» se partía en
                   «2026-07-» y «20» (revisión por módulos del 02/10). */}
               <Dato etiqueta="Emisión" valor={formatearFecha(c.fecha_emision)} />
+              {esNota ? (
+                <>
+                  <Dato etiqueta="Motivo" valor={motivoNota ?? "—"} />
+                  {c.referencia_id ? (
+                    <Dato
+                      etiqueta="Corrige a"
+                      valor={
+                        <Link href={`/facturacion/${c.referencia_id}`} className="font-medium text-brand-700 underline dark:text-brand-300">
+                          {c.referencia_numero ?? "el comprobante"}
+                        </Link>
+                      }
+                    />
+                  ) : null}
+                </>
+              ) : (
+                <>
               <Dato
                 etiqueta="Pago"
                 valor={
@@ -398,11 +451,59 @@ export default async function PaginaDetalleComprobante({
                 valor={c.guia_numero ?? "—"}
               />
               <Dato etiqueta="Orden de compra" valor={c.orden_compra_cliente ?? "—"} />
-              {c.referencia_numero ? (
-                <Dato etiqueta="Corrige a" valor={c.referencia_numero} />
-              ) : null}
+                </>
+              )}
               <Dato etiqueta="Vendedor" valor={c.vendedor ?? "—"} />
             </dl>
+
+            {/* La retención y las cuotas: estaban solo en el papel. */}
+            {!esNota && c.retencion_aplica ? (
+              <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
+                <p className="font-medium">
+                  Retención del IGV · <Moneda moneda={c.moneda} valor={c.retencion_monto} tamano="sm" />
+                </p>
+                <p className="mt-0.5 text-[var(--fg-muted)]">
+                  Te pagan <Moneda moneda={c.moneda} valor={Math.round((c.total - c.retencion_monto) * 100) / 100} tamano="sm" enfasis="suave" />.
+                  Lo retenido se registra en Cobranzas con «Retención».
+                </p>
+              </div>
+            ) : null}
+            {!esNota && c.cuotas.length > 1 ? (
+              <div className="mt-3 text-sm">
+                <p className="mb-1 font-medium">Cuotas</p>
+                <ul className="flex flex-col gap-0.5">
+                  {cuotasNetas(c.cuotas, c.retencion_aplica ? c.retencion_monto : 0).map((q) => (
+                    <li key={q.numero} className="flex justify-between gap-2">
+                      <span>
+                        Cuota {q.numero} · vence {formatearFecha(q.fecha_vencimiento)}
+                      </span>
+                      <Moneda moneda={c.moneda} valor={q.monto} tamano="sm" />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {/* Las notas que la corrigen, con su enlace. */}
+            {notas.length > 0 ? (
+              <div className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm">
+                <p className="mb-1 font-medium">{notas.length === 1 ? "Nota que la corrige" : "Notas que la corrigen"}</p>
+                <ul className="flex flex-col gap-1">
+                  {notas.map((n) => (
+                    <li key={n.id} className="flex flex-wrap items-baseline justify-between gap-2">
+                      <Link href={`/facturacion/${n.id}`} className="font-mono font-medium text-brand-700 underline dark:text-brand-300">
+                        {n.numero}
+                      </Link>
+                      <span className="text-[var(--fg-muted)]">
+                        {formatearFecha(n.fecha_emision)} ·{" "}
+                        <Moneda moneda={n.moneda} valor={n.moneda === "PEN" && n.pen_total != null ? n.pen_total : n.total} tamano="sm" />
+                        {n.estado === "anulado" ? " · anulada" : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
             {c.detraccion_aplica ? (
               <div className="mt-3 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">

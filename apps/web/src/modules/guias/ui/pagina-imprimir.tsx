@@ -7,6 +7,9 @@ import { emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleGuia } from "../api/consultas";
 import { DocumentoGuia } from "./documento";
+import { hojaDeGuia } from "./papel";
+import { BotonDescargarPdf } from "@/componentes/boton-pdf";
+import { nombreArchivo } from "@/lib/pdf-hoja";
 import { Volver } from "@/componentes/volver";
 
 /**
@@ -72,7 +75,12 @@ export default async function PaginaImprimirGuia({
 
         {/* Aquí, y no solo en la ficha: quien llega a la hoja ya viene a
             sacarla, y hasta hoy tenía que acordarse de Ctrl+P. */}
-        <BotonesDocumento auto={auto} />
+        <BotonesDocumento
+          auto={auto}
+          descargar={
+            <BotonDescargarPdf hoja={hojaDeGuia(g, emisor)} nombre={nombreArchivo(g.numero, g.cliente)} variante="primary" />
+          }
+        />
       </div>
 
       <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">

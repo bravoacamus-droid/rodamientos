@@ -34,7 +34,17 @@ import { Button } from "@rodatech/ui";
  * que desde la ficha es un clic. El latido es para que el navegador termine de
  * pintar la hoja: sin él captura la página a medio montar.
  */
-export function BotonesDocumento({ auto = false }: { auto?: boolean }) {
+export function BotonesDocumento({
+  auto = false,
+  descargar,
+}: {
+  auto?: boolean;
+  /**
+   * El botón que BAJA EL PDF de verdad (`BotonDescargarPdf`), donde lo hay
+   * (14/10). Sin él, «Descargar» abre la ventana de imprimir, como antes.
+   */
+  descargar?: React.ReactNode;
+}) {
   React.useEffect(() => {
     if (!auto) return;
     const t = setTimeout(() => window.print(), 400);
@@ -44,10 +54,12 @@ export function BotonesDocumento({ auto = false }: { auto?: boolean }) {
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex items-center gap-2">
-        <Button type="button" onClick={() => window.print()}>
-          <IconoDescargar />
-          Descargar
-        </Button>
+        {descargar ?? (
+          <Button type="button" onClick={() => window.print()}>
+            <IconoDescargar />
+            Descargar
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={() => window.print()}>
           <IconoImprimir />
           Imprimir
@@ -65,10 +77,12 @@ export function BotonesDocumento({ auto = false }: { auto?: boolean }) {
         Es la limitación del navegador, no del ERP: bajar el archivo directo
         obliga a generar el PDF en el servidor, y eso se decide al desplegar.
       */}
-      <p className="text-sm text-[var(--fg-subtle)]">
-        Para guardarlo, elige <strong className="font-medium">Guardar como PDF</strong> en
-        la ventana que se abre.
-      </p>
+      {descargar ? null : (
+        <p className="text-sm text-[var(--fg-subtle)]">
+          Para guardarlo, elige <strong className="font-medium">Guardar como PDF</strong> en
+          la ventana que se abre.
+        </p>
+      )}
     </div>
   );
 }

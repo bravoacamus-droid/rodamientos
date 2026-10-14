@@ -7,6 +7,9 @@ import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
 import { detalleComprobante } from "../api/consultas";
 import { DocumentoComprobante } from "./documento";
+import { hojaDeComprobante } from "./papel";
+import { BotonDescargarPdf } from "@/componentes/boton-pdf";
+import { nombreArchivo } from "@/lib/pdf-hoja";
 import { Volver } from "@/componentes/volver";
 
 /**
@@ -67,7 +70,17 @@ export default async function PaginaImprimirComprobante({
 
         {/* Quien llega a la hoja viene a sacarla, y hasta hoy tenía que
             acordarse de Ctrl+P. Es el mismo componente que la guía. */}
-        <BotonesDocumento auto={auto} />
+        <BotonesDocumento
+          auto={auto}
+          // El PDF de verdad, como en la ficha (auditoría 14/10).
+          descargar={
+            <BotonDescargarPdf
+              hoja={hojaDeComprobante(c, emisor, cuentas)}
+              nombre={nombreArchivo(c.numero, c.cliente)}
+              variante="primary"
+            />
+          }
+        />
       </div>
 
       {/* El aviso de anulado, en su propia franja y no apretado entre los

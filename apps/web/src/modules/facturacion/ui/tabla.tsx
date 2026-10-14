@@ -69,7 +69,8 @@ export async function TablaComprobantes({
     );
   }
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  // Hoy en LIMA: en UTC, después de las 19:00 lo que vence hoy salía vencido.
+  const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 
   return (
     <>

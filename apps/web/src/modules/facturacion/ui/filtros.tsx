@@ -34,7 +34,7 @@ export function FiltrosFacturacionBarra({
       <CajaBuscar
         valor={texto}
         onCambiar={setTexto}
-        placeholder="Número u orden de compra"
+        placeholder="Número, cliente u orden de compra"
         etiqueta="Buscar comprobantes"
       />
       <FiltroCliente

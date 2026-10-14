@@ -139,8 +139,9 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
             {esGerencia ? (
               <Link
                 href="/configuracion/sunat"
-                className="mt-2 inline-block font-medium underline"
+                className={cn(buttonVariants({ variant: "outline" }), "mt-2 px-3")}
               >
+                <Settings className="size-4" aria-hidden="true" />
                 Ir a configurarlo
               </Link>
             ) : null}
@@ -177,7 +178,8 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
           </Suspense>
           <FiltrosFacturacionBarra
             nombreCliente={cliente?.ok ? cliente.nombre : null}
-            series={series}
+            // Sin las de boleta: las boletas se quitaron (13/10).
+            series={series.filter((s) => !s.valor.startsWith("B"))}
           />
         </div>
 
@@ -226,11 +228,13 @@ async function Indicadores({ filtros }: { filtros: FiltrosComprobantes }) {
         },
         {
           etiqueta: "Con SUNAT",
-          valor: sinRespuesta > 0 ? `${sinRespuesta} pendientes` : "Todo aceptado",
+          // «Todo aceptado» al lado de «nada llega a SUNAT todavía» se leía
+          // como que ya se declaraba: lo aceptado es el histórico (14/10).
+          valor: sinRespuesta > 0 ? `${sinRespuesta} pendientes` : "Nada pendiente",
           detalle:
             sinRespuesta > 0
               ? `${d.sunatProblema} observados o rechazados · ${d.sunatAceptado} aceptados`
-              : `${d.sunatAceptado.toLocaleString("es-PE")} aceptados`,
+              : `${d.sunatAceptado.toLocaleString("es-PE")} con estado aceptado`,
           tono: d.sunatProblema > 0 ? "urgente" : sinRespuesta > 0 ? "aviso" : "ok",
           icono: <ShieldCheck aria-hidden="true" />,
           href: sinRespuesta > 0 ? "/facturacion?sunat=pendiente" : undefined,

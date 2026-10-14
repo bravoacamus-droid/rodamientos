@@ -1,6 +1,6 @@
 import { importeConDescuento, redondear2 } from "@rodatech/config";
 
-import type { ComprobanteDetalle, TipoComprobante } from "./tipos";
+import type { ComprobanteDetalle } from "./tipos";
 
 /**
  * Reglas de las notas de crédito y débito.
@@ -63,24 +63,6 @@ export function esMotivoTotal(codigo: string): boolean {
  */
 export function esCorreccionSinImporte(codigo: string): boolean {
   return codigo === MOTIVOS_CREDITO.CORRECCION_DESCRIPCION;
-}
-
-/**
- * La serie que le toca a la nota, derivada del documento afectado.
- *
- * **No se elige.** SUNAT exige que la serie de la nota empiece por la misma
- * letra que el documento que corrige: una nota sobre factura va en serie F,
- * sobre boleta en serie B. Emitirla cruzada es un rechazo con el correlativo ya
- * gastado.
- *
- * `emitir_comprobante()` toma por defecto la serie predeterminada del tipo
- * —FC01 para crédito, FD01 para débito—, que solo acierta con facturas. Por eso
- * la serie se calcula aquí y se manda siempre explícita.
- */
-export function serieDeNota(tipoAfectado: TipoComprobante, tipoNota: TipoNota): string {
-  const inicial = tipoAfectado === "boleta" ? "B" : "F";
-  const letra = tipoNota === "nota_credito" ? "C" : "D";
-  return `${inicial}${letra}01`;
 }
 
 export interface BloqueoNota {

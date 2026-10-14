@@ -56,7 +56,7 @@ export function DocumentoComprobante({
       emisor={emisor}
       // «Factura electrónica», no «Factura»: es lo que dice el documento que
       // SUNAT espera, y lo que distingue a este papel de uno preimpreso.
-      titulo={`${ETIQUETA_TIPO[c.tipo]} electrónica`}
+      titulo={`${ETIQUETA_TIPO[c.tipo]} electrónica${c.estado === "anulado" ? " · ANULADA, sin validez" : ""}`}
       numero={c.numero}
       datos={datosDeComprobante(c)}
       columnas={[
