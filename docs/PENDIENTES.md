@@ -7973,3 +7973,12 @@ soles, su ficha y su PDF, y cobrarla —hace falta una guía emitida, y eso muev
 stock en la base del cliente—. **Falta**: el enlace público `/ver` sigue en
 dólares (`cotizacion_por_token` no trae la moneda), y el XML a SUNAT en soles
 se verá con el certificado.
+
+**El enlace público en soles (117, 15/10).** `cotizacion_por_token` devuelve
+ahora `moneda`, `tipo_cambio`, `tipo_cambio_fijo` y `tipo_cambio_fecha`:
+aprobada en soles, el congelado; sin aprobar, el último venta de SUNAT ya
+consultado (`consultas_cache`), porque el enlace no tiene sesión para salir a
+SUNAT. `/ver` pasa el papel por `enSoles`. El centinela mira ahora también la
+lista blanca de la CABECERA (antes solo la de las líneas). Probado con
+`curl` sobre la COT1-000012 pasada a soles y devuelta a dólares: «S/ 12.13»,
+«DOCE CON 13/100 SOLES», cambio 3.448; en dólares, igual que antes.

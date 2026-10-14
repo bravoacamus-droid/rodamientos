@@ -4,7 +4,7 @@ import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
 import { cotizacionPorToken } from "../api/publica";
 import { DISPONIBILIDADES, type Disponibilidad } from "../dominio/disponibilidad";
-import { armarCotizacionImpresa, formaDePago } from "../dominio/impresion";
+import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresion";
 import { Documento } from "./detalle/documento";
 import { BotonesDelCliente } from "./publica/botones";
 
@@ -62,7 +62,7 @@ export default async function PaginaCotizacionPublica({
     cuentasParaCobrar(),
   ]);
 
-  const impresa = armarCotizacionImpresa({
+  const enDolares = armarCotizacionImpresa({
     emisor: {
       razonSocial: emisor.razonSocial,
       nombreComercial: emisor.nombreComercial,
@@ -108,6 +108,14 @@ export default async function PaginaCotizacionPublica({
       diasEntrega: l.dias_entrega,
     })),
   });
+
+  // Una venta en soles se le enseña al cliente en soles (117), igual que el
+  // papel y el PDF de la ficha.
+  const tc = Number(cot.tipo_cambio);
+  const impresa =
+    cot.moneda === "PEN" && tc > 0
+      ? enSoles(enDolares, { valor: tc, fecha: cot.tipo_cambio_fecha ?? cot.fecha })
+      : enDolares;
 
   return (
     <div className="min-h-dvh bg-[var(--surface-2)] py-6 print:bg-white print:py-0">

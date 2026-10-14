@@ -42,6 +42,15 @@ export interface CotizacionPublica {
   descuento_total: number;
   igv: number;
   total: number;
+  /**
+   * La moneda de la venta (117). En soles, `tipo_cambio` es el congelado al
+   * aprobar o, sin aprobar, el último de SUNAT ya consultado. Opcionales: una
+   * base sin la 117 no los manda y el enlace sigue en dólares.
+   */
+  moneda?: "USD" | "PEN";
+  tipo_cambio?: number | null;
+  tipo_cambio_fijo?: boolean;
+  tipo_cambio_fecha?: string | null;
   vendedor: string | null;
   cliente: {
     razon_social: string;
