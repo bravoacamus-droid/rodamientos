@@ -248,11 +248,13 @@ describe("tonoTramo", () => {
 });
 
 describe("lo que se debe en soles (116)", () => {
-  it("al cambio de la factura, sin pasarse del total; pagada, cero", () => {
-    const pen = { moneda: "PEN" as const, tipo_cambio: 3.448, pen_total: 132.68 };
-    expect(saldoEnMoneda({ ...pen, saldo: 38.48 })).toBe(132.68);
-    expect(saldoEnMoneda({ ...pen, saldo: 10 })).toBe(34.48);
+  it("en proporción al total: sin pagos, el total exacto; pagada, cero", () => {
+    // La F002-532: 1608.40 dólares, S/ 5415.53 al 3.367. Multiplicar daba
+    // 5415.48 y «pagado S/ 0.05» en una factura sin un solo pago.
+    const pen = { moneda: "PEN" as const, tipo_cambio: 3.367, pen_total: 5415.53, total: 1608.4 };
+    expect(saldoEnMoneda({ ...pen, saldo: 1608.4 })).toBe(5415.53);
+    expect(saldoEnMoneda({ ...pen, saldo: 804.2 })).toBe(2707.77);
     expect(saldoEnMoneda({ ...pen, saldo: 0 })).toBe(0);
-    expect(saldoEnMoneda({ moneda: "USD", tipo_cambio: null, pen_total: null, saldo: 12.5 })).toBe(12.5);
+    expect(saldoEnMoneda({ moneda: "USD", tipo_cambio: null, pen_total: null, total: 20, saldo: 12.5 })).toBe(12.5);
   });
 });

@@ -8043,3 +8043,18 @@ tipo de cambio, reportes en dólares. Es como está desde la 116. Decidido
 otra vez: la factura usa el cambio congelado al aprobar la cotización.
 Pendiente de su permiso: marcar en soles las 17 facturas F002 del histórico
 que se emitieron en soles (su sistema las enseña en S/, el ERP en $).
+
+**Las 17 facturas del histórico emitidas en soles, ya en soles (15/10, con
+permiso de Luis: «lo que fueron en soles tenemos que verlo en soles»).** Su
+sistema las enseña en S/ y el ERP las tenía en $ (se cargaron convertidas).
+Del export del 07/10 (`2026-10-07-sales (1).xlsx`: Moneda PEN, TC inverso) se
+sacó por factura el cambio (1/TC, a tres decimales) y la base, el IGV y el
+total en soles, y se escribieron en `moneda`/`tipo_cambio`/`pen_*`, más el
+importe en letras en soles (estaba vacío). Los dólares no se tocaron: los
+reportes no cambian. Respaldo JSON en el scratchpad de la sesión. Son
+F002-45 a F002-532; dos siguen por cobrar: F002-527 (S/ 1,165.02) y F002-532
+(S/ 5,415.53 —su sistema dice 5,415.52, un céntimo de redondeo por línea).
+
+Y un fallo que salió al verlo: el saldo en soles se calculaba saldo × cambio,
+y con el cambio a tres decimales la F002-532 sin pagar decía «pagado S/ 0.05».
+Ahora es proporcional al total (ficha, lista, cartera, estado de cuenta).

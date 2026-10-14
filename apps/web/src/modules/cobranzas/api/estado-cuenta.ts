@@ -143,7 +143,9 @@ export async function estadoDeCuenta(
             if (!pen) {
               return { moneda: "USD" as const, total_doc: Number(d.total ?? 0), pagado_doc: Number(d.pagado ?? 0), saldo_doc: saldo };
             }
-            const saldoDoc = saldo <= 0 ? 0 : Math.min(pen.total, Math.round(saldo * pen.tc * 100) / 100);
+            const totalUsd = Number(d.total ?? 0);
+            const saldoDoc =
+              saldo <= 0 || !(totalUsd > 0) ? 0 : Math.min(pen.total, Math.round(((pen.total * saldo) / totalUsd) * 100) / 100);
             return {
               moneda: "PEN" as const,
               total_doc: pen.total,

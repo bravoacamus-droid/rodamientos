@@ -42,7 +42,9 @@ export function enMonedaDelDocumento(c: ComprobanteDetalle): ComprobanteDetalle 
     return { ...q, monto, pagado: redondear2(q.pagado * tc) };
   });
 
-  const saldo = c.saldo <= 0 ? 0 : Math.min(pen.total, redondear2(c.saldo * tc));
+  // En PROPORCIÓN al total y no × cambio: el cambio va a tres decimales y una
+  // factura sin pagar salía con «pagado S/ 0.05» (F002-532, 15/10).
+  const saldo = c.saldo <= 0 ? 0 : c.total > 0 ? Math.min(pen.total, redondear2((pen.total * c.saldo) / c.total)) : 0;
 
   return {
     ...c,

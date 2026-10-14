@@ -162,7 +162,11 @@ export async function listarComprobantes(
       const tc = c.moneda === "PEN" && c.pen_total != null ? Number(c.tipo_cambio) : 0;
       const totalDoc = tc > 0 ? Number(c.pen_total) : Number(c.total ?? 0);
       const saldoDoc =
-        tc > 0 ? (Number(c.saldo ?? 0) <= 0 ? 0 : Math.min(totalDoc, Math.round(Number(c.saldo) * tc * 100) / 100)) : Number(c.saldo ?? 0);
+        tc > 0
+          ? Number(c.saldo ?? 0) <= 0 || !(Number(c.total) > 0)
+            ? 0
+            : Math.min(totalDoc, Math.round(((totalDoc * Number(c.saldo)) / Number(c.total)) * 100) / 100)
+          : Number(c.saldo ?? 0);
       return {
       id: String(c.id),
       tipo: c.tipo as TipoComprobante,

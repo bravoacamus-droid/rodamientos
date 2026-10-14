@@ -91,10 +91,14 @@ export interface DocumentoPorCobrar {
 }
 
 /** Lo que se debe en la moneda del documento: en soles, al cambio de la factura. */
-export function saldoEnMoneda(d: Pick<DocumentoPorCobrar, "moneda" | "saldo" | "tipo_cambio" | "pen_total">): number {
+export function saldoEnMoneda(
+  d: Pick<DocumentoPorCobrar, "moneda" | "saldo" | "total" | "tipo_cambio" | "pen_total">,
+): number {
   if (d.moneda !== "PEN" || !d.tipo_cambio || d.pen_total == null) return d.saldo;
   if (d.saldo <= 0) return 0;
-  return Math.min(d.pen_total, Math.round(d.saldo * d.tipo_cambio * 100) / 100);
+  // En proporción al total: sin pagos da exacto el total en soles.
+  if (!(d.total > 0)) return 0;
+  return Math.min(d.pen_total, Math.round(((d.pen_total * d.saldo) / d.total) * 100) / 100);
 }
 
 /** Un pago ya registrado. */
