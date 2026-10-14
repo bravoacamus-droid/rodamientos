@@ -19,7 +19,7 @@ import { siguienteCorrelativoBaja, tipoSunatDe, type TipoDocumentoSunat } from "
  * a la vista del cliente.
  *
  * Es asíncrona: SUNAT devuelve un ticket y la respuesta se pregunta después
- * con «Preguntar a SUNAT».
+ * con «Preguntar a SUNAT». La comunican gerencia y admin, como anular.
  */
 
 const ROLES = ["gerencia", "admin"] as const;
@@ -32,9 +32,9 @@ export type ResultadoBaja = { ok: true; mensaje: string } | { ok: false; error: 
 export async function comunicarBaja(fechaDocumentos: string): Promise<ResultadoBaja> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  // Como anular: solo gerencia. Es la otra mitad del mismo acto.
+  // Los mismos que pueden anular (gerencia y admin): es la otra mitad del acto.
   if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Solo Gerencia puede comunicar bajas a SUNAT." };
+    return { ok: false, error: "Solo Gerencia o Administración pueden comunicar bajas a SUNAT." };
   }
   if (!z.string().regex(/^\d{4}-\d{2}-\d{2}$/).safeParse(fechaDocumentos).success) {
     return { ok: false, error: "La fecha no es válida." };

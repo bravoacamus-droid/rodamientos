@@ -18,7 +18,9 @@ import { ordenDeEnvio, type TipoDocumentoSunat } from "../dominio/bandeja";
  */
 
 const ROLES = ["gerencia", "admin", "ventas"] as const;
-const MAXIMO = 50;
+// Diez por tanda: cada uno es una llamada a SUNAT, y una acción no puede
+// ocupar al servidor indefinidamente. «Quedan N» invita a seguir.
+const MAXIMO = 10;
 
 export interface ResultadoUno {
   id: string;
@@ -45,7 +47,8 @@ export async function enviarVarios(ids: string[]): Promise<ResultadoVarios> {
     .select("id, tipo, numero, fecha_emision")
     .in("id", validos.data)
     .neq("estado", "anulado")
-    .in("estado_sunat", ["no_enviado", "pendiente", "enviado", "rechazado"]);
+    // «enviado» no: está en vuelo, y reenviarlo lo mandaría dos veces.
+    .in("estado_sunat", ["no_enviado", "pendiente", "rechazado"]);
   if (error) return { ok: false, error: error.message };
 
   const todos = ordenDeEnvio(

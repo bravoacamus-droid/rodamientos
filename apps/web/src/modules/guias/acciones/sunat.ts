@@ -4,10 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
-import { envOpcional } from "@rodatech/config";
 import { ErrorGre, type ResultadoCdr } from "@rodatech/sunat";
 
-import { conectorSunat } from "@/modules/facturacion/api/configuracion";
+import { bloqueoPorSeriePrueba, conectorSunat, modoGuias } from "@/modules/facturacion/api/configuracion";
 
 import { detalleGuia } from "../api/consultas";
 import { faltaParaSunat, guiaParaSunat } from "../dominio/sunat";
@@ -75,19 +74,13 @@ export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> 
   const falta = faltaParaSunat(g);
   if (falta.length > 0) return { ok: false, error: `Antes de mandarla: ${falta.join(" ")}` };
 
-  /*
-    SUNAT no tiene ambiente de pruebas para guías: el host es uno solo, el
-    real. En «beta» una guía mandada iría a SUNAT de verdad con un número de
-    prueba. Solo se deja si apunta a un emulador (SUNAT_GRE_HOST).
-  */
-  const { data: cfg } = await clienteAdmin().from("config_sunat").select("ambiente").eq("id", 1).maybeSingle();
-  if ((cfg?.ambiente ?? "beta") !== "produccion" && !envOpcional("SUNAT_GRE_HOST")) {
-    return {
-      ok: false,
-      error:
-        "Estás en modo de pruebas, y SUNAT no tiene pruebas para guías: se mandaría a SUNAT de verdad. " +
-        "Las guías se envían al pasar a producción.",
-    };
+  // SUNAT no tiene pruebas para guías: en beta solo a un emulador (126/127).
+  const modo = await modoGuias();
+  if (modo.modo === "bloqueado") return { ok: false, error: modo.motivo };
+  // Y en producción, nunca una serie de prueba (T001).
+  if (modo.modo === "produccion") {
+    const prueba = await bloqueoPorSeriePrueba(g.serie);
+    if (prueba) return { ok: false, error: prueba };
   }
 
   const conector = await conectorSunat();
@@ -102,12 +95,19 @@ export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> 
   const emitidaEn = fecha === hoyLima() ? new Date() : new Date(`${fecha}T12:00:00-05:00`);
 
   const admin = clienteAdmin();
-  // «Enviada» ANTES de llamar, como la factura: si el proceso muere a mitad,
-  // queda marcada en vuelo y no como pendiente.
-  await admin
+  // «Enviada» ANTES de llamar, como la factura, y como CANDADO: solo si
+  // nadie la tiene en vuelo. Una enviada se pregunta, no se reenvía; pasados
+  // 15 minutos sin ticket se da por muerta.
+  const hace15 = new Date(Date.now() - 15 * 60_000).toISOString();
+  const { data: tomada } = await admin
     .from("guias_remision")
     .update({ estado_sunat: "enviado", sunat_enviado_en: new Date().toISOString(), sunat_mensaje: null })
-    .eq("id", id);
+    .eq("id", id)
+    .or(`estado_sunat.in.(no_enviado,pendiente,rechazado),and(estado_sunat.eq.enviado,sunat_ticket.is.null,sunat_enviado_en.lt.${hace15})`)
+    .select("id");
+  if (!tomada || tomada.length === 0) {
+    return { ok: false, error: `${g.numero} ya se mandó y SUNAT la está revisando: pulsa «Preguntar a SUNAT».` };
+  }
 
   let ticket: string;
   try {

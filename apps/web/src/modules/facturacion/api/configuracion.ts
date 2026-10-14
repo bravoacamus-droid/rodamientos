@@ -198,6 +198,59 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
 }
 
 /**
+ * ¿Se puede mandar a SUNAT un documento de esta serie? (auditoría 15/10)
+ *
+ * En producción, NUNCA uno de serie de prueba (`es_prueba`, 093): la 093
+ * impide numerar con ellas, pero lo ya numerado —la F001 y la T001 de las
+ * pruebas— seguía en la bandeja, y «Enviar todas» lo habría declarado ante
+ * SUNAT de verdad. Devuelve el motivo para no mandarlo, o null.
+ */
+export async function bloqueoPorSeriePrueba(serie: string): Promise<string | null> {
+  const admin = clienteAdmin();
+  const [{ data: cfg }, { data: series }] = await Promise.all([
+    admin.from("config_sunat").select("ambiente").eq("id", 1).maybeSingle(),
+    admin.from("series_documento").select("serie").eq("serie", serie).eq("es_prueba", true).limit(1),
+  ]);
+  if (cfg?.ambiente !== "produccion" || !series || series.length === 0) return null;
+  return `${serie} es una serie de PRUEBA: no se manda a SUNAT de verdad. Si el documento no vale, anúlalo.`;
+}
+
+/**
+ * Cómo se mandan las guías (auditoría 15/10). SUNAT no tiene ambiente de
+ * pruebas para la GRE, así que:
+ *
+ *  · **producción**: a SUNAT, con las credenciales guardadas. Las variables
+ *    del emulador se IGNORAN: si se quedan puestas en el despliegue, las
+ *    guías reales no pueden acabar «aceptadas» en un emulador.
+ *  · **beta**: solo a un emulador, y solo con las DOS direcciones y
+ *    credenciales PROPIAS del emulador (`SUNAT_GRE_PRUEBA_*`). Nunca las
+ *    reales: mandar el client_secret de Willy a un tercero es regalarlo.
+ *  · Si no, no se manda.
+ */
+export type ModoGuias =
+  | { modo: "produccion" }
+  | { modo: "emulador"; urlToken: string; hostEnvio: string; clientId: string; clientSecret: string }
+  | { modo: "bloqueado"; motivo: string };
+
+export async function modoGuias(): Promise<ModoGuias> {
+  const { data: cfg } = await clienteAdmin().from("config_sunat").select("ambiente").eq("id", 1).maybeSingle();
+  if ((cfg?.ambiente ?? envOpcional("SUNAT_AMBIENTE") ?? "beta") === "produccion") return { modo: "produccion" };
+  const urlToken = envOpcional("SUNAT_GRE_URL_TOKEN");
+  const hostEnvio = envOpcional("SUNAT_GRE_HOST");
+  const clientId = envOpcional("SUNAT_GRE_PRUEBA_CLIENT_ID");
+  const clientSecret = envOpcional("SUNAT_GRE_PRUEBA_CLIENT_SECRET");
+  if (urlToken && hostEnvio && clientId && clientSecret) {
+    return { modo: "emulador", urlToken, hostEnvio, clientId, clientSecret };
+  }
+  return {
+    modo: "bloqueado",
+    motivo:
+      "Estás en modo de pruebas, y SUNAT no tiene pruebas para guías: se mandaría a SUNAT de verdad. " +
+      "Las guías se envían al pasar a producción.",
+  };
+}
+
+/**
  * Construye el conector con las credenciales descifradas.
  *
  * ES LA ÚNICA FUNCIÓN QUE TOCA LOS SECRETOS. No los devuelve: devuelve el
@@ -253,9 +306,6 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
     const greClientSecret = secretos?.gre_client_secret_cifrado
       ? descifrar(secretos.gre_client_secret_cifrado)
       : envOpcional("SUNAT_GRE_CLIENT_SECRET");
-    // Para probar contra un emulador (no hay beta oficial de la GRE).
-    const greUrlToken = envOpcional("SUNAT_GRE_URL_TOKEN");
-    const greHost = envOpcional("SUNAT_GRE_HOST");
 
     const ambienteEnv = envOpcional("SUNAT_AMBIENTE");
     const ambiente =
@@ -270,15 +320,18 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
         certificadoClave,
         usuarioSol,
         claveSol,
-        gre:
-          greClientId && greClientSecret
-            ? {
-                clientId: greClientId,
-                clientSecret: greClientSecret,
-                ...(greUrlToken ? { urlToken: greUrlToken } : {}),
-                ...(greHost ? { hostEnvio: greHost } : {}),
-              }
-            : undefined,
+        // En producción, las reales contra SUNAT; en beta, solo el emulador
+        // con SUS credenciales (`modoGuias`); si no, ninguna.
+        gre: await (async () => {
+          const m = await modoGuias();
+          if (m.modo === "emulador") {
+            return { clientId: m.clientId, clientSecret: m.clientSecret, urlToken: m.urlToken, hostEnvio: m.hostEnvio };
+          }
+          if (m.modo === "produccion" && greClientId && greClientSecret) {
+            return { clientId: greClientId, clientSecret: greClientSecret };
+          }
+          return undefined;
+        })(),
       }),
     };
   } catch (e) {

@@ -108,15 +108,18 @@ export function SunatGuia({
               {pendiente ? "Preguntando…" : "Preguntar a SUNAT"}
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant={enviada ? "outline" : "primary"}
-            onClick={() => correr(enviarGuiaASunat)}
-            disabled={pendiente || !configurado || faltaGuia.length > 0}
-          >
-            <Send className="size-4" aria-hidden="true" />
-            {pendiente ? "Enviando…" : enviada ? "Volver a enviar" : estadoSunat === "rechazado" ? "Enviar otra vez" : "Enviar a SUNAT"}
-          </Button>
+          {/* Una enviada se PREGUNTA, no se reenvía: mandarla otra vez la
+              duplicaría y perdería el ticket de la primera (auditoría 15/10). */}
+          {enviada ? null : (
+            <Button
+              type="button"
+              onClick={() => correr(enviarGuiaASunat)}
+              disabled={pendiente || !configurado || faltaGuia.length > 0}
+            >
+              <Send className="size-4" aria-hidden="true" />
+              {pendiente ? "Enviando…" : estadoSunat === "rechazado" ? "Enviar otra vez" : "Enviar a SUNAT"}
+            </Button>
+          )}
         </div>
       ) : null}
 

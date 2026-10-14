@@ -350,7 +350,14 @@ export function crearConector(config: ConfigSunat): ConectorSunat {
         return cdr;
       }
       if (r.estado === "procesado") {
-        return { aceptado: true, codigo: "0", descripcion: "Aceptada por SUNAT.", observaciones: [] };
+        // «0» sin constancia (CDR): aceptada según SUNAT, pero sin prueba. Se
+        // marca con una observación para que se vea y se revise (auditoría).
+        return {
+          aceptado: true,
+          codigo: "0",
+          descripcion: "SUNAT la dio por recibida, pero no devolvió la constancia (CDR). Revísala en SUNAT.",
+          observaciones: ["Sin constancia de recepción (CDR)."],
+        };
       }
       return { aceptado: false, codigo: r.codigo ?? "99", descripcion: r.mensaje, observaciones: [] };
     },

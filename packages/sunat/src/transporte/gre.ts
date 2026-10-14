@@ -8,8 +8,9 @@
  * `openapi.yaml` de `thegreenter/gre-api`.
  *
  * Las URL son configurables a propósito: no hay ambiente de pruebas oficial,
- * y para probar sin gastar correlativos reales se apunta a un emulador (el
- * de NubeFact, por ejemplo) cambiando solo los hosts.
+ * y para probar sin gastar correlativos reales se apunta a un emulador. La
+ * app solo lo permite en beta y con credenciales PROPIAS del emulador
+ * (`modoGuias`): nunca se mandan las reales a un tercero.
  */
 import { createHash } from "node:crypto";
 
@@ -68,12 +69,17 @@ function mensajeDeError(cuerpo: unknown, http: number): { mensaje: string; codig
   };
 }
 
+/**
+ * El cuerpo como JSON, o null. Un cuerpo que no es JSON NO se repite: si un
+ * proxy delante del token devolviera el formulario enviado, ese texto lleva
+ * el client_secret y la clave SOL, y acabaría en pantalla (auditoría 15/10).
+ */
 async function leerJson(r: Response): Promise<unknown> {
   const texto = await r.text();
   try {
     return texto ? JSON.parse(texto) : null;
   } catch {
-    return { msg: texto.slice(0, 300) };
+    return null;
   }
 }
 

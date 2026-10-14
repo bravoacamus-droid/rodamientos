@@ -8,7 +8,7 @@ import { clasificarRechazo, sePuedeReenviar } from "@rodatech/sunat";
 import type { Comprobante, ItemComprobante, NotaComprobante } from "@rodatech/sunat";
 import type { Json } from "@rodatech/db/tipos";
 
-import { conectorSunat } from "../api/configuracion";
+import { bloqueoPorSeriePrueba, conectorSunat } from "../api/configuracion";
 import { detalleComprobante } from "../api/consultas";
 import { cuotasDe, docSunatDe, unidadSunat } from "../dominio/emision";
 import { cuotasNetas } from "../dominio/retencion";
@@ -72,7 +72,7 @@ export async function enviarASunat(
   if (c.estado === "anulado") {
     return { ok: false, error: "El comprobante está anulado: no se envía." };
   }
-  if (c.estado_sunat === "aceptado") {
+  if (c.estado_sunat === "aceptado" || c.estado_sunat === "observado") {
     return { ok: false, error: `${c.numero} ya fue aceptado por SUNAT.` };
   }
   /*
@@ -81,6 +81,9 @@ export async function enviarASunat(
     escrito y nadie lo llamaba, así que ninguna nota llegaba a SUNAT.
   */
   const esNota = c.tipo === "nota_credito" || c.tipo === "nota_debito";
+
+  const prueba = await bloqueoPorSeriePrueba(c.serie);
+  if (prueba) return { ok: false, error: prueba };
 
   const conector = await conectorSunat();
   if (!conector.ok) return { ok: false, error: conector.error };
@@ -204,11 +207,21 @@ export async function enviarASunat(
   // mitad, el documento queda marcado como en vuelo y no como pendiente: es
   // preferible revisar uno que quizá llegó a reenviar uno que sí llegó, porque
   // SUNAT rechaza el duplicado y ese rechazo confunde más que el estado raro.
+  //
+  // Y es un CANDADO (auditoría 15/10): solo pasa a «enviado» si nadie lo
+  // tiene ya en vuelo. Dos clics o dos pestañas mandaban el mismo documento
+  // dos veces. Uno «enviado» hace más de 15 minutos se da por muerto (052).
   const admin = clienteAdmin();
-  await admin
+  const hace15 = new Date(Date.now() - 15 * 60_000).toISOString();
+  const { data: tomado } = await admin
     .from("comprobantes")
     .update({ estado_sunat: "enviado", sunat_enviado_en: new Date().toISOString() })
-    .eq("id", c.id);
+    .eq("id", c.id)
+    .or(`estado_sunat.in.(no_enviado,pendiente,rechazado),and(estado_sunat.eq.enviado,sunat_enviado_en.lt.${hace15})`)
+    .select("id");
+  if (!tomado || tomado.length === 0) {
+    return { ok: false, error: `${c.numero} ya se está enviando. Espera la respuesta antes de volver a mandarlo.` };
+  }
 
   try {
     const cdr =

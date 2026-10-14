@@ -8153,3 +8153,22 @@ Decisiones que la primera guía real puede tumbar:
   («WILLY ANGEL | FERNANDEZ PAREDES»). Un apellido compuesto saldría mal.
 - La fecha de los comprobantes ahora va con zona (-05:00): en un servidor en
   UTC salían fechados un día antes.
+
+### §CD.1 · La auditoría del envío (127)
+
+El auditor revisó 388f1f8 y c34b4fa. Arreglado:
+
+- **M-1** En producción no se manda NADA de serie de prueba (F001, T001…):
+  `bloqueoPorSeriePrueba`. La 093 impedía numerar con ellas, no mandar lo
+  ya numerado.
+- **M-2** El emulador de guías solo en beta, con las cuatro variables y
+  credenciales PROPIAS (`SUNAT_GRE_PRUEBA_*`); en producción se ignoran
+  (`modoGuias`). Antes, `SUNAT_GRE_HOST` solo pedía un token REAL y lo
+  mandaba al emulador.
+- **M-3** (127) `estado_sunat` y `sunat_*` de guías y comprobantes solo
+  los escribe el servidor: un PATCH podía marcar una guía como aceptada. El
+  centinela lo EJECUTA con una sesión de gerencia.
+- **B-1** Candado antes de llamar a SUNAT: lo que está en vuelo no se reenvía.
+- **B-3** Un «0» sin CDR queda observado, no aceptado a secas.
+- **S-1** Un cuerpo que no es JSON ya no se repite en pantalla.
+- **B-4** Diez por tanda en «Enviar todas».
