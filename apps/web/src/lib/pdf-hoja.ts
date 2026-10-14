@@ -64,6 +64,8 @@ export interface HojaPdf {
   titulo: string;
   numero: string;
   datos: ({ etiqueta: string; valor: string; ancho?: boolean } | null)[];
+  /** Bloques de dos columnas independientes (la guía), después de `datos`. */
+  bloques?: { izquierda: { etiqueta: string; valor: string }[]; derecha: { etiqueta: string; valor: string }[] }[];
   columnas: { clave: string; titulo: string; alinear?: "izquierda" | "centro" | "derecha"; sinCortar?: boolean }[];
   filas: Record<string, string | CeldaPdf>[];
   totales?: { etiqueta: string; valor: string; destacado?: boolean }[];
@@ -189,14 +191,22 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
   const xCaja = anchoPagina - MARGEN - anchoCaja;
   doc.setDrawColor(...AZUL);
   doc.setLineWidth(0.6);
-  doc.roundedRect(xCaja, yCab, anchoCaja, 16, 1, 1, "S");
-  doc.setTextColor(...AZUL);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(CHICO);
-  doc.text(textoPdf(h.titulo.toUpperCase()), xCaja + anchoCaja / 2, yCab + 6, { align: "center" });
+  const lineasTitulo = doc.splitTextToSize(textoPdf(h.titulo.toUpperCase()), anchoCaja - 4) as string[];
+  const altoCaja = 10 + lineasTitulo.length * 3 + 6;
+  doc.roundedRect(xCaja, yCab, anchoCaja, altoCaja, 1, 1, "S");
+  // El RUC dentro del recuadro, como todo comprobante SUNAT (Luis, 15/10).
+  doc.setTextColor(...NEGRO);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(CUERPO + 1);
+  doc.text(textoPdf(`R.U.C. N.° ${h.emisor.ruc}`), xCaja + anchoCaja / 2, yCab + 5.5, { align: "center" });
+  doc.setTextColor(...AZUL);
+  doc.setFontSize(CHICO);
+  doc.text(lineasTitulo, xCaja + anchoCaja / 2, yCab + 10, { align: "center" });
   doc.setTextColor(...NEGRO);
   doc.setFontSize(12);
-  doc.text(textoPdf(h.numero), xCaja + anchoCaja / 2, yCab + 12, { align: "center" });
+  doc.text(textoPdf(h.numero), xCaja + anchoCaja / 2, yCab + 10 + lineasTitulo.length * 3 + 3.5, { align: "center" });
 
   // La razón social y debajo lo demás del emisor.
   const anchoEmisor = xCaja - 5 - x;
@@ -218,7 +228,7 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
     yEm += partes.length * 3.2;
   }
 
-  let y = Math.max(yEm, yCab + 18) + 1;
+  let y = Math.max(yEm, yCab + altoCaja + 2) + 1;
   doc.setDrawColor(...AZUL);
   doc.setLineWidth(0.6);
   doc.line(MARGEN, y, anchoPagina - MARGEN, y);
@@ -260,6 +270,25 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
     columna = 1 - columna;
   }
   if (columna === 1) y += altoFila;
+  // Los bloques de dos columnas: cada mitad se pinta sola, y el bloque
+  // acaba donde acabe la más larga.
+  (h.bloques ?? []).forEach((b, i) => {
+    if (i > 0 || h.datos.length > 0) {
+      y += 0.5;
+      doc.setDrawColor(...BORDE);
+      doc.setLineWidth(0.2);
+      doc.line(MARGEN, y - 3, anchoPagina - MARGEN, y - 3);
+      y += 1.5;
+    }
+    const inicio = y;
+    let fin = y;
+    [b.izquierda, b.derecha].forEach((col, j) => {
+      y = inicio;
+      for (const d of col) y += pintarDato(d, j === 0 ? MARGEN : MARGEN + mitad + 8, mitad);
+      fin = Math.max(fin, y);
+    });
+    y = fin;
+  });
   y += 3;
 
   /* -------------------------------------------------------------- Líneas */

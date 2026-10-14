@@ -62,6 +62,27 @@ export interface TotalHoja {
   destacado?: boolean;
 }
 
+/** Un par «etiqueta: valor» del bloque de arriba. */
+export interface DatoHoja {
+  etiqueta: string;
+  valor: string;
+  ancho?: boolean;
+}
+
+/**
+ * Un bloque de dos columnas que NO se cruzan: cada una es su propia lista,
+ * y un valor largo salta de renglón dentro de su mitad.
+ *
+ * Nace con la guía (Luis, 15/10: *«tiene que ser dos columnas… no pasarse,
+ * sino respetar su espacio y saltar línea»*). Con la rejilla de pares, una
+ * dirección a lo ancho dejaba huecos y empujaba lo de al lado a la columna
+ * contraria: «Inicio de traslado» acababa solo a la derecha, bajo nada.
+ */
+export interface BloqueDatos {
+  izquierda: DatoHoja[];
+  derecha: DatoHoja[];
+}
+
 const ALINEACION = {
   izquierda: "text-left",
   centro: "text-center",
@@ -72,7 +93,8 @@ export function HojaDocumento({
   emisor,
   titulo,
   numero,
-  datos,
+  datos = [],
+  bloques,
   columnas,
   filas,
   totales,
@@ -93,7 +115,9 @@ export function HojaDocumento({
    * ZONA GRAN INDUSTRIA I3. CALLAO - PROV. CONST. DEL CALLAO»— partida en
    * media hoja son cinco renglones que empujan todo lo de al lado.
    */
-  datos: ({ etiqueta: string; valor: string; ancho?: boolean } | null)[];
+  datos?: (DatoHoja | null)[];
+  /** En vez de `datos`: bloques de dos columnas independientes. */
+  bloques?: BloqueDatos[];
   columnas: ColumnaHoja[];
   /** Una fila es un valor por clave de columna. */
   filas: Record<string, ReactNode>[];
@@ -151,8 +175,11 @@ export function HojaDocumento({
           className="shrink-0 rounded border-2 px-5 py-3 text-center"
           style={{ borderColor: AZUL }}
         >
+          {/* El RUC dentro del recuadro, como todo comprobante SUNAT: dice de
+              quién es ese número (Luis, 15/10). */}
+          <p className="text-sm font-bold tabular">R.U.C. N.° {emisor.ruc}</p>
           <p
-            className="text-xs font-semibold uppercase tracking-wide"
+            className="mt-0.5 text-xs font-semibold uppercase tracking-wide"
             style={{ color: AZUL }}
           >
             {titulo}
@@ -162,6 +189,28 @@ export function HojaDocumento({
       </header>
 
       {/* -------------------------------------------------------- Los datos */}
+      {bloques?.map((b, i) => (
+        <section
+          key={`bloque-${i}`}
+          className={`grid grid-cols-1 gap-x-8 gap-y-1 text-xs @2xl:grid-cols-2 print:grid-cols-2 ${
+            i === 0 ? "mt-4" : "mt-2 border-t border-[#ddd] pt-2"
+          }`}
+        >
+          {[b.izquierda, b.derecha].map((columna, j) => (
+            <div key={j} className="flex min-w-0 flex-col gap-1">
+              {columna.map((d) => (
+                <p key={d.etiqueta} className="flex gap-2">
+                  <span className="w-28 shrink-0 font-semibold" style={{ color: AZUL }}>
+                    {d.etiqueta}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words">{d.valor}</span>
+                </p>
+              ))}
+            </div>
+          ))}
+        </section>
+      ))}
+      {datos.length > 0 ? (
       <section className="mt-4 grid grid-cols-1 gap-x-8 gap-y-1 text-xs @2xl:grid-cols-2 print:grid-cols-2">
         {datos.map((d, i) =>
           d ? (
@@ -179,6 +228,7 @@ export function HojaDocumento({
           ),
         )}
       </section>
+      ) : null}
 
       {/* --------------------------------------------------------- Líneas */}
       <div className="mt-4 -mx-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8 print:mx-0 print:overflow-visible print:px-0">

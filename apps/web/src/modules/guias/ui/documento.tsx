@@ -1,7 +1,7 @@
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import type { GuiaDetalle } from "../dominio/tipos";
-import { datosDeGuia } from "./papel";
+import { bloquesDeGuia } from "./papel";
 
 /**
  * La guía de remisión, en papel.
@@ -29,9 +29,9 @@ export function DocumentoGuia({
   return (
     <HojaDocumento
       emisor={emisor}
-      titulo={g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión electrónica · Remitente"}
+      titulo={g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión electrónica remitente"}
       numero={g.numero}
-      datos={datosDeGuia(g)}
+      bloques={bloquesDeGuia(g)}
       /*
         Sin columna de peso por línea. Willy, 41:44, repasando el impreso:
         *«los pesos parciales, ahí sí está un problema: debería ser el peso
