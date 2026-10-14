@@ -17,6 +17,9 @@ import { EmitirGuia } from "./emitir-guia";
 import { DocumentoGuia } from "./documento";
 import { hojaDeGuia } from "./papel";
 import { Volver } from "@/componentes/volver";
+import { estadoConfiguracion } from "@/modules/facturacion/api/configuracion";
+import { faltaParaSunat } from "../dominio/sunat";
+import { SunatGuia } from "./sunat-guia";
 
 /**
  * Ficha de una guía de remisión.
@@ -34,10 +37,11 @@ export default async function PaginaDetalleGuia({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, emisor] = await Promise.all([
+  const [resultado, perfil, emisor, config] = await Promise.all([
     detalleGuia(id),
     perfilActual(),
     emisorParaImprimir(),
+    estadoConfiguracion(),
   ]);
 
   if (!resultado.ok) {
@@ -352,8 +356,8 @@ export default async function PaginaDetalleGuia({
             ) : null}
           </section>
 
-          {/* La GRE todavía no se envía: el conector REST + OAuth2 está por
-              escribir. Se dice aquí en vez de dejar un botón que falla. */}
+          {/* La guía ante SUNAT (15/10): tiene que estar aceptada antes de
+              que salga la mercadería. */}
           <section className="card p-4 no-print">
             <h2 className="mb-1 text-sm font-semibold">SUNAT</h2>
             {g.comprobante ? (
@@ -367,11 +371,16 @@ export default async function PaginaDetalleGuia({
                 </Link>
               </p>
             ) : null}
-            <p className="text-sm text-[var(--fg-muted)]">
-              El envío de la guía electrónica (GRE) todavía no está disponible: SUNAT lo
-              cambió a un servicio REST con OAuth2 que hay que escribir aparte. La guía
-              es válida como documento interno y mueve el stock igual.
-            </p>
+            <SunatGuia
+              id={g.id}
+              estado={g.estado}
+              estadoSunat={g.estado_sunat}
+              mensaje={g.sunat_mensaje}
+              configurado={config.guias.listo}
+              faltaConfig={config.guias.faltan}
+              faltaGuia={faltaParaSunat(g).filter((f) => !f.startsWith("Solo se manda"))}
+              puede={puedeEmitir}
+            />
           </section>
         </div>
       </div>

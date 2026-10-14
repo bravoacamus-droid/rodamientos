@@ -210,6 +210,8 @@ export interface ConfigFiscal {
   probado_ok: boolean | null;
   probado_mensaje: string | null;
   actualizado_en: string | null;
+  /** ID de la aplicación en «Credenciales de API SUNAT», para guías (126). */
+  gre_client_id: string | null;
 }
 
 /** Qué falta para poder emitir de verdad. */
@@ -220,6 +222,11 @@ export interface EstadoConfiguracion {
   ambiente: "beta" | "produccion";
   /** Aviso si el certificado está por caducar o ya caducó. */
   avisoCaducidad: string | null;
+  /**
+   * Las guías piden además las credenciales de API (126). Aparte, porque se
+   * puede facturar sin ellas y no se puede mandar una guía.
+   */
+  guias: { listo: boolean; faltan: string[] };
 }
 
 /** Una cotización aprobada, lista para facturar. */

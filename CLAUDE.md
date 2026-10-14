@@ -388,9 +388,11 @@ sigue bloqueado en Willy. No es un fallo, es el aviso llegando a tiempo.
   al probar el 09/09 quedó registrado que **MARCO PERUANA vende el retén
   50X68X8TC a $ 1.40** — `proveedor_productos` se llena sola con cada
   respuesta (046) y eso no lo deshace borrar la respuesta.
-- **Envío de guías a SUNAT (GRE)** — cambió a REST con OAuth2 y hay que
-  escribirlo. Las guías valen como documento interno y mueven stock, pero **no
-  se están declarando**.
+- **Envío de guías a SUNAT (GRE)** — ESCRITO el 15/10 (§CD): REST con OAuth2,
+  ticket y consulta, con su botón en la ficha de la guía y en `/sunat`.
+  Probado de punta a punta contra un SUNAT falso; **nunca contra el real**, que
+  no tiene ambiente de pruebas para guías. Falta que Willy genere el
+  `client_id`/`client_secret` en SOL. En beta las guías NO se mandan.
 
 ### A medias, y es lo primero que hay que terminar
 

@@ -29,7 +29,20 @@ export interface BajaEnviada {
   creado_en: string;
 }
 
+/** Una guía emitida que SUNAT todavía no aceptó. */
+export interface GuiaBandeja {
+  id: string;
+  numero: string;
+  cliente: string;
+  fecha_emision: string;
+  fecha_traslado: string;
+  estado_sunat: string;
+  mensaje: string | null;
+}
+
 export interface Bandeja {
+  /** Guías emitidas sin aceptar (15/10): no deberían salir así. */
+  guias: GuiaBandeja[];
   porEnviar: DocumentoBandeja[];
   rechazados: Rechazado[];
   porDarDeBaja: PorDarDeBaja[];
@@ -89,7 +102,7 @@ export async function bandejaSunat(hoy: string): Promise<Resultado<Bandeja>> {
     const supabase = await clienteServidor();
     const inicioMes = `${hoy.slice(0, 7)}-01`;
 
-    const [porEnviar, rechazados, porBaja, bajas, aceptados, ultimos] = await Promise.all([
+    const [porEnviar, rechazados, porBaja, bajas, aceptados, ultimos, guias] = await Promise.all([
       supabase
         .from("comprobantes")
         .select(COLUMNAS)
@@ -128,9 +141,16 @@ export async function bandejaSunat(hoy: string): Promise<Resultado<Bandeja>> {
         .not("sunat_enviado_en", "is", null)
         .order("sunat_enviado_en", { ascending: false })
         .limit(5),
+      supabase
+        .from("guias_remision")
+        .select("id, numero, fecha_emision, fecha_traslado, estado_sunat, sunat_mensaje, clientes(razon_social)")
+        .eq("estado", "emitida")
+        .in("estado_sunat", ["no_enviado", "pendiente", "enviado", "rechazado"])
+        .order("fecha_emision", { ascending: true })
+        .limit(200),
     ]);
 
-    for (const r of [porEnviar, rechazados, porBaja, bajas, aceptados, ultimos]) {
+    for (const r of [porEnviar, rechazados, porBaja, bajas, aceptados, ultimos, guias]) {
       if (r.error) return fallo(r.error, "sunat/bandejaSunat");
     }
 
@@ -176,6 +196,23 @@ export async function bandejaSunat(hoy: string): Promise<Resultado<Bandeja>> {
         })),
         aceptadosMes: aceptados.count ?? 0,
         ultimosAceptados: ((ultimos.data ?? []) as unknown as Fila[]).map(aDocumento),
+        guias: ((guias.data ?? []) as unknown as {
+          id: string;
+          numero: string | null;
+          fecha_emision: string;
+          fecha_traslado: string;
+          estado_sunat: string;
+          sunat_mensaje: string | null;
+          clientes: { razon_social: string } | null;
+        }[]).map((x) => ({
+          id: x.id,
+          numero: x.numero ?? "—",
+          cliente: x.clientes?.razon_social ?? "—",
+          fecha_emision: String(x.fecha_emision).slice(0, 10),
+          fecha_traslado: String(x.fecha_traslado).slice(0, 10),
+          estado_sunat: x.estado_sunat,
+          mensaje: x.sunat_mensaje,
+        })),
       },
     };
   } catch (e) {
@@ -186,7 +223,7 @@ export async function bandejaSunat(hoy: string): Promise<Resultado<Bandeja>> {
 /** Cuántas cosas esperan en SUNAT, para el número del menú. */
 export async function pendientesSunat(): Promise<number> {
   const supabase = await clienteServidor();
-  const [a, b, c] = await Promise.all([
+  const [a, b, c, d] = await Promise.all([
     supabase
       .from("comprobantes")
       .select("id", { count: "exact", head: true })
@@ -201,9 +238,14 @@ export async function pendientesSunat(): Promise<number> {
       .in("estado_sunat", ["baja_solicitada", "observado"])
       .limit(500),
     supabase.from("sunat_bajas").select("comprobantes").eq("estado", "enviada"),
+    supabase
+      .from("guias_remision")
+      .select("id", { count: "exact", head: true })
+      .eq("estado", "emitida")
+      .in("estado_sunat", ["no_enviado", "pendiente", "enviado", "rechazado"]),
   ]);
   // Lo que ya va en una baja en curso espera a SUNAT, no a quien mira.
   const enCurso = new Set((c.data ?? []).flatMap((x) => x.comprobantes as string[]));
   const bajas = (b.data ?? []).filter((x) => !enCurso.has(x.id)).length;
-  return (a.count ?? 0) + bajas;
+  return (a.count ?? 0) + bajas + (d.count ?? 0);
 }

@@ -70,8 +70,9 @@ export async function comunicarBaja(fechaDocumentos: string): Promise<ResultadoB
   try {
     const r = await conector.datos.emitirComunicacionBaja({
       correlativo,
-      fechaEmisionDocs: new Date(`${fechaDocumentos}T00:00:00`),
-      fechaComunicacion: new Date(`${hoy}T00:00:00`),
+      // Con su zona (Lima): sin ella, un servidor en UTC las corre un día.
+      fechaEmisionDocs: new Date(`${fechaDocumentos}T00:00:00-05:00`),
+      fechaComunicacion: new Date(`${hoy}T00:00:00-05:00`),
       emisor: { ruc: empresa.ruc, razonSocial: empresa.razon_social },
       documentos: lista.map((d) => ({
         tipoDocumento: tipoSunatDe(d.tipo as TipoDocumentoSunat),

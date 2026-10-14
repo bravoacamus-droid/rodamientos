@@ -36,6 +36,9 @@ const esquema = z.object({
   certificado_clave: z.string().max(200),
   serie_factura: z.string().regex(/^F[A-Z0-9]{3}$/, "La serie de factura empieza por F."),
   serie_boleta: z.string().regex(/^B[A-Z0-9]{3}$/, "La serie de boleta empieza por B."),
+  // Las credenciales de API de la guía (126). Vacías = no tocar.
+  gre_client_id: z.string().trim().max(100).regex(/^[A-Za-z0-9-]*$/, "El ID de API va con letras, números y guiones."),
+  gre_client_secret: z.string().max(200),
 });
 
 export type ResultadoConfig =
@@ -71,6 +74,8 @@ export async function guardarConfigSunat(
       certificado_clave: formData.get("certificado_clave") ?? "",
       serie_factura: formData.get("serie_factura") ?? "F001",
       serie_boleta: formData.get("serie_boleta") ?? "B001",
+      gre_client_id: formData.get("gre_client_id") ?? "",
+      gre_client_secret: formData.get("gre_client_secret") ?? "",
     });
   } catch (e) {
     const detalle = e instanceof z.ZodError ? e.issues[0]?.message : "formato inesperado";
@@ -100,6 +105,7 @@ export async function guardarConfigSunat(
       actualizado_en: string;
       usuario_sol?: string;
       certificado_nombre?: string;
+      gre_client_id?: string;
     } = {
       ambiente: datos.ambiente,
       serie_factura: datos.serie_factura,
@@ -107,6 +113,7 @@ export async function guardarConfigSunat(
       actualizado_en: new Date().toISOString(),
     };
     if (datos.usuario_sol) visible.usuario_sol = datos.usuario_sol;
+    if (datos.gre_client_id) visible.gre_client_id = datos.gre_client_id;
     if (hayCertificado) visible.certificado_nombre = hayCertificado.name;
 
     const { error: errorVisible } = await admin
@@ -121,6 +128,7 @@ export async function guardarConfigSunat(
       clave_sol_cifrada?: string;
       certificado_clave_cifrada?: string;
       certificado_pfx_cifrado?: string;
+      gre_client_secret_cifrado?: string;
     } = {
       actualizado_en: new Date().toISOString(),
     };
@@ -131,6 +139,7 @@ export async function guardarConfigSunat(
     if (datos.certificado_clave) {
       secretos.certificado_clave_cifrada = cifrar(datos.certificado_clave);
     }
+    if (datos.gre_client_secret) secretos.gre_client_secret_cifrado = cifrar(datos.gre_client_secret);
     if (hayCertificado) {
       const bytes = Buffer.from(await hayCertificado.arrayBuffer());
       secretos.certificado_pfx_cifrado = cifrarBinario(bytes);

@@ -149,7 +149,8 @@ export async function enviarASunat(
     tipoDocumento: c.tipo === "boleta" ? "03" : "01",
     serie: c.serie,
     correlativo: c.correlativo,
-    fechaEmision: new Date(`${c.fecha_emision}T00:00:00`),
+    // Con su zona: sin ella, en un servidor en UTC salía fechada un día antes.
+    fechaEmision: new Date(`${c.fecha_emision.slice(0, 10)}T00:00:00-05:00`),
     // Casi siempre dólares; en soles si la venta se aprobó en soles (116).
     moneda: c.moneda,
     emisor: {

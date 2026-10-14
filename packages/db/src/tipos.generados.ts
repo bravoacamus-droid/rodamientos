@@ -1511,6 +1511,7 @@ export type Database = {
           certificado_caduca_en: string | null
           certificado_nombre: string | null
           certificado_sujeto: string | null
+          gre_client_id: string | null
           id: number
           probado_en: string | null
           probado_mensaje: string | null
@@ -1526,6 +1527,7 @@ export type Database = {
           certificado_caduca_en?: string | null
           certificado_nombre?: string | null
           certificado_sujeto?: string | null
+          gre_client_id?: string | null
           id?: number
           probado_en?: string | null
           probado_mensaje?: string | null
@@ -1541,6 +1543,7 @@ export type Database = {
           certificado_caduca_en?: string | null
           certificado_nombre?: string | null
           certificado_sujeto?: string | null
+          gre_client_id?: string | null
           id?: number
           probado_en?: string | null
           probado_mensaje?: string | null
@@ -1565,6 +1568,7 @@ export type Database = {
           certificado_clave_cifrada: string | null
           certificado_pfx_cifrado: string | null
           clave_sol_cifrada: string | null
+          gre_client_secret_cifrado: string | null
           id: number
         }
         Insert: {
@@ -1572,6 +1576,7 @@ export type Database = {
           certificado_clave_cifrada?: string | null
           certificado_pfx_cifrado?: string | null
           clave_sol_cifrada?: string | null
+          gre_client_secret_cifrado?: string | null
           id?: number
         }
         Update: {
@@ -1579,6 +1584,7 @@ export type Database = {
           certificado_clave_cifrada?: string | null
           certificado_pfx_cifrado?: string | null
           clave_sol_cifrada?: string | null
+          gre_client_secret_cifrado?: string | null
           id?: number
         }
         Relationships: []

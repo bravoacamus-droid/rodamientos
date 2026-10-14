@@ -19,14 +19,7 @@ export * from "./dominio/guia";
 export * from "./impresion/qr";
 export { montoEnLetras } from "./ubl/numero-a-letras";
 
-/**
- * El XML de la guía se genera, pero el conector NO lo envía.
- *
- * La guía de remisión electrónica no viaja por el mismo canal que la factura:
- * SUNAT la recibe por una API REST con OAuth2, no por el SOAP de aquí. Hasta
- * que exista ese cliente (ver `docs/PENDIENTES.md` §3), la función se exporta
- * para poder generar y revisar el XML, y el conector no la usa.
- */
+// El XML de la guía, para revisarlo; el envío va por `emitirGuia` (REST, 15/10).
 export { generarGuiaXml } from "./ubl/guia";
 
 import type {
@@ -54,6 +47,12 @@ import {
   type ResultadoPrueba,
 } from "./transporte/soap";
 import { parsearCdr } from "./cdr/index";
+import { generarGuiaXml } from "./ubl/guia";
+import type { GuiaRemision } from "./dominio/guia";
+import { consultarTicketGre, enviarGre, ErrorGre, type CredencialesGre } from "./transporte/gre";
+
+export { ErrorGre, hashZip } from "./transporte/gre";
+export type { CredencialesGre } from "./transporte/gre";
 
 export type { ResultadoPrueba } from "./transporte/soap";
 export type { ResumenBoletas, BoletaResumen } from "./ubl/resumen";
@@ -92,6 +91,19 @@ export interface ConfigSunat {
   usuarioSol: string;
   /** Clave del usuario SOL. */
   claveSol: string;
+  /**
+   * Las credenciales de API de la guía (OAuth2). Las genera el contribuyente
+   * en SOL › «Credenciales de API SUNAT»; sin ellas no se envían guías.
+   */
+  gre?: Pick<CredencialesGre, "clientId" | "clientSecret" | "urlToken" | "hostEnvio">;
+}
+
+/** Lo que devuelve mandar una guía: el ticket, y el XML firmado para guardarlo. */
+export interface EnvioGuia {
+  ticket: string;
+  nombre: string;
+  xmlFirmado: string;
+  hash: string;
 }
 
 /**
@@ -139,6 +151,37 @@ export interface ConectorSunat {
    * Permite validar la configuración antes de arriesgar un comprobante real.
    */
   probarConexion(ruc: string): Promise<ResultadoPrueba>;
+
+  /**
+   * Firma y manda una guía de remisión (09) por la API REST de la GRE.
+   * Asíncrono: devuelve el ticket; el CDR se pregunta con consultarGuia.
+   */
+  emitirGuia(guia: GuiaRemision): Promise<EnvioGuia>;
+
+  /** Cómo quedó una guía enviada, por su ticket. */
+  consultarGuia(ticket: string): Promise<ResultadoCdr | { enProceso: true }>;
+}
+
+/**
+ * El CDR de la GRE llega en base64 y no está claro si es un ZIP (como en la
+ * factura) o el XML a secas: se mira la firma «PK» y se trata según sea.
+ */
+async function cdrDeBase64(b64: string): Promise<string> {
+  const bytes = Buffer.from(b64, "base64");
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return extraerCdr(b64);
+  return bytes.toString("utf8");
+}
+
+/** Las cuatro credenciales de la GRE, o un error que dice cuál falta. */
+function credencialesGre(config: ConfigSunat): CredencialesGre {
+  if (!config.gre?.clientId || !config.gre.clientSecret) {
+    throw new ErrorGre(
+      "Faltan las credenciales de API de SUNAT para guías (client_id y client_secret). Se generan en SOL › Credenciales de API SUNAT.",
+      null,
+      null,
+    );
+  }
+  return { ...config.gre, usuarioSol: config.usuarioSol, claveSol: config.claveSol };
 }
 
 /** Nombre del documento según SUNAT: RUC-tipo-serie-correlativo. */
@@ -283,6 +326,33 @@ export function crearConector(config: ConfigSunat): ConectorSunat {
         config.claveSol,
         ruc,
       );
+    },
+
+    async emitirGuia(guia) {
+      const gre = credencialesGre(config);
+      const nombre = nombreDocumento(guia.emisor.ruc, guia.tipoDocumento, guia.serie, guia.correlativo);
+      const firmado = firmarXml(generarGuiaXml(guia), nombre, {
+        certificadoPfx: config.certificadoPfx,
+        certificadoClave: config.certificadoClave,
+      });
+      const zipB64 = await comprimirComprobante(firmado.nombre, firmado.xmlFirmado);
+      const ticket = await enviarGre(gre, firmado.nombre, zipB64);
+      return { ticket, nombre: firmado.nombre, xmlFirmado: firmado.xmlFirmado, hash: firmado.hash };
+    },
+
+    async consultarGuia(ticket) {
+      const r = await consultarTicketGre(credencialesGre(config), ticket);
+      if (r.estado === "en_proceso") return { enProceso: true };
+      if (r.cdr) {
+        const cdr = parsearCdr(await cdrDeBase64(r.cdr));
+        // Con error y CDR, manda el CDR (trae el código de rechazo); sin CDR,
+        // el error del envío.
+        return cdr;
+      }
+      if (r.estado === "procesado") {
+        return { aceptado: true, codigo: "0", descripcion: "Aceptada por SUNAT.", observaciones: [] };
+      }
+      return { aceptado: false, codigo: r.codigo ?? "99", descripcion: r.mensaje, observaciones: [] };
     },
 
     async consultarResumen(ticket) {

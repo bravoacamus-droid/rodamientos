@@ -85,13 +85,29 @@ export interface ItemGuia {
   codigoProducto?: string;
 }
 
-/** Documento que originó el traslado (la factura o boleta de la venta). */
+/**
+ * Documento relacionado con el traslado (catálogo 61): la factura de la
+ * venta, si ya existe. En el ERP la guía va ANTES que la factura, así que lo
+ * normal es que no lleve ninguno.
+ */
 export interface DocumentoRelacionado {
-  /** Tipo de documento (catálogo 01): 01 factura, 03 boleta. */
+  /** Código del catálogo 61: 01 factura, 03 boleta… */
   tipoDocumento: string;
+  /** Su nombre, que SUNAT pide junto al código («Factura»). */
+  descripcion: string;
   /** Serie y correlativo, p. ej. F001-123. */
   numero: string;
+  /** RUC de quien lo emitió. */
+  emisorRuc?: string;
 }
+
+/**
+ * Indicadores del envío (`cbc:SpecialInstructions`). El que usamos: el
+ * traslado en vehículo M1 o L (auto o moto), que exime de placa y conductor.
+ */
+export const INDICADOR_ENVIO = {
+  VEHICULO_M1_L: "SUNAT_Envio_IndicadorTrasladoVehiculoM1L",
+} as const;
 
 export interface GuiaRemision {
   /** 09 remitente, 31 transportista. */
@@ -122,8 +138,10 @@ export interface GuiaRemision {
   pesoTotal: number;
   /** Unidad del peso (catálogo 03): KGM kilogramos, TNE toneladas. */
   unidadPeso: string;
-  /** El envío se reparte en varios vehículos. */
-  envioParcial?: boolean;
+  /** Número de bultos o pallets. */
+  numeroBultos?: number;
+  /** Indicadores especiales del envío (ver {@link INDICADOR_ENVIO}). */
+  indicadores?: string[];
 
   puntoPartida: PuntoTraslado;
   puntoLlegada: PuntoTraslado;
@@ -135,6 +153,6 @@ export interface GuiaRemision {
   vehiculo?: Vehiculo;
 
   items: ItemGuia[];
-  documentoRelacionado?: DocumentoRelacionado;
+  documentosRelacionados?: DocumentoRelacionado[];
   observaciones?: string;
 }

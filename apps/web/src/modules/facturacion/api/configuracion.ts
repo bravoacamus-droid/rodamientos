@@ -40,7 +40,7 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
       .select(
         `ambiente, usuario_sol, certificado_nombre, certificado_sujeto,
          certificado_caduca_en, serie_factura, serie_boleta,
-         probado_en, probado_ok, probado_mensaje, actualizado_en`,
+         probado_en, probado_ok, probado_mensaje, actualizado_en, gre_client_id`,
       )
       .eq("id", 1)
       .maybeSingle();
@@ -68,6 +68,7 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
         serie_boleta: data.serie_boleta ?? "B001",
         probado_en: data.probado_en ?? null,
         probado_ok: data.probado_ok ?? null,
+        gre_client_id: data.gre_client_id ?? null,
         probado_mensaje: data.probado_mensaje ?? null,
         actualizado_en: data.actualizado_en ?? null,
       },
@@ -94,6 +95,7 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
 
   let ambiente: "beta" | "produccion" = "beta";
   let caduca: string | null = null;
+  const faltanGuias: string[] = [];
 
   try {
     const admin = clienteAdmin();
@@ -134,15 +136,22 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
     const [{ data: visible }, { data: secretos }] = await Promise.all([
       admin
         .from("config_sunat")
-        .select("ambiente, usuario_sol, certificado_caduca_en")
+        .select("ambiente, usuario_sol, certificado_caduca_en, gre_client_id")
         .eq("id", 1)
         .maybeSingle(),
       admin
         .from("config_sunat_secretos")
-        .select("clave_sol_cifrada, certificado_pfx_cifrado, certificado_clave_cifrada")
+        .select("clave_sol_cifrada, certificado_pfx_cifrado, certificado_clave_cifrada, gre_client_secret_cifrado")
         .eq("id", 1)
         .maybeSingle(),
     ]);
+
+    if (!visible?.gre_client_id && !envOpcional("SUNAT_GRE_CLIENT_ID")) {
+      faltanGuias.push("Falta el ID de las credenciales de API de SUNAT (para guías).");
+    }
+    if (!secretos?.gre_client_secret_cifrado && !envOpcional("SUNAT_GRE_CLIENT_SECRET")) {
+      faltanGuias.push("Falta la CLAVE de las credenciales de API de SUNAT (para guías).");
+    }
 
     ambiente = (visible?.ambiente as "beta" | "produccion") ?? "beta";
     caduca = visible?.certificado_caduca_en ?? null;
@@ -177,11 +186,14 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
     }
   }
 
+  // Una guía necesita todo lo de la factura MÁS sus credenciales de API.
+  const todasGuias = [...faltan, ...faltanGuias];
   return {
     listo: faltan.length === 0,
     faltan,
     ambiente,
     avisoCaducidad,
+    guias: { listo: todasGuias.length === 0, faltan: todasGuias },
   };
 }
 
@@ -201,10 +213,10 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
     const admin = clienteAdmin();
 
     const [{ data: visible }, { data: secretos }] = await Promise.all([
-      admin.from("config_sunat").select("ambiente, usuario_sol").eq("id", 1).maybeSingle(),
+      admin.from("config_sunat").select("ambiente, usuario_sol, gre_client_id").eq("id", 1).maybeSingle(),
       admin
         .from("config_sunat_secretos")
-        .select("clave_sol_cifrada, certificado_pfx_cifrado, certificado_clave_cifrada")
+        .select("clave_sol_cifrada, certificado_pfx_cifrado, certificado_clave_cifrada, gre_client_secret_cifrado")
         .eq("id", 1)
         .maybeSingle(),
     ]);
@@ -235,6 +247,16 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
       };
     }
 
+    // Las de la guía son opcionales aquí: sin ellas se factura igual, y es
+    // `emitirGuia` quien dice que faltan.
+    const greClientId = visible?.gre_client_id ?? envOpcional("SUNAT_GRE_CLIENT_ID");
+    const greClientSecret = secretos?.gre_client_secret_cifrado
+      ? descifrar(secretos.gre_client_secret_cifrado)
+      : envOpcional("SUNAT_GRE_CLIENT_SECRET");
+    // Para probar contra un emulador (no hay beta oficial de la GRE).
+    const greUrlToken = envOpcional("SUNAT_GRE_URL_TOKEN");
+    const greHost = envOpcional("SUNAT_GRE_HOST");
+
     const ambienteEnv = envOpcional("SUNAT_AMBIENTE");
     const ambiente =
       (visible?.ambiente as "beta" | "produccion" | undefined) ??
@@ -248,6 +270,15 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
         certificadoClave,
         usuarioSol,
         claveSol,
+        gre:
+          greClientId && greClientSecret
+            ? {
+                clientId: greClientId,
+                clientSecret: greClientSecret,
+                ...(greUrlToken ? { urlToken: greUrlToken } : {}),
+                ...(greHost ? { hostEnvio: greHost } : {}),
+              }
+            : undefined,
       }),
     };
   } catch (e) {

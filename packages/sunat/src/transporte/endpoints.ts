@@ -47,9 +47,8 @@ export function endpointGuias(_ambiente: Ambiente): never {
 /**
  * Rutas del servicio REST de la GRE, para cuando se cablee el módulo.
  *
- * Todavía no las consume nadie: el conector no tiene métodos de guía. Están
- * aquí, y no en el módulo que las vaya a usar, para que la sustitución de
- * `endpointGuias` esté a la vista de quien lea el error.
+ * Las usa `transporte/gre.ts` desde el 15/10. Siguen aquí, junto a
+ * `endpointGuias`, para que quien lea ese error encuentre al lado lo vigente.
  *
  * `HOST_ENVIO` es ambiguo en las fuentes: el README de `greenter/gre-api` usa
  * `https://api.sunat.gob.pe`, y su propio `openapi.yaml` usa

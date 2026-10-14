@@ -7,6 +7,7 @@ import { Button } from "@rodatech/ui";
 
 import { comunicarBaja, consultarBaja } from "../acciones/baja";
 import { enviarVarios, type ResultadoUno } from "../acciones/enviar";
+import { enviarGuiaASunat } from "@/modules/guias/acciones/sunat";
 
 /**
  * Enviar uno o varios a SUNAT. Con varios, uno detrás de otro, y al terminar
@@ -109,6 +110,70 @@ export function BotonBaja({ fecha, bajaId }: { fecha?: string; bajaId?: string }
         <p role={aviso.ok ? "status" : "alert"} className={`text-sm ${aviso.ok ? "text-[var(--fg-muted)]" : "text-[var(--danger)]"}`}>
           {aviso.texto}
         </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Mandar guías a SUNAT, una detrás de otra (15/10). Cada una pasa por el
+ * mismo `enviarGuiaASunat` que el botón de su ficha.
+ */
+export function BotonEnviarGuias({
+  guias,
+  etiqueta,
+  principal = false,
+  deshabilitado = false,
+}: {
+  guias: { id: string; numero: string }[];
+  etiqueta: string;
+  principal?: boolean;
+  deshabilitado?: boolean;
+}) {
+  const router = useRouter();
+  const [pendiente, iniciar] = React.useTransition();
+  const [hechas, setHechas] = React.useState<{ numero: string; ok: boolean; texto: string }[] | null>(null);
+
+  const enviar = () =>
+    iniciar(async () => {
+      const lista: { numero: string; ok: boolean; texto: string }[] = [];
+      setHechas([]);
+      for (const g of guias) {
+        const r = await enviarGuiaASunat(g.id);
+        lista.push(
+          r.ok
+            ? { numero: g.numero, ok: r.estado === "aceptada", texto: r.mensaje }
+            : { numero: g.numero, ok: false, texto: r.error },
+        );
+        setHechas([...lista]);
+      }
+      router.refresh();
+    });
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        type="button"
+        variant={principal ? "primary" : "outline"}
+        onClick={enviar}
+        disabled={pendiente || deshabilitado || guias.length === 0}
+      >
+        <Send className="size-4" aria-hidden="true" />
+        {pendiente ? `Enviando ${hechas?.length ?? 0} de ${guias.length}…` : etiqueta}
+      </Button>
+      {hechas && hechas.length > 0 ? (
+        <ul className="flex flex-col gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
+          {hechas.map((x) => (
+            <li key={x.numero} className="flex items-start gap-2">
+              {x.ok ? (
+                <CircleCheck className="mt-0.5 size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+              ) : (
+                <CircleX className="mt-0.5 size-4 shrink-0 text-[var(--danger)]" aria-hidden="true" />
+              )}
+              <span>{x.texto}</span>
+            </li>
+          ))}
+        </ul>
       ) : null}
     </div>
   );

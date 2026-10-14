@@ -188,6 +188,38 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
           </div>
         </div>
 
+        {/*
+          Las de la guía (126). La guía no va por el mismo servicio que la
+          factura: SUNAT pide además estas dos, que Willy genera una vez en
+          SOL › «Credenciales de API SUNAT».
+        */}
+        <fieldset className="grid gap-3 border-t border-[var(--border-soft)] pt-4 sm:grid-cols-2">
+          <legend className="mb-1 text-sm font-semibold">Guías de remisión: credenciales de API</legend>
+          <p className="text-sm text-[var(--fg-muted)] sm:col-span-2">
+            Se generan una sola vez en SUNAT Operaciones en Línea › «Credenciales de API SUNAT», marcando
+            «GREE Emisión de Comprobantes». SUNAT da un ID y una CLAVE; pueden tardar unas horas en activarse.
+          </p>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">ID (client_id)</span>
+            <Input
+              name="gre_client_id"
+              defaultValue={config.gre_client_id ?? ""}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="font-mono"
+              autoComplete="off"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">CLAVE (client_secret)</span>
+            <Input
+              name="gre_client_secret"
+              type="password"
+              placeholder="•••••••• (en blanco = no cambiar)"
+              autoComplete="new-password"
+            />
+          </label>
+        </fieldset>
+
         {resultado && !resultado.ok ? (
           <p className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
             {resultado.error}

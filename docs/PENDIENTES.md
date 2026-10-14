@@ -8128,3 +8128,28 @@ estados si fue rechazado o así; más que todo es para el cliente»*.
 
 **Sin probar contra SUNAT**: no hay certificado ni usuario SOL. Lo siguiente
 es la prueba en beta (MODDATOS) y después el envío de la GRE.
+
+## §CD · 15/10 — El envío de las guías a SUNAT (GRE, 126)
+
+Luis: *«por lo que se sabe las guías también se mandan a SUNAT»*. Sí, y desde
+el 01/07/2026 es obligatorio: la guía tiene que estar ACEPTADA antes de que
+salga la mercadería.
+
+- `packages/sunat`: `transporte/gre.ts` (token OAuth2 con caché, envío del
+  ZIP con su SHA-256, consulta del ticket 98/0/99, errores 401/422) y el
+  conector con `emitirGuia`/`consultarGuia`. El CDR se lee sea ZIP o XML.
+- `ubl/guia.ts` reescrito contra `despatch2022.xml.twig` de Greenter: los
+  nueve fallos de `docs/INVESTIGACION-GRE.md` §8.3 corregidos.
+- Credenciales de API en Configuración › SUNAT (126); el secreto, cifrado.
+- La ficha de la guía dice su estado ante SUNAT y tiene «Enviar a SUNAT» /
+  «Preguntar a SUNAT»; `/sunat` las pone primero, en rojo.
+- **En beta no se mandan**: SUNAT no tiene ambiente de pruebas para guías y
+  se irían al real. Para probar, `SUNAT_GRE_HOST` hacia un emulador.
+
+Decisiones que la primera guía real puede tumbar:
+- **«A pie»** se manda como vehículo M1/L (indicador que exime de placa y
+  conductor). SUNAT no tiene «a pie».
+- **El nombre del conductor** se parte: los dos últimos son los apellidos
+  («WILLY ANGEL | FERNANDEZ PAREDES»). Un apellido compuesto saldría mal.
+- La fecha de los comprobantes ahora va con zona (-05:00): en un servidor en
+  UTC salían fechados un día antes.

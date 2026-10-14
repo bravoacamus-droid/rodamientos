@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CircleCheck, FileX2, SendHorizontal, ShieldAlert, TriangleAlert } from "lucide-react";
+import { CircleCheck, FileX2, SendHorizontal, ShieldAlert, TriangleAlert, Truck } from "lucide-react";
 import { EstadoError, Moneda, formatearFecha, formatearFechaHora } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -10,7 +10,7 @@ import { ETIQUETA_TIPO } from "@/modules/facturacion/dominio/tipos";
 
 import { bandejaSunat } from "../api/consultas";
 import { bajasPorFecha, plazoDeEnvio, type DocumentoBandeja } from "../dominio/bandeja";
-import { BotonBaja, BotonEnviar } from "./botones";
+import { BotonBaja, BotonEnviar, BotonEnviarGuias } from "./botones";
 
 /**
  * SUNAT: todo lo que espera algo de SUNAT, en un solo sitio (15/10).
@@ -44,7 +44,7 @@ export default async function PaginaSunat() {
   const b = bandeja.datos;
   const grupos = bajasPorFecha(b.porDarDeBaja);
   const bajasEnCurso = b.bajas.filter((x) => x.estado === "enviada");
-  const todoAlDia = b.porEnviar.length === 0 && b.rechazados.length === 0 && b.porDarDeBaja.length === 0 && bajasEnCurso.length === 0;
+  const todoAlDia = b.guias.length === 0 && b.porEnviar.length === 0 && b.rechazados.length === 0 && b.porDarDeBaja.length === 0 && bajasEnCurso.length === 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,11 +55,13 @@ export default async function PaginaSunat() {
         </p>
       </div>
 
-      {!config.listo ? (
+      {!config.guias.listo ? (
         <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          <p className="font-semibold">Todavía no está conectado con SUNAT.</p>
+          <p className="font-semibold">
+            {config.listo ? "Las facturas ya se pueden enviar; las guías todavía no." : "Todavía no está conectado con SUNAT."}
+          </p>
           <ul className="mt-1 list-inside list-disc">
-            {config.faltan.map((f) => (
+            {config.guias.faltan.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
@@ -105,11 +107,12 @@ export default async function PaginaSunat() {
             href: "#bajas",
           },
           {
-            etiqueta: "Aceptados este mes",
-            valor: String(b.aceptadosMes),
-            detalle: "facturas y notas",
-            tono: "ok",
-            icono: <CircleCheck aria-hidden="true" />,
+            etiqueta: "Guías sin aceptar",
+            valor: String(b.guias.length),
+            detalle: b.guias.length > 0 ? "no deberían salir así" : `ninguna · ${b.aceptadosMes} comprobantes aceptados este mes`,
+            tono: b.guias.length > 0 ? "urgente" : "ok",
+            icono: <Truck aria-hidden="true" />,
+            href: "#guias",
           },
         ]}
       />
@@ -122,6 +125,51 @@ export default async function PaginaSunat() {
             <p className="text-sm text-[var(--fg-muted)]">No hay nada por enviar, rechazado ni por dar de baja.</p>
           </div>
         </div>
+      ) : null}
+
+      {/* ----------------------------------------------------------- Guías */}
+      {b.guias.length > 0 ? (
+        <section id="guias" className="card flex flex-col gap-3 border-[var(--danger)] p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Guías sin aceptar ({b.guias.length})</h2>
+              <p className="text-sm text-[var(--fg-muted)]">
+                Una guía tiene que estar aceptada por SUNAT ANTES de que salga la mercadería. Si paran el camión,
+                una guía que SUNAT no tiene es como no llevar guía.
+              </p>
+            </div>
+            <BotonEnviarGuias
+              guias={b.guias.filter((g) => g.estado_sunat !== "enviado").map((g) => ({ id: g.id, numero: g.numero }))}
+              etiqueta={b.guias.length === 1 ? "Enviar la guía a SUNAT" : `Enviar las ${b.guias.length} guías`}
+              principal
+              deshabilitado={!config.guias.listo}
+            />
+          </div>
+          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+            {b.guias.map((g) => (
+              <li key={g.id} className="flex flex-col gap-0.5 py-3">
+                <p className="flex flex-wrap items-baseline gap-x-2 text-base">
+                  <Link href={`/guias/${g.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
+                    {g.numero}
+                  </Link>
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    Guía · emitida {formatearFecha(g.fecha_emision)} · traslado {formatearFecha(g.fecha_traslado)}
+                  </span>
+                </p>
+                <p className="text-sm">{g.cliente}</p>
+                <p
+                  className={`text-sm font-medium ${g.estado_sunat === "rechazado" ? "text-[var(--danger)]" : "text-[var(--warn)]"}`}
+                >
+                  {g.estado_sunat === "rechazado"
+                    ? `Rechazada: ${g.mensaje ?? "sin detalle"}`
+                    : g.estado_sunat === "enviado"
+                      ? "Enviada: SUNAT la está revisando (ábrela para preguntar)."
+                      : "Todavía no se mandó."}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       {/* ------------------------------------------------------ Por enviar */}
