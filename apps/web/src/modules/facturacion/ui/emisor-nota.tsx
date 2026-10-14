@@ -26,8 +26,13 @@ import {
   avisosNota,
   bloqueosNota,
   esCorreccionSinImporte,
+  esMotivoPorItem,
   esMotivoTotal,
+  lineasPorItem,
+  totalDeLineas,
   totalDeNota,
+  MOTIVOS_CREDITO,
+  type EleccionItem,
   type TipoNota,
 } from "../dominio/nota";
 import type { ComprobanteDetalle } from "../dominio/tipos";
@@ -76,6 +81,13 @@ export function EmisorNota({
   const [monto, setMonto] = React.useState(0);
   const [concepto, setConcepto] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
+  /*
+    Por producto (05 y 07): lo que se teclea en cada línea, tal cual —unidades
+    en la devolución, importe con IGV en la moneda de la factura en el
+    descuento—. Luis, 15/10: como la nota de su sistema, que lista los
+    productos de la factura.
+  */
+  const [porLinea, setPorLinea] = React.useState<Record<number, string>>({});
 
   const [resultado, emitir, emitiendo] = useActionState<
     ResultadoNota | null,
@@ -104,6 +116,24 @@ export function EmisorNota({
   const delTipo = motivos.filter((m) => m.tipo === tipo);
   const total = esMotivoTotal(motivo);
   const importeFijo = total || esCorreccionSinImporte(motivo);
+  const porItem = esMotivoPorItem(motivo);
+  const esDevolucion = motivo === MOTIVOS_CREDITO.DEVOLUCION_ITEM;
+  const elegidos: EleccionItem[] = Object.entries(porLinea).map(([i, v]) => {
+    const n = Number(v) || 0;
+    return esDevolucion
+      ? { indice: Number(i), cantidad: n, monto: 0 }
+      : // El descuento se teclea en la moneda de la factura; por dentro, dólares.
+        { indice: Number(i), cantidad: 0, monto: tcDoc ? Math.round((n / tcDoc) * 10000) / 10000 : n };
+  });
+  const lineasElegidas = porItem ? lineasPorItem(documento, motivo, elegidos) : [];
+  // Lo que vale la nota: por producto sale de las líneas, si no, del importe.
+  const importe = porItem ? totalDeLineas(lineasElegidas) : monto;
+  // En soles, como lo cuenta la base (116): cada unitario a soles y redondeado,
+  // y el IGV sobre esa suma. Pasar el total en dólares desviaba céntimos.
+  const importeVisto =
+    porItem && tcDoc
+      ? totalDeLineas(lineasElegidas.map((l) => ({ ...l, valor_unitario: Math.round(l.valor_unitario * tcDoc * 100) / 100 })))
+      : ver(importe);
 
   // Con un motivo total el importe no se elige: es el pendiente de acreditar.
   React.useEffect(() => {
@@ -136,11 +166,11 @@ export function EmisorNota({
     documento,
     tipo,
     motivo,
-    monto,
+    importe,
     fecha,
     yaAcreditado,
   );
-  const avisos = avisosNota(documento, tipo, motivo, monto);
+  const avisos = avisosNota(documento, tipo, motivo, importe);
   const serieNota = series[tipo];
   const serie = serieNota?.serie ?? "—";
   const totalReal = totalDeNota(monto);
@@ -150,7 +180,8 @@ export function EmisorNota({
     tipo,
     motivo_codigo: motivo,
     fecha_emision: fecha,
-    monto,
+    monto: importe,
+    items: porItem ? elegidos : [],
     concepto: concepto.trim(),
     observaciones: observaciones.trim() || null,
   });
@@ -172,7 +203,7 @@ export function EmisorNota({
         Emitir nota
       </DialogTrigger>
 
-      <DialogContent className="max-w-lg">
+      <DialogContent className={porItem ? "max-w-2xl" : "max-w-lg"}>
         <DialogHeader>
           <DialogTitle>Nota sobre {documento.numero}</DialogTitle>
           <DialogDescription>
@@ -183,6 +214,9 @@ export function EmisorNota({
                 <Dolares moneda={monedaDoc} valor={ver(disponible)} />
               </>
             ) : null}
+            {/* El cambio, a la vista (su nota lo muestra, 15/10). Es el de la
+                factura: con otro, la nota no cuadraría con ella. */}
+            {tcDoc ? <> · en soles al cambio de la factura, S/ {tcDoc.toFixed(3)}</> : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -245,6 +279,7 @@ export function EmisorNota({
                     setMonto(0);
                     setEnSoles("");
                   }
+                  setPorLinea({});
                 }}
               >
                 <option value="">Elige el motivo…</option>
@@ -256,6 +291,54 @@ export function EmisorNota({
               </SelectNativo>
             </label>
 
+            {porItem ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">
+                  {esDevolucion ? "¿Qué productos vuelven y cuántos?" : "¿A qué productos se les descuenta y cuánto (con IGV)?"}
+                </p>
+                <ul className="flex max-h-[40vh] flex-col divide-y divide-[var(--border-soft)] overflow-y-auto rounded-sm border border-[var(--border)]">
+                  {documento.lineas.map((l, i) => (
+                    <li key={l.id} className="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">{l.codigo}</p>
+                        <p className="line-clamp-2 text-sm text-[var(--fg-muted)]">{l.descripcion}</p>
+                        <p className="text-sm text-[var(--fg-muted)]">
+                          Facturado: {l.cantidad} {l.unidad} · <Dolares moneda={monedaDoc} valor={ver(l.valor_unitario)} /> c/u sin IGV
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <span className="shrink-0">{esDevolucion ? "Vuelven" : "Descuento"}</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={esDevolucion ? l.cantidad : undefined}
+                          step={esDevolucion ? "any" : "0.01"}
+                          numerico
+                          className="w-28"
+                          value={porLinea[i] ?? ""}
+                          placeholder="0"
+                          onChange={(e) => setPorLinea((p) => ({ ...p, [i]: e.target.value }))}
+                          aria-label={`${esDevolucion ? "Unidades que vuelven" : "Descuento"} de ${l.codigo}`}
+                        />
+                        {esDevolucion ? <span className="shrink-0 text-[var(--fg-muted)]">de {l.cantidad}</span> : null}
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm">
+                  La nota sale por{" "}
+                  <strong>
+                    <Dolares moneda={monedaDoc} valor={importeVisto} />
+                  </strong>{" "}
+                  con IGV
+                  {lineasElegidas.length > 0
+                    ? `, ${lineasElegidas.length} ${lineasElegidas.length === 1 ? "producto" : "productos"}.`
+                    : ": todavía no marcaste ninguno."}
+                </p>
+              </div>
+            ) : null}
+
+            {!porItem ? (
             <div className="grid gap-3 sm:grid-cols-2 sm:gap-2">
               {/*
                 Con un motivo total el importe no se elige, y en vez de una
@@ -309,8 +392,9 @@ export function EmisorNota({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
-            {!importeFijo ? (
+            {porItem ? null : !importeFijo ? (
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Concepto</span>
                 <Input

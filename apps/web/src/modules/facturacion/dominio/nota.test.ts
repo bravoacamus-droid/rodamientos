@@ -7,7 +7,10 @@ import {
   bloqueosNota,
   esCorreccionSinImporte,
   esMotivoTotal,
+  esMotivoPorItem,
   lineasDeNota,
+  lineasPorItem,
+  totalDeLineas,
   totalDeNota,
   valorSinIgv,
 } from "./nota";
@@ -335,5 +338,41 @@ describe("valorSinIgv y totalDeNota", () => {
       const desvio = Math.round(Math.abs(totalDeNota(pedido) - pedido) * 100) / 100;
       expect(desvio, `${pedido} se desvió ${desvio}`).toBeLessThanOrEqual(0.01);
     }
+  });
+});
+
+describe("nota por producto (05 y 07)", () => {
+  it("solo la devolución y el descuento por ítem van por producto", () => {
+    expect(esMotivoPorItem(MOTIVOS_CREDITO.DEVOLUCION_ITEM)).toBe(true);
+    expect(esMotivoPorItem(MOTIVOS_CREDITO.DESCUENTO_ITEM)).toBe(true);
+    expect(esMotivoPorItem(MOTIVOS_CREDITO.DESCUENTO_GLOBAL)).toBe(false);
+    expect(esMotivoPorItem(MOTIVOS_CREDITO.BONIFICACION)).toBe(false);
+  });
+
+  it("la devolución copia la línea con las unidades que vuelven, sin pasar de lo facturado", () => {
+    const lineas = lineasPorItem(FACTURA, MOTIVOS_CREDITO.DEVOLUCION_ITEM, [
+      { indice: 1, cantidad: 2, monto: 0 },
+      { indice: 0, cantidad: 0, monto: 0 },
+    ]);
+    expect(lineas).toHaveLength(1);
+    expect(lineas[0]).toMatchObject({ producto_id: "p2", codigo: "7210 BEP", cantidad: 2, valor_unitario: 41.32 });
+    // 2 × 41.32 = 82.64 + IGV 14.88 = 97.52
+    expect(totalDeLineas(lineas)).toBe(97.52);
+
+    const deMas = lineasPorItem(FACTURA, MOTIVOS_CREDITO.DEVOLUCION_ITEM, [{ indice: 1, cantidad: 99, monto: 0 }]);
+    expect(deMas[0]?.cantidad).toBe(6);
+  });
+
+  it("el descuento por ítem es una línea por producto con su código", () => {
+    const lineas = lineasPorItem(FACTURA, MOTIVOS_CREDITO.DESCUENTO_ITEM, [{ indice: 0, cantidad: 0, monto: 11.8 }]);
+    expect(lineas).toEqual([
+      expect.objectContaining({ codigo: lineas[0]?.codigo, cantidad: 1, valor_unitario: 10 }),
+    ]);
+    expect(lineas[0]?.descripcion.startsWith("Descuento: ")).toBe(true);
+    expect(totalDeLineas(lineas)).toBe(11.8);
+  });
+
+  it("un índice que no existe no entra", () => {
+    expect(lineasPorItem(FACTURA, MOTIVOS_CREDITO.DEVOLUCION_ITEM, [{ indice: 7, cantidad: 1, monto: 0 }])).toEqual([]);
   });
 });

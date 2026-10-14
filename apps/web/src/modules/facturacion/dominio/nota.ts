@@ -23,6 +23,8 @@ export const MOTIVOS_CREDITO = {
   DESCUENTO_ITEM: "05",
   DEVOLUCION_TOTAL: "06",
   DEVOLUCION_ITEM: "07",
+  // En el catálogo 09 desde siempre y faltaba aquí; su sistema lo ofrece (15/10).
+  BONIFICACION: "08",
   DISMINUCION_VALOR: "09",
   OTROS: "10",
 } as const;
@@ -63,6 +65,28 @@ export function esMotivoTotal(codigo: string): boolean {
  */
 export function esCorreccionSinImporte(codigo: string): boolean {
   return codigo === MOTIVOS_CREDITO.CORRECCION_DESCRIPCION;
+}
+
+/**
+ * Motivos que van POR PRODUCTO: se eligen las líneas de la factura.
+ *
+ * Luis, 15/10, con la nota de su sistema delante: ahí aparecen los productos
+ * de la factura y se marca cuáles vuelven y cuántos. Aquí salía una sola
+ * línea «NOTA» con un monto a mano, y el papel no decía QUÉ se devolvió: con
+ * rodamientos, «devuelven 2 de las 6 chumaceras» es justo el dato que importa.
+ */
+export function esMotivoPorItem(codigo: string): boolean {
+  return codigo === MOTIVOS_CREDITO.DEVOLUCION_ITEM || codigo === MOTIVOS_CREDITO.DESCUENTO_ITEM;
+}
+
+/**
+ * Lo elegido de una línea del documento: en la devolución, cuántas unidades
+ * vuelven; en el descuento, cuánto se rebaja CON IGV.
+ */
+export interface EleccionItem {
+  indice: number;
+  cantidad: number;
+  monto: number;
 }
 
 export interface BloqueoNota {
@@ -260,6 +284,65 @@ export function lineasDeNota(
       descuento_pct: 0,
     },
   ];
+}
+
+/**
+ * Las líneas de una nota por producto (05 y 07).
+ *
+ * - **Devolución:** la línea original con las unidades que vuelven, a su
+ *   mismo valor unitario y descuento. Nunca más de las que se facturaron.
+ * - **Descuento:** una línea por producto, «Descuento: <descripción>», por
+ *   el importe rebajado. Con su código, para que se sepa a qué se aplicó.
+ *
+ * Lo que no se eligió (cero) no entra.
+ */
+export function lineasPorItem(
+  documento: ComprobanteDetalle,
+  motivo: string,
+  elegidos: readonly EleccionItem[],
+): LineaNota[] {
+  const lineas: LineaNota[] = [];
+  for (const e of elegidos) {
+    const l = documento.lineas[e.indice];
+    if (!l) continue;
+    if (motivo === MOTIVOS_CREDITO.DEVOLUCION_ITEM) {
+      const cantidad = Math.min(Number(e.cantidad) || 0, l.cantidad);
+      if (!(cantidad > 0)) continue;
+      lineas.push({
+        producto_id: l.producto_id,
+        codigo: l.codigo,
+        descripcion: l.descripcion,
+        unidad: l.unidad,
+        cantidad,
+        valor_unitario: l.valor_unitario,
+        descuento_pct: l.descuento_pct,
+      });
+    } else if (motivo === MOTIVOS_CREDITO.DESCUENTO_ITEM) {
+      const valor = valorSinIgv(Number(e.monto) || 0);
+      if (!(valor > 0)) continue;
+      lineas.push({
+        producto_id: l.producto_id,
+        codigo: l.codigo,
+        descripcion: `Descuento: ${l.descripcion}`,
+        unidad: l.unidad,
+        cantidad: 1,
+        valor_unitario: valor,
+        descuento_pct: 0,
+      });
+    }
+  }
+  return lineas;
+}
+
+/**
+ * El total CON IGV de unas líneas, como lo calcula `emitir_comprobante`:
+ * cada importe redondeado, y el IGV una vez sobre la base entera.
+ */
+export function totalDeLineas(lineas: readonly LineaNota[], tasaIgv = 0.18): number {
+  const base = redondear2(
+    lineas.reduce((a, l) => a + importeConDescuento(l.cantidad, l.valor_unitario, l.descuento_pct), 0),
+  );
+  return redondear2(base + redondear2(base * tasaIgv));
 }
 
 /**

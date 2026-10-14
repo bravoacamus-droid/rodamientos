@@ -8,7 +8,10 @@ import type { Json } from "@rodatech/db/tipos";
 import { detalleComprobante, seriesDeNota } from "../api/consultas";
 import {
   bloqueosNota,
+  esMotivoPorItem,
   lineasDeNota,
+  lineasPorItem,
+  totalDeLineas,
   valorSinIgv,
 } from "../dominio/nota";
 
@@ -35,7 +38,21 @@ const esquema = z.object({
   motivo_codigo: z.string().length(2),
   fecha_emision: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida."),
   /** Importe CON IGV, que es como lo piensa quien emite. */
-  monto: z.number().positive().finite(),
+  monto: z.number().nonnegative().finite(),
+  /**
+   * Con devolución o descuento por ítem: qué líneas y cuánto. El importe
+   * entonces NO se cree del navegador: se recalcula aquí con estas líneas.
+   */
+  items: z
+    .array(
+      z.object({
+        indice: z.number().int().min(0),
+        cantidad: z.number().nonnegative().finite(),
+        monto: z.number().nonnegative().finite(),
+      }),
+    )
+    .max(200)
+    .default([]),
   concepto: z.string().max(500),
   observaciones: z.string().max(2000).nullable(),
 });
@@ -75,6 +92,15 @@ export async function emitirNota(
 
   const doc = ficha.datos;
 
+  // Por producto, el importe sale de las líneas elegidas y releídas del
+  // servidor, no del que mandó la pantalla.
+  const porItem = esMotivoPorItem(datos.motivo_codigo);
+  const lineasItem = porItem ? lineasPorItem(doc, datos.motivo_codigo, datos.items) : [];
+  if (porItem && lineasItem.length === 0) {
+    return { ok: false, error: "Marca al menos un producto, con cuántas unidades o cuánto se descuenta." };
+  }
+  const monto = porItem ? totalDeLineas(lineasItem) : datos.monto;
+
   // Cuánto se ha acreditado ya con otras notas vigentes. Sin este dato se
   // podrían emitir dos notas por el total y acreditar el doble de lo facturado.
   const supabase = await clienteServidor();
@@ -96,7 +122,7 @@ export async function emitirNota(
     doc,
     datos.tipo,
     datos.motivo_codigo,
-    datos.monto,
+    monto,
     datos.fecha_emision,
     yaAcreditado,
   );
@@ -117,7 +143,7 @@ export async function emitirNota(
         error: "No hay serie predeterminada para esta nota. Márcala en Configuración › SUNAT y numeración.",
       };
     }
-    const lineas = lineasDeNota(doc, datos.motivo_codigo, datos.monto, datos.concepto);
+    const lineas = porItem ? lineasItem : lineasDeNota(doc, datos.motivo_codigo, monto, datos.concepto);
 
     const payload = {
       tipo: datos.tipo,
