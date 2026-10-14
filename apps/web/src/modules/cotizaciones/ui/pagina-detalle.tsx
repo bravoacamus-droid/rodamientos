@@ -199,6 +199,22 @@ export default async function PaginaDetalleCotizacion({
     n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
 
   /*
+    La ficha EN SOLES cuando la venta es en soles (Luis, 15/10: *«tiene que
+    cambiar ahí la información de los productos, deberían pasarse a soles, y
+    por ahí también debería aparecer el cambio del día»*). Aprobada, al cambio
+    congelado; sin aprobar, al venta de SUNAT de hoy. Con la misma cuenta que
+    el papel y la factura: el unitario a céntimos y se vuelve a sumar.
+
+    El MARGEN sigue en dólares: los costos están en dólares, y convertir los
+    dos lados daría el mismo porcentaje con más redondeo.
+  */
+  const tcVer = moneda === "PEN" ? (tcFijo ?? (tcHoy && tcHoy.ok ? tcHoy.venta : null)) : null;
+  const monedaVer = tcVer ? "PEN" : "USD";
+  const dinero = (n: number) =>
+    n.toLocaleString("es-PE", { style: "currency", currency: monedaVer });
+  const unitVer = (u: number) => (tcVer ? Math.round(u * tcVer * 100) / 100 : u);
+
+  /*
     Qué le falta a este pedido, una sola vez y para dos sitios.
 
     Luis, 09/09: *«cuando se apruebe, lo que falta debería salir en listos para
@@ -255,9 +271,17 @@ export default async function PaginaDetalleCotizacion({
     confirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
   const importeDe = (l: (typeof lineas)[number], cantidad: number) =>
     Math.round(cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100) / 100;
+  /** El importe que se ENSEÑA, en la moneda de la venta. */
+  const importeVer = (l: (typeof lineas)[number], cantidad: number) =>
+    Math.round(cantidad * unitVer(l.valor_unitario) * (1 - l.descuento_pct / 100) * 100) / 100;
   const cambioAlConfirmar = confirmado && lineas.some((l) => lleva(l) !== Number(l.cantidad));
   const subtotalConfirmado = Math.round(lineas.reduce((t, l) => t + importeDe(l, lleva(l)), 0) * 100) / 100;
-  const igvConfirmado = Math.round(subtotalConfirmado * 0.18 * 100) / 100;
+  const subtotalConfirmadoVer = Math.round(lineas.reduce((t, l) => t + importeVer(l, lleva(l)), 0) * 100) / 100;
+  const igvConfirmadoVer = Math.round(subtotalConfirmadoVer * 0.18 * 100) / 100;
+  // Los totales de lo cotizado, en la moneda de la venta (`enSoles` ya los suma).
+  const totalesVer = enSolesVer
+    ? { subtotal: enSolesVer.subtotal, descuento: enSolesVer.descuento, igv: enSolesVer.igv, total: enSolesVer.total }
+    : { subtotal: cabecera.subtotal, descuento: cabecera.descuento_total, igv: cabecera.igv, total: cabecera.total };
   // El margen, también sobre lo que se lleva.
   const ventaMargen = cambioAlConfirmar ? subtotalConfirmado : cabecera.subtotal;
   const costoMargen = cambioAlConfirmar
@@ -509,6 +533,22 @@ export default async function PaginaDetalleCotizacion({
               {lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} en la
               cotización.
             </p>
+            {/* El cambio, a la vista: sin él no se sabe de dónde salen los soles. */}
+            {moneda === "PEN" ? (
+              <p className="mt-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
+                {tcVer ? (
+                  <>
+                    <strong>Precios en soles</strong> al tipo de cambio{" "}
+                    <strong className="tabular">{tcVer.toFixed(3)}</strong>
+                    {tcFijo
+                      ? ` (venta SUNAT, fijado al aprobar${fechaTc ? ` el ${fechaCorta(fechaTc)}` : ""}).`
+                      : ` (venta SUNAT de hoy${tcHoy && tcHoy.ok ? `, ${fechaCorta(tcHoy.fecha)}` : ""}). Se fija al aprobar.`}
+                  </>
+                ) : (
+                  <>Venta en soles, pero no se pudo traer el tipo de cambio de SUNAT: los precios siguen en dólares.</>
+                )}
+              </p>
+            ) : null}
           </header>
 
           {/*
@@ -593,7 +633,7 @@ export default async function PaginaDetalleCotizacion({
                       </td>
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
-                      {dolar(l.valor_unitario)}
+                      {dinero(unitVer(l.valor_unitario))}
                       {/* Sin esto, cantidad × valor no daba el importe de al
                           lado y no se veía por qué (revisión por módulos del
                           02/10). */}
@@ -606,10 +646,10 @@ export default async function PaginaDetalleCotizacion({
                     <td className="whitespace-nowrap px-4 py-2.5 text-right tabular font-medium">
                       {lleva(l) === 0 ? (
                         <span className="text-[var(--fg-subtle)] line-through">
-                          {dolar(importeDe(l, Number(l.cantidad)))}
+                          {dinero(importeVer(l, Number(l.cantidad)))}
                         </span>
                       ) : (
-                        dolar(importeDe(l, lleva(l)))
+                        dinero(importeVer(l, lleva(l)))
                       )}
                     </td>
                   </tr>
@@ -630,7 +670,7 @@ export default async function PaginaDetalleCotizacion({
                   <span
                     className={`shrink-0 tabular text-sm font-medium ${lleva(l) === 0 ? "text-[var(--fg-subtle)] line-through" : ""}`}
                   >
-                    {dolar(importeDe(l, lleva(l) === 0 ? Number(l.cantidad) : lleva(l)))}
+                    {dinero(importeVer(l, lleva(l) === 0 ? Number(l.cantidad) : lleva(l)))}
                   </span>
                 </div>
 
@@ -652,7 +692,7 @@ export default async function PaginaDetalleCotizacion({
                     unidad={unidadLegible(l.unidad_codigo)}
                   />{" "}
                   ×{" "}
-                  <span className="tabular">{dolar(l.valor_unitario)}</span>
+                  <span className="tabular">{dinero(unitVer(l.valor_unitario))}</span>
                   {/* Con el descuento, o la cuenta no da el importe de arriba. */}
                   {l.descuento_pct > 0 ? (
                     <span className="tabular"> − {l.descuento_pct}%</span>
@@ -682,47 +722,47 @@ export default async function PaginaDetalleCotizacion({
               <dl className="w-full max-w-xs text-sm">
                 <div className="flex items-baseline justify-between py-1">
                   <dt className="text-[var(--fg-muted)]">Subtotal confirmado (sin IGV)</dt>
-                  <dd className="tabular">{dolar(subtotalConfirmado)}</dd>
+                  <dd className="tabular">{dinero(subtotalConfirmadoVer)}</dd>
                 </div>
                 <div className="flex items-baseline justify-between py-1">
                   <dt className="text-[var(--fg-muted)]">IGV (18%)</dt>
-                  <dd className="tabular">{dolar(igvConfirmado)}</dd>
+                  <dd className="tabular">{dinero(igvConfirmadoVer)}</dd>
                 </div>
                 <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
                   <dt className="font-semibold">Total confirmado</dt>
-                  <dd className="tabular text-lg font-semibold">{dolar(subtotalConfirmado + igvConfirmado)}</dd>
+                  <dd className="tabular text-lg font-semibold">{dinero(subtotalConfirmadoVer + igvConfirmadoVer)}</dd>
                 </div>
                 <div className="flex items-baseline justify-between pt-1 text-[var(--fg-muted)]">
                   <dt>Se había cotizado</dt>
-                  <dd className="tabular">{dolar(cabecera.total)}</dd>
+                  <dd className="tabular">{dinero(totalesVer.total)}</dd>
                 </div>
               </dl>
             ) : (
             <dl className="w-full max-w-xs text-sm">
               <div className="flex items-baseline justify-between py-1">
                 <dt className="text-[var(--fg-muted)]">Subtotal (sin IGV)</dt>
-                <dd className="tabular">{dolar(cabecera.subtotal)}</dd>
+                <dd className="tabular">{dinero(totalesVer.subtotal)}</dd>
               </div>
-              {cabecera.descuento_total > 0 ? (
+              {totalesVer.descuento > 0 ? (
                 <div className="flex items-baseline justify-between py-1">
                   <dt className="text-[var(--fg-muted)]">Descuento</dt>
                   <dd className="tabular text-[var(--ok)]">
-                    − {dolar(cabecera.descuento_total)}
+                    − {dinero(totalesVer.descuento)}
                   </dd>
                 </div>
               ) : null}
               <div className="flex items-baseline justify-between py-1">
                 <dt className="text-[var(--fg-muted)]">IGV (18%)</dt>
-                <dd className="tabular">{dolar(cabecera.igv)}</dd>
+                <dd className="tabular">{dinero(totalesVer.igv)}</dd>
               </div>
               <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
                 <dt className="font-semibold">Total</dt>
-                <dd className="tabular text-lg font-semibold">{dolar(cabecera.total)}</dd>
+                <dd className="tabular text-lg font-semibold">{dinero(totalesVer.total)}</dd>
               </div>
-              {enSolesFijo && tcFijo ? (
-                <div className="flex items-baseline justify-between pt-1">
-                  <dt className="font-semibold">En soles (cambio {tcFijo.toFixed(3)})</dt>
-                  <dd className="tabular text-lg font-semibold">S/ {enSolesFijo.total.toFixed(2)}</dd>
+              {tcVer ? (
+                <div className="flex items-baseline justify-between pt-1 text-[var(--fg-muted)]">
+                  <dt>En dólares</dt>
+                  <dd className="tabular">{dolar(cabecera.total)}</dd>
                 </div>
               ) : null}
             </dl>

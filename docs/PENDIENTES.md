@@ -7982,3 +7982,13 @@ SUNAT. `/ver` pasa el papel por `enSoles`. El centinela mira ahora también la
 lista blanca de la CABECERA (antes solo la de las líneas). Probado con
 `curl` sobre la COT1-000012 pasada a soles y devuelta a dólares: «S/ 12.13»,
 «DOCE CON 13/100 SOLES», cambio 3.448; en dólares, igual que antes.
+
+**La ficha entera en soles (15/10).** Luis: *«tiene que cambiar ahí la
+información de los productos, deberían pasarse a soles, y por ahí también
+debería aparecer el cambio del día, dinámico; si no, ¿cómo va a saber?»*. Con
+la venta en soles, la tabla de productos (unitario e importe), el subtotal, el
+IGV y el total salen en soles —al cambio de hoy, o al congelado si está
+aprobada—, con un aviso encima: «Precios en soles al tipo de cambio 3.439
+(venta SUNAT de hoy, 14/10/2026). Se fija al aprobar». Debajo del total, «En
+dólares» como referencia. El margen sigue en dólares (los costos lo están).
+Visto en pantalla con la COT1-000012, devuelta a dólares.
