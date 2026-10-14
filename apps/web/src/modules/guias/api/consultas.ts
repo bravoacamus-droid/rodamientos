@@ -183,6 +183,24 @@ export async function listarGuias(
   }
 }
 
+/**
+ * «San Juan de Lurigancho, Lima - Lima» en vez de «150132» (15/10): el papel
+ * de su sistema escribe el distrito, y el nuestro el código del ubigeo.
+ */
+async function nombresDeUbigeo(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  [partida, llegada]: (string | null)[],
+): Promise<{ partida_lugar: string | null; llegada_lugar: string | null }> {
+  const codigos = [partida, llegada].filter((c): c is string => Boolean(c));
+  if (codigos.length === 0) return { partida_lugar: null, llegada_lugar: null };
+  const { data } = await supabase.from("ubigeo").select("codigo, departamento, provincia, distrito").in("codigo", codigos);
+  const nombre = (c: string | null | undefined) => {
+    const u = (data ?? []).find((x) => x.codigo === c);
+    return u ? `${u.distrito}, ${u.provincia} - ${u.departamento}` : null;
+  };
+  return { partida_lugar: nombre(partida), llegada_lugar: nombre(llegada) };
+}
+
 /** La ficha de una guía, con sus líneas. */
 export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | null>> {
   try {
@@ -201,7 +219,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
          conductor_telefono, a_pie,
          entregado_por, recibido_por, estado, estado_sunat, sunat_mensaje,
          observaciones, motivo_anulacion, creado_en,
-         clientes(razon_social, numero_documento),
+         clientes(razon_social, numero_documento, telefono, direccion),
          cotizaciones(numero),
          guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg,
                     productos(es_kit, stock(cantidad)))`,
@@ -263,6 +281,9 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         cliente_id: String(g.cliente_id),
         cliente: g.clientes?.razon_social ?? null,
         cliente_documento: g.clientes?.numero_documento ?? null,
+        cliente_telefono: (g.clientes as { telefono?: string | null } | null)?.telefono ?? null,
+        cliente_direccion: (g.clientes as { direccion?: string | null } | null)?.direccion ?? null,
+        ...(await nombresDeUbigeo(supabase, [g.ubigeo_partida as string | null, g.ubigeo_llegada as string | null])),
         cotizacion_id: (g.cotizacion_id as string | null) ?? null,
         cotizacion_numero: g.cotizaciones?.numero ?? null,
         orden_compra_cliente: (g.orden_compra_cliente as string | null) ?? null,

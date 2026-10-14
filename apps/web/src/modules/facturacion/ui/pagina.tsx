@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Ban, ShieldCheck, Info, Plus, Receipt, Settings, Wallet } from "lucide-react";
+import { Ban, FileArchive, ShieldCheck, Info, Plus, Receipt, Settings, Wallet } from "lucide-react";
 import { Skeleton, buttonVariants, cn, formatearMoneda, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -41,6 +41,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     tipo: uno(sp.tipo),
     estado: uno(sp.estado),
     sunat: uno(sp.sunat),
+    cr: uno(sp.cr),
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
     cursor: uno(sp.cursor),
@@ -90,6 +91,19 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
             «Volver» y que los botones de la ficha (revisión por módulos del
             02/10): había tres alturas y dos radios entre lista y ficha. */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Los CR del periodo y cliente que se están viendo, en un ZIP
+              por cliente (Willy, 14/10: «descargar todo… por carpetas»). */}
+          <a
+            href={`/facturacion/cr?${new URLSearchParams(
+              Object.entries({ desde: filtros.desde ?? "", hasta: filtros.hasta ?? "", cliente: filtros.cliente ?? "" }).filter(
+                ([, v]) => v,
+              ),
+            ).toString()}`}
+            className={cn(buttonVariants({ variant: "outline" }), "px-3")}
+          >
+            <FileArchive className="size-4" aria-hidden="true" />
+            Descargar CR
+          </a>
           {esGerencia ? (
             <Link
               href="/configuracion/sunat"

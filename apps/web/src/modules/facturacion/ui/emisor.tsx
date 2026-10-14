@@ -583,8 +583,15 @@ export function EmisorComprobante({
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="flex min-w-0 flex-1 flex-col gap-5">
           {/* ------------------------------------------------- Cabecera */}
+          {/*
+            La cabecera, compacta (Luis y Willy, 14/10): la cotización y la
+            orden de compra del cliente MITAD Y MITAD arriba —la O/C viene de
+            la guía—, y debajo comprobante, fecha, pago y plazo en una fila.
+            La O/C vivía sola al fondo, en una tarjeta entera.
+          */}
           <section className="card p-4">
-            <div className="flex flex-col gap-1">
+            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex min-w-0 flex-col gap-1">
               <label htmlFor="fac-cotizacion" className="text-sm font-medium">
                 Cotización aprobada <span className="text-[var(--danger)]">*</span>
               </label>
@@ -609,6 +616,20 @@ export function EmisorComprobante({
               ) : null}
             </div>
 
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-sm font-medium">Orden de compra del cliente</span>
+              <Input
+                value={ordenCompra}
+                onChange={(e) => setOrdenCompra(e.target.value)}
+                placeholder={cot ? "La que vino en la guía" : "Elige primero la cotización"}
+                disabled={!cot}
+              />
+              <span className="text-sm text-[var(--fg-muted)]">
+                {cot && ordenCompra.trim() ? "Viene de la guía; sale impresa en la factura." : "Sale impresa en la factura."}
+              </span>
+            </label>
+            </div>
+
             {cargando ? (
               <p className="anim-latido mt-3 text-sm text-[var(--fg-muted)]">
                 Trayendo la cotización…
@@ -626,10 +647,10 @@ export function EmisorComprobante({
                 {/* Solo facturas (14/10): Willy no emite boletas. */}
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Comprobante</span>
-                  <p className="flex h-control-md items-center text-base font-semibold">Factura</p>
-                  <span className="text-sm text-[var(--fg-muted)]">
-                    Serie <strong className="font-mono font-semibold text-[var(--fg)]">{serie}</strong>
-                  </span>
+                  <p className="flex h-control-md items-center gap-2 rounded-md bg-[var(--surface-2)] px-3 text-base font-semibold">
+                    Factura
+                    <span className="font-mono text-sm font-semibold text-[var(--fg-muted)]">{serie}</span>
+                  </p>
                 </div>
 
                 <label className="flex flex-col gap-1">
@@ -899,21 +920,6 @@ export function EmisorComprobante({
                 que la base sigue recibiendo lo mismo. Si algún día vuelve la
                 venta sin guía, se vuelve a enseñar aquí y ya está.
               */}
-
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">
-                  Orden de compra del cliente
-                </span>
-                <Input
-                  value={ordenCompra}
-                  onChange={(e) => setOrdenCompra(e.target.value)}
-                  placeholder="La que mandó al confirmar"
-                />
-                <span className="text-sm text-[var(--fg-muted)]">
-                  Sale impresa en el comprobante. Si te piden solo los últimos
-                  dígitos —el 345 de 2026-000-345—, escribe esos.
-                </span>
-              </label>
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Observaciones</span>

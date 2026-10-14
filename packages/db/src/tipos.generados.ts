@@ -1098,6 +1098,68 @@ export type Database = {
           },
         ]
       }
+      comprobante_retenciones: {
+        Row: {
+          comprobante_id: string
+          mime: string
+          nombre: string
+          numero_cr: string | null
+          ruta: string
+          sha256: string
+          subido_en: string
+          subido_por: string | null
+        }
+        Insert: {
+          comprobante_id: string
+          mime: string
+          nombre: string
+          numero_cr?: string | null
+          ruta: string
+          sha256: string
+          subido_en?: string
+          subido_por?: string | null
+        }
+        Update: {
+          comprobante_id?: string
+          mime?: string
+          nombre?: string
+          numero_cr?: string | null
+          ruta?: string
+          sha256?: string
+          subido_en?: string
+          subido_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: true
+            referencedRelation: "comprobantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: true
+            referencedRelation: "v_cartera"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: true
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_retenciones_subido_por_fkey"
+            columns: ["subido_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comprobantes: {
         Row: {
           actualizado_en: string
@@ -5249,7 +5311,7 @@ export type Database = {
         }[]
       }
       poner_moneda_cotizacion: {
-        Args: { p_id: string; p_moneda: string }
+        Args: { p_id: string; p_moneda: string; p_tipo_cambio?: number }
         Returns: undefined
       }
       poner_orden_compra_cliente: {
@@ -5377,6 +5439,10 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      repetir_pedido: {
+        Args: { p_id: string; p_lineas: Json; p_oc?: string }
+        Returns: Json
+      }
       rescatar_envios_sunat: { Args: never; Returns: Json }
       resumen_trazabilidad: { Args: { p_producto: string }; Returns: Json }
       serie_compras: {

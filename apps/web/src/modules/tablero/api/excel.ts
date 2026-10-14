@@ -352,6 +352,71 @@ export async function libroDetalle(opciones: {
     }
   }
 
+  // ------------------------------------------------------------- Facturas --
+  /*
+    Una fila por documento, con la retención y su CR (Willy, 14/10: «en el
+    reporte en Excel del listado de facturas debe aparecer [si tiene
+    retención]… para hacerle seguimiento»). El total va en la moneda del
+    documento y además en dólares, que es como suman los reportes.
+  */
+  if (tipo === "ventas") {
+    const supabase = await clienteServidor();
+    let consulta = supabase
+      .from("comprobantes")
+      .select(
+        `numero, tipo, fecha_emision, estado, total, saldo, moneda, pen_total, orden_compra_cliente,
+         retencion_aplica, retencion_monto, pen_retencion,
+         clientes(razon_social, numero_documento),
+         comprobante_retenciones(numero_cr)`,
+      )
+      .gte("fecha_emision", desde)
+      .lte("fecha_emision", hasta)
+      .order("fecha_emision")
+      .limit(5000);
+    if (cliente) consulta = consulta.eq("cliente_id", cliente);
+    const { data: docs } = await consulta;
+    const hojaFacturas = wb.addWorksheet("Facturas", { views: [{ state: "frozen", ySplit: 1 }] });
+    hojaFacturas.columns = [
+      { header: "Fecha", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+      { header: "Tipo", width: 15 },
+      { header: "Número", width: 15 },
+      { header: "Cliente", width: 40 },
+      { header: "RUC / DNI", width: 14 },
+      { header: "Orden de compra", width: 16 },
+      { header: "Moneda", width: 8 },
+      { header: "Total (moneda del documento)", width: 18, style: { numFmt: "#,##0.00" } },
+      { header: "Total en dólares", width: 16, style: { numFmt: DINERO } },
+      { header: "Retención", width: 10 },
+      { header: "Monto retenido (moneda del documento)", width: 20, style: { numFmt: "#,##0.00" } },
+      { header: "CR", width: 14 },
+      { header: "Cobro", width: 15 },
+    ];
+    hojaFacturas.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    hojaFacturas.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
+    const n = (v: unknown) => Number(v ?? 0);
+    for (const d of (docs ?? []) as Record<string, unknown>[]) {
+      const enSoles = d.moneda === "PEN" && d.pen_total != null;
+      const cli = d.clientes as { razon_social?: string; numero_documento?: string } | null;
+      const retiene = Boolean(d.retencion_aplica);
+      const cr = d.comprobante_retenciones as { numero_cr?: string | null } | null;
+      hojaFacturas.addRow([
+        fechaExcel(String(d.fecha_emision)),
+        d.tipo === "nota_credito" ? "Nota de crédito" : d.tipo === "nota_debito" ? "Nota de débito" : "Factura",
+        String(d.numero),
+        cli?.razon_social ?? "",
+        cli?.numero_documento ?? "",
+        (d.orden_compra_cliente as string | null) ?? "",
+        enSoles ? "PEN" : "USD",
+        enSoles ? n(d.pen_total) : n(d.total),
+        n(d.total),
+        retiene ? "Sí" : "No",
+        retiene ? (enSoles ? n(d.pen_retencion) : n(d.retencion_monto)) : "",
+        retiene ? (cr ? (cr.numero_cr ? `Registrado ${cr.numero_cr}` : "Registrado") : "Falta") : "",
+        d.estado === "anulado" ? "Anulado" : (ESTADO_VENTA[String(d.estado)] ?? String(d.estado)),
+      ]);
+    }
+  }
+
   const datos = await wb.xlsx.writeBuffer();
   return { libro: Buffer.from(datos as ArrayBuffer), lineas: lineas.length };
 }

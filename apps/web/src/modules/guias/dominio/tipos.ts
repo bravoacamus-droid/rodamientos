@@ -94,6 +94,12 @@ export interface GuiaDetalle {
   cliente_id: string;
   cliente: string | null;
   cliente_documento: string | null;
+  /** Para el papel, como su formato (15/10). */
+  cliente_telefono: string | null;
+  cliente_direccion: string | null;
+  /** El distrito escrito, no el código del ubigeo. */
+  partida_lugar: string | null;
+  llegada_lugar: string | null;
   cotizacion_id: string | null;
   cotizacion_numero: string | null;
   orden_compra_cliente: string | null;

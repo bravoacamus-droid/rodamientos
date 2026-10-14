@@ -165,8 +165,8 @@ export function SelectorMonedaPapel() {
 
       {estado.enSoles && estado.fijo ? (
         <span className="text-base">
-          Tipo de cambio <strong className="tabular">{estado.tipoCambio?.toFixed(3)}</strong>, fijado al aprobar
-          {estado.fecha ? ` el ${fechaCorta(estado.fecha)}` : ""}
+          Tipo de cambio <strong className="tabular">{estado.tipoCambio?.toFixed(3)}</strong>, del día de la cotización
+          {estado.fecha ? ` (${fechaCorta(estado.fecha)})` : ""}
         </span>
       ) : estado.enSoles ? (
         <div className="flex flex-wrap items-center gap-2">

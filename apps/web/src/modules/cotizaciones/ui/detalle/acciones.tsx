@@ -22,6 +22,7 @@ import type { EstadoCotizacion } from "../../dominio/tipos";
 import type { DatosMensaje } from "../../dominio/whatsapp";
 import { DialogoEnviar } from "./dialogo-enviar";
 import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
+import { OtroPedido } from "./otro-pedido";
 
 /**
  * Acciones de una cotización.
@@ -268,7 +269,12 @@ export function AccionesCotizacion({
                 Ver guía {guias[guias.length - 1]!.numero}
               </Button>
             ) : null}
+            {/* Ya despachado y facturado todo: el siguiente pedido (121). */}
+            {!despachable && !facturable ? <OtroPedido cotizacionId={id} lineas={lineas} /> : null}
           </>
+        ) : estado === "atendida" ? (
+          // Atendida: lo que sigue, si el cliente vuelve a pedir (Willy, 14/10).
+          <OtroPedido cotizacionId={id} lineas={lineas} />
         ) : null}
 
         {/*

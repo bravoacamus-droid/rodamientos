@@ -344,6 +344,14 @@ function Insignias({ c }: { c: ComprobanteLista }) {
           Anulado
         </span>
       ) : null}
+      {/* Con retención: si ya tiene su CR o falta (120). */}
+      {c.retencion && c.estado !== "anulado" ? (
+        <span
+          className={`rounded-sm px-1.5 py-0.5 text-sm font-medium ${c.conCr ? "bg-[var(--surface-2)] text-[var(--ok)]" : "bg-[var(--warn-bg)] text-[var(--warn)]"}`}
+        >
+          {c.conCr ? "Retención · CR ok" : "Retención · falta CR"}
+        </span>
+      ) : null}
     </span>
   );
 }

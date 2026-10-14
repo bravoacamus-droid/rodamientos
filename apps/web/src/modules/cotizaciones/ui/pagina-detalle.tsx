@@ -163,7 +163,8 @@ export default async function PaginaDetalleCotizacion({
   */
   const moneda = cabecera.moneda === "PEN" ? "PEN" : "USD";
   const tcFijo = Number(cabecera.tipo_cambio) > 0 ? Number(cabecera.tipo_cambio) : null;
-  const fechaTc = cabecera.aprobada_en ? cabecera.aprobada_en.slice(0, 10) : "";
+  // El cambio es el del DÍA DE LA COTIZACIÓN (119): se fija al pasarla a soles.
+  const fechaTc = cabecera.fecha ? cabecera.fecha.slice(0, 10) : "";
   const enSolesFijo =
     moneda === "PEN" && tcFijo ? enSoles(impresa, { valor: tcFijo, fecha: fechaTc }) : null;
   // En soles y sin aprobar: al cambio de hoy, para el mensaje y la tarjeta.
@@ -406,11 +407,11 @@ export default async function PaginaDetalleCotizacion({
             valor={moneda === "PEN" ? "Soles" : "Dólares"}
             detalle={
               enSolesFijo && tcFijo
-                ? `S/ ${enSolesFijo.total.toFixed(2)} · cambio ${tcFijo.toFixed(3)} fijado al aprobar`
+                ? `S/ ${enSolesFijo.total.toFixed(2)} · cambio ${tcFijo.toFixed(3)} del ${fechaCorta(fechaTc)}, el día de la cotización`
                 : moneda === "PEN"
                   ? enSolesHoy && tcHoy?.ok
-                    ? `≈ S/ ${enSolesHoy.total.toFixed(2)} al cambio de hoy (${tcHoy.venta.toFixed(3)}); se fija al aprobar`
-                    : "el tipo de cambio se fija al aprobar"
+                    ? `≈ S/ ${enSolesHoy.total.toFixed(2)} al cambio de hoy (${tcHoy.venta.toFixed(3)}); SUNAT no dio el de su fecha`
+                    : "sin tipo de cambio: se pide al aprobar"
                   : "factura y cobro en dólares"
             }
             accion={
@@ -541,8 +542,8 @@ export default async function PaginaDetalleCotizacion({
                     <strong>Precios en soles</strong> al tipo de cambio{" "}
                     <strong className="tabular">{tcVer.toFixed(3)}</strong>
                     {tcFijo
-                      ? ` (venta SUNAT, fijado al aprobar${fechaTc ? ` el ${fechaCorta(fechaTc)}` : ""}).`
-                      : ` (venta SUNAT de hoy${tcHoy && tcHoy.ok ? `, ${fechaCorta(tcHoy.fecha)}` : ""}). Se fija al aprobar.`}
+                      ? ` (venta SUNAT del ${fechaCorta(fechaTc)}, el día de la cotización). Se mantiene aunque se apruebe otro día.`
+                      : ` (venta SUNAT de hoy${tcHoy && tcHoy.ok ? `, ${fechaCorta(tcHoy.fecha)}` : ""}): no se pudo traer el de su fecha. Se fija al aprobar.`}
                   </>
                 ) : (
                   <>Venta en soles, pero no se pudo traer el tipo de cambio de SUNAT: los precios siguen en dólares.</>

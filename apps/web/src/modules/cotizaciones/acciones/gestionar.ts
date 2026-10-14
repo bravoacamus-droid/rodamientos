@@ -80,22 +80,22 @@ export async function aprobar(
     const supabase = await clienteServidor();
 
     /*
-      En soles, el tipo de cambio se CONGELA aquí (116, Luis 14/10): es lo que
-      el cliente aceptó, y con él sale la factura. El venta de SUNAT de hoy; si
-      SUNAT no contesta, el que escriban.
+      En soles, el cambio es el del DÍA DE LA COTIZACIÓN (119, Willy 14/10) y
+      ya se fijó al pasarla a soles. Aquí solo se busca si falta: el venta de
+      SUNAT de su fecha; si SUNAT no contesta, el que escriban.
     */
     let tipoCambio: number | null = null;
     const { data: cab, error: errorCab } = await supabase
       .from("cotizaciones")
-      .select("moneda")
+      .select("moneda, tipo_cambio, fecha")
       .eq("id", id)
       .maybeSingle();
     if (errorCab) return { ok: false, error: errorCab.message };
-    if (cab?.moneda === "PEN") {
+    if (cab?.moneda === "PEN" && !(Number(cab.tipo_cambio) > 0)) {
       if (typeof tipoCambioManual === "number" && tipoCambioManual > 0 && tipoCambioManual < 100) {
         tipoCambio = tipoCambioManual;
       } else {
-        const tc = await consultarTipoCambio();
+        const tc = await consultarTipoCambio(cab.fecha);
         if (!tc.ok) {
           return {
             ok: false,
@@ -335,11 +335,59 @@ export async function ponerMoneda(id: string, moneda: "USD" | "PEN"): Promise<Re
 
   try {
     const supabase = await clienteServidor();
-    const { error } = await supabase.rpc("poner_moneda_cotizacion", { p_id: id, p_moneda: moneda });
+    /*
+      En soles, el cambio del DÍA DE LA COTIZACIÓN, fijado ya (119). Willy,
+      14/10: «tiene que mantener el mismo precio… ese tipo de cambio tiene que
+      ser del día que se cotizó». Si SUNAT no contesta, se pide al aprobar.
+    */
+    let tipoCambio: number | null = null;
+    if (moneda === "PEN") {
+      const { data: cab } = await supabase.from("cotizaciones").select("fecha").eq("id", id).maybeSingle();
+      const tc = await consultarTipoCambio(cab?.fecha);
+      if (tc.ok) tipoCambio = tc.venta;
+    }
+    const { error } = await supabase.rpc("poner_moneda_cotizacion", {
+      p_id: id,
+      p_moneda: moneda,
+      ...(tipoCambio ? { p_tipo_cambio: tipoCambio } : {}),
+    });
     if (error) return { ok: false, error: error.message };
     refrescar(id);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo cambiar la moneda." };
+  }
+}
+
+/**
+ * Otro pedido con la misma cotización (121). Willy, 14/10: el cliente
+ * fidelizado le pide otra vez lo mismo y él saca la guía y la factura de la
+ * misma cotización; salen con su propio número, colgando de ella.
+ */
+export async function repetirPedido(
+  id: string,
+  lineas: { item_id: string; cantidad: number }[],
+  ordenCompra: string,
+): Promise<ResultadoGestion> {
+  const problema = await exigirPermiso();
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  const revision = z.array(esquemaLinea).min(1).max(200).safeParse(lineas);
+  if (!revision.success) return { ok: false, error: "Las cantidades del pedido no son válidas." };
+  if (!revision.data.some((l) => l.cantidad > 0)) return { ok: false, error: "Pon al menos una cantidad." };
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("repetir_pedido", {
+      p_id: id,
+      p_lineas: revision.data as unknown as Json,
+      p_oc: ordenCompra.trim().slice(0, 60) || undefined,
+    });
+    if (error) return { ok: false, error: error.message };
+    refrescar(id);
+    revalidatePath("/guias");
+    return { ok: true, id };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo registrar el pedido." };
   }
 }

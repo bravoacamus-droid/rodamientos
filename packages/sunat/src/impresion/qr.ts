@@ -64,3 +64,11 @@ export async function generarQrSvg(d: DatosQr): Promise<string> {
     margin: 1,
   });
 }
+
+/**
+ * El mismo QR como PNG en data URL, para el PDF que se arma en el navegador
+ * (jsPDF no dibuja SVG). Se genera en el servidor y viaja como texto.
+ */
+export async function generarQrPng(d: DatosQr): Promise<string> {
+  return QRCode.toDataURL(contenidoQr(d), { errorCorrectionLevel: "M", margin: 1, width: 240 });
+}

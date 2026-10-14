@@ -8058,3 +8058,42 @@ F002-45 a F002-532; dos siguen por cobrar: F002-527 (S/ 1,165.02) y F002-532
 Y un fallo que salió al verlo: el saldo en soles se calculaba saldo × cambio,
 y con el cambio a tres decimales la F002-532 sin pagar decía «pagado S/ 0.05».
 Ahora es proporcional al total (ficha, lista, cartera, estado de cuenta).
+
+---
+
+## §CB · 15/10 — Reunión con Willy del 14/10: CR, otro pedido, papeles y cambio de la cotización
+
+- **El tipo de cambio es el del DÍA DE LA COTIZACIÓN (119).** Willy: *«la
+  cotización un día 10… se aprueba el 14… tiene que mantener el mismo
+  precio; el tipo de cambio tiene que ser del día que se cotizó»*. Se fija al
+  pasarla a soles (venta SUNAT de su fecha); aprobar lo respeta y solo lo pide
+  si falta. Reportes, siempre en dólares.
+- **«Registrar CR» (120).** En cada factura con retención: sube el PDF del
+  comprobante de retención y queda colgado de su factura; el mismo archivo
+  (sha256) no entra en dos facturas y se dice en cuál está. En la lista,
+  «Retención · falta CR» / «CR ok» y el filtro «Falta el CR». «Descargar CR»
+  baja un ZIP con una carpeta por cliente, del periodo y cliente filtrados.
+  Willy: *«al final de año salió como 5 mil soles… plata dormida»*.
+- **Atender otro pedido con la misma cotización (121).** Willy: *«un cliente
+  fidelizado me pide 20 cada cierto tiempo… cojo la misma cotización y le
+  hago la guía y la factura»*. «Atender otro pedido» suma las cantidades a
+  lo confirmado (que ya puede pasar de lo cotizado), pone la O/C nueva,
+  reabre la cotización y lleva a la guía. Guía y factura con su número.
+- **Emitir factura, compacta.** Cotización y O/C del cliente mitad y mitad
+  arriba (la O/C viene de la guía); comprobante, fecha, pago y días en una
+  fila. La O/C ya no vive sola al fondo.
+- **El papel de la factura, con lo de su formato** (F002-564/565): moneda,
+  precio unitario con IGV, total de ítems, las cuatro operaciones aunque
+  vayan en cero, «importe total», detalle de cuotas aunque sea una, y el QR
+  con el hash (en el papel y en el PDF).
+- **El papel de la guía** (T002-558): dirección y teléfono del destinatario,
+  el distrito escrito en partida y llegada (no el código), peso con dos
+  decimales, «Guía de remisión electrónica · Remitente».
+- **Excel de ventas**: hoja nueva «Facturas», una fila por documento, con
+  moneda, total en su moneda y en dólares, retención, monto retenido y CR.
+
+Sin probar en pantalla: «Registrar CR» y su ZIP con un CR de verdad (no hay
+ninguna factura con retención), «Atender otro pedido» (no hay cotización
+atendida) y la hoja «Facturas» abierta en Excel. **No hecho**: medio de pago
+en el papel (no se guarda), y el XML/CDR de las notas, que llegan con el
+certificado.

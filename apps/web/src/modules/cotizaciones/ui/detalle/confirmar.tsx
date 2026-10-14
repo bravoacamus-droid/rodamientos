@@ -325,7 +325,8 @@ export function DialogoConfirmar({
           {enSoles && !corrigiendo ? (
             <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-sm">
               <p>
-                <strong>Venta en soles.</strong> Al aprobar se fija el tipo de cambio venta de SUNAT de hoy, y con él
+                <strong>Venta en soles.</strong> Se mantiene el tipo de cambio del día de la cotización (si faltaba, el de
+                SUNAT de esa fecha), y con él
                 salen la factura y el cobro.
               </p>
               {pideTc ? (

@@ -52,7 +52,12 @@ export type BloquePiePdf =
   /** Una tabla chica con título (las cuotas de la factura). */
   | { tipo: "tabla"; titulo: string; cabecera: string[]; filas: string[][]; derecha?: number[] }
   /** La raya para el sello y la firma del que recibe. */
-  | { tipo: "sello"; texto: string };
+  | { tipo: "sello"; texto: string }
+  /**
+   * El QR de la representación impresa (PNG en data URL) y el hash, a la
+   * derecha, como en el formato de Willy (15/10).
+   */
+  | { tipo: "qr"; dato: string; hash: string | null };
 
 export interface HojaPdf {
   emisor: EmisorHoja;
@@ -442,6 +447,18 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
           tableLineWidth: 0.2,
         });
         y = finalY() + 4;
+      } else if (b.tipo === "qr") {
+        const lado = 28;
+        y = quedaSitio(y + 3, lado + 6);
+        const x0 = anchoPagina - MARGEN - lado;
+        doc.addImage(b.dato, "PNG", x0, y, lado, lado);
+        if (b.hash) {
+          doc.setFont("helvetica", "bold");
+          doc.text("Hash:", MARGEN, y + 4);
+          doc.setFont("helvetica", "normal");
+          doc.text(textoPdf(b.hash), MARGEN + 12, y + 4);
+        }
+        y += lado + 3;
       } else if (b.tipo === "sello") {
         // Sitio en blanco para el sello del que recibe, con su raya.
         y = quedaSitio(y + 14, 8);

@@ -101,7 +101,8 @@ export async function listarComprobantes(
       .from("comprobantes")
       .select(
         `id, creado_en, tipo, numero, fecha_emision, fecha_vencimiento, total, pagado, saldo,
-         estado, estado_sunat, moneda, tipo_cambio, pen_total,
+         estado, estado_sunat, moneda, tipo_cambio, pen_total, retencion_aplica,
+         comprobante_retenciones(comprobante_id),
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
@@ -127,6 +128,10 @@ export async function listarComprobantes(
     if (estado) consulta = consulta.eq("estado", estado);
     const sunat = SUNAT.find((s) => s === filtros.sunat);
     if (sunat) consulta = consulta.eq("estado_sunat", sunat);
+    // Con retención y sin su CR (120): lo que queda por pedirle al cliente.
+    if (filtros.cr === "sin") {
+      consulta = consulta.eq("retencion_aplica", true).neq("estado", "anulado").is("comprobante_retenciones", null);
+    }
 
     if (filtros.q) {
       /*
@@ -180,6 +185,8 @@ export async function listarComprobantes(
       pagado: Math.round((totalDoc - saldoDoc) * 100) / 100,
       saldo: saldoDoc,
       moneda: tc > 0 ? "PEN" : "USD",
+      retencion: Boolean(c.retencion_aplica),
+      conCr: Boolean(c.comprobante_retenciones),
       estado: c.estado as EstadoComprobante,
       estado_sunat: c.estado_sunat as EstadoSunat,
       vendedor: c.perfiles?.nombre ?? null,
@@ -723,6 +730,23 @@ export async function yaAcreditadoDe(comprobanteId: string): Promise<number> {
     );
   } catch {
     return 0;
+  }
+}
+
+/** El CR de una factura (120), si ya se registró. */
+export async function crDe(
+  comprobanteId: string,
+): Promise<{ nombre: string; numero_cr: string | null; subido_en: string } | null> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("comprobante_retenciones")
+      .select("nombre, numero_cr, subido_en")
+      .eq("comprobante_id", comprobanteId)
+      .maybeSingle();
+    return data ? { nombre: String(data.nombre), numero_cr: data.numero_cr ?? null, subido_en: String(data.subido_en) } : null;
+  } catch {
+    return null;
   }
 }
 

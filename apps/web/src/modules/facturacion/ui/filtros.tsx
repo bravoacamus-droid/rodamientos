@@ -4,7 +4,7 @@
 // pasando en el servidor — la URL es el estado, y así un filtro se puede
 // compartir por enlace y sobrevive a recargar la página.
 
-import { FileText, Hash, ShieldCheck, Wallet } from "lucide-react";
+import { FileCheck2, FileText, Hash, ShieldCheck, Wallet } from "lucide-react";
 
 import { FiltroCliente } from "@/componentes/filtro-cliente";
 import { CajaBuscar, FiltroDesplegable, FilaFiltros, useBarraFiltros } from "@/componentes/filtros";
@@ -73,6 +73,14 @@ export function FiltrosFacturacionBarra({
         valor={valor("sunat")}
         opciones={Object.entries(ETIQUETA_SUNAT).map(([v, t]) => ({ valor: v, etiqueta: t }))}
         onCambiar={(v) => aplicar("sunat", v)}
+      />
+      <FiltroDesplegable
+        icono={FileCheck2}
+        etiqueta="Retención"
+        todos="Retención: todas"
+        valor={valor("cr")}
+        opciones={[{ valor: "sin", etiqueta: "Falta el CR" }]}
+        onCambiar={(v) => aplicar("cr", v)}
       />
       <FiltroDesplegable
         icono={Hash}

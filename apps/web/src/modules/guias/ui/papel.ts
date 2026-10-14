@@ -21,6 +21,9 @@ export function datosDeGuia(g: GuiaDetalle) {
     { etiqueta: "Destinatario", valor: g.cliente ?? "—" },
     { etiqueta: "Fecha de emisión", valor: fecha(g.fecha_emision) },
     { etiqueta: "RUC / DNI", valor: g.cliente_documento ?? "—" },
+    // Dirección y teléfono del destinatario, como su formato (15/10).
+    g.cliente_direccion ? { etiqueta: "Dirección", valor: g.cliente_direccion, ancho: true } : null,
+    g.cliente_telefono ? { etiqueta: "Teléfono", valor: g.cliente_telefono } : null,
     // «Inicio de traslado» y no «fecha de traslado». Willy, 40:34:
     // *«inicio de traslado, porque puede que lo prepare ahora, pero lo
     // llegue mañana»*. Es el día que sale la mercadería, no el día que se
@@ -34,15 +37,18 @@ export function datosDeGuia(g: GuiaDetalle) {
     { etiqueta: "Modalidad", valor: ETIQUETA_MODALIDAD[g.modalidad_traslado] },
     {
       etiqueta: "Punto de partida",
-      valor: [g.direccion_partida, g.ubigeo_partida].filter(Boolean).join(" · ") || "—",
+      // El distrito escrito y no el código del ubigeo (15/10).
+      valor: [g.direccion_partida, g.partida_lugar ?? g.ubigeo_partida].filter(Boolean).join(" - ") || "—",
+      ancho: true,
     },
     {
       etiqueta: "Punto de llegada",
-      valor: [g.direccion_llegada, g.ubigeo_llegada].filter(Boolean).join(" · ") || "—",
+      valor: [g.direccion_llegada, g.llegada_lugar ?? g.ubigeo_llegada].filter(Boolean).join(" - ") || "—",
+      ancho: true,
     },
     {
       etiqueta: "Peso bruto",
-      valor: `${g.peso_bruto_kg} ${g.unidad_peso}`,
+      valor: `${Number(g.peso_bruto_kg).toFixed(2)} ${g.unidad_peso}`,
     },
     {
       etiqueta: "Bultos",
@@ -103,7 +109,7 @@ export function hojaDeGuia(g: GuiaDetalle, emisor: EmisorHoja): HojaPdf {
   return {
     emisor,
     // Un borrador no puede salir igual que una guía emitida (auditoría 14/10).
-    titulo: g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión · Remitente",
+    titulo: g.estado === "borrador" ? "Guía de remisión · BORRADOR, sin validez" : "Guía de remisión electrónica · Remitente",
     numero: g.numero,
     datos: datosDeGuia(g),
     columnas: [

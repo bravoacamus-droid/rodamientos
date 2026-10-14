@@ -8,6 +8,7 @@ import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 import { detalleComprobante } from "../api/consultas";
 import { DocumentoComprobante } from "./documento";
 import { hojaDeComprobante } from "./papel";
+import { qrDeComprobante } from "../api/qr";
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
 import { nombreArchivo } from "@/lib/pdf-hoja";
 import { Volver } from "@/componentes/volver";
@@ -56,6 +57,7 @@ export default async function PaginaImprimirComprobante({
   if (!resultado.datos) notFound();
 
   const c = resultado.datos;
+  const qr = await qrDeComprobante(c, emisor.ruc);
 
   return (
     <div className="flex flex-col gap-3">
@@ -75,7 +77,7 @@ export default async function PaginaImprimirComprobante({
           // El PDF de verdad, como en la ficha (auditoría 14/10).
           descargar={
             <BotonDescargarPdf
-              hoja={hojaDeComprobante(c, emisor, cuentas)}
+              hoja={hojaDeComprobante(c, emisor, cuentas, qr)}
               nombre={nombreArchivo(c.numero, c.cliente)}
               variante="primary"
             />
@@ -95,7 +97,7 @@ export default async function PaginaImprimirComprobante({
           que la pantalla, y con `hidden` se cortaba el correo y la tabla sin
           forma de verlos. Así se desliza. En el papel no cambia nada. */}
       <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
-        <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
+        <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} qr={qr} />
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import { ETIQUETA_TIPO, type ComprobanteDetalle } from "../dominio/tipos";
 import { enMonedaDelDocumento, nombreMoneda, simboloDe } from "../dominio/moneda-documento";
-import { cuadroRetencion, cuotasDelPapel, datosDeComprobante, infoRetencion } from "./papel";
+import { COLUMNAS_COMPROBANTE, imprimeCuotas, precioConIgv, totalesDelPapel, cuadroRetencion, cuotasDelPapel, datosDeComprobante, infoRetencion } from "./papel";
 
 /**
  * La factura, la boleta y las notas, en papel.
@@ -30,9 +30,12 @@ export function DocumentoComprobante({
   c: original,
   emisor,
   cuentas = [],
+  qr = null,
 }: {
   c: ComprobanteDetalle;
   emisor: EmisorHoja;
+  /** El QR y el hash (15/10), armados en el servidor. Sin él, no sale. */
+  qr?: { svg: string; hash: string | null } | null;
   /**
    * Las cuentas a las que se le paga (064).
    *
@@ -47,9 +50,6 @@ export function DocumentoComprobante({
   // En soles, todo en soles (116): líneas, totales y cuotas.
   const c = enMonedaDelDocumento(original);
   const sim = simboloDe(c.moneda);
-  // Un descuento en cero no merece una fila: en un documento fiscal, cada
-  // línea de más es una pregunta de más de quien lo revisa.
-  const hayDescuento = c.descuento_global > 0;
 
   return (
     <HojaDocumento
@@ -59,20 +59,8 @@ export function DocumentoComprobante({
       titulo={`${ETIQUETA_TIPO[c.tipo]} electrónica${c.estado === "anulado" ? " · ANULADA, sin validez" : ""}`}
       numero={c.numero}
       datos={datosDeComprobante(c)}
-      columnas={[
-        { clave: "n", titulo: "#", alinear: "centro" },
-        { clave: "codigo", titulo: "Código" },
-        // La marca aparte, como en la cotización. Willy, 11:07: *«junta la
-        // descripción con la marca, y no debe estar así: una columna para la
-        // descripción y una columna para la marca»*. Su factura las lleva
-        // pegadas —«RODAMIENTO CONICO MM__SKF»— y por eso no se copia.
-        { clave: "marca", titulo: "Marca" },
-        { clave: "descripcion", titulo: "Descripción" },
-        { clave: "cantidad", titulo: "Cant.", alinear: "derecha" },
-        { clave: "unidad", titulo: "U.M.", alinear: "centro" },
-        { clave: "valorUnitario", titulo: "Valor unit.", alinear: "derecha" },
-        { clave: "importe", titulo: "Importe", alinear: "derecha" },
-      ]}
+      // Las mismas del PDF (papel.ts), con el precio unitario con IGV (15/10).
+      columnas={COLUMNAS_COMPROBANTE}
       filas={c.lineas.map((l, i) => ({
         n: i + 1,
         codigo: <span className="font-medium">{l.codigo}</span>,
@@ -81,22 +69,10 @@ export function DocumentoComprobante({
         cantidad: <span className="tabular">{l.cantidad}</span>,
         unidad: l.unidad,
         valorUnitario: <span className="tabular">{dinero(l.valor_unitario)}</span>,
+        precioUnitario: <span className="tabular">{precioConIgv(l.valor_unitario, l.descuento_pct)}</span>,
         importe: <span className="tabular">{dinero(l.importe)}</span>,
       }))}
-      totales={[
-        { etiqueta: "Op. gravada", valor: `${sim} ${dinero(c.op_gravada)}` },
-        ...(c.op_exonerada > 0
-          ? [{ etiqueta: "Op. exonerada", valor: `${sim} ${dinero(c.op_exonerada)}` }]
-          : []),
-        ...(c.op_inafecta > 0
-          ? [{ etiqueta: "Op. inafecta", valor: `${sim} ${dinero(c.op_inafecta)}` }]
-          : []),
-        ...(hayDescuento
-          ? [{ etiqueta: "Descuento", valor: `${sim} − ${dinero(c.descuento_global)}` }]
-          : []),
-        { etiqueta: "IGV (18%)", valor: `${sim} ${dinero(c.igv)}` },
-        { etiqueta: "Total", valor: `${sim} ${dinero(c.total)}`, destacado: true },
-      ]}
+      totales={totalesDelPapel(c)}
       enLetras={c.total_letras}
       pie={
         <>
@@ -135,9 +111,11 @@ export function DocumentoComprobante({
             vencimiento y el total que ya están arriba, y en un documento
             fiscal cada línea de más es una pregunta de más de quien lo revisa.
           */}
-          {c.cuotas.length > 1 ? (
+          {imprimeCuotas(c) ? (
             <div className="mb-2 break-inside-avoid">
-              <p className="mb-1 font-semibold">Cuotas</p>
+              <p className="mb-1 font-semibold">
+                Detalle de cuotas · pago pendiente ({sim} {dinero(cuotasDelPapel(c).reduce((a, q) => a + q.monto, 0))})
+              </p>
               <table className="w-full max-w-xs">
                 <thead>
                   <tr className="border-b border-[#ccc] text-left">
@@ -197,6 +175,20 @@ export function DocumentoComprobante({
 
           {c.mostrar_cuenta ? (
             <CuentasParaPagar cuentas={cuentas} />
+          ) : null}
+
+          {/* El QR y el hash, abajo a la derecha, como su formato (15/10). */}
+          {qr ? (
+            <div className="mt-3 flex break-inside-avoid items-end justify-between gap-4">
+              <p className="min-w-0 break-all text-[#333]">
+                {qr.hash ? (
+                  <>
+                    <strong>Hash:</strong> {qr.hash}
+                  </>
+                ) : null}
+              </p>
+              <div className="size-28 shrink-0 [&_svg]:size-full" dangerouslySetInnerHTML={{ __html: qr.svg }} />
+            </div>
           ) : null}
 
           {/*

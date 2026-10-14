@@ -42,6 +42,8 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
     alCredito && c.fecha_vencimiento
       ? { etiqueta: "Vence", valor: fecha(c.fecha_vencimiento) }
       : null,
+    // La moneda, dicha (su formato la lleva: «MONEDA: USD», 15/10).
+    { etiqueta: "Moneda", valor: c.moneda === "PEN" ? "Soles (PEN)" : "Dólares americanos (USD)" },
     // Una nota sin decir qué corrige no sirve de nada: es el dato por el
     // que se busca, tanto en el ERP como en la contabilidad del cliente.
     esNota && c.referencia_numero
@@ -69,6 +71,58 @@ export function datosDeComprobante(c: ComprobanteDetalle) {
         }
       : null,
   ];
+}
+
+/**
+ * Las columnas del detalle, las mismas en el papel y en el PDF (15/10). Su
+ * formato lleva el valor unitario Y el precio unitario con IGV, y el nuestro
+ * solo el primero: el cliente que compara con su orden de compra suele mirar
+ * el precio con IGV.
+ */
+export const COLUMNAS_COMPROBANTE = [
+  { clave: "n", titulo: "#", alinear: "centro" as const },
+  { clave: "codigo", titulo: "Código" },
+  { clave: "marca", titulo: "Marca" },
+  { clave: "descripcion", titulo: "Descripción" },
+  { clave: "cantidad", titulo: "Cant.", alinear: "derecha" as const },
+  { clave: "unidad", titulo: "U.M.", alinear: "centro" as const },
+  { clave: "valorUnitario", titulo: "V. unit.", alinear: "derecha" as const },
+  { clave: "precioUnitario", titulo: "P. unit. (con IGV)", alinear: "derecha" as const },
+  { clave: "importe", titulo: "Importe", alinear: "derecha" as const },
+];
+
+/** El precio unitario con IGV, a cuatro decimales como el de su formato. */
+export function precioConIgv(valorUnitario: number, descuentoPct = 0): string {
+  return (valorUnitario * (1 - descuentoPct / 100) * 1.18).toFixed(4);
+}
+
+/**
+ * Los totales del papel, como su formato: el total de ítems, las cuatro
+ * operaciones —gravada, gratuita, exonerada, inafecta, aunque vayan en cero—,
+ * el IGV y el total.
+ */
+export function totalesDelPapel(c: ComprobanteDetalle): { etiqueta: string; valor: string; destacado?: boolean }[] {
+  const sim = simboloDe(c.moneda);
+  const items = c.lineas.reduce((a, l) => a + Number(l.cantidad), 0);
+  return [
+    { etiqueta: "Total de ítems", valor: items.toFixed(2) },
+    { etiqueta: "Op. gravada", valor: `${sim} ${dinero(c.op_gravada)}` },
+    { etiqueta: "Op. gratuita", valor: `${sim} 0.00` },
+    { etiqueta: "Op. exonerada", valor: `${sim} ${dinero(c.op_exonerada)}` },
+    { etiqueta: "Op. inafecta", valor: `${sim} ${dinero(c.op_inafecta)}` },
+    ...(c.descuento_global > 0 ? [{ etiqueta: "Descuento", valor: `${sim} - ${dinero(c.descuento_global)}` }] : []),
+    { etiqueta: "IGV (18%)", valor: `${sim} ${dinero(c.igv)}` },
+    { etiqueta: "Importe total", valor: `${sim} ${dinero(c.total)}`, destacado: true },
+  ];
+}
+
+/**
+ * Las cuotas se imprimen siempre que es a crédito —«DETALLE CUOTAS PAGO
+ * PENDIENTE», como su formato—, aunque sea una sola. Con retención ya las
+ * dice el cuadro de la retención (cuota, fecha y neto), y no se repiten.
+ */
+export function imprimeCuotas(c: ComprobanteDetalle): boolean {
+  return c.condicion_pago === "credito" && c.cuotas.length > 0 && !c.retencion_aplica;
 }
 
 /**
@@ -107,6 +161,7 @@ export function hojaDeComprobante(
   original: ComprobanteDetalle,
   emisor: EmisorHoja,
   cuentas: readonly CuentaParaPagar[] = [],
+  qr: { png: string; hash: string | null } | null = null,
 ): HojaPdf {
   // En soles, todo en soles (116): las líneas, los totales y las cuotas.
   const c = enMonedaDelDocumento(original);
@@ -132,10 +187,10 @@ export function hojaDeComprobante(
     trozos: [{ texto: "Representación impresa del comprobante electrónico. Consulte su validez en el portal de SUNAT." }],
   });
   // Las cuotas, solo si hay más de una (igual que el papel).
-  if (c.cuotas.length > 1) {
+  if (imprimeCuotas(c)) {
     pie.push({
       tipo: "tabla",
-      titulo: "Cuotas",
+      titulo: `Detalle de cuotas · pago pendiente (${simboloDe(c.moneda)} ${dinero(cuotasDelPapel(c).reduce((a, q) => a + q.monto, 0))})`,
       cabecera: ["Cuota", "Vence", "Importe"],
       filas: cuotasDelPapel(c).map((q) => [String(q.numero), fecha(q.fecha_vencimiento), `${simboloDe(c.moneda)} ${dinero(q.monto)}`]),
       derecha: [2],
@@ -160,23 +215,14 @@ export function hojaDeComprobante(
     });
   }
 
-  const hayDescuento = c.descuento_global > 0;
+  if (qr) pie.push({ tipo: "qr", dato: qr.png, hash: qr.hash });
   return {
     emisor,
     // Anulado, que se vea en el papel y en el PDF (auditoría 14/10).
     titulo: `${ETIQUETA_TIPO[c.tipo]} electrónica${c.estado === "anulado" ? " · ANULADA, sin validez" : ""}`,
     numero: c.numero,
     datos: datosDeComprobante(c),
-    columnas: [
-      { clave: "n", titulo: "#", alinear: "centro" },
-      { clave: "codigo", titulo: "Código" },
-      { clave: "marca", titulo: "Marca" },
-      { clave: "descripcion", titulo: "Descripción" },
-      { clave: "cantidad", titulo: "Cant.", alinear: "derecha" },
-      { clave: "unidad", titulo: "U.M.", alinear: "centro" },
-      { clave: "valorUnitario", titulo: "Valor unit.", alinear: "derecha" },
-      { clave: "importe", titulo: "Importe", alinear: "derecha" },
-    ],
+    columnas: COLUMNAS_COMPROBANTE,
     filas: c.lineas.map((l, i) => ({
       n: String(i + 1),
       codigo: l.codigo,
@@ -185,16 +231,10 @@ export function hojaDeComprobante(
       cantidad: String(l.cantidad),
       unidad: l.unidad,
       valorUnitario: dinero(l.valor_unitario),
+      precioUnitario: precioConIgv(l.valor_unitario, l.descuento_pct),
       importe: dinero(l.importe),
     })),
-    totales: [
-      { etiqueta: "Op. gravada", valor: `${simboloDe(c.moneda)} ${dinero(c.op_gravada)}` },
-      ...(c.op_exonerada > 0 ? [{ etiqueta: "Op. exonerada", valor: `${simboloDe(c.moneda)} ${dinero(c.op_exonerada)}` }] : []),
-      ...(c.op_inafecta > 0 ? [{ etiqueta: "Op. inafecta", valor: `${simboloDe(c.moneda)} ${dinero(c.op_inafecta)}` }] : []),
-      ...(hayDescuento ? [{ etiqueta: "Descuento", valor: `${simboloDe(c.moneda)} - ${dinero(c.descuento_global)}` }] : []),
-      { etiqueta: "IGV (18%)", valor: `${simboloDe(c.moneda)} ${dinero(c.igv)}` },
-      { etiqueta: "Total", valor: `${simboloDe(c.moneda)} ${dinero(c.total)}`, destacado: true },
-    ],
+    totales: totalesDelPapel(c),
     enLetras: c.total_letras,
     pie,
   };

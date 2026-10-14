@@ -13,7 +13,8 @@ import {
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { estadoConfiguracion } from "../api/configuracion";
-import { detalleComprobante, motivosNota, notasDe, seriesDeNota, yaAcreditadoDe } from "../api/consultas";
+import { crDe, detalleComprobante, motivosNota, notasDe, seriesDeNota, yaAcreditadoDe } from "../api/consultas";
+import { RegistrarCr } from "./registrar-cr";
 import { cuotasNetas } from "../dominio/retencion";
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
 import { EmisorNota } from "./emisor-nota";
@@ -26,6 +27,7 @@ import { nombreArchivo } from "@/lib/pdf-hoja";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 import { DocumentoComprobante } from "./documento";
 import { hojaDeComprobante } from "./papel";
+import { qrDeComprobante } from "../api/qr";
 import { enMonedaDelDocumento } from "../dominio/moneda-documento";
 
 /**
@@ -42,7 +44,7 @@ export default async function PaginaDetalleComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series] = await Promise.all([
+  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series, cr] = await Promise.all([
     detalleComprobante(id),
     perfilActual(),
     estadoConfiguracion(),
@@ -52,6 +54,7 @@ export default async function PaginaDetalleComprobante({
     cuentasParaCobrar(),
     notasDe(id),
     seriesDeNota(),
+    crDe(id),
   ]);
 
   if (!resultado.ok) {
@@ -68,7 +71,9 @@ export default async function PaginaDetalleComprobante({
   // En la moneda en que se emitió (116): en soles, todo lo de abajo en soles.
   const c = enMonedaDelDocumento(resultado.datos);
   // El PDF, armado aquí con lo mismo que pinta el papel (14/10).
-  const hoja = hojaDeComprobante(c, emisor, cuentas);
+  // El QR y el hash de la representación impresa (15/10).
+  const qr = await qrDeComprobante(resultado.datos, emisor.ruc);
+  const hoja = hojaDeComprobante(c, emisor, cuentas, qr);
   const archivo = nombreArchivo(c.numero, c.cliente);
   const rol = perfil?.activo ? perfil.rol : null;
   const puedeEnviar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
@@ -142,7 +147,7 @@ export default async function PaginaDetalleComprobante({
                 cotización (14/10). «Descargar» llevaba a la ventana de
                 imprimir del navegador. */}
             <VistaPreviaDocumento numero={c.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
-              <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
+              <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} qr={qr} />
             </VistaPreviaDocumento>
             {/* Anulado, el PDF no va en azul: no es lo que se le manda a nadie. */}
             <BotonDescargarPdf hoja={hoja} nombre={archivo} variante={anulado ? "outline" : "primary"} />
@@ -468,6 +473,12 @@ export default async function PaginaDetalleComprobante({
                 </p>
               </div>
             ) : null}
+            {/* «Registrar CR» (Willy, 14/10): el comprobante de retención. */}
+            {!esNota && c.retencion_aplica && !anulado ? (
+              <div className="mt-3">
+                <RegistrarCr comprobanteId={c.id} numero={c.numero} cr={cr} puede={puedeCobrar} />
+              </div>
+            ) : null}
             {!esNota && c.cuotas.length > 1 ? (
               <div className="mt-3 text-sm">
                 <p className="mb-1 font-medium">Cuotas</p>
@@ -529,7 +540,7 @@ export default async function PaginaDetalleComprobante({
       </div>
     </div>
     <div className="hidden print:block">
-      <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} />
+      <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} qr={qr} />
     </div>
     </>
   );

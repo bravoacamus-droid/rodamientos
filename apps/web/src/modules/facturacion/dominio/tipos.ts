@@ -68,6 +68,9 @@ export interface ComprobanteLista {
   pagado: number;
   saldo: number;
   moneda: "USD" | "PEN";
+  /** Con retención (y si ya tiene su CR, 120). */
+  retencion: boolean;
+  conCr: boolean;
   estado: EstadoComprobante;
   estado_sunat: EstadoSunat;
   vendedor: string | null;
@@ -171,6 +174,8 @@ export interface FiltrosComprobantes {
   tipo?: string;
   estado?: string;
   sunat?: string;
+  /** «sin»: con retención y sin su CR registrado (120). */
+  cr?: string;
   desde?: string;
   hasta?: string;
   cursor?: string;
