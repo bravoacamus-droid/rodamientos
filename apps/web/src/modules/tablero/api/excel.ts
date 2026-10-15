@@ -466,7 +466,7 @@ export async function libroDetalle(opciones: {
         p.venta,
         p.costo > 0 ? p.costo : "",
         margen === null ? "" : margen / 100,
-        p.compras.total === 0 ? "Con stock" : `${p.compras.total - p.compras.porRegistrar} de ${p.compras.total} compradas`,
+        p.compras.total === 0 ? "Sin órdenes" : `${p.compras.total - p.compras.porRegistrar} de ${p.compras.total} compradas`,
         p.guia?.emitida ? p.guia.numero : "",
         p.facturas.map((f) => f.numero).join(", "),
         p.facturas.length > 0 ? p.facturas.reduce((a, f) => a + f.saldoUsd, 0) : "",

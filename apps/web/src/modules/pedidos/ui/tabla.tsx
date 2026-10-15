@@ -67,7 +67,8 @@ function Margen({ p }: { p: FilaPedido }) {
 }
 
 function Compras({ p }: { p: FilaPedido }) {
-  if (p.compras.total === 0) return <span className="text-[var(--fg-subtle)]">con stock</span>;
+  // Sin órdenes no dice que haya stock: puede faltar y no haberse pedido.
+  if (p.compras.total === 0) return <span className="text-[var(--fg-subtle)]">sin órdenes</span>;
   return p.compras.porRegistrar > 0 ? (
     <span className="font-medium">
       {p.compras.total - p.compras.porRegistrar} de {p.compras.total} compradas

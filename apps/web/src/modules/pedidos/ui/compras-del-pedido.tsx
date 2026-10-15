@@ -47,9 +47,10 @@ export function ComprasDelPedido({
 
       {ordenes.length === 0 ? (
         <div className="flex flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
-          <p>Este pedido no tiene órdenes de compra: se atiende con lo que hay en almacén.</p>
+          <p>Este pedido no tiene órdenes de compra.</p>
           <p className="text-[var(--fg-muted)]">
-            Si falta algo, las órdenes salen desde la cotización, con lo que se analizó al cotizar.
+            Si lo hay en almacén, se despacha con la guía. Si falta, las órdenes salen desde la cotización, con lo que
+            se analizó al cotizar.
           </p>
           <Link href={`/cotizaciones/${cotizacionId}`} className={cn(buttonVariants({ variant: "outline" }), "w-fit px-3")}>
             Ir a la cotización
