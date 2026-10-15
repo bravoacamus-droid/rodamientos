@@ -78,12 +78,12 @@ function Opcion({
   apagada?: boolean;
 }) {
   return (
-    <DropdownMenuItem onSelect={onSelect} className={`items-start gap-3 py-2 ${apagada ? "opacity-70" : ""}`}>
-      <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg shadow-sm ${TONO[tono]}`}>
-        <Icono className="size-4" aria-hidden="true" />
+    <DropdownMenuItem onSelect={onSelect} className={`items-start gap-2.5 py-1.5 ${apagada ? "opacity-70" : ""}`}>
+      <span className={`grid size-6 shrink-0 place-items-center rounded-md ${TONO[tono]}`}>
+        <Icono className="size-3.5" aria-hidden="true" />
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className={`text-sm font-semibold ${peligro ? "text-[var(--danger)]" : ""}`}>{titulo}</span>
+        <span className={`text-sm font-medium leading-6 ${peligro ? "text-[var(--danger)]" : ""}`}>{titulo}</span>
         {detalle ? <span className="text-sm text-[var(--fg-muted)]">{detalle}</span> : null}
       </span>
     </DropdownMenuItem>
@@ -175,7 +175,7 @@ export function AccionesPedido({
           Acciones
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuContent align="end" className="w-64">
           {enFicha ? null : (
             <Opcion icono={ClipboardList} tono="marca" titulo="Ver pedido" onSelect={() => router.push(`/pedidos/${p.id}`)} />
           )}
@@ -183,7 +183,6 @@ export function AccionesPedido({
             icono={FileSearch}
             tono="azul"
             titulo="Hoja de pedido"
-            detalle="Vista previa, imprimir o PDF"
             onSelect={() => router.push(`/pedidos/${p.id}?hoja=1`)}
           />
           <Opcion
@@ -201,7 +200,7 @@ export function AccionesPedido({
                   icono={Truck}
                   tono="marca"
                   titulo={p.guia ? "Seguir con la guía" : "Hacer la guía"}
-                  detalle={p.guia ? "Está en borrador" : "Despachar este pedido"}
+                  detalle={p.guia ? "Está en borrador" : undefined}
                   onSelect={() => router.push(urlGuia)}
                 />
               )}
@@ -209,7 +208,7 @@ export function AccionesPedido({
                 icono={Receipt}
                 tono={guiaEmitida ? "verde" : "ambar"}
                 titulo="Facturar"
-                detalle={guiaEmitida ? "Con la guía emitida" : "Primero hay que emitir la guía"}
+                detalle={guiaEmitida ? undefined : "Primero hay que emitir la guía"}
                 apagada={!guiaEmitida}
                 onSelect={facturar}
               />
@@ -223,7 +222,7 @@ export function AccionesPedido({
                 icono={Repeat}
                 tono="violeta"
                 titulo="Repetir pedido"
-                detalle={p.facturado ? "Mismos precios, otras cantidades" : "Cuando este esté facturado"}
+                detalle={p.facturado ? undefined : "Cuando este esté facturado"}
                 apagada={!p.facturado}
                 onSelect={repetir}
               />
