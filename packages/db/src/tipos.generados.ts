@@ -5840,6 +5840,15 @@ export type Database = {
         }
         Returns: Json
       }
+      tablero_compras: {
+        Args: {
+          p_desde: string
+          p_grano?: string
+          p_hasta: string
+          p_proveedor?: string
+        }
+        Returns: Json
+      }
       tablero_cotizaciones: {
         Args: {
           p_cliente?: string

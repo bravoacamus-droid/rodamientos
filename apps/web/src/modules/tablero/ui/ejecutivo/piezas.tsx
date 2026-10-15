@@ -297,12 +297,13 @@ export function BotonExcel({
   sp,
   explicacion,
 }: {
-  tipo: "ventas" | "cotizaciones";
+  tipo: "ventas" | "cotizaciones" | "compras";
   sp: ParamsBusqueda;
   explicacion: string;
 }) {
-  const q = new URLSearchParams({ tipo });
-  for (const k of ["atajo", "desde", "hasta", "cliente"]) {
+  // Compras va a su propia ruta (133); las otras dos, a la de siempre.
+  const q = new URLSearchParams(tipo === "compras" ? {} : { tipo });
+  for (const k of ["atajo", "desde", "hasta", "cliente", "proveedor"]) {
     const v = uno(sp[k]);
     if (v) q.set(k, v);
   }
@@ -310,7 +311,7 @@ export function BotonExcel({
     <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-base text-[var(--fg-muted)]">{explicacion}</p>
       <a
-        href={`/reportes/excel?${q.toString()}`}
+        href={`${tipo === "compras" ? "/reportes/compras/excel" : "/reportes/excel"}?${q.toString()}`}
         download
         className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#1d6f42] px-4 text-base font-semibold text-white shadow-sm hover:bg-[#185c37]"
       >

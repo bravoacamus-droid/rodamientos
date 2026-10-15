@@ -150,6 +150,8 @@ export const NAVEGACION: readonly GrupoNav[] = [
       { etiqueta: "Ventas por cliente", ruta: "/reportes/clientes", icono: "panelClientes" },
       { etiqueta: "Cotizado y ganado", ruta: "/reportes/cotizaciones", icono: "panelCotizaciones" },
       { etiqueta: "Lo facturado", ruta: "/reportes/facturacion", icono: "panelFacturacion" },
+      // Compras (133): cuánto, a quién, qué, quién lo deja más barato.
+      { etiqueta: "Compras", ruta: "/reportes/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
       // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
       // solo para quien manda, como cuando vivía en «Gestión».
       { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },

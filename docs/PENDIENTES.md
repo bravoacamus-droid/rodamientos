@@ -8245,3 +8245,25 @@ pedido de verdad; el centinela de la 130 sí lo ejecuta y lo deshace).
   «Facturas».
 - 2026 hasta el 15/10: vendido $ 134 997.65 (285) contra facturado
   $ 114 352.09 (248).
+
+## §CH · 15/10 — El reporte de compras (133)
+
+Luis: *«falta reportes amplio de compras… ranking de los productos más
+comprados, cuál fue el mejor proveedor con el mejor precio… algo total que
+ayude a Willy a ver mejor gráficos e información de compras»*.
+
+- **`tablero_compras` (133)**, todo en US$ sin IGV y sin anuladas: comprado,
+  compras, proveedores, productos, gastos de importación sobre lo importado,
+  días de entrega (compra → primera recepción), serie por vía, ranking de
+  proveedores y de productos, **mejor precio** por producto (último costo de
+  cada proveedor en `proveedor_productos`), **ahorro posible** (lo pagado de
+  más contra el mejor conocido), **alzas** (última compra contra la
+  anterior) y lo pendiente (por recibir y órdenes sin registrar).
+- **`/reportes/compras`** en el menú de Reportes (gerencia, admin, compras),
+  con periodo, comparación y proveedor; Excel propio
+  (`/reportes/compras/excel`): Detalle, Por proveedor, Por producto, Mejor
+  precio.
+- **Ojo:** las compras del sistema anterior no se cargaron, así que hoy
+  enseña las ~12 de prueba. Y «Quién lo deja más barato» trae costos de las
+  rondas de prueba (AUTOLAND a $ 1.00): se limpia con
+  `limpiar-pruebas-16-09.sql`.

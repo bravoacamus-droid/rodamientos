@@ -68,3 +68,31 @@ export function FiltroCliente({
     </div>
   );
 }
+
+/** El proveedor del reporte de compras (133), con buscador como el cliente. */
+export function FiltroProveedor({
+  valor,
+  proveedores,
+}: {
+  valor: string | null;
+  proveedores: { id: string; nombre: string }[];
+}) {
+  const aplicar = useAplicar();
+  return (
+    <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
+      <label htmlFor="f-proveedor-reporte" className="text-sm font-medium text-[var(--fg-muted)]">
+        Proveedor
+      </label>
+      <Combobox
+        id="f-proveedor-reporte"
+        className="w-full sm:w-72"
+        opciones={proveedores.map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
+        valor={valor}
+        onCambio={(v) => aplicar("proveedor", v)}
+        placeholder="Todos los proveedores"
+        placeholderBusqueda="Escribe parte del nombre…"
+        textoVacio="Ningún proveedor coincide."
+      />
+    </div>
+  );
+}

@@ -480,3 +480,181 @@ export async function datosVentas(
     return fallo(e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Compras (133)
+// ---------------------------------------------------------------------------
+
+/** El reporte de compras: todo en dólares y sin IGV, sin las anuladas. */
+export interface DatosCompras {
+  resumen: {
+    compras: number;
+    proveedores: number;
+    comprado: number;
+    gastos: number;
+    importado: number;
+    gastosImportacion: number;
+    diasEntrega: number | null;
+    productos: number;
+    unidades: number;
+    ahorroPosible: number;
+    porRecibir: number;
+    montoPorRecibir: number;
+    sinRegistrar: number;
+  };
+  serie: { periodo: string; compras: number; local: number; aerea: number; maritima: number; gastos: number }[];
+  porVia: { via: string; compras: number; monto: number; gastos: number }[];
+  proveedores: {
+    id: string;
+    proveedor: string;
+    compras: number;
+    monto: number;
+    diasEntrega: number | null;
+    recibidas: number;
+    ultima: string;
+  }[];
+  productos: {
+    id: string;
+    codigo: string;
+    descripcion: string;
+    marca: string | null;
+    unidades: number;
+    monto: number;
+    veces: number;
+    proveedores: number;
+    costoPromedio: number;
+  }[];
+  mejorPrecio: {
+    id: string;
+    codigo: string;
+    descripcion: string;
+    mejor: number;
+    peor: number;
+    proveedores: number;
+    proveedorMejor: string;
+    proveedorPeor: string;
+    diferencia: number;
+  }[];
+  alzas: { codigo: string; descripcion: string; ultimo: number; anterior: number; variacion: number; fecha: string }[];
+  pendientes: { id: string; numero: string; fecha: string; proveedor: string; faltaFactura: boolean; monto: number; dias: number }[];
+}
+
+export async function datosCompras(
+  rango: { desde: string; hasta: string; grano: Grano },
+  proveedor: string | null = null,
+): Promise<Resultado<DatosCompras>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("tablero_compras", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_grano: rango.grano,
+      ...(proveedor ? { p_proveedor: proveedor } : {}),
+    });
+    if (error) return fallo(error);
+    const d = (data ?? {}) as Json;
+    const r = (d.resumen ?? {}) as Json;
+    return {
+      ok: true,
+      datos: {
+        resumen: {
+          compras: n(r.compras),
+          proveedores: n(r.proveedores),
+          comprado: n(r.comprado),
+          gastos: n(r.gastos),
+          importado: n(r.importado),
+          gastosImportacion: n(r.gastos_importacion),
+          diasEntrega: nulo(r.dias_entrega),
+          productos: n(r.productos),
+          unidades: n(r.unidades),
+          ahorroPosible: n(r.ahorro_posible),
+          porRecibir: n(r.por_recibir),
+          montoPorRecibir: n(r.monto_por_recibir),
+          sinRegistrar: n(r.sin_registrar),
+        },
+        serie: lista(d.serie).map((p) => ({
+          periodo: txt(p.periodo),
+          compras: n(p.compras),
+          local: n(p.local),
+          aerea: n(p.aerea),
+          maritima: n(p.maritima),
+          gastos: n(p.gastos),
+        })),
+        porVia: lista(d.por_via).map((v) => ({ via: txt(v.via), compras: n(v.compras), monto: n(v.monto), gastos: n(v.gastos) })),
+        proveedores: lista(d.proveedores).map((x) => ({
+          id: txt(x.id),
+          proveedor: txt(x.proveedor),
+          compras: n(x.compras),
+          monto: n(x.monto),
+          diasEntrega: nulo(x.dias_entrega),
+          recibidas: n(x.recibidas),
+          ultima: txt(x.ultima),
+        })),
+        productos: lista(d.productos).map((x) => ({
+          id: txt(x.id),
+          codigo: txt(x.codigo),
+          descripcion: txt(x.descripcion),
+          marca: x.marca ? txt(x.marca) : null,
+          unidades: n(x.unidades),
+          monto: n(x.monto),
+          veces: n(x.veces),
+          proveedores: n(x.proveedores),
+          costoPromedio: n(x.costo_promedio),
+        })),
+        mejorPrecio: lista(d.mejor_precio).map((x) => ({
+          id: txt(x.id),
+          codigo: txt(x.codigo),
+          descripcion: txt(x.descripcion),
+          mejor: n(x.mejor),
+          peor: n(x.peor),
+          proveedores: n(x.proveedores),
+          proveedorMejor: txt(x.proveedor_mejor),
+          proveedorPeor: txt(x.proveedor_peor),
+          diferencia: n(x.diferencia),
+        })),
+        alzas: lista(d.alzas).map((x) => ({
+          codigo: txt(x.codigo),
+          descripcion: txt(x.descripcion),
+          ultimo: n(x.ultimo),
+          anterior: n(x.anterior),
+          variacion: n(x.variacion),
+          fecha: txt(x.fecha),
+        })),
+        pendientes: lista(d.pendientes).map((x) => ({
+          id: txt(x.id),
+          numero: txt(x.numero),
+          fecha: txt(x.fecha),
+          proveedor: txt(x.proveedor),
+          faltaFactura: Boolean(x.falta_factura),
+          monto: n(x.monto),
+          dias: n(x.dias),
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Los proveedores a los que se les ha comprado, para el filtro del reporte. */
+export async function proveedoresConCompras(): Promise<Resultado<{ id: string; nombre: string }[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compras")
+      .select("proveedor_id, proveedores(razon_social)")
+      .neq("estado", "anulada")
+      .limit(5000);
+    if (error) return fallo(error);
+    const vistos = new Map<string, string>();
+    for (const c of (data ?? []) as unknown as { proveedor_id: string; proveedores: { razon_social: string } | null }[]) {
+      vistos.set(c.proveedor_id, c.proveedores?.razon_social ?? "—");
+    }
+    return {
+      ok: true,
+      datos: [...vistos.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
