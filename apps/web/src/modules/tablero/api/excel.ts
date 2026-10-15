@@ -1,6 +1,9 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { filasDePedidos } from "@/modules/pedidos/api/consultas";
+import { ETIQUETA_ETAPA } from "@/modules/pedidos/dominio/etapa";
+import { margenPct, sunatDe } from "@/modules/pedidos/dominio/lista";
 
 /**
  * El detalle de lo vendido o lo cotizado, como libro de Excel (105).
@@ -367,6 +370,7 @@ export async function libroDetalle(opciones: {
         `numero, tipo, fecha_emision, estado, total, saldo, moneda, pen_total, orden_compra_cliente,
          retencion_aplica, retencion_monto, pen_retencion,
          clientes(razon_social, numero_documento),
+         pedido:pedidos!comprobantes_pedido_id_fkey(numero),
          comprobante_retenciones(numero_cr)`,
       )
       .gte("fecha_emision", desde)
@@ -383,6 +387,8 @@ export async function libroDetalle(opciones: {
       { header: "Cliente", width: 40 },
       { header: "RUC / DNI", width: 14 },
       { header: "Orden de compra", width: 16 },
+      // De qué pedido viene (130): lo facturado se cruza con lo vendido.
+      { header: "Pedido", width: 15 },
       { header: "Moneda", width: 8 },
       { header: "Total (moneda del documento)", width: 18, style: { numFmt: "#,##0.00" } },
       { header: "Total en dólares", width: 16, style: { numFmt: DINERO } },
@@ -406,6 +412,7 @@ export async function libroDetalle(opciones: {
         cli?.razon_social ?? "",
         cli?.numero_documento ?? "",
         (d.orden_compra_cliente as string | null) ?? "",
+        (d.pedido as { numero?: string } | null)?.numero ?? "",
         enSoles ? "PEN" : "USD",
         enSoles ? n(d.pen_total) : n(d.total),
         n(d.total),
@@ -413,6 +420,58 @@ export async function libroDetalle(opciones: {
         retiene ? (enSoles ? n(d.pen_retencion) : n(d.retencion_monto)) : "",
         retiene ? (cr ? (cr.numero_cr ? `Registrado ${cr.numero_cr}` : "Registrado") : "Falta") : "",
         d.estado === "anulado" ? "Anulado" : (ESTADO_VENTA[String(d.estado)] ?? String(d.estado)),
+      ]);
+    }
+  }
+
+  // -------------------------------------------------------------- Pedidos --
+  /*
+    Una fila por pedido del periodo (130-132), con las columnas de la tabla
+    de Pedidos: lo vendido, su margen y en qué va. Luis, 15/10: *«ahí es
+    cuando una venta ya se concretó»*.
+  */
+  {
+    const r = await filasDePedidos({ desde, hasta });
+    const filas = r.ok ? r.datos.filter((p) => !cliente || p.clienteId === cliente) : [];
+    const hojaPedidos = wb.addWorksheet("Pedidos", { views: [{ state: "frozen", ySplit: 1 }] });
+    hojaPedidos.columns = [
+      { header: "Fecha", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+      { header: "Pedido", width: 15 },
+      { header: "Cotización", width: 15 },
+      { header: "Cliente", width: 40 },
+      { header: "Repetido", width: 10 },
+      { header: "Productos", width: 40 },
+      { header: "Venta sin IGV (US$)", width: 16, style: { numFmt: DINERO } },
+      { header: "Costo analizado (US$)", width: 16, style: { numFmt: DINERO } },
+      { header: "Margen sobre el costo", width: 12, style: { numFmt: "0.0%" } },
+      { header: "Compras", width: 16 },
+      { header: "Guía", width: 15 },
+      { header: "Factura", width: 15 },
+      { header: "Debe (US$)", width: 14, style: { numFmt: DINERO } },
+      { header: "SUNAT", width: 12 },
+      { header: "Etapa", width: 26 },
+    ];
+    hojaPedidos.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    hojaPedidos.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
+    const SUNAT_TEXTO = { aceptado: "Aceptada", pendiente: "Sin enviar", rechazado: "Rechazada", sin_factura: "" } as const;
+    for (const p of [...filas].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero.localeCompare(b.numero))) {
+      const margen = margenPct(p.venta, p.costo);
+      hojaPedidos.addRow([
+        fechaExcel(p.fecha),
+        p.numero,
+        p.cotizacion,
+        p.cliente,
+        p.secuencia > 1 ? "Sí" : "No",
+        p.productos.map((x) => `${x.codigo} × ${x.cantidad}`).join(" · "),
+        p.venta,
+        p.costo > 0 ? p.costo : "",
+        margen === null ? "" : margen / 100,
+        p.compras.total === 0 ? "Con stock" : `${p.compras.total - p.compras.porRegistrar} de ${p.compras.total} compradas`,
+        p.guia?.emitida ? p.guia.numero : "",
+        p.facturas.map((f) => f.numero).join(", "),
+        p.facturas.length > 0 ? p.facturas.reduce((a, f) => a + f.saldoUsd, 0) : "",
+        SUNAT_TEXTO[sunatDe(p)],
+        ETIQUETA_ETAPA[p.etapa],
       ]);
     }
   }

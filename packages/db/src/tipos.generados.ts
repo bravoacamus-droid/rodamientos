@@ -5228,6 +5228,20 @@ export type Database = {
         }
         Relationships: []
       }
+      v_ventas_concretadas: {
+        Row: {
+          cliente_id: string | null
+          costo: number | null
+          cotizacion_id: string | null
+          es_repeticion: boolean | null
+          fecha: string | null
+          numero: string | null
+          origen: string | null
+          pedido_id: string | null
+          venta: number | null
+        }
+        Relationships: []
+      }
       v_ventas_mensuales: {
         Row: {
           costo: number | null
@@ -5836,6 +5850,15 @@ export type Database = {
         Returns: Json
       }
       tablero_facturacion: {
+        Args: {
+          p_cliente?: string
+          p_desde: string
+          p_grano?: string
+          p_hasta: string
+        }
+        Returns: Json
+      }
+      tablero_ventas: {
         Args: {
           p_cliente?: string
           p_desde: string

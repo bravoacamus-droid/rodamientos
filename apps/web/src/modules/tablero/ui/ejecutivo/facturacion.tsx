@@ -4,7 +4,7 @@ import { EstadoError, KpiCard } from "@rodatech/ui";
 
 import { FiltroRango } from "@/modules/reportes";
 
-import { clientesConCompras, datosFacturacion } from "../../api/ejecutivo";
+import { clientesConCompras, datosFacturacion, datosVentas } from "../../api/ejecutivo";
 import { FRASE_COMPARACION } from "../../dominio/ejecutivo";
 import { FiltroCliente, FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
@@ -68,7 +68,7 @@ export default async function PaginaFacturacionEjecutiva({
   const cliente = uno(sp.cliente) ?? null;
   const frase = FRASE_COMPARACION[f.comparar];
 
-  const [actual, previo, lista, historia] = await Promise.all([
+  const [actual, previo, lista, historia, ventas] = await Promise.all([
     datosFacturacion(f.rango, cliente),
     f.hayComparacion
       ? datosFacturacion({ ...f.previo, grano: f.rango.grano }, cliente)
@@ -77,6 +77,8 @@ export default async function PaginaFacturacionEjecutiva({
     // Toda la historia por año, sin importar el periodo elegido: es la
     // pregunta de Willy, 06/10 (53:28): «¿de qué año se vendió más?».
     datosFacturacion({ desde: "2020-01-01", hasta: hoy, grano: "anio" }, cliente),
+    // Lo vendido del mismo periodo (132): lo facturado se lee contra ello.
+    datosVentas(f.rango, cliente),
   ]);
 
   const clientes = lista.ok ? lista.datos : [];
@@ -397,6 +399,33 @@ export default async function PaginaFacturacionEjecutiva({
         <Dato etiqueta="Cobrado" valor={dinero(r.cobrado)} tono="ok" />
         <Dato etiqueta="Neto de notas" valor={dinero(r.venta - r.notasMonto)} />
       </div>
+
+      {/*
+        Lo vendido junto a lo facturado (132). Lo facturado es lo declarado a
+        SUNAT; lo vendido, el sí del cliente (el pedido). Lo que separa a los
+        dos es lo que ya se vendió y todavía no tiene factura.
+      */}
+      {ventas.ok ? (
+        <Bloque
+          titulo="Vendido y facturado"
+          descripcion="Lo vendido son los pedidos del periodo (y lo del sistema anterior). Lo que falta facturar sale de los pedidos del ERP."
+          accion={{ href: "/pedidos?etapa=por_facturar", texto: "Pedidos por facturar" }}
+        >
+          <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+            <Dato etiqueta="Vendido (pedidos)" valor={dinero(ventas.datos.resumen.vendido)} />
+            <Dato etiqueta="Facturado" valor={dinero(r.venta)} />
+            <Dato
+              etiqueta="Pedidos sin factura"
+              valor={`${entero(ventas.datos.resumen.sinFacturar)} · ${dinero(ventas.datos.resumen.montoSinFacturar)}`}
+              tono={ventas.datos.resumen.sinFacturar > 0 ? "warn" : "ok"}
+            />
+            <Dato
+              etiqueta="Margen de lo vendido"
+              valor={ventas.datos.resumen.margen === null ? "sin costo analizado" : pct(ventas.datos.resumen.margen, 1)}
+            />
+          </div>
+        </Bloque>
+      ) : null}
     </div>
   );
 }

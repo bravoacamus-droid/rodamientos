@@ -391,3 +391,92 @@ export async function clientesActivos(): Promise<Resultado<{ id: string; nombre:
     return fallo(e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Lo vendido (132)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo vendido: los pedidos (130) más el histórico del sistema viejo (las
+ * cotizaciones atendidas sin pedido). Luis, 15/10: *«ahí es cuando una venta
+ * ya se concretó»*. Va junto a lo facturado y lo cotizado, no en su lugar:
+ * lo facturado es lo declarado; lo vendido, el sí del cliente.
+ */
+export interface DatosVentas {
+  resumen: {
+    ventas: number;
+    pedidos: number;
+    repetidos: number;
+    vendido: number;
+    /** Margen sobre el costo, solo de lo que tiene costo; null sin ninguna. */
+    margen: number | null;
+    clientes: number;
+    facturado: number;
+    porCobrar: number;
+    sinFacturar: number;
+    montoSinFacturar: number;
+  };
+  serie: { periodo: string; ventas: number; vendido: number; repetidos: number }[];
+  porCliente: {
+    id: string;
+    cliente: string;
+    ventas: number;
+    repetidos: number;
+    vendido: number;
+    margen: number | null;
+  }[];
+}
+
+const margenDe = (venta: number, costo: number) =>
+  costo > 0 ? Math.round(((venta - costo) / costo) * 1000) / 10 : null;
+
+export async function datosVentas(
+  rango: { desde: string; hasta: string; grano: Grano },
+  cliente: string | null = null,
+): Promise<Resultado<DatosVentas>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("tablero_ventas", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_grano: rango.grano,
+      ...(cliente ? { p_cliente: cliente } : {}),
+    });
+    if (error) return fallo(error);
+    const d = (data ?? {}) as Json;
+    const r = (d.resumen ?? {}) as Json;
+    return {
+      ok: true,
+      datos: {
+        resumen: {
+          ventas: n(r.ventas),
+          pedidos: n(r.pedidos),
+          repetidos: n(r.repetidos),
+          vendido: n(r.vendido),
+          margen: margenDe(n(r.venta_con_costo), n(r.costo)),
+          clientes: n(r.clientes),
+          facturado: n(r.facturado),
+          porCobrar: n(r.por_cobrar),
+          sinFacturar: n(r.sin_facturar),
+          montoSinFacturar: n(r.monto_sin_facturar),
+        },
+        serie: lista(d.serie).map((p) => ({
+          periodo: txt(p.periodo),
+          ventas: n(p.ventas),
+          vendido: n(p.vendido),
+          repetidos: n(p.repetidos),
+        })),
+        porCliente: lista(d.por_cliente).map((c) => ({
+          id: txt(c.id),
+          cliente: txt(c.cliente),
+          ventas: n(c.ventas),
+          repetidos: n(c.repetidos),
+          vendido: n(c.vendido),
+          margen: margenDe(n(c.venta_con_costo), n(c.costo)),
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

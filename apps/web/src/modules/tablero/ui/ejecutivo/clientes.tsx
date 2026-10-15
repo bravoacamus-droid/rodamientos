@@ -4,7 +4,7 @@ import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
 
 import { FiltroRango, etiquetaPeriodo } from "@/modules/reportes";
 
-import { datosClientes } from "../../api/ejecutivo";
+import { datosClientes, datosVentas } from "../../api/ejecutivo";
 import {
   ETIQUETA_SEGMENTO,
   EXPLICA_SEGMENTO,
@@ -95,7 +95,9 @@ export default async function PaginaClientesEjecutiva({
     />
   );
 
-  const res = await datosClientes(f.rango, f.previo);
+  // Lo facturado (lo declarado) y lo vendido (los pedidos, 132), juntos.
+  const [res, ventas] = await Promise.all([datosClientes(f.rango, f.previo), datosVentas(f.rango)]);
+  const vendidoDe = new Map((ventas.ok ? ventas.datos.porCliente : []).map((c) => [c.id, c]));
   if (!res.ok) {
     return (
       <>
@@ -306,10 +308,12 @@ export default async function PaginaClientesEjecutiva({
                 <thead className="border-b border-[var(--border)] text-left text-sm text-[var(--fg-muted)]">
                   <tr>
                     <th className="py-2 pr-3 font-semibold">Cliente</th>
-                    <th className="px-3 py-2 text-right font-semibold">Este periodo</th>
+                    <th className="px-3 py-2 text-right font-semibold">Facturado</th>
+                    <th className="px-3 py-2 text-right font-semibold">Vendido</th>
+                    <th className="px-3 py-2 text-right font-semibold">Margen</th>
                     {f.hayComparacion ? <th className="px-3 py-2 text-right font-semibold">Comparación</th> : null}
                     {f.hayComparacion ? <th className="px-3 py-2 text-right font-semibold">Cambio</th> : null}
-                    <th className="px-3 py-2 text-right font-semibold">Compras</th>
+                    <th className="px-3 py-2 text-right font-semibold">Facturas</th>
                     <th className="px-3 py-2 font-semibold">Última compra</th>
                     <th className="py-2 pl-3 text-right font-semibold">
                       <span className="sr-only">Abrir</span>
@@ -336,6 +340,22 @@ export default async function PaginaClientesEjecutiva({
                           </span>
                         </td>
                         <td className="tabular px-3 py-2.5 text-right font-semibold">{dinero(x.venta)}</td>
+                        <td className="tabular px-3 py-2.5 text-right">
+                          {dinero(vendidoDe.get(x.id)?.vendido ?? 0)}
+                          {vendidoDe.get(x.id) ? (
+                            <span className="block text-sm text-[var(--fg-muted)]">
+                              {entero(vendidoDe.get(x.id)!.ventas)} {vendidoDe.get(x.id)!.ventas === 1 ? "pedido" : "pedidos"}
+                              {vendidoDe.get(x.id)!.repetidos > 0 ? ` · ${entero(vendidoDe.get(x.id)!.repetidos)} repetido${vendidoDe.get(x.id)!.repetidos === 1 ? "" : "s"}` : ""}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="tabular px-3 py-2.5 text-right">
+                          {vendidoDe.get(x.id)?.margen == null ? (
+                            <span className="text-sm text-[var(--fg-muted)]">—</span>
+                          ) : (
+                            pct(vendidoDe.get(x.id)!.margen, 1)
+                          )}
+                        </td>
                         {f.hayComparacion ? (
                           <td className="tabular px-3 py-2.5 text-right text-[var(--fg-muted)]">{dinero(x.ventaPrev)}</td>
                         ) : null}
@@ -380,8 +400,16 @@ export default async function PaginaClientesEjecutiva({
                     </p>
                     <p className="ml-5 text-sm text-[var(--fg-muted)]">{ETIQUETA_SEGMENTO[x.segmento]}</p>
                     <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
-                      <dt className="text-[var(--fg-muted)]">Este periodo</dt>
+                      <dt className="text-[var(--fg-muted)]">Facturado</dt>
                       <dd className="tabular text-right text-base font-semibold">{dinero(x.venta)}</dd>
+                      <dt className="text-[var(--fg-muted)]">Vendido</dt>
+                      <dd className="tabular text-right">{dinero(vendidoDe.get(x.id)?.vendido ?? 0)}</dd>
+                      {vendidoDe.get(x.id)?.margen != null ? (
+                        <>
+                          <dt className="text-[var(--fg-muted)]">Margen</dt>
+                          <dd className="tabular text-right">{pct(vendidoDe.get(x.id)!.margen, 1)}</dd>
+                        </>
+                      ) : null}
                       {f.hayComparacion ? (
                         <>
                           <dt className="text-[var(--fg-muted)]">Comparación</dt>

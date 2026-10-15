@@ -8225,3 +8225,23 @@ aprobó, y después desde ahí sí se puede vincular con órdenes de compra»*.
 
 **Sin probar en pantalla:** «Atender otro pedido» de punta a punta (crearía un
 pedido de verdad; el centinela de la 130 sí lo ejecuta y lo deshace).
+
+## §CG · 15/10 — La tabla de pedidos y lo vendido en los reportes (131-132)
+
+- **Tabla de pedidos (131):** periodo, buscar, cliente, etapa, cobro, SUNAT y
+  guía; columnas ordenables; total con IGV en la moneda de la venta, margen
+  sobre el costo analizado, compras, guía, factura y lo que debe, SUNAT,
+  etapa. KPIs: pedidos, vendido con margen, por hacer y por cobrar.
+- **Lo vendido (132):** `v_ventas_concretadas` = pedidos + cotizaciones
+  atendidas sin pedido de aprobación (las 631 CT02). Sin el histórico,
+  «vendido» habría sido cero dos años. El margen, solo con costo (el
+  histórico no lo tiene). `tablero_ventas` lo sirve a los reportes.
+- **Reportes:** «Cotizado y ganado» compara cotizado con VENDIDO y da margen
+  y pedidos repetidos; «Ventas por cliente» pone Facturado, Vendido (con
+  sus pedidos) y Margen; «Lo facturado» suma el bloque «Vendido y
+  facturado» con los pedidos sin factura; el informe general abre con «Lo
+  vendido (pedidos)» y el gráfico de facturas pasa a llamarse «Lo
+  facturado». El Excel trae la hoja «Pedidos» y la columna «Pedido» en
+  «Facturas».
+- 2026 hasta el 15/10: vendido $ 134 997.65 (285) contra facturado
+  $ 114 352.09 (248).

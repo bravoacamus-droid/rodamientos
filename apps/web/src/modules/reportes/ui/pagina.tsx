@@ -15,6 +15,7 @@ import {
 import { COLORES_FAMILIA, etiquetaAging, variacionPct } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
+import { datosVentas } from "@/modules/tablero/api/ejecutivo";
 import {
   GraficoAging,
   GraficoSerieCompras,
@@ -95,10 +96,21 @@ export default async function PaginaReportes({ searchParams }: Props) {
         <Indicadores hoy={hoy} />
       </Suspense>
 
+      {/* Lo vendido (132): los pedidos del periodo, que es cuando la venta se
+          concreta. Antes que lo facturado, porque va antes en el tiempo. */}
+      <Bloque
+        titulo="Lo vendido (pedidos)"
+        nota="Cada vez que un cliente confirma: los pedidos del periodo —también los repetidos— y lo del sistema anterior. Sin IGV."
+      >
+        <Suspense key={`p-${clave}`} fallback={<FilaSkeleton alto="h-20" columnas={4} />}>
+          <BloquePedidos rango={rango} />
+        </Suspense>
+      </Bloque>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
-          titulo="Ventas"
-          nota="Lo vendido en cada periodo, sin IGV. En verde, lo que queda después del costo, cuando se conoce."
+          titulo="Lo facturado"
+          nota="Lo facturado en cada periodo, sin IGV: lo declarado a SUNAT. En verde, lo que queda después del costo, cuando se conoce."
         >
           <Suspense key={`v-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
             <BloqueVentas rango={rango} />
@@ -324,6 +336,46 @@ function Kpi({
 }
 
 // ---------------------------------------------------------------------------
+
+/** Lo vendido del periodo (132), en cuatro cifras. */
+async function BloquePedidos({ rango }: { rango: Rango }) {
+  const r = await datosVentas(rango);
+  if (!r.ok) return <EstadoError titulo="No se pudo cargar lo vendido" detalle={r.error} />;
+  const d = r.datos.resumen;
+  return (
+    <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+      <Kpi
+        etiqueta="Vendido"
+        valor={d.vendido}
+        prefijo="$ "
+        decimales={2}
+        pie={`${d.ventas} ${d.ventas === 1 ? "venta" : "ventas"} a ${d.clientes} ${d.clientes === 1 ? "cliente" : "clientes"}`}
+      />
+      <Kpi
+        etiqueta="Margen de lo vendido"
+        valor={d.margen ?? undefined}
+        texto={d.margen === null ? "sin costo" : undefined}
+        sufijo=" %"
+        decimales={1}
+        pie="sobre el costo analizado al cotizar"
+        tono={d.margen !== null && d.margen < 10 ? "aviso" : undefined}
+      />
+      <Kpi
+        etiqueta="Pedidos repetidos"
+        valor={d.repetidos}
+        pie={d.repetidos > 0 ? "clientes que volvieron a pedir lo mismo" : "ninguno en este periodo"}
+      />
+      <Kpi
+        etiqueta="Vendido sin facturar"
+        valor={d.montoSinFacturar}
+        prefijo="$ "
+        decimales={2}
+        pie={d.sinFacturar > 0 ? `${d.sinFacturar} ${d.sinFacturar === 1 ? "pedido" : "pedidos"} por facturar` : "todo lo vendido está facturado"}
+        tono={d.sinFacturar > 0 ? "aviso" : "ok"}
+      />
+    </div>
+  );
+}
 
 async function BloqueVentas({ rango }: { rango: Rango }) {
   const r = await serieVentas(rango);

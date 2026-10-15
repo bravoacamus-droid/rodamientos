@@ -4,7 +4,7 @@ import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
 
 import { FiltroRango, etiquetaPeriodo } from "@/modules/reportes";
 
-import { clientesActivos, datosCotizaciones } from "../../api/ejecutivo";
+import { clientesActivos, datosCotizaciones, datosVentas } from "../../api/ejecutivo";
 import { FRASE_COMPARACION, tasaDeCierre } from "../../dominio/ejecutivo";
 import { FiltroCliente, FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
@@ -38,6 +38,10 @@ import {
  * Una cotización «enviada» con la validez pasada cuenta como VENCIDA aunque
  * en la tabla siga enviada (104): contarla en juego inflaría justo la cifra
  * que se viene a vigilar.
+ *
+ * Lo ganado se mide en VENDIDO desde la 132 (Luis, 15/10: *«ahí es cuando
+ * una venta ya se concretó»*): los pedidos —también los repetidos, que la
+ * cotización sola no contaba— más el histórico del sistema viejo.
  */
 
 const ESTADOS: { clave: string; texto: string; color: string }[] = [
@@ -77,11 +81,12 @@ export default async function PaginaCotizacionesEjecutiva({
     />
   );
 
-  const [actual, previo] = await Promise.all([
+  const [actual, previo, ventas] = await Promise.all([
     datosCotizaciones(f.rango, cliente),
     f.hayComparacion
       ? datosCotizaciones({ ...f.previo, grano: f.rango.grano }, cliente)
       : Promise.resolve(null),
+    datosVentas(f.rango, cliente),
   ]);
 
   if (!actual.ok) {
@@ -101,13 +106,15 @@ export default async function PaginaCotizacionesEjecutiva({
   const tasaPrev = rp ? tasaDeCierre(rp) : null;
   const enJuego = r.borrador + r.enviada;
 
+  const v = ventas.ok ? ventas.datos : null;
   const porPeriodo = new Map(a.serie.map((p) => [p.periodo.slice(0, 10), p]));
+  const vendidoPorPeriodo = new Map((v?.serie ?? []).map((p) => [p.periodo.slice(0, 10), p.vendido]));
   const serie = f.periodos.map((periodo) => {
     const p = porPeriodo.get(periodo);
     return {
       etiqueta: etiquetaPeriodo(periodo, f.rango.grano),
       cotizado: p?.monto ?? 0,
-      aprobado: p?.montoAprobado ?? 0,
+      vendido: vendidoPorPeriodo.get(periodo) ?? 0,
     };
   });
 
@@ -127,9 +134,9 @@ export default async function PaginaCotizacionesEjecutiva({
       {/* Lo que hay hoy en la base: que no se lea como un fallo. */}
       {r.cotizaciones < 5 ? (
         <p className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3 text-base">
-          Todavía hay <strong>{entero(r.cotizaciones)}</strong>{" "}
-          {r.cotizaciones === 1 ? "cotización" : "cotizaciones"} en este periodo. Las del sistema
-          anterior no se cargaron; este tablero se va llenando con cada cotización que se hace en el ERP.
+          Hay <strong>{entero(r.cotizaciones)}</strong>{" "}
+          {r.cotizaciones === 1 ? "cotización" : "cotizaciones"} en este periodo. Prueba con un periodo más
+          largo arriba.
         </p>
       ) : null}
 
@@ -202,8 +209,8 @@ export default async function PaginaCotizacionesEjecutiva({
 
         <Bloque
           className="@4xl:col-span-3"
-          titulo="Lo cotizado y lo aprobado"
-          descripcion="Por periodo, sin IGV. La distancia entre las dos barras es lo que no se cerró."
+          titulo="Lo cotizado y lo vendido"
+          descripcion="Por periodo, sin IGV. Vendido son los pedidos —también los repetidos— y lo del sistema anterior."
         >
           {r.cotizaciones === 0 ? (
             <p className="py-10 text-center text-base text-[var(--fg-muted)]">No hay cotizaciones en este periodo.</p>
@@ -212,15 +219,23 @@ export default async function PaginaCotizacionesEjecutiva({
               datos={serie}
               series={[
                 { clave: "cotizado", nombre: "Cotizado", color: "var(--viz-1)" },
-                { clave: "aprobado", nombre: "Aprobado", color: "var(--viz-3)" },
+                { clave: "vendido", nombre: "Vendido", color: "var(--viz-3)" },
               ]}
             />
           )}
         </Bloque>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
-        <Dato etiqueta="Aprobado" valor={dinero(r.montoAprobado)} tono="ok" />
+      <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-3">
+        <Dato etiqueta="Vendido (pedidos)" valor={dinero(v?.resumen.vendido ?? r.montoAprobado)} tono="ok" />
+        <Dato
+          etiqueta="Margen de lo vendido"
+          valor={v?.resumen.margen === null || v === null ? "sin costo analizado" : pct(v.resumen.margen, 1)}
+        />
+        <Dato
+          etiqueta="Pedidos repetidos"
+          valor={v ? `${entero(v.resumen.repetidos)} de ${entero(v.resumen.ventas)}` : "—"}
+        />
         <Dato etiqueta="Perdido (rechazado o vencido)" valor={dinero(r.montoPerdido)} tono={r.montoPerdido > 0 ? "danger" : undefined} />
         <Dato etiqueta="Ya facturado de estas" valor={dinero(r.facturado)} />
         <Dato
