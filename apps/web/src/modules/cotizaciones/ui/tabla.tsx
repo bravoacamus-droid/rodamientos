@@ -210,21 +210,13 @@ export async function TablaCotizaciones({
                   />
                 </td>
 
-                {/*
-                  Rejilla de dos columnas FIJAS, no una fila que se encoge.
-
-                  Con `flex` cada botón medía lo que medía su texto, así que
-                  «Editar» y «Facturar» dejaban el «Ver» de su fila en una
-                  equis distinta y la columna salía en escalera. Luis, 08/09:
-                  *«los botones no cuadran»*.
-
-                  Las dos columnas miden lo que mide el texto más largo de
-                  cada una. Cuando una fila no tiene paso siguiente, la
-                  segunda columna se queda vacía y el «Ver» no se mueve: es
-                  justamente lo que mantiene la columna a plomo.
-                */}
+                {/* Un solo botón, «Acciones», con todo dentro (Luis, 15/10:
+                    «la idea es que esté adentro todo»). Mide lo mismo en
+                    todas las filas, así que la columna queda a plomo. */}
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover:bg-[var(--surface-2)] px-4 py-2.5">
-                  <AccionesFilaCotizacion c={c} />
+                  <div className="flex justify-end">
+                    <AccionesFilaCotizacion c={c} />
+                  </div>
                 </td>
               </tr>
             ))}

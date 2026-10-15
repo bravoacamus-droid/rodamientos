@@ -36,17 +36,10 @@ export interface CotizacionLista {
   vendedor: string | null;
   items: number;
   /**
-   * El último pedido de la cotización (130), con lo justo para decir en la
-   * fila qué sigue: hacer la guía o facturar. Luis, 15/10: *«solo se puede
-   * facturar si tiene guía»*.
+   * Sus pedidos (130), del primero al último, para ir a ellos desde el menú
+   * de la fila. La guía y la factura se hacen en el pedido, no aquí.
    */
-  pedido: {
-    id: string;
-    numero: string;
-    /** La guía emitida del pedido, si la hay: sin ella no se factura. */
-    guiaEmitida: string | null;
-    facturado: boolean;
-  } | null;
+  pedidos: { id: string; numero: string }[];
 }
 
 /**

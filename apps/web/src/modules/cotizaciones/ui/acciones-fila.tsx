@@ -1,159 +1,85 @@
 "use client";
 
-// Cliente: el menú de tres puntos y «Duplicar», que llama a una Server Action
-// y lleva a la copia.
+// Cliente: el menú se abre y navega con el router.
 
-import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ClipboardList, Copy, EllipsisVertical, Eye, Pencil, Receipt, Truck } from "lucide-react";
+import { Check, ClipboardList, EllipsisVertical, Eye, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@rodatech/ui";
 
-import { clonar } from "../acciones/gestionar";
 import type { CotizacionLista } from "../dominio/tipos";
 
 /**
- * Las acciones de una cotización en la lista: «Ver», el paso siguiente y el
- * resto en el menú de tres puntos.
+ * Las acciones de una cotización en la lista: TODO dentro de un solo menú.
  *
- * Luis, 15/10: *«debería haber otro botón para aprobar cotización o poner un
- * tres puntos, y ahí está ver cotización, aprobar cotización, duplicar,
- * facturar; porque el aprobar es pasar a pedidos»*. Y: *«solo se puede
- * facturar si tiene guía; si no, no»*.
+ * Luis, 15/10, al ver «Ver» y «Aprobar» fuera y los tres puntos al lado:
+ * *«la idea es que esté adentro todo»*. Y dentro, solo lo que es de la
+ * cotización y de sus pedidos: *«duplicar, facturar no sería ahí, porque eso
+ * está en pedido»*. La guía, la factura, las compras y repetir el pedido se
+ * hacen en la ficha del pedido.
  *
- * Por eso el paso siguiente cambia con el estado: en una cotización viva es
- * «Aprobar» (abre la ficha con el diálogo de qué confirmó el cliente), y en
- * una aprobada es «Pedido», que es donde se hace todo lo demás. «Facturar»
- * solo se ofrece con la guía emitida; sin ella sale apagado y dice por qué.
+ * El botón lleva su palabra, «Acciones», con borde: tres puntos sueltos no
+ * dicen que ahí hay algo que pulsar (revisión por módulos del 02/10).
  */
 export function AccionesFilaCotizacion({ c, ancho = false }: { c: CotizacionLista; ancho?: boolean }) {
   const router = useRouter();
-  const [pendiente, iniciar] = React.useTransition();
-  const [error, setError] = React.useState<string | null>(null);
-
   const viva = c.estado === "borrador" || c.estado === "enviada";
-  const p = c.pedido;
-  const puedeFacturar = Boolean(p && p.guiaEmitida && !p.facturado);
-
-  const duplicar = () => {
-    setError(null);
-    iniciar(async () => {
-      const r = await clonar(c.id);
-      if (!r.ok) setError(r.error ?? "No se pudo duplicar.");
-      else if (r.id) router.push(`/cotizaciones/${r.id}`);
-    });
-  };
 
   return (
-    <div className={ancho ? "flex w-full flex-col gap-1" : "flex flex-col items-end gap-1"}>
-      <div className={ancho ? "flex w-full items-center gap-2" : "grid w-[268px] grid-cols-[84px_1fr_36px] gap-1.5"}>
-        <Link href={`/cotizaciones/${c.id}`} className={`${SECUNDARIO} ${ancho ? "flex-1" : "w-full"} justify-center`}>
-          <Eye className="size-4 shrink-0" aria-hidden="true" />
-          Ver
-        </Link>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        type="button"
+        aria-label={`Acciones de ${c.numero}`}
+        className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "w-full" : "ml-auto"}`}
+      >
+        <EllipsisVertical className="size-4" aria-hidden="true" />
+        Acciones
+      </DropdownMenuTrigger>
 
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuItem asChild>
+          <Link href={`/cotizaciones/${c.id}`}>
+            <Eye className="size-4" aria-hidden="true" />
+            Ver cotización
+          </Link>
+        </DropdownMenuItem>
         {viva ? (
-          <Link
-            href={`/cotizaciones/${c.id}?aprobar=1`}
-            className={`${PRINCIPAL} ${ancho ? "flex-1" : "w-full"} justify-center`}
-          >
-            <Check className="size-4 shrink-0" aria-hidden="true" />
-            Aprobar
-          </Link>
-        ) : p ? (
-          <Link href={`/pedidos/${p.id}`} className={`${PRINCIPAL} ${ancho ? "flex-1" : "w-full"} justify-center`}>
-            <ClipboardList className="size-4 shrink-0" aria-hidden="true" />
-            Pedido
-          </Link>
-        ) : (
-          // Sin paso siguiente el hueco se queda: es lo que mantiene la
-          // columna a plomo entre filas (Luis, 08/09: «los botones no cuadran»).
-          <span className={ancho ? "hidden" : ""} />
-        )}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            type="button"
-            aria-label={`Más acciones de ${c.numero}`}
-            title="Más acciones"
-            disabled={pendiente}
-            className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "px-3" : "w-9"}`}
-          >
-            <EllipsisVertical className="size-4" aria-hidden="true" />
-            {ancho ? "Más" : null}
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}`)}>
-              <Eye className="size-4" aria-hidden="true" />
-              Ver cotización
+          <>
+            <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}/editar`)}>
+              <Pencil className="size-4" aria-hidden="true" />
+              Editar cotización
             </DropdownMenuItem>
-            {viva ? (
-              <>
-                <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}/editar`)}>
-                  <Pencil className="size-4" aria-hidden="true" />
-                  Editar cotización
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}?aprobar=1`)}>
-                  <Check className="size-4" aria-hidden="true" />
-                  Aprobar cotización
-                </DropdownMenuItem>
-              </>
-            ) : null}
-            <DropdownMenuItem disabled={pendiente} onSelect={duplicar}>
-              <Copy className="size-4" aria-hidden="true" />
-              Duplicar
-              <span className="ml-auto text-sm text-[var(--fg-subtle)]">precios de hoy</span>
+            {/* Aprobar es pasar a pedidos: abre la ficha con «¿Qué te
+                confirmó el cliente?» y, al aprobar, lleva al pedido. */}
+            <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}?aprobar=1`)}>
+              <Check className="size-4" aria-hidden="true" />
+              Aprobar cotización
             </DropdownMenuItem>
+          </>
+        ) : null}
 
-            {p ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => router.push(`/pedidos/${p.id}`)}>
-                  <ClipboardList className="size-4" aria-hidden="true" />
-                  Ver pedido {p.numero}
-                </DropdownMenuItem>
-                {!p.guiaEmitida ? (
-                  <DropdownMenuItem onSelect={() => router.push(`/guias/nueva?cotizacion=${c.id}`)}>
-                    <Truck className="size-4" aria-hidden="true" />
-                    Hacer la guía
-                  </DropdownMenuItem>
-                ) : null}
-                {puedeFacturar ? (
-                  <DropdownMenuItem
-                    onSelect={() => router.push(`/facturacion/nueva?cotizacion=${c.id}&guia=${p.guiaEmitida}`)}
-                  >
-                    <Receipt className="size-4" aria-hidden="true" />
-                    Facturar
-                  </DropdownMenuItem>
-                ) : !p.facturado ? (
-                  <DropdownMenuItem disabled className="flex-col items-start gap-0">
-                    <span className="inline-flex items-center gap-2">
-                      <Receipt className="size-4" aria-hidden="true" />
-                      Facturar
-                    </span>
-                    <span className="pl-6 text-sm">Primero hay que emitir la guía</span>
-                  </DropdownMenuItem>
-                ) : null}
-              </>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      {pendiente ? <span className="text-sm text-[var(--fg-muted)]">Duplicando…</span> : null}
-      {error ? <span className="text-sm text-[var(--danger)]">{error}</span> : null}
-    </div>
+        {c.pedidos.length > 0 ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-sm font-medium text-[var(--fg-muted)]">
+              {c.pedidos.length === 1 ? "Su pedido" : "Sus pedidos"}
+            </DropdownMenuLabel>
+            {c.pedidos.map((p) => (
+              <DropdownMenuItem key={p.id} onSelect={() => router.push(`/pedidos/${p.id}`)}>
+                <ClipboardList className="size-4" aria-hidden="true" />
+                Ver pedido <span className="font-mono">{p.numero}</span>
+              </DropdownMenuItem>
+            ))}
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
-
-const PRINCIPAL =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
