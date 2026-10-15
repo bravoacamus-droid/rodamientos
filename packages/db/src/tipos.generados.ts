@@ -4803,9 +4803,12 @@ export type Database = {
         Row: {
           cantidad: number | null
           codigo: string | null
+          costo: number | null
+          costo_unitario: number | null
           cotizacion_item_id: string | null
           descripcion: string | null
           descuento_pct: number | null
+          importe: number | null
           orden: number | null
           pedido_id: string | null
           producto_id: string | null

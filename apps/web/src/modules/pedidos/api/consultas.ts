@@ -5,6 +5,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 
 import { etapaDe, type Etapa } from "../dominio/etapa";
+import type { EstadoSunatFactura, FilaPedido } from "../dominio/lista";
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -241,4 +242,136 @@ export async function pedidoVigente(cotizacionId: string): Promise<string | null
     .limit(1)
     .maybeSingle();
   return data?.id ?? null;
+}
+
+/**
+ * Las filas de la tabla de pedidos (131), con todo lo que cuelga de cada uno:
+ * venta y costo, compras, guía, facturas con su cobro y su SUNAT. El periodo
+ * se filtra aquí (por la fecha del pedido); lo demás, en `dominio/lista`.
+ */
+export async function filasDePedidos(periodo: { desde?: string; hasta?: string }): Promise<Resultado<FilaPedido[]>> {
+  try {
+    const supabase = await clienteServidor();
+    let consulta = supabase
+      .from("pedidos")
+      .select(
+        `id, numero, secuencia, fecha, cotizacion_id, cliente_id,
+         cotizaciones(numero, moneda, tipo_cambio), clientes(razon_social),
+         compras(estado, falta_factura),
+         guias_remision(id, numero, estado),
+         comprobantes(id, numero, tipo, estado, saldo, total, moneda, pen_total, estado_sunat, fecha_vencimiento)`,
+      )
+      .order("fecha", { ascending: false })
+      .order("numero", { ascending: false })
+      .limit(1000);
+    if (periodo.desde) consulta = consulta.gte("fecha", periodo.desde);
+    if (periodo.hasta) consulta = consulta.lte("fecha", periodo.hasta);
+    const { data, error } = await consulta;
+    if (error) return fallo(error, "pedidos/filasDePedidos");
+
+    const filas = (data ?? []) as unknown as {
+      id: string;
+      numero: string;
+      secuencia: number;
+      fecha: string;
+      cotizacion_id: string;
+      cliente_id: string;
+      cotizaciones: { numero: string | null; moneda: string | null; tipo_cambio: number | null } | null;
+      clientes: { razon_social: string } | null;
+      compras: { estado: string; falta_factura: boolean }[] | null;
+      guias_remision: { id: string; numero: string | null; estado: string }[] | null;
+      comprobantes:
+        | {
+            id: string;
+            numero: string | null;
+            tipo: string;
+            estado: string;
+            saldo: number;
+            total: number;
+            moneda: string | null;
+            pen_total: number | null;
+            estado_sunat: string;
+            fecha_vencimiento: string | null;
+          }[]
+        | null;
+    }[];
+
+    const ids = filas.map((f) => f.id);
+    const dinero = new Map<string, { venta: number; costo: number; productos: { codigo: string; cantidad: number }[] }>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: ls, error: el } = await supabase
+        .from("v_pedido_lineas")
+        .select("pedido_id, codigo, cantidad, importe, costo, orden")
+        .in("pedido_id", ids.slice(i, i + 200))
+        .gt("cantidad", 0)
+        .order("orden");
+      if (el) return fallo(el, "pedidos/filasDePedidos");
+      for (const l of ls ?? []) {
+        const k = String(l.pedido_id);
+        const d = dinero.get(k) ?? { venta: 0, costo: 0, productos: [] };
+        d.venta += Number(l.importe ?? 0);
+        d.costo += Number(l.costo ?? 0);
+        d.productos.push({ codigo: String(l.codigo), cantidad: Number(l.cantidad) });
+        dinero.set(k, d);
+      }
+    }
+
+    const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
+    const sunat = (e: string): EstadoSunatFactura =>
+      e === "aceptado" || e === "observado" ? "aceptado" : e === "rechazado" ? "rechazado" : "pendiente";
+
+    return {
+      ok: true,
+      datos: filas.map((f): FilaPedido => {
+        const d = dinero.get(f.id) ?? { venta: 0, costo: 0, productos: [] };
+        const compras = (f.compras ?? []).filter((k) => k.estado !== "anulada");
+        const guias = (f.guias_remision ?? []).filter((g) => g.estado !== "anulada");
+        const guia = guias.find((g) => g.estado === "emitida") ?? guias[0] ?? null;
+        const facturas = (f.comprobantes ?? []).filter(
+          (c) => (c.tipo === "factura" || c.tipo === "boleta") && c.estado !== "anulado",
+        );
+        const colg = {
+          compras,
+          guiasEmitidas: guias.filter((g) => g.estado === "emitida").length,
+          facturas: facturas.map((c) => ({ saldo: Number(c.saldo ?? 0) })),
+        };
+        return {
+          id: f.id,
+          numero: f.numero,
+          secuencia: f.secuencia,
+          fecha: String(f.fecha),
+          cotizacionId: f.cotizacion_id,
+          cotizacion: f.cotizaciones?.numero ?? "—",
+          clienteId: f.cliente_id,
+          cliente: f.clientes?.razon_social ?? "—",
+          moneda: f.cotizaciones?.moneda === "PEN" ? "PEN" : "USD",
+          tipoCambio: Number(f.cotizaciones?.tipo_cambio) > 0 ? Number(f.cotizaciones?.tipo_cambio) : null,
+          venta: Math.round(d.venta * 100) / 100,
+          costo: Math.round(d.costo * 100) / 100,
+          compras: {
+            total: compras.length,
+            porRegistrar: compras.filter((k) => k.falta_factura && k.estado === "registrada").length,
+          },
+          guia: guia ? { id: guia.id, numero: guia.numero ?? "borrador", emitida: guia.estado === "emitida" } : null,
+          facturas: facturas.map((c) => {
+            const enSoles = c.moneda === "PEN" && c.pen_total != null && Number(c.total) > 0;
+            const saldoUsd = Number(c.saldo ?? 0);
+            return {
+              id: c.id,
+              numero: c.numero ?? "—",
+              saldoUsd,
+              saldo: enSoles ? Math.round(((saldoUsd * Number(c.pen_total)) / Number(c.total)) * 100) / 100 : saldoUsd,
+              moneda: enSoles ? "PEN" : "USD",
+              vencida: saldoUsd > 0.005 && !!c.fecha_vencimiento && c.fecha_vencimiento < hoy,
+              sunat: sunat(c.estado_sunat),
+            };
+          }),
+          etapa: etapaDe(colg),
+          productos: d.productos,
+        };
+      }),
+    };
+  } catch (e) {
+    return fallo(e, "pedidos/filasDePedidos");
+  }
 }
