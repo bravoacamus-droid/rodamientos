@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { HistorialProveedor } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { EstadoError } from "@rodatech/ui";
+import { EstadoError, Skeleton } from "@rodatech/ui";
 import { PackageCheck, Pencil } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -13,10 +15,14 @@ import { Volver } from "@/componentes/volver";
 /** La ficha de un proveedor. */
 export default async function PaginaDetalleProveedor({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** El periodo del historial (134). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const [resultado, perfil, catalogo] = await Promise.all([
     detalleProveedor(id),
     perfilActual(),
@@ -134,6 +140,12 @@ export default async function PaginaDetalleProveedor({
         productos={catalogo.ok ? catalogo.datos : []}
         puedeEditar={puedeEditar}
       />
+
+      {/* Lo que se le ha comprado (134): cifras, gráfico y sus compras, con
+          su periodo. Es a donde lleva el reporte de compras. */}
+      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
+        <HistorialProveedor id={p.id} sp={sp} />
+      </Suspense>
 
       {p.direccion || p.email || p.notas ? (
         <section className="card grid gap-4 p-4 sm:grid-cols-2">

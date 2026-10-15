@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { HistorialCliente } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, Button, EstadoError, Moneda, Skeleton } from "@rodatech/ui";
 import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -22,10 +24,14 @@ const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
  */
 export default async function PaginaDetalleCliente({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** El periodo del historial (134). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const [resultado, perfil] = await Promise.all([clientePorId(id), perfilActual()]);
 
   if (!resultado.ok) {
@@ -189,6 +195,12 @@ export default async function PaginaDetalleCliente({
           ))}
         </div>
       </section>
+
+      {/* Lo que se le ha vendido, en cifras (134): vendido, facturado, lo que
+          debe, cuánto se le gana y sus pedidos, con su periodo. */}
+      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
+        <HistorialCliente id={c.id} sp={sp} />
+      </Suspense>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ------------------------------------------------------ Contacto */}

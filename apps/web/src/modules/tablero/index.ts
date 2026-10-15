@@ -13,3 +13,8 @@ export { default as PaginaComprasEjecutiva } from "./ui/ejecutivo/compras";
 export { default as PaginaFacturacionEjecutiva } from "./ui/ejecutivo/facturacion";
 
 export type { AlertaResumen, Cartera, KpisPeriodo, PuntoSerie } from "./api/consultas";
+
+// El historial de cada ficha (134): proveedor, cliente y producto.
+export { HistorialProveedor } from "./ui/ficha/historial-proveedor";
+export { HistorialCliente } from "./ui/ficha/historial-cliente";
+export { HistorialProducto } from "./ui/ficha/historial-producto";

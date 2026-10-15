@@ -658,3 +658,171 @@ export async function proveedoresConCompras(): Promise<Resultado<{ id: string; n
     return fallo(e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Historial del producto (134) y compras de un proveedor
+// ---------------------------------------------------------------------------
+
+export interface DatosProducto {
+  resumen: {
+    vendidoUnidades: number;
+    vendido: number;
+    ventas: number;
+    clientes: number;
+    precioPromedio: number | null;
+    margen: number | null;
+    facturadoUnidades: number;
+    facturado: number;
+    compradoUnidades: number;
+    comprado: number;
+    costoPromedio: number | null;
+    proveedores: number;
+  };
+  serie: { periodo: string; vendidoUnidades: number; vendido: number; compradoUnidades: number; comprado: number }[];
+  clientes: { id: string; cliente: string; unidades: number; vendido: number; ventas: number; ultima: string; precio: number | null }[];
+  proveedores: {
+    id: string;
+    proveedor: string;
+    ultimoCosto: number | null;
+    ultimaCompra: string | null;
+    unidades: number | null;
+    costoPromedio: number | null;
+    compras: number;
+  }[];
+}
+
+export async function datosProducto(
+  rango: { desde: string; hasta: string; grano: Grano },
+  producto: string,
+): Promise<Resultado<DatosProducto>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("tablero_producto", {
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+      p_grano: rango.grano,
+      p_producto: producto,
+    });
+    if (error) return fallo(error);
+    const d = (data ?? {}) as Json;
+    const r = (d.resumen ?? {}) as Json;
+    return {
+      ok: true,
+      datos: {
+        resumen: {
+          vendidoUnidades: n(r.vendido_unidades),
+          vendido: n(r.vendido),
+          ventas: n(r.ventas),
+          clientes: n(r.clientes),
+          precioPromedio: nulo(r.precio_promedio),
+          margen: margenDe(n(r.venta_con_costo), n(r.costo_vendido)),
+          facturadoUnidades: n(r.facturado_unidades),
+          facturado: n(r.facturado),
+          compradoUnidades: n(r.comprado_unidades),
+          comprado: n(r.comprado),
+          costoPromedio: nulo(r.costo_promedio),
+          proveedores: n(r.proveedores),
+        },
+        serie: lista(d.serie).map((p) => ({
+          periodo: txt(p.periodo),
+          vendidoUnidades: n(p.vendido_unidades),
+          vendido: n(p.vendido),
+          compradoUnidades: n(p.comprado_unidades),
+          comprado: n(p.comprado),
+        })),
+        clientes: lista(d.clientes).map((c) => ({
+          id: txt(c.id),
+          cliente: txt(c.cliente),
+          unidades: n(c.unidades),
+          vendido: n(c.vendido),
+          ventas: n(c.ventas),
+          ultima: txt(c.ultima),
+          precio: nulo(c.precio),
+        })),
+        proveedores: lista(d.proveedores).map((x) => ({
+          id: txt(x.id),
+          proveedor: txt(x.proveedor),
+          ultimoCosto: nulo(x.ultimo_costo),
+          ultimaCompra: x.ultima_compra ? txt(x.ultima_compra) : null,
+          unidades: nulo(x.unidades),
+          costoPromedio: nulo(x.costo_promedio),
+          compras: n(x.compras),
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Una compra en la lista de su proveedor. */
+export interface CompraDeProveedor {
+  id: string;
+  numero: string;
+  fecha: string;
+  estado: string;
+  faltaFactura: boolean;
+  via: string;
+  factura: string | null;
+  pedido: { id: string; numero: string } | null;
+  totalUsd: number;
+  productos: string;
+}
+
+/** Las compras de un proveedor en el periodo, las últimas primero. */
+export async function comprasDelProveedor(
+  proveedor: string,
+  rango: { desde: string; hasta: string },
+): Promise<Resultado<CompraDeProveedor[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compras")
+      .select(
+        `id, numero, fecha, estado, falta_factura, tipo, via_importacion, documento_proveedor, total, moneda, tipo_cambio,
+         pedido:pedidos!compras_pedido_id_fkey(id, numero),
+         compra_items(cantidad, productos(codigo))`,
+      )
+      .eq("proveedor_id", proveedor)
+      .gte("fecha", rango.desde)
+      .lte("fecha", rango.hasta)
+      .order("fecha", { ascending: false })
+      .order("numero", { ascending: false })
+      .limit(200);
+    if (error) return fallo(error);
+    return {
+      ok: true,
+      datos: ((data ?? []) as unknown as {
+        id: string;
+        numero: string;
+        fecha: string;
+        estado: string;
+        falta_factura: boolean;
+        tipo: string;
+        via_importacion: string | null;
+        documento_proveedor: string | null;
+        total: number;
+        moneda: string;
+        tipo_cambio: number | null;
+        pedido: { id: string; numero: string } | null;
+        compra_items: { cantidad: number; productos: { codigo: string } | null }[] | null;
+      }[]).map((c) => ({
+        id: c.id,
+        numero: c.numero,
+        fecha: String(c.fecha),
+        estado: c.estado,
+        faltaFactura: Boolean(c.falta_factura),
+        via: c.tipo === "local" ? "local" : (c.via_importacion ?? "importacion"),
+        factura: c.documento_proveedor,
+        pedido: c.pedido,
+        totalUsd:
+          c.moneda === "USD" || !(Number(c.tipo_cambio) > 0)
+            ? Number(c.total)
+            : Math.round((Number(c.total) / Number(c.tipo_cambio)) * 100) / 100,
+        productos: (c.compra_items ?? []).map((i) => `${i.productos?.codigo ?? "—"} × ${Number(i.cantidad)}`).join(" · "),
+      })),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

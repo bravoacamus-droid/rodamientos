@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Badge, EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, EstadoError, Moneda, Skeleton } from "@rodatech/ui";
+import { HistorialProducto } from "@/modules/tablero";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresDeProducto } from "@/modules/proveedores";
@@ -27,10 +29,14 @@ import { UNIDADES, abreviaturaUnidad } from "@rodatech/config";
  */
 export default async function PaginaDetalleProducto({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  /** El periodo del historial (134). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   // Un kit tiene su propia ficha: la de kits, que es donde se ve y se cambia
   // lo que lleva dentro. Desde el listado del catálogo se llegaba aquí.
   if (await esKit(id)) redirect(`/productos/kits/${id}`);
@@ -176,6 +182,12 @@ export default async function PaginaDetalleProducto({
         unidad={abreviaturaUnidad(p.unidad)}
         error={movimientos.ok ? null : movimientos.error}
       />
+
+      {/* Cómo se mueve (134): vendido y comprado, precio y costo, margen, a
+          quién se le vende y a quién se le compra, con su periodo. */}
+      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
+        <HistorialProducto id={p.id} sp={sp} />
+      </Suspense>
 
       {/* `grid-cols-1` explícito: sin él la columna implícita se mide por su
           contenido, y las tablas de proveedores la estiraban más allá del

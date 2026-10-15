@@ -8267,3 +8267,25 @@ ayude a Willy a ver mejor gráficos e información de compras»*.
   enseña las ~12 de prueba. Y «Quién lo deja más barato» trae costos de las
   rondas de prueba (AUTOLAND a $ 1.00): se limpia con
   `limpiar-pruebas-16-09.sql`.
+
+## §CI · 15/10 — El historial en la ficha de proveedor, cliente y producto (134)
+
+Luis: *«en todos los reportes también se puede dar clic y te lleva como algo
+personal… cuando le di a un proveedor me llevó a un módulo donde puedo ver
+los productos y lo que se compró, pero falta filtros, mejora de UI/UX,
+responsivo»*.
+
+- Un bloque de **historial** en las tres fichas a las que llevan los
+  reportes, con el periodo de los reportes (12 meses por defecto):
+  · **Proveedor:** comprado, compras, días de entrega, pendiente hoy; por mes
+    según la vía; lo que se le compra; lo que nos subió; sus compras en tabla
+    (tarjetas en el teléfono). Reusa `tablero_compras` con el proveedor.
+  · **Cliente:** vendido (con margen), facturado, lo que debe, cuánto se le
+    gana; vendido contra facturado por mes; lo que más compra; sus pedidos.
+    Reusa `tablero_ventas`, `tablero_facturacion` y `tablero_cotizaciones`.
+  · **Producto:** vendido y comprado en unidades, precio contra costo,
+    margen (o ≈ estimado con precio de venta contra costo de compra cuando
+    no hay costo analizado), por mes, a quién se le vende y a quién se le
+    compra con el último costo de cada proveedor.
+- **134:** `v_ventas_lineas` (lo vendido línea a línea, misma regla que la
+  132) y `tablero_producto`.
