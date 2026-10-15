@@ -171,14 +171,34 @@ export default async function PaginaDetalleCompra({
         Para quién es (Luis, 09/10: *«enlazado al cliente y la cotización»*).
         Antes solo lo decían las observaciones, en gris y al final.
       */}
+      {/* La orden del pedido todavía sin la factura del proveedor (128). */}
+      {c.falta_factura && c.estado === "registrada" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
+          <div>
+            <p className="text-base font-semibold">Falta la factura del proveedor</p>
+            <p className="text-sm">
+              Es una orden del pedido: registra cómo llegó, su número de factura, el PDF y lo que cobró.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href={`/compras/${c.id}/factura`}>Registrar su factura</Link>
+          </Button>
+        </div>
+      ) : null}
+
       {c.para ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800 dark:bg-brand-950">
           <p className="text-base">
             Para el pedido <strong>{c.para.numero}</strong> de <strong>{c.para.cliente}</strong>
           </p>
-          <Button asChild variant="outline">
-            <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver el pedido</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link href={`/compras/pedido/${c.para.cotizacionId}`}>Compras del pedido</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver el pedido</Link>
+            </Button>
+          </div>
         </div>
       ) : null}
 

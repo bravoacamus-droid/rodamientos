@@ -771,6 +771,7 @@ export type Database = {
           creado_en: string
           documento_proveedor: string | null
           estado: Database["public"]["Enums"]["estado_compra"]
+          falta_factura: boolean
           fecha: string
           fecha_estimada: string | null
           gastos_importacion: number
@@ -798,6 +799,7 @@ export type Database = {
           creado_en?: string
           documento_proveedor?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
+          falta_factura?: boolean
           fecha?: string
           fecha_estimada?: string | null
           gastos_importacion?: number
@@ -825,6 +827,7 @@ export type Database = {
           creado_en?: string
           documento_proveedor?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
+          falta_factura?: boolean
           fecha?: string
           fecha_estimada?: string | null
           gastos_importacion?: number
@@ -5164,6 +5167,7 @@ export type Database = {
         Args: { p_nombre: string; p_tabla: unknown }
         Returns: string
       }
+      completar_compra: { Args: { p_datos: Json; p_id: string }; Returns: Json }
       consultas_liberar_cuota: {
         Args: { p_periodo: string }
         Returns: undefined

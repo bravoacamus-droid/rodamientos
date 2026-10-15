@@ -150,6 +150,12 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                       segundo canal, para quien no distingue verde de rojo— y
                       con las anuladas tachadas. */}
                   <EstadoBadge estado={c.estado} size="xs" />
+                  {/* La orden del pedido sin la factura del proveedor (128). */}
+                  {c.falta_factura && c.estado === "registrada" ? (
+                    <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
+                      Falta factura
+                    </span>
+                  ) : null}
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
                   {faltaRecibir(c.estado) ? (
@@ -198,8 +204,13 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   </span>
                 ) : null}
               </span>
-              <span className="shrink-0">
+              <span className="flex shrink-0 flex-col items-end">
                 <EstadoBadge estado={c.estado} size="xs" />
+                {c.falta_factura && c.estado === "registrada" ? (
+                    <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
+                      Falta factura
+                    </span>
+                  ) : null}
               </span>
             </div>
 

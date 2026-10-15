@@ -21,6 +21,7 @@ import { costosDelProveedor } from "../../acciones/costos";
 import { quienEsperaAhora } from "../../acciones/esperando";
 import { avisosDeCantidad, type QuienEsperaProducto } from "../../dominio/listos";
 import { registrarCompra, type ResultadoCompra } from "../../acciones/registrar";
+import { completarCompra, type ResultadoCompletar } from "../../acciones/completar";
 import { subirDocumentoCompra } from "../../acciones/adjuntos";
 import {
   aPayload,
@@ -60,7 +61,24 @@ import {
  * mercadería"*. Por eso aquí no hay ni una palabra de kardex: lo que se está
  * registrando es el compromiso con el proveedor.
  */
+/**
+ * La orden de un pedido a la que se le registra la factura (128). Con ella,
+ * el mismo formulario no crea una compra: completa la que ya salió de la
+ * cotización. Proveedor fijo, cantidades del pedido, y el resto como siempre.
+ */
+export interface OrdenAFacturar {
+  compraId: string;
+  numero: string;
+  cotizacionId: string;
+  cotizacion: string;
+  cliente: string;
+  /** «Orden 2 de 3». */
+  posicion: number;
+  de: number;
+}
+
 export function ConstructorCompra({
+  orden = null,
   sugeridos,
   hoy,
   precarga = [],
@@ -70,6 +88,7 @@ export function ConstructorCompra({
   couriers = [...COURIERS_DE_SIEMPRE],
   plantilla = null,
 }: {
+  orden?: OrdenAFacturar | null;
   /** Los de siempre y los ya usados, para el desplegable (095). */
   couriers?: string[];
   /** Al «volver a comprar»: lo que se trae de la compra anterior (§AO.5). */
@@ -169,7 +188,8 @@ export function ConstructorCompra({
     elegirla.
   */
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
-    formulario: "compra",
+    formulario: orden ? "compra-orden" : "compra",
+    id: orden?.compraId ?? null,
     datos: { estado, proveedor },
     valeLaPena: (d) => Boolean(d.estado.proveedorId || d.estado.lineas.length > 0),
     recuperar: (d) => {
@@ -178,9 +198,9 @@ export function ConstructorCompra({
     },
   });
 
-  const [resultado, guardar, guardando] = useActionState<ResultadoCompra | null, FormData>(
-    async (previo, formData) => {
-      const r = await registrarCompra(previo, formData);
+  const [resultado, guardar, guardando] = useActionState<ResultadoCompra | ResultadoCompletar | null, FormData>(
+    async (_previo, formData) => {
+      const r = orden ? await completarCompra(null, formData) : await registrarCompra(null, formData);
       if (r.ok) {
         /*
           La factura, a la compra recién creada. Si falla, la compra YA está
@@ -202,7 +222,8 @@ export function ConstructorCompra({
         }
         // Ya está en la base: el borrador sobra.
         olvidarBorrador();
-        router.push(`/compras/${r.id}`);
+        // La orden vuelve a su pedido: es donde se ve cuál falta.
+        router.push(orden ? `/compras/pedido/${orden.cotizacionId}` : `/compras/${r.id}`);
       }
       return r;
     },
@@ -210,7 +231,13 @@ export function ConstructorCompra({
   );
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
-  const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
+  const bloqueos = useMemo(() => {
+    const b = calcularBloqueos(estado);
+    // Es lo que convierte la orden en compra: sin el papel no hay nada que registrar.
+    return orden && !estado.documentoProveedor.trim()
+      ? [...b, { campo: "documentoProveedor" as const, mensaje: "Falta el número de la factura del proveedor." }]
+      : b;
+  }, [estado, orden]);
   const avisos = useMemo(() => calcularAvisos(estado), [estado]);
 
   useEffect(() => {
@@ -327,11 +354,30 @@ export function ConstructorCompra({
           e.preventDefault();
       }}
     >
-      <input type="hidden" name="compra" value={JSON.stringify(aPayload(estado))} />
+      <input
+        type="hidden"
+        name="compra"
+        value={JSON.stringify(orden ? { ...aPayload(estado), compra_id: orden.compraId } : aPayload(estado))}
+      />
 
       {avisoBorrador}
 
       <header className="flex flex-wrap items-center justify-between gap-3">
+        {orden ? (
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">
+              Factura de la orden {orden.numero}
+            </h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Orden {orden.posicion} de {orden.de} del pedido{" "}
+              <Link href={`/compras/pedido/${orden.cotizacionId}`} className="text-brand-600 underline">
+                {orden.cotizacion} · {orden.cliente}
+              </Link>
+              . Pon lo que dice la factura del proveedor: cómo llegó, su número y lo que cobró por cada
+              producto. Las cantidades son las del pedido.
+            </p>
+          </div>
+        ) : (
         <div>
           <h1 className="text-xl font-semibold tracking-tight">Registrar compra</h1>
           {/*
@@ -364,6 +410,7 @@ export function ConstructorCompra({
             recepcione.
           </p>
         </div>
+        )}
         {/*
           En el teléfono, «Cancelar» y «Guardar compra» en la misma fila y a
           medias: «Guardar» caía solo en una tercera línea (revisión por
@@ -381,7 +428,7 @@ export function ConstructorCompra({
             No bloquea nada: registrar una compra ya pactada, sin preguntar a
             nadie, es lo normal y sigue estando a un botón de distancia.
           */}
-          {estado.lineas.length > 0 ? (
+          {estado.lineas.length > 0 && !orden ? (
             <Button
               type="button"
               variant="outline"
@@ -404,13 +451,13 @@ export function ConstructorCompra({
             onClick={() => {
               // Cancelar es decidir no seguir: no se ofrece otra vez.
               olvidarBorrador();
-              router.push("/compras");
+              router.push(orden ? `/compras/pedido/${orden.cotizacionId}` : "/compras");
             }}
           >
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Guardando…" : "Guardar compra"}
+            {guardando ? "Guardando…" : orden ? "Guardar factura" : "Guardar compra"}
           </Button>
         </div>
       </header>
@@ -433,7 +480,7 @@ export function ConstructorCompra({
             número de la proforma confirmada, y el desaduanaje cuando llegue.
           </p>
         </div>
-      ) : plantilla ? (
+      ) : plantilla && plantilla.origen !== "orden" ? (
         <div className="rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-3 text-sm">
           <p className="font-medium">
             Volviendo a comprar lo de la {plantilla.numero}
@@ -488,7 +535,19 @@ export function ConstructorCompra({
                     atajo desaparecía justo cuando se iba a usar. Solo cuando no hay
                     proveedor todavía: una vez elegido, estos botones
                     invitarían a cambiarlo sin motivo. */}
-                {!proveedor && candidatos.length > 0 ? (
+                {orden ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Proveedor</span>
+                    <p className="flex min-h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 text-sm font-semibold">
+                      {proveedor?.razon_social ?? "—"}
+                      {proveedor?.numero_documento ? (
+                        <span className="ml-2 font-normal text-[var(--fg-muted)]">{proveedor.numero_documento}</span>
+                      ) : null}
+                    </p>
+                    <span className="text-sm text-[var(--fg-subtle)]">El de la orden: no se cambia aquí.</span>
+                  </div>
+                ) : null}
+                {!orden && !proveedor && candidatos.length > 0 ? (
                   <div className="flex flex-wrap items-center gap-2 pb-1">
                     <span className="text-sm text-[var(--fg-subtle)]">
                       Ya te han vendido esto:
@@ -516,7 +575,7 @@ export function ConstructorCompra({
                   </div>
                 ) : null}
 
-                <BuscadorProveedores
+                {orden ? null : <BuscadorProveedores
                   id="com-proveedor"
                   sugeridos={sugeridos}
                   elegido={proveedor}
@@ -541,8 +600,8 @@ export function ConstructorCompra({
                     despachar({ tipo: "cabecera", campo: "proveedorId", valor: null });
                   }}
                   hoy={hoy}
-                />
-                {proveedor ? null : (
+                />}
+                {proveedor || orden ? null : (
                   <span className="text-sm text-[var(--fg-subtle)]">
                     Es lo primero: los precios que se enseñan son los suyos.
                   </span>
@@ -713,12 +772,18 @@ export function ConstructorCompra({
 
           {/* --------------------------------------------------- Líneas */}
           <section className="card @container p-4">
+            {orden ? (
+              <p className="mb-3 text-sm text-[var(--fg-muted)]">
+                Los productos y cantidades del pedido. Corrige el costo si la factura dice otro.
+              </p>
+            ) : (
             <div className="mb-3">
               <BuscadorCompra
                 onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
                 ultimosCostos={ultimosCostos}
               />
             </div>
+            )}
 
             {estado.lineas.length === 0 ? (
               <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
@@ -743,6 +808,7 @@ export function ConstructorCompra({
                     ultimoCosto={ultimosCostos[l.productoId]}
                     extras={extrasDe(l.key)}
                     despachar={despachar}
+                    fija={Boolean(orden)}
                   />
                 ))}
               </ul>
@@ -769,6 +835,7 @@ export function ConstructorCompra({
                         ultimoCosto={ultimosCostos[l.productoId]}
                         extras={extrasDe(l.key)}
                         despachar={despachar}
+                        fija={Boolean(orden)}
                       />
                     ))}
                   </TBody>

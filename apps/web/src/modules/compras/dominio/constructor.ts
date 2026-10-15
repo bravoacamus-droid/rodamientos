@@ -551,7 +551,7 @@ export function totalesDe(estado: EstadoCompra): TotalesCompra {
 }
 
 export interface Bloqueo {
-  campo: "proveedor" | "lineas" | "fecha";
+  campo: "proveedor" | "lineas" | "fecha" | "documentoProveedor";
   mensaje: string;
 }
 
@@ -724,7 +724,7 @@ export interface PlantillaCompra {
    * De dónde viene: de otra compra («volver a comprar») o de un análisis de
    * importación (098). Cambia lo que dice el aviso de arriba.
    */
-  origen?: "compra" | "analisis";
+  origen?: "compra" | "analisis" | "orden";
   /**
    * Costos ESCRITOS, por producto: el FOB del análisis. Entran como decididos
    * (no propuestos) para que el «último costo de este proveedor» no los pise.

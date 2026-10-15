@@ -93,7 +93,7 @@ export async function listarCompras(
       .from("compras")
       .select(
         `id, creado_en, numero, fecha, fecha_estimada, tipo, documento_proveedor, estado,
-         total, gastos_importacion, moneda,
+         total, gastos_importacion, moneda, falta_factura,
          proveedores(razon_social),
          cotizacion:cotizaciones!compras_cotizacion_id_fkey(id, numero, clientes(razon_social)),
          compra_items(cantidad, cantidad_recibida)`,
@@ -145,6 +145,7 @@ export async function listarCompras(
       const items = c.compra_items ?? [];
       return {
         id: String(c.id),
+        falta_factura: Boolean(c.falta_factura),
         para: (() => {
           const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
           return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
@@ -219,7 +220,7 @@ export async function detalleCompra(
         `id, numero, fecha, fecha_estimada, proveedor_id, tipo,
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
-         motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda,
+         motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda, falta_factura,
          gastos_importacion_detalle:gastos_importacion(id, concepto, monto, reparto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento, direccion),
@@ -277,6 +278,7 @@ export async function detalleCompra(
         proveedor: c.proveedores?.razon_social ?? null,
         proveedor_documento: c.proveedores?.numero_documento ?? null,
         proveedor_direccion: c.proveedores?.direccion ?? null,
+        falta_factura: Boolean(c.falta_factura),
         para: (() => {
           const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
           return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
@@ -472,5 +474,94 @@ export async function couriersUsados(): Promise<string[]> {
     return [...vistos.values()];
   } catch {
     return deSiempre;
+  }
+}
+
+/** Una orden del pedido, como la pinta la pantalla del pedido (128). */
+export interface OrdenDePedido {
+  id: string;
+  numero: string;
+  estado: string;
+  falta_factura: boolean;
+  proveedor: string;
+  tipo: TipoCompra;
+  via_importacion: "aerea" | "maritima" | null;
+  documento_proveedor: string | null;
+  moneda: "USD" | "PEN";
+  total: number;
+  fecha: string;
+  productos: { codigo: string; cantidad: number }[];
+}
+
+export interface PedidoConOrdenes {
+  cotizacionId: string;
+  cotizacion: string;
+  cliente: string;
+  ordenes: OrdenDePedido[];
+}
+
+/**
+ * Las órdenes de compra de una cotización, juntas (128). Luis, 15/10:
+ * *«lo que yo quiero englobar es cotización y cliente… si una cotización
+ * tiene tres órdenes, se junta eso, pero cada orden es diferente»*.
+ */
+export async function ordenesDeLaCotizacion(cotizacionId: string): Promise<Resultado<PedidoConOrdenes | null>> {
+  try {
+    const supabase = await clienteServidor();
+    const [{ data: cot, error: e1 }, { data: compras, error: e2 }] = await Promise.all([
+      supabase.from("cotizaciones").select("id, numero, clientes(razon_social)").eq("id", cotizacionId).maybeSingle(),
+      supabase
+        .from("compras")
+        .select(
+          `id, numero, estado, falta_factura, tipo, via_importacion, documento_proveedor, moneda, total, fecha,
+           proveedores(razon_social),
+           compra_items(cantidad, productos(codigo))`,
+        )
+        .eq("cotizacion_id", cotizacionId)
+        .neq("estado", "anulada")
+        .order("numero", { ascending: true }),
+    ]);
+    if (e1) return fallo(e1, "compras/ordenesDeLaCotizacion");
+    if (e2) return fallo(e2, "compras/ordenesDeLaCotizacion");
+    if (!cot) return { ok: true, datos: null };
+
+    const filas = (compras ?? []) as unknown as {
+      id: string;
+      numero: string;
+      estado: string;
+      falta_factura: boolean;
+      tipo: TipoCompra;
+      via_importacion: "aerea" | "maritima" | null;
+      documento_proveedor: string | null;
+      moneda: string | null;
+      total: number;
+      fecha: string;
+      proveedores: { razon_social: string } | null;
+      compra_items: { cantidad: number; productos: { codigo: string } | null }[] | null;
+    }[];
+    return {
+      ok: true,
+      datos: {
+        cotizacionId: cot.id,
+        cotizacion: cot.numero ?? "—",
+        cliente: (cot.clientes as { razon_social: string } | null)?.razon_social ?? "—",
+        ordenes: filas.map((f) => ({
+          id: f.id,
+          numero: f.numero,
+          estado: f.estado,
+          falta_factura: Boolean(f.falta_factura),
+          proveedor: f.proveedores?.razon_social ?? "—",
+          tipo: f.tipo,
+          via_importacion: f.via_importacion,
+          documento_proveedor: f.documento_proveedor,
+          moneda: f.moneda === "PEN" ? "PEN" : "USD",
+          total: Number(f.total ?? 0),
+          fecha: String(f.fecha),
+          productos: (f.compra_items ?? []).map((i) => ({ codigo: i.productos?.codigo ?? "—", cantidad: Number(i.cantidad ?? 0) })),
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "compras/ordenesDeLaCotizacion");
   }
 }

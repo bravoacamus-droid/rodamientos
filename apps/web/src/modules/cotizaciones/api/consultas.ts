@@ -834,6 +834,8 @@ export interface OrdenDelPedido {
   productos: string[];
   /** Y cuánto de cada uno (121): con otro pedido se propone solo lo que falta. */
   items: { productoId: string; cantidad: number }[];
+  /** Sin la factura del proveedor todavía (128). */
+  faltaFactura: boolean;
 }
 
 /**
@@ -848,7 +850,7 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("compras")
-      .select("id, numero, estado, fecha, moneda, total, proveedor_id, proveedores(razon_social), compra_items(producto_id, cantidad)")
+      .select("id, numero, estado, fecha, moneda, total, proveedor_id, falta_factura, proveedores(razon_social), compra_items(producto_id, cantidad)")
       .eq("cotizacion_id", cotizacionId)
       .order("numero");
     if (error) return [];
@@ -860,9 +862,11 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
       moneda: string;
       total: number;
       proveedor_id: string;
+      falta_factura: boolean | null;
       proveedores: { razon_social: string } | null;
       compra_items: { producto_id: string; cantidad: number | string }[] | null;
     }[]).map((c) => ({
+      faltaFactura: Boolean(c.falta_factura),
       id: c.id,
       numero: c.numero,
       estado: c.estado,

@@ -8172,3 +8172,28 @@ El auditor revisó 388f1f8 y c34b4fa. Arreglado:
 - **B-3** Un «0» sin CDR queda observado, no aceptado a secas.
 - **S-1** Un cuerpo que no es JSON ya no se repite en pantalla.
 - **B-4** Diez por tanda en «Enviar todas».
+
+## §CE · 15/10 — Las órdenes del pedido se completan con su factura (128)
+
+Luis, con «Registrar compra» delante: *«yo registro esta orden o órdenes…
+lo que quiero es englobar cotización y cliente, porque puede tener varios
+proveedores… cada orden es diferente… no se sabe si el producto es compra
+local, aérea o marítima, tiene que subir número de factura, su factura, todo
+eso, para que guarde una compra»*.
+
+- **El hueco:** `generar_ordenes_de_compra` crea cada orden ya como compra
+  «registrada», sin factura, sin vía y sin gastos, y la ficha de la compra no
+  se edita. No había dónde terminarla.
+- **128:** `compras.falta_factura` (por trigger en las que traen
+  `cotizacion_id`) y `completar_compra(id, datos)`: factura, cómo llegó,
+  moneda, IGV, gastos y el costo de la factura por línea, con los totales de
+  la base. Una vez, solo «registrada»; las cantidades no se tocan. Centinela
+  que la EJECUTA y la deshace.
+- **`/compras/pedido/<cotización>`:** «COT · cliente», una tarjeta por orden,
+  «N de M con factura». Al generar las órdenes desde la cotización se va ahí.
+- **`/compras/<id>/factura`:** el MISMO formulario de «Registrar compra»
+  (modo `orden`): proveedor fijo, cantidades bloqueadas, sin buscar productos.
+- «Falta factura» en la lista de compras, en la ficha y en la cotización.
+
+**Sin probar:** guardar una factura de verdad desde la pantalla (la función
+sí, por el centinela). La única orden es CMP-26-00013, de COT1-000012.

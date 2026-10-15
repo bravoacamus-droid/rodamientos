@@ -40,7 +40,13 @@ export function FilaCompra({
   ultimoCosto,
   extras,
   despachar,
+  fija = false,
 }: {
+  /**
+   * La orden de un pedido (128): las cantidades son las del cliente y no se
+   * tocan, ni se quitan líneas. Solo el costo de la factura.
+   */
+  fija?: boolean;
   linea: LineaCompraEditable;
   /** Lo que ESTE proveedor cobró la última vez por este producto. */
   ultimoCosto: { costo: number; numero: string } | undefined;
@@ -85,6 +91,7 @@ export function FilaCompra({
           min={0}
           step={1}
           value={linea.cantidad}
+          disabled={fija}
           onChange={(e) =>
             despachar({
               tipo: "cantidad",
@@ -142,7 +149,7 @@ export function FilaCompra({
       <td className="px-2 py-2 text-right">
         {/* Un botón que parece botón: era un «Quitar» en gris de 12 px, sin
             borde, que Willy no habría reconocido como algo que se pulsa. */}
-        <Button
+        {fija ? null : <Button
           type="button"
           variant="outline"
           size="sm"
@@ -154,7 +161,7 @@ export function FilaCompra({
               qué hace (revisión por módulos del 02/10). */}
           <Trash2 className="size-4" aria-hidden />
           Quitar
-        </Button>
+        </Button>}
       </td>
     </tr>
   );
@@ -178,7 +185,13 @@ export function TarjetaCompra({
   ultimoCosto,
   extras,
   despachar,
+  fija = false,
 }: {
+  /**
+   * La orden de un pedido (128): las cantidades son las del cliente y no se
+   * tocan, ni se quitan líneas. Solo el costo de la factura.
+   */
+  fija?: boolean;
   linea: LineaCompraEditable;
   ultimoCosto: { costo: number; numero: string } | undefined;
   extras: ExtrasLinea;
@@ -197,7 +210,7 @@ export function TarjetaCompra({
             <p className="text-sm text-[var(--fg-subtle)]">{linea.marca}</p>
           ) : null}
         </div>
-        <Button
+        {fija ? null : <Button
           type="button"
           variant="outline"
           size="sm"
@@ -207,7 +220,7 @@ export function TarjetaCompra({
         >
           <Trash2 className="size-4" aria-hidden />
           Quitar
-        </Button>
+        </Button>}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -219,6 +232,7 @@ export function TarjetaCompra({
             min={0}
             step={1}
             value={linea.cantidad}
+            disabled={fija}
             onChange={(e) =>
               despachar({
                 tipo: "cantidad",

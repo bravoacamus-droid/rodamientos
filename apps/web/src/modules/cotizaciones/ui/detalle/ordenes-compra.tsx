@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClipboardList, ShoppingCart } from "lucide-react";
+import { ClipboardList, Receipt, ShoppingCart } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -92,10 +92,33 @@ export function OrdenesDeCompra({
               <span className="min-w-0 flex-1 truncate">{o.proveedor}</span>
               <span className="text-sm text-[var(--fg-muted)]">{formatearFecha(o.fecha)}</span>
               <span className="tabular font-medium">{dinero(o.total, o.moneda)}</span>
-              <EstadoBadge estado={o.estado as EstadoDocumento} />
+              {o.faltaFactura && o.estado !== "anulada" ? (
+                <span className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
+                  Falta factura
+                </span>
+              ) : (
+                <EstadoBadge estado={o.estado as EstadoDocumento} />
+              )}
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {/* Registrar la factura de cada orden, todas juntas bajo el pedido (128). */}
+      {vivas.length > 0 ? (
+        <Link
+          href={`/compras/pedido/${cotizacionId}`}
+          className={`inline-flex h-10 w-fit items-center gap-2 rounded-md px-4 text-sm font-medium ${
+            vivas.some((o) => o.faltaFactura)
+              ? "bg-brand-600 text-white hover:bg-brand-700"
+              : "border border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+          }`}
+        >
+          <Receipt className="size-4" aria-hidden="true" />
+          {vivas.some((o) => o.faltaFactura)
+            ? `Registrar facturas de las compras (${vivas.filter((o) => o.faltaFactura).length} sin factura)`
+            : "Ver las compras del pedido"}
+        </Link>
       ) : null}
 
       {/* Lo que falta comprar de lo analizado, aquí y no en el aviso de
@@ -193,7 +216,9 @@ function DialogoGenerar({
         return;
       }
       setAbierto(false);
-      router.refresh();
+      // Lo que sigue es registrar la factura de cada una (Luis, 15/10:
+      // «deberías lanzarme así»): a la pantalla del pedido.
+      router.push(`/compras/pedido/${cotizacionId}`);
     });
 
   return (
