@@ -1,17 +1,15 @@
-import Link from "next/link";
 import { Banknote, ClipboardList, FileText, Target } from "lucide-react";
-import { EstadoError, KpiCard, Moneda, formatearFecha } from "@rodatech/ui";
+import { EstadoError, KpiCard } from "@rodatech/ui";
 
 import { etiquetaPeriodo } from "@/modules/reportes";
 import { filasDePedidos } from "@/modules/pedidos/api/consultas";
-import { cobroDe, margenPct, totalVisible } from "@/modules/pedidos/dominio/lista";
-import { InsigniaEtapa } from "@/modules/pedidos/ui/insignia";
 
 import { datosCotizaciones, datosFacturacion, datosVentas } from "../../api/ejecutivo";
 import { tasaDeCierre } from "../../dominio/ejecutivo";
 import { GraficoBarras } from "../ejecutivo/grafico-lazy";
 import { Bloque, Ranking, dinero, entero, hoyEnLima, leerFiltros, pct, type ParamsBusqueda } from "../ejecutivo/piezas";
 import { CabeceraHistorial } from "./cabecera";
+import { PedidosDelClienteLista } from "./pedidos-cliente";
 
 /**
  * El historial del cliente (134): cuánto se le vendió y se le facturó, cuánto
@@ -109,37 +107,7 @@ export async function HistorialCliente({ id, sp }: { id: string; sp: ParamsBusqu
         descripcion="Cada vez que confirmó, con su total, su margen y en qué va."
         accion={suyos.length > 0 ? { href: `/pedidos?cliente=${id}`, texto: "Ver en Pedidos" } : undefined}
       >
-        {suyos.length === 0 ? (
-          <p className="py-6 text-center text-base text-[var(--fg-muted)]">Ningún pedido en este periodo.</p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
-            {suyos.map((p) => {
-              const m = margenPct(p.venta, p.costo);
-              const c = cobroDe(p);
-              return (
-                <li key={p.id} className="flex flex-col gap-2 py-3 @3xl:flex-row @3xl:items-center @3xl:gap-4">
-                  <div className="min-w-0 flex-1">
-                    <Link href={`/pedidos/${p.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
-                      {p.numero}
-                    </Link>
-                    <span className="ml-2 text-sm text-[var(--fg-muted)]">
-                      {p.cotizacion} · {formatearFecha(p.fecha)}
-                    </span>
-                    <p className="truncate text-sm">{p.productos.map((x) => `${x.codigo} × ${x.cantidad}`).join(" · ")}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    <span className="tabular font-semibold">
-                      <Moneda valor={totalVisible(p)} moneda={p.moneda} tamano="sm" />
-                    </span>
-                    <span className="tabular">{m === null ? "sin costo" : `margen ${m.toFixed(1)} %`}</span>
-                    <span>{c === "pagado" ? "cobrado" : c === "vencido" ? "vencido" : c === "pendiente" ? "por cobrar" : "sin factura"}</span>
-                    <InsigniaEtapa etapa={p.etapa} />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <PedidosDelClienteLista pedidos={suyos} />
       </Bloque>
     </section>
   );

@@ -110,6 +110,13 @@ export default async function PaginaDetalleProveedor({
         />
       </section>
 
+      {/* Lo que se le ha comprado (134): cifras, gráfico y sus compras, con
+          su periodo. Arriba, que es a lo que se viene desde el reporte de
+          compras (Luis, 15/10: el periodo quedaba debajo de toda la lista). */}
+      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
+        <HistorialProveedor id={p.id} sp={sp} />
+      </Suspense>
+
       <section className="card p-4">
         <h2 className="text-sm font-semibold">Marcas que representa</h2>
         {p.marcas.length === 0 ? (
@@ -140,12 +147,6 @@ export default async function PaginaDetalleProveedor({
         productos={catalogo.ok ? catalogo.datos : []}
         puedeEditar={puedeEditar}
       />
-
-      {/* Lo que se le ha comprado (134): cifras, gráfico y sus compras, con
-          su periodo. Es a donde lleva el reporte de compras. */}
-      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
-        <HistorialProveedor id={p.id} sp={sp} />
-      </Suspense>
 
       {p.direccion || p.email || p.notas ? (
         <section className="card grid gap-4 p-4 sm:grid-cols-2">

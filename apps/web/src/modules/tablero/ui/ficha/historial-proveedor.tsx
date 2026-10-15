@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Clock, Package, ShoppingCart, TrendingUp, Truck } from "lucide-react";
 import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
 
@@ -8,15 +7,7 @@ import { comprasDelProveedor, datosCompras } from "../../api/ejecutivo";
 import { GraficoBarras } from "../ejecutivo/grafico-lazy";
 import { Bloque, Ranking, dinero, entero, hoyEnLima, leerFiltros, pct, type ParamsBusqueda } from "../ejecutivo/piezas";
 import { CabeceraHistorial } from "./cabecera";
-
-const VIA: Record<string, string> = { local: "Local", aerea: "Aérea", maritima: "Marítima", importacion: "Importación" };
-
-function estadoDe(c: { estado: string; faltaFactura: boolean }) {
-  if (c.faltaFactura && c.estado === "registrada") return { texto: "Falta registrar", tono: "font-medium text-[var(--warn)]" };
-  if (c.estado === "registrada") return { texto: "Por recibir", tono: "" };
-  if (c.estado === "recibida_parcial") return { texto: "Recibida en parte", tono: "" };
-  return { texto: "Recibida", tono: "text-[var(--ok)]" };
-}
+import { ComprasDelProveedorLista } from "./compras-proveedor";
 
 /**
  * El historial del proveedor (134): lo que se le compró en el periodo, cómo
@@ -125,75 +116,15 @@ export async function HistorialProveedor({ id, sp }: { id: string; sp: ParamsBus
         </Bloque>
       ) : null}
 
-      <Bloque titulo="Sus compras" descripcion="Una por fila, las últimas primero. Toca el número para abrirla.">
+      <Bloque
+        titulo="Sus compras"
+        descripcion="Las de este periodo. Toca el número para abrirla."
+        accion={{ href: `/compras?proveedor=${id}`, texto: "Ver en Compras" }}
+      >
         {!compras.ok ? (
           <EstadoError titulo="No se pudieron cargar sus compras" detalle={compras.error} />
-        ) : compras.datos.length === 0 ? (
-          <p className="py-6 text-center text-base text-[var(--fg-muted)]">Ninguna compra en este periodo.</p>
         ) : (
-          <>
-            <div className="scroll-x hidden @3xl:block">
-              <table className="w-full text-sm">
-                <thead className="border-b border-[var(--border)] text-left text-sm text-[var(--fg-muted)]">
-                  <tr>
-                    <th className="py-2 pr-3 font-semibold">Fecha</th>
-                    <th className="px-3 py-2 font-semibold">Compra</th>
-                    <th className="px-3 py-2 font-semibold">Vía</th>
-                    <th className="px-3 py-2 font-semibold">Factura</th>
-                    <th className="px-3 py-2 font-semibold">Productos</th>
-                    <th className="px-3 py-2 text-right font-semibold">Total</th>
-                    <th className="py-2 pl-3 font-semibold">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--border-soft)]">
-                  {compras.datos.map((c) => {
-                    const e = estadoDe(c);
-                    return (
-                      <tr key={c.id} className="align-top">
-                        <td className="tabular whitespace-nowrap py-2.5 pr-3">{formatearFecha(c.fecha)}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5">
-                          <Link href={`/compras/${c.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
-                            {c.numero}
-                          </Link>
-                          {c.pedido ? (
-                            <Link href={`/pedidos/${c.pedido.id}`} className="block font-mono text-[var(--fg-subtle)] hover:underline">
-                              {c.pedido.numero}
-                            </Link>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2.5">{VIA[c.via] ?? c.via}</td>
-                        <td className="px-3 py-2.5 font-mono">{c.factura ?? "—"}</td>
-                        <td className="max-w-xs px-3 py-2.5 text-[var(--fg-muted)]">{c.productos}</td>
-                        <td className="tabular whitespace-nowrap px-3 py-2.5 text-right font-semibold">{dinero(c.totalUsd)}</td>
-                        <td className={`whitespace-nowrap py-2.5 pl-3 ${e.tono}`}>{e.texto}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <ul className="flex flex-col gap-2 @3xl:hidden">
-              {compras.datos.map((c) => {
-                const e = estadoDe(c);
-                return (
-                  <li key={c.id} className="rounded-lg border border-[var(--border)] p-3">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <Link href={`/compras/${c.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
-                        {c.numero}
-                      </Link>
-                      <span className="tabular font-semibold">{dinero(c.totalUsd)}</span>
-                    </div>
-                    <p className="text-sm text-[var(--fg-muted)]">
-                      {formatearFecha(c.fecha)} · {VIA[c.via] ?? c.via}
-                      {c.factura ? ` · factura ${c.factura}` : ""}
-                    </p>
-                    <p className="text-sm">{c.productos}</p>
-                    <p className={`text-sm ${e.tono}`}>{e.texto}</p>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
+          <ComprasDelProveedorLista compras={compras.datos} />
         )}
       </Bloque>
     </section>

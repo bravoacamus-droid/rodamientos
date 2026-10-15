@@ -10,11 +10,13 @@ import {
   Badge,
   BuscadorProductos,
   Button,
+  Input,
   Moneda,
+  SelectNativo,
   formatearFecha,
   type ProductoBuscado,
 } from "@rodatech/ui";
-import { Plus, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 
 import {
   anotarQueVende,
@@ -22,6 +24,10 @@ import {
   olvidarQueVende,
 } from "../acciones/catalogo";
 import type { ProductoDeProveedor } from "../api/catalogo";
+import { PaginasLista, trozo } from "@/componentes/paginas-lista";
+
+/** De quince en quince: la lista puede crecer (Luis, 15/10). */
+const TAMANO = 15;
 
 /**
  * Qué vende este proveedor.
@@ -54,6 +60,52 @@ export function QueVende({
     () => productos.map((p) => p.producto_id),
     [productos],
   );
+
+  /*
+    Los filtros de la lista (15/10). Luis, con la ficha de AUTOLAND delante:
+    *«¿y los filtros que te pedí?»* — 21 productos en fila, sin forma de
+    buscar uno ni de ver el más barato. Se filtra aquí, mientras se teclea:
+    la lista ya está entera en la pantalla.
+  */
+  const [q, setQ] = React.useState("");
+  const [marca, setMarca] = React.useState("");
+  const [como, setComo] = React.useState("");
+  const [orden, setOrden] = React.useState("ultima");
+  const marcas = React.useMemo(
+    () => [...new Set(productos.map((p) => p.marca).filter((m): m is string => !!m))].sort(),
+    [productos],
+  );
+  const comoDe = (p: ProductoDeProveedor) =>
+    p.veces > 0 ? "comprado" : p.notas?.startsWith("Cotizó en ") ? "precio" : "mano";
+  const visibles = React.useMemo(() => {
+    const t = q.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const filtrados = productos.filter(
+      (p) =>
+        (!t || `${p.codigo} ${p.descripcion}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(t)) &&
+        (!marca || p.marca === marca) &&
+        (!como || comoDe(p) === como),
+    );
+    const costo = (p: ProductoDeProveedor) => p.ultimoCostoUsd ?? p.ultimoCosto;
+    return [...filtrados].sort((a, b) => {
+      switch (orden) {
+        case "barato":
+          return (costo(a) ?? Infinity) - (costo(b) ?? Infinity);
+        case "caro":
+          return (costo(b) ?? -Infinity) - (costo(a) ?? -Infinity);
+        case "veces":
+          return b.veces - a.veces;
+        case "codigo":
+          return a.codigo.localeCompare(b.codigo);
+        default:
+          return (b.ultimaCompra ?? "").localeCompare(a.ultimaCompra ?? "");
+      }
+    });
+  }, [productos, q, marca, como, orden]);
+  const filtrando = Boolean(q.trim() || marca || como);
+  // Cada filtro nuevo vuelve a la primera página.
+  const [pagina, setPagina] = React.useState(1);
+  React.useEffect(() => setPagina(1), [q, marca, como, orden]);
+  const enPagina = trozo(visibles, pagina, TAMANO);
 
   // Estable entre renders, como pide el buscador: si cambiara en cada render
   // relanzaría la consulta sola.
@@ -162,7 +214,62 @@ export function QueVende({
         </p>
       ) : null}
 
-      {productos.length === 0 ? null : (
+      {productos.length > 0 ? (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+          <label className="relative block">
+            <span className="sr-only">Buscar en lo que vende</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]" aria-hidden="true" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Código o descripción" className="pl-9" />
+          </label>
+          <SelectNativo value={marca} onChange={(e) => setMarca(e.target.value)} aria-label="Marca">
+            <option value="">Marca: todas</option>
+            {marcas.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </SelectNativo>
+          <SelectNativo value={como} onChange={(e) => setComo(e.target.value)} aria-label="Cómo se sabe">
+            <option value="">Cómo se sabe: todos</option>
+            <option value="comprado">Comprado</option>
+            <option value="precio">Nos dio precio</option>
+            <option value="mano">Anotado a mano</option>
+          </SelectNativo>
+          <SelectNativo value={orden} onChange={(e) => setOrden(e.target.value)} aria-label="Ordenar">
+            <option value="ultima">Lo último comprado primero</option>
+            <option value="barato">Lo más barato primero</option>
+            <option value="caro">Lo más caro primero</option>
+            <option value="veces">Lo más comprado primero</option>
+            <option value="codigo">Por código</option>
+          </SelectNativo>
+          {filtrando ? (
+            <p className="flex items-center gap-2 text-sm text-[var(--fg-muted)] sm:col-span-2 lg:col-span-4">
+              {visibles.length} de {productos.length}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setQ("");
+                  setMarca("");
+                  setComo("");
+                }}
+              >
+                <X aria-hidden="true" />
+                Quitar filtros
+              </Button>
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {productos.length > 0 && visibles.length === 0 ? (
+        <p className="mt-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+          Ningún producto coincide con esos filtros.
+        </p>
+      ) : null}
+
+      {visibles.length === 0 ? null : (
         /*
           Tarjetas en una caja estrecha y tabla cuando cabe. Revisión de diseño
           del 02/10: en el teléfono esta tabla se desplazaba de lado (390 px:
@@ -170,7 +277,7 @@ export function QueVende({
         */
         <div className="@container mt-3">
           <ul className="flex flex-col gap-2 @2xl:hidden">
-            {productos.map((p) => (
+            {enPagina.filas.map((p) => (
               <li key={p.producto_id} className="rounded-md border border-[var(--border)] p-3">
                 <Producto p={p} />
                 <div className="mt-2">
@@ -211,7 +318,7 @@ export function QueVende({
                 </tr>
               </thead>
               <tbody>
-                {productos.map((p) => (
+                {enPagina.filas.map((p) => (
                   <tr key={p.producto_id} className="border-b border-[var(--border-soft)]">
                     <td className="py-2 pr-3">
                       <Producto p={p} />
@@ -236,6 +343,7 @@ export function QueVende({
               </tbody>
             </table>
           </div>
+          <PaginasLista pagina={enPagina.pagina} tamano={TAMANO} total={visibles.length} onCambiar={setPagina} />
         </div>
       )}
     </section>
