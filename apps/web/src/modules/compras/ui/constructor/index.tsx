@@ -366,15 +366,15 @@ export function ConstructorCompra({
         {orden ? (
           <div>
             <h1 className="text-xl font-semibold tracking-tight">
-              Factura de la orden {orden.numero}
+              Registrar compra de la orden {orden.numero}
             </h1>
             <p className="text-sm text-[var(--fg-muted)]">
               Orden {orden.posicion} de {orden.de} del pedido{" "}
               <Link href={`/compras/pedido/${orden.cotizacionId}`} className="text-brand-600 underline">
                 {orden.cotizacion} · {orden.cliente}
               </Link>
-              . Pon lo que dice la factura del proveedor: cómo llegó, su número y lo que cobró por cada
-              producto. Las cantidades son las del pedido.
+              . Los productos ya están: pon lo que dice la factura del proveedor —cómo llegó, su número,
+              el PDF y lo que cobró por cada uno—. Las cantidades son las del pedido.
             </p>
           </div>
         ) : (
@@ -457,7 +457,7 @@ export function ConstructorCompra({
             Cancelar
           </Button>
           <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Guardando…" : orden ? "Guardar factura" : "Guardar compra"}
+            {guardando ? "Guardando…" : "Guardar compra"}
           </Button>
         </div>
       </header>

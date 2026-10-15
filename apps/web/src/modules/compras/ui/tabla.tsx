@@ -153,7 +153,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   {/* La orden del pedido sin la factura del proveedor (128). */}
                   {c.falta_factura && c.estado === "registrada" ? (
                     <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                      Falta factura
+                      Falta registrar la compra
                     </span>
                   ) : null}
                 </td>
@@ -208,7 +208,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <EstadoBadge estado={c.estado} size="xs" />
                 {c.falta_factura && c.estado === "registrada" ? (
                     <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                      Falta factura
+                      Falta registrar la compra
                     </span>
                   ) : null}
               </span>

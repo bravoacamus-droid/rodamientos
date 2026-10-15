@@ -18,8 +18,9 @@ const ROLES = ["gerencia", "admin", "compras"];
  * significa que es otra orden… si una cotización tiene tres órdenes, se junta
  * eso, pero cada orden es diferente»*.
  *
- * Arriba, de quién es y cuántas faltan. Cada orden, su tarjeta: si le falta
- * la factura, el botón para registrarla; si ya la tiene, lo que dice.
+ * Una orden NO es una compra (Luis, 15/10): es lo que se va a pedir, al
+ * precio que se analizó al cotizar. Cuando se compra de verdad se registra
+ * con su factura: «Registrar compra». Arriba, cuántas faltan.
  */
 export default async function PaginaPedidoCompras({ params }: { params: Promise<{ cotizacionId: string }> }) {
   const { cotizacionId } = await params;
@@ -45,7 +46,8 @@ export default async function PaginaPedidoCompras({ params }: { params: Promise<
             {p.cotizacion} · {p.cliente}
           </h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Una orden por proveedor. Cada una se registra con su propia factura.
+            Una orden por proveedor: lo que se va a pedir, al precio analizado. Cuando la compres,
+            regístrala con su factura.
           </p>
         </div>
         {p.ordenes.length > 0 ? (
@@ -57,8 +59,8 @@ export default async function PaginaPedidoCompras({ params }: { params: Promise<
             }`}
           >
             {faltan.length === 0
-              ? "Todas con su factura"
-              : `${hechas} de ${p.ordenes.length} con factura · faltan ${faltan.length}`}
+              ? "Todas compradas"
+              : `${hechas} de ${p.ordenes.length} compradas · faltan ${faltan.length}`}
           </p>
         ) : null}
       </header>
@@ -96,12 +98,12 @@ export default async function PaginaPedidoCompras({ params }: { params: Promise<
                   {o.productos.map((x) => `${x.codigo} × ${x.cantidad}`).join(" · ")}
                 </p>
                 {o.falta_factura ? (
-                  <p className="mt-1 text-sm font-medium text-[var(--warn)]">Falta la factura del proveedor</p>
+                  <p className="mt-1 text-sm font-medium">Pedida · falta registrar la compra</p>
                 ) : (
                   <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
                     <CircleCheck className="size-4 text-[var(--ok)]" aria-hidden="true" />
                     <span>
-                      Factura <strong className="font-mono">{o.documento_proveedor ?? "—"}</strong> ·{" "}
+                      Comprada · factura <strong className="font-mono">{o.documento_proveedor ?? "—"}</strong> ·{" "}
                       {ETIQUETA_MODALIDAD[modalidadDe(o.tipo, o.via_importacion ?? "aerea")]} ·{" "}
                       {formatearFecha(o.fecha)} ·
                     </span>
@@ -112,7 +114,7 @@ export default async function PaginaPedidoCompras({ params }: { params: Promise<
               {o.falta_factura && o.estado === "registrada" && puede ? (
                 <Link href={`/compras/${o.id}/factura`} className={cn(buttonVariants(), "h-11 px-5 text-base")}>
                   <Receipt className="size-5" aria-hidden="true" />
-                  Registrar su factura
+                  Registrar compra
                 </Link>
               ) : (
                 <Link href={`/compras/${o.id}`} className={cn(buttonVariants({ variant: "outline" }), "px-4")}>

@@ -94,7 +94,7 @@ export function OrdenesDeCompra({
               <span className="tabular font-medium">{dinero(o.total, o.moneda)}</span>
               {o.faltaFactura && o.estado !== "anulada" ? (
                 <span className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                  Falta factura
+                  Falta registrar la compra
                 </span>
               ) : (
                 <EstadoBadge estado={o.estado as EstadoDocumento} />
@@ -116,7 +116,7 @@ export function OrdenesDeCompra({
         >
           <Receipt className="size-4" aria-hidden="true" />
           {vivas.some((o) => o.faltaFactura)
-            ? `Registrar facturas de las compras (${vivas.filter((o) => o.faltaFactura).length} sin factura)`
+            ? `Registrar compras (${vivas.filter((o) => o.faltaFactura).length} por registrar)`
             : "Ver las compras del pedido"}
         </Link>
       ) : null}

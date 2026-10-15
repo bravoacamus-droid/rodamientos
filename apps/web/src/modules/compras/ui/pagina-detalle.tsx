@@ -175,13 +175,13 @@ export default async function PaginaDetalleCompra({
       {c.falta_factura && c.estado === "registrada" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
           <div>
-            <p className="text-base font-semibold">Falta la factura del proveedor</p>
+            <p className="text-base font-semibold">Orden pedida: falta registrar la compra</p>
             <p className="text-sm">
-              Es una orden del pedido: registra cómo llegó, su número de factura, el PDF y lo que cobró.
+              Cuando la compres, regístrala con su factura: cómo llegó, el número, el PDF y lo que cobró.
             </p>
           </div>
           <Button asChild>
-            <Link href={`/compras/${c.id}/factura`}>Registrar su factura</Link>
+            <Link href={`/compras/${c.id}/factura`}>Registrar compra</Link>
           </Button>
         </div>
       ) : null}
