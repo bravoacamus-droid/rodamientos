@@ -47,6 +47,11 @@ export interface FilaPedido {
   facturas: FacturaDelPedido[];
   etapa: Etapa;
   productos: { codigo: string; cantidad: number }[];
+  /**
+   * Es el último de su cotización. Lo nuevo —guía, órdenes, factura, otro
+   * pedido— cuelga siempre del vigente (130), así que solo ahí se ofrece.
+   */
+  vigente: boolean;
 }
 
 /** El margen sobre el COSTO (023), o null si no hay costo con qué medirlo. */

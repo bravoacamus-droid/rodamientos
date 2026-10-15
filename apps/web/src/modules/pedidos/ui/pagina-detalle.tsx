@@ -18,6 +18,8 @@ import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-pr
 import { detallePedido } from "../api/consultas";
 import { ETIQUETA_ETAPA } from "../dominio/etapa";
 import { papelDelPedido } from "../dominio/hoja";
+import { OtroPedido } from "@/modules/cotizaciones/ui/detalle/otro-pedido";
+import { AccionesPedido } from "./acciones";
 import { ComprasDelPedido } from "./compras-del-pedido";
 import { DescargarHojaPedido } from "./descargar-hoja";
 import { DocumentoPedido } from "./documento";
@@ -32,8 +34,18 @@ import { InsigniaEtapa } from "./insignia";
  * su cotización): una guía o una factura nuevas cuelgan siempre de ese, así
  * que ofrecerlas desde uno anterior las colgaría donde no se mira.
  */
-export default async function PaginaDetallePedido({ params }: { params: Promise<{ id: string }> }) {
+export default async function PaginaDetallePedido({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  // Desde el menú «Acciones» de la lista (15/10): la hoja o repetir, abiertos.
+  const sp = (await searchParams) ?? {};
+  const abrirHoja = sp.hoja === "1";
+  const abrirRepetir = sp.repetir === "1";
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
   const rol = perfil.rol;
@@ -57,9 +69,30 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
     para quien compra; es lo mismo que ofrece la ficha de la cotización.
   */
   let generar: React.ReactNode = null;
+  let repetir: React.ReactNode = null;
+  const cot = vigente ? await cotizacionPorId(p.cotizacion.id) : null;
+  if (cot?.ok && abrirRepetir && p.facturas.length > 0) {
+    repetir = (
+      <OtroPedido
+        cotizacionId={p.cotizacion.id}
+        sinBoton
+        abiertoInicial
+        alCerrarIr={`/pedidos/${p.id}`}
+        lineas={cot.datos.lineas.map((l) => ({
+          id: l.id,
+          codigo: l.codigo,
+          descripcion: l.descripcion,
+          cantidad: l.cantidad,
+          cantidadConfirmada: l.cantidad_aprobada ?? null,
+          unidad: l.unidad_codigo,
+          valorUnitario: l.valor_unitario,
+          descuentoPct: l.descuento_pct,
+        }))}
+      />
+    );
+  }
   if (vigente && puedeComprar) {
-    const cot = await cotizacionPorId(p.cotizacion.id);
-    if (cot.ok) {
+    if (cot?.ok) {
       const lineas = cot.datos.lineas
         .filter((l) => l.producto_id !== null)
         .map((l) => ({
@@ -113,6 +146,9 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
           {p.lineas.length > 0 ? (
             <>
               <VistaPreviaDocumento
+                key={abrirHoja ? "hoja" : "ficha"}
+                abiertaInicial={abrirHoja}
+                alCerrarIr={abrirHoja ? `/pedidos/${p.id}` : undefined}
                 numero={p.numero}
                 junto={<DescargarHojaPedido numero={p.numero} cliente={p.cliente} papel={papel} emisor={emisor} />}
               >
@@ -121,6 +157,24 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
               <DescargarHojaPedido numero={p.numero} cliente={p.cliente} papel={papel} emisor={emisor} />
             </>
           ) : null}
+          <AccionesPedido
+            enFicha
+            p={{
+              id: p.id,
+              numero: p.numero,
+              cotizacionId: p.cotizacion.id,
+              cotizacion: p.cotizacion.numero,
+              vigente,
+              guia: guiaEmitida
+                ? { id: guiaEmitida.id, emitida: true }
+                : borrador
+                  ? { id: borrador.id, emitida: false }
+                  : null,
+              facturado: p.facturas.length > 0,
+              conCompras: ordenes.ok ? ordenes.datos.some((o) => o.estado !== "anulada") : true,
+            }}
+          />
+          {repetir}
         </div>
       </header>
 

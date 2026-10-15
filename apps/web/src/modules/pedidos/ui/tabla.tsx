@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, CircleCheck, Eye } from "lucide-react";
-import { EstadoVacio, Moneda, PaginacionKeyset, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
+import { ArrowDown, ArrowUp, ArrowUpDown, CircleCheck } from "lucide-react";
+import { EstadoVacio, Moneda, PaginacionKeyset, formatearFecha } from "@rodatech/ui";
 
 import {
   cobroDe,
@@ -10,7 +10,19 @@ import {
   type FilaPedido,
   type Orden,
 } from "../dominio/lista";
+import { AccionesPedido, type PedidoParaAcciones } from "./acciones";
 import { InsigniaEtapa } from "./insignia";
+
+const paraAcciones = (p: FilaPedido): PedidoParaAcciones => ({
+  id: p.id,
+  numero: p.numero,
+  cotizacionId: p.cotizacionId,
+  cotizacion: p.cotizacion,
+  vigente: p.vigente,
+  guia: p.guia ? { id: p.guia.id, emitida: p.guia.emitida } : null,
+  facturado: p.facturas.length > 0,
+  conCompras: p.compras.total > 0,
+});
 
 type Params = Record<string, string | undefined>;
 
@@ -214,10 +226,7 @@ export function TablaPedidos({
                   <InsigniaEtapa etapa={p.etapa} />
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
-                  <Link href={`/pedidos/${p.id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5 px-3")}>
-                    <Eye className="size-4" aria-hidden="true" />
-                    Ver
-                  </Link>
+                  <AccionesPedido p={paraAcciones(p)} />
                 </td>
               </tr>
             ))}
@@ -277,9 +286,7 @@ export function TablaPedidos({
                 <dd className={SUNAT[sunatDe(p)].clase}>{SUNAT[sunatDe(p)].texto}</dd>
               </div>
             </dl>
-            <Link href={`/pedidos/${p.id}`} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
-              Ver pedido
-            </Link>
+            <AccionesPedido p={paraAcciones(p)} ancho />
           </li>
         ))}
       </ul>

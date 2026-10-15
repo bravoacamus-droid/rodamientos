@@ -360,6 +360,20 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       }
     }
 
+    // El último pedido de cada cotización, aunque caiga fuera del periodo.
+    const ultimo = new Map<string, number>();
+    const cots = [...new Set(filas.map((f) => f.cotizacion_id))];
+    for (let i = 0; i < cots.length; i += 200) {
+      const { data: ps, error: ep } = await supabase
+        .from("pedidos")
+        .select("cotizacion_id, secuencia")
+        .in("cotizacion_id", cots.slice(i, i + 200));
+      if (ep) return fallo(ep, "pedidos/filasDePedidos");
+      for (const p of ps ?? []) {
+        ultimo.set(p.cotizacion_id, Math.max(ultimo.get(p.cotizacion_id) ?? 0, p.secuencia));
+      }
+    }
+
     const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
     const sunat = (e: string): EstadoSunatFactura =>
       e === "aceptado" || e === "observado" ? "aceptado" : e === "rechazado" ? "rechazado" : "pendiente";
@@ -412,6 +426,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
           }),
           etapa: etapaDe(colg),
           productos: d.productos,
+          vigente: (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
         };
       }),
     };

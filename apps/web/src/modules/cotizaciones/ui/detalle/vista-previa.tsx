@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Eye, Printer } from "lucide-react";
 import { Button, Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from "@rodatech/ui";
 
@@ -38,7 +39,13 @@ export function VistaPreviaDocumento({
   encima,
   junto,
   children,
+  abiertaInicial = false,
+  alCerrarIr,
 }: {
+  /** Llega abierta: «Hoja de pedido» desde el menú de acciones (15/10). */
+  abiertaInicial?: boolean;
+  /** A dónde volver al cerrarla, para que recargar no la reabra. */
+  alCerrarIr?: string;
   numero: string;
   /** Lo que va sobre la hoja: en la cotización, la moneda del papel (13/10). */
   encima?: React.ReactNode;
@@ -47,7 +54,12 @@ export function VistaPreviaDocumento({
   /** El `<Documento>` ya montado en el servidor. */
   children: React.ReactNode;
 }) {
-  const [abierta, setAbierta] = React.useState(false);
+  const router = useRouter();
+  const [abierta, setAbiertaCruda] = React.useState(abiertaInicial);
+  const setAbierta = (v: boolean) => {
+    setAbiertaCruda(v);
+    if (!v && alCerrarIr) router.replace(alCerrarIr, { scroll: false });
+  };
 
   return (
     <>

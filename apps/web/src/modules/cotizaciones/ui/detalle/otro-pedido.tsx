@@ -29,9 +29,28 @@ import { unidadLegible } from "../../dominio/unidades";
  * se pone en la guía (Luis, 15/10), y la vieja se vacía al registrar (123). La guía y la
  * factura salen con su propio número, colgando de esta cotización.
  */
-export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lineas: LineaParaConfirmar[] }) {
+export function OtroPedido({
+  cotizacionId,
+  lineas,
+  abiertoInicial = false,
+  sinBoton = false,
+  alCerrarIr,
+}: {
+  cotizacionId: string;
+  lineas: LineaParaConfirmar[];
+  /** Desde «Repetir pedido» en el menú del pedido (15/10): ya abierto. */
+  abiertoInicial?: boolean;
+  /** Solo el diálogo: el botón lo pone el menú de acciones. */
+  sinBoton?: boolean;
+  /** A dónde volver al cerrarlo, para que recargar no lo reabra. */
+  alCerrarIr?: string;
+}) {
   const router = useRouter();
-  const [abierto, setAbierto] = React.useState(false);
+  const [abierto, setAbiertoCrudo] = React.useState(abiertoInicial);
+  const setAbierto = (v: boolean) => {
+    setAbiertoCrudo(v);
+    if (!v && alCerrarIr) router.replace(alCerrarIr, { scroll: false });
+  };
   const [cantidades, setCantidades] = React.useState<Record<string, number>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [pendiente, iniciar] = React.useTransition();
@@ -53,17 +72,20 @@ export function OtroPedido({ cotizacionId, lineas }: { cotizacionId: string; lin
         setError(r.error);
         return;
       }
-      setAbierto(false);
-      // Lo que sigue es sacar la mercadería: a la guía, ya con este pedido.
-      router.push(`/guias/nueva?cotizacion=${cotizacionId}`);
+      setAbiertoCrudo(false);
+      // Al pedido que nace (15/10): desde ahí se hace todo —compras, guía,
+      // factura—. Sin su id, a la guía, como antes.
+      router.push("pedidoId" in r && r.pedidoId ? `/pedidos/${r.pedidoId}` : `/guias/nueva?cotizacion=${cotizacionId}`);
     });
 
   return (
     <>
-      <Button onClick={() => setAbierto(true)}>
-        <Repeat className="size-[18px] shrink-0" aria-hidden="true" />
-        Atender otro pedido
-      </Button>
+      {sinBoton ? null : (
+        <Button onClick={() => setAbierto(true)}>
+          <Repeat className="size-[18px] shrink-0" aria-hidden="true" />
+          Atender otro pedido
+        </Button>
+      )}
       <Dialog open={abierto} onOpenChange={setAbierto}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

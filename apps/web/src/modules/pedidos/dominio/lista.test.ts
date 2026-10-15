@@ -20,6 +20,7 @@ const fila = (o: Partial<FilaPedido>): FilaPedido => ({
   facturas: [],
   etapa: "por_entregar",
   productos: [{ codigo: "6202-2Z", cantidad: 1 }],
+  vigente: true,
   ...o,
 });
 

@@ -5567,6 +5567,7 @@ export type Database = {
         Args: { p_disp: Database["public"]["Enums"]["disponibilidad_item"] }
         Returns: number
       }
+      eliminar_pedido: { Args: { p_id: string }; Returns: Json }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
       es_gerencia: { Args: never; Returns: boolean }

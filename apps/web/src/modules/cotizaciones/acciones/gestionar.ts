@@ -386,7 +386,7 @@ export async function repetirPedido(
 
   try {
     const supabase = await clienteServidor();
-    const { error } = await supabase.rpc("repetir_pedido", {
+    const { data, error } = await supabase.rpc("repetir_pedido", {
       p_id: id,
       p_lineas: revision.data as unknown as Json,
       // Sin O/C: la del pedido anterior se vacía y la nueva se pone en la guía (123).
@@ -394,7 +394,9 @@ export async function repetirPedido(
     if (error) return { ok: false, error: error.message };
     refrescar(id);
     revalidatePath("/guias");
-    return { ok: true, id };
+    revalidatePath("/pedidos");
+    const pedidoId = (data as { pedido_id?: string } | null)?.pedido_id;
+    return { ok: true, id, ...(pedidoId ? { pedidoId } : {}) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo registrar el pedido." };
   }
