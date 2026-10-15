@@ -220,7 +220,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
          entregado_por, recibido_por, estado, estado_sunat, sunat_mensaje,
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento, telefono, direccion),
-         cotizaciones(numero),
+         cotizaciones(numero), pedidos(id, numero),
          guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg,
                     productos(es_kit, stock(cantidad)))`,
       )
@@ -286,6 +286,7 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         ...(await nombresDeUbigeo(supabase, [g.ubigeo_partida as string | null, g.ubigeo_llegada as string | null])),
         cotizacion_id: (g.cotizacion_id as string | null) ?? null,
         cotizacion_numero: g.cotizaciones?.numero ?? null,
+        pedido: (g as unknown as { pedidos: { id: string; numero: string } | null }).pedidos ?? null,
         orden_compra_cliente: (g.orden_compra_cliente as string | null) ?? null,
         fecha_emision: String(g.fecha_emision),
         fecha_traslado: String(g.fecha_traslado),

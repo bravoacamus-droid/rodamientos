@@ -17,6 +17,7 @@ const GUIA: GuiaDetalle = {
   llegada_lugar: null,
   cotizacion_id: null,
   cotizacion_numero: null,
+  pedido: null,
   orden_compra_cliente: "OC-1",
   fecha_emision: "2026-10-15",
   fecha_traslado: "2026-10-16",

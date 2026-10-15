@@ -38,6 +38,7 @@ const FACTURA: ComprobanteDetalle = {
   cliente_email: null,
   cotizacion_id: null,
   cotizacion_numero: null,
+  pedido: null,
   orden_compra_cliente: null,
   referencia_id: null,
   referencia_numero: null,

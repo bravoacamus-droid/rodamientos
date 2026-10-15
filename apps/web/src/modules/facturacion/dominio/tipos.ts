@@ -114,6 +114,8 @@ export interface ComprobanteDetalle {
   cliente_email: string | null;
   cotizacion_id: string | null;
   cotizacion_numero: string | null;
+  /** El pedido que factura (130): desde la factura se llega a él. */
+  pedido: { id: string; numero: string } | null;
   orden_compra_cliente: string | null;
   referencia_id: string | null;
   referencia_numero: string | null;

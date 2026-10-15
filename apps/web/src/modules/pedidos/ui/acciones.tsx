@@ -46,6 +46,11 @@ export interface PedidoParaAcciones {
   facturado: boolean;
   /** Órdenes de compra vivas: con alguna, no se elimina. */
   conCompras: boolean;
+  /**
+   * Con una guía ya emitida, queda algo por despachar: se ofrece otra
+   * (revisión del 15/10). Solo lo sabe la ficha; en la lista no se calcula.
+   */
+  otraGuia?: boolean;
 }
 
 /** Cada opción con su color: el icono en una pastilla, como un emoticono. */
@@ -195,6 +200,15 @@ export function AccionesPedido({
           {p.vigente && !p.facturado ? (
             <>
               <DropdownMenuSeparator />
+              {guiaEmitida && p.otraGuia ? (
+                <Opcion
+                  icono={Truck}
+                  tono="marca"
+                  titulo="Hacer otra guía"
+                  detalle="Queda algo por despachar"
+                  onSelect={() => router.push(`/guias/nueva?cotizacion=${p.cotizacionId}`)}
+                />
+              ) : null}
               {guiaEmitida ? null : (
                 <Opcion
                   icono={Truck}

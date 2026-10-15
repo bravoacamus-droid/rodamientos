@@ -376,6 +376,7 @@ export async function emitirComprobante(
 
     revalidatePath("/facturacion");
     revalidatePath("/cotizaciones");
+    revalidatePath("/pedidos");
     revalidatePath(`/cotizaciones/${cot.id}`);
     revalidatePath("/dashboard");
 

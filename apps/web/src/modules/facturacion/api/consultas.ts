@@ -264,7 +264,7 @@ export async function detalleComprobante(
          moneda, tipo_cambio, pen_gravada, pen_descuento, pen_igv, pen_total, pen_retencion,
          observaciones, motivo_anulacion, creado_en,
          clientes(razon_social, numero_documento, tipo_documento, direccion, email),
-         cotizaciones(numero),
+         cotizaciones(numero), pedidos(id, numero),
          guias_remision!comprobantes_guia_id_fkey(numero),
          comprobante_guias(orden, guias_remision(numero)),
          comprobante_cuotas(numero, fecha_vencimiento, monto, pagado),
@@ -352,6 +352,7 @@ export async function detalleComprobante(
         cliente_email: c.clientes?.email ?? null,
         cotizacion_id: (c.cotizacion_id as string | null) ?? null,
         cotizacion_numero: c.cotizaciones?.numero ?? null,
+        pedido: (c.pedidos as { id: string; numero: string } | null) ?? null,
         orden_compra_cliente: (c.orden_compra_cliente as string | null) ?? null,
         referencia_id: (c.referencia_id as string | null) ?? null,
         referencia_numero: referenciaNumero,
@@ -527,7 +528,14 @@ interface GuiaDeCotizacion {
   numero: string;
   fecha_emision: string;
   estado: string;
+  comprobante_guias?: { comprobantes: { estado: string; tipo: string } | null }[] | null;
 }
+
+/** Ya ampara una factura o boleta viva: no se vuelve a ofrecer (revisión del 15/10). */
+const yaFacturada = (g: GuiaDeCotizacion) =>
+  (g.comprobante_guias ?? []).some(
+    (x) => x.comprobantes && x.comprobantes.estado !== "anulado" && (x.comprobantes.tipo === "factura" || x.comprobantes.tipo === "boleta"),
+  );
 
 export async function cotizacionParaFacturar(
   id: string,
@@ -545,7 +553,8 @@ export async function cotizacionParaFacturar(
            cantidad, cantidad_aprobada, cantidad_atendida,
            valor_unitario, descuento_pct, importe
          ),
-         guias_remision(id, numero, fecha_emision, estado, orden_compra_cliente)`,
+         guias_remision(id, numero, fecha_emision, estado, orden_compra_cliente,
+           comprobante_guias(comprobantes(estado, tipo)))`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -632,7 +641,7 @@ export async function cotizacionParaFacturar(
           mercadería viajó con un documento que ya no existe.
         */
         guias: ((c.guias_remision ?? []) as GuiaDeCotizacion[])
-          .filter((g) => g.estado === "emitida")
+          .filter((g) => g.estado === "emitida" && !yaFacturada(g))
           .map((g) => ({ id: g.id, numero: g.numero, fecha: g.fecha_emision }))
           .sort((a, b) => a.numero.localeCompare(b.numero)),
         // Las de BORRADOR, solo para poder decir «emite la que ya tienes» en

@@ -304,6 +304,18 @@ export default async function PaginaDetalleGuia({
               <Dato etiqueta="Código del distrito" valor={g.ubigeo_llegada ?? "—"} />
               <Dato etiqueta="Emisión" valor={formatearFecha(g.fecha_emision)} />
               <Dato etiqueta="Cotización" valor={g.cotizacion_numero ?? "—"} />
+              {/* Al pedido del que sale (revisión del 15/10): desde la guía no
+                  se llegaba, y el pedido es donde se hace lo que sigue. */}
+              {g.pedido ? (
+                <div className="flex gap-3">
+                  <dt className="w-32 shrink-0 text-[var(--fg-muted)]">Pedido</dt>
+                  <dd className="min-w-0 flex-1">
+                    <Link href={`/pedidos/${g.pedido.id}`} className="font-mono font-semibold text-brand-600 underline-offset-4 hover:underline">
+                      {g.pedido.numero}
+                    </Link>
+                  </dd>
+                </div>
+              ) : null}
               <Dato etiqueta="Orden de compra" valor={g.orden_compra_cliente ?? "—"} />
             </dl>
           </section>

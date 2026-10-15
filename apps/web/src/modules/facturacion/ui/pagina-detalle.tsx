@@ -444,6 +444,17 @@ export default async function PaginaDetalleComprobante({
                 }
               />
               <Dato etiqueta="Cotización" valor={c.cotizacion_numero ?? "—"} />
+              {/* Al pedido que factura (revisión del 15/10). */}
+              {c.pedido ? (
+                <Dato
+                  etiqueta="Pedido"
+                  valor={
+                    <Link href={`/pedidos/${c.pedido.id}`} className="font-mono font-semibold text-brand-600 underline-offset-4 hover:underline">
+                      {c.pedido.numero}
+                    </Link>
+                  }
+                />
+              ) : null}
               {/*
                 Desde la 089 no se factura sin guía, así que el número de la
                 guía es lo que justifica que esta factura exista. Salía en el

@@ -231,6 +231,7 @@ export function AntesDeEmitir({
     cliente_email: null,
     cotizacion_id: cot.id,
     cotizacion_numero: cot.numero,
+    pedido: null,
     orden_compra_cliente: ordenCompra.trim() || cot.orden_compra_cliente,
     referencia_id: null,
     referencia_numero: null,

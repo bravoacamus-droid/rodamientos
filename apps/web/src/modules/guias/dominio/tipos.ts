@@ -102,6 +102,8 @@ export interface GuiaDetalle {
   llegada_lugar: string | null;
   cotizacion_id: string | null;
   cotizacion_numero: string | null;
+  /** El pedido del que sale (130): desde la guía se llega a él. */
+  pedido: { id: string; numero: string } | null;
   orden_compra_cliente: string | null;
   fecha_emision: string;
   fecha_traslado: string;

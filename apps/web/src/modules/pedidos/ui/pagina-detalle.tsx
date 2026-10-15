@@ -8,7 +8,11 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { Volver } from "@/componentes/volver";
 import { emisorParaImprimir } from "@/lib/emisor";
 import { ordenesDelPedido } from "@/modules/compras/api/consultas";
-import { cotizacionPorId, ordenesDelPedido as ordenesDeLaCotizacion } from "@/modules/cotizaciones/api/consultas";
+import {
+  cotizacionPorId,
+  despachoDelPedido,
+  ordenesDelPedido as ordenesDeLaCotizacion,
+} from "@/modules/cotizaciones/api/consultas";
 import { demandaDeProductos } from "@/modules/cotizaciones/api/demanda";
 import { proveedoresGuardados } from "@/modules/cotizaciones/dominio/compra-linea";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
@@ -70,7 +74,11 @@ export default async function PaginaDetallePedido({
   */
   let generar: React.ReactNode = null;
   let repetir: React.ReactNode = null;
-  const cot = vigente ? await cotizacionPorId(p.cotizacion.id) : null;
+  const [cot, despacho] = vigente
+    ? await Promise.all([cotizacionPorId(p.cotizacion.id), despachoDelPedido(p.cotizacion.id)])
+    : [null, null];
+  // Con la guía emitida y algo por despachar: otra guía (revisión del 15/10).
+  const otraGuia = Boolean(guiaEmitida && despacho?.pendiente && !borrador);
   if (cot?.ok && abrirRepetir && p.facturas.length > 0) {
     repetir = (
       <OtroPedido
@@ -172,6 +180,7 @@ export default async function PaginaDetallePedido({
                   : null,
               facturado: p.facturas.length > 0,
               conCompras: ordenes.ok ? ordenes.datos.some((o) => o.estado !== "anulada") : true,
+              otraGuia,
             }}
           />
           {repetir}
@@ -258,6 +267,14 @@ export default async function PaginaDetallePedido({
           >
             <Truck className="size-4" aria-hidden="true" />
             {borrador ? "Seguir con la guía" : "Hacer la guía"}
+          </Link>
+        ) : vigente && puedeDespachar && otraGuia ? (
+          <Link
+            href={`/guias/nueva?cotizacion=${p.cotizacion.id}`}
+            className={cn(buttonVariants({ variant: "outline" }), "mt-1 w-fit px-4")}
+          >
+            <Truck className="size-4" aria-hidden="true" />
+            Hacer otra guía · queda algo por despachar
           </Link>
         ) : null}
       </section>
