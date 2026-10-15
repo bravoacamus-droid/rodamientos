@@ -85,6 +85,8 @@ export function sunatDe(f: Pick<FilaPedido, "facturas">): EstadoSunatFactura | "
 export interface FiltrosPedidos {
   q?: string;
   cliente?: string;
+  /** Los pedidos de UNA cotización (Luis, 15/10: «solo quiero filtrar los de esa cotización»). */
+  cotizacion?: string;
   etapa?: string;
   cobro?: string;
   sunat?: string;
@@ -103,6 +105,7 @@ export function filtrar(filas: readonly FilaPedido[], f: FiltrosPedidos): FilaPe
     (p) =>
       (!q || [p.numero, p.cotizacion, p.cliente, ...p.productos.map((x) => x.codigo)].some((t) => normal(t).includes(q))) &&
       (!f.cliente || p.clienteId === f.cliente) &&
+      (!f.cotizacion || p.cotizacionId === f.cotizacion) &&
       (!f.etapa || p.etapa === f.etapa) &&
       (!f.cobro || cobroDe(p) === f.cobro) &&
       (!f.sunat || sunatDe(p) === f.sunat) &&

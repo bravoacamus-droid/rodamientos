@@ -18,6 +18,15 @@ export function PedidosDeLaCotizacion({ pedidos }: { pedidos: PedidoLista[] }) {
       <header className="flex items-center gap-2">
         <ClipboardList className="size-5 text-brand-600" aria-hidden="true" />
         <h2 className="text-base font-semibold">{orden.length === 1 ? "Pedido" : `Pedidos (${orden.length})`}</h2>
+        {/* Con varios, la tabla de Pedidos filtrada por esta cotización (15/10). */}
+        {orden.length > 1 ? (
+          <Link
+            href={`/pedidos?cotizacion=${orden[0]!.cotizacionId}`}
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }), "ml-auto px-3")}
+          >
+            Ver en Pedidos
+          </Link>
+        ) : null}
       </header>
       <ul className="flex flex-col gap-2">
         {orden.map((p) => (

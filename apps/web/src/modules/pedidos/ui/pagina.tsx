@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { AlertTriangle, Banknote, ClipboardList, Percent, ShoppingCart, Truck } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Banknote, ClipboardList, Percent, ShoppingCart, Truck, X } from "lucide-react";
 import { EstadoError, Skeleton, formatearMoneda, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -44,6 +45,7 @@ export default async function PaginaPedidos({
   const filtros: FiltrosPedidos = {
     q: params.q,
     cliente: params.cliente,
+    cotizacion: params.cotizacion,
     etapa: params.etapa,
     cobro: params.cobro,
     sunat: params.sunat,
@@ -95,6 +97,13 @@ async function Contenido({
   if (!r.ok) return <EstadoError titulo="No se pudieron cargar los pedidos" detalle={r.error} />;
 
   const filtradas = ordenar(filtrar(r.datos, filtros), orden.campo, orden.desc);
+  // El número de la cotización filtrada, para decirlo arriba con su botón de quitar.
+  const deLaCotizacion = filtros.cotizacion
+    ? (r.datos.find((p) => p.cotizacionId === filtros.cotizacion) ?? null)
+    : null;
+  const sinCotizacion = new URLSearchParams(
+    Object.entries(params).filter((e): e is [string, string] => Boolean(e[1]) && e[0] !== "cotizacion" && e[0] !== "cursor"),
+  ).toString();
   const c = cifras(filtradas);
   const pag = paginar(filtradas, Number(params.cursor ?? 1), tamano);
   const filtrando = Object.values(filtros).some(Boolean);
@@ -143,6 +152,29 @@ async function Contenido({
         <div className="flex flex-col gap-3 px-4 pb-4">
           <BarraPeriodo />
           <FiltrosPedidosBarra nombreCliente={nombreCliente} />
+          {filtros.cotizacion ? (
+            <p className="flex flex-wrap items-center gap-2 rounded-md border border-brand-300 bg-brand-50 px-3 py-2 text-base dark:bg-brand-950">
+              <ClipboardList className="size-5 text-brand-600" aria-hidden="true" />
+              <span>
+                Solo los pedidos de la cotización{" "}
+                {deLaCotizacion ? (
+                  <Link href={`/cotizaciones/${filtros.cotizacion}`} className="font-mono font-semibold text-brand-700 hover:underline">
+                    {deLaCotizacion.cotizacion}
+                  </Link>
+                ) : (
+                  "elegida"
+                )}
+                {deLaCotizacion ? ` · ${deLaCotizacion.cliente}` : ""}
+              </span>
+              <Link
+                href={`/pedidos${sinCotizacion ? `?${sinCotizacion}` : ""}`}
+                className="ml-auto inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              >
+                <X className="size-4" aria-hidden="true" />
+                Ver todos los pedidos
+              </Link>
+            </p>
+          ) : null}
         </div>
         <TablaPedidos
           filas={pag.filas}

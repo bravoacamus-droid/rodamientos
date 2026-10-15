@@ -9,7 +9,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@rodatech/ui";
@@ -69,22 +68,30 @@ export function AccionesFilaCotizacion({ c, ancho = false }: { c: CotizacionList
           </DropdownMenuItem>
         ) : null}
 
+        {/* Un pedido: directo a él. Varios: una sola opción que abre Pedidos
+            filtrado por ESTA cotización, no una lista dentro del menú (Luis,
+            15/10: «no va a ser un select de varios… solo quiero filtrar los
+            pedidos de esa cotización»). */}
         {c.pedidos.length > 0 ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-sm font-medium text-[var(--fg-muted)]">
-              {c.pedidos.length === 1 ? "Su pedido" : "Sus pedidos"}
-            </DropdownMenuLabel>
-            {c.pedidos.map((p) => (
-              <DropdownMenuItem
-                key={p.id}
-                onSelect={() => router.push(`/pedidos/${p.id}`)}
-                className="font-medium text-brand-700"
-              >
-                <ClipboardList className="size-4" aria-hidden="true" />
-                Ver pedido <span className="font-mono">{p.numero}</span>
-              </DropdownMenuItem>
-            ))}
+            <DropdownMenuItem
+              onSelect={() =>
+                router.push(
+                  c.pedidos.length === 1 ? `/pedidos/${c.pedidos[0]!.id}` : `/pedidos?cotizacion=${c.id}`,
+                )
+              }
+              className="font-medium text-brand-700"
+            >
+              <ClipboardList className="size-4" aria-hidden="true" />
+              {c.pedidos.length === 1 ? (
+                <>
+                  Ver pedido <span className="font-mono">{c.pedidos[0]!.numero}</span>
+                </>
+              ) : (
+                `Ver sus ${c.pedidos.length} pedidos`
+              )}
+            </DropdownMenuItem>
           </>
         ) : null}
       </DropdownMenuContent>
