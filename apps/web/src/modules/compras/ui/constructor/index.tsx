@@ -69,6 +69,9 @@ import {
 export interface OrdenAFacturar {
   compraId: string;
   numero: string;
+  /** El pedido del que es (130): a donde se vuelve al guardar. */
+  pedidoId: string;
+  pedido: string;
   cotizacionId: string;
   cotizacion: string;
   cliente: string;
@@ -223,7 +226,7 @@ export function ConstructorCompra({
         // Ya está en la base: el borrador sobra.
         olvidarBorrador();
         // La orden vuelve a su pedido: es donde se ve cuál falta.
-        router.push(orden ? `/compras/pedido/${orden.cotizacionId}` : `/compras/${r.id}`);
+        router.push(orden ? `/pedidos/${orden.pedidoId}` : `/compras/${r.id}`);
       }
       return r;
     },
@@ -370,9 +373,10 @@ export function ConstructorCompra({
             </h1>
             <p className="text-sm text-[var(--fg-muted)]">
               Orden {orden.posicion} de {orden.de} del pedido{" "}
-              <Link href={`/compras/pedido/${orden.cotizacionId}`} className="text-brand-600 underline">
-                {orden.cotizacion} · {orden.cliente}
-              </Link>
+              <Link href={`/pedidos/${orden.pedidoId}`} className="text-brand-600 underline">
+                {orden.pedido} · {orden.cliente}
+              </Link>{" "}
+              (cotización {orden.cotizacion})
               . Los productos ya están: pon lo que dice la factura del proveedor —cómo llegó, su número,
               el PDF y lo que cobró por cada uno—. Las cantidades son las del pedido.
             </p>
@@ -451,7 +455,7 @@ export function ConstructorCompra({
             onClick={() => {
               // Cancelar es decidir no seguir: no se ofrece otra vez.
               olvidarBorrador();
-              router.push(orden ? `/compras/pedido/${orden.cotizacionId}` : "/compras");
+              router.push(orden ? `/pedidos/${orden.pedidoId}` : "/compras");
             }}
           >
             Cancelar

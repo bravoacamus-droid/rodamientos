@@ -189,14 +189,17 @@ export default async function PaginaDetalleCompra({
       {c.para ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800 dark:bg-brand-950">
           <p className="text-base">
-            Para el pedido <strong>{c.para.numero}</strong> de <strong>{c.para.cliente}</strong>
+            Para el pedido <strong>{c.pedido?.numero ?? c.para.numero}</strong> de <strong>{c.para.cliente}</strong>
+            {c.pedido ? <span className="text-sm text-[var(--fg-muted)]"> (cotización {c.para.numero})</span> : null}
           </p>
           <div className="flex flex-wrap gap-2">
+            {c.pedido ? (
+              <Button asChild variant="outline">
+                <Link href={`/pedidos/${c.pedido.id}`}>Ver el pedido</Link>
+              </Button>
+            ) : null}
             <Button asChild variant="outline">
-              <Link href={`/compras/pedido/${c.para.cotizacionId}`}>Compras del pedido</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver el pedido</Link>
+              <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver la cotización</Link>
             </Button>
           </div>
         </div>

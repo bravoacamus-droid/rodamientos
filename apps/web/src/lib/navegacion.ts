@@ -166,7 +166,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
       // cotiza, el cliente confirma, y cuando llega la mercadería alguien
       // tiene que acordarse de avisarle. Ese «alguien» era la memoria de
       // Willy hasta el 04/09.
-      { etiqueta: "Listos para entregar", ruta: "/cotizaciones/listos", icono: "listos" },
+      // «Pedidos» (130), antes «Listos para entregar»: cada confirmación del
+      // cliente con el paso que le toca. Lo de antes es una de sus pestañas.
+      { etiqueta: "Pedidos", ruta: "/pedidos", icono: "listos" },
       { etiqueta: "Guías de remisión", ruta: "/guias", icono: "guia" },
       { etiqueta: "Facturación", ruta: "/facturacion", icono: "factura" },
       // Justo debajo: lo que la factura espera de SUNAT (15/10). Con número

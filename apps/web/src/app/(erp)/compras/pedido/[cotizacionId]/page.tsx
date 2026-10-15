@@ -1,5 +1,10 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Compras del pedido" };
+import { pedidoVigente } from "@/modules/pedidos/api/consultas";
 
-export { PaginaPedidoCompras as default } from "@/modules/compras";
+/** Desde la 130 las compras cuelgan del PEDIDO: se va al vigente de la cotización. */
+export default async function ComprasDelPedidoViejo({ params }: { params: Promise<{ cotizacionId: string }> }) {
+  const { cotizacionId } = await params;
+  const id = await pedidoVigente(cotizacionId);
+  redirect(id ? `/pedidos/${id}` : `/cotizaciones/${cotizacionId}`);
+}

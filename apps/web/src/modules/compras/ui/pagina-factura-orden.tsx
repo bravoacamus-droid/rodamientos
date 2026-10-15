@@ -3,7 +3,7 @@ import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
-import { couriersUsados, detalleCompra, ordenesDeLaCotizacion } from "../api/consultas";
+import { couriersUsados, detalleCompra, ordenesDelPedido } from "../api/consultas";
 import { precargaDeCompra } from "../api/por-comprar";
 import type { PlantillaCompra } from "../dominio/constructor";
 import { modalidadDe } from "../dominio/gastos";
@@ -39,17 +39,17 @@ export default async function PaginaFacturaOrden({ params }: { params: Promise<{
   if (!r.datos) notFound();
   const c = r.datos;
   // Ya tiene su factura, o no sale de un pedido: a su ficha.
-  if (!c.falta_factura || !c.para || c.estado !== "registrada") redirect(`/compras/${c.id}`);
+  if (!c.falta_factura || !c.para || !c.pedido || c.estado !== "registrada") redirect(`/compras/${c.id}`);
 
   const [precarga, fichas, sugeridos, couriers, pedido] = await Promise.all([
     precargaDeCompra(c.lineas.map((l) => `${l.producto_id}:${l.cantidad}`).join(",")),
     proveedoresPorId([c.proveedor_id]),
     proveedoresSugeridos(),
     couriersUsados(),
-    ordenesDeLaCotizacion(c.para.cotizacionId),
+    ordenesDelPedido(c.pedido.id),
   ]);
 
-  const ordenes = pedido.ok && pedido.datos ? pedido.datos.ordenes : [];
+  const ordenes = pedido.ok ? pedido.datos : [];
   const posicion = Math.max(ordenes.findIndex((o) => o.id === c.id), 0) + 1;
 
   const ficha = fichas.ok ? (fichas.datos.find((f) => f.id === c.proveedor_id) ?? null) : null;
@@ -79,6 +79,8 @@ export default async function PaginaFacturaOrden({ params }: { params: Promise<{
       orden={{
         compraId: c.id,
         numero: c.numero,
+        pedidoId: c.pedido.id,
+        pedido: c.pedido.numero,
         cotizacionId: c.para.cotizacionId,
         cotizacion: c.para.numero,
         cliente: c.para.cliente,

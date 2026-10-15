@@ -782,6 +782,7 @@ export type Database = {
           motivo_anulacion: string | null
           numero: string
           observaciones: string | null
+          pedido_id: string | null
           proveedor_id: string
           subtotal: number
           tipo: Database["public"]["Enums"]["tipo_compra"]
@@ -810,6 +811,7 @@ export type Database = {
           motivo_anulacion?: string | null
           numero: string
           observaciones?: string | null
+          pedido_id?: string | null
           proveedor_id: string
           subtotal?: number
           tipo?: Database["public"]["Enums"]["tipo_compra"]
@@ -838,6 +840,7 @@ export type Database = {
           motivo_anulacion?: string | null
           numero?: string
           observaciones?: string | null
+          pedido_id?: string | null
           proveedor_id?: string
           subtotal?: number
           tipo?: Database["public"]["Enums"]["tipo_compra"]
@@ -881,6 +884,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["cotizacion_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "compras_proveedor_id_fkey"
@@ -1199,6 +1216,7 @@ export type Database = {
           op_inafecta: number
           orden_compra_cliente: string | null
           pagado: number
+          pedido_id: string | null
           pen_descuento: number | null
           pen_gravada: number | null
           pen_igv: number | null
@@ -1259,6 +1277,7 @@ export type Database = {
           op_inafecta?: number
           orden_compra_cliente?: string | null
           pagado?: number
+          pedido_id?: string | null
           pen_descuento?: number | null
           pen_gravada?: number | null
           pen_igv?: number | null
@@ -1319,6 +1338,7 @@ export type Database = {
           op_inafecta?: number
           orden_compra_cliente?: string | null
           pagado?: number
+          pedido_id?: string | null
           pen_descuento?: number | null
           pen_gravada?: number | null
           pen_igv?: number | null
@@ -1407,6 +1427,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["guia_id"]
+          },
+          {
+            foreignKeyName: "comprobantes_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "comprobantes_referencia_id_fkey"
@@ -2016,6 +2050,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_comprometido"
             referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "cotizacion_item_proveedores_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["cotizacion_item_id"]
           },
           {
             foreignKeyName: "cotizacion_item_proveedores_proveedor_id_fkey"
@@ -2680,6 +2721,13 @@ export type Database = {
             referencedColumns: ["item_id"]
           },
           {
+            foreignKeyName: "guia_items_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["cotizacion_item_id"]
+          },
+          {
             foreignKeyName: "guia_items_guia_id_fkey"
             columns: ["guia_id"]
             isOneToOne: false
@@ -2756,6 +2804,7 @@ export type Database = {
           numero_bultos: number
           observaciones: string | null
           orden_compra_cliente: string | null
+          pedido_id: string | null
           peso_bruto_kg: number
           recibido_por: string | null
           serie: string
@@ -2806,6 +2855,7 @@ export type Database = {
           numero_bultos?: number
           observaciones?: string | null
           orden_compra_cliente?: string | null
+          pedido_id?: string | null
           peso_bruto_kg: number
           recibido_por?: string | null
           serie?: string
@@ -2856,6 +2906,7 @@ export type Database = {
           numero_bultos?: number
           observaciones?: string | null
           orden_compra_cliente?: string | null
+          pedido_id?: string | null
           peso_bruto_kg?: number
           recibido_por?: string | null
           serie?: string
@@ -2944,6 +2995,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "motivos_traslado"
             referencedColumns: ["codigo"]
+          },
+          {
+            foreignKeyName: "guias_remision_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guias_remision_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "guias_remision_ubigeo_llegada_fkey"
@@ -3277,6 +3342,139 @@ export type Database = {
           {
             foreignKeyName: "pagos_registrado_por_fkey"
             columns: ["registrado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_items: {
+        Row: {
+          cantidad: number
+          cotizacion_item_id: string
+          pedido_id: string
+        }
+        Insert: {
+          cantidad: number
+          cotizacion_item_id: string
+          pedido_id: string
+        }
+        Update: {
+          cantidad?: number
+          cotizacion_item_id?: string
+          pedido_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_items_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_comprometido"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "pedido_items_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["cotizacion_item_id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["pedido_id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          cliente_id: string
+          cotizacion_id: string
+          creado_en: string
+          creado_por: string | null
+          desde_aprobacion: boolean
+          fecha: string
+          id: string
+          numero: string
+          secuencia: number
+        }
+        Insert: {
+          cliente_id: string
+          cotizacion_id: string
+          creado_en?: string
+          creado_por?: string | null
+          desde_aprobacion?: boolean
+          fecha?: string
+          id?: string
+          numero: string
+          secuencia: number
+        }
+        Update: {
+          cliente_id?: string
+          cotizacion_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          desde_aprobacion?: boolean
+          fecha?: string
+          id?: string
+          numero?: string
+          secuencia?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "pedidos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
+          },
+          {
+            foreignKeyName: "pedidos_creado_por_fkey"
+            columns: ["creado_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
@@ -4601,6 +4799,50 @@ export type Database = {
           },
         ]
       }
+      v_pedido_lineas: {
+        Row: {
+          cantidad: number | null
+          codigo: string | null
+          cotizacion_item_id: string | null
+          descripcion: string | null
+          descuento_pct: number | null
+          orden: number | null
+          pedido_id: string | null
+          producto_id: string | null
+          unidad_codigo: string | null
+          valor_unitario: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_unidad_codigo_fkey"
+            columns: ["unidad_codigo"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
       v_pedido_pendiente: {
         Row: {
           compras: number | null
@@ -5221,6 +5463,10 @@ export type Database = {
       crear_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       crear_familia: { Args: { p_nombre: string }; Returns: Json }
       crear_marca: { Args: { p_nombre: string }; Returns: Json }
+      crear_pedido: {
+        Args: { p_cot: string; p_fecha?: string; p_items: Json }
+        Returns: string
+      }
       crear_subfamilia: {
         Args: { p_familia: string; p_nombre: string }
         Returns: Json

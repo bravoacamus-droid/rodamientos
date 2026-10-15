@@ -8197,3 +8197,31 @@ eso, para que guarde una compra»*.
 
 **Sin probar:** guardar una factura de verdad desde la pantalla (la función
 sí, por el centinela). La única orden es CMP-26-00013, de COT1-000012.
+
+## §CF · 15/10 — Los pedidos (130)
+
+Luis: *«en vez de listo para entregar sería pedidos, porque la cotización
+puede duplicarse, se puede utilizar de nuevo, pero el pedido ya es cuando se
+aprobó, y después desde ahí sí se puede vincular con órdenes de compra»*.
+
+- **`pedidos` + `pedido_items` (130):** nace uno al aprobar la cotización
+  (trigger; `aprobar_cotizacion` no se toca) y otro con cada «Atender otro
+  pedido» (`repetir_pedido` lo crea con sus cantidades). PED-26-00001…
+- **`compras`, `guias_remision`, `comprobantes` llevan `pedido_id`**, que pone
+  un trigger con el pedido VIGENTE (el último) de su cotización. Vale porque
+  «Atender otro pedido» solo se ofrece con el anterior despachado y facturado.
+- **Las cantidades no se mudan:** los topes de guía y factura siguen en
+  `cantidad_aprobada`. `v_pedido_lineas` enseña las de cada pedido (las del
+  primero, deducidas).
+- **Historia:** las 631 CT02 del sistema viejo no tienen pedido (nada suyo
+  vive en el ERP). Lo tienen COT1-000012 (PED-26-00001) y COT1-000014
+  (PED-26-00002).
+- **Pantallas:** «Pedidos» en el menú (antes «Listos para entregar», que
+  queda como pestaña en `/pedidos/listos`); ficha `/pedidos/<id>` con qué
+  pidió, sus compras («Registrar compra»), su guía, su factura y su cobro, y
+  los botones de lo que sigue solo en el pedido vigente. La cotización enseña
+  sus pedidos. `/compras/pedido/<cot>` (128) y `/cotizaciones/listos`
+  redirigen.
+
+**Sin probar en pantalla:** «Atender otro pedido» de punta a punta (crearía un
+pedido de verdad; el centinela de la 130 sí lo ejecuta y lo deshace).

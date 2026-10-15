@@ -5,6 +5,7 @@ import { Badge, EstadoError, EstadoVacio, Moneda, formatearFecha, formatearMoned
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { FilaIndicadores } from "@/componentes/indicadores";
+import { PestanasPedidos } from "@/modules/pedidos/ui/pestanas";
 
 import { listosParaEntregar, type PedidoDelCliente } from "../api/por-comprar";
 import { ETIQUETA_URGENCIA } from "../dominio/por-comprar";
@@ -88,12 +89,14 @@ export default async function PaginaListos({ searchParams }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Listos para entregar</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
         <p className="text-sm text-[var(--fg-muted)]">
           Pedidos que salieron de una cotización aprobada y todavía no se han
           entregado del todo. Los que están «Por cubrir» aún no tienen stock.
         </p>
       </header>
+
+      <PestanasPedidos activa="listos" />
 
       {todos.length === 0 ? (
         <EstadoVacio
@@ -303,7 +306,7 @@ export default async function PaginaListos({ searchParams }: Props) {
             {visibles.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-[var(--fg-muted)]">
                 Ningún pedido en «{filtro ? ETIQUETA[filtro] : ""}».{" "}
-                <Link href="/cotizaciones/listos" className="text-brand-700 underline">
+                <Link href="/pedidos/listos" className="text-brand-700 underline">
                   Ver todos
                 </Link>
               </p>
@@ -342,14 +345,14 @@ function Pastillas({
 
   return (
     <div className="flex flex-wrap gap-1.5">
-      <Link href="/cotizaciones/listos" className={clase(!activo)}>
+      <Link href="/pedidos/listos" className={clase(!activo)}>
         Todos
         <span className="tabular opacity-70">{total}</span>
       </Link>
       {MONTONES.map((m) => (
         <Link
           key={m}
-          href={`/cotizaciones/listos?estado=${m}`}
+          href={`/pedidos/listos?estado=${m}`}
           className={clase(activo === m)}
         >
           {ETIQUETA[m]}
@@ -480,7 +483,7 @@ function Indicadores({ todos }: { todos: PedidoDelCliente[] }) {
           detalle: listos.length > 0 ? `${formatearMoneda(suma(listos))} · el almacén los cubre enteros` : "ninguno cubierto del todo",
           tono: listos.length > 0 ? "ok" : undefined,
           icono: <PackageCheck aria-hidden="true" />,
-          href: listos.length > 0 ? "/cotizaciones/listos?estado=completo" : undefined,
+          href: listos.length > 0 ? "/pedidos/listos?estado=completo" : undefined,
         },
         {
           etiqueta: "Por cubrir",

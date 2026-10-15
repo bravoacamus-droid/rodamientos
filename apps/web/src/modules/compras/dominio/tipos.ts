@@ -102,6 +102,8 @@ export interface CompraDetalle {
   para: { cotizacionId: string; numero: string; cliente: string } | null;
   /** La orden salió del pedido y todavía no tiene la factura del proveedor (128). */
   falta_factura: boolean;
+  /** El pedido del que es (130). */
+  pedido: { id: string; numero: string } | null;
   /** Para imprimir la orden (09/10). */
   proveedor_direccion: string | null;
   numero: string;

@@ -225,6 +225,7 @@ export async function detalleCompra(
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento, direccion),
          cotizacion:cotizaciones!compras_cotizacion_id_fkey(id, numero, clientes(razon_social)),
+         pedido:pedidos!compras_pedido_id_fkey(id, numero),
          perfiles(nombre),
          compra_items(
            id, producto_id, cantidad, cantidad_recibida, costo_unitario,
@@ -283,6 +284,7 @@ export async function detalleCompra(
           const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
           return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
         })(),
+        pedido: (c.pedido as { id: string; numero: string } | null) ?? null,
 
         tipo: (c.tipo as TipoCompra) ?? "local",
         documento_proveedor: (c.documento_proveedor as string | null) ?? null,
@@ -493,39 +495,28 @@ export interface OrdenDePedido {
   productos: { codigo: string; cantidad: number }[];
 }
 
-export interface PedidoConOrdenes {
-  cotizacionId: string;
-  cotizacion: string;
-  cliente: string;
-  ordenes: OrdenDePedido[];
-}
-
 /**
- * Las órdenes de compra de una cotización, juntas (128). Luis, 15/10:
- * *«lo que yo quiero englobar es cotización y cliente… si una cotización
- * tiene tres órdenes, se junta eso, pero cada orden es diferente»*.
+ * Las órdenes de compra de UN pedido (128, 130). Luis, 15/10: *«si una
+ * cotización tiene tres órdenes, se junta eso, pero cada orden es
+ * diferente»* — y desde la 130 se juntan por PEDIDO, no por cotización: el
+ * pedido de noviembre no mezcla sus órdenes con las de octubre.
  */
-export async function ordenesDeLaCotizacion(cotizacionId: string): Promise<Resultado<PedidoConOrdenes | null>> {
+export async function ordenesDelPedido(pedidoId: string): Promise<Resultado<OrdenDePedido[]>> {
   try {
     const supabase = await clienteServidor();
-    const [{ data: cot, error: e1 }, { data: compras, error: e2 }] = await Promise.all([
-      supabase.from("cotizaciones").select("id, numero, clientes(razon_social)").eq("id", cotizacionId).maybeSingle(),
-      supabase
-        .from("compras")
-        .select(
-          `id, numero, estado, falta_factura, tipo, via_importacion, documento_proveedor, moneda, total, fecha,
-           proveedores(razon_social),
-           compra_items(cantidad, productos(codigo))`,
-        )
-        .eq("cotizacion_id", cotizacionId)
-        .neq("estado", "anulada")
-        .order("numero", { ascending: true }),
-    ]);
-    if (e1) return fallo(e1, "compras/ordenesDeLaCotizacion");
-    if (e2) return fallo(e2, "compras/ordenesDeLaCotizacion");
-    if (!cot) return { ok: true, datos: null };
+    const { data, error } = await supabase
+      .from("compras")
+      .select(
+        `id, numero, estado, falta_factura, tipo, via_importacion, documento_proveedor, moneda, total, fecha,
+         proveedores(razon_social),
+         compra_items(cantidad, productos(codigo))`,
+      )
+      .eq("pedido_id", pedidoId)
+      .neq("estado", "anulada")
+      .order("numero", { ascending: true });
+    if (error) return fallo(error, "compras/ordenesDelPedido");
 
-    const filas = (compras ?? []) as unknown as {
+    const filas = (data ?? []) as unknown as {
       id: string;
       numero: string;
       estado: string;
@@ -541,27 +532,22 @@ export async function ordenesDeLaCotizacion(cotizacionId: string): Promise<Resul
     }[];
     return {
       ok: true,
-      datos: {
-        cotizacionId: cot.id,
-        cotizacion: cot.numero ?? "—",
-        cliente: (cot.clientes as { razon_social: string } | null)?.razon_social ?? "—",
-        ordenes: filas.map((f) => ({
-          id: f.id,
-          numero: f.numero,
-          estado: f.estado,
-          falta_factura: Boolean(f.falta_factura),
-          proveedor: f.proveedores?.razon_social ?? "—",
-          tipo: f.tipo,
-          via_importacion: f.via_importacion,
-          documento_proveedor: f.documento_proveedor,
-          moneda: f.moneda === "PEN" ? "PEN" : "USD",
-          total: Number(f.total ?? 0),
-          fecha: String(f.fecha),
-          productos: (f.compra_items ?? []).map((i) => ({ codigo: i.productos?.codigo ?? "—", cantidad: Number(i.cantidad ?? 0) })),
-        })),
-      },
+      datos: filas.map((f) => ({
+        id: f.id,
+        numero: f.numero,
+        estado: f.estado,
+        falta_factura: Boolean(f.falta_factura),
+        proveedor: f.proveedores?.razon_social ?? "—",
+        tipo: f.tipo,
+        via_importacion: f.via_importacion,
+        documento_proveedor: f.documento_proveedor,
+        moneda: f.moneda === "PEN" ? "PEN" : "USD",
+        total: Number(f.total ?? 0),
+        fecha: String(f.fecha),
+        productos: (f.compra_items ?? []).map((i) => ({ codigo: i.productos?.codigo ?? "—", cantidad: Number(i.cantidad ?? 0) })),
+      })),
     };
   } catch (e) {
-    return fallo(e, "compras/ordenesDeLaCotizacion");
+    return fallo(e, "compras/ordenesDelPedido");
   }
 }

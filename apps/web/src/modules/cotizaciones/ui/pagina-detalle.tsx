@@ -20,6 +20,8 @@ import { DescargarPdf } from "./detalle/descargar-pdf";
 import { MonedaVenta } from "./detalle/moneda-venta";
 import { LoQueFalta } from "./detalle/lo-que-falta";
 import { OrdenesDeCompra } from "./detalle/ordenes-compra";
+import { listarPedidos } from "@/modules/pedidos/api/consultas";
+import { PedidosDeLaCotizacion } from "@/modules/pedidos/ui/de-la-cotizacion";
 import { OrdenCliente } from "./detalle/orden-cliente";
 import { demandaDeProductos } from "../api/demanda";
 import { proveedoresGuardados } from "../dominio/compra-linea";
@@ -248,9 +250,14 @@ export default async function PaginaDetalleCotizacion({
   // Las órdenes de compra (111): solo de un pedido confirmado.
   const confirmado = cabecera.estado === "aprobada" || cabecera.estado === "atendida";
   const idsConProducto = lineas.map((l) => l.producto_id).filter((x): x is string => !!x);
-  const [ordenes, perfil, demanda] = confirmado
-    ? await Promise.all([ordenesDelPedido(cabecera.id), perfilActual(), demandaDeProductos(idsConProducto)])
-    : [[], null, new Map()];
+  const [ordenes, perfil, demanda, pedidos] = confirmado
+    ? await Promise.all([
+        ordenesDelPedido(cabecera.id),
+        perfilActual(),
+        demandaDeProductos(idsConProducto),
+        listarPedidos({ cotizacionId: cabecera.id }),
+      ])
+    : [[], null, new Map(), null];
   const lineasConfirmadas = lineas
     .filter((l) => l.producto_id !== null)
     .map((l) => ({
@@ -496,6 +503,9 @@ export default async function PaginaDetalleCotizacion({
           no compre es ruido. Va antes de los productos porque, recién
           confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
         */}
+        {/* Sus pedidos (130): cada confirmación del cliente, con su etapa. */}
+        {pedidos?.ok ? <PedidosDeLaCotizacion pedidos={pedidos.datos} /> : null}
+
         <LoQueFalta
           falta={falta}
           analizados={lineasConfirmadas

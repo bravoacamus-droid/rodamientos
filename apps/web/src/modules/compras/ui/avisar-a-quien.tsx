@@ -40,7 +40,7 @@ export async function AvisarAQuien() {
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">A quién se le puede entregar ya</h2>
         <Link
-          href="/cotizaciones/listos"
+          href="/pedidos/listos"
           className="text-sm text-brand-600 underline-offset-2 hover:underline"
         >
           Verlos todos
