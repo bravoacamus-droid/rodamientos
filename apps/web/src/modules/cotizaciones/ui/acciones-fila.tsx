@@ -44,6 +44,18 @@ export function AccionesFilaCotizacion({ c, ancho = false }: { c: CotizacionList
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64">
+        {/* Aprobar, PRIMERO y en verde (Luis, 15/10): es lo que se viene a
+            hacer aquí. Aprobar es pasar a pedidos: abre la ficha con «¿Qué te
+            confirmó el cliente?» y, al aprobar, lleva al pedido. */}
+        {viva ? (
+          <DropdownMenuItem
+            onSelect={() => router.push(`/cotizaciones/${c.id}?aprobar=1`)}
+            className="mb-1 bg-[var(--ok-bg)] font-semibold text-[var(--ok)] focus:bg-[var(--ok-bg)] focus:text-[var(--ok)]"
+          >
+            <Check className="size-4" aria-hidden="true" />
+            Aprobar cotización
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild>
           <Link href={`/cotizaciones/${c.id}`}>
             <Eye className="size-4" aria-hidden="true" />
@@ -51,18 +63,10 @@ export function AccionesFilaCotizacion({ c, ancho = false }: { c: CotizacionList
           </Link>
         </DropdownMenuItem>
         {viva ? (
-          <>
-            <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}/editar`)}>
-              <Pencil className="size-4" aria-hidden="true" />
-              Editar cotización
-            </DropdownMenuItem>
-            {/* Aprobar es pasar a pedidos: abre la ficha con «¿Qué te
-                confirmó el cliente?» y, al aprobar, lleva al pedido. */}
-            <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}?aprobar=1`)}>
-              <Check className="size-4" aria-hidden="true" />
-              Aprobar cotización
-            </DropdownMenuItem>
-          </>
+          <DropdownMenuItem onSelect={() => router.push(`/cotizaciones/${c.id}/editar`)}>
+            <Pencil className="size-4" aria-hidden="true" />
+            Editar cotización
+          </DropdownMenuItem>
         ) : null}
 
         {c.pedidos.length > 0 ? (
@@ -72,7 +76,11 @@ export function AccionesFilaCotizacion({ c, ancho = false }: { c: CotizacionList
               {c.pedidos.length === 1 ? "Su pedido" : "Sus pedidos"}
             </DropdownMenuLabel>
             {c.pedidos.map((p) => (
-              <DropdownMenuItem key={p.id} onSelect={() => router.push(`/pedidos/${p.id}`)}>
+              <DropdownMenuItem
+                key={p.id}
+                onSelect={() => router.push(`/pedidos/${p.id}`)}
+                className="font-medium text-brand-700"
+              >
                 <ClipboardList className="size-4" aria-hidden="true" />
                 Ver pedido <span className="font-mono">{p.numero}</span>
               </DropdownMenuItem>
