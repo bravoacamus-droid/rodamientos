@@ -25,7 +25,9 @@ export function FormularioLogin({ destino }: { destino: string }) {
   const [estado, accion] = useActionState(iniciarSesion, INICIAL);
 
   return (
-    <form action={accion} className="flex flex-col gap-4">
+    // `noValidate`: el error lo dice siempre el aviso de abajo, en grande y
+    // en español, no el globo del navegador (pequeño y a veces en inglés).
+    <form action={accion} noValidate className="flex flex-col gap-4">
       <input type="hidden" name="destino" value={destino} />
 
       <div className="flex flex-col gap-1.5">
@@ -36,6 +38,10 @@ export function FormularioLogin({ destino }: { destino: string }) {
           type="email"
           autoComplete="username"
           required
+          defaultValue={estado.correo ?? ""}
+          key={estado.correo ?? ""}
+          autoCapitalize="none"
+          spellCheck={false}
           placeholder="nombre@rodatech.pe"
         />
       </div>

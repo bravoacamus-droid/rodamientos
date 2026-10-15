@@ -3,17 +3,19 @@
 import { redirect } from "next/navigation";
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { apuntarIntento, esperaParaEntrar, minutosDeEspera } from "@/lib/limite-login";
+
 import { ATAJOS_VISIBLES, hayAtajos } from "./cuentas-dev";
+import { destinoSeguro, esquemaLogin } from "./validar";
 
 export interface ResultadoLogin {
   error: string | null;
-}
-
-/** Solo se acepta una ruta interna, para que `destino` no sirva de trampolín
- *  a un dominio externo (redirección abierta). */
-function destinoSeguro(valor: FormDataEntryValue | null): string {
-  const ruta = typeof valor === "string" ? valor : "";
-  return ruta.startsWith("/") && !ruta.startsWith("//") ? ruta : "/dashboard";
+  /**
+   * El correo que se escribió, para devolverlo al campo: React vacía el
+   * formulario al terminar la acción y Willy tendría que reescribirlo tras
+   * cada error.
+   */
+  correo?: string;
 }
 
 /**
@@ -28,11 +30,20 @@ export async function iniciarSesion(
   _previo: ResultadoLogin,
   datos: FormData,
 ): Promise<ResultadoLogin> {
-  const correo = String(datos.get("correo") ?? "").trim();
-  const clave = String(datos.get("clave") ?? "");
+  const escrito = String(datos.get("correo") ?? "").slice(0, 200);
+  const revision = esquemaLogin.safeParse({ correo: escrito, clave: String(datos.get("clave") ?? "") });
+  if (!revision.success) {
+    return { error: revision.error.issues[0]?.message ?? "Revise el correo y la contraseña.", correo: escrito.trim() };
+  }
+  const { correo, clave } = revision.data;
 
-  if (!correo || !clave) {
-    return { error: "Escriba su correo y su contraseña." };
+  // El límite propio (136): por correo y por IP, antes de llamar a Supabase.
+  const espera = await esperaParaEntrar(correo);
+  if (espera > 0) {
+    return {
+      error: `Demasiados intentos fallidos. Espere ${minutosDeEspera(espera)} y vuelva a probar.`,
+      correo,
+    };
   }
 
   const supabase = await clienteServidor();
@@ -42,15 +53,21 @@ export async function iniciarSesion(
   });
 
   if (error) {
-    // El mensaje de Supabase es genérico a propósito: no revela si el correo
-    // existe. Se traduce sin añadir detalle.
+    // El mensaje no revela si el correo existe. Por código y no por el texto
+    // en inglés, que Supabase puede cambiar.
+    if (error.status === 429 || error.code === "over_request_rate_limit") {
+      return { error: "Demasiados intentos. Espere unos minutos y vuelva a probar.", correo };
+    }
+    await apuntarIntento(correo, false);
     return {
       error:
-        error.message === "Invalid login credentials"
+        error.code === "invalid_credentials" || error.message === "Invalid login credentials"
           ? "Correo o contraseña incorrectos."
           : "No se pudo iniciar sesión. Intente de nuevo.",
+      correo,
     };
   }
+  await apuntarIntento(correo, true);
 
   // redirect() lanza para cortar el flujo, así que va fuera de cualquier
   // try/catch y después de que la cookie de sesión ya quedó escrita.

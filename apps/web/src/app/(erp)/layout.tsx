@@ -39,6 +39,13 @@ export default async function LayoutErp({
     redirect("/cambiar-contrasena");
   }
 
+  // Desactivado, o sin perfil: fuera, con su explicación (revisión del
+  // 15/10). Antes entraba a un ERP vacío —RLS no le devolvía nada— sin saber
+  // por qué. `/salir` cierra la sesión: aquí no se pueden borrar cookies.
+  if (!perfil || !perfil.activo) {
+    redirect("/salir?motivo=inactivo");
+  }
+
   const grupos = menuPara(perfil?.rol ?? null);
 
   // Cuántas cosas esperan, para la pastilla del menú. Nunca lanza: si falla,

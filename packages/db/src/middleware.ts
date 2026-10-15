@@ -18,7 +18,7 @@ import type { Database } from "./tipos";
  * `/verificar`, `/ventas` o cualquier ruta futura que empiece igual, y eso es
  * exactamente la clase de agujero que nadie nota hasta que ya está abierto.
  */
-const PUBLICAS = ["/login", "/auth", "/ver/"];
+const PUBLICAS = ["/ver/"];
 
 /**
  * Refresca el token de sesión y decide si la petición puede seguir.
@@ -35,7 +35,8 @@ export async function refrescarSesion(request: NextRequest) {
   let respuesta = NextResponse.next({ request });
 
   const ruta = request.nextUrl.pathname;
-  const esPublica = PUBLICAS.some((p) => ruta.startsWith(p));
+  // `/login` exacta: con `startsWith` se abría también `/loginX`.
+  const esPublica = ruta === "/login" || PUBLICAS.some((p) => ruta.startsWith(p));
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

@@ -3033,6 +3033,27 @@ export type Database = {
           },
         ]
       }
+      intentos_login: {
+        Row: {
+          correo: string
+          creado_en: string
+          id: number
+          ip: string | null
+        }
+        Insert: {
+          correo: string
+          creado_en?: string
+          id?: number
+          ip?: string | null
+        }
+        Update: {
+          correo?: string
+          creado_en?: string
+          id?: number
+          ip?: string | null
+        }
+        Relationships: []
+      }
       kit_componentes: {
         Row: {
           cantidad: number
@@ -5626,6 +5647,14 @@ export type Database = {
       kpis_dashboard: {
         Args: { p_desde?: string; p_hasta?: string }
         Returns: Json
+      }
+      login_espera: {
+        Args: { p_correo: string; p_ip: string }
+        Returns: number
+      }
+      login_registrar: {
+        Args: { p_correo: string; p_exito: boolean; p_ip: string }
+        Returns: undefined
       }
       mi_rol: {
         Args: never

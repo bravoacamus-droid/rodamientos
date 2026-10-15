@@ -26,6 +26,8 @@ export default async function PaginaCambiarContrasena() {
 
   // Quien ya la cambió no tiene nada que hacer aquí. Sin esto, la pantalla
   // quedaría accesible para siempre escribiendo la dirección a mano.
+  // Desactivado o sin perfil: tampoco aquí (revisión del 15/10).
+  if (!perfil || !perfil.activo) redirect("/salir?motivo=inactivo");
   if (perfil && !perfil.debe_cambiar_contrasena) {
     redirect("/dashboard");
   }

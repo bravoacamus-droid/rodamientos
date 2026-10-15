@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
+import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 import { mensajeDeError } from "@/lib/errores";
 
 import { ROLES, type Rol, type TipoDocumento } from "../dominio/tipos";
@@ -348,8 +349,26 @@ export async function cambiarUsuario(
     const { error } = await supabase.from("perfiles").update(datos.data).eq("id", id);
     if (error) return { ok: false, error: mensajeDeError(error) };
 
-    revalidatePath("/configuracion/empresa");
-    return { ok: true, mensaje: "Usuario actualizado." };
+    /*
+      Desactivar también cierra la puerta en Supabase Auth (revisión del
+      15/10): solo con `perfiles.activo` la cuenta seguía iniciando sesión y
+      veía un ERP vacío. Con la cuenta bloqueada no entra, y las sesiones
+      abiertas no pueden renovar su token.
+    */
+    let aviso = "";
+    if (datos.data.activo !== undefined) {
+      if (hayClaveAdmin()) {
+        const { error: errorAuth } = await clienteAdmin().auth.admin.updateUserById(id, {
+          ban_duration: datos.data.activo ? "none" : "876000h",
+        });
+        if (errorAuth) aviso = ` Ojo: no se pudo ${datos.data.activo ? "desbloquear" : "bloquear"} su acceso (${errorAuth.message}).`;
+      } else {
+        aviso = " Ojo: falta la clave de servicio, así que su acceso no se bloqueó en el inicio de sesión.";
+      }
+    }
+
+    revalidatePath("/configuracion/usuarios");
+    return { ok: true, mensaje: `Usuario actualizado.${aviso}` };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
   }

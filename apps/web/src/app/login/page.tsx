@@ -41,6 +41,16 @@ export default async function PaginaLogin({
             </p>
           ) : null}
 
+          {error === "inactivo" ? (
+            <p
+              role="alert"
+              className="mb-4 rounded-sm bg-[var(--warn-bg)] px-3 py-2 text-sm text-[var(--warn)]"
+            >
+              Su cuenta está desactivada o no tiene un perfil asignado. Hable
+              con Gerencia.
+            </p>
+          ) : null}
+
           <FormularioLogin destino={destino} />
           <AtajosDev destino={destino} />
         </div>

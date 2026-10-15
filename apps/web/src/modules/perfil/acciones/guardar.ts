@@ -6,6 +6,8 @@ import { clienteServidor, usuarioActual } from "@rodatech/db/servidor";
 import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 
 import { mensajeDeError } from "@/lib/errores";
+import { apuntarIntento, esperaParaEntrar, minutosDeEspera } from "@/lib/limite-login";
+import { problemaContrasenaNueva } from "@/app/login/validar";
 
 import { MINIMO_CONTRASENA } from "../dominio/tipos";
 
@@ -118,12 +120,9 @@ export async function cambiarMiContrasena(
   const usuario = await usuarioActual();
   if (!usuario?.email) return { ok: false, error: "Hay que iniciar sesión." };
 
-  if (typeof nueva !== "string" || nueva.length < MINIMO_CONTRASENA) {
-    return {
-      ok: false,
-      error: `La contraseña nueva necesita al menos ${MINIMO_CONTRASENA} caracteres.`,
-    };
-  }
+  if (typeof actual !== "string") return { ok: false, error: "Datos no válidos." };
+  const problema = problemaContrasenaNueva(nueva, MINIMO_CONTRASENA);
+  if (problema) return { ok: false, error: problema };
   if (nueva === actual) {
     return { ok: false, error: "La contraseña nueva es igual que la actual." };
   }
@@ -132,11 +131,18 @@ export async function cambiarMiContrasena(
     const supabase = await clienteServidor();
 
     // La actual, comprobada contra Supabase Auth y no contra nada nuestro.
+    // Con el mismo límite que el login (136): si no, esto servía para
+    // adivinarla sin pasar por él.
+    const espera = await esperaParaEntrar(usuario.email);
+    if (espera > 0) {
+      return { ok: false, error: `Demasiados intentos. Espere ${minutosDeEspera(espera)} y vuelva a probar.` };
+    }
     const { error: errorClave } = await supabase.auth.signInWithPassword({
       email: usuario.email,
       password: actual,
     });
     if (errorClave) {
+      await apuntarIntento(usuario.email, false);
       return { ok: false, error: "La contraseña actual no es correcta." };
     }
 
