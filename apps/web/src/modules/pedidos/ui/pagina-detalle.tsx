@@ -1,3 +1,4 @@
+import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { FileText, Receipt, Truck, Wallet } from "lucide-react";
@@ -5,12 +6,21 @@ import { EstadoError, Moneda, buttonVariants, cn, formatearFecha } from "@rodate
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { Volver } from "@/componentes/volver";
+import { emisorParaImprimir } from "@/lib/emisor";
 import { ordenesDelPedido } from "@/modules/compras/api/consultas";
+import { cotizacionPorId, ordenesDelPedido as ordenesDeLaCotizacion } from "@/modules/cotizaciones/api/consultas";
+import { demandaDeProductos } from "@/modules/cotizaciones/api/demanda";
+import { proveedoresGuardados } from "@/modules/cotizaciones/dominio/compra-linea";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
+import { GenerarOrdenes } from "@/modules/cotizaciones/ui/detalle/ordenes-compra";
+import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
 import { detallePedido } from "../api/consultas";
 import { ETIQUETA_ETAPA } from "../dominio/etapa";
+import { papelDelPedido } from "../dominio/hoja";
 import { ComprasDelPedido } from "./compras-del-pedido";
+import { DescargarHojaPedido } from "./descargar-hoja";
+import { DocumentoPedido } from "./documento";
 import { InsigniaEtapa } from "./insignia";
 
 /**
@@ -32,16 +42,52 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
   const puedeFacturar = ["gerencia", "admin", "ventas"].includes(rol);
   const puedeCobrar = ["gerencia", "admin", "cobranzas"].includes(rol);
 
-  const [r, ordenes] = await Promise.all([detallePedido(id), ordenesDelPedido(id)]);
+  const [r, ordenes, emisor] = await Promise.all([detallePedido(id), ordenesDelPedido(id), emisorParaImprimir()]);
   if (!r.ok) return <EstadoError titulo="No se pudo cargar el pedido" detalle={r.error} />;
   if (!r.datos) notFound();
   const p = r.datos;
   const vigente = p.hermanos.length === 0 || p.hermanos[p.hermanos.length - 1]?.id === p.id;
   const guiaEmitida = p.guias.find((g) => g.estado === "emitida");
   const borrador = p.guias.find((g) => g.estado === "borrador");
+  const papel = papelDelPedido(p, unidadLegible);
+
+  /*
+    Ordenar las compras desde aquí (Luis, 15/10: «de ahí se hace todo»): lo
+    analizado al cotizar, menos lo ya pedido. Solo en el pedido vigente y
+    para quien compra; es lo mismo que ofrece la ficha de la cotización.
+  */
+  let generar: React.ReactNode = null;
+  if (vigente && puedeComprar) {
+    const cot = await cotizacionPorId(p.cotizacion.id);
+    if (cot.ok) {
+      const lineas = cot.datos.lineas
+        .filter((l) => l.producto_id !== null)
+        .map((l) => ({
+          productoId: l.producto_id as string,
+          codigo: l.codigo,
+          cantidad: Number(l.cantidad),
+          confirmada: Number(l.cantidad_aprobada ?? 0),
+          unidad: l.unidad_codigo,
+          proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+        }));
+      const [existentes, demanda] = await Promise.all([
+        ordenesDeLaCotizacion(p.cotizacion.id),
+        demandaDeProductos(lineas.map((l) => l.productoId)),
+      ]);
+      generar = (
+        <GenerarOrdenes
+          cotizacionId={p.cotizacion.id}
+          lineas={lineas}
+          existentes={existentes}
+          demanda={[...demanda.values()]}
+        />
+      );
+    }
+  }
 
   return (
-    <div className="flex flex-col gap-5">
+    <>
+    <div className="flex flex-col gap-5 print:hidden">
       <Volver href="/pedidos">Volver a pedidos</Volver>
 
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -60,7 +106,22 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
             {p.cotizacion.ordenCompraCliente && vigente ? ` · O/C del cliente ${p.cotizacion.ordenCompraCliente}` : ""}
           </p>
         </div>
-        <InsigniaEtapa etapa={p.etapa} grande />
+        <div className="flex flex-wrap items-center gap-2">
+          <InsigniaEtapa etapa={p.etapa} grande />
+          {/* La hoja de pedido (Luis, 15/10: «se puede imprimir, igual
+              descargar la hoja de pedido»). */}
+          {p.lineas.length > 0 ? (
+            <>
+              <VistaPreviaDocumento
+                numero={p.numero}
+                junto={<DescargarHojaPedido numero={p.numero} cliente={p.cliente} papel={papel} emisor={emisor} />}
+              >
+                <DocumentoPedido numero={p.numero} papel={papel} emisor={emisor} />
+              </VistaPreviaDocumento>
+              <DescargarHojaPedido numero={p.numero} cliente={p.cliente} papel={papel} emisor={emisor} />
+            </>
+          ) : null}
+        </div>
       </header>
 
       {/* Los otros pedidos de la misma cotización: el cliente repite. */}
@@ -107,7 +168,12 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
 
       {/* ------------------------------------------------ Compras */}
       {ordenes.ok ? (
-        <ComprasDelPedido ordenes={ordenes.datos} puede={puedeComprar} cotizacionId={p.cotizacion.id} />
+        <ComprasDelPedido
+          ordenes={ordenes.datos}
+          puede={puedeComprar}
+          cotizacionId={p.cotizacion.id}
+          generar={generar}
+        />
       ) : (
         <EstadoError titulo="No se pudieron cargar las compras" detalle={ordenes.error} />
       )}
@@ -191,5 +257,11 @@ export default async function PaginaDetallePedido({ params }: { params: Promise<
 
       <p className="text-sm text-[var(--fg-subtle)]">Etapa: {ETIQUETA_ETAPA[p.etapa]}.</p>
     </div>
+
+    {/* El papel: montado siempre, visible solo al imprimir (como la cotización). */}
+    <div className="hidden print:block">
+      <DocumentoPedido numero={p.numero} papel={papel} emisor={emisor} />
+    </div>
+    </>
   );
 }

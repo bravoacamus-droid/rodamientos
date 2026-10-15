@@ -52,16 +52,7 @@ export function OrdenesDeCompra({
   demanda: DemandaProducto[];
 }) {
   const vivas = existentes.filter((o) => o.estado !== "anulada");
-  // Lo ya pedido a cada proveedor, en unidades (121): con otro pedido de la
-  // misma cotización se propone solo lo que falta, no se repite la primera.
-  const pedido = new Map<string, number>();
-  for (const o of vivas) {
-    for (const i of o.items) {
-      const k = `${o.proveedorId}:${i.productoId}`;
-      pedido.set(k, (pedido.get(k) ?? 0) + i.cantidad);
-    }
-  }
-  const propuestas = proponerPendientes(lineas, pedido);
+  const propuestas = propuestasPendientes(lineas, existentes);
 
   if (existentes.length === 0 && propuestas.length === 0) return null;
 
@@ -146,16 +137,64 @@ export function OrdenesDeCompra({
   );
 }
 
+/**
+ * Lo que falta pedir de lo analizado al cotizar. Lo ya pedido a cada
+ * proveedor se descuenta en unidades (121): con otro pedido de la misma
+ * cotización se propone solo lo que falta, no se repite la primera.
+ */
+function propuestasPendientes(lineas: LineaConfirmada[], existentes: OrdenDelPedido[]): OrdenPropuesta[] {
+  const pedido = new Map<string, number>();
+  for (const o of existentes.filter((x) => x.estado !== "anulada")) {
+    for (const i of o.items) {
+      const k = `${o.proveedorId}:${i.productoId}`;
+      pedido.set(k, (pedido.get(k) ?? 0) + i.cantidad);
+    }
+  }
+  return proponerPendientes(lineas, pedido);
+}
+
+/**
+ * Solo el botón de generar, para la ficha del PEDIDO (15/10). Luis: *«en
+ * pedido… de ahí se hace todo también, ordenar las compras»*. Sin nada que
+ * proponer no pinta nada.
+ */
+export function GenerarOrdenes({
+  cotizacionId,
+  lineas,
+  existentes,
+  demanda,
+}: {
+  cotizacionId: string;
+  lineas: LineaConfirmada[];
+  existentes: OrdenDelPedido[];
+  demanda: DemandaProducto[];
+}) {
+  const propuestas = propuestasPendientes(lineas, existentes);
+  if (propuestas.length === 0) return null;
+  const primera = existentes.every((o) => o.estado === "anulada");
+  return (
+    <DialogoGenerar
+      cotizacionId={cotizacionId}
+      propuestas={propuestas}
+      primera={primera}
+      demanda={new Map(demanda.map((d) => [d.productoId, d]))}
+      etiqueta={primera ? "Generar órdenes de compra" : "Ordenar lo que falta"}
+    />
+  );
+}
+
 function DialogoGenerar({
   cotizacionId,
   propuestas,
   primera,
   demanda,
+  etiqueta,
 }: {
   cotizacionId: string;
   propuestas: OrdenPropuesta[];
   primera: boolean;
   demanda: Map<string, DemandaProducto>;
+  etiqueta?: string;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
@@ -225,7 +264,7 @@ function DialogoGenerar({
     <Dialog open={abierto} onOpenChange={setAbierto}>
       <Button type="button" onClick={abrir} className="gap-1.5">
         <ShoppingCart className="size-4" aria-hidden="true" />
-        {primera ? "Registrar la compra" : "Registrar lo que falta"}
+        {etiqueta ?? (primera ? "Registrar la compra" : "Registrar lo que falta")}
       </Button>
       <DialogContent ancho="max-w-3xl">
         <DialogHeader>

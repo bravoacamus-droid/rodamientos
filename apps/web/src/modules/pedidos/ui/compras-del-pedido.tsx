@@ -1,3 +1,4 @@
+import type * as React from "react";
 import Link from "next/link";
 import { CircleCheck, FileText, Receipt } from "lucide-react";
 import { Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
@@ -17,10 +18,17 @@ export function ComprasDelPedido({
   ordenes,
   puede,
   cotizacionId,
+  generar,
 }: {
   ordenes: OrdenDePedido[];
   puede: boolean;
   cotizacionId: string;
+  /**
+   * El botón de generar las órdenes, ya montado, cuando queda algo analizado
+   * por pedir (15/10). Luis: *«de ahí se hace todo también, ordenar las
+   * compras»*.
+   */
+  generar?: React.ReactNode;
 }) {
   const faltan = ordenes.filter((o) => o.falta_factura && o.estado === "registrada").length;
 
@@ -34,6 +42,7 @@ export function ComprasDelPedido({
             factura.
           </p>
         </div>
+        {generar}
         {ordenes.length > 0 ? (
           <p
             className={`rounded-md border px-3 py-1.5 text-sm font-semibold ${
@@ -45,7 +54,12 @@ export function ComprasDelPedido({
         ) : null}
       </header>
 
-      {ordenes.length === 0 ? (
+      {ordenes.length === 0 && generar ? (
+        <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+          Este pedido todavía no tiene órdenes de compra. El botón de arriba arma una por proveedor con lo que
+          apuntaste al cotizar, menos lo ya pedido.
+        </p>
+      ) : ordenes.length === 0 ? (
         <div className="flex flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
           <p>Este pedido no tiene órdenes de compra.</p>
           <p className="text-[var(--fg-muted)]">

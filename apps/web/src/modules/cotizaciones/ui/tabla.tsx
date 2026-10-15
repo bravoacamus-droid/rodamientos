@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Eye, FileText, Pencil } from "lucide-react";
 import {
   EstadoBadge,
   EstadoError,
@@ -9,6 +8,7 @@ import {
 } from "@rodatech/ui";
 
 import { listarCotizaciones } from "../api/consultas";
+import { AccionesFilaCotizacion } from "./acciones-fila";
 import {
   ETIQUETA_ESTADO,
   RIEL_ESTADO,
@@ -36,8 +36,9 @@ import {
  *    cotización era pulsar su número —texto azul de 13 px—, y para editar un
  *    borrador había que entrar antes a verlo. Luis, 08/09: *«una persona que
  *    no sabe que tiene que darle click ahí»*. Ahora cada fila lleva **Ver** y,
- *    cuando toca, el paso siguiente: editar si el cliente todavía no la ha
- *    aceptado, facturar si ya la aceptó.
+ *    cuando toca, el paso siguiente: aprobar si el cliente todavía no la ha
+ *    aceptado, ir a su pedido si ya la aceptó. Lo demás —editar, duplicar,
+ *    hacer la guía, facturar— va en los tres puntos (Luis, 15/10).
  *
  * En móvil no es una tabla. Ocho columnas en un teléfono no se leen ni con
  * scroll, así que por debajo de `md` cada cotización es una tarjeta con el
@@ -223,16 +224,7 @@ export async function TablaCotizaciones({
                   justamente lo que mantiene la columna a plomo.
                 */}
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover:bg-[var(--surface-2)] px-4 py-2.5">
-                  <div className="ml-auto grid w-[216px] grid-cols-[84px_1fr] gap-1.5">
-                    <Link
-                      href={`/cotizaciones/${c.id}`}
-                      className={`${SECUNDARIO} w-full justify-center`}
-                    >
-                      <Eye className="size-4 shrink-0" />
-                      Ver
-                    </Link>
-                    <Siguiente cotizacion={c} />
-                  </div>
+                  <AccionesFilaCotizacion c={c} />
                 </td>
               </tr>
             ))}
@@ -287,12 +279,8 @@ export async function TablaCotizaciones({
                 </span>
               </div>
 
-              <div className="mt-3 flex items-center gap-2">
-                <Link href={`/cotizaciones/${c.id}`} className={`${SECUNDARIO} flex-1 justify-center`}>
-                  <Eye className="size-4 shrink-0" />
-                  Ver
-                </Link>
-                <Siguiente cotizacion={c} />
+              <div className="mt-3">
+                <AccionesFilaCotizacion c={c} ancho />
               </div>
             </div>
           </li>
@@ -310,62 +298,6 @@ export async function TablaCotizaciones({
     </div>
   );
 }
-
-/*
-  Los dos botones de la columna de acciones.
-
-  Alto 36 px y `text-sm`: el mínimo con el que un botón sigue pareciendo un
-  botón en una fila de tabla. Se escriben aquí como constantes y no como un
-  componente para que la tabla siga siendo un componente de servidor entero —
-  `Button` es de cliente, y traérselo para nueve filas cargaría Radix en una
-  pantalla que solo pinta enlaces.
-*/
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
-
-const PRINCIPAL =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
-
-/**
- * El paso siguiente de esta cotización, si lo hay.
- *
- * Cambia con el estado, y esa es la mitad del valor: en un borrador dice
- * «Editar» y en una aprobada «Facturar», así que la fila dice qué hacer sin
- * que haya que abrirla y decidirlo.
- *
- * En `atendida`, `rechazada`, `vencida` y `anulada` no sale nada. No es un
- * olvido: en esas cuatro no queda ningún paso, y un botón que no lleva a
- * ninguna parte enseña a desconfiar de los que sí.
- */
-function Siguiente({ cotizacion: c }: { cotizacion: CotizacionLista }) {
-  // `w-full justify-center` en los dos: el ancho lo pone la rejilla de la
-  // celda, no el texto de dentro. Es lo que los deja a plomo entre filas.
-  if (c.estado === "borrador" || c.estado === "enviada") {
-    return (
-      <Link
-        href={`/cotizaciones/${c.id}/editar`}
-        className={`${SECUNDARIO} w-full justify-center`}
-      >
-        <Pencil className="size-4 shrink-0" />
-        Editar
-      </Link>
-    );
-  }
-  if (c.estado === "aprobada") {
-    return (
-      <Link
-        href={`/facturacion/nueva?cotizacion=${c.id}`}
-        className={`${PRINCIPAL} w-full justify-center`}
-      >
-        <FileText className="size-4 shrink-0" />
-        Facturar
-      </Link>
-    );
-  }
-  return null;
-}
-
-/* Los iconos, en línea. Tres trazos cada uno: no compensa un paquete. */
 
 /**
  * El margen.

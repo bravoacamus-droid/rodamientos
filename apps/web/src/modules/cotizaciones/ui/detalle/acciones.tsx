@@ -47,9 +47,12 @@ export function AccionesCotizacion({
   guias,
   vistaPrevia,
   enSoles = false,
+  abrirAprobar = false,
 }: {
   id: string;
   estado: EstadoCotizacion;
+  /** Viene de «Aprobar» en la lista (`?aprobar=1`): el diálogo, ya abierto. */
+  abrirAprobar?: boolean;
   /** Venta en soles (116): el diálogo de aprobar avisa que fija el cambio. */
   enSoles?: boolean;
   /**
@@ -109,7 +112,8 @@ export function AccionesCotizacion({
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [confirmando, setConfirmando] = useState(false);
+  const enCurso = estado === "borrador" || estado === "enviada";
+  const [confirmando, setConfirmando] = useState(abrirAprobar && enCurso);
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
 
   const correr = (f: () => Promise<{ ok: boolean; error?: string; id?: string }>) => {
@@ -122,7 +126,6 @@ export function AccionesCotizacion({
     });
   };
 
-  const enCurso = estado === "borrador" || estado === "enviada";
   const viva = enCurso || estado === "aprobada";
 
   return (
@@ -152,7 +155,11 @@ export function AccionesCotizacion({
         cotizacionId={id}
         lineas={lineas}
         abierto={confirmando}
-        onCerrar={() => setConfirmando(false)}
+        onCerrar={() => {
+          setConfirmando(false);
+          // Que recargar la página no lo vuelva a abrir.
+          if (abrirAprobar) router.replace(`/cotizaciones/${id}`, { scroll: false });
+        }}
         corrigiendo={estado === "aprobada"}
         enSoles={enSoles}
       />

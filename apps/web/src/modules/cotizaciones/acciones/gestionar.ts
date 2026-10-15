@@ -16,7 +16,7 @@ const ROLES = ["gerencia", "admin", "ventas"] as const;
 const uuid = z.string().uuid();
 
 export type ResultadoGestion =
-  | { ok: true; id?: string; numero?: string }
+  | { ok: true; id?: string; numero?: string; pedidoId?: string }
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
   | { ok: false; error: string; pideTipoCambio?: boolean };
 
@@ -114,7 +114,16 @@ export async function aprobar(
     });
     if (error) return { ok: false, error: error.message };
     refrescar(id);
-    return { ok: true };
+    revalidatePath("/pedidos");
+    // El pedido que acaba de nacer (130), para llevar a él.
+    const { data: ped } = await supabase
+      .from("pedidos")
+      .select("id")
+      .eq("cotizacion_id", id)
+      .order("secuencia", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { ok: true, pedidoId: ped?.id ?? undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo aprobar." };
   }

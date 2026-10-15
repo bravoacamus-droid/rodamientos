@@ -194,7 +194,9 @@ export function DialogoConfirmar({
         }
       }
       onCerrar();
-      router.refresh();
+      // Aprobar es pasar a pedidos (Luis, 15/10): se va al pedido que nace.
+      if (!corrigiendo && "pedidoId" in r && r.pedidoId) router.push(`/pedidos/${r.pedidoId}`);
+      else router.refresh();
     });
   };
 

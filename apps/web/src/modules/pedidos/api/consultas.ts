@@ -120,7 +120,23 @@ export interface PedidoDetalle {
   cliente: string;
   /** Los demás pedidos de la misma cotización, para ir de uno a otro. */
   hermanos: { id: string; numero: string; secuencia: number }[];
-  lineas: { codigo: string; descripcion: string; cantidad: number; unidad: string }[];
+  lineas: {
+    codigo: string;
+    marca: string | null;
+    descripcion: string;
+    cantidad: number;
+    unidad: string;
+    /** En dólares y sin IGV, como en la cotización. */
+    valorUnitario: number;
+    descuentoPct: number;
+  }[];
+  /** Lo que la hoja de pedido necesita y la ficha no enseña. */
+  papel: {
+    moneda: "USD" | "PEN";
+    tipoCambio: number | null;
+    clienteDocumento: string | null;
+    clienteDireccion: string | null;
+  };
   guias: { id: string; numero: string; estado: string; fecha: string }[];
   facturas: {
     id: string;
@@ -140,7 +156,8 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
       .from("pedidos")
       .select(
         `id, numero, secuencia, fecha, cotizacion_id,
-         cotizaciones(id, numero, orden_compra_cliente, estado), clientes(razon_social),
+         cotizaciones(id, numero, orden_compra_cliente, estado, moneda, tipo_cambio),
+         clientes(razon_social, tipo_documento, numero_documento, direccion),
          compras(estado, falta_factura),
          guias_remision(id, numero, estado, fecha_emision),
          comprobantes(id, numero, tipo, estado, total, saldo, moneda, pen_total)`,
@@ -156,8 +173,20 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
       secuencia: number;
       fecha: string;
       cotizacion_id: string;
-      cotizaciones: { id: string; numero: string | null; orden_compra_cliente: string | null; estado: string } | null;
-      clientes: { razon_social: string } | null;
+      cotizaciones: {
+        id: string;
+        numero: string | null;
+        orden_compra_cliente: string | null;
+        estado: string;
+        moneda: string | null;
+        tipo_cambio: number | null;
+      } | null;
+      clientes: {
+        razon_social: string;
+        tipo_documento: string | null;
+        numero_documento: string | null;
+        direccion: string | null;
+      } | null;
       guias_remision: { id: string; numero: string | null; estado: string; fecha_emision: string }[] | null;
       comprobantes:
         | {
@@ -173,15 +202,19 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         | null;
     };
 
-    const [{ data: hermanos }, { data: lineas }] = await Promise.all([
+    const [{ data: hermanos }, { data: lineas }, { data: marcas }] = await Promise.all([
       supabase.from("pedidos").select("id, numero, secuencia").eq("cotizacion_id", f.cotizacion_id).order("secuencia"),
       supabase
         .from("v_pedido_lineas")
-        .select("codigo, descripcion, cantidad, unidad_codigo, orden")
+        .select("cotizacion_item_id, codigo, descripcion, cantidad, unidad_codigo, valor_unitario, descuento_pct, orden")
         .eq("pedido_id", id)
         .gt("cantidad", 0)
         .order("orden"),
+      // La marca no está en la vista; sale de la línea de la cotización.
+      supabase.from("cotizacion_items").select("id, marca").eq("cotizacion_id", f.cotizacion_id),
     ]);
+    const marcaDe = new Map((marcas ?? []).map((m) => [m.id, m.marca]));
+    const tc = Number(f.cotizaciones?.tipo_cambio ?? 0);
 
     return {
       ok: true,
@@ -201,10 +234,21 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia })),
         lineas: (lineas ?? []).map((l) => ({
           codigo: String(l.codigo),
+          marca: marcaDe.get(String(l.cotizacion_item_id)) ?? null,
           descripcion: String(l.descripcion),
           cantidad: Number(l.cantidad),
           unidad: String(l.unidad_codigo ?? "NIU"),
+          valorUnitario: Number(l.valor_unitario ?? 0),
+          descuentoPct: Number(l.descuento_pct ?? 0),
         })),
+        papel: {
+          moneda: f.cotizaciones?.moneda === "PEN" && tc > 0 ? "PEN" : "USD",
+          tipoCambio: tc > 0 ? tc : null,
+          clienteDocumento: f.clientes?.numero_documento
+            ? `${f.clientes.tipo_documento ?? "RUC"} ${f.clientes.numero_documento}`
+            : null,
+          clienteDireccion: f.clientes?.direccion ?? null,
+        },
         guias: (f.guias_remision ?? [])
           .filter((g) => g.estado !== "anulada")
           .map((g) => ({ id: g.id, numero: g.numero ?? "(borrador)", estado: g.estado, fecha: String(g.fecha_emision) })),

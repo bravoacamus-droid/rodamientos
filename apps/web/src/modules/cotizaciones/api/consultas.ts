@@ -56,7 +56,8 @@ export async function listarCotizaciones(
          orden_compra_cliente, subtotal, igv, total, costo_total, margen_pct, estado, moneda,
          clientes!inner(razon_social, numero_documento),
          perfiles!cotizaciones_vendedor_id_fkey(nombre),
-         cotizacion_items(count)`,
+         cotizacion_items(count),
+         pedidos(id, numero, secuencia, guias_remision(id, estado), comprobantes(id, estado))`,
       )
       // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
       .order("fecha", { ascending: atras })
@@ -95,6 +96,15 @@ export async function listarCotizaciones(
         clientes: { razon_social: string; numero_documento: string | null } | null;
         perfiles: { nombre: string } | null;
         cotizacion_items: { count: number }[] | null;
+        pedidos:
+          | {
+              id: string;
+              numero: string;
+              secuencia: number;
+              guias_remision: { id: string; estado: string }[] | null;
+              comprobantes: { id: string; estado: string }[] | null;
+            }[]
+          | null;
       }
     >;
 
@@ -116,6 +126,7 @@ export async function listarCotizaciones(
       estado: c.estado as CotizacionLista["estado"],
       vendedor: c.perfiles?.nombre ?? null,
       items: c.cotizacion_items?.[0]?.count ?? 0,
+      pedido: pedidoVigente(c.pedidos),
     }));
 
     /*
@@ -881,4 +892,26 @@ export async function ordenesDelPedido(cotizacionId: string): Promise<OrdenDelPe
   } catch {
     return [];
   }
+}
+
+/** El último pedido de la cotización, para la fila de la lista (130). */
+function pedidoVigente(
+  pedidos:
+    | {
+        id: string;
+        numero: string;
+        secuencia: number;
+        guias_remision: { id: string; estado: string }[] | null;
+        comprobantes: { id: string; estado: string }[] | null;
+      }[]
+    | null,
+): CotizacionLista["pedido"] {
+  const p = [...(pedidos ?? [])].sort((a, b) => b.secuencia - a.secuencia)[0];
+  if (!p) return null;
+  return {
+    id: p.id,
+    numero: p.numero,
+    guiaEmitida: (p.guias_remision ?? []).find((g) => g.estado === "emitida")?.id ?? null,
+    facturado: (p.comprobantes ?? []).some((c) => c.estado !== "anulado"),
+  };
 }

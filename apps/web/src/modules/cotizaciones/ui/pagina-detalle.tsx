@@ -41,10 +41,14 @@ import { Volver } from "@/componentes/volver";
  */
 export default async function PaginaDetalleCotizacion({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  // «Aprobar» desde los tres puntos de la lista (15/10): abre el diálogo aquí.
+  const abrirAprobar = (await searchParams)?.aprobar === "1";
   const resultado = await cotizacionPorId(id);
 
   if (!resultado.ok) {
@@ -357,6 +361,7 @@ export default async function PaginaDetalleCotizacion({
           <AccionesCotizacion
             id={cabecera.id}
             estado={cabecera.estado}
+            abrirAprobar={abrirAprobar}
             datosMensaje={datosMensaje}
             cliente={{
               id: cabecera.cliente_id,
