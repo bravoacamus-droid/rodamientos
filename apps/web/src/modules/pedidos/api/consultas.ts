@@ -3,6 +3,7 @@ import "server-only";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
+import { bandejaPorComprar, loQueFaltaDe } from "@/modules/compras";
 
 import { etapaDe, type Etapa } from "../dominio/etapa";
 import type { EstadoSunatFactura, FilaPedido } from "../dominio/lista";
@@ -374,6 +375,28 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       }
     }
 
+    /*
+      «Sin órdenes» no decía nada (Willy, 16/10: «¿eso se entiende como que
+      está pendiente de comprarlo o como que tengo en stock?»). Para el pedido
+      vigente sin órdenes se mira la bandeja —el mismo reparto del stock que
+      la ficha—: si le falta algo, falta hacer la orden; si no, sale del
+      almacén. Una sola lectura para toda la lista, y solo si hace falta.
+    */
+    const sinOrdenes = filas.filter(
+      (f) =>
+        (f.compras ?? []).every((k) => k.estado === "anulada") &&
+        (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
+    );
+    const faltaPorCotizacion = new Map<string, number>();
+    if (sinOrdenes.length > 0) {
+      const b = await bandejaPorComprar();
+      if (b.ok) {
+        for (const f of sinOrdenes) {
+          faltaPorCotizacion.set(f.cotizacion_id, loQueFaltaDe(f.cotizacion_id, b.datos.filas).length);
+        }
+      }
+    }
+
     const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
     const sunat = (e: string): EstadoSunatFactura =>
       e === "aceptado" || e === "observado" ? "aceptado" : e === "rechazado" ? "rechazado" : "pendiente";
@@ -409,6 +432,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
           compras: {
             total: compras.length,
             porRegistrar: compras.filter((k) => k.falta_factura && k.estado === "registrada").length,
+            faltaPedir: compras.length === 0 ? (faltaPorCotizacion.get(f.cotizacion_id) ?? 0) : 0,
           },
           guia: guia ? { id: guia.id, numero: guia.numero ?? "borrador", emitida: guia.estado === "emitida" } : null,
           facturas: facturas.map((c) => {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUp, ArrowUpDown, CircleCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, CircleCheck, TriangleAlert, Warehouse } from "lucide-react";
 import { EstadoVacio, Moneda, PaginacionKeyset, formatearFecha } from "@rodatech/ui";
 
 import {
@@ -79,8 +79,26 @@ function Margen({ p }: { p: FilaPedido }) {
 }
 
 function Compras({ p }: { p: FilaPedido }) {
-  // Sin órdenes no dice que haya stock: puede faltar y no haberse pedido.
-  if (p.compras.total === 0) return <span className="text-[var(--fg-subtle)]">sin órdenes</span>;
+  // «Sin órdenes» no decía si faltaba o había stock (Willy, 16/10). Ahora lo
+  // dice: falta hacer la orden, o sale del almacén.
+  if (p.compras.total === 0) {
+    if ((p.compras.faltaPedir ?? 0) > 0) {
+      return (
+        <span className="inline-flex items-center gap-1 font-medium text-[var(--warn)]">
+          <TriangleAlert className="size-4" aria-hidden="true" />
+          Falta hacer la orden
+        </span>
+      );
+    }
+    return p.vigente ? (
+      <span className="inline-flex items-center gap-1">
+        <Warehouse className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
+        Sale del almacén
+      </span>
+    ) : (
+      <span className="text-[var(--fg-subtle)]">sin órdenes</span>
+    );
+  }
   return p.compras.porRegistrar > 0 ? (
     <span className="font-medium">
       {p.compras.total - p.compras.porRegistrar} de {p.compras.total} compradas

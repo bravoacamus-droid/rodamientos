@@ -325,10 +325,24 @@ function DialogoGenerar({
                       {(() => {
                         const d = demanda.get(i.productoId);
                         const mas = Math.ceil(faltanParaOtros(d, pidiendo(i.productoId)));
-                        if (excluida || otrosPedidos(d, cotizacionId).aprobadas.length === 0) return null;
+                        // Salen TODAS las cotizaciones con el producto, no solo
+                        // las aprobadas (Willy, 16/10: «todo cotizado, para
+                        // saber con quiénes está trabajando ese producto»).
+                        const otros = otrosPedidos(d, cotizacionId);
+                        if (excluida || otros.total === 0) return null;
+                        const soloSinAprobar = otros.aprobadas.length === 0;
                         return (
-                          <div className="flex w-full flex-wrap items-center gap-2 rounded-md bg-[var(--warn-bg)] px-2 py-1.5 text-sm">
-                            {mas > 0 ? (
+                          <div
+                            className={`flex w-full flex-wrap items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                              soloSinAprobar ? "bg-[var(--surface-2)]" : "bg-[var(--warn-bg)]"
+                            }`}
+                          >
+                            {soloSinAprobar ? (
+                              <span className="text-[var(--fg-muted)]">
+                                {otros.total === 1 ? "Está en otra cotización" : `Está en ${otros.total} cotizaciones más`}{" "}
+                                sin aprobar: todavía no cuentan para comprar.
+                              </span>
+                            ) : mas > 0 ? (
                               <span className="font-medium text-[var(--warn)]">
                                 Otros pedidos aprobados necesitan {mas} más.
                               </span>
@@ -336,7 +350,7 @@ function DialogoGenerar({
                               <span className="text-[var(--fg-muted)]">Con esto alcanza también para los otros pedidos aprobados.</span>
                             )}
                             <OtrosPedidos demanda={d} actual={cotizacionId} codigo={i.codigo} />
-                            {mas > 0 ? (
+                            {mas > 0 && !soloSinAprobar ? (
                               <Button
                                 type="button"
                                 size="sm"

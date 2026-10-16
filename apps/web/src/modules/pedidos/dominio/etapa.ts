@@ -30,7 +30,9 @@ export const ETIQUETA_ETAPA: Record<Etapa, string> = {
   esperando_mercaderia: "Esperando la mercadería",
   por_entregar: "Por entregar",
   por_facturar: "Entregado · por facturar",
-  por_cobrar: "Facturado · por cobrar",
+  // «Al cliente»: Willy lo leyó como sus propias compras (16/10: «todos mis
+  // compras son al contado»).
+  por_cobrar: "Facturado · falta cobrar al cliente",
   cobrado: "Cobrado",
 };
 

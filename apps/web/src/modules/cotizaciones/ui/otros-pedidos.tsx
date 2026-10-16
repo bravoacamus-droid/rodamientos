@@ -22,8 +22,9 @@ import { faltaComprar, otrosPedidos, type DemandaProducto, type PedidoDelProduct
  *
  * Pequeño, pero un botón con borde: lo que Willy no ve como botón no existe
  * (CLAUDE.md §1). Dentro, a qué cliente y en qué cotización; las aprobadas
- * cuentan para comprar y las demás se enseñan aparte, porque el cliente
- * todavía no ha confirmado si se lleva todo o una parte.
+ * cuentan para comprar y las demás no, porque el cliente todavía no ha
+ * confirmado si se lleva todo o una parte. Desde el 16/10 van en UNA lista,
+ * las aprobadas primero y en negrita (lo pidió Willy).
  */
 export function OtrosPedidos({
   demanda,
@@ -62,14 +63,15 @@ export function OtrosPedidos({
           <DialogHeader>
             <DialogTitle>¿Quién más pide {codigo}?</DialogTitle>
             <DialogDescription>
-              Las aprobadas cuentan para comprar. Las demás todavía no: el cliente no ha confirmado.
+              Todas las cotizaciones con este producto. <strong>Las aprobadas, en negrita</strong>: son
+              las que cuentan para comprar. Las demás el cliente todavía no las confirma.
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="flex flex-col gap-4">
-            <Lista titulo="Aprobadas — cuentan para comprar" pedidos={otros.aprobadas} vacio="Ninguna otra aprobada." />
-            {otros.sinConfirmar.length > 0 ? (
-              <Lista titulo="Sin confirmar — no cuentan todavía" pedidos={otros.sinConfirmar} vacio="" />
-            ) : null}
+            {/* Una sola lista, las aprobadas primero y en negrita (Willy,
+                16/10: «que salgan todas, pero con la salvedad de que los que
+                están aprobados salgan en negritas para diferenciarlos»). */}
+            <Lista pedidos={[...otros.aprobadas, ...otros.sinConfirmar]} />
             <p className="rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm">
               Todos los pedidos aprobados piden{" "}
               <strong className="tabular">{demanda.aprobadas.reduce((s, p) => s + p.cantidad, 0)}</strong>; hay{" "}
@@ -90,31 +92,32 @@ export function OtrosPedidos({
   );
 }
 
-function Lista({ titulo, pedidos, vacio }: { titulo: string; pedidos: PedidoDelProducto[]; vacio: string }) {
+function Lista({ pedidos }: { pedidos: PedidoDelProducto[] }) {
   return (
-    <section className="flex flex-col gap-1.5">
-      <h3 className="text-sm font-semibold">{titulo}</h3>
-      {pedidos.length === 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">{vacio}</p>
-      ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">
-          {pedidos.map((p) => (
-            <li key={p.cotizacionId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2">
-              <Link
-                href={`/cotizaciones/${p.cotizacionId}`}
-                target="_blank"
-                className="font-semibold text-brand-700 underline-offset-4 hover:underline"
-              >
-                {p.numero}
-              </Link>
-              <span className="min-w-0 flex-1 truncate">{p.cliente}</span>
-              <span className="text-sm text-[var(--fg-muted)]">{formatearFecha(p.fecha)}</span>
-              <strong className="tabular">{p.cantidad}</strong>
-              <EstadoBadge estado={p.estado} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <ul className="flex flex-col divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">
+      {pedidos.map((p) => {
+        const aprobada = p.estado === "aprobada";
+        return (
+          <li
+            key={p.cotizacionId}
+            className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 ${
+              aprobada ? "bg-[var(--ok-bg)] font-bold" : "font-normal text-[var(--fg-muted)]"
+            }`}
+          >
+            <Link
+              href={`/cotizaciones/${p.cotizacionId}`}
+              target="_blank"
+              className={`text-brand-700 underline-offset-4 hover:underline ${aprobada ? "font-bold" : "font-medium"}`}
+            >
+              {p.numero}
+            </Link>
+            <span className={`min-w-0 flex-1 truncate ${aprobada ? "text-[var(--fg)]" : ""}`}>{p.cliente}</span>
+            <span className="text-sm font-normal text-[var(--fg-muted)]">{formatearFecha(p.fecha)}</span>
+            <span className={`tabular ${aprobada ? "text-[var(--fg)]" : ""}`}>{p.cantidad}</span>
+            <EstadoBadge estado={p.estado} />
+          </li>
+        );
+      })}
+    </ul>
   );
 }

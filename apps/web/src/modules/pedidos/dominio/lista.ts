@@ -42,7 +42,11 @@ export interface FilaPedido {
   /** Venta sin IGV y costo analizado, en dólares. */
   venta: number;
   costo: number;
-  compras: { total: number; porRegistrar: number };
+  /**
+   * `faltaPedir`: sin órdenes, cuántos productos no cubre el almacén
+   * (16/10). Cero sin órdenes es que sale del almacén.
+   */
+  compras: { total: number; porRegistrar: number; faltaPedir?: number };
   guia: { id: string; numero: string; emitida: boolean } | null;
   facturas: FacturaDelPedido[];
   etapa: Etapa;
