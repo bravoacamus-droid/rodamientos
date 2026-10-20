@@ -90,6 +90,16 @@ const esquema = z.object({
   ubigeo_distrito: opcional(80, "El distrito"),
   referencia_direccion: opcional(200, "La referencia"),
   sector: opcional(80, "El sector"),
+  // Zona de visita y rubro (141). La base comprueba que existan (claves
+  // foráneas); aquí solo la forma.
+  zona_codigo: opcional(6, "La zona").refine(
+    (v) => v === null || /^\d{6}$/.test(v),
+    "La zona no es válida. Elígela de la lista.",
+  ),
+  rubro_id: opcional(36, "El rubro").refine(
+    (v) => v === null || z.string().uuid().safeParse(v).success,
+    "El rubro elegido no es válido.",
+  ),
   email: opcional(160, "El correo").refine(
     (v) => v === null || z.string().email().safeParse(v).success,
     "El correo no tiene un formato válido.",
@@ -278,6 +288,8 @@ export async function guardarCliente(
     ubigeo_codigo: ubigeo,
     referencia_direccion: datos.referencia_direccion,
     sector: datos.sector,
+    zona_codigo: datos.zona_codigo,
+    rubro_id: datos.rubro_id,
     email: datos.email,
     telefono: datos.telefono,
     whatsapp: datos.whatsapp,

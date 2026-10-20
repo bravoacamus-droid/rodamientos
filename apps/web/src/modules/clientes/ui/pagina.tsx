@@ -5,7 +5,9 @@ import { Skeleton, leerTamano } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import type { CondicionPago, FiltrosClientes } from "../dominio/tipos";
+import { rubrosDeCliente, zonasDeVisita } from "../api/consultas";
 import { FiltrosClientesBarra } from "./filtros";
+import { ResumenCartera } from "./resumen-cartera";
 import { TablaClientes } from "./tabla";
 
 /** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
@@ -40,6 +42,8 @@ export default async function PaginaClientes({ searchParams }: Props) {
       condicion === "contado" || condicion === "credito"
         ? (condicion as CondicionPago)
         : undefined,
+    zona: /^\d{6}$/.test(uno(sp.zona) ?? "") ? uno(sp.zona) : undefined,
+    rubro: /^[0-9a-f-]{36}$/i.test(uno(sp.rubro) ?? "") ? uno(sp.rubro) : undefined,
     bloqueados: uno(sp.bloqueados) === "1",
     inactivos: uno(sp.inactivos) === "1",
     cursor: uno(sp.cursor),
@@ -47,7 +51,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const perfil = await perfilActual();
+  const [perfil, zonas, rubros] = await Promise.all([perfilActual(), zonasDeVisita(), rubrosDeCliente()]);
   // Solo quien mantiene la cartera ve el botón. Que aparezca y luego rebote es
   // peor que no verlo.
   const puedeCrear =
@@ -59,7 +63,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Cartera comercial: documento, cómo paga y su tope de deuda.
+            Cartera comercial: documento, zona de visita y rubro.
           </p>
         </div>
 
@@ -74,8 +78,14 @@ export default async function PaginaClientes({ searchParams }: Props) {
         ) : null}
       </div>
 
+      {/* Por zona y por rubro (141), encima de la lista: es la pregunta con
+          que se arma la semana de visitas. */}
+      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+        <ResumenCartera hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date())} />
+      </Suspense>
+
       <section className="card @container pt-4">
-        <FiltrosClientesBarra />
+        <FiltrosClientesBarra zonas={zonas} rubros={rubros} />
 
         <Suspense
           // La clave fuerza un skeleton nuevo en cada cambio de filtro; sin

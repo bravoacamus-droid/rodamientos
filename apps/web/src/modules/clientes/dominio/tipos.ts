@@ -52,6 +52,27 @@ export interface ClienteLista {
   linea_credito: number;
   bloqueado: boolean;
   activo: boolean;
+  /**
+   * La zona de visita y el rubro (141). Willy, 20/10: *«hacemos visitas por
+   * zonas»* y *«el sector productivo al que pertenece»*.
+   */
+  zona_codigo: string | null;
+  /** El distrito de la zona, ya resuelto: «Callao», «Ate». */
+  zona_nombre: string | null;
+  rubro_id: string | null;
+  rubro_nombre: string | null;
+}
+
+/** Una zona que se ofrece: un distrito de Lima Metropolitana o del Callao. */
+export interface ZonaCliente {
+  codigo: string;
+  nombre: string;
+  provincia: string;
+}
+
+export interface RubroCliente {
+  id: string;
+  nombre: string;
 }
 
 /** La ficha completa. Los 32 campos del maestro. */
@@ -81,6 +102,10 @@ export interface ClienteDetalle extends ClienteLista {
 export interface FiltrosClientes {
   q?: string;
   condicion?: CondicionPago;
+  /** Código de ubigeo de la zona (141). */
+  zona?: string;
+  /** Id del rubro (141). */
+  rubro?: string;
   /** "1" incluye los bloqueados; por defecto se ocultan. */
   bloqueados?: boolean;
   /** "1" incluye los desactivados. */
@@ -130,6 +155,9 @@ export interface ClienteEditable {
   ubigeo_distrito?: string | null;
   referencia_direccion: string | null;
   sector: string | null;
+  /** Zona de visita y rubro (141). */
+  zona_codigo: string | null;
+  rubro_id: string | null;
   email: string | null;
   telefono: string | null;
   whatsapp: string | null;

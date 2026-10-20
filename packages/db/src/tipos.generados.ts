@@ -551,12 +551,14 @@ export type Database = {
           numero_documento: string | null
           razon_social: string
           referencia_direccion: string | null
+          rubro_id: string | null
           sector: string | null
           telefono: string | null
           tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo: string | null
           vendedor_id: string | null
           whatsapp: string | null
+          zona_codigo: string | null
         }
         Insert: {
           activo?: boolean
@@ -581,12 +583,14 @@ export type Database = {
           numero_documento?: string | null
           razon_social: string
           referencia_direccion?: string | null
+          rubro_id?: string | null
           sector?: string | null
           telefono?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo?: string | null
           vendedor_id?: string | null
           whatsapp?: string | null
+          zona_codigo?: string | null
         }
         Update: {
           activo?: boolean
@@ -611,14 +615,23 @@ export type Database = {
           numero_documento?: string | null
           razon_social?: string
           referencia_direccion?: string | null
+          rubro_id?: string | null
           sector?: string | null
           telefono?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo?: string | null
           vendedor_id?: string | null
           whatsapp?: string | null
+          zona_codigo?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_rubro_id_fkey"
+            columns: ["rubro_id"]
+            isOneToOne: false
+            referencedRelation: "rubros"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_ubigeo_codigo_fkey"
             columns: ["ubigeo_codigo"]
@@ -632,6 +645,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_zona_codigo_fkey"
+            columns: ["zona_codigo"]
+            isOneToOne: false
+            referencedRelation: "ubigeo"
+            referencedColumns: ["codigo"]
           },
         ]
       }
@@ -4190,6 +4210,30 @@ export type Database = {
           },
         ]
       }
+      rubros: {
+        Row: {
+          activo: boolean
+          creado_en: string
+          id: string
+          nombre: string
+          nombre_norm: string | null
+        }
+        Insert: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre: string
+          nombre_norm?: string | null
+        }
+        Update: {
+          activo?: boolean
+          creado_en?: string
+          id?: string
+          nombre?: string
+          nombre_norm?: string | null
+        }
+        Relationships: []
+      }
       series_documento: {
         Row: {
           activo: boolean
@@ -5523,6 +5567,7 @@ export type Database = {
         Args: { p_cot: string; p_fecha?: string; p_items: Json }
         Returns: string
       }
+      crear_rubro: { Args: { p_nombre: string }; Returns: Json }
       crear_subfamilia: {
         Args: { p_familia: string; p_nombre: string }
         Returns: Json

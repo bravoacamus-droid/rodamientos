@@ -737,8 +737,10 @@ export function EmisorComprobante({
                       </>
                     ) : (
                       <>
-                        Este cliente <strong>no está marcado como agente de retención</strong>, así que sale apagada.
-                        Si te retiene, enciéndela (y márcalo en su ficha).
+                        {/* Ya no se marca en la ficha del cliente (Willy, 20/10:
+                            «eso se define en la factura»). */}
+                        Sale apagada. <strong>Si este cliente te retiene, enciéndela.</strong>
+
                       </>
                     )}
                   </p>

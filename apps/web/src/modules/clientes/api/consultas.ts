@@ -7,6 +7,8 @@ import { fallo } from "@/lib/errores";
 import type {
   ClienteDetalle,
   ClienteLista,
+  RubroCliente,
+  ZonaCliente,
   FiltrosClientes,
   Resultado,
 } from "../dominio/tipos";
@@ -42,14 +44,25 @@ export const POR_PAGINA = 50;
 const COLUMNAS_LISTA_LEFT = `id, codigo, tipo_documento, numero_documento, razon_social,
    nombre_comercial, telefono, whatsapp, email, condicion_pago,
    dias_credito, linea_credito, bloqueado, activo,
+   zona_codigo, rubro_id,
+   zona:ubigeo!clientes_zona_codigo_fkey(distrito),
+   rubros(nombre),
    cliente_contactos(nombre, principal, activo)`;
 
-/** Aplana los contactos embebidos: el principal al frente y cuántos hay. */
+/**
+ * Aplana los contactos embebidos —el principal al frente y cuántos hay— y la
+ * zona y el rubro (141), que llegan como objetos anidados.
+ */
 function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
   contacto: string | null;
   contactos: number;
+  zona_nombre: string | null;
+  rubro_nombre: string | null;
 } {
-  const { cliente_contactos, ...resto } = fila;
+  const { cliente_contactos, zona, rubros, ...resto } = fila as T & {
+    zona?: { distrito: string } | null;
+    rubros?: { nombre: string } | null;
+  };
   const gente = (cliente_contactos ?? []) as {
     nombre: string;
     principal: boolean;
@@ -61,9 +74,11 @@ function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
   // propósito— y enseñar un nombre cualquiera es mejor que enseñar ninguno.
   const principal = activos.find((g) => g.principal) ?? activos[0] ?? null;
   return {
-    ...(resto as T),
+    ...(resto as unknown as T),
     contacto: principal?.nombre ?? null,
     contactos: activos.length,
+    zona_nombre: zona?.distrito ?? null,
+    rubro_nombre: rubros?.nombre ?? null,
   };
 }
 
@@ -168,6 +183,8 @@ export async function listarClientes(
     if (!filtros.inactivos) consulta = consulta.eq("activo", true);
     if (!filtros.bloqueados) consulta = consulta.eq("bloqueado", false);
     if (filtros.condicion) consulta = consulta.eq("condicion_pago", filtros.condicion);
+    if (filtros.zona) consulta = consulta.eq("zona_codigo", filtros.zona);
+    if (filtros.rubro) consulta = consulta.eq("rubro_id", filtros.rubro);
 
     if (filtros.q) {
       const termino = normalizarTexto(filtros.q.trim());
@@ -256,7 +273,7 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
       .select(
         `${COLUMNAS_LISTA_LEFT}, direccion, ubigeo_codigo, referencia_direccion, sector,
          dias_gracia, agente_retencion, motivo_bloqueo, vendedor_id, notas, creado_en,
-         ubigeo(departamento, provincia, distrito),
+         ubigeo:ubigeo!clientes_ubigeo_codigo_fkey(departamento, provincia, distrito),
          perfiles(nombre)`,
       )
       .eq("id", id)
@@ -325,19 +342,23 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
  * quien nunca los va a visitar.
  */
 export async function catalogosCliente(): Promise<
-  Resultado<{ vendedores: { id: string; nombre: string }[] }>
+  Resultado<{ vendedores: { id: string; nombre: string }[]; zonas: ZonaCliente[]; rubros: RubroCliente[] }>
 > {
   try {
     const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("perfiles")
-      .select("id, nombre")
-      .eq("activo", true)
-      .in("rol", ["ventas", "gerencia"])
-      .order("nombre");
+    const [{ data, error }, zonas, rubros] = await Promise.all([
+      supabase
+        .from("perfiles")
+        .select("id, nombre")
+        .eq("activo", true)
+        .in("rol", ["ventas", "gerencia"])
+        .order("nombre"),
+      zonasDeVisita(),
+      rubrosDeCliente(),
+    ]);
 
     if (error) return fallo(error);
-    return { ok: true, datos: { vendedores: data ?? [] } };
+    return { ok: true, datos: { vendedores: data ?? [], zonas, rubros } };
   } catch (e) {
     return fallo(e);
   }
@@ -434,4 +455,111 @@ export async function ubigeoDistritos(
   } catch {
     return [];
   }
+}
+
+/**
+ * Las zonas que se ofrecen (141): los distritos de Lima Metropolitana y del
+ * Callao, que es donde se visita. «Lima» (el Cercado) se llama «Lima Centro»,
+ * como lo dice Willy.
+ */
+export async function zonasDeVisita(): Promise<ZonaCliente[]> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase
+    .from("ubigeo")
+    .select("codigo, distrito, provincia")
+    .or("codigo.like.1501%,codigo.like.0701%")
+    .order("distrito")
+    .limit(100);
+  return (data ?? []).map((u) => ({
+    codigo: String(u.codigo),
+    nombre: u.codigo === "150101" ? "Lima Centro (Cercado)" : String(u.distrito),
+    provincia: String(u.provincia),
+  }));
+}
+
+/** Los rubros activos, por nombre (141). */
+export async function rubrosDeCliente(): Promise<RubroCliente[]> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("rubros").select("id, nombre").eq("activo", true).order("nombre").limit(500);
+  return (data ?? []).map((r) => ({ id: String(r.id), nombre: String(r.nombre) }));
+}
+
+/** Una fila del resumen por zona o por rubro. */
+export interface GrupoCartera {
+  /** Código de zona o id de rubro; null = sin poner. */
+  clave: string | null;
+  nombre: string;
+  clientes: number;
+  /** Facturado en los últimos 12 meses, sin IGV y en dólares. */
+  vendido: number;
+}
+
+/**
+ * Cuántos clientes hay y cuánto compran, por zona y por rubro (141).
+ *
+ * Willy, 20/10: *«reportes por zona: cuántos clientes hay o cuánto están
+ * comprando»* y, del rubro, *«con cuántas empresas agroindustriales contamos
+ * y si vale la pena»*. Lo facturado de los últimos 12 meses, sin IGV y sin
+ * las series de prueba (093), como en Informes.
+ */
+export async function resumenCartera(
+  hoy: string,
+): Promise<{ zonas: GrupoCartera[]; rubros: GrupoCartera[]; conDatos: number; total: number }> {
+  const supabase = await clienteServidor();
+  const desde = `${Number(hoy.slice(0, 4)) - 1}${hoy.slice(4)}`;
+  const [cli, docs, prueba] = await Promise.all([
+    supabase
+      .from("clientes")
+      .select("id, zona_codigo, rubro_id, zona:ubigeo!clientes_zona_codigo_fkey(distrito), rubros(nombre)")
+      .eq("activo", true)
+      .limit(5000),
+    supabase
+      .from("comprobantes")
+      .select("cliente_id, serie, op_gravada")
+      .in("tipo", ["factura", "boleta"])
+      .neq("estado", "anulado")
+      .gte("fecha_emision", desde)
+      .limit(10000),
+    supabase.from("series_documento").select("serie").eq("es_prueba", true),
+  ]);
+
+  const deSerieDePrueba = new Set((prueba.data ?? []).map((s) => s.serie));
+  const vendido = new Map<string, number>();
+  for (const d of docs.data ?? []) {
+    if (!d.cliente_id || deSerieDePrueba.has(d.serie)) continue;
+    vendido.set(d.cliente_id, (vendido.get(d.cliente_id) ?? 0) + Number(d.op_gravada ?? 0));
+  }
+
+  const filas = (cli.data ?? []) as unknown as {
+    id: string;
+    zona_codigo: string | null;
+    rubro_id: string | null;
+    zona: { distrito: string } | null;
+    rubros: { nombre: string } | null;
+  }[];
+
+  const agrupar = (clave: (f: (typeof filas)[number]) => string | null, nombre: (f: (typeof filas)[number]) => string) => {
+    const g = new Map<string | null, GrupoCartera>();
+    for (const f of filas) {
+      const k = clave(f);
+      const x = g.get(k) ?? { clave: k, nombre: k === null ? "Sin poner" : nombre(f), clientes: 0, vendido: 0 };
+      x.clientes += 1;
+      x.vendido += vendido.get(f.id) ?? 0;
+      g.set(k, x);
+    }
+    // Lo que más compra arriba; «Sin poner» siempre al final.
+    return [...g.values()]
+      .map((x) => ({ ...x, vendido: Math.round(x.vendido * 100) / 100 }))
+      .sort((a, b) => (a.clave === null ? 1 : b.clave === null ? -1 : b.vendido - a.vendido || b.clientes - a.clientes));
+  };
+
+  return {
+    zonas: agrupar(
+      (f) => f.zona_codigo,
+      (f) => (f.zona_codigo === "150101" ? "Lima Centro (Cercado)" : f.zona?.distrito ?? "—"),
+    ),
+    rubros: agrupar((f) => f.rubro_id, (f) => f.rubros?.nombre ?? "—"),
+    conDatos: filas.filter((f) => f.zona_codigo || f.rubro_id).length,
+    total: filas.length,
+  };
 }

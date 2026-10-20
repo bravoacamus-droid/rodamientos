@@ -1,13 +1,9 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
+import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { listarClientes } from "../api/consultas";
-import {
-  ETIQUETA_CONDICION,
-  type ClienteLista,
-  type FiltrosClientes,
-} from "../dominio/tipos";
+import type { ClienteLista, FiltrosClientes } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
 
 /** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
@@ -37,7 +33,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
   const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
-    const filtrando = Boolean(filtros.q || filtros.condicion);
+    const filtrando = Boolean(filtros.q || filtros.condicion || filtros.zona || filtros.rubro);
     return (
       <EstadoVacio
         titulo={filtrando ? "Ningún cliente coincide" : "La cartera está vacía"}
@@ -83,7 +79,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               <th className="px-4 py-2.5 font-medium">Código</th>
               <th className="px-4 py-2.5 font-medium">Razón social</th>
               <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Contacto</th>
-              <th className="px-4 py-2.5 font-medium">Condición</th>
+              <th className="px-4 py-2.5 font-medium">Zona y rubro</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valia cuando ahi solo habia tres puntos. */}
@@ -121,13 +117,8 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="hidden max-w-[14rem] px-4 py-2.5 2xl:table-cell">
                   <Contacto c={c} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5">
-                  <Condicion c={c} />
-                  {c.condicion_pago === "credito" && c.linea_credito > 0 ? (
-                    <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
-                      hasta <Moneda valor={c.linea_credito} tamano="sm" enfasis="suave" />
-                    </span>
-                  ) : null}
+                <td className="max-w-[14rem] px-4 py-2.5">
+                  <ZonaRubro c={c} />
                 </td>
                 <td className="px-4 py-2.5">
                   <Estado c={c} />
@@ -211,19 +202,8 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               !c.codigo.includes(c.numero_documento) ? (
                 <Dato etiqueta={c.tipo_documento}>{c.numero_documento}</Dato>
               ) : null}
-              <Dato etiqueta="Condición">
-                <Condicion c={c} />
-                {/* La línea de crédito, igual que en la fila de escritorio.
-                    Hoy no se ve nunca —los 97 entraron a crédito 0 días— y
-                    por eso se cayó de la tarjeta sin que se notara. En cuanto
-                    Willy conteste cuánto fía (sigue bloqueado en él, CLAUDE.md
-                    §8.2), es el dato que decide si se le despacha o no. */}
-                {c.condicion_pago === "credito" && c.linea_credito > 0 ? (
-                  <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">
-                    hasta{" "}
-                    <Moneda valor={c.linea_credito} tamano="sm" enfasis="suave" />
-                  </span>
-                ) : null}
+              <Dato etiqueta="Zona y rubro">
+                <ZonaRubro c={c} />
               </Dato>
               <div className="col-span-2 min-w-0">
                 <Dato etiqueta="Contacto">
@@ -278,19 +258,19 @@ function Contacto({ c }: { c: ClienteLista }) {
   );
 }
 
-function Condicion({ c }: { c: ClienteLista }) {
-  if (c.condicion_pago === "contado") {
-    return (
-      <Badge tone="neutral" size="xs">
-        {ETIQUETA_CONDICION.contado}
-      </Badge>
-    );
+/**
+ * La zona y el rubro (141) en lugar de la condición de pago, que dejó de ser
+ * del cliente (Willy, 20/10: se decide en cada cotización y factura).
+ */
+function ZonaRubro({ c }: { c: ClienteLista }) {
+  if (!c.zona_nombre && !c.rubro_nombre) {
+    return <span className="text-sm text-[var(--fg-subtle)]">Sin zona ni rubro</span>;
   }
   return (
-    <Badge tone="info" size="xs">
-      {ETIQUETA_CONDICION.credito}
-      {c.dias_credito > 0 ? ` ${c.dias_credito}d` : ""}
-    </Badge>
+    <span className="flex flex-col">
+      <span className="truncate font-medium">{c.zona_nombre ?? "Sin zona"}</span>
+      <span className="truncate text-sm text-[var(--fg-muted)]">{c.rubro_nombre ?? "Sin rubro"}</span>
+    </span>
   );
 }
 

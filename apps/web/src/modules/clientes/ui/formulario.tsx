@@ -8,15 +8,13 @@
 import * as React from "react";
 import { useBorrador } from "@/componentes/borrador";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Pencil, Plus } from "lucide-react";
+import { Check, ChevronDown, Pencil } from "lucide-react";
 import {
   Badge,
   Button,
   Campo,
   Combobox,
   Input,
-  RadioCampo,
-  RadioGroup,
   SelectNativo,
   Textarea,
 } from "@rodatech/ui";
@@ -26,16 +24,19 @@ import { ContactosNuevos, type ContactoNuevo } from "./contactos-nuevos";
 import { EditorContactos } from "./editor-contactos";
 import { SelectorUbigeoCascada, type DistritoUbigeo } from "./selector-ubigeo";
 import { guardarCliente } from "../acciones/guardar";
+import { crearRubro } from "../acciones/rubros";
+import { SelectorCatalogo } from "@/modules/cotizaciones/ui/constructor/selector-catalogo";
 import { esConsultable, revisarDocumento } from "../dominio/documento";
 import {
-  ETIQUETA_CONDICION,
   ETIQUETA_DOCUMENTO,
   LARGO_DOCUMENTO,
   type ClienteDetalle,
   type CondicionPago,
   type DatosDocumento,
   type ResultadoCliente,
+  type RubroCliente,
   type TipoDocumento,
+  type ZonaCliente,
 } from "../dominio/tipos";
 
 /**
@@ -57,6 +58,9 @@ import {
 
 export interface CatalogosCliente {
   vendedores: { id: string; nombre: string }[];
+  /** Los distritos de Lima y el Callao que se ofrecen como zona (141). */
+  zonas: ZonaCliente[];
+  rubros: RubroCliente[];
 }
 
 /**
@@ -66,27 +70,6 @@ export interface CatalogosCliente {
  * están bien; en el almacén se opera con el pulgar, y ahí 38 px se falla.
  */
 const ALTO_TACTIL = "h-11 md:h-control-md";
-
-/**
- * Los plazos de crédito que se usan de verdad en el Perú.
- *
- * Cuatro botones en vez de una caja de número. No es un capricho: escribir
- * «30» a mano cuesta más que pulsarlo, y sobre todo un campo vacío se queda
- * en 0 — que es exactamente cómo acabaron 30 de los 37 clientes de Willy «a
- * crédito con 0 días», o sea con la factura vencida el día que se emite.
- * Quien necesite otro plazo tiene «Otro…».
- */
-const PLAZOS = [15, 30, 45, 60] as const;
-
-/** Botón-chip: pulsado se pinta de marca, sin pulsar es un borde. */
-function chip(activo: boolean): string {
-  return [
-    "inline-flex min-h-9 items-center rounded-full border px-3 text-sm transition-colors",
-    activo
-      ? "border-brand-600 bg-brand-600 font-medium text-white"
-      : "border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]",
-  ].join(" ");
-}
 
 export function FormularioCliente({
   catalogos,
@@ -142,6 +125,8 @@ export function FormularioCliente({
     direccion: cliente?.direccion ?? "",
     ubigeo_codigo: cliente?.ubigeo_codigo ?? "",
     referencia_direccion: cliente?.referencia_direccion ?? "",
+    zona_codigo: cliente?.zona_codigo ?? "",
+    rubro_id: cliente?.rubro_id ?? "",
     linea_credito: String(cliente?.linea_credito ?? "0"),
     dias_credito: String(cliente?.dias_credito ?? "0"),
     dias_gracia: String(cliente?.dias_gracia ?? "0"),
@@ -150,6 +135,10 @@ export function FormularioCliente({
   });
 
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+
+  /** Los rubros, con los que se creen aquí mismo (141). */
+  const [rubros, setRubros] = React.useState(catalogos.rubros);
+  const [errorRubro, setErrorRubro] = React.useState<string | null>(null);
 
   /**
    * ¿Se está corrigiendo a mano lo que trajo SUNAT?
@@ -162,10 +151,6 @@ export function FormularioCliente({
    */
   const [corrigiendo, setCorrigiendo] = React.useState(false);
 
-  /** Días de crédito escritos a mano, fuera de los cuatro botones. */
-  const [diasAMano, setDiasAMano] = React.useState(false);
-  /** ¿Se le pone tope de deuda? Casi nunca, así que va detrás de un clic. */
-  const [conTope, setConTope] = React.useState(false);
 
   /**
    * Los contactos que se crean junto con la empresa, solo en el ALTA.
@@ -336,7 +321,6 @@ export function FormularioCliente({
    */
   const campos = [
     f.nombre_comercial,
-    f.sector,
     f.email,
     f.telefono,
     f.whatsapp,
@@ -366,6 +350,8 @@ export function FormularioCliente({
     ubigeo_codigo: f.ubigeo_codigo || null,
     referencia_direccion: f.referencia_direccion.trim() || null,
     sector: f.sector.trim() || null,
+    zona_codigo: f.zona_codigo || null,
+    rubro_id: f.rubro_id || null,
     email: f.email.trim() || null,
     telefono: f.telefono.trim() || null,
     whatsapp: f.whatsapp.trim() || null,
@@ -420,14 +406,12 @@ export function FormularioCliente({
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "cliente",
     id: cliente?.id ?? null,
-    datos: { tipoDocumento, condicionPago, f, diasAMano, conTope, contactos, ubigeoNombre, ubigeoDep, ubigeoProv, ubigeoDist },
+    datos: { tipoDocumento, condicionPago, f, contactos, ubigeoNombre, ubigeoDep, ubigeoProv, ubigeoDist },
     valeLaPena: (d) => Boolean(d.f.numero_documento || d.f.razon_social || d.contactos.length > 0),
     recuperar: (d) => {
       setTipoDocumento(d.tipoDocumento);
       setCondicionPago(d.condicionPago);
       setF(d.f);
-      setDiasAMano(d.diasAMano);
-      setConTope(d.conTope);
       setContactos(d.contactos);
       setUbigeoNombre(d.ubigeoNombre);
       setUbigeoDep(d.ubigeoDep);
@@ -661,7 +645,7 @@ export function FormularioCliente({
           <>
             <Campo
               id="razon_social"
-              label="Razón social"
+              label={tipoDocumento === "DNI" ? "Nombre y apellidos" : "Razón social"}
               requerido
               error={errorDe("razon_social")}
               ayuda="Es el nombre que sale impreso en la factura."
@@ -677,8 +661,12 @@ export function FormularioCliente({
 
             <Campo
               id="direccion"
-              label="Dirección fiscal"
-              ayuda="La que sale en la factura y en la guía de remisión."
+              label={tipoDocumento === "DNI" ? "Dirección (opcional)" : "Dirección fiscal"}
+              ayuda={
+                tipoDocumento === "DNI"
+                  ? "Con DNI no hace falta. Si la pones, sale en la guía de remisión."
+                  : "La que sale en la factura y en la guía de remisión."
+              }
             >
               <Input
                 id="direccion"
@@ -754,138 +742,66 @@ export function FormularioCliente({
         )}
       </section>
 
-      {/* ═══════════════════════════════════════════════ ¿Cómo paga? ═════
-          Era un desplegable de dos opciones más tres cajas de números. Un
-          desplegable para elegir entre DOS cosas es un clic de más, y los
-          plazos de crédito del Perú son cuatro números: escribirlos a mano no
-          aporta nada. Los días de gracia bajan a «más datos» — es el campo que
-          Willy no entendía y que nadie ha llenado nunca. */}
+      {/* ═══════════════════════════════════════ Zona y rubro ═════════════
+          En el sitio de «¿Cómo paga?», que se fue (Willy, 20/10, ≈42:40):
+          *«esto se pone en la cotización y en la factura… un cliente puede
+          empezar con crédito y de ahí se le puede quitar»*; y la retención
+          *«se define en la factura»*. Lo que ya tuviera guardado un cliente se
+          conserva: solo deja de editarse aquí.
+
+          Y en su lugar, lo que pidió para trabajar (141): la ZONA, para
+          agrupar las visitas —*«un día se trabaja por el Callao, otro día me
+          voy a Chorrillos»*—, que no es la dirección fiscal; y el RUBRO, para
+          saber *«con cuántas empresas agroindustriales contamos»*. */}
       <section className="card flex flex-col gap-3 p-4">
-        <h2 className="text-sm font-semibold">¿Cómo paga?</h2>
-
-        <RadioGroup
-          value={condicionPago}
-          onValueChange={(v) => setCondicionPago(v as CondicionPago)}
-          className="grid gap-2 sm:grid-cols-2"
-        >
-          <RadioCampo
-            id="pago-contado"
-            value="contado"
-            label={ETIQUETA_CONDICION.contado}
-            ayuda="Paga al entregar."
+        <h2 className="text-sm font-semibold">¿Por dónde lo visitas y a qué se dedica?</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo
+            id="zona_codigo"
+            label="Zona"
+            ayuda="El distrito donde se le visita. No tiene que ser el de la dirección fiscal."
+          >
+            <Combobox
+              id="zona_codigo"
+              opciones={catalogos.zonas.map((z) => ({
+                valor: z.codigo,
+                etiqueta: z.nombre,
+                detalle: z.provincia === "Callao" ? "Callao" : undefined,
+              }))}
+              valor={f.zona_codigo || null}
+              onCambio={(v) => set("zona_codigo", v ?? "")}
+              placeholder="Elige el distrito"
+              placeholderBusqueda="Escribe el distrito…"
+              textoVacio="No hay un distrito con ese nombre."
+              limpiable
+            />
+          </Campo>
+          <SelectorCatalogo
+            id="rubro_id"
+            label="Rubro"
+            ayuda="El sector: textil, pesquera, metalmecánica… Si no está, créalo."
+            opciones={rubros}
+            valor={f.rubro_id}
+            onElegir={(o) => set("rubro_id", o?.id ?? "")}
+            placeholder="Elige o escribe el rubro"
+            onCrear={async (nombre) => {
+              const r = await crearRubro(nombre);
+              if (!r.ok) {
+                setErrorRubro(r.error);
+                return null;
+              }
+              setErrorRubro(null);
+              setRubros((lista) =>
+                lista.some((x) => x.id === r.datos.id)
+                  ? lista
+                  : [...lista, r.datos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
+              );
+              set("rubro_id", r.datos.id);
+              return r.datos;
+            }}
           />
-          <RadioCampo
-            id="pago-credito"
-            value="credito"
-            label={ETIQUETA_CONDICION.credito}
-            ayuda="Se le factura y paga después."
-          />
-        </RadioGroup>
-
-        {aCredito ? (
-          <div className="flex flex-col gap-3 border-t border-[var(--border-soft)] pt-3">
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium">¿A cuántos días?</span>
-              <div className="flex flex-wrap gap-2">
-                {PLAZOS.map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => {
-                      setDiasAMano(false);
-                      set("dias_credito", String(d));
-                    }}
-                    aria-pressed={!diasAMano && num(f.dias_credito) === d}
-                    className={chip(!diasAMano && num(f.dias_credito) === d)}
-                  >
-                    {d} días
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setDiasAMano(true)}
-                  aria-pressed={diasAMano}
-                  className={chip(diasAMano)}
-                >
-                  Otro…
-                </button>
-              </div>
-
-              {diasAMano ? (
-                <Input
-                  id="dias_credito"
-                  type="number"
-                  min={0}
-                  step="1"
-                  numerico
-                  autoFocus
-                  className={`${ALTO_TACTIL} w-32`}
-                  value={f.dias_credito}
-                  onChange={(e) => set("dias_credito", e.target.value)}
-                />
-              ) : null}
-
-              {num(f.dias_credito) === 0 ? (
-                <p className="text-sm text-[var(--warn)]">
-                  Con 0 días la factura nace vencida el mismo día que se emite.
-                  Elige un plazo.
-                </p>
-              ) : null}
-            </div>
-
-            {/* El tope de deuda, detrás de un clic: ninguno de los 37 clientes
-                reales tiene uno puesto, y es justo el campo que Willy entendió
-                al revés —creía que era un máximo mensual—. */}
-            {conTope || num(f.linea_credito) > 0 ? (
-              <Campo
-                id="linea_credito"
-                label="Tope de deuda"
-                ayuda="Cuánto puede DEBER a la vez, sumando todas sus facturas sin pagar. No es un tope mensual."
-              >
-                <Input
-                  id="linea_credito"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  numerico
-                  className={`${ALTO_TACTIL} w-48`}
-                  value={f.linea_credito}
-                  onChange={(e) => set("linea_credito", e.target.value)}
-                />
-              </Campo>
-            ) : (
-              <Button
-                type="button"
-                variant="subtle"
-                className="h-11 self-start md:h-control-md"
-                onClick={() => setConTope(true)}
-              >
-                <Plus aria-hidden="true" />
-                Ponerle un tope de deuda
-              </Button>
-            )}
-          </div>
-        ) : null}
-
-        {/*
-          Agente de retención (118). Luis, 15/10: la retención del 3 % se
-          enciende sola en la factura desde S/ 700 «solo si el cliente es
-          agente de retención». Aquí es donde se dice si lo es.
-        */}
-        <label className="flex items-start gap-3 rounded-md border border-[var(--border)] p-3">
-          <input
-            type="checkbox"
-            className="mt-0.5 size-5 shrink-0"
-            checked={agenteRetencion}
-            onChange={(e) => setAgenteRetencion(e.target.checked)}
-          />
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">Es agente de retención</span>
-            <span className="text-sm text-[var(--fg-muted)]">
-              SUNAT lo designó: en sus facturas desde S/ 700 te retiene el 3 % y la retención se pone sola.
-            </span>
-          </span>
-        </label>
+        </div>
+        {errorRubro ? <p className="text-sm font-medium text-[var(--danger)]">{errorRubro}</p> : null}
       </section>
 
       {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════
@@ -926,7 +842,7 @@ export function FormularioCliente({
         <span>
           Más datos
           <span className="ml-2 font-normal text-[var(--fg-muted)]">
-            nombre comercial, sector, teléfonos, vendedor, notas ·{" "}
+            nombre comercial, teléfonos, vendedor, notas ·{" "}
             {llenosDeMas} de {campos.length}
           </span>
         </span>
@@ -953,15 +869,7 @@ export function FormularioCliente({
                 />
               </Campo>
 
-              <Campo id="sector" label="Sector">
-                <Input
-                  id="sector"
-                  className={ALTO_TACTIL}
-                  value={f.sector}
-                  onChange={(e) => set("sector", e.target.value)}
-                  placeholder="Minería, pesca, transporte…"
-                />
-              </Campo>
+{/* «Sector» se fue: lo reemplaza el rubro de arriba (141). */}
 
               <Campo
                 id="email"
@@ -1007,24 +915,6 @@ export function FormularioCliente({
                 />
               </Campo>
 
-              {aCredito ? (
-                <Campo
-                  id="dias_gracia"
-                  label="Días de gracia"
-                  ayuda="Lo que se le aguanta DESPUÉS de vencer antes de perseguirlo."
-                >
-                  <Input
-                    id="dias_gracia"
-                    type="number"
-                    min={0}
-                    step="1"
-                    numerico
-                    className={ALTO_TACTIL}
-                    value={f.dias_gracia}
-                    onChange={(e) => set("dias_gracia", e.target.value)}
-                  />
-                </Campo>
-              ) : null}
 
               <Campo
                 id="vendedor_id"

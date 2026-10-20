@@ -2,12 +2,12 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HistorialCliente } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { Badge, Button, EstadoError, Moneda, Skeleton } from "@rodatech/ui";
+import { Badge, Button, EstadoError, Skeleton } from "@rodatech/ui";
 import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { clientePorId } from "../api/consultas";
-import { ETIQUETA_CONDICION, ETIQUETA_DOCUMENTO } from "../dominio/tipos";
+import { ETIQUETA_DOCUMENTO } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
 import { Volver } from "@/componentes/volver";
 
@@ -64,15 +64,6 @@ export default async function PaginaDetalleCliente({
             <Badge tone="neutral" size="xs">
               {ETIQUETA_DOCUMENTO[c.tipo_documento]} {c.numero_documento ?? "—"}
             </Badge>
-            <Badge tone={c.condicion_pago === "credito" ? "info" : "neutral"} size="xs">
-              {ETIQUETA_CONDICION[c.condicion_pago]}
-            </Badge>
-            {/* 118: en sus facturas desde S/ 700 la retención se pone sola. */}
-            {c.agente_retencion ? (
-              <Badge tone="info" size="xs">
-                Agente de retención
-              </Badge>
-            ) : null}
             {c.bloqueado ? (
               <Badge tone="danger" size="xs">
                 Bloqueado
@@ -123,39 +114,37 @@ export default async function PaginaDetalleCliente({
         </p>
       ) : null}
 
-      {/* -------------------------------------------------------- Crédito */}
-      {/* Dos columnas en móvil ya caben (son cifras cortas); cuatro solo desde
-          `lg`, que es cuando hay ancho para que no se aprieten. */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* ------------------------------------------------- Zona y rubro */}
+      {/* En lugar de condición, tope y días de gracia, que dejaron de ser del
+          cliente (Willy, 20/10: «se define en la cotización y en la
+          factura»). La zona y el rubro (141) llevan a la lista filtrada: es
+          como se arma la ruta de visitas. */}
+      <div className="grid gap-3 sm:grid-cols-3">
         <Tarjeta
-          etiqueta="Condición"
-          valor={ETIQUETA_CONDICION[c.condicion_pago]}
-          pie={c.condicion_pago === "credito" ? `${c.dias_credito} días` : "paga al entregar"}
-        />
-        <Tarjeta
-          // Con el nombre del formulario: allí se llama «Tope de deuda» desde
-          // que Willy entendió «línea» como un máximo mensual. Aquí seguía
-          // «Línea de crédito» (revisión por módulos del 02/10).
-          etiqueta="Tope de deuda"
-          valor={
-            c.condicion_pago === "credito" && c.linea_credito > 0 ? (
-              <Moneda valor={c.linea_credito} />
+          etiqueta="Zona"
+          valor={c.zona_nombre ?? "Sin zona"}
+          pie={
+            c.zona_codigo ? (
+              <Link href={`/clientes?zona=${c.zona_codigo}`} className="font-medium text-brand-700 underline underline-offset-4">
+                Ver los clientes de esta zona
+              </Link>
             ) : (
-              "—"
+              "ponla al editar"
             )
           }
-          pie={
-            c.condicion_pago !== "credito"
-              ? "no aplica al contado"
-              : c.linea_credito > 0
-                ? "lo que puede deber a la vez"
-                : "sin tope definido"
-          }
         />
         <Tarjeta
-          etiqueta="Días de gracia"
-          valor={c.condicion_pago === "credito" ? String(c.dias_gracia) : "—"}
-          pie="antes de contarla vencida"
+          etiqueta="Rubro"
+          valor={c.rubro_nombre ?? "Sin rubro"}
+          pie={
+            c.rubro_id ? (
+              <Link href={`/clientes?rubro=${c.rubro_id}`} className="font-medium text-brand-700 underline underline-offset-4">
+                Ver los clientes de este rubro
+              </Link>
+            ) : (
+              "ponlo al editar"
+            )
+          }
         />
         <Tarjeta
           etiqueta="Vendedor"
@@ -213,7 +202,6 @@ export default async function PaginaDetalleCliente({
             <Dato etiqueta="Correo" valor={c.email} />
             <Dato etiqueta="Teléfono" valor={c.telefono} />
             <Dato etiqueta="WhatsApp" valor={c.whatsapp} />
-            <Dato etiqueta="Sector" valor={c.sector} />
           </dl>
         </section>
 
@@ -316,7 +304,7 @@ function Tarjeta({
 }: {
   etiqueta: string;
   valor: React.ReactNode;
-  pie?: string;
+  pie?: React.ReactNode;
 }) {
   return (
     <div className="card p-3">

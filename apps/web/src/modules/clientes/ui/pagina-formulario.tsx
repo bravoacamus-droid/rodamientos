@@ -88,7 +88,7 @@ export default async function PaginaFormularioCliente({
   // Si los vendedores no cargan NO se corta el alta: el cliente se crea sin
   // asignar y se le pone dueño después. Perder un cliente nuevo porque no
   // cargó un desplegable sería absurdo.
-  const datosCatalogos = catalogos.ok ? catalogos.datos : { vendedores: [] };
+  const datosCatalogos = catalogos.ok ? catalogos.datos : { vendedores: [], zonas: [], rubros: [] };
 
   const c = cliente?.ok ? cliente.datos : undefined;
 

@@ -5,7 +5,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Combobox, Input, SelectNativo, Textarea } from "@rodatech/ui";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import { useBorrador } from "@/componentes/borrador";
 import { Volver } from "@/componentes/volver";
@@ -18,6 +18,7 @@ import { SelectorUbigeoCascada } from "@/modules/clientes/ui/selector-ubigeo";
 
 import { buscarProveedorPorDocumento } from "../acciones/consultar";
 import { guardarProveedor } from "../acciones/guardar";
+import { BuscadorMarcas } from "./buscador-marcas";
 import { esConsultable } from "../dominio/documento";
 import { PAISES } from "../dominio/paises";
 import {
@@ -112,14 +113,6 @@ export function FormularioProveedor({
 
   const set = <K extends keyof ProveedorEditable>(campo: K, valor: ProveedorEditable[K]) =>
     setDatos((d) => ({ ...d, [campo]: valor }));
-
-  const alternarMarca = (id: string) =>
-    setDatos((d) => ({
-      ...d,
-      marca_ids: d.marca_ids.includes(id)
-        ? d.marca_ids.filter((m) => m !== id)
-        : [...d.marca_ids, id],
-    }));
 
   const puedeConsultar = esConsultable(datos.tipo_documento, datos.numero_documento);
 
@@ -429,18 +422,9 @@ export function FormularioProveedor({
             </label>
           )}
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Días de pago</span>
-            <Input
-              type="number"
-              min={0}
-              max={365}
-              value={datos.dias_pago}
-              onChange={(e) => set("dias_pago", Number(e.target.value))}
-              className="tabular"
-            />
-            <span className="text-sm text-[var(--fg-subtle)]">0 = al contado.</span>
-          </label>
+          {/* «Días de pago» se quitó (20/10, Willy ≈53:50: «día de pago no…
+              por lo general todo al contado»). La columna sigue y el guardado
+              manda lo que ya tenía: el único con crédito no lo pierde. */}
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Plazo de entrega</span>
@@ -467,35 +451,11 @@ export function FormularioProveedor({
           fichas una a una.
         </p>
 
-        {marcas.length === 0 ? (
-          <p className="text-sm text-[var(--fg-subtle)]">
-            No hay marcas en el maestro todavía.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {marcas.map((m) => {
-              const puesta = datos.marca_ids.includes(m.id);
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => alternarMarca(m.id)}
-                  aria-pressed={puesta}
-                  className={`inline-flex min-h-9 items-center gap-1 rounded-full border px-3 py-1 text-sm transition-colors ${
-                    puesta
-                      ? "border-brand-600 bg-brand-50 font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-200"
-                      : "border-[var(--border)] hover:bg-[var(--surface-2)]"
-                  }`}
-                >
-                  {/* La marca puesta lleva su visto: solo el color no basta
-                      para quien ve mal (revisión por módulos del 02/10). */}
-                  {puesta ? <Check className="size-4" aria-hidden="true" /> : null}
-                  {m.nombre}
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <BuscadorMarcas
+          marcas={marcas}
+          elegidas={datos.marca_ids}
+          onCambio={(ids) => set("marca_ids", ids)}
+        />
       </section>
 
       {/* ------------------------------------------------------ Más datos */}
