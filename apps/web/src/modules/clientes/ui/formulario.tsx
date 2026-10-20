@@ -8,15 +8,13 @@
 import * as React from "react";
 import { useBorrador } from "@/componentes/borrador";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import {
   Badge,
   Button,
   Campo,
-  Combobox,
   Input,
   SelectNativo,
-  Textarea,
 } from "@rodatech/ui";
 
 import { buscarPorDocumento } from "../acciones/consultar";
@@ -54,8 +52,7 @@ import {
  *
  *   · Arriba, el ALTA RÁPIDA: tipo de documento, número, «Traer datos» y razón
  *     social. Con eso ya se puede guardar. Es el 90% de las altas reales.
- *   · Abajo, «Más datos» plegado: comercial, dirección, crédito y asignación.
- *     Existe, pero no se le planta delante a quien solo tiene un RUC.
+ *   · Abajo, la zona y el rubro, y los contactos. «Más datos» se quitó el 20/10.
  *
  * Nada de lo que devuelva la consulta puede impedir guardar. Si la cuota se
  * agotó, si SUNAT no responde o si el contribuyente está NO HABIDO, se avisa y
@@ -214,10 +211,6 @@ export function FormularioCliente({
    */
   const [contactos, setContactos] = React.useState<ContactoNuevo[]>([]);
 
-  // Al editar el panel arranca abierto: los datos ya existen y esconderlos
-  // obligaría a un clic extra para ver lo que se viene a cambiar. Al crear
-  // arranca cerrado, que es justamente el punto del alta rápida.
-  const [masDatos, setMasDatos] = React.useState(Boolean(cliente));
 
   // El nombre del distrito se lleva aparte del código porque son datos de
   // origen distinto: el código puede venir de SUNAT (que no manda el nombre) o
@@ -237,18 +230,6 @@ export function FormularioCliente({
   const [ubigeoProv, setUbigeoProv] = React.useState(cliente?.ubigeo_provincia ?? "");
   const [ubigeoDist, setUbigeoDist] = React.useState(cliente?.ubigeo_distrito ?? "");
 
-  // Si el servidor rechaza el guardado señalando un campo que vive dentro del
-  // panel, el panel se abre solo. Si no, el mensaje de error apuntaría a un
-  // input que no está en pantalla y la persona no sabría qué corregir.
-  const campoCulpable = resultado && !resultado.ok ? resultado.campo : undefined;
-  React.useEffect(() => {
-    if (
-      campoCulpable &&
-      !["tipo_documento", "numero_documento", "razon_social"].includes(campoCulpable)
-    ) {
-      setMasDatos(true);
-    }
-  }, [campoCulpable]);
 
   // Lo que dijo el padrón la última vez que se consultó. Se guarda para poder
   // seguir mostrando el aviso de NO HABIDO mientras se llena el resto.
@@ -365,22 +346,6 @@ export function FormularioCliente({
 
   const aCredito = condicionPago === "credito";
 
-  /**
-   * Lo que vive detrás de «Más datos», y cuántos tienen algo escrito.
-   *
-   * El contador existe para no tener que abrir el panel a comprobar si hay
-   * algo dentro. En un alta nueva dice «0 de 7» y se puede ignorar entero;
-   * al editar un cliente que sí los tiene, dice cuántos y se abre a mirar.
-   */
-  const campos = [
-    f.nombre_comercial,
-    f.email,
-    f.telefono,
-    f.whatsapp,
-    f.vendedor_id,
-    f.notas,
-  ];
-  const llenosDeMas = campos.filter((v) => v.trim() !== "").length;
 
   /**
    * ¿Se puede plegar lo de SUNAT en la tarjeta de resumen?
@@ -470,7 +435,6 @@ export function FormularioCliente({
       setUbigeoDep(d.ubigeoDep);
       setUbigeoProv(d.ubigeoProv);
       setUbigeoDist(d.ubigeoDist);
-      setMasDatos(true);
     },
   });
 
@@ -856,132 +820,11 @@ export function FormularioCliente({
         <ContactosNuevos lista={contactos} onCambio={setContactos} />
       )}
 
-      {/* ═════════════════════════════════════════════════ Más datos ═════
-          Aquí abajo va todo lo que en dos años del sistema anterior no se
-          llenó NI UNA VEZ en 37 clientes: sector, teléfono, WhatsApp, días de
-          gracia, vendedor, notas. No se borra —puede servirle— pero deja de
-          ocupar pantalla, y el contador dice si hay algo dentro para no tener
-          que abrirlo a comprobar. */}
-      <button
-        type="button"
-        onClick={() => setMasDatos((v) => !v)}
-        aria-expanded={masDatos}
-        aria-controls="mas-datos"
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
-      >
-        <span>
-          Más datos
-          <span className="ml-2 font-normal text-[var(--fg-muted)]">
-            nombre comercial, teléfonos, vendedor, notas ·{" "}
-            {llenosDeMas} de {campos.length}
-          </span>
-        </span>
-        <ChevronDown
-          aria-hidden="true"
-          className={`size-4 shrink-0 transition-transform ${masDatos ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {/* Se monta y desmonta en vez de ocultarse con CSS: si un error del
-          servidor apunta a un campo de aquí, el panel se abre solo y el campo
-          existe con su valor. */}
-      {masDatos ? (
-        <div id="mas-datos" className="flex flex-col gap-4">
-          <section className="card flex flex-col gap-3 p-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <Campo id="nombre_comercial" label="Nombre comercial">
-                <Input
-                  id="nombre_comercial"
-                  className={ALTO_TACTIL}
-                  value={f.nombre_comercial}
-                  onChange={(e) => set("nombre_comercial", e.target.value)}
-                  placeholder="Como lo conocen en el taller"
-                />
-              </Campo>
-
-{/* «Sector» se fue: lo reemplaza el rubro de arriba (141). */}
-
-              <Campo
-                id="email"
-                label="Correo de la empresa"
-                error={errorDe("email")}
-                ayuda="El general. El de la persona va en su contacto."
-              >
-                <Input
-                  id="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="off"
-                  className={ALTO_TACTIL}
-                  value={f.email}
-                  onChange={(e) => set("email", e.target.value)}
-                />
-              </Campo>
-
-              <Campo id="telefono" label="Teléfono">
-                <Input
-                  id="telefono"
-                  type="tel"
-                  inputMode="tel"
-                  className={ALTO_TACTIL}
-                  value={f.telefono}
-                  onChange={(e) => set("telefono", e.target.value)}
-                />
-              </Campo>
-
-              <Campo
-                id="whatsapp"
-                label="WhatsApp"
-                ayuda="Es por donde de verdad se les escribe."
-              >
-                <Input
-                  id="whatsapp"
-                  type="tel"
-                  inputMode="tel"
-                  className={ALTO_TACTIL}
-                  value={f.whatsapp}
-                  onChange={(e) => set("whatsapp", e.target.value)}
-                  placeholder="9XX XXX XXX"
-                />
-              </Campo>
-
-
-              <Campo
-                id="vendedor_id"
-                label="Vendedor asignado"
-                ayuda="Quien lo atiende. Se puede dejar vacío."
-              >
-                <Combobox
-                  id="vendedor_id"
-                  opciones={catalogos.vendedores.map((v) => ({
-                    valor: v.id,
-                    etiqueta: v.nombre,
-                  }))}
-                  valor={f.vendedor_id || null}
-                  onCambio={(v) => set("vendedor_id", v ?? "")}
-                  placeholder="Sin asignar"
-                  placeholderBusqueda="Nombre del vendedor"
-                  textoVacio="Ningún vendedor coincide."
-                  className={ALTO_TACTIL}
-                />
-              </Campo>
-            </div>
-
-            <Campo
-              id="notas"
-              label="Notas"
-              ayuda="Lo que haya que recordar: cómo paga, quién autoriza, a qué hora recibe."
-            >
-              <Textarea
-                id="notas"
-                rows={3}
-                value={f.notas}
-                onChange={(e) => set("notas", e.target.value)}
-              />
-            </Campo>
-          </section>
-        </div>
-      ) : null}
+      {/* «Más datos» se fue (Luis, 20/10): nombre comercial, teléfonos,
+          vendedor y notas no se llenaban nunca, y lo que importa de una
+          empresa es su gente —los contactos de arriba, a quienes se les
+          vende—. Lo que ya tuviera guardado un cliente se conserva: el
+          envío sigue mandando esos campos como estaban. */}
 
       {/* Los botones se apilan en móvil y el de guardar va primero visualmente
           abajo: el pulgar llega antes al borde inferior. */}
