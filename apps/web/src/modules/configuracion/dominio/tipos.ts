@@ -109,6 +109,8 @@ export interface Empresa {
   retencion_porcentaje: number;
   cuenta_detraccion: string | null;
   agente_retencion: boolean;
+  /** Meta de venta del mes, USD sin IGV (140). Null: Informes usa el promedio. */
+  meta_venta_mensual: number | null;
 
   /**
    * La cuenta a la que COBRA. Nada que ver con `cuenta_detraccion`, que es la

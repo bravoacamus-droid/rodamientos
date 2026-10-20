@@ -216,6 +216,43 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </div>
       </div>
 
+      {/* La meta del mes (Luis, 20/10). En dólares y sin IGV, que es como
+          suman los informes. Solo por mes: por día no hace falta (Luis,
+          20/10). */}
+      <div className="rounded-md border border-[var(--border-soft)] p-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+          Meta de ventas
+        </h3>
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
+          Lo que quieres vender cada mes. Sale en Informes, en «¿Cómo voy este mes?». Si la dejas
+          vacía, se usa tu promedio de los meses que elijas allí.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Campo
+            id="meta_mes"
+            label="Meta del mes ($, sin IGV)"
+            ayuda="Vacía: se usa tu promedio."
+          >
+            <Input
+              id="meta_mes"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="100"
+              placeholder="Por ejemplo, 15000"
+              value={datos.meta_venta_mensual ?? ""}
+              onChange={(e) =>
+                setDatos((d) => ({
+                  ...d,
+                  meta_venta_mensual: e.target.value === "" ? null : Number(e.target.value),
+                }))
+              }
+              disabled={!puedeEditar}
+            />
+          </Campo>
+        </div>
+      </div>
+
       {resultado && !resultado.ok ? (
         <p className="text-sm text-[var(--danger)]">{resultado.error}</p>
       ) : null}

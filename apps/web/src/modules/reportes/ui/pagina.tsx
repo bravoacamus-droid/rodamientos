@@ -12,9 +12,10 @@ import {
   topProductosRango,
   valorizacionPorFamilia,
 } from "../api/consultas";
-import { COLORES_FAMILIA, etiquetaAging, variacionPct } from "../dominio/periodo";
+import { COLORES_FAMILIA, etiquetaAging } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
+import { ComoVoyBloque } from "./como-voy";
 import { datosVentas } from "@/modules/tablero/api/ejecutivo";
 import {
   GraficoAging,
@@ -92,7 +93,17 @@ export default async function PaginaReportes({ searchParams }: Props) {
         atajo={rango.atajo}
       />
 
-      <Suspense fallback={<FilaSkeleton alto="h-24" columnas={4} />}>
+      {/* «¿Cómo voy este mes?» (20/10): lo primero, porque es la pregunta con
+          que se abre esta pantalla. Compara con el rango elegido arriba; sin
+          elegir, con los meses de enero al anterior. */}
+      <Suspense key={`cv|${clave}`} fallback={<FilaSkeleton alto="h-64" columnas={1} />}>
+        <ComoVoyBloque
+          hoy={hoy}
+          referencia={uno(sp.desde) || uno(sp.atajo) ? { desde: rango.desde, hasta: rango.hasta } : null}
+        />
+      </Suspense>
+
+      <Suspense fallback={<FilaSkeleton alto="h-24" columnas={3} />}>
         <Indicadores hoy={hoy} />
       </Suspense>
 
@@ -227,22 +238,11 @@ async function Indicadores({ hoy }: { hoy: string }) {
   }
 
   const d = r.datos;
-  const variacion = variacionPct(d.ventaMes, d.ventaMesAnterior);
 
+  // «Vendido este mes» se fue a «¿Cómo voy?» (20/10): comparaba el mes a
+  // medias con el mes pasado entero, y el día 10 siempre decía «−70 %».
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Kpi
-        etiqueta="Vendido este mes"
-        valor={d.ventaMes}
-        prefijo="$ "
-        decimales={2}
-        pie={
-          variacion === null
-            ? "sin mes anterior con el que comparar"
-            : `${variacion > 0 ? "+" : ""}${variacion} % frente al mes pasado`
-        }
-        tono={variacion === null ? undefined : variacion >= 0 ? "ok" : "malo"}
-      />
+    <div className="grid gap-3 sm:grid-cols-3">
       {/* Con el costo en cero, «0.0 %» no es un margen del cero por ciento:
           es que no se sabe. El histórico se cargó sin costo (059). */}
       {d.costoMes > 0 ? (

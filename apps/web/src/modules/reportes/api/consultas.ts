@@ -13,6 +13,7 @@ import {
 } from "../dominio/periodo";
 import { etiquetaPeriodo, type Rango } from "../dominio/rango";
 import { rellenarPeriodos } from "../dominio/serie";
+import type { VentaDelDia } from "../dominio/como-voy";
 import type {
   ClienteFrecuente,
   Embudo,
@@ -505,5 +506,93 @@ export async function topClientesRango(
     };
   } catch (e) {
     return fallo(e);
+  }
+}
+
+/**
+ * Las ventas por día de los últimos trece meses, para «¿Cómo voy este mes?».
+ *
+ * Facturas y boletas vigentes, sin IGV y en dólares —lo mismo que suma
+ * `v_ventas_mensuales`—, pero SIN las series de prueba (093): una factura de
+ * F001 no es una venta, y el día que se probó la emisión sumaba aquí.
+ */
+export async function ventasPorDia(hoy: string, desde?: string): Promise<Resultado<VentaDelDia[]>> {
+  // Trece meses, o más si el rango elegido arriba empieza antes.
+  const inicio = desde && desde < mesesAtras(hoy, 12) ? inicioDeMes(desde) : mesesAtras(hoy, 12);
+  try {
+    const supabase = await clienteServidor();
+    const [docs, series] = await Promise.all([
+      supabase
+        .from("comprobantes")
+        .select("fecha_emision, serie, op_gravada")
+        .in("tipo", ["factura", "boleta"])
+        .neq("estado", "anulado")
+        .gte("fecha_emision", inicio)
+        .lte("fecha_emision", hoy)
+        .limit(5000),
+      supabase.from("series_documento").select("serie").eq("es_prueba", true),
+    ]);
+    if (docs.error) return fallo(docs.error);
+    if (series.error) return fallo(series.error);
+
+    const prueba = new Set((series.data ?? []).map((s) => s.serie));
+    const porDia = new Map<string, number>();
+    for (const d of docs.data ?? []) {
+      if (prueba.has(d.serie)) continue;
+      const f = String(d.fecha_emision);
+      porDia.set(f, (porDia.get(f) ?? 0) + Number(d.op_gravada ?? 0));
+    }
+    return {
+      ok: true,
+      datos: [...porDia].map(([fecha, monto]) => ({ fecha, monto })).sort((a, b) => a.fecha.localeCompare(b.fecha)),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Las cotizaciones enviadas que el cliente todavía puede aprobar: la venta que
+ * está más cerca. Es la recomendación de «¿Cómo voy?» con una cifra detrás.
+ */
+export async function cotizacionesPorCerrar(
+  hoy: string,
+): Promise<Resultado<{ cantidad: number; monto: number; vencenPronto: number }>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("cotizaciones")
+      .select("subtotal, fecha_vencimiento")
+      .eq("estado", "enviada")
+      .gte("fecha_vencimiento", hoy)
+      .limit(1000);
+    if (error) return fallo(error);
+    const filas = data ?? [];
+    const enTres = new Date(`${hoy}T12:00:00Z`);
+    enTres.setUTCDate(enTres.getUTCDate() + 3);
+    const limite = enTres.toISOString().slice(0, 10);
+    return {
+      ok: true,
+      datos: {
+        cantidad: filas.length,
+        monto: Math.round(filas.reduce((a, f) => a + Number(f.subtotal ?? 0), 0) * 100) / 100,
+        vencenPronto: filas.filter((f) => String(f.fecha_vencimiento) <= limite).length,
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** La meta del mes de Datos de la empresa (140), o null si no se puso. */
+export async function metaDelMes(): Promise<number | null> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase.from("empresa").select("meta_venta_mensual").eq("id", 1).maybeSingle();
+    const n = Number(data?.meta_venta_mensual);
+    return n > 0 ? n : null;
+  } catch {
+    // Sin meta se usa el promedio: no es motivo para tumbar el informe.
+    return null;
   }
 }

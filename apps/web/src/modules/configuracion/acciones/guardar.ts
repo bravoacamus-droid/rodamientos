@@ -75,6 +75,15 @@ const esquemaEmpresa = z.object({
   retencion_porcentaje: z.number().min(0).max(100),
   cuenta_detraccion: textoOpcional,
   agente_retencion: z.boolean(),
+  // La meta del mes (140). Vacía o cero: sin meta, Informes usa el promedio.
+  meta_venta_mensual: z
+    .number()
+    .finite()
+    .min(0)
+    .max(100_000_000)
+    .nullable()
+    .default(null)
+    .transform((n) => (n && n > 0 ? Math.round(n * 100) / 100 : null)),
 
   // La cuenta a la que cobra. Distinta de la de detracción, que es del Banco
   // de la Nación y no sirve para que el cliente transfiera.
@@ -123,6 +132,7 @@ export async function guardarEmpresa(
     // El pie de la cotización y de la factura salen de aquí.
     revalidatePath("/cotizaciones", "layout");
     revalidatePath("/facturacion", "layout");
+    revalidatePath("/reportes");
     return { ok: true, mensaje: "Datos de la empresa guardados." };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };

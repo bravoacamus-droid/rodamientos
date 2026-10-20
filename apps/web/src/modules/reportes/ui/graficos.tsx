@@ -12,6 +12,7 @@ import {
   Line,
   Pie,
   PieChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -525,6 +526,121 @@ export function GraficoSerieCompras({ datos }: { datos: PuntoCompras[] }) {
           ...(conGastos
             ? [{ color: "var(--color-accent-400)", texto: "Gastos de importación" }]
             : []),
+        ]}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// La meta del mes
+// ---------------------------------------------------------------------------
+
+export interface PuntoMeta {
+  etiqueta: string;
+  /** Lo vendido (en el mes en curso, hasta hoy). */
+  venta: number;
+  /** Solo en el mes en curso: lo que le falta para llegar al ritmo de hoy. */
+  resto: number;
+  enCurso: boolean;
+}
+
+/**
+ * Cada mes contra la meta y el tope (Luis, 20/10: *«gráficos que me digan cuál
+ * es el tope que estoy vendiendo, cuánto debería vender, como si fuera mi
+ * límite»*).
+ *
+ * Barras por mes; la **meta** —el promedio— en línea discontinua verde y el
+ * **tope** —el mejor mes— en línea punteada gris. El mes en curso va más
+ * claro, y encima, con borde discontinuo, lo que sumaría si sigue al mismo
+ * ritmo: así se ve de un vistazo si llega a la línea.
+ */
+export function GraficoMeta({
+  datos,
+  meta,
+  tope,
+}: {
+  datos: PuntoMeta[];
+  meta: number;
+  tope: number | null;
+}) {
+  const [ref, ancho] = useAncho();
+  const caben = ancho > 0 && ancho / Math.max(datos.length, 1) >= 64;
+  const techo = Math.max(meta, tope ?? 0, ...datos.map((d) => d.venta + d.resto)) * 1.12;
+
+  return (
+    <div ref={ref}>
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={datos} margin={{ ...MARGEN_EJES, right: 16 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
+          <XAxis dataKey="etiqueta" {...EJE} interval={0} minTickGap={4} />
+          <YAxis tickFormatter={corto} {...EJE} width={ANCHO_EJE_Y} domain={[0, Math.ceil(techo)]} />
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+              const p = payload[0]?.payload as PuntoMeta | undefined;
+              if (!p) return null;
+              return (
+                <div className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm elev-2">
+                  <p className="mb-1 font-medium">{label}{p.enCurso ? " · va a medias" : ""}</p>
+                  <p>Vendido: <span className="tabular font-medium">{dinero(p.venta)}</span></p>
+                  {p.enCurso ? (
+                    <p>A este ritmo cerraría en: <span className="tabular font-medium">{dinero(p.venta + p.resto)}</span></p>
+                  ) : null}
+                  <p className="text-[var(--fg-muted)]">
+                    {p.venta >= meta ? "Pasó la meta" : `Faltó ${dinero(meta - p.venta)} para la meta`}
+                  </p>
+                </div>
+              );
+            }}
+            cursor={{ fill: "var(--surface-2)" }}
+          />
+          <Bar dataKey="venta" stackId="m" name="Vendido" maxBarSize={64} isAnimationActive={ANIMAR}>
+            {datos.map((d) => (
+              <Cell
+                key={d.etiqueta}
+                fill={d.enCurso ? "var(--color-brand-400)" : "var(--color-brand-600)"}
+                radius={(d.resto > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]) as unknown as number}
+              />
+            ))}
+            {caben ? <LabelList dataKey="venta" {...CIFRA} /> : null}
+          </Bar>
+          <Bar
+            dataKey="resto"
+            stackId="m"
+            name="Si sigue a este ritmo"
+            fill="transparent"
+            stroke="var(--color-brand-500)"
+            strokeDasharray="4 3"
+            strokeWidth={2}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={64}
+            isAnimationActive={ANIMAR}
+          />
+          <ReferenceLine
+            y={meta}
+            stroke="var(--ok)"
+            strokeWidth={2}
+            strokeDasharray="8 4"
+            label={{ value: `Meta ${corto(meta)}`, position: "insideTopLeft", fill: "var(--ok)", fontSize: 14, fontWeight: 600 }}
+          />
+          {tope !== null && tope > meta ? (
+            <ReferenceLine
+              y={tope}
+              stroke="var(--fg-muted)"
+              strokeWidth={2}
+              strokeDasharray="2 4"
+              label={{ value: `Tope ${corto(tope)}`, position: "insideTopLeft", fill: "var(--fg-muted)", fontSize: 14, fontWeight: 600 }}
+            />
+          ) : null}
+        </BarChart>
+      </ResponsiveContainer>
+      <Leyenda
+        items={[
+          { color: "var(--color-brand-600)", texto: "Vendido en el mes, sin IGV" },
+          { color: "var(--color-brand-400)", texto: "Este mes, hasta hoy" },
+          { color: "var(--ok)", texto: "Meta: tu promedio" },
+          ...(tope !== null && tope > meta ? [{ color: "var(--fg-muted)", texto: "Tope: tu mejor mes" }] : []),
         ]}
       />
     </div>

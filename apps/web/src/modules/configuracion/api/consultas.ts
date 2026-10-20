@@ -30,7 +30,7 @@ export async function empresa(): Promise<Resultado<Empresa>> {
          email, email_ventas, web, eslogan, igv_porcentaje,
          detraccion_monto_minimo, detraccion_porcentaje, retencion_porcentaje,
          cuenta_detraccion, agente_retencion, banco, cuenta_corriente, cci,
-         actualizado_en`,
+         meta_venta_mensual, actualizado_en`,
       )
       .eq("id", 1)
       .maybeSingle();
@@ -64,6 +64,7 @@ export async function empresa(): Promise<Resultado<Empresa>> {
         retencion_porcentaje: Number(f.retencion_porcentaje ?? 3),
         cuenta_detraccion: (f.cuenta_detraccion as string | null) ?? null,
         agente_retencion: Boolean(f.agente_retencion),
+        meta_venta_mensual: Number(f.meta_venta_mensual) > 0 ? Number(f.meta_venta_mensual) : null,
         banco: (f.banco as string | null) ?? null,
         cuenta_corriente: (f.cuenta_corriente as string | null) ?? null,
         cci: (f.cci as string | null) ?? null,

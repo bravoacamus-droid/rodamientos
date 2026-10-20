@@ -2384,6 +2384,7 @@ export type Database = {
           id: number
           igv_porcentaje: number
           logo_url: string | null
+          meta_venta_mensual: number | null
           moneda: string
           nombre_comercial: string
           razon_social: string
@@ -2410,6 +2411,7 @@ export type Database = {
           id?: number
           igv_porcentaje?: number
           logo_url?: string | null
+          meta_venta_mensual?: number | null
           moneda?: string
           nombre_comercial: string
           razon_social: string
@@ -2436,6 +2438,7 @@ export type Database = {
           id?: number
           igv_porcentaje?: number
           logo_url?: string | null
+          meta_venta_mensual?: number | null
           moneda?: string
           nombre_comercial?: string
           razon_social?: string
