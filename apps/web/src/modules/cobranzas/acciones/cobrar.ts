@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { BUCKET_VOUCHERS, revisarVoucher, subirVoucher } from "./archivo-voucher";
@@ -24,8 +25,6 @@ import { BUCKET_VOUCHERS, revisarVoucher, subirVoucher } from "./archivo-voucher
  */
 
 /** La misma lista que `permisos_rol` tiene para `pagos`. */
-const ROLES = ["gerencia", "admin", "ventas", "cobranzas"] as const;
-
 const MEDIOS = [
   "efectivo",
   "transferencia",
@@ -60,8 +59,9 @@ export async function registrarCobro(
 ): Promise<ResultadoCobro> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar pagos." };
+  const negado = await sinPermiso("cobranzas", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("cobro");

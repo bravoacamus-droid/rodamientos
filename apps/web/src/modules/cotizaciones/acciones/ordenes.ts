@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 /**
@@ -10,8 +11,6 @@ import type { Json } from "@rodatech/db/tipos";
  * proveedor, todas o ninguna. La base comprueba que cada producto sea de
  * esta cotización y que no se le pida dos veces lo mismo al mismo proveedor.
  */
-const ROLES = ["gerencia", "admin", "compras"] as const;
-
 const esquema = z.object({
   cotizacion_id: z.string().uuid(),
   ordenes: z
@@ -47,8 +46,9 @@ export async function generarOrdenesDeCompra(
 ): Promise<{ ok: true; ordenes: { id: string; numero: string }[] } | { ok: false; error: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede generar órdenes de compra." };
+  const negado = await sinPermiso("compras", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const datos = esquema.safeParse(datosCrudos);

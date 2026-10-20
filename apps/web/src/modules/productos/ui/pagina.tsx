@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { opcionesDeFiltro } from "../api/consultas";
 import type { FiltrosProductos } from "../dominio/tipos";
@@ -43,13 +45,10 @@ export default async function PaginaProductos({ searchParams }: Props) {
     archivados: uno(sp.archivados) === "1",
   };
 
-  const [opciones, perfil] = await Promise.all([opcionesDeFiltro(), perfilActual()]);
-  // Solo quien mantiene el maestro ve el botón. Que aparezca y luego rebote es
-  // peor que no verlo.
-  const puedeCrear =
-    perfil !== null &&
-    perfil.activo &&
-    ["gerencia", "admin", "compras"].includes(perfil.rol);
+  const [opciones, permisos] = await Promise.all([opcionesDeFiltro(), misPermisos()]);
+  // Configuración › Roles y permisos (143). Sin permiso, el botón sale con candado y
+  // dice por qué, en vez de esconderse (QA, 20/10).
+  const puedeCrear = permisos.tiene("productos", "crear");
   const catalogos = opciones.ok
     ? opciones.datos
     : { marcas: [], familias: [], subfamilias: [] };
@@ -81,7 +80,11 @@ export default async function PaginaProductos({ searchParams }: Props) {
               Nuevo producto
             </Link>
           </div>
-        ) : null}
+        ) : (
+          <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            Nuevo producto
+          </BotonBloqueado>
+        )}
       </div>
 
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>

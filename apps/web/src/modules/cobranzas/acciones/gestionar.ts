@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { cuotasDe as leerCuotas } from "../api/consultas";
 
@@ -20,8 +21,6 @@ import { cuotasDe as leerCuotas } from "../api/consultas";
  */
 
 /** La misma lista que `permisos_rol` tiene para `gestiones_cobranza`. */
-const ROLES = ["gerencia", "admin", "cobranzas"] as const;
-
 const esquema = z.object({
   cliente_id: z.string().uuid(),
   comprobante_id: z.string().uuid().nullable(),
@@ -44,8 +43,11 @@ export async function registrarGestion(
 ): Promise<ResultadoGestion> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar gestiones de cobranza." };
+  // «Editar» y no «crear»: crear es cobrar, que ventas también hace; las
+  // gestiones de cartera eran solo de cobranzas (auditoría de la 143).
+  const negado = await sinPermiso("cobranzas", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("gestion");

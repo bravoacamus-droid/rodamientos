@@ -1,6 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import { rucValido } from "@rodatech/consultas/validacion";
 
 import { consultarDocumentoSunat, type ResultadoSunat } from "@/lib/documento-sunat";
@@ -30,15 +31,14 @@ import { consultarDocumentoSunat, type ResultadoSunat } from "@/lib/documento-su
  */
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 export async function consultarRucAgencia(numero: string): Promise<ResultadoSunat> {
   // 1 · Identidad y rol. Cada llamada gasta cuota COMPARTIDA de la empresa
   // —son 100 al mes—, así que no puede quedar abierta a cualquiera con sesión.
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede consultar documentos." };
+  const negado = (await sinPermiso("guias", "crear")) && (await sinPermiso("guias", "editar"));
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   // 2 · Entrada. Los argumentos de una Server Action llegan del navegador:

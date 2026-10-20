@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { cotizacionParaFacturar } from "../api/consultas";
@@ -36,8 +37,6 @@ import { enviarASunat } from "./enviar";
  */
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 const esquema = z.object({
   cotizacion_id: z.string().uuid(),
   tipo: z.enum(["factura", "boleta"]),
@@ -182,8 +181,9 @@ export async function emitirComprobante(
 ): Promise<ResultadoEmision> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede emitir comprobantes." };
+  const negado = await sinPermiso("facturacion", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("comprobante");

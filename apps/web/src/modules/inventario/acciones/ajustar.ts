@@ -26,6 +26,8 @@ import type { Json } from "@rodatech/db/tipos";
  * `es_gerencia()`, que a su vez es `tiene_rol('gerencia','admin')`. Se
  * comprueba aquí para dar un mensaje legible; la que manda es la de Postgres.
  */
+// Fuera de Configuración › Roles y permisos a propósito (143): el cuadre es de quien
+// manda, como es_gerencia() y registrar_ajuste_inventario() en la base.
 const ROLES = ["gerencia", "admin"] as const;
 
 const esquema = z.object({

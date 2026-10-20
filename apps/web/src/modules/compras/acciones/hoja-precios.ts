@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { anotarFallo } from "@/lib/errores";
@@ -16,13 +17,12 @@ import { analisisParaElegir, analisisParaHoja, historialDeProducto, referenciasD
  * aunque la pantalla ya lo haya hecho, y la base (110) lo vuelve a validar.
  */
 
-/** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 async function puede(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) return "Tu rol no puede pedir precios.";
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) return prohibido;
   return null;
 }
 

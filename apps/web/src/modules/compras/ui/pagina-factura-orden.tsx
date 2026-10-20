@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
 import { couriersUsados, detalleCompra, ordenesDelPedido } from "../api/consultas";
@@ -9,7 +11,6 @@ import type { PlantillaCompra } from "../dominio/constructor";
 import { modalidadDe } from "../dominio/gastos";
 import { ConstructorCompra } from "./constructor";
 
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * La factura de una orden del pedido (128): el mismo formulario de «Registrar
@@ -24,13 +25,13 @@ export default async function PaginaFacturaOrden({ params }: { params: Promise<{
   const { id } = await params;
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("compras", "editar");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes registrar compras"
-        descripcion="Tu rol no tiene permiso para el abastecimiento. Habla con Gerencia si crees que debería."
-        mostrarReintentar={false}
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes registrar compras</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

@@ -7,7 +7,7 @@ import { EstadoError, Moneda } from "@rodatech/ui";
 import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
 import { Volver } from "@/componentes/volver";
 
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { detalleRecepcion, papelesDeRecepcion } from "../api/consultas";
 import {
@@ -35,9 +35,9 @@ export default async function PaginaDetalleRecepcion({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, papeles] = await Promise.all([
+  const [resultado, permisos, papeles] = await Promise.all([
     detalleRecepcion(id),
-    perfilActual(),
+    misPermisos(),
     papelesDeRecepcion(id),
   ]);
 
@@ -53,10 +53,8 @@ export default async function PaginaDetalleRecepcion({
   if (!resultado.datos) notFound();
 
   const r = resultado.datos;
-  // Los mismos roles que `permisos_rol` tiene para `recepcion_adjuntos`.
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeAdjuntar =
-    rol !== null && ["gerencia", "admin", "almacen", "compras"].includes(rol);
+  // Colgarle papeles o corregir números es «Almacén · Editar» (143).
+  const puedeAdjuntar = permisos.tiene("almacen", "editar");
   const total = r.lineas.reduce((a, l) => a + l.importe, 0);
   const unidades = r.lineas.reduce((a, l) => a + l.cantidad, 0);
 

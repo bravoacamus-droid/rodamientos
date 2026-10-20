@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import { ErrorGre, type ResultadoCdr } from "@rodatech/sunat";
 
 import { bloqueoPorSeriePrueba, conectorSunat, modoGuias } from "@/modules/facturacion/api/configuracion";
@@ -25,8 +26,6 @@ import { faltaParaSunat, guiaParaSunat } from "../dominio/sunat";
  * contestado, queda «enviada» y se pregunta luego con su botón.
  */
 
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 export type ResultadoSunatGuia =
   | { ok: true; estado: "aceptada" | "rechazada" | "en_proceso"; mensaje: string }
   | { ok: false; error: string };
@@ -37,7 +36,8 @@ const hoyLima = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima
 async function puede(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) return "Tu rol no puede mandar guías a SUNAT.";
+  const negado = await sinPermiso("guias", "editar");
+  if (negado) return negado;
   return null;
 }
 

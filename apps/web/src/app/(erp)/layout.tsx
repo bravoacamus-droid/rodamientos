@@ -3,9 +3,11 @@ import { redirect } from "next/navigation";
 import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
+import { GuardaVer } from "@/componentes/guarda-ver";
 import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
 import { COOKIE_MENU_ESTRECHO, menuPara } from "@/lib/navegacion";
+import { misPermisos } from "@/lib/permisos";
 import { pendientesDelMenu } from "@/lib/pendientes-del-menu";
 import { emisorParaImprimir } from "@/lib/emisor";
 
@@ -46,7 +48,10 @@ export default async function LayoutErp({
     redirect("/salir?motivo=inactivo");
   }
 
-  const grupos = menuPara(perfil?.rol ?? null);
+  // El menú sale de los permisos del rol (143): lo que se marca en
+  // Configuración › Roles y permisos es lo que aparece aquí.
+  const permisos = await misPermisos();
+  const grupos = menuPara(perfil?.rol ?? null, permisos.lista);
 
   // Cuántas cosas esperan, para la pastilla del menú. Nunca lanza: si falla,
   // vuelve a ceros y el menú se pinta sin números.
@@ -93,7 +98,7 @@ export default async function LayoutErp({
             <SelectorTema />
             <MenuUsuario
               nombre={perfil?.nombre ?? "Sesión"}
-              rol={perfil?.rol ?? null}
+              rol={permisos.nombreRol}
             />
           </div>
         </header>
@@ -102,7 +107,9 @@ export default async function LayoutErp({
             el desbordamiento tiene que quedarse dentro de su contenedor. En
             papel el margen lo pone `@page`, no el padding de la pantalla. */}
         <main className="min-w-0 flex-1 p-3 sm:p-4 md:p-6 print:p-0">
-          {children}
+          <GuardaVer rol={perfil?.rol ?? null} nombreRol={permisos.nombreRol} permisos={permisos.lista}>
+            {children}
+          </GuardaVer>
         </main>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Los documentos de una compra: la proforma confirmada, en PDF (099, §AQ).
@@ -14,8 +15,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * (068): bucket privado, ruta con uuid propio, enlace de diez minutos.
  */
 
-/** La misma lista que `permisos_rol` tiene para `compra_adjuntos`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const BUCKET = "documentos-proveedor";
 const MAXIMO = 10 * 1024 * 1024;
@@ -33,8 +32,9 @@ export type ResultadoDocumento = { ok: true } | { ok: false; error: string };
 async function exigirRol(): Promise<{ id: string } | string> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede tocar los documentos de una compra.";
+  const prohibido = await sinPermiso("compras", "editar");
+  if (prohibido) {
+    return prohibido;
   }
   return { id: perfil.id };
 }

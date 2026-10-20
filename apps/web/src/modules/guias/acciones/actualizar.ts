@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Corregir un borrador de guía.
@@ -35,8 +36,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  */
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 const esquema = z.object({
   id: z.string().uuid(),
   fecha_traslado: z
@@ -86,8 +85,9 @@ const limpio = (v: string | null) => (v === null || v.trim() === "" ? null : v.t
 export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualizar> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede tocar guías." };
+  const negado = await sinPermiso("guias", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   let d: z.infer<typeof esquema>;

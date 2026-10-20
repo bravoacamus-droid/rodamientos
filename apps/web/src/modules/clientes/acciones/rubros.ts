@@ -5,6 +5,8 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { mensajeDeError } from "@/lib/errores";
+import { sinPermiso } from "@/lib/permisos";
+import type { Accion } from "@/lib/permisos-comun";
 
 /**
  * Los dos catálogos del cliente —rubros (141) y zonas (142)— con su CRUD
@@ -23,9 +25,12 @@ type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 const nombre = z.string().trim().min(2, "El nombre es demasiado corto.").max(80, "El nombre es demasiado largo.");
 const id = z.string().uuid("No es válido.");
 
-async function ejecutar<T>(rpc: string, args: Record<string, unknown>): Promise<Resultado<T>> {
+async function ejecutar<T>(rpc: string, args: Record<string, unknown>, accion: Accion): Promise<Resultado<T>> {
   const perfil = await perfilActual();
-  if (!perfil) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  if (!perfil || !perfil.activo) return { ok: false, error: "Tu sesión expiró. Vuelve a entrar." };
+  // Crear y corregir desde el formulario del cliente es editar; borrar, eliminar (144).
+  const no = await sinPermiso("clientes", accion);
+  if (no) return { ok: false, error: no };
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase.rpc(rpc as never, args as never);
@@ -46,7 +51,7 @@ function invalido(e: z.ZodError): { ok: false; error: string } {
 export async function crearRubro(texto: string): Promise<Resultado<Opcion>> {
   const n = nombre.safeParse(texto);
   if (!n.success) return invalido(n.error);
-  return ejecutar<Opcion>("crear_rubro", { p_nombre: n.data });
+  return ejecutar<Opcion>("crear_rubro", { p_nombre: n.data }, "editar");
 }
 
 export async function renombrarRubro(idRubro: string, texto: string): Promise<Resultado<Opcion>> {
@@ -54,19 +59,19 @@ export async function renombrarRubro(idRubro: string, texto: string): Promise<Re
   const n = nombre.safeParse(texto);
   if (!i.success) return invalido(i.error);
   if (!n.success) return invalido(n.error);
-  return ejecutar<Opcion>("renombrar_rubro", { p_id: i.data, p_nombre: n.data });
+  return ejecutar<Opcion>("renombrar_rubro", { p_id: i.data, p_nombre: n.data }, "editar");
 }
 
 export async function eliminarRubro(idRubro: string): Promise<Resultado<null>> {
   const i = id.safeParse(idRubro);
   if (!i.success) return invalido(i.error);
-  return ejecutar<null>("eliminar_rubro", { p_id: i.data });
+  return ejecutar<null>("eliminar_rubro", { p_id: i.data }, "eliminar");
 }
 
 export async function crearZona(texto: string): Promise<Resultado<Opcion>> {
   const n = nombre.safeParse(texto);
   if (!n.success) return invalido(n.error);
-  return ejecutar<Opcion>("crear_zona", { p_nombre: n.data });
+  return ejecutar<Opcion>("crear_zona", { p_nombre: n.data }, "editar");
 }
 
 export async function renombrarZona(idZona: string, texto: string): Promise<Resultado<Opcion>> {
@@ -74,11 +79,11 @@ export async function renombrarZona(idZona: string, texto: string): Promise<Resu
   const n = nombre.safeParse(texto);
   if (!i.success) return invalido(i.error);
   if (!n.success) return invalido(n.error);
-  return ejecutar<Opcion>("renombrar_zona", { p_id: i.data, p_nombre: n.data });
+  return ejecutar<Opcion>("renombrar_zona", { p_id: i.data, p_nombre: n.data }, "editar");
 }
 
 export async function eliminarZona(idZona: string): Promise<Resultado<null>> {
   const i = id.safeParse(idZona);
   if (!i.success) return invalido(i.error);
-  return ejecutar<null>("eliminar_zona", { p_id: i.data });
+  return ejecutar<null>("eliminar_zona", { p_id: i.data }, "eliminar");
 }

@@ -7,7 +7,9 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 import { mensajeDeError } from "@/lib/errores";
 
-import { ROLES, type Rol, type TipoDocumento } from "../dominio/tipos";
+import { sinPermiso } from "@/lib/permisos";
+
+import type { Rol, TipoDocumento } from "../dominio/tipos";
 
 /**
  * Guardar la configuración.
@@ -23,17 +25,26 @@ export type ResultadoConfig =
   | { ok: true; mensaje: string }
   | { ok: false; error: string };
 
-/** `empresa` y `series_documento` son de gerencia y administración. */
-const ROLES_CONFIG = ["gerencia", "admin"] as const;
+
+/**
+ * El rol tiene que existir en `roles` (143). Ya no es una lista fija: los
+ * crea gerencia en Configuración › Roles y permisos.
+ */
+async function rolExiste(clave: string): Promise<boolean> {
+  if (!/^[a-z][a-z0-9_]{1,40}$/.test(clave)) return false;
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("roles").select("clave").eq("clave", clave).maybeSingle();
+  return Boolean(data);
+}
 
 async function exigirGerencia(): Promise<
   { ok: true; id: string; rol: string } | { ok: false; error: string }
 > {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES_CONFIG.includes(perfil.rol as (typeof ROLES_CONFIG)[number])) {
-    return { ok: false, error: "Solo gerencia y administración cambian la configuración." };
-  }
+  // Datos de la empresa y series: «Configuración · editar» en la matriz (143).
+  const no = await sinPermiso("configuracion", "editar");
+  if (no) return { ok: false, error: no };
   return { ok: true, id: perfil.id, rol: perfil.rol };
 }
 
@@ -345,7 +356,7 @@ export async function cambiarUsuario(
   }
 
   const esquema = z.object({
-    rol: z.enum(ROLES as unknown as [Rol, ...Rol[]]).optional(),
+    rol: z.string().min(2).max(41).optional(),
     activo: z.boolean().optional(),
   });
 
@@ -353,10 +364,15 @@ export async function cambiarUsuario(
   if (!datos.success || Object.keys(datos.data).length === 0) {
     return { ok: false, error: "No había nada que cambiar." };
   }
+  if (datos.data.rol !== undefined && !(await rolExiste(datos.data.rol))) {
+    return { ok: false, error: "Ese rol no existe. Elígelo de la lista." };
+  }
 
   try {
     const supabase = await clienteServidor();
-    const { error } = await supabase.from("perfiles").update(datos.data).eq("id", id);
+    // `as never`: el rol ya se comprobó contra `roles`, y puede ser uno creado
+    // después de generar los tipos (143), que el enum de TypeScript no conoce.
+    const { error } = await supabase.from("perfiles").update(datos.data as never).eq("id", id);
     if (error) return { ok: false, error: mensajeDeError(error) };
 
     /*

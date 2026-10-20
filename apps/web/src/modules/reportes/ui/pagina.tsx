@@ -16,6 +16,8 @@ import { COLORES_FAMILIA, etiquetaAging } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
 import { ComoVoyBloque } from "./como-voy";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 import { datosVentas } from "@/modules/tablero/api/ejecutivo";
 import {
   GraficoAging,
@@ -56,6 +58,17 @@ function dinero(n: number): string {
 }
 
 export default async function PaginaReportes({ searchParams }: Props) {
+  // Hasta el 20/10 solo lo escondía el menú: la URL abría para cualquiera.
+  // Ahora es «Informe general · Ver» (143).
+  const prohibido = await sinPermiso("informe", "ver");
+  if (prohibido) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Informe general</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
+    );
+  }
   const sp = await searchParams;
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
     new Date(),

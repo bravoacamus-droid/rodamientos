@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { type Accion, sinPermiso } from "@/lib/permisos";
 
 /**
  * La lista de condiciones de la cotización (113). Luis, 12/10: *«un select
@@ -10,8 +11,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * Toda Server Action es un endpoint público: rol y datos aquí, y la base lo
  * vuelve a mirar con RLS (`puede_escribir('cotizaciones')`).
  */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 export interface Condicion {
   id: string;
   texto: string;
@@ -25,10 +24,11 @@ const texto = z
   .pipe(z.string().min(2, "Escribe la condición.").max(200, "Máximo 200 letras."));
 const id = z.string().uuid();
 
-async function permiso(): Promise<string | null> {
+async function permiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) return "Tu rol no puede tocar las condiciones.";
+  const negado = await sinPermiso("cotizaciones", accion);
+  if (negado) return negado;
   return null;
 }
 
@@ -36,7 +36,7 @@ const repetida = (mensaje: string) =>
   /duplicate|unique/i.test(mensaje) ? "Esa condición ya está en la lista." : mensaje;
 
 export async function listarCondiciones(): Promise<Resultado<Condicion[]>> {
-  const p = await permiso();
+  const p = await permiso("ver");
   if (p) return { ok: false, error: p };
   const supabase = await clienteServidor();
   const { data, error } = await supabase
@@ -49,7 +49,7 @@ export async function listarCondiciones(): Promise<Resultado<Condicion[]>> {
 }
 
 export async function crearCondicion(entrada: string): Promise<Resultado<Condicion>> {
-  const p = await permiso();
+  const p = await permiso("editar");
   if (p) return { ok: false, error: p };
   const t = texto.safeParse(entrada);
   if (!t.success) return { ok: false, error: t.error.issues[0]?.message ?? "No es válida." };
@@ -64,7 +64,7 @@ export async function crearCondicion(entrada: string): Promise<Resultado<Condici
 }
 
 export async function editarCondicion(idCondicion: string, entrada: string): Promise<Resultado<Condicion>> {
-  const p = await permiso();
+  const p = await permiso("editar");
   if (p) return { ok: false, error: p };
   const i = id.safeParse(idCondicion);
   const t = texto.safeParse(entrada);
@@ -82,7 +82,7 @@ export async function editarCondicion(idCondicion: string, entrada: string): Pro
 }
 
 export async function eliminarCondicion(idCondicion: string): Promise<Resultado<null>> {
-  const p = await permiso();
+  const p = await permiso("eliminar");
   if (p) return { ok: false, error: p };
   const i = id.safeParse(idCondicion);
   if (!i.success) return { ok: false, error: "La condición no es válida." };

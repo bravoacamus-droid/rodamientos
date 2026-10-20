@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import { clasificarRechazo, sePuedeReenviar } from "@rodatech/sunat";
 import type { Comprobante, ItemComprobante, NotaComprobante } from "@rodatech/sunat";
 import type { Json } from "@rodatech/db/tipos";
@@ -28,8 +29,6 @@ import { enMonedaDelDocumento } from "../dominio/moneda-documento";
  * certificado: se emite, se cobra, y el envío queda esperando.
  */
 
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 const esquema = z.object({ id: z.string().uuid() });
 
 export type ResultadoEnvio =
@@ -50,8 +49,9 @@ export async function enviarASunat(
 ): Promise<ResultadoEnvio> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede enviar comprobantes a SUNAT." };
+  const negado = await sinPermiso("facturacion", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   let datos: z.infer<typeof esquema>;

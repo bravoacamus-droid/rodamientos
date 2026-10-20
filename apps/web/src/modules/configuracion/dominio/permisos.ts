@@ -1,180 +1,94 @@
+import type { Accion, Modulo } from "@/lib/permisos-comun";
+
 import type { Rol } from "./tipos";
 
 /**
- * Los permisos, agrupados como se piensan y no como están guardados.
+ * Los permisos, como se piensan (143): un ROL agrupa lo que puede hacer en
+ * cada MÓDULO —ver, crear, editar, eliminar—.
  *
- * `permisos_rol` es una matriz tabla×rol: 35 tablas por 6 roles son 210
- * casillas, y los nombres son `comprobante_cuotas` o `proveedor_marcas`. Eso
- * no es una pantalla, es un volcado — y va contra la primera regla del
- * proyecto: *nada de jerga*. Nadie va a decidir si ventas escribe en
- * `guia_items`; lo que se decide es si **ventas puede despachar**.
+ * Hasta el 20/10 la pantalla enseñaba áreas con un solo «Sí / No / A medias»
+ * por rol, y debajo había una matriz tabla×rol. El QA lo vio: el «A medias»
+ * no volvía nunca después del primer clic, y quitar un área no cambiaba los
+ * botones porque la aplicación tenía su propia lista de roles a mano. Luis:
+ * *«los roles y permisos es diferente… se agrupa qué pueden hacer: leer,
+ * editar, el CRUD de los módulos»*.
  *
- * Así que la pantalla enseña ÁREAS, ocho, con los nombres del menú. Marcar un
- * área escribe todas sus tablas de golpe, que es justo lo que se quería decir.
- *
- * ---------------------------------------------------------------------------
- * Lo que NO está aquí, y es a propósito
- * ---------------------------------------------------------------------------
- * `permisos_rol` no controla:
- *
- *   · **Quién cambia un rol** — eso es el trigger de la 077, gerencia y punto.
- *   · **El ajuste de inventario** — su política es `es_gerencia()` directa
- *     (006), no pasa por la matriz.
- *   · **La propia matriz** — misma política. Por eso no hay forma de quitarse
- *     el acceso a esta pantalla desde esta pantalla, que sería la peor manera
- *     posible de quedarse fuera.
- *
- * Si algún día una tabla entra en la matriz y nadie la mete en un área, la
- * pantalla la enseña igual en «Otros permisos» con su nombre técnico. Es feo a
- * propósito: un permiso que no se ve es un permiso que nadie revisa, y en este
- * proyecto eso ya ha pasado treinta veces.
+ * Lo que NO está aquí, a propósito:
+ *   · Usuarios y esta misma pantalla: solo gerencia, siempre. Dejarlo en la
+ *     matriz sería ofrecer un botón para quedarse fuera.
+ *   · El ajuste de inventario: `es_gerencia()` en la base (gerencia y
+ *     administración), como lo pidió Willy, «un botón que se usa con cuidado».
  */
-export type Area = {
-  clave: string;
-  etiqueta: string;
-  /** Qué significa en la práctica marcar esta casilla. */
+export interface ModuloDef {
+  clave: Modulo;
+  nombre: string;
   ayuda: string;
-  tablas: readonly string[];
-};
+  /** Las acciones que tienen sentido: Reportes solo se ve. */
+  acciones: Accion[];
+}
 
-export const AREAS: readonly Area[] = [
-  {
-    clave: "ventas",
-    etiqueta: "Ventas y documentos",
-    ayuda: "Hacer cotizaciones, guías de remisión y facturas.",
-    tablas: [
-      "cotizaciones",
-      "cotizacion_items",
-      "guias_remision",
-      "guia_items",
-      "comprobantes",
-      "comprobante_items",
-      "comprobante_cuotas",
-      // Los textos con los que se manda una cotización por WhatsApp. Van aquí
-      // y no en «Avisos»: quien los escribe es quien vende.
-      "plantillas_mensaje",
-    ],
-  },
-  {
-    clave: "clientes",
-    etiqueta: "Clientes y cobranza",
-    ayuda: "Dar de alta clientes, anotar pagos y gestiones de cobro.",
-    tablas: ["clientes", "cliente_contactos", "pagos", "gestiones_cobranza"],
-  },
-  {
-    clave: "transporte",
-    etiqueta: "Transporte",
-    ayuda: "Agencias, conductores y vehículos que salen en la guía de remisión.",
-    tablas: ["agencias_transporte", "conductores", "vehiculos"],
-  },
-  {
-    clave: "catalogo",
-    etiqueta: "Catálogo de productos",
-    ayuda: "Crear y editar productos, marcas, familias y equivalencias. Aquí viven los precios de venta.",
-    tablas: [
-      "productos",
-      "marcas",
-      "familias",
-      "subfamilias",
-      "tipos",
-      "producto_equivalencias",
-      "unidades_medida",
-    ],
-  },
-  {
-    clave: "almacen",
-    etiqueta: "Almacén y stock",
-    ayuda: "Recibir mercadería y mover existencias.",
-    tablas: [
-      "stock",
-      "movimientos_inventario",
-      "recepciones",
-      "recepcion_items",
-      // Los papeles que manda el proveedor con la mercadería (migración 050).
-      "recepcion_adjuntos",
-    ],
-  },
-  {
-    clave: "compras",
-    etiqueta: "Compras y proveedores",
-    ayuda: "Proveedores, órdenes de compra y gastos de importación. Aquí se ven los costos.",
-    tablas: [
-      "proveedores",
-      "proveedor_marcas",
-      "compras",
-      "compra_items",
-      "gastos_importacion",
-      // Quién vende qué y a qué precio. Se llena sola con cada ronda (046).
-      "proveedor_productos",
-    ],
-  },
-  {
-    clave: "consultas",
-    etiqueta: "Traer datos por RUC o DNI",
-    ayuda: "Usar el botón que busca la razón social en SUNAT y RENIEC.",
-    tablas: ["consultas_cache", "consultas_cuota", "consultas_log"],
-  },
-  {
-    clave: "configuracion",
-    etiqueta: "Datos de la empresa y series",
-    ayuda: "Cambiar los datos fiscales y la numeración de los documentos.",
-    tablas: [
-      "empresa",
-      "series_documento",
-      "motivos_traslado",
-      "motivos_nota",
-      // Las cuentas que se imprimen en la cotización (064).
-      "cuentas_bancarias",
-    ],
-  },
-  {
-    clave: "avisos",
-    etiqueta: "Avisos y bitácora",
-    ayuda: "Marcar avisos como vistos y dejar rastro de lo que se hace.",
-    tablas: ["alertas", "actividad", "fallos"],
-  },
-];
+/** Una fila de `permisos`: este rol puede esto en este módulo. */
+export interface Permiso {
+  rol: Rol;
+  modulo: Modulo;
+  accion: Accion;
+}
 
-/** Una fila de la matriz tal como está guardada. */
-export type PermisoGuardado = { tabla: string; rol: Rol; escribir: boolean };
+const clave = (p: Permiso) => `${p.rol}|${p.modulo}|${p.accion}`;
 
-/** Cómo se ve un área para un rol: todo, nada, o a medias. */
-export type EstadoArea = "todo" | "nada" | "mezcla";
-
-/**
- * En qué estado está un área para un rol.
- *
- * «Mezcla» existe porque la matriz se sembró tabla a tabla (007) y nada obliga
- * a que un área esté entera. Enseñarlo como un simple sí/no mentiría, y al
- * primer clic se llevaría por delante permisos que alguien puso a mano.
- */
-export function estadoDelArea(
-  area: Area,
+/** ¿Lo tiene? Gerencia lo tiene todo, sin filas. */
+export function tiene(
+  permisos: readonly Permiso[],
   rol: Rol,
-  guardados: readonly PermisoGuardado[],
-): EstadoArea {
-  const puestos = new Set(
-    guardados.filter((p) => p.rol === rol && p.escribir).map((p) => p.tabla),
-  );
-  const conPermiso = area.tablas.filter((t) => puestos.has(t)).length;
-
-  if (conPermiso === 0) return "nada";
-  if (conPermiso === area.tablas.length) return "todo";
-  return "mezcla";
+  modulo: Modulo,
+  accion: Accion,
+): boolean {
+  if (rol === "gerencia") return true;
+  return permisos.some((p) => p.rol === rol && p.modulo === modulo && p.accion === accion);
 }
 
 /**
- * Las tablas que están en la matriz y en ningún área.
+ * Cómo queda la lista después de un clic. Es la misma regla que aplica
+ * `cambiar_permiso` en la base, repetida aquí para que la casilla cambie al
+ * instante y no tras la ida y vuelta:
  *
- * No devuelve nunca nada hoy. Lo devolverá el día que alguien añada una tabla
- * a `permisos_rol` y se olvide de esta pantalla — y entonces saldrá en la
- * pantalla en vez de quedarse invisible, que es el fallo que este proyecto
- * comete una y otra vez.
+ *   · dar crear/editar/eliminar da también VER: no se crea lo que no se ve;
+ *   · quitar VER quita el módulo entero, por lo mismo.
  */
-export function tablasSinArea(guardados: readonly PermisoGuardado[]): string[] {
-  const clasificadas = new Set(AREAS.flatMap((a) => a.tablas));
-  const sueltas = new Set(
-    guardados.map((p) => p.tabla).filter((t) => !clasificadas.has(t)),
-  );
-  return [...sueltas].sort();
+export function aplicarCambio(
+  permisos: readonly Permiso[],
+  cambio: Permiso & { puede: boolean },
+): Permiso[] {
+  const { rol, modulo, accion, puede } = cambio;
+  if (puede) {
+    const nuevos: Permiso[] = [{ rol, modulo, accion }];
+    if (accion !== "ver") nuevos.push({ rol, modulo, accion: "ver" });
+    const vistas = new Set(permisos.map(clave));
+    return [...permisos, ...nuevos.filter((n) => !vistas.has(clave(n)))];
+  }
+  if (accion === "ver") {
+    return permisos.filter((p) => !(p.rol === rol && p.modulo === modulo));
+  }
+  return permisos.filter((p) => clave(p) !== clave({ rol, modulo, accion }));
+}
+
+/**
+ * Lo que puede un rol, dicho en una línea para la lista de roles: «Ve 9
+ * módulos · cambia 5». Sirve para distinguir de un vistazo un rol que solo
+ * mira de uno que trabaja.
+ */
+export function resumenDelRol(
+  permisos: readonly Permiso[],
+  modulos: readonly ModuloDef[],
+  rol: Rol,
+): { ve: number; cambia: number } {
+  let ve = 0;
+  let cambia = 0;
+  for (const m of modulos) {
+    if (tiene(permisos, rol, m.clave, "ver")) ve++;
+    if ((["crear", "editar", "eliminar"] as const).some((a) => m.acciones.includes(a) && tiene(permisos, rol, m.clave, a))) {
+      cambia++;
+    }
+  }
+  return { ve, cambia };
 }

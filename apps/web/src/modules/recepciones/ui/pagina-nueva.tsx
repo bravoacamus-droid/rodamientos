@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
 import { comprasPendientes } from "../api/consultas";
 import { ConstructorRecepcion } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `recepciones`. */
-const ROLES = ["gerencia", "admin", "almacen", "compras"];
 
 /**
  * Pantalla de alta de una recepción.
@@ -29,12 +30,13 @@ export default async function PaginaNuevaRecepcion({
 
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("almacen", "crear");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes recepcionar mercadería"
-        descripcion="Tu rol no tiene permiso para registrar entradas al almacén. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes recepcionar mercadería</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

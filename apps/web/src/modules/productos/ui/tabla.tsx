@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { listarProductos } from "../api/consultas";
 import {
@@ -27,9 +27,9 @@ import { abreviaturaUnidad } from "@rodatech/config";
  * recortada.
  */
 export async function TablaProductos({ filtros }: { filtros: FiltrosProductos }) {
-  const [resultado, perfil] = await Promise.all([
+  const [resultado, deLaMatriz] = await Promise.all([
     listarProductos(filtros),
-    perfilActual(),
+    misPermisos(),
   ]);
 
   if (!resultado.ok) {
@@ -60,9 +60,12 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
     );
   }
 
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
-  const puedeAjustarStock = rol !== null && ["gerencia", "admin", "almacen"].includes(rol);
+  // Configuración › Roles y permisos (143).
+  const puedeEditar = deLaMatriz.tiene("productos", "editar");
+  // El cuadre de stock no pasa por la matriz: es de Gerencia y Administración,
+  // como `ajustarStock` y `registrar_ajuste_inventario` en la base. Antes
+  // aquí entraba también Almacén, y la acción le rebotaba al guardar.
+  const puedeAjustarStock = deLaMatriz.rol === "gerencia" || deLaMatriz.rol === "admin";
 
   const permisos = { puedeEditar, puedeAjustarStock };
 

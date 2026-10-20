@@ -1,5 +1,5 @@
 import { EstadoError } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import {
   agenciasDelMaestro,
@@ -120,11 +120,9 @@ function juntar(...partes: (string | null | undefined)[]): string {
 */
 
 export default async function PaginaTransporte() {
-  const perfil = await perfilActual();
-  const rol = perfil?.activo ? perfil.rol : null;
-  // Los mismos de la 029 y la 060: quien despacha, mantiene.
-  const puedeEditar =
-    rol === "gerencia" || rol === "admin" || rol === "ventas" || rol === "almacen";
+  // Dar de alta y corregir; cada acción vuelve a preguntar la suya (143).
+  const permisos = await misPermisos();
+  const puedeEditar = permisos.tiene("transporte", "crear") || permisos.tiene("transporte", "editar");
 
   const [agencias, vehiculos, conductores] = await Promise.all([
     agenciasDelMaestro(),

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Enseñarle al sistema qué vende un proveedor.
@@ -17,8 +18,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * rol, porque una Server Action es un endpoint público.
  */
 
-/** La misma lista que `permisos_rol` tiene para `proveedor_productos`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export type ResultadoCatalogo =
   | { ok: true; anotados: number }
@@ -37,8 +36,9 @@ const esquemaAnotar = z.object({
 async function autorizado(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede editar el catálogo de un proveedor.";
+  const prohibido = await sinPermiso("proveedores", "editar");
+  if (prohibido) {
+    return prohibido;
   }
   return null;
 }

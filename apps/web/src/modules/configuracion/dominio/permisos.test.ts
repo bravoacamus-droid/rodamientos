@@ -1,105 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  AREAS,
-  estadoDelArea,
-  tablasSinArea,
-  type PermisoGuardado,
-} from "./permisos";
-import type { Rol } from "./tipos";
+import { aplicarCambio, resumenDelRol, tiene, type ModuloDef, type Permiso } from "./permisos";
 
-function fila(tabla: string, rol: Rol, escribir = true): PermisoGuardado {
-  return { tabla, rol, escribir };
-}
+const p = (rol: string, modulo: Permiso["modulo"], accion: Permiso["accion"]): Permiso => ({ rol, modulo, accion });
 
-describe("AREAS", () => {
-  it("no repite una tabla en dos áreas", () => {
-    const vistas = new Map<string, string>();
-    for (const area of AREAS) {
-      for (const t of area.tablas) {
-        expect(vistas.has(t), `${t} está en ${vistas.get(t)} y en ${area.clave}`).toBe(
-          false,
-        );
-        vistas.set(t, area.clave);
-      }
-    }
+const MODULOS: ModuloDef[] = [
+  { clave: "clientes", nombre: "Clientes", ayuda: "", acciones: ["ver", "crear", "editar", "eliminar"] },
+  { clave: "reportes", nombre: "Reportes", ayuda: "", acciones: ["ver"] },
+];
+
+describe("tiene", () => {
+  it("gerencia lo tiene todo aunque no tenga filas", () => {
+    expect(tiene([], "gerencia", "clientes", "eliminar")).toBe(true);
   });
 
-  it("no repite una clave de área", () => {
-    const claves = AREAS.map((a) => a.clave);
-    expect(new Set(claves).size).toBe(claves.length);
-  });
-
-  /*
-    La primera regla del proyecto: nada de jerga. Si un día alguien añade un
-    área llamada «comprobante_cuotas», esto se cae.
-  */
-  it("ninguna etiqueta es un nombre de tabla", () => {
-    for (const area of AREAS) {
-      expect(area.etiqueta).not.toMatch(/_/);
-      expect(area.etiqueta[0]).toBe(area.etiqueta[0]?.toUpperCase());
-    }
-  });
-
-  it("toda área explica qué pasa al marcarla", () => {
-    for (const area of AREAS) {
-      expect(area.ayuda.length, area.clave).toBeGreaterThan(20);
-      expect(area.tablas.length, area.clave).toBeGreaterThan(0);
-    }
+  it("los demás, solo lo que tienen", () => {
+    const lista = [p("ventas", "clientes", "ver")];
+    expect(tiene(lista, "ventas", "clientes", "ver")).toBe(true);
+    expect(tiene(lista, "ventas", "clientes", "crear")).toBe(false);
+    expect(tiene(lista, "almacen", "clientes", "ver")).toBe(false);
   });
 });
 
-describe("estadoDelArea", () => {
-  const ventas = AREAS.find((a) => a.clave === "ventas")!;
-
-  it("sin ninguna fila, el área está en nada", () => {
-    expect(estadoDelArea(ventas, "almacen", [])).toBe("nada");
+describe("aplicarCambio: la misma regla que cambiar_permiso (143)", () => {
+  it("dar crear da también ver: no se crea lo que no se ve", () => {
+    const r = aplicarCambio([], { ...p("ventas", "clientes", "crear"), puede: true });
+    expect(r).toEqual(expect.arrayContaining([p("ventas", "clientes", "crear"), p("ventas", "clientes", "ver")]));
+    expect(r).toHaveLength(2);
   });
 
-  it("con todas las tablas, está en todo", () => {
-    const guardados = ventas.tablas.map((t) => fila(t, "ventas"));
-    expect(estadoDelArea(ventas, "ventas", guardados)).toBe("todo");
+  it("no duplica lo que ya estaba", () => {
+    const r = aplicarCambio([p("ventas", "clientes", "ver")], { ...p("ventas", "clientes", "editar"), puede: true });
+    expect(r).toHaveLength(2);
   });
 
-  /*
-    El caso que obliga a que exista el tercer estado: la matriz se sembró
-    tabla a tabla y nada garantiza que un área esté entera. Si esto devolviera
-    «nada», el primer clic borraría permisos que alguien puso a propósito.
-  */
-  it("con algunas, está en mezcla", () => {
-    const guardados = [fila(ventas.tablas[0]!, "ventas")];
-    expect(estadoDelArea(ventas, "ventas", guardados)).toBe("mezcla");
-  });
-
-  it("una fila con escribir en false no cuenta", () => {
-    const guardados = ventas.tablas.map((t) => fila(t, "ventas", false));
-    expect(estadoDelArea(ventas, "ventas", guardados)).toBe("nada");
-  });
-
-  it("no se confunde de rol", () => {
-    const guardados = ventas.tablas.map((t) => fila(t, "compras"));
-    expect(estadoDelArea(ventas, "ventas", guardados)).toBe("nada");
-    expect(estadoDelArea(ventas, "compras", guardados)).toBe("todo");
-  });
-});
-
-describe("tablasSinArea", () => {
-  it("hoy no hay ninguna suelta", () => {
-    const todas = AREAS.flatMap((a) => a.tablas.map((t) => fila(t, "gerencia")));
-    expect(tablasSinArea(todas)).toEqual([]);
-  });
-
-  /*
-    El día que alguien meta una tabla en la matriz y se olvide de esta
-    pantalla, tiene que SALIR en la pantalla. Un permiso invisible es un
-    permiso que nadie revisa.
-  */
-  it("saca la que nadie clasificó, sin repetirla", () => {
-    const guardados = [
-      fila("tabla_nueva", "ventas"),
-      fila("tabla_nueva", "compras"),
-      fila("clientes", "ventas"),
+  it("quitar ver quita el módulo entero, y solo de ese rol", () => {
+    const antes = [
+      p("ventas", "clientes", "ver"),
+      p("ventas", "clientes", "crear"),
+      p("ventas", "reportes", "ver"),
+      p("almacen", "clientes", "ver"),
     ];
-    expect(tablasSinArea(guardados)).toEqual(["tabla_nueva"]);
+    const r = aplicarCambio(antes, { ...p("ventas", "clientes", "ver"), puede: false });
+    expect(r).toEqual([p("ventas", "reportes", "ver"), p("almacen", "clientes", "ver")]);
+  });
+
+  it("quitar crear deja ver", () => {
+    const r = aplicarCambio(
+      [p("ventas", "clientes", "ver"), p("ventas", "clientes", "crear")],
+      { ...p("ventas", "clientes", "crear"), puede: false },
+    );
+    expect(r).toEqual([p("ventas", "clientes", "ver")]);
+  });
+});
+
+describe("resumenDelRol", () => {
+  it("cuenta los módulos que ve y en los que cambia algo", () => {
+    const lista = [p("ventas", "clientes", "ver"), p("ventas", "clientes", "editar"), p("ventas", "reportes", "ver")];
+    expect(resumenDelRol(lista, MODULOS, "ventas")).toEqual({ ve: 2, cambia: 1 });
+    expect(resumenDelRol(lista, MODULOS, "gerencia")).toEqual({ ve: 2, cambia: 1 });
   });
 });

@@ -4,12 +4,12 @@ import * as React from "react";
 import { clave } from "@/lib/borrador";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Input, SelectNativo, toast } from "@rodatech/ui";
-import { Check, Copy, UserPlus, X } from "lucide-react";
+import { Check, Copy, UserPlus } from "lucide-react";
 
 import { useBorrador } from "@/componentes/borrador";
 
 import { crearUsuario } from "../acciones/usuarios";
-import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol } from "../dominio/tipos";
+import type { Rol, RolDef } from "../dominio/tipos";
 
 /**
  * Dar de alta a un empleado.
@@ -23,7 +23,7 @@ import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol } from "../dominio/tipos";
  * terminar. Es deliberado —Luis, 24/09: «se crea una automáticamente»—, y
  * evita el vicio de siempre, que es poner a todos la misma.
  */
-export function AltaUsuario({ hayClave }: { hayClave: boolean }) {
+export function AltaUsuario({ hayClave, roles }: { hayClave: boolean; roles: RolDef[] }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
   /*
@@ -75,6 +75,7 @@ export function AltaUsuario({ hayClave }: { hayClave: boolean }) {
 
   return (
     <Formulario
+      roles={roles}
       onCancelar={() => setAbierto(false)}
       onCreada={(d) => {
         setAbierto(false);
@@ -86,9 +87,11 @@ export function AltaUsuario({ hayClave }: { hayClave: boolean }) {
 }
 
 function Formulario({
+  roles,
   onCancelar,
   onCreada,
 }: {
+  roles: RolDef[];
   onCancelar: () => void;
   onCreada: (d: { nombre: string; email: string; contrasena: string }) => void;
 }) {
@@ -194,15 +197,18 @@ function Formulario({
           ve. La ayuda cambia con la selección para no tener que saberse la
           tabla de memoria. */}
       <div className="mt-3">
-        <Campo id="alta-rol" label="Qué va a poder hacer" requerido ayuda={AYUDA_ROL[rol]}>
+        <Campo id="alta-rol" label="Qué va a poder hacer" requerido ayuda={
+            (roles.find((r) => r.clave === rol)?.descripcion ?? "") +
+            " Lo que puede cada rol se ve y se cambia en Roles y permisos."
+          }>
           <SelectNativo
             id="alta-rol"
             value={rol}
             onChange={(e) => setRol(e.target.value as Rol)}
           >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {ETIQUETA_ROL[r]}
+            {roles.map((r) => (
+              <option key={r.clave} value={r.clave}>
+                {r.nombre}
               </option>
             ))}
           </SelectNativo>
@@ -300,8 +306,8 @@ function ContrasenaReciencreada({
           {copiada ? "Copiada" : "Copiar contraseña"}
         </Button>
         <Button variant="outline" onClick={onCerrar} className="gap-2">
-          <X className="size-4" aria-hidden />
-          Ya la apunté, cerrar
+          {/* QA 20/10: «Ya la apunté, cerrar» sobraba; cerrar es lo que hace. */}
+          Ya la apunté
         </Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { listarProveedores } from "../api/consultas";
 import { ETIQUETA_TIPO, type FiltrosProveedores } from "../dominio/tipos";
@@ -17,9 +17,9 @@ import { AccionesFila } from "./acciones-fila";
  * con lo mismo apilado, igual que en el resto del ERP.
  */
 export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedores }) {
-  const [resultado, perfil] = await Promise.all([
+  const [resultado, permisos] = await Promise.all([
     listarProveedores(filtros),
-    perfilActual(),
+    misPermisos(),
   ]);
 
   if (!resultado.ok) {
@@ -48,8 +48,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
     );
   }
 
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
+  const puedeEditar = permisos.tiene("proveedores", "editar");
 
   return (
     <>

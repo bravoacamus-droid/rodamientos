@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { marcasDisponibles } from "../api/consultas";
 import type { FiltrosProveedores } from "../dominio/tipos";
@@ -39,13 +41,11 @@ export default async function PaginaProveedores({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [marcas, perfil] = await Promise.all([marcasDisponibles(), perfilActual()]);
+  const [marcas, permisos] = await Promise.all([marcasDisponibles(), misPermisos()]);
 
   // Que el botón aparezca y luego rebote es peor que no verlo.
-  const puedeCrear =
-    perfil !== null &&
-    perfil.activo &&
-    ["gerencia", "admin", "compras"].includes(perfil.rol);
+  // Configuración › Roles y permisos (143).
+  const puedeCrear = permisos.tiene("proveedores", "crear");
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,7 +65,11 @@ export default async function PaginaProveedores({ searchParams }: Props) {
             <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
             Nuevo proveedor
           </Link>
-        ) : null}
+        ) : (
+          <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            Nuevo proveedor
+          </BotonBloqueado>
+        )}
       </div>
 
       <section className="card @container pt-4">

@@ -681,7 +681,9 @@ export function FormularioCliente({
               label={tipoDocumento === "DNI" ? "Dirección (opcional)" : "Dirección fiscal"}
               ayuda={
                 tipoDocumento === "DNI"
-                  ? "Con DNI no hace falta. Si la pones, sale en la guía de remisión."
+                  ? // RENIEC (Decolecta) solo devuelve el nombre: ni dirección ni
+                    // distrito. El QA lo echó en falta el 20/10; no hay de dónde traerlo.
+                    "RENIEC solo da el nombre: la dirección y el distrito se escriben a mano. Con DNI no hacen falta; si los pones, salen en la guía."
                   : "La que sale en la factura y en la guía de remisión."
               }
             >

@@ -3183,6 +3183,33 @@ export type Database = {
         }
         Relationships: []
       }
+      modulos: {
+        Row: {
+          acciones: string[]
+          ayuda: string
+          clave: string
+          nombre: string
+          orden: number
+          tablas: string[]
+        }
+        Insert: {
+          acciones: string[]
+          ayuda: string
+          clave: string
+          nombre: string
+          orden: number
+          tablas?: string[]
+        }
+        Update: {
+          acciones?: string[]
+          ayuda?: string
+          clave?: string
+          nombre?: string
+          orden?: number
+          tablas?: string[]
+        }
+        Relationships: []
+      }
       motivos_nota: {
         Row: {
           activo: boolean
@@ -3564,26 +3591,38 @@ export type Database = {
         }
         Relationships: []
       }
-      permisos_rol: {
+      permisos: {
         Row: {
-          escribir: boolean
-          nota: string | null
-          rol: Database["public"]["Enums"]["rol_usuario"]
-          tabla: string
+          accion: string
+          modulo: string
+          rol: string
         }
         Insert: {
-          escribir?: boolean
-          nota?: string | null
-          rol: Database["public"]["Enums"]["rol_usuario"]
-          tabla: string
+          accion: string
+          modulo: string
+          rol: string
         }
         Update: {
-          escribir?: boolean
-          nota?: string | null
-          rol?: Database["public"]["Enums"]["rol_usuario"]
-          tabla?: string
+          accion?: string
+          modulo?: string
+          rol?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "permisos_modulo_fkey"
+            columns: ["modulo"]
+            isOneToOne: false
+            referencedRelation: "modulos"
+            referencedColumns: ["clave"]
+          },
+          {
+            foreignKeyName: "permisos_rol_fkey"
+            columns: ["rol"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["clave"]
+          },
+        ]
       }
       producto_equivalencias: {
         Row: {
@@ -4209,6 +4248,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      roles: {
+        Row: {
+          clave: string
+          creado_en: string
+          descripcion: string | null
+          nombre: string
+          nombre_norm: string | null
+          sistema: boolean
+        }
+        Insert: {
+          clave: string
+          creado_en?: string
+          descripcion?: string | null
+          nombre: string
+          nombre_norm?: string | null
+          sistema?: boolean
+        }
+        Update: {
+          clave?: string
+          creado_en?: string
+          descripcion?: string | null
+          nombre?: string
+          nombre_norm?: string | null
+          sistema?: boolean
+        }
+        Relationships: []
       }
       rubros: {
         Row: {
@@ -5373,10 +5439,13 @@ export type Database = {
       }
     }
     Functions: {
+      _clave_de_rol: { Args: { p_nombre: string }; Returns: string }
       _nombre_de_catalogo: {
         Args: { p: string; p_que: string }
         Returns: string
       }
+      _solo_gerencia: { Args: never; Returns: undefined }
+      _tabla_de_todos: { Args: { p_tabla: string }; Returns: boolean }
       _tres_letras: { Args: { n: number }; Returns: string }
       a_dolares: {
         Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
@@ -5504,6 +5573,15 @@ export type Database = {
           relevancia: number
         }[]
       }
+      cambiar_permiso: {
+        Args: {
+          p_accion: string
+          p_modulo: string
+          p_puede: boolean
+          p_rol: string
+        }
+        Returns: Json
+      }
       clientes_de_producto: {
         Args: { p_desde: string; p_hasta: string; p_producto: string }
         Returns: {
@@ -5603,6 +5681,10 @@ export type Database = {
         Args: { p_cot: string; p_fecha?: string; p_items: Json }
         Returns: string
       }
+      crear_rol: {
+        Args: { p_copiar_de?: string; p_descripcion?: string; p_nombre: string }
+        Returns: Json
+      }
       crear_rubro: { Args: { p_nombre: string }; Returns: Json }
       crear_subfamilia: {
         Args: { p_familia: string; p_nombre: string }
@@ -5674,6 +5756,7 @@ export type Database = {
         Returns: number
       }
       eliminar_pedido: { Args: { p_id: string }; Returns: Json }
+      eliminar_rol: { Args: { p_clave: string }; Returns: undefined }
       eliminar_rubro: { Args: { p_id: string }; Returns: undefined }
       eliminar_zona: { Args: { p_id: string }; Returns: undefined }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
@@ -5747,6 +5830,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["rol_usuario"]
       }
+      mis_permisos: { Args: never; Returns: Json }
       normalizar_codigo: { Args: { p_codigo: string }; Returns: string }
       normalizar_texto: { Args: { p_texto: string }; Returns: string }
       numero_a_letras: {
@@ -5860,6 +5944,7 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      puede: { Args: { p_accion: string; p_modulo: string }; Returns: boolean }
       puede_escribir: { Args: { p_tabla: string }; Returns: boolean }
       recalcular_precios_promedio: {
         Args: { p_meses?: number; p_productos?: Json }
@@ -5900,6 +5985,10 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      renombrar_rol: {
+        Args: { p_clave: string; p_descripcion: string; p_nombre: string }
+        Returns: Json
+      }
       renombrar_rubro: {
         Args: { p_id: string; p_nombre: string }
         Returns: Json

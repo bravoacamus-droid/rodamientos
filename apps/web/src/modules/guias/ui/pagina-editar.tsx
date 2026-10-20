@@ -1,6 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { Volver } from "@/componentes/volver";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { transportePropioActivo } from "@/modules/transporte";
 
@@ -9,8 +13,6 @@ import { estadoParaEditar } from "../dominio/constructor";
 import { ConstructorGuia } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"];
-
 /**
  * Editar un borrador de guía.
  *
@@ -44,12 +46,13 @@ export default async function PaginaEditarGuia({
   ]);
 
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const permisos = await misPermisos();
+  if (!permisos.tiene("guias", "editar")) {
     return (
-      <EstadoError
-        titulo="No puedes editar guías"
-        descripcion="Tu rol no tiene permiso para despachar mercadería. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <Volver href={`/guias/${id}`}>Volver a la guía</Volver>
+        <AvisoSinPermiso mensaje={avisoSinPermiso("guias", "editar", permisos.nombreRol)} />
+      </div>
     );
   }
 

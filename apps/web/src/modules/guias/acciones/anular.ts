@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Anula una guía y **devuelve al almacén lo que sacó**.
@@ -17,8 +18,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  */
 
 /** Solo gerencia y admin, que es lo que exige `es_gerencia()`. */
-const ROLES = ["gerencia", "admin"] as const;
-
 const esquema = z.object({
   id: z.string().uuid(),
   motivo: z
@@ -38,8 +37,9 @@ export async function anularGuia(
 ): Promise<ResultadoAnulacionGuia> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Solo Gerencia puede anular una guía." };
+  const negado = await sinPermiso("guias", "eliminar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   let datos: z.infer<typeof esquema>;

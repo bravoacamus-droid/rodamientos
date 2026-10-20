@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { CandadoEdicion } from "@/componentes/candado-edicion";
 
@@ -16,26 +18,26 @@ import { Volver } from "@/componentes/volver";
  * habría duplicado el formulario, que es donde está toda la lógica.
  */
 
-const ROLES = ["gerencia", "admin", "compras"];
-
 export default async function PaginaFormularioProducto({
   params,
 }: {
   params?: Promise<{ id: string }>;
 }) {
   const perfil = await perfilActual();
-  if (!perfil || !perfil.activo || !ROLES.includes(perfil.rol)) {
+  if (!perfil || !perfil.activo) redirect("/login");
+  // Antes de enseñar el formulario, no al guardar (QA, 20/10).
+  const idPedido = params ? (await params).id : null;
+  const prohibido = await sinPermiso("productos", idPedido ? "editar" : "crear");
+  if (prohibido) {
     return (
-      <div className="p-6">
-        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          Tu usuario no puede crear ni cambiar productos. Lo mantienen Compras o
-          Gerencia.
-        </div>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">{idPedido ? "Editar producto" : "Nuevo producto"}</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
       </div>
     );
   }
 
-  const id = params ? (await params).id : null;
+  const id = idPedido;
   // Un kit no se edita con el formulario de producto (Luis, 25/09).
   if (id && (await esKit(id))) redirect(`/productos/kits/${id}`);
 

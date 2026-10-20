@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Ponerle el teléfono a un proveedor sin salir de donde estás.
@@ -29,8 +30,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * del proveedor y regresaba a compra y se borró todo lo que llevé»*.
  */
 
-/** La misma lista que `permisos_rol` tiene para `proveedores`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const esquema = z.object({
   id: z.string().uuid(),
@@ -50,8 +49,9 @@ export async function ponerContactoProveedor(
 ): Promise<ResultadoContactoProveedor> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede editar proveedores." };
+  const prohibido = await sinPermiso("proveedores", "editar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   let datos: z.infer<typeof esquema>;

@@ -2,13 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio, Moneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 import { PackageCheck } from "lucide-react";
 
 import { bandejaPorComprar, ofertasDeLosProductos } from "../../api/por-comprar";
 import { TablaPorComprar } from "./tabla";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * La bandeja «Por comprar».
@@ -29,12 +30,13 @@ const ROLES = ["gerencia", "admin", "compras"];
 export default async function PaginaPorComprar() {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes ver el abastecimiento"
-        descripcion="Tu rol no tiene permiso para las compras. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes ver el abastecimiento</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

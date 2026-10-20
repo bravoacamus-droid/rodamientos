@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { type Accion, sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
@@ -12,7 +13,6 @@ import { consultarTipoCambio } from "@/lib/tipo-cambio";
  * o clonarla para volver a cotizar.
  */
 
-const ROLES = ["gerencia", "admin", "ventas"] as const;
 const uuid = z.string().uuid();
 
 export type ResultadoGestion =
@@ -20,11 +20,12 @@ export type ResultadoGestion =
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
   | { ok: false; error: string; pideTipoCambio?: boolean };
 
-async function exigirPermiso(): Promise<string | null> {
+async function exigirPermiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede gestionar cotizaciones.";
+  const negado = await sinPermiso("cotizaciones", accion);
+  if (negado) {
+    return negado;
   }
   return null;
 }
@@ -60,7 +61,7 @@ export async function aprobar(
   /** Solo si SUNAT no contestó y la cotización es en soles. */
   tipoCambioManual?: number,
 ): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("editar");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
 
@@ -141,7 +142,7 @@ export async function cambiarEstado(
   id: string,
   estado: (typeof DESTINOS)[number],
 ): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("editar");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
   if (!DESTINOS.includes(estado)) return { ok: false, error: "Estado no permitido." };
@@ -172,7 +173,7 @@ export async function cambiarEstado(
  * La nueva nace en borrador, así que todavía se puede revisar antes de mandarla.
  */
 export async function clonar(id: string): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("crear");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
 
@@ -282,7 +283,7 @@ export async function corregirConfirmado(
   id: string,
   lineas: { item_id: string; cantidad: number }[],
 ): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("editar");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
 
@@ -314,8 +315,8 @@ export async function corregirConfirmado(
  * aprobar o desde la ficha, cuando llegue.
  */
 export async function ponerOrdenCliente(id: string, oc: string): Promise<ResultadoGestion> {
-  const sinPermiso = await exigirPermiso();
-  if (sinPermiso) return { ok: false, error: sinPermiso };
+  const problemaPermiso = await exigirPermiso("editar");
+  if (problemaPermiso) return { ok: false, error: problemaPermiso };
   if (!uuid.safeParse(id).success) return { ok: false, error: "La cotización no es válida." };
   if (typeof oc !== "string" || oc.trim().length > 60) {
     return { ok: false, error: "La orden de compra no puede pasar de 60 caracteres." };
@@ -337,7 +338,7 @@ export async function ponerOrdenCliente(id: string, oc: string): Promise<Resulta
  * antes de aprobar: al aprobar se congela el tipo de cambio.
  */
 export async function ponerMoneda(id: string, moneda: "USD" | "PEN"): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("editar");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
   if (moneda !== "USD" && moneda !== "PEN") return { ok: false, error: "Moneda no válida." };
@@ -377,7 +378,7 @@ export async function repetirPedido(
   id: string,
   lineas: { item_id: string; cantidad: number }[],
 ): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso();
+  const problema = await exigirPermiso("crear");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
   const revision = z.array(esquemaLinea).min(1).max(200).safeParse(lineas);

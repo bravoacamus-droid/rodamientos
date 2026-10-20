@@ -3,11 +3,11 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
-import { perfilActual } from "@rodatech/db/servidor";
+import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { mensajeDeError } from "@/lib/errores";
 import { generarContrasenaInicial } from "../dominio/contrasena";
-import { ROLES, type Rol } from "../dominio/tipos";
+import type { Rol } from "../dominio/tipos";
 
 export type ResultadoAlta =
   | { ok: true; contrasena: string; nombre: string; email: string }
@@ -18,8 +18,20 @@ const esquema = z.object({
   email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
   cargo: z.string().trim().max(120).optional(),
   telefono: z.string().trim().max(30).optional(),
-  rol: z.enum(ROLES as unknown as [Rol, ...Rol[]]),
+  rol: z.string().min(2).max(41),
 });
+
+/**
+ * El rol tiene que existir en `roles` (143). Ya no es una lista fija: los
+ * crea gerencia en Configuración › Roles y permisos.
+ */
+async function rolExiste(clave: string): Promise<boolean> {
+  if (!/^[a-z][a-z0-9_]{1,40}$/.test(clave)) return false;
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("roles").select("clave").eq("clave", clave).maybeSingle();
+  return Boolean(data);
+}
+
 
 /**
  * Da de alta a un empleado.
@@ -79,6 +91,7 @@ export async function crearUsuario(entrada: {
   }
 
   const { nombre, email, cargo, telefono, rol } = datos.data;
+  if (!(await rolExiste(rol))) return { ok: false, error: "Ese rol no existe. Elígelo de la lista." };
   const contrasena = generarContrasenaInicial();
 
   try {

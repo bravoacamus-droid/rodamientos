@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 /**
@@ -22,11 +23,10 @@ import type { Json } from "@rodatech/db/tipos";
 /**
  * Quién puede comprar.
  *
- * Es la misma lista que `permisos_rol` tiene para la tabla `compras`
- * (gerencia, admin, compras). Se comprueba aquí para dar un mensaje legible;
- * la que manda es la de Postgres, dentro de la propia función.
+ * Lo dice la matriz de Configuración › Roles y permisos (143): «Compras · Crear».
+ * Se comprueba aquí para dar un mensaje legible; la base lo vuelve a mirar
+ * dentro de la propia función.
  */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const esquemaItem = z.object({
   producto_id: z.string().uuid(),
@@ -118,8 +118,9 @@ export async function registrarCompra(
 ): Promise<ResultadoCompra> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar compras." };
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   const crudo = formData.get("compra");

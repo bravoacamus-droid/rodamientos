@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { listarClientes } from "../api/consultas";
 import type { ClienteLista, FiltrosClientes } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
-
-/** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
-const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
 
 /**
  * Listado de la cartera.
@@ -18,7 +15,7 @@ const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
  * mismo dato, no una versión recortada.
  */
 export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
-  const [resultado, perfil] = await Promise.all([listarClientes(filtros), perfilActual()]);
+  const [resultado, perfil] = await Promise.all([listarClientes(filtros), misPermisos()]);
 
   if (!resultado.ok) {
     return (
@@ -46,8 +43,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
     );
   }
 
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol !== null && ROLES_ESCRITURA.includes(rol);
+  const puedeEditar = perfil.tiene("clientes", "editar");
 
   return (
     <>

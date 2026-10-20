@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * El comprobante de retención (CR) de una factura (120).
@@ -24,15 +25,14 @@ const TIPOS: Record<string, string> = {
 };
 
 /** Quien toca los cobros: la misma lista que `permisos_rol` tiene para `pagos`. */
-const ROLES = ["gerencia", "admin", "cobranzas", "ventas"] as const;
-
 export type ResultadoCr = { ok: true } | { ok: false; error: string };
 
 export async function registrarCr(formData: FormData): Promise<ResultadoCr> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar comprobantes de retención." };
+  const negado = (await sinPermiso("facturacion", "editar")) && (await sinPermiso("cobranzas", "crear"));
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const id = formData.get("comprobante_id");

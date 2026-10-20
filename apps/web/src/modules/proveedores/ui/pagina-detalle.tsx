@@ -4,7 +4,9 @@ import { HistorialProveedor } from "@/modules/tablero";
 import { notFound } from "next/navigation";
 import { EstadoError, Skeleton } from "@rodatech/ui";
 import { PackageCheck, Pencil } from "lucide-react";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { productosDeProveedor } from "../api/catalogo";
 import { detalleProveedor } from "../api/consultas";
@@ -23,9 +25,9 @@ export default async function PaginaDetalleProveedor({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [resultado, perfil, catalogo] = await Promise.all([
+  const [resultado, permisos, catalogo] = await Promise.all([
     detalleProveedor(id),
-    perfilActual(),
+    misPermisos(),
     productosDeProveedor(id),
   ]);
 
@@ -41,10 +43,8 @@ export default async function PaginaDetalleProveedor({
   if (!resultado.datos) notFound();
 
   const p = resultado.datos;
-  const puedeEditar =
-    perfil !== null &&
-    perfil.activo &&
-    ["gerencia", "admin", "compras"].includes(perfil.rol);
+  // Configuración › Roles y permisos (143).
+  const puedeEditar = permisos.tiene("proveedores", "editar");
 
   return (
     <div className="flex flex-col gap-5">
@@ -87,7 +87,11 @@ export default async function PaginaDetalleProveedor({
               <Pencil className="size-4" aria-hidden="true" />
               Editar
             </Link>
-          ) : null}
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "editar", permisos.nombreRol)} className="h-9 md:h-9">
+              Editar
+            </BotonBloqueado>
+          )}
         </div>
       </div>
 

@@ -18,6 +18,17 @@ import type { CotizacionDespachable, GuiaDetalle, ModalidadTraslado } from "./ti
 const redondear3 = (n: number): number =>
   Math.round((n + Number.EPSILON) * 1000) / 1000;
 
+/**
+ * El peso como lo escribe una persona, no como lo guarda la base (QA 20/10:
+ * se ponía «20» y salía «20.000 kg»). Entero sin decimales —«20»—, y con
+ * decimales al menos dos —«10.50», «0.125»—, que es como se escribe un peso.
+ */
+export function formatoPeso(n: number): string {
+  const r = redondear3(Number(n) || 0);
+  if (Number.isInteger(r)) return String(r);
+  return r.toFixed(3).replace(/0$/, "");
+}
+
 export interface LineaDespacho {
   /** Clave estable: el id de la línea de cotización, que ya es única. */
   key: string;

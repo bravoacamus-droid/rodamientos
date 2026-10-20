@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 /**
@@ -16,7 +17,6 @@ import type { Json } from "@rodatech/db/tipos";
  * Mismos roles que registrar una compra; la base vuelve a comprobarlo.
  */
 
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const esquema = z.object({
   compra_id: z.string().uuid(),
@@ -59,8 +59,9 @@ export type ResultadoCompletar = { ok: true; id: string; numero: string } | { ok
 export async function completarCompra(_previo: ResultadoCompletar | null, formData: FormData): Promise<ResultadoCompletar> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar compras." };
+  const prohibido = await sinPermiso("compras", "editar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   let datos: z.infer<typeof esquema>;

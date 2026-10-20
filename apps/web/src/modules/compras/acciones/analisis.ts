@@ -3,17 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { mensajeDeError } from "@/lib/errores";
 
-/** Los mismos que `permisos_rol` tiene para `analisis_importacion` (098). */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 async function exigirRol(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede hacer análisis de importación. Lo hacen Compras o Gerencia.";
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
+    return prohibido;
   }
   return null;
 }

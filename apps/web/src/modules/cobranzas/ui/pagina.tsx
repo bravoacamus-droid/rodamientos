@@ -10,7 +10,7 @@ import {
   formatearFecha,
   formatearMoneda,
 } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
@@ -75,13 +75,14 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
   // El nombre del cliente filtrado, para que el filtro lo enseñe en vez de
   // un id. Una fila, como en facturación.
   const [perfil, cliente] = await Promise.all([
-    perfilActual(),
+    misPermisos(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
   ]);
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeCobrar =
-    rol !== null && ["gerencia", "admin", "ventas", "cobranzas"].includes(rol);
-  const puedeGestionar = rol !== null && ["gerencia", "admin", "cobranzas"].includes(rol);
+  // Anotar un pago o una gestión es crear; ponerle el voucher a un pago ya
+  // anotado, editar (143).
+  const puedeCobrar = perfil.tiene("cobranzas", "crear");
+  const puedeGestionar = perfil.tiene("cobranzas", "editar");
+  const puedeSubir = perfil.tiene("cobranzas", "editar");
 
   return (
     <div className="flex flex-col gap-5">
@@ -154,7 +155,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             key={`${periodo.desde}|${periodo.hasta}`}
             fallback={<Skeleton className="h-40 w-full" />}
           >
-            <ListaPagos periodo={periodo} puedeSubir={puedeGestionar} />
+            <ListaPagos periodo={periodo} puedeSubir={puedeSubir} />
           </Suspense>
         </section>
 

@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { proveedoresActivos } from "../api/consultas";
 import type { FiltrosRecepciones } from "../dominio/tipos";
@@ -38,17 +40,14 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [proveedores, perfil] = await Promise.all([
+  const [proveedores, permisos] = await Promise.all([
     proveedoresActivos(),
-    perfilActual(),
+    misPermisos(),
   ]);
 
-  // Que el botón aparezca y luego rebote es peor que no verlo. La lista es la
-  // misma que `permisos_rol` tiene para `recepciones`.
-  const puedeRecibir =
-    perfil !== null &&
-    perfil.activo &&
-    ["gerencia", "admin", "almacen", "compras"].includes(perfil.rol);
+  // Configuración › Roles y permisos (143). Sin permiso, el botón sale con candado y
+  // dice por qué, en vez de esconderse (QA, 20/10).
+  const puedeRecibir = permisos.tiene("almacen", "crear");
 
   return (
     <div className="flex flex-col gap-5">
@@ -67,7 +66,11 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
           >
             Recibir mercadería
           </Link>
-        ) : null}
+        ) : (
+          <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            Recibir mercadería
+          </BotonBloqueado>
+        )}
       </div>
 
       <section className="card pt-4">

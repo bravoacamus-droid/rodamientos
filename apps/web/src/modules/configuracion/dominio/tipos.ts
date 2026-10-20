@@ -12,36 +12,24 @@
  *   3. Quién entra y con qué rol.
  */
 
-/** Los seis roles de `rol_usuario`. */
-export type Rol = "gerencia" | "admin" | "ventas" | "almacen" | "compras" | "cobranzas";
+/**
+ * La clave de un rol: «ventas», o la de uno creado por gerencia
+ * («vendedor_junior»). Desde la 143 los roles viven en la tabla `roles` y ya
+ * no son una lista fija, así que aquí es texto.
+ */
+export type Rol = string;
 
-export const ROLES: readonly Rol[] = [
-  "gerencia",
-  "admin",
-  "ventas",
-  "almacen",
-  "compras",
-  "cobranzas",
-];
-
-export const ETIQUETA_ROL: Record<Rol, string> = {
-  gerencia: "Gerencia",
-  admin: "Administración",
-  ventas: "Ventas",
-  almacen: "Almacén",
-  compras: "Compras",
-  cobranzas: "Cobranzas",
-};
-
-/** Qué puede hacer cada rol, dicho para quien lo va a asignar. */
-export const AYUDA_ROL: Record<Rol, string> = {
-  gerencia: "Todo, incluido el ajuste de inventario y los permisos.",
-  admin: "Todo salvo lo que gerencia se reservó.",
-  ventas: "Cotiza, factura, despacha y da de alta clientes. No ve costos de compra.",
-  almacen: "Recibe, despacha y mueve stock. No fija precios.",
-  compras: "Proveedores, compras, recepciones y el maestro de productos.",
-  cobranzas: "Cartera, pagos y gestiones. No emite.",
-};
+/** Un rol, como lo enseña la pantalla. */
+export interface RolDef {
+  clave: Rol;
+  nombre: string;
+  /** Qué hace, dicho para quien lo va a asignar. */
+  descripcion: string | null;
+  /** Los seis de siempre: no se borran. */
+  sistema: boolean;
+  /** Cuántos usuarios activos o no lo tienen. */
+  usuarios: number;
+}
 
 /** Los nueve valores de `tipo_documento`. */
 export type TipoDocumento =

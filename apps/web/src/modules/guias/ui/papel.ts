@@ -2,6 +2,7 @@ import type { BloqueDatos, DatoHoja, EmisorHoja } from "@/componentes/hoja-docum
 import type { BloquePiePdf, HojaPdf } from "@/lib/pdf-hoja";
 
 import { ETIQUETA_MODALIDAD, type GuiaDetalle } from "../dominio/tipos";
+import { formatoPeso } from "../dominio/constructor";
 
 /**
  * Lo que dice la cabecera del papel de la guía, y la guía entera como PDF.
@@ -61,7 +62,7 @@ export function bloquesDeGuia(g: GuiaDetalle): BloqueDatos[] {
           // El distrito escrito y no el código del ubigeo (15/10).
           valor: [g.direccion_partida, g.partida_lugar ?? g.ubigeo_partida].filter(Boolean).join(" - ") || "—",
         },
-        { etiqueta: "Peso bruto", valor: `${Number(g.peso_bruto_kg).toFixed(2)} ${g.unidad_peso}` },
+        { etiqueta: "Peso bruto", valor: `${formatoPeso(Number(g.peso_bruto_kg))} ${g.unidad_peso}` },
       ],
       derecha: [
         { etiqueta: "Modalidad", valor: ETIQUETA_MODALIDAD[g.modalidad_traslado] },

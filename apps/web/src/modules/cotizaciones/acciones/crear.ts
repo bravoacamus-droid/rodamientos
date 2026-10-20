@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { lineasBajoPiso } from "../dominio/piso";
@@ -15,8 +16,6 @@ import { bloqueoQueImpide } from "@/lib/bloqueo";
  * En la demo, emitir un documento de 20 ítems eran 20 viajes secuenciales al
  * servidor; era el problema de rendimiento más caro que tenía.
  */
-
-const ROLES = ["gerencia", "admin", "ventas"] as const;
 
 /**
  * A quién se le compraría la línea (111). Cantidad 0 = solo se apunta el
@@ -148,8 +147,9 @@ export async function crearCotizacion(
   if (!perfil || !perfil.activo) {
     return { ok: false, error: "Hay que iniciar sesión." };
   }
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede emitir cotizaciones." };
+  const negado = await sinPermiso("cotizaciones", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("cotizacion");
@@ -211,8 +211,9 @@ export async function actualizarCotizacion(
 ): Promise<ResultadoEdicion> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede editar cotizaciones." };
+  const negado = await sinPermiso("cotizaciones", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("cotizacion");

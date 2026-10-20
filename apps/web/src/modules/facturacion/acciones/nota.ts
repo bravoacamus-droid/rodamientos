@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { detalleComprobante, seriesDeNota } from "../api/consultas";
@@ -30,8 +31,6 @@ import {
  */
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 const esquema = z.object({
   referencia_id: z.string().uuid(),
   tipo: z.enum(["nota_credito", "nota_debito"]),
@@ -67,8 +66,9 @@ export async function emitirNota(
 ): Promise<ResultadoNota> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede emitir notas." };
+  const negado = await sinPermiso("facturacion", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("nota");
@@ -204,7 +204,7 @@ export async function emitirNota(
 /**
  * Anula un comprobante.
  *
- * Solo gerencia: `anular_comprobante()` exige `tiene_rol('gerencia','admin')`.
+ * Quien tenga «eliminar» en Facturación: `anular_comprobante()` exige `puede('facturacion','eliminar')` desde la 143.
  *
  * Ojo con la diferencia respecto a la nota de crédito, que es la que más se
  * confunde:
@@ -234,9 +234,8 @@ export async function anularComprobante(
 ): Promise<ResultadoAnulacionComprobante> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!["gerencia", "admin"].includes(perfil.rol)) {
-    return { ok: false, error: "Solo Gerencia puede anular un comprobante." };
-  }
+  const negadoAnular = await sinPermiso("facturacion", "eliminar");
+  if (negadoAnular) return { ok: false, error: negadoAnular };
 
   let datos: z.infer<typeof esquemaAnulacion>;
   try {

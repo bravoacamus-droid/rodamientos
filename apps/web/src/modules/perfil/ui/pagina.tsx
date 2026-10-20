@@ -1,18 +1,10 @@
 import { redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 
+import { misPermisos } from "@/lib/permisos";
+
 import { miPerfil } from "../api/consultas";
 import { FormContrasena, FormMisDatos } from "./formulario";
-
-/** Cómo se llama cada rol de cara a una persona. */
-const ETIQUETA_ROL: Record<string, string> = {
-  gerencia: "Gerencia",
-  admin: "Administración",
-  ventas: "Ventas",
-  almacen: "Almacén",
-  compras: "Compras",
-  cobranzas: "Cobranzas",
-};
 
 /**
  * Mi perfil.
@@ -27,7 +19,8 @@ const ETIQUETA_ROL: Record<string, string> = {
  * configuración, que es de gerencia y administración.
  */
 export default async function PaginaMiPerfil() {
-  const r = await miPerfil();
+  // El nombre del rol sale de la base: puede ser uno creado por gerencia (143).
+  const [r, { nombreRol }] = await Promise.all([miPerfil(), misPermisos()]);
 
   if (!r.ok) {
     return (
@@ -60,7 +53,7 @@ export default async function PaginaMiPerfil() {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{perfil.nombre}</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            {ETIQUETA_ROL[perfil.rol] ?? perfil.rol}
+            {nombreRol ?? perfil.rol}
             {perfil.cargo ? ` · ${perfil.cargo}` : ""}
           </p>
         </div>
@@ -90,7 +83,7 @@ export default async function PaginaMiPerfil() {
           <Dato etiqueta="Correo con el que entras">
             {perfil.email ?? "—"}
           </Dato>
-          <Dato etiqueta="Rol">{ETIQUETA_ROL[perfil.rol] ?? perfil.rol}</Dato>
+          <Dato etiqueta="Rol">{nombreRol ?? perfil.rol}</Dato>
           <Dato etiqueta="Último acceso">
             {/* En hora de Lima: cortar el ISO enseñaba la hora UTC, cinco
                 horas por delante (revisión por módulos del 02/10). */}

@@ -1,11 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { detalleProveedor, marcasDisponibles } from "../api/consultas";
 import { FormularioProveedor } from "./formulario";
 
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * Alta y edición de un proveedor.
@@ -22,16 +23,18 @@ export default async function PaginaFormularioProveedor({
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
 
-  if (!ROLES.includes(perfil.rol)) {
+  const idPedido = params ? (await params).id : null;
+  const prohibido = await sinPermiso("proveedores", idPedido ? "editar" : "crear");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes mantener el maestro de proveedores"
-        descripcion="Tu rol no tiene permiso para dar de alta ni editar proveedores. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes mantener el maestro de proveedores</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 
-  const id = params ? (await params).id : null;
+  const id = idPedido;
 
   const [detalle, marcas] = await Promise.all([
     id ? detalleProveedor(id) : Promise.resolve(null),

@@ -5,7 +5,6 @@
 // el bundle de TODAS las páginas del ERP, que es donde vive este menú.
 
 import Link from "next/link";
-import type { Rol } from "@rodatech/config";
 import {
   Button,
   DropdownMenu,
@@ -17,21 +16,13 @@ import {
 } from "@rodatech/ui";
 import { cerrarSesion } from "@/app/login/acciones";
 
-const ETIQUETA_ROL: Record<Rol, string> = {
-  gerencia: "Gerencia",
-  admin: "Administración",
-  ventas: "Ventas",
-  almacen: "Almacén",
-  compras: "Compras",
-  cobranzas: "Cobranzas",
-};
-
 export function MenuUsuario({
   nombre,
   rol,
 }: {
   nombre: string;
-  rol: Rol | null;
+  /** El NOMBRE del rol, ya resuelto: puede ser uno creado por gerencia (143). */
+  rol: string | null;
 }) {
   return (
     <DropdownMenu>
@@ -40,7 +31,7 @@ export function MenuUsuario({
           <span className="max-w-40 truncate">{nombre}</span>
           {rol ? (
             <span className="text-sm text-[var(--fg-subtle)]">
-              {ETIQUETA_ROL[rol]}
+              {rol}
             </span>
           ) : null}
         </Button>

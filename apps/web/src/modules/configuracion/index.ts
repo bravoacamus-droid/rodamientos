@@ -32,14 +32,12 @@ export {
 } from "./dominio/serie";
 
 export {
-  AYUDA_ROL,
-  ETIQUETA_ROL,
   ETIQUETA_TIPO_DOCUMENTO,
-  ROLES,
   TIPOS_FISCALES,
   type ConteosCatalogo,
   type Empresa,
   type Rol,
+  type RolDef,
   type SerieDocumento,
   type TipoDocumento,
   type Usuario,

@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { Volver } from "@/componentes/volver";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { CandadoEdicion } from "@/componentes/candado-edicion";
 
@@ -16,7 +20,6 @@ import { entregaDelDocumento } from "../dominio/disponibilidad";
 import { Constructor } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `cotizaciones`. */
-const ROLES = ["gerencia", "admin", "ventas"];
 
 /**
  * Editar una cotización que el cliente todavía no ha aceptado.
@@ -54,15 +57,19 @@ export default async function PaginaEditarCotizacion({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil] = await Promise.all([cotizacionPorId(id), perfilActual()]);
+  const [resultado, perfil, permisos] = await Promise.all([
+    cotizacionPorId(id),
+    perfilActual(),
+    misPermisos(),
+  ]);
 
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  if (!permisos.tiene("cotizaciones", "editar")) {
     return (
-      <EstadoError
-        titulo="No puedes editar cotizaciones"
-        descripcion="Tu rol no tiene permiso. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <Volver href={`/cotizaciones/${id}`}>Volver a la cotización</Volver>
+        <AvisoSinPermiso mensaje={avisoSinPermiso("cotizaciones", "editar", permisos.nombreRol)} />
+      </div>
     );
   }
 
@@ -195,10 +202,8 @@ export default async function PaginaEditarCotizacion({
       {compras.length > 0 ? <AvisoDeCompras compras={compras} /> : null}
       <Constructor
       sugeridos={[]}
-      // Los mismos roles que `guardarKit` (25/09).
-      puedeEditarKit={
-        !!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)
-      }
+      // El mismo permiso que `guardarKit`.
+      puedeEditarKit={permisos.tiene("productos", "editar")}
       // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
       puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}
       hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(

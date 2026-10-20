@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import {
   catalogosCliente,
@@ -47,29 +49,25 @@ async function cargarDistritos(
  * habría duplicado el formulario, que es donde está toda la lógica.
  */
 
-/** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
-const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
-
 export default async function PaginaFormularioCliente({
   params,
 }: {
   params?: Promise<{ id: string }>;
 }) {
-  const perfil = await perfilActual();
-  // El permiso se comprueba aquí, en el servidor, y no solo escondiendo el
-  // botón del listado: a esta URL se puede llegar escribiéndola.
-  if (!perfil || !perfil.activo || !ROLES_ESCRITURA.includes(perfil.rol)) {
+  const id = params ? (await params).id : null;
+  // El permiso se comprueba aquí, en el servidor, y no solo con el botón del
+  // listado: a esta URL se puede llegar escribiéndola. Y se dice ANTES de que
+  // llene nada (QA, 20/10), no al pulsar Guardar.
+  const permisos = await misPermisos();
+  const accion = id ? "editar" : "crear";
+  if (!permisos.tiene("clientes", accion)) {
     return (
-      <div className="p-6">
-        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          Tu rol no puede dar de alta ni editar clientes. La cartera la mantienen
-          Ventas, Administración o Gerencia.
-        </div>
+      <div className="flex flex-col gap-4">
+        <Volver href={id ? `/clientes/${id}` : "/clientes"}>{id ? "Volver al cliente" : "Volver a clientes"}</Volver>
+        <AvisoSinPermiso mensaje={avisoSinPermiso("clientes", accion, permisos.nombreRol)} />
       </div>
     );
   }
-
-  const id = params ? (await params).id : null;
 
   const [catalogos, cliente] = await Promise.all([
     catalogosCliente(),

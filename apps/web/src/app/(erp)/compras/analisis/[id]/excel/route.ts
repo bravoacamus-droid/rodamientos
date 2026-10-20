@@ -1,11 +1,9 @@
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { analisisPorId } from "@/modules/compras/api/analisis";
 import { libroAnalisis } from "@/modules/compras/api/analisis-excel";
 import { proveedoresPorId } from "@/modules/proveedores/api/consultas";
-
-/** Los mismos que pueden ver y hacer análisis (098). */
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * El análisis GUARDADO, como su hoja de Excel.
@@ -22,7 +20,9 @@ const ROLES = ["gerencia", "admin", "compras"];
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return new Response("Hay que iniciar sesión.", { status: 401 });
-  if (!ROLES.includes(perfil.rol)) return new Response("Tu rol no puede ver los análisis.", { status: 403 });
+  // Quien ve las compras ve sus análisis (Configuración › Roles y permisos, 143).
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) return new Response(prohibido, { status: 403 });
 
   const { id } = await params;
   const r = await analisisPorId(id);

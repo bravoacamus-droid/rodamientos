@@ -197,7 +197,9 @@ export function FiltroBuscable({
         placeholderBusqueda={buscar}
         className={
           valor
-            ? "[&>button:first-of-type]:border-brand-300 [&>button:first-of-type]:bg-brand-50 [&>button:first-of-type]:font-medium"
+            ? // Mismo «puesto» que la caja de buscar, oscuro incluido: sin el
+            // `dark:` el desplegable elegido salía blanco (QA 20/10).
+            "[&>button:first-of-type]:border-brand-300 [&>button:first-of-type]:bg-brand-50 [&>button:first-of-type]:font-medium dark:[&>button:first-of-type]:bg-brand-950"
             : undefined
         }
       />

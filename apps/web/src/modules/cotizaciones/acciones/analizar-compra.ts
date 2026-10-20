@@ -1,6 +1,7 @@
 "use server";
 
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { historialDeProducto, referenciasDeProductos, type HistorialProducto, type Referencias } from "@/modules/compras/api/hoja-precios";
 
@@ -13,8 +14,6 @@ import type { DemandaProducto } from "../dominio/demanda";
  * Toda Server Action es un endpoint público: rol primero. Son los roles que
  * cotizan, porque es quien cotiza el que llama al proveedor.
  */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 export interface DatosParaAnalizar {
   referencias: Referencias | null;
   /** Los que ya se lo vendieron, con su último costo: se añaden con un clic. */
@@ -29,8 +28,9 @@ export async function datosParaAnalizar(
 ): Promise<{ ok: true; datos: DatosParaAnalizar } | { ok: false; error: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede analizar precios." };
+  const negado = await sinPermiso("cotizaciones", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   if (typeof productoId !== "string" || !/^[0-9a-f-]{36}$/i.test(productoId)) {
     return { ok: false, error: "El producto no es válido." };
@@ -97,9 +97,9 @@ export async function demandaParaLineas(
 ): Promise<{ ok: true; datos: DemandaProducto[] } | { ok: false; error: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!(ROLES as readonly string[]).includes(perfil.rol) && perfil.rol !== "compras") {
-    return { ok: false, error: "Tu rol no puede ver los pedidos." };
-  }
+  // Lo usa quien arma la cotización y quien compra para ella.
+  const negado = (await sinPermiso("cotizaciones", "editar")) && (await sinPermiso("compras", "editar"));
+  if (negado) return { ok: false, error: negado };
   if (!Array.isArray(productoIds) || productoIds.length > 200 || !productoIds.every((i) => typeof i === "string" && /^[0-9a-f-]{36}$/i.test(i))) {
     return { ok: false, error: "Los productos no son válidos." };
   }

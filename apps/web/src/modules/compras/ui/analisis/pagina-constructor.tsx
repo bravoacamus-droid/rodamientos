@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
 
@@ -8,7 +10,6 @@ import { analisisPorId } from "../../api/analisis";
 import type { EstadoAnalisis } from "../../dominio/analisis";
 import { ConstructorAnalisis } from "./constructor";
 
-const ROLES = ["gerencia", "admin", "compras"];
 
 /** Nuevo análisis (sin `params`) o uno guardado (con `id`). */
 async function construir({
@@ -21,19 +22,21 @@ async function construir({
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const idPedido = params ? (await params).id : null;
+  const prohibido = await sinPermiso("compras", !idPedido ? "crear" : modo === "ver" ? "ver" : "editar");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes hacer análisis de importación"
-        descripcion="Los hacen Compras y Gerencia. Habla con Gerencia si crees que deberías."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes hacer análisis de importación</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
   const sugeridos = await proveedoresSugeridos();
 
-  const id = params ? (await params).id : null;
+  const id = idPedido;
   if (!id) {
     return <ConstructorAnalisis hoy={hoy} sugeridos={sugeridos.ok ? sugeridos.datos : []} inicial={null} />;
   }

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Badge, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import {
   crossReference,
@@ -32,7 +32,6 @@ interface Props {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Los roles que `permisos_rol` deja escribir en `producto_equivalencias`. */
-const ROLES_QUE_DECLARAN = ["gerencia", "admin", "ventas", "compras"];
 
 /**
  * Equivalencias · cross-reference entre marcas.
@@ -56,9 +55,10 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
   const crudo = Array.isArray(sp.producto) ? sp.producto[0] : sp.producto;
   const productoId = crudo && UUID.test(crudo) ? crudo : null;
 
-  const perfil = await perfilActual();
-  const puedeDeclarar =
-    perfil?.activo === true && ROLES_QUE_DECLARAN.includes(perfil.rol);
+  // Configuración › Roles y permisos (143): declarar es «crear»; quitar, «eliminar».
+  const permisos = await misPermisos();
+  const puedeDeclarar = permisos.tiene("equivalencias", "crear");
+  const puedeQuitar = permisos.tiene("equivalencias", "eliminar");
 
   return (
     <div className="flex flex-col gap-5">
@@ -103,7 +103,7 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
         </section>
       ) : (
         <Suspense key={productoId} fallback={<Skeleton className="h-96 w-full" />}>
-          <Cross productoId={productoId} puedeDeclarar={puedeDeclarar} />
+          <Cross productoId={productoId} puedeDeclarar={puedeDeclarar} puedeQuitar={puedeQuitar} />
         </Suspense>
       )}
     </div>
@@ -135,9 +135,11 @@ async function Contador() {
 async function Cross({
   productoId,
   puedeDeclarar,
+  puedeQuitar,
 }: {
   productoId: string;
   puedeDeclarar: boolean;
+  puedeQuitar: boolean;
 }) {
   const [base, sustitutos, declaradas] = await Promise.all([
     productoBase(productoId),
@@ -255,7 +257,7 @@ async function Cross({
                   <span className="text-sm text-[var(--fg-subtle)]">
                     {d.creado_por ?? "—"} · {d.creado_en.slice(0, 10)}
                   </span>
-                  {puedeDeclarar ? (
+                  {puedeQuitar ? (
                     <BotonQuitar productoId={productoId} equivalenteId={d.otro_id} />
                   ) : null}
                 </div>

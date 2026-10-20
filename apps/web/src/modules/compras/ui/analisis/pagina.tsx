@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { Badge, EstadoError } from "@rodatech/ui";
 import { ChevronLeft, ChevronRight, Download, Eye, Plus } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { listarAnalisis, type AnalisisLista } from "../../api/analisis";
 
-const ROLES = ["gerencia", "admin", "compras"];
 
 const dolar = (n: number) =>
   `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -88,8 +89,14 @@ export default async function PaginaAnalisis({
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
-    return <EstadoError titulo="No puedes ver los análisis" descripcion="Los hacen Compras y Gerencia." />;
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes ver los análisis</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
+    );
   }
 
   const sp = (await searchParams) ?? {};

@@ -13,6 +13,10 @@ import {
   leerTamano,
 } from "@rodatech/ui";
 
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+
 import { listarKits, type KitDetalle } from "../../api/kits";
 import { AccionesKit } from "./acciones";
 import { FiltrosKits } from "./filtros";
@@ -70,7 +74,7 @@ export async function PaginaKits({
   const porPagina = leerTamano(uno(sp.n));
   const pagina = Math.max(1, Number(uno(sp.p) ?? 1) || 1);
 
-  const r = await listarKits();
+  const [r, permisos] = await Promise.all([listarKits(), misPermisos()]);
   if (!r.ok) {
     return <EstadoError titulo="No se pudieron cargar los kits" detalle={r.error} />;
   }
@@ -106,13 +110,17 @@ export async function PaginaKits({
             precio total.
           </p>
         </div>
-        <Link
-          href="/productos/kits/nuevo"
-          className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          <Plus className="size-[18px]" />
-          Nuevo kit
-        </Link>
+        {permisos.tiene("productos", "crear") ? (
+          <Link
+            href="/productos/kits/nuevo"
+            className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+          >
+            <Plus className="size-[18px]" />
+            Nuevo kit
+          </Link>
+        ) : (
+          <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)}>Nuevo kit</BotonBloqueado>
+        )}
       </div>
 
       {/* Tres y no cuatro: un indicador que no decide nada es ruido. Estos son

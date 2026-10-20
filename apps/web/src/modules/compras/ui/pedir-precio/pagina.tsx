@@ -1,7 +1,8 @@
 import { Volver } from "@/componentes/volver";
 import { redirect } from "next/navigation";
-import { EstadoError } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { proveedoresParaPedir, proveedoresPorProducto } from "@/modules/proveedores";
 import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
@@ -14,7 +15,6 @@ import { hojaVacia } from "../../dominio/hoja-precios";
 import { HojaPrecios } from "../hoja-precios/hoja";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * Pedirle precio a varios proveedores a la vez.
@@ -34,12 +34,13 @@ export default async function PaginaPedirPrecio({
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes pedir precios"
-        descripcion="Tu rol no tiene permiso para el abastecimiento."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes pedir precios</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

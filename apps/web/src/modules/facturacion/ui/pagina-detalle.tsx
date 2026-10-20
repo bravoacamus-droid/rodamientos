@@ -10,7 +10,7 @@ import {
   cn,
   formatearFecha,
 } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { estadoConfiguracion } from "../api/configuracion";
 import { crDe, detalleComprobante, motivosNota, notasDe, seriesDeNota, yaAcreditadoDe } from "../api/consultas";
@@ -46,7 +46,7 @@ export default async function PaginaDetalleComprobante({
   const { id } = await params;
   const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series, cr] = await Promise.all([
     detalleComprobante(id),
-    perfilActual(),
+    misPermisos(),
     estadoConfiguracion(),
     motivosNota(),
     yaAcreditadoDe(id),
@@ -75,9 +75,11 @@ export default async function PaginaDetalleComprobante({
   const qr = await qrDeComprobante(resultado.datos, emisor.ruc);
   const hoja = hojaDeComprobante(c, emisor, cuentas, qr);
   const archivo = nombreArchivo(c.numero, c.cliente);
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEnviar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
-  const puedeCobrar = rol !== null && ["gerencia", "admin", "ventas", "cobranzas"].includes(rol);
+  // Mandar a SUNAT y hacer notas es trabajar sobre la factura; cobrarla, de
+  // Cobranzas; la constancia de retención la sube cualquiera de los dos (143).
+  const puedeEnviar = perfil.tiene("facturacion", "editar");
+  const puedeCobrar = perfil.tiene("cobranzas", "crear");
+  const puedeCr = puedeEnviar || puedeCobrar;
 
   /*
     Auditoría del 14/10: la ficha de una NOTA enseñaba saldo, forma de pago,
@@ -487,7 +489,7 @@ export default async function PaginaDetalleComprobante({
             {/* «Registrar CR» (Willy, 14/10): el comprobante de retención. */}
             {!esNota && c.retencion_aplica && !anulado ? (
               <div className="mt-3">
-                <RegistrarCr comprobanteId={c.id} numero={c.numero} cr={cr} puede={puedeCobrar} />
+                <RegistrarCr comprobanteId={c.id} numero={c.numero} cr={cr} puede={puedeCr} />
               </div>
             ) : null}
             {!esNota && c.cuotas.length > 1 ? (

@@ -3,6 +3,7 @@ import { Eye, Printer } from "lucide-react";
 import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset, formatearFecha } from "@rodatech/ui";
 
 import { listarGuias } from "../api/consultas";
+import { formatoPeso } from "../dominio/constructor";
 import type { FiltrosGuias } from "../dominio/tipos";
 
 /**
@@ -131,7 +132,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 </td>
                 <td className="px-3 py-2.5 text-right tabular">{g.numero_bultos}</td>
                 <td className="px-3 py-2.5 text-right tabular">
-                  {g.peso_bruto_kg.toFixed(3)}
+                  {formatoPeso(g.peso_bruto_kg)}
                   <span className="ml-1 text-sm text-[var(--fg-subtle)]">kg</span>
                 </td>
                 <td className="px-3 py-2.5">
@@ -254,7 +255,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
               {/* El peso primero de los dos números: es lo que Willy llamó «lo
                   más importante» (02:46), porque es lo que el transportista
                   necesita antes de cargar. */}
-              <Dato etiqueta="Peso">{g.peso_bruto_kg.toFixed(3)} kg</Dato>
+              <Dato etiqueta="Peso">{formatoPeso(g.peso_bruto_kg)} kg</Dato>
               <Dato etiqueta="Bultos">{g.numero_bultos}</Dato>
               <Dato etiqueta="Motivo">{g.motivo ?? "—"}</Dato>
               {/* La dirección, a ancho completo y SIN recortar: los demás

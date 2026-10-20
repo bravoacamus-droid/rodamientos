@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Ban, FileArchive, ShieldCheck, Info, Plus, Receipt, Settings, Wallet } from "lucide-react";
 import { Skeleton, buttonVariants, cn, formatearMoneda, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
@@ -59,15 +61,15 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
     8f3a…».
   */
   const [perfil, config, cliente, series] = await Promise.all([
-    perfilActual(),
+    misPermisos(),
     estadoConfiguracion(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
     seriesDe(["factura", "nota_credito", "nota_debito"]),
   ]);
 
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeFacturar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
-  const esGerencia = rol !== null && ["gerencia", "admin"].includes(rol);
+  const puedeFacturar = perfil.tiene("facturacion", "crear");
+  // El enlace a «SUNAT y numeración», a quien puede abrirla (143).
+  const esGerencia = perfil.tiene("configuracion", "ver");
 
   return (
     <div className="flex flex-col gap-5">
@@ -121,7 +123,11 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
               <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
               Emitir comprobante
             </Link>
-          ) : null}
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("facturacion", "crear", perfil.nombreRol)}>
+              Emitir comprobante
+            </BotonBloqueado>
+          )}
         </div>
       </div>
 

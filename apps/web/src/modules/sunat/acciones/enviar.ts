@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { enviarASunat } from "@/modules/facturacion/acciones/enviar";
 
@@ -17,7 +18,6 @@ import { ordenDeEnvio, type TipoDocumentoSunat } from "../dominio/bandeja";
  * que el botón de su ficha: una sola forma de enviar, con sus mismas puertas.
  */
 
-const ROLES = ["gerencia", "admin", "ventas"] as const;
 // Diez por tanda: cada uno es una llamada a SUNAT, y una acción no puede
 // ocupar al servidor indefinidamente. «Quedan N» invita a seguir.
 const MAXIMO = 10;
@@ -34,8 +34,9 @@ export type ResultadoVarios = { ok: true; resultados: ResultadoUno[]; quedan: nu
 export async function enviarVarios(ids: string[]): Promise<ResultadoVarios> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede enviar comprobantes a SUNAT." };
+  const negado = await sinPermiso("facturacion", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   const validos = z.array(z.string().uuid()).min(1).max(500).safeParse(ids);
   if (!validos.success) return { ok: false, error: "No llegó ningún comprobante que enviar." };

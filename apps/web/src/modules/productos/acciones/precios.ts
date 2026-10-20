@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Ajustar el precio de venta y el piso, desde donde se ve el costo.
@@ -31,7 +32,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  */
 
 /** Quien decide a cuánto se vende. Compras negocia; el precio es de gerencia. */
-const ROLES = ["gerencia", "admin", "ventas", "compras"] as const;
 
 const esquema = z.object({
   producto_id: z.string().uuid(),
@@ -48,8 +48,9 @@ export async function ajustarPreciosDeVenta(
 ): Promise<ResultadoPrecios> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede cambiar precios." };
+  const prohibido = (await sinPermiso("productos", "editar")) && (await sinPermiso("cotizaciones", "crear"));
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   let datos: z.infer<typeof esquema>;

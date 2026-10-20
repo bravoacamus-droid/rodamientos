@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { anotarFallo } from "@/lib/errores";
@@ -16,8 +17,6 @@ import { anotarFallo } from "@/lib/errores";
  * solo se guarda qué se preguntó para poder anotar las respuestas después.
  */
 
-/** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 /**
  * El tipo va escrito y no inferido: con dos ramas que solo se distinguen por
@@ -27,8 +26,9 @@ const ROLES = ["gerencia", "admin", "compras"] as const;
 async function quienEs(): Promise<{ error: string } | { error?: never }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { error: "Tu rol no puede pedir precios." };
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
+    return { error: prohibido };
   }
   return {};
 }

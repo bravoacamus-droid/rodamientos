@@ -4,15 +4,14 @@ import { HistorialCliente } from "@/modules/tablero";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoError, Skeleton } from "@rodatech/ui";
 import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
-import { perfilActual } from "@rodatech/db/servidor";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { clientePorId } from "../api/consultas";
 import { ETIQUETA_DOCUMENTO } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
 import { Volver } from "@/componentes/volver";
-
-/** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
-const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
 
 /**
  * Ficha de un cliente.
@@ -32,7 +31,7 @@ export default async function PaginaDetalleCliente({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [resultado, perfil] = await Promise.all([clientePorId(id), perfilActual()]);
+  const [resultado, permisos] = await Promise.all([clientePorId(id), misPermisos()]);
 
   if (!resultado.ok) {
     if (resultado.error.includes("no existe")) notFound();
@@ -44,8 +43,7 @@ export default async function PaginaDetalleCliente({
   }
 
   const c = resultado.datos;
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol !== null && ROLES_ESCRITURA.includes(rol);
+  const puedeEditar = permisos.tiene("clientes", "editar");
 
   return (
     <div className="flex flex-col gap-5">
@@ -91,7 +89,11 @@ export default async function PaginaDetalleCliente({
                 Editar
               </Link>
             </Button>
-          ) : null}
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("clientes", "editar", permisos.nombreRol)}>
+              Editar
+            </BotonBloqueado>
+          )}
           <AccionesFila
             id={c.id}
             codigo={c.codigo}

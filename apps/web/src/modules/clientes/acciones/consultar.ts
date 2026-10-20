@@ -1,6 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { consultarDocumentoSunat } from "@/lib/documento-sunat";
 
@@ -19,8 +20,6 @@ import type { ResultadoDocumento, TipoDocumento } from "../dominio/tipos";
  * y las reglas del documento de un cliente.
  */
 
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 export async function buscarPorDocumento(
   tipo: TipoDocumento,
   numero: string,
@@ -29,8 +28,9 @@ export async function buscarPorDocumento(
   // empresa: no puede quedar abierta a cualquiera con una sesión.
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede consultar documentos." };
+  const negado = (await sinPermiso("clientes", "crear")) && (await sinPermiso("clientes", "editar"));
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   // 2 · Entrada. Los argumentos de una Server Action llegan del navegador:

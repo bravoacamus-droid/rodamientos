@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { codigoDeProveedor, revisarDocumento, variante } from "../dominio/documento";
 import type { ProveedorEditable, ResultadoProveedor, TipoDocumento } from "../dominio/tipos";
@@ -17,7 +18,6 @@ import type { ProveedorEditable, ResultadoProveedor, TipoDocumento } from "../do
  */
 
 /** Quién mantiene el maestro. La que manda es la de RLS en Postgres. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 /** Cuántos códigos alternativos se prueban antes de rendirse. */
 const MAX_INTENTOS_CODIGO = 25;
@@ -108,9 +108,6 @@ export async function guardarProveedor(
 ): Promise<ResultadoProveedor> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede mantener el maestro de proveedores." };
-  }
 
   const crudo = formData.get("proveedor");
   if (typeof crudo !== "string") return { ok: false, error: "Faltan los datos." };
@@ -129,6 +126,10 @@ export async function guardarProveedor(
     }
     return { ok: false, error: "Los datos no son válidos." };
   }
+
+  // Con id es corregir uno que ya está; sin id, darlo de alta (143).
+  const prohibido = await sinPermiso("proveedores", datos.id ? "editar" : "crear");
+  if (prohibido) return { ok: false, error: prohibido };
 
   // El documento se valida con las mismas reglas que usaría la consulta a
   // SUNAT, y el error de aquí es legible; el de la restricción de Postgres no.

@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FileText, Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
 import { emisorParaImprimir } from "@/lib/emisor";
@@ -19,6 +21,7 @@ import { hojaDeGuia } from "./papel";
 import { Volver } from "@/componentes/volver";
 import { estadoConfiguracion } from "@/modules/facturacion/api/configuracion";
 import { faltaParaSunat } from "../dominio/sunat";
+import { formatoPeso } from "../dominio/constructor";
 import { SunatGuia } from "./sunat-guia";
 
 /**
@@ -39,7 +42,7 @@ export default async function PaginaDetalleGuia({
   const { id } = await params;
   const [resultado, perfil, emisor, config] = await Promise.all([
     detalleGuia(id),
-    perfilActual(),
+    misPermisos(),
     emisorParaImprimir(),
     estadoConfiguracion(),
   ]);
@@ -56,12 +59,10 @@ export default async function PaginaDetalleGuia({
   if (!resultado.datos) notFound();
 
   const g = resultado.datos;
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEmitir =
-    rol !== null && ["gerencia", "admin", "ventas", "almacen"].includes(rol);
-  const esGerencia = rol !== null && ["gerencia", "admin"].includes(rol);
-  // Los mismos roles que pueden emitir comprobantes (facturacion/pagina-nueva).
-  const puedeFacturar = rol !== null && ["gerencia", "admin", "ventas"].includes(rol);
+  // Corregir y emitir un borrador es «editar» la guía; anularla, «eliminar» (143).
+  const puedeEmitir = perfil.tiene("guias", "editar");
+  const puedeAnular = perfil.tiene("guias", "eliminar");
+  const puedeFacturar = perfil.tiene("facturacion", "crear");
   // Emitida, sin factura y de una cotización: lo siguiente es facturarla.
   const porFacturar = g.estado === "emitida" && !g.comprobante && Boolean(g.cotizacion_id);
 
@@ -175,15 +176,29 @@ export default async function PaginaDetalleGuia({
               <Pencil className="size-4" aria-hidden="true" />
               Editar
             </Link>
+          ) : g.estado === "borrador" ? (
+            <BotonBloqueado
+              mensaje={avisoSinPermiso("guias", "editar", perfil.nombreRol)}
+              className="md:h-9"
+            >
+              Editar
+            </BotonBloqueado>
           ) : null}
           {puedeEmitir ? <EmitirGuia guia={g} /> : null}
-          {esGerencia ? (
+          {puedeAnular ? (
             <AnularGuia
               id={g.id}
               numero={g.numero}
               estado={g.estado}
               comprobante={g.comprobante}
             />
+          ) : g.estado !== "anulada" ? (
+            <BotonBloqueado
+              mensaje={avisoSinPermiso("guias", "eliminar", perfil.nombreRol)}
+              className="md:h-9"
+            >
+              Anular
+            </BotonBloqueado>
           ) : null}
         </div>
       </header>
@@ -203,7 +218,7 @@ export default async function PaginaDetalleGuia({
 
       {/* --------------------------------------------------------- Cifras */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Peso bruto" valor={`${g.peso_bruto_kg.toFixed(3)} kg`} />
+        <Tarjeta etiqueta="Peso bruto" valor={`${formatoPeso(g.peso_bruto_kg)} kg`} />
         <Tarjeta etiqueta="Bultos" valor={String(g.numero_bultos)} />
         <Tarjeta
           etiqueta="Unidades"

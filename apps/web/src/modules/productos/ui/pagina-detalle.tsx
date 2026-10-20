@@ -3,7 +3,9 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { Badge, EstadoError, Moneda, Skeleton } from "@rodatech/ui";
 import { HistorialProducto } from "@/modules/tablero";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { proveedoresDeProducto } from "@/modules/proveedores";
 
@@ -40,9 +42,9 @@ export default async function PaginaDetalleProducto({
   // Un kit tiene su propia ficha: la de kits, que es donde se ve y se cambia
   // lo que lleva dentro. Desde el listado del catálogo se llegaba aquí.
   if (await esKit(id)) redirect(`/productos/kits/${id}`);
-  const [resultado, perfil, quienVende, compras, precios, movimientos] = await Promise.all([
+  const [resultado, permisos, quienVende, compras, precios, movimientos] = await Promise.all([
     productoConDetalle(id),
-    perfilActual(),
+    misPermisos(),
     proveedoresDeProducto(id),
     comprasDelProducto(id),
     // A cuánto te lo deja cada uno, juntando lo pagado y lo cotizado (21/09).
@@ -61,9 +63,13 @@ export default async function PaginaDetalleProducto({
   }
 
   const p = resultado.datos;
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
-  const puedeAjustarStock = rol !== null && ["gerencia", "admin", "almacen"].includes(rol);
+  // Configuración › Roles y permisos (143).
+  const puedeEditar = permisos.tiene("productos", "editar");
+  const puedeComprar = permisos.tiene("compras", "crear");
+  // El cuadre de stock no pasa por la matriz: es de Gerencia y Administración,
+  // como `ajustarStock` y `registrar_ajuste_inventario` en la base. Antes
+  // aquí entraba también Almacén, y la acción le rebotaba al guardar.
+  const puedeAjustarStock = permisos.rol === "gerencia" || permisos.rol === "admin";
 
   // Sobre el COSTO (023). Era el último sitio que seguía dividiendo entre la
   // venta, así que la ficha decía un número y el listado del catálogo otro
@@ -110,7 +116,11 @@ export default async function PaginaDetalleProducto({
             >
               Editar
             </Link>
-          ) : null}
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("productos", "editar", permisos.nombreRol)} className="h-9 md:h-9">
+              Editar
+            </BotonBloqueado>
+          )}
           <AccionesFila
             id={p.id}
             codigo={p.codigo}
@@ -286,7 +296,7 @@ export default async function PaginaDetalleProducto({
         <ComprasAnteriores
           compras={compras.ok ? compras.datos : []}
           productoId={p.id}
-          puedeComprar={puedeEditar}
+          puedeComprar={puedeComprar}
         />
       </div>
     </div>

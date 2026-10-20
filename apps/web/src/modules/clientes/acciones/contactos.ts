@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import type { ContactoCliente } from "../dominio/tipos";
 
@@ -19,8 +20,6 @@ import type { ContactoCliente } from "../dominio/tipos";
  * teléfono no debería obligar a revalidar y reenviar la ficha comercial
  * entera, ni a arriesgarse a pisar un cambio que hizo otro mientras tanto.
  */
-
-const ROLES = ["gerencia", "admin", "ventas"] as const;
 
 export type ResultadoContacto =
   | { ok: true; id: string }
@@ -60,8 +59,9 @@ const esquema = z.object({
 async function permiso(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Tu sesión expiró. Vuelve a entrar.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede editar los contactos de un cliente.";
+  const negado = await sinPermiso("clientes", "editar");
+  if (negado) {
+    return negado;
   }
   return null;
 }

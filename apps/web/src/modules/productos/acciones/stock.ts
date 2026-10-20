@@ -21,6 +21,8 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 // `registrar_ajuste_inventario()` en la base, y viene de que Willy describió
 // el cuadre como "un botón que se usa con cuidado" (26:49). Ponerlo más
 // abierto aquí solo conseguiría que el rebote llegara desde Postgres.
+// Fuera de Configuración › Roles y permisos a propósito (143): el cuadre es de quien
+// manda, como es_gerencia() y registrar_ajuste_inventario() en la base.
 const ROLES = ["gerencia", "admin"] as const;
 
 const esquema = z.object({

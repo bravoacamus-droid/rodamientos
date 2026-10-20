@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { mensajeDeError } from "@/lib/errores";
 
@@ -24,7 +25,6 @@ import { mensajeDeError } from "@/lib/errores";
  */
 
 /** La misma lista que mantiene el maestro de productos. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export interface NodoCreado {
   id: string;
@@ -49,8 +49,9 @@ const uuid = z.string().uuid();
 async function exigirPermiso(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede tocar la clasificación de productos. La mantienen Compras o Gerencia.";
+  const prohibido = await sinPermiso("productos", "crear");
+  if (prohibido) {
+    return prohibido;
   }
   return null;
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { leerPlantilla, matrizDeArchivo } from "../api/hoja";
@@ -30,7 +31,6 @@ import type {
  */
 
 /** Quién puede tocar el maestro. Compras lo mantiene; gerencia y admin, todo. */
-const ROLES_IMPORTACION = ["gerencia", "admin", "compras"] as const;
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_FILAS = 5000;
@@ -64,8 +64,9 @@ async function exigirPermiso(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil) return "Hay que iniciar sesión.";
   if (!perfil.activo) return "La cuenta está desactivada.";
-  if (!ROLES_IMPORTACION.includes(perfil.rol as (typeof ROLES_IMPORTACION)[number])) {
-    return "Tu rol no puede cargar el maestro de productos. Lo hace Compras o Gerencia.";
+  const prohibido = await sinPermiso("productos", "crear");
+  if (prohibido) {
+    return prohibido;
   }
   return null;
 }

@@ -3,21 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Eliminar un pedido (135). Las reglas viven en `eliminar_pedido`: solo el
  * último de su cotización y sin nada vivo colgando. Si era el único, la
  * cotización vuelve a «enviada».
  */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 export async function eliminarPedido(
   id: string,
 ): Promise<{ ok: true; cotizacionId: string; numero: string } | { ok: false; error: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede eliminar pedidos." };
+  const negado = await sinPermiso("cotizaciones", "eliminar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Pedido no válido." };
 

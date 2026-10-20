@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+
 import { kitPorId } from "../../api/kits";
 import { FormularioKit } from "./formulario";
 
@@ -21,6 +24,16 @@ export default async function PaginaFormularioKit({
   params?: Promise<{ id?: string }>;
 }) {
   const id = params ? (await params).id : undefined;
+  // Antes de enseñar el formulario, no al guardar (QA, 20/10; 143).
+  const prohibido = await sinPermiso("productos", id ? "editar" : "crear");
+  if (prohibido) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">{id ? "Editar kit" : "Nuevo kit"}</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
+    );
+  }
   if (!id) return <FormularioKit kit={null} />;
 
   const r = await kitPorId(id);

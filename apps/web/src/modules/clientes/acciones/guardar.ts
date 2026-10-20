@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { contactosListosParaGuardar } from "../dominio/contactos";
 import { codigoDeCliente, revisarDocumento, variante } from "../dominio/documento";
@@ -20,12 +21,9 @@ import type { ClienteEditable, ResultadoCliente } from "../dominio/tipos";
 /**
  * Quién puede escribir en el maestro.
  *
- * `cobranzas` también tiene permiso en `permisos_rol` (necesita marcar
- * bloqueos), pero el alta y la edición de la ficha comercial son de ventas.
- * La lista de aquí es la primera línea; la de verdad la aplica RLS en Postgres.
+ * Desde la 143 lo decide la matriz de Roles y permisos (`clientes`), aquí y
+ * en RLS: crear para el alta, editar para corregir.
  */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 /** Cuántos códigos alternativos se prueban antes de rendirse. */
 const MAX_INTENTOS_CODIGO = 25;
 
@@ -213,10 +211,11 @@ export async function guardarCliente(
   // cualquiera con una sesión de almacén escribe en el maestro comercial.
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
+  const negado = (await sinPermiso("clientes", "crear")) && (await sinPermiso("clientes", "editar"));
+  if (negado) {
     return {
       ok: false,
-      error: "Tu rol no puede dar de alta ni editar clientes. Lo hacen Ventas o Gerencia.",
+      error: negado,
     };
   }
 
@@ -240,6 +239,10 @@ export async function guardarCliente(
     }
     return { ok: false, error: "Los datos no son válidos." };
   }
+
+  // 2.bis · Ya se sabe si es alta o corrección: el permiso fino.
+  const negadoAccion = await sinPermiso("clientes", datos.id ? "editar" : "crear");
+  if (negadoAccion) return { ok: false, error: negadoAccion };
 
   // 3 · El documento, con su dígito verificador. La restricción
   // `clientes_documento_ok` de la base diría lo mismo, pero en un idioma que
@@ -422,8 +425,9 @@ export async function bloquearCliente(
 ): Promise<{ ok: boolean; error?: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede bloquear clientes." };
+  const negado = await sinPermiso("clientes", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "Cliente no válido." };

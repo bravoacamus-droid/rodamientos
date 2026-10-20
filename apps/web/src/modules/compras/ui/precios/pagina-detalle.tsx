@@ -2,6 +2,8 @@ import { Volver } from "@/componentes/volver";
 import { redirect } from "next/navigation";
 import { EstadoError, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { referenciasDeRonda, rondaDetalle } from "../../api/comparador";
 import { proveedoresParaPedir } from "@/modules/proveedores";
@@ -11,7 +13,6 @@ import { HojaPrecios } from "../hoja-precios/hoja";
 import { Comparativa } from "./comparativa";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * Una consulta de precios: la rejilla.
@@ -28,12 +29,13 @@ export default async function PaginaComparativa({
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes ver las consultas de precios"
-        descripcion="Tu rol no tiene permiso para las compras. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes ver las consultas de precios</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

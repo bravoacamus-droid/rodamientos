@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { EstadoError, Skeleton } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { conteosCatalogo, cuentasBancarias, empresa } from "../api/consultas";
 import { CabeceraConfig } from "./cabecera";
@@ -19,9 +21,12 @@ import { FormEmpresa } from "./form-empresa";
  * de alta a un vendedor no se hacen ni el mismo día ni por la misma persona.
  */
 export default async function PaginaConfigEmpresa() {
-  const perfil = await perfilActual();
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol === "gerencia" || rol === "admin";
+  // «Datos de la empresa y numeración» en la matriz (143).
+  const permisos = await misPermisos();
+  const puedeEditar = permisos.tiene("configuracion", "editar");
+  if (!permisos.tiene("configuracion", "ver")) {
+    return <AvisoSinPermiso mensaje={avisoSinPermiso("configuracion", "ver", permisos.nombreRol)} />;
+  }
 
   return (
     <div className="flex flex-col gap-5">

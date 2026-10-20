@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { Volver } from "@/componentes/volver";
 
@@ -13,11 +14,9 @@ import { FormularioImportacion } from "./formulario";
  * pasos necesita estado entre subir y confirmar.
  */
 
-const ROLES = ["gerencia", "admin", "compras"];
-
 export default async function PaginaImportacion() {
-  const perfil = await perfilActual();
-  const puede = perfil !== null && perfil.activo && ROLES.includes(perfil.rol);
+  // Cargar es dar de alta productos: «Productos · Crear» (143).
+  const prohibido = await sinPermiso("productos", "crear");
 
   return (
     // Sin `p-6`, que el marco ya pone, y con su «Volver»: era la única
@@ -33,10 +32,8 @@ export default async function PaginaImportacion() {
         </p>
       </header>
 
-      {!puede ? (
-        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          Tu usuario no puede cargar productos. Lo hacen Compras o Gerencia.
-        </div>
+      {prohibido ? (
+        <AvisoSinPermiso mensaje={prohibido} />
       ) : (
         <>
           {/* Willy, 26/08 (13:00): «voy a poner también que usted pueda

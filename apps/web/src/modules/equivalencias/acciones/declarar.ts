@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { mensajeDeError } from "@/lib/errores";
 
@@ -14,12 +15,10 @@ import { CLASES, type ClaseEquivalencia } from "../dominio/tipos";
  *
  * `producto_equivalencias` no tiene RPC y no lo necesita: es un insert de
  * cuatro columnas sobre una tabla con RLS, y la política ya pregunta a
- * `permisos_rol`. Lo que sí hace falta es la parte que la base no puede
+ * la matriz de permisos (143). Lo que sí hace falta es la parte que la base no puede
  * decidir sola —en qué SENTIDO se guarda el par— y eso vive en `parCanonico`.
  */
 
-/** La misma lista que `permisos_rol` tiene para `producto_equivalencias`. */
-const ROLES = ["gerencia", "admin", "ventas", "compras"] as const;
 
 export type ResultadoEquivalencia =
   | { ok: true; mensaje: string }
@@ -34,15 +33,16 @@ const esquema = z.object({
   nota: z.string().max(500).nullable(),
 });
 
-async function perfilQuePuede(): Promise<
+async function perfilQuePuede(accion: "crear" | "eliminar"): Promise<
   { ok: true; id: string } | { ok: false; error: string }
 > {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) {
     return { ok: false, error: "Hay que iniciar sesión." };
   }
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede declarar equivalencias." };
+  const prohibido = await sinPermiso("equivalencias", accion);
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   return { ok: true, id: perfil.id };
 }
@@ -61,7 +61,7 @@ export async function declararEquivalencia(
   clase: ClaseEquivalencia,
   nota: string | null,
 ): Promise<ResultadoEquivalencia> {
-  const quien = await perfilQuePuede();
+  const quien = await perfilQuePuede("crear");
   if (!quien.ok) return quien;
 
   const datos = esquema.safeParse({
@@ -121,7 +121,7 @@ export async function quitarEquivalencia(
   productoId: string,
   equivalenteId: string,
 ): Promise<ResultadoEquivalencia> {
-  const quien = await perfilQuePuede();
+  const quien = await perfilQuePuede("eliminar");
   if (!quien.ok) return quien;
 
   if (!uuid.safeParse(productoId).success || !uuid.safeParse(equivalenteId).success) {

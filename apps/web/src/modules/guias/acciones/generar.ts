@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 /**
@@ -17,8 +18,6 @@ import type { Json } from "@rodatech/db/tipos";
  */
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 const esquemaItem = z.object({
   producto_id: z.string().uuid(),
   cotizacion_item_id: z.string().uuid().nullable(),
@@ -65,8 +64,9 @@ export async function generarGuia(
 ): Promise<ResultadoGuia> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede generar guías de remisión." };
+  const negado = await sinPermiso("guias", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   const crudo = formData.get("guia");

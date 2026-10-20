@@ -8,7 +8,7 @@ import {
   Skeleton,
   formatearMoneda,
 } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { importaciones } from "../api/consultas";
 import {
@@ -45,7 +45,6 @@ function uno(v: string | string[] | undefined): string | undefined {
 const dinero = (n: number) => formatearMoneda(n);
 
 /** Los roles que `permisos_rol` deja escribir en `gastos_importacion`. */
-const ROLES_GASTOS = ["gerencia", "admin", "compras"];
 
 /**
  * Importaciones.
@@ -77,9 +76,8 @@ export default async function PaginaImportaciones({ searchParams }: Props) {
     new Date(),
   );
 
-  const perfil = await perfilActual();
-  const puedeGastos =
-    perfil?.activo === true && ROLES_GASTOS.includes(perfil.rol);
+  // Los gastos se le cuelgan a una compra ya registrada: «Compras · Editar» (143).
+  const puedeGastos = (await misPermisos()).tiene("compras", "editar");
 
   return (
     <div className="flex flex-col gap-5">

@@ -25,7 +25,8 @@ import { PedidosDeLaCotizacion } from "@/modules/pedidos/ui/de-la-cotizacion";
 import { OrdenCliente } from "./detalle/orden-cliente";
 import { demandaDeProductos } from "../api/demanda";
 import { proveedoresGuardados } from "../dominio/compra-linea";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { YaFacturado } from "./detalle/ya-facturado";
 import { VistaPreviaDocumento } from "./detalle/vista-previa";
 import { unidadLegible } from "../dominio/unidades";
@@ -257,7 +258,7 @@ export default async function PaginaDetalleCotizacion({
   const [ordenes, perfil, demanda, pedidos] = confirmado
     ? await Promise.all([
         ordenesDelPedido(cabecera.id),
-        perfilActual(),
+        misPermisos(),
         demandaDeProductos(idsConProducto),
         listarPedidos({ cotizacionId: cabecera.id }),
       ])
@@ -516,7 +517,7 @@ export default async function PaginaDetalleCotizacion({
           analizados={lineasConfirmadas
             .filter((l) => l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null))
             .map((l) => l.productoId)}
-          puedeGenerar={!!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)}
+          puedeGenerar={!!perfil?.tiene("compras", "crear")}
         />
 
         {confirmado ? (
@@ -524,7 +525,8 @@ export default async function PaginaDetalleCotizacion({
             cotizacionId={cabecera.id}
             lineas={lineasConfirmadas}
             existentes={ordenes}
-            puedeGenerar={!!perfil?.activo && ["gerencia", "admin", "compras"].includes(perfil.rol)}
+            puedeGenerar={!!perfil?.tiene("compras", "crear")}
+            sinPermiso={avisoSinPermiso("compras", "crear", perfil?.nombreRol)}
             demanda={[...demanda.values()]}
           />
         ) : null}

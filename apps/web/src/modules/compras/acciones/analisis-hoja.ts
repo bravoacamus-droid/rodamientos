@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { matrizDeArchivo } from "@/modules/importacion/api/hoja";
 
@@ -9,7 +10,6 @@ import { libroAnalisis } from "../api/analisis-excel";
 import { leerHojaAnalisis } from "../dominio/analisis-hoja";
 import type { LineaAnalisis, ProductoParaAnalizar } from "../dominio/analisis";
 
-const ROLES = ["gerencia", "admin", "compras"] as const;
 /** Su hoja pesa 17 KB; el tope de una Server Action es 1 MB. */
 const MAX_BYTES = 900 * 1024;
 
@@ -34,7 +34,7 @@ export async function productoPorCodigo(
   marca: string,
 ): Promise<ProductoParaAnalizar | null> {
   const perfil = await perfilActual();
-  if (!perfil || !perfil.activo || !ROLES.includes(perfil.rol as (typeof ROLES)[number])) return null;
+  if (!perfil || !perfil.activo || (await sinPermiso("compras", "ver"))) return null;
   const trozos = String(codigo).toUpperCase().match(/[A-Z0-9]+/g);
   if (!trozos || trozos.join("").length < 2) return null;
 
@@ -89,8 +89,9 @@ export type ResultadoHoja =
 export async function leerExcelAnalisis(formData: FormData): Promise<ResultadoHoja> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede hacer análisis de importación." };
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   const archivo = formData.get("archivo");
@@ -220,8 +221,9 @@ export type ResultadoExcel =
 export async function exportarAnalisisExcel(entrada: unknown): Promise<ResultadoExcel> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede hacer análisis de importación." };
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   const v = esquemaExcel.safeParse(entrada);
   if (!v.success) {

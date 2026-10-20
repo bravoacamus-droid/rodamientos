@@ -11,7 +11,7 @@ import { mensajeDeError } from "@/lib/errores";
  *
  * No hay RPC para leer ni para archivar porque no hace falta: son un UPDATE de
  * una columna booleana y RLS ya decide quién puede. La política pregunta a
- * `permisos_rol`, donde `alertas` está abierta a los cinco roles — es un tablero
+ * `puede_escribir`, que desde la 143 la deja abierta a todos los roles — es un tablero
  * compartido, no el buzón de nadie en particular.
  *
  * Archivar SÍ tiene consecuencia, y conviene tenerla presente: el índice único
@@ -29,7 +29,7 @@ export type ResultadoAccion =
  * Devuelve el fallo si no hay sesión, y `null` si la hay.
  *
  * Solo comprueba que el perfil esté activo: quién puede escribir en `alertas`
- * lo decide RLS contra `permisos_rol`, y repetir aquí la lista de roles sería
+ * lo decide RLS con `puede_escribir`, y repetir aquí la lista de roles sería
  * mantener la misma regla en dos sitios.
  */
 async function sesionInvalida(): Promise<ResultadoAccion | null> {

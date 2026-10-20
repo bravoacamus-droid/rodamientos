@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { proveedoresParaPedir } from "@/modules/proveedores";
 import { proveedoresPorId, proveedoresSugeridos } from "@/modules/proveedores/api/consultas";
@@ -15,7 +17,6 @@ import { paraQuienEs, precargaDeCompra } from "../api/por-comprar";
 import { ConstructorCompra } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"];
 
 /**
  * Pantalla de alta de una compra.
@@ -37,12 +38,13 @@ export default async function PaginaNuevaCompra({
 }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes registrar compras"
-        descripcion="Tu rol no tiene permiso para el abastecimiento. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes registrar compras</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 

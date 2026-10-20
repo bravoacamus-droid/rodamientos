@@ -19,6 +19,8 @@ import {
   type EstadoDocumento,
 } from "@rodatech/ui";
 
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+
 import { generarOrdenesDeCompra } from "../../acciones/ordenes";
 import type { OrdenDelPedido } from "../../api/consultas";
 import { proponerPendientes, type LineaConfirmada, type OrdenPropuesta } from "../../dominio/compra-linea";
@@ -42,12 +44,15 @@ export function OrdenesDeCompra({
   lineas,
   existentes,
   puedeGenerar,
+  sinPermiso,
   demanda,
 }: {
   cotizacionId: string;
   lineas: LineaConfirmada[];
   existentes: OrdenDelPedido[];
   puedeGenerar: boolean;
+  /** Por qué no puede, para el botón con candado (143). */
+  sinPermiso?: string;
   /** Quién más pide estos productos (09/10). */
   demanda: DemandaProducto[];
 }) {
@@ -70,6 +75,10 @@ export function OrdenesDeCompra({
             primera={vivas.length === 0}
             demanda={new Map(demanda.map((d) => [d.productoId, d]))}
           />
+        ) : !puedeGenerar && propuestas.length > 0 && sinPermiso ? (
+          <BotonBloqueado mensaje={sinPermiso}>
+            {vivas.length === 0 ? "Registrar la compra" : "Registrar lo que falta"}
+          </BotonBloqueado>
         ) : null}
       </header>
 

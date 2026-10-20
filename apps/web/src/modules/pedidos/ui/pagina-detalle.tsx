@@ -7,6 +7,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 
 import { Volver } from "@/componentes/volver";
 import { emisorParaImprimir } from "@/lib/emisor";
+import { misPermisos } from "@/lib/permisos";
 import { ordenesDelPedido } from "@/modules/compras/api/consultas";
 import {
   cotizacionPorId,
@@ -52,11 +53,12 @@ export default async function PaginaDetallePedido({
   const abrirRepetir = sp.repetir === "1";
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  const rol = perfil.rol;
-  const puedeComprar = ["gerencia", "admin", "compras"].includes(rol);
-  const puedeDespachar = ["gerencia", "admin", "ventas", "almacen"].includes(rol);
-  const puedeFacturar = ["gerencia", "admin", "ventas"].includes(rol);
-  const puedeCobrar = ["gerencia", "admin", "cobranzas"].includes(rol);
+  // Cada paso del pedido es de un módulo distinto (143).
+  const permisos = await misPermisos();
+  const puedeComprar = permisos.tiene("compras", "crear");
+  const puedeDespachar = permisos.tiene("guias", "crear");
+  const puedeFacturar = permisos.tiene("facturacion", "crear");
+  const puedeCobrar = permisos.tiene("cobranzas", "crear");
 
   const [r, ordenes, emisor] = await Promise.all([detallePedido(id), ordenesDelPedido(id), emisorParaImprimir()]);
   if (!r.ok) return <EstadoError titulo="No se pudo cargar el pedido" detalle={r.error} />;

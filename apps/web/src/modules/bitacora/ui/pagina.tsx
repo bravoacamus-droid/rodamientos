@@ -10,6 +10,8 @@ import {
   formatearFechaHora,
 } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { puedo, sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 import { History } from "lucide-react";
 
 import {
@@ -30,7 +32,6 @@ import { Fallos } from "./fallos";
 import { FiltrosBarra } from "./filtros";
 
 /** Solo quien puede verlo todo. La bitácora dice quién hizo qué. */
-const ROLES = ["gerencia", "admin"];
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -54,12 +55,13 @@ function uno(v: string | string[] | undefined): string | undefined {
 export default async function PaginaBitacora({ searchParams }: Props) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const prohibido = await sinPermiso("bitacora", "ver");
+  if (prohibido) {
     return (
-      <EstadoError
-        titulo="No puedes ver la bitácora"
-        descripcion="Dice quién hizo qué, así que solo la ve Gerencia y Administración."
-      />
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">No puedes ver la bitácora</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
     );
   }
 
@@ -132,7 +134,8 @@ async function BloqueFallos() {
       />
     );
   }
-  return <Fallos fallos={r.datos} />;
+  // Marcar revisado es «editar» de Qué ha pasado (144); ver no basta.
+  return <Fallos fallos={r.datos} puedeRevisar={await puedo("bitacora", "editar")} />;
 }
 
 async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {

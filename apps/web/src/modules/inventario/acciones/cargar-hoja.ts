@@ -16,6 +16,8 @@ import type { FiltrosConteo, ProductoContable } from "../dominio/tipos";
  */
 
 /** Solo gerencia, igual que el ajuste que va a salir de esta hoja. */
+// Fuera de Configuración › Roles y permisos a propósito (143): el cuadre es de quien
+// manda, como es_gerencia() y registrar_ajuste_inventario() en la base.
 const ROLES = ["gerencia", "admin"] as const;
 
 export type Resultado<T> =

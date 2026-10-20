@@ -6,6 +6,8 @@ import { opcionesDeInventario } from "../api/consultas";
 import { HojaDeConteo } from "./conteo";
 
 /** Solo gerencia (26:49). Es la misma que impone `es_gerencia()` en Postgres. */
+// Fuera de Configuración › Roles y permisos a propósito (143): el cuadre es de quien
+// manda, como es_gerencia() y registrar_ajuste_inventario() en la base.
 const ROLES = ["gerencia", "admin"];
 
 /**

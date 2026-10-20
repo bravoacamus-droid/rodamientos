@@ -23,7 +23,7 @@ import type { Fallo } from "../api/consultas";
 /** Cuántos se enseñan antes de «Ver los otros». */
 const VISIBLES = 5;
 
-export function Fallos({ fallos }: { fallos: Fallo[] }) {
+export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puedeRevisar?: boolean }) {
   const router = useRouter();
   const [marcando, marcar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
@@ -87,6 +87,7 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
             </span>
           </div>
 
+          {puedeRevisar ? (
           <Button
             type="button"
             variant="outline"
@@ -103,6 +104,7 @@ export function Fallos({ fallos }: { fallos: Fallo[] }) {
             <Check aria-hidden="true" />
             Ya está visto
           </Button>
+          ) : null}
         </div>
       ))}
 

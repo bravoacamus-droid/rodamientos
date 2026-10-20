@@ -1,6 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { consultarTipoCambio, type ResultadoTipoCambio } from "@/lib/tipo-cambio";
 
@@ -31,13 +32,13 @@ export type { ResultadoTipoCambio };
  */
 
 /** La misma lista que puede registrar compras. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export async function tipoCambioDelDia(fecha?: string): Promise<ResultadoTipoCambio> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede registrar compras." };
+  const prohibido = await sinPermiso("compras", "crear");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   return consultarTipoCambio(fecha);

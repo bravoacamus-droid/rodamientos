@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { proveedoresActivos } from "../api/consultas";
 import type { FiltrosCompras } from "../dominio/tipos";
@@ -44,17 +46,14 @@ export default async function PaginaCompras({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [proveedores, perfil] = await Promise.all([
+  const [proveedores, permisos] = await Promise.all([
     proveedoresActivos(),
-    perfilActual(),
+    misPermisos(),
   ]);
 
-  // Que el botón aparezca y luego rebote es peor que no verlo. La lista es la
-  // misma que `permisos_rol` tiene para `compras`.
-  const puedeComprar =
-    perfil !== null &&
-    perfil.activo &&
-    ["gerencia", "admin", "compras"].includes(perfil.rol);
+  // Lo que dice Configuración › Roles y permisos (143). Sin permiso el botón sale
+  // con candado y explica, en vez de esconderse (QA, 20/10).
+  const puedeComprar = permisos.tiene("compras", "crear");
 
   const sinProveedores = proveedores.ok && proveedores.datos.length === 0;
 
@@ -75,6 +74,10 @@ export default async function PaginaCompras({ searchParams }: Props) {
           >
             Registrar compra
           </Link>
+        ) : !puedeComprar ? (
+          <BotonBloqueado mensaje={avisoSinPermiso("compras", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            Registrar compra
+          </BotonBloqueado>
         ) : null}
       </div>
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Marcar un fallo como revisado.
@@ -12,15 +13,15 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * pendiente, su huella queda libre, así que si reaparece abre una fila nueva y
  * se nota que volvió.
  */
-const ROLES = ["gerencia", "admin"] as const;
 
 export type ResultadoFallo = { ok: true } | { ok: false; error: string };
 
 export async function marcarRevisado(id: number): Promise<ResultadoFallo> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede marcar fallos." };
+  const prohibido = await sinPermiso("bitacora", "editar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   if (!z.number().int().positive().safeParse(id).success) {
     return { ok: false, error: "Identificador inválido." };

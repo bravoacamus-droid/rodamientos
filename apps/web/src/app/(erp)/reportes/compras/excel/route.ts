@@ -1,4 +1,5 @@
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { describirRango, leerRango } from "@/modules/reportes";
 import { libroCompras } from "@/modules/tablero/api/excel-compras";
@@ -6,12 +7,12 @@ import { libroCompras } from "@/modules/tablero/api/excel-compras";
 /** El Excel del reporte de compras (133), con los filtros de la pantalla. */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ROLES = ["gerencia", "admin", "compras"];
 
 export async function GET(req: Request) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return new Response("Hay que iniciar sesión.", { status: 401 });
-  if (!ROLES.includes(perfil.rol)) return new Response("Tu rol no ve el reporte de compras.", { status: 403 });
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) return new Response(prohibido, { status: 403 });
 
   const url = new URL(req.url);
   const p = (k: string) => url.searchParams.get(k) ?? undefined;

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Apuntarle el teléfono o el correo al cliente sin salir de la cotización.
@@ -28,9 +29,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * número que acaban de dar por teléfono.
  */
 
-/** La misma lista que `permisos_rol` tiene para `clientes`. */
-const ROLES = ["gerencia", "admin", "ventas"] as const;
-
 const esquema = z.object({
   id: z.string().uuid(),
   // Los tres opcionales y los tres a la vez: se apunta lo que se sepa. Vaciar
@@ -49,8 +47,9 @@ export async function ponerContactoCliente(
 ): Promise<ResultadoContactoCliente> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede editar clientes." };
+  const negado = await sinPermiso("clientes", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   let datos: z.infer<typeof esquema>;

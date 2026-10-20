@@ -1,5 +1,7 @@
 import type { Rol } from "@rodatech/config";
 
+import { type Accion, type Modulo, tieneEn } from "./permisos-comun";
+
 /**
  * Los iconos del menú. Uno por ítem, ninguno decorativo.
  *
@@ -21,7 +23,17 @@ export interface ItemNav {
   etiqueta: string;
   ruta: string;
   icono: NombreIcono;
-  /** Roles que ven el ítem. Vacío = todos los autenticados. */
+  /**
+   * El módulo cuyo permiso hace falta para verlo (143): lo que se marca en
+   * Configuración › Roles y permisos. Por defecto «ver»; «Cargar productos» pide
+   * «crear». Sin módulo ni roles, lo ve cualquiera con sesión.
+   */
+  permiso?: Modulo;
+  accion?: Accion;
+  /**
+   * Solo para lo que NO pasa por la matriz: usuarios, permisos y el ajuste de
+   * inventario, que siguen siendo de quien manda.
+   */
   roles?: readonly Rol[];
 }
 
@@ -97,12 +109,14 @@ export const CONFIGURACION: GrupoNav = {
       etiqueta: "Datos de la empresa",
       ruta: "/configuracion/empresa",
       icono: "empresa",
-      roles: ["gerencia", "admin"],
+      permiso: "configuracion",
     },
     {
       etiqueta: "SUNAT y numeración",
       ruta: "/configuracion/sunat",
       icono: "sunat",
+      // El certificado y el usuario SOL: `es_gerencia()` en la base, fuera de
+      // la matriz (143). Lo ve quien lo puede guardar.
       roles: ["gerencia", "admin"],
     },
     {
@@ -113,7 +127,7 @@ export const CONFIGURACION: GrupoNav = {
       roles: ["gerencia", "admin"],
     },
     {
-      etiqueta: "Permisos",
+      etiqueta: "Roles y permisos",
       ruta: "/configuracion/permisos",
       icono: "usuarios",
       // Misma regla que arriba: admin mira, gerencia cambia. Y va DESPUÉS de
@@ -147,14 +161,14 @@ export const NAVEGACION: readonly GrupoNav[] = [
     titulo: "Reportes",
     icono: "reporte",
     items: [
-      { etiqueta: "Ventas por cliente", ruta: "/reportes/clientes", icono: "panelClientes" },
-      { etiqueta: "Cotizado y ganado", ruta: "/reportes/cotizaciones", icono: "panelCotizaciones" },
-      { etiqueta: "Lo facturado", ruta: "/reportes/facturacion", icono: "panelFacturacion" },
+      { etiqueta: "Ventas por cliente", ruta: "/reportes/clientes", permiso: "reportes", icono: "panelClientes" },
+      { etiqueta: "Cotizado y ganado", ruta: "/reportes/cotizaciones", permiso: "reportes", icono: "panelCotizaciones" },
+      { etiqueta: "Lo facturado", ruta: "/reportes/facturacion", permiso: "reportes", icono: "panelFacturacion" },
       // Compras (133): cuánto, a quién, qué, quién lo deja más barato.
-      { etiqueta: "Compras", ruta: "/reportes/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Compras", ruta: "/reportes/compras", icono: "compra", permiso: "compras" },
       // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
       // solo para quien manda, como cuando vivía en «Gestión».
-      { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", roles: ["gerencia", "admin"] },
+      { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", permiso: "informe" },
     ],
   },
   {
@@ -163,32 +177,32 @@ export const NAVEGACION: readonly GrupoNav[] = [
     titulo: "Ventas",
     icono: "cotizacion",
     items: [
-      { etiqueta: "Cotizaciones", ruta: "/cotizaciones", icono: "cotizacion" },
+      { etiqueta: "Cotizaciones", ruta: "/cotizaciones", permiso: "cotizaciones", icono: "cotizacion" },
       // Justo después, porque es el paso siguiente del mismo hilo: se
       // cotiza, el cliente confirma, y cuando llega la mercadería alguien
       // tiene que acordarse de avisarle. Ese «alguien» era la memoria de
       // Willy hasta el 04/09.
       // «Pedidos» (130), antes «Listos para entregar»: cada confirmación del
       // cliente con el paso que le toca. Lo de antes es una de sus pestañas.
-      { etiqueta: "Pedidos", ruta: "/pedidos", icono: "listos" },
-      { etiqueta: "Guías de remisión", ruta: "/guias", icono: "guia" },
-      { etiqueta: "Facturación", ruta: "/facturacion", icono: "factura" },
+      { etiqueta: "Pedidos", ruta: "/pedidos", permiso: "cotizaciones", icono: "listos" },
+      { etiqueta: "Guías de remisión", ruta: "/guias", permiso: "guias", icono: "guia" },
+      { etiqueta: "Facturación", ruta: "/facturacion", permiso: "facturacion", icono: "factura" },
       // Justo debajo: lo que la factura espera de SUNAT (15/10). Con número
       // rojo cuando hay algo por enviar, rechazado o por dar de baja.
-      { etiqueta: "SUNAT", ruta: "/sunat", icono: "sunat", roles: ["gerencia", "admin", "ventas"] },
-      { etiqueta: "Cobranzas", ruta: "/cobranzas", icono: "cobranza", roles: ["gerencia", "admin", "cobranzas"] },
+      { etiqueta: "SUNAT", ruta: "/sunat", icono: "sunat", permiso: "facturacion" },
+      { etiqueta: "Cobranzas", ruta: "/cobranzas", icono: "cobranza", permiso: "cobranzas" },
     ],
   },
   {
     titulo: "Catálogo",
     icono: "producto",
     items: [
-      { etiqueta: "Productos", ruta: "/productos", icono: "producto" },
+      { etiqueta: "Productos", ruta: "/productos", permiso: "productos", icono: "producto" },
       // Quien mantiene el maestro es Compras; gerencia y admin pueden todo.
       {
         etiqueta: "Cargar productos",
         ruta: "/productos/cargar", icono: "cargar",
-        roles: ["gerencia", "admin", "compras"],
+        permiso: "productos", accion: "crear",
       },
       /*
         Los kits (085), justo debajo de Productos.
@@ -200,16 +214,16 @@ export const NAVEGACION: readonly GrupoNav[] = [
         Va en el menú desde el primer día a propósito: en este proyecto lo que
         no está en el menú no existe, y ya van treinta veces.
       */
-      { etiqueta: "Kits", ruta: "/productos/kits", icono: "kit" },
-      { etiqueta: "Equivalencias", ruta: "/equivalencias", icono: "equivalencia" },
-      { etiqueta: "Clientes", ruta: "/clientes", icono: "cliente" },
+      { etiqueta: "Kits", ruta: "/productos/kits", permiso: "productos", icono: "kit" },
+      { etiqueta: "Equivalencias", ruta: "/equivalencias", permiso: "equivalencias", icono: "equivalencia" },
+      { etiqueta: "Clientes", ruta: "/clientes", permiso: "clientes", icono: "cliente" },
       // Con quién y con qué se despacha: las agencias, los vehículos propios y
       // los conductores. Va en Catálogo y no en Configuración porque se
       // mantiene mientras se trabaja —a la agencia nueva se le da de alta el
       // día que el cliente la pide—, no el día de la puesta en marcha.
       {
         etiqueta: "Transporte", ruta: "/transporte", icono: "transporte",
-        roles: ["gerencia", "admin", "ventas", "almacen"],
+        permiso: "transporte",
       },
     ],
   },
@@ -217,9 +231,9 @@ export const NAVEGACION: readonly GrupoNav[] = [
     titulo: "Almacén",
     icono: "inventario",
     items: [
-      { etiqueta: "Inventario", ruta: "/inventario", icono: "inventario" },
-      { etiqueta: "Kardex", ruta: "/inventario/kardex", icono: "kardex" },
-      { etiqueta: "Recepciones", ruta: "/recepciones", icono: "recepcion", roles: ["gerencia", "admin", "almacen", "compras"] },
+      { etiqueta: "Inventario", ruta: "/inventario", permiso: "almacen", icono: "inventario" },
+      { etiqueta: "Kardex", ruta: "/inventario/kardex", permiso: "almacen", icono: "kardex" },
+      { etiqueta: "Recepciones", ruta: "/recepciones", icono: "recepcion", permiso: "almacen" },
       // El cuadre lo pidió Willy como "un botón que se usa con cuidado" (26:49).
       { etiqueta: "Ajuste de inventario", ruta: "/inventario/ajuste", icono: "ajuste", roles: ["gerencia"] },
     ],
@@ -232,7 +246,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
       // Antes que «Compras» a propósito: es la pantalla desde la que se
       // empieza. Willy no abre el ERP para registrar una compra, la abre
       // para saber qué le falta.
-      { etiqueta: "Por comprar", ruta: "/compras/por-comprar", icono: "porcomprar", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Por comprar", ruta: "/compras/por-comprar", icono: "porcomprar", permiso: "compras" },
       /*
         Entre las dos, que es donde cae en el flujo: se ve qué falta, se
         pregunta el precio, y de ahí sale la compra.
@@ -247,15 +261,15 @@ export const NAVEGACION: readonly GrupoNav[] = [
         «Pedir precios» es su propio verbo —él dice «pedir precio»— y dice lo
         que se hace ahí.
       */
-      { etiqueta: "Pedir precios", ruta: "/compras/precios", icono: "precios", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Pedir precios", ruta: "/compras/precios", icono: "precios", permiso: "compras" },
       /*
         Lo que Willy hace en Excel antes de comprar fuera (098, §AQ): la
         proforma, el $/kg, el precio puesto en Lima contra el mercado, y cuánto
         pedir. Junto a «Pedir precios» porque es su equivalente de importación:
         decidir qué comprar antes de registrar la compra.
       */
-      { etiqueta: "Análisis de importación", ruta: "/compras/analisis", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
-      { etiqueta: "Compras", ruta: "/compras", icono: "compra", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Análisis de importación", ruta: "/compras/analisis", icono: "importacion", permiso: "compras" },
+      { etiqueta: "Compras", ruta: "/compras", icono: "compra", permiso: "compras" },
       /*
         Proveedores vive aquí desde el 11/09, y no en Catálogo.
 
@@ -274,8 +288,8 @@ export const NAVEGACION: readonly GrupoNav[] = [
         que no es «una cosa de ventas». Es un maestro de verdad, y ahí es donde
         se queda.
       */
-      { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", roles: ["gerencia", "admin", "compras"] },
-      { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", roles: ["gerencia", "admin", "compras"] },
+      { etiqueta: "Proveedores", ruta: "/proveedores", icono: "proveedor", permiso: "proveedores" },
+      { etiqueta: "Importaciones", ruta: "/importaciones", icono: "importacion", permiso: "compras" },
     ],
   },
   {
@@ -284,7 +298,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
     items: [
       { etiqueta: "Alertas", ruta: "/alertas", icono: "alerta" },
       // Dice quién hizo qué, así que la ve quien responde de ello.
-      { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", roles: ["gerencia", "admin"] },
+      { etiqueta: "Qué ha pasado", ruta: "/actividad", icono: "bitacora", permiso: "bitacora" },
     ],
   },
   // Y la última, definida arriba porque es larga y tiene su propia historia.
@@ -323,16 +337,20 @@ export function rutaActiva(
 }
 
 /**
- * Filtra el menú para un rol. Sin rol conocido, solo lo abierto a todos.
+ * Filtra el menú para un rol y sus permisos (143). Sin rol conocido, solo lo
+ * abierto a todos.
  *
  * Los grupos que se quedan sin ítems desaparecen, así que la configuración no
  * le sale a quien no tiene ninguno de sus tres permisos: no hace falta un
  * interruptor aparte para esconderla.
  */
-export function menuPara(rol: Rol | null): GrupoNav[] {
+export function menuPara(rol: string | null, permisos: readonly string[] = []): GrupoNav[] {
+  const ve = (i: ItemNav) =>
+    (!i.roles || (rol !== null && (i.roles as readonly string[]).includes(rol))) &&
+    (!i.permiso || tieneEn(permisos, i.permiso, i.accion ?? "ver"));
   return NAVEGACION.map((grupo) => ({
     ...grupo,
-    items: grupo.items.filter((i) => !i.roles || (rol !== null && i.roles.includes(rol))),
+    items: grupo.items.filter(ve),
   })).filter((grupo) => grupo.items.length > 0);
 }
 
@@ -345,3 +363,27 @@ export function menuPara(rol: Rol | null): GrupoNav[] {
  * al servidor como referencia de cliente, no como texto.
  */
 export const COOKIE_MENU_ESTRECHO = "rodatech.menu.estrecho";
+
+/**
+ * ¿Puede abrir esta ruta? (143) El mismo criterio que el menú, aplicado a la
+ * dirección: el ítem más específico del que cuelga decide. Lo que no cuelga
+ * de ningún ítem —el tablero, el perfil— se abre siempre.
+ *
+ * Hacía falta porque esconder del menú no basta: el QA y cualquiera puede
+ * escribir `/proveedores` en la barra. Las lecturas siguen abiertas en la base
+ * (ventas necesita leer productos para cotizar), así que esto es la puerta de
+ * la PANTALLA, no de los datos.
+ */
+export function puedeAbrir(
+  ruta: string,
+  rol: string | null,
+  permisos: readonly string[],
+  grupos: readonly GrupoNav[] = NAVEGACION,
+): boolean {
+  const activa = rutaActiva(ruta, grupos);
+  if (activa === null) return true;
+  const item = grupos.flatMap((g) => g.items).find((i) => i.ruta === activa);
+  if (!item) return true;
+  if (item.roles && (rol === null || !(item.roles as readonly string[]).includes(rol))) return false;
+  return !item.permiso || tieneEn(permisos, item.permiso, item.accion ?? "ver");
+}

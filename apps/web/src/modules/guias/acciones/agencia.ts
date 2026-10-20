@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Dar de alta una agencia de transporte sin salir de la guía.
@@ -33,8 +34,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  */
 
 /** Los mismos roles que la 029 le dio a `agencias_transporte`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 export interface AgenciaCreada {
   id: string;
   razon_social: string;
@@ -62,8 +61,9 @@ const limpio = (v: string | null) => (v === null || v.trim() === "" ? null : v.t
 export async function registrarAgencia(datosCrudos: unknown): Promise<ResultadoAgencia> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede dar de alta agencias." };
+  const negado = await sinPermiso("transporte", "crear");
+  if (negado) {
+    return { ok: false, error: negado };
   }
 
   let datos: z.infer<typeof esquema>;

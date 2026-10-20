@@ -2,16 +2,15 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import type { CondicionPago, FiltrosClientes } from "../dominio/tipos";
 import { rubrosDeCliente, zonasDeVisita } from "../api/consultas";
 import { FiltrosClientesBarra } from "./filtros";
 import { ResumenCartera } from "./resumen-cartera";
 import { TablaClientes } from "./tabla";
-
-/** Roles que mantienen la cartera. Ventas entra porque es quien da de alta. */
-const ROLES_ESCRITURA = ["gerencia", "admin", "ventas"];
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -51,11 +50,10 @@ export default async function PaginaClientes({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [perfil, zonas, rubros] = await Promise.all([perfilActual(), zonasDeVisita(), rubrosDeCliente()]);
-  // Solo quien mantiene la cartera ve el botón. Que aparezca y luego rebote es
-  // peor que no verlo.
-  const puedeCrear =
-    perfil !== null && perfil.activo && ROLES_ESCRITURA.includes(perfil.rol);
+  const [permisos, zonas, rubros] = await Promise.all([misPermisos(), zonasDeVisita(), rubrosDeCliente()]);
+  // Sin permiso el botón sale con candado y dice por qué (QA, 20/10): que
+  // aparezca y rebote al guardar es lo peor; que no aparezca, tampoco explica.
+  const puedeCrear = permisos.tiene("clientes", "crear");
 
   return (
     <div className="flex flex-col gap-5">
@@ -75,7 +73,14 @@ export default async function PaginaClientes({ searchParams }: Props) {
             <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
             Nuevo cliente
           </Link>
-        ) : null}
+        ) : (
+          <BotonBloqueado
+            mensaje={avisoSinPermiso("clientes", "crear", permisos.nombreRol)}
+            className="w-full sm:w-auto"
+          >
+            Nuevo cliente
+          </BotonBloqueado>
+        )}
       </div>
 
       {/* Por zona y por rubro (141), encima de la lista: es la pregunta con

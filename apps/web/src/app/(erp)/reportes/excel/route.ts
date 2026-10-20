@@ -1,4 +1,5 @@
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { describirRango, leerRango } from "@/modules/reportes";
 import { libroDetalle, type TipoDetalle } from "@/modules/tablero/api/excel";
@@ -19,6 +20,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function GET(req: Request) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return new Response("Hay que iniciar sesión.", { status: 401 });
+  const prohibido = await sinPermiso("reportes", "ver");
+  if (prohibido) return new Response(prohibido, { status: 403 });
 
   const url = new URL(req.url);
   const p = (k: string) => url.searchParams.get(k) ?? undefined;

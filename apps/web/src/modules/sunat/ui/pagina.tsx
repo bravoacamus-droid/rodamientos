@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CircleCheck, FileX2, SendHorizontal, ShieldAlert, TriangleAlert, Truck } from "lucide-react";
 import { EstadoError, Moneda, formatearFecha, formatearFechaHora } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import { FilaIndicadores } from "@/componentes/indicadores";
 import { estadoConfiguracion } from "@/modules/facturacion/api/configuracion";
@@ -21,8 +22,6 @@ import { BotonBaja, BotonEnviar, BotonEnviarGuias } from "./botones";
  * para hacerlo. Cuando está todo al día, lo dice en verde y nada más.
  */
 
-const ROLES = ["gerencia", "admin", "ventas"];
-
 const TONO = {
   ok: "text-[var(--ok)]",
   aviso: "text-[var(--warn)]",
@@ -32,11 +31,14 @@ const TONO = {
 export default async function PaginaSunat() {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) redirect("/dashboard");
+  const permisos = await misPermisos();
+  if (!permisos.tiene("facturacion", "ver")) redirect("/dashboard");
 
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
   const [config, bandeja] = await Promise.all([estadoConfiguracion(), bandejaSunat(hoy)]);
-  const esGerencia = ["gerencia", "admin"].includes(perfil.rol);
+  // El enlace a la configuración y las bajas, cada uno con su permiso (143).
+  const esGerencia = permisos.tiene("configuracion", "ver");
+  const puedeDarDeBaja = permisos.tiene("facturacion", "eliminar");
 
   if (!bandeja.ok) {
     return <EstadoError titulo="No se pudo leer el estado de SUNAT" detalle={bandeja.error} />;
@@ -252,12 +254,12 @@ export default async function PaginaSunat() {
             <div key={g.fecha} className="rounded-sm border border-[var(--border)] p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <p className="font-semibold">Emitidos el {formatearFecha(g.fecha)}</p>
-                {esGerencia ? (
+                {puedeDarDeBaja ? (
                   config.listo ? (
                     <BotonBaja fecha={g.fecha} />
                   ) : null
                 ) : (
-                  <p className="text-sm text-[var(--fg-muted)]">La comunica Gerencia.</p>
+                  <p className="text-sm text-[var(--fg-muted)]">La comunica quien puede anular facturas.</p>
                 )}
               </div>
               <ul className="mt-2 flex flex-col gap-2">

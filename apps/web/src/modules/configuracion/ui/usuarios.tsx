@@ -9,7 +9,17 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, SelectNativo, toast } from "@rodatech/ui";
 
 import { cambiarUsuario, type ResultadoConfig } from "../acciones/guardar";
-import { AYUDA_ROL, ETIQUETA_ROL, ROLES, type Rol, type Usuario } from "../dominio/tipos";
+import type { Rol, RolDef, Usuario } from "../dominio/tipos";
+
+/**
+ * Los roles vienen de la base (143): los seis de siempre y los que cree
+ * gerencia. Van por contexto para no pasarlos por tres niveles de props.
+ */
+const Roles = React.createContext<RolDef[]>([]);
+function useRol(clave: string): { nombre: string; descripcion: string | null } {
+  const r = React.useContext(Roles).find((x) => x.clave === clave);
+  return { nombre: r?.nombre ?? clave, descripcion: r?.descripcion ?? null };
+}
 
 /**
  * «05/10/2026», en hora de Lima. Era `slice(0, 10)` del ISO en UTC: «2026-10-05»
@@ -48,16 +58,19 @@ function fechaAcceso(iso: string | null): string {
  */
 export function TablaUsuarios({
   usuarios,
+  roles,
   idPropio,
   puedeEditar,
 }: {
   usuarios: Usuario[];
+  roles: RolDef[];
   idPropio: string | null;
   puedeEditar: boolean;
 }) {
   // @container: a 820 con el menú abierto la tabla pedía 232 px más de los
   // que había y «Desactivar» quedaba fuera (revisión por módulos del 02/10).
   return (
+    <Roles.Provider value={roles}>
     <div className="@container">
       <div className="flex flex-col gap-3 @3xl:hidden">
         {usuarios.map((u) => (
@@ -93,6 +106,7 @@ export function TablaUsuarios({
         </table>
       </div>
     </div>
+    </Roles.Provider>
   );
 }
 
@@ -133,6 +147,7 @@ function SelectorRol({
   onCambiar: (rol: Rol) => void;
   className?: string;
 }) {
+  const roles = React.useContext(Roles);
   return (
     <SelectNativo
       value={usuario.rol}
@@ -141,9 +156,9 @@ function SelectorRol({
       onChange={(e) => onCambiar(e.target.value as Rol)}
       className={className}
     >
-      {ROLES.map((r) => (
-        <option key={r} value={r}>
-          {ETIQUETA_ROL[r]}
+      {roles.map((r) => (
+        <option key={r.clave} value={r.clave}>
+          {r.nombre}
         </option>
       ))}
     </SelectNativo>
@@ -207,6 +222,7 @@ function TarjetaUsuario({
 }) {
   const { ocupado, correr } = useCambiar();
   const editable = puedeEditar && !esUnoMismo;
+  const rol = useRol(usuario.rol);
 
   return (
     <div
@@ -230,9 +246,9 @@ function TarjetaUsuario({
             className="w-full"
           />
         ) : (
-          <p className="font-medium">{ETIQUETA_ROL[usuario.rol]}</p>
+          <p className="font-medium">{rol.nombre}</p>
         )}
-        <p className="mt-1 text-sm text-[var(--fg-muted)]">{AYUDA_ROL[usuario.rol]}</p>
+        {rol.descripcion ? <p className="mt-1 text-sm text-[var(--fg-muted)]">{rol.descripcion}</p> : null}
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2">
@@ -269,6 +285,7 @@ function FilaUsuario({
 }) {
   const { ocupado, correr } = useCambiar();
   const editable = puedeEditar && !esUnoMismo;
+  const rol = useRol(usuario.rol);
 
   return (
     <tr className={`border-b border-[var(--border-soft)] ${usuario.activo ? "" : "opacity-60"}`}>
@@ -295,11 +312,11 @@ function FilaUsuario({
             className="w-auto"
           />
         ) : (
-          <span>{ETIQUETA_ROL[usuario.rol]}</span>
+          <span>{rol.nombre}</span>
         )}
-        <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
-          {AYUDA_ROL[usuario.rol]}
-        </span>
+        {rol.descripcion ? (
+          <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">{rol.descripcion}</span>
+        ) : null}
       </td>
 
       <td className="tabular px-3 py-2 text-sm text-[var(--fg-muted)]">

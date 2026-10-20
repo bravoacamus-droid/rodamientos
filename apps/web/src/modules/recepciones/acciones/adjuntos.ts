@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 /**
  * Guardar la guía y la factura del proveedor, escaneadas.
@@ -29,8 +30,6 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  * saltar.
  */
 
-/** La misma lista que `permisos_rol` tiene para `recepcion_adjuntos`. */
-const ROLES = ["gerencia", "admin", "almacen", "compras"] as const;
 
 const BUCKET = "documentos-proveedor";
 const MAXIMO = 10 * 1024 * 1024;
@@ -58,8 +57,9 @@ export async function subirPapelDelProveedor(
 ): Promise<ResultadoAdjunto> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede adjuntar papeles a una recepción." };
+  const prohibido = await sinPermiso("almacen", "crear");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   const revision = esquema.safeParse({
@@ -156,8 +156,9 @@ export async function subirPapelDelProveedor(
 export async function quitarPapelDelProveedor(id: string): Promise<ResultadoAdjunto> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede quitar papeles." };
+  const prohibido = await sinPermiso("almacen", "editar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "Ese adjunto no vale." };
@@ -225,8 +226,9 @@ export async function enlaceAlPapel(
   */
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "No tienes permiso para ver los papeles del proveedor." };
+  const prohibido = await sinPermiso("almacen", "ver");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "El papel no es válido." };
@@ -295,8 +297,9 @@ export async function corregirNumerosDelProveedor(
 ): Promise<ResultadoAdjunto> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede tocar los papeles del proveedor." };
+  const prohibido = await sinPermiso("almacen", "editar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   let datos: z.infer<typeof esquemaNumeros>;

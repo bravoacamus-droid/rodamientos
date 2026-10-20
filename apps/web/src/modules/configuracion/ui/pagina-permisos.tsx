@@ -2,19 +2,17 @@ import { Suspense } from "react";
 import { EstadoError, Skeleton } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
-import type { Rol } from "../dominio/tipos";
-
-import { permisosGuardados } from "../api/consultas";
+import { rolesYPermisos } from "../api/consultas";
 import { CabeceraConfig } from "./cabecera";
-import { MatrizPermisos } from "./matriz-permisos";
+import { RolesYPermisos } from "./roles-permisos";
 
 /**
- * Permisos.
+ * Roles y permisos.
  *
- * La cuarta pantalla de Configuración, desde el 24/09. `permisos_rol` existe
- * desde la 002 y su comentario dice que la gracia es «cambiar quién escribe
- * qué sin tocar una política» — pero no había dónde cambiarlo, así que en la
- * práctica era un `insert` a mano contra producción.
+ * Desde el 24/09 se cambiaba aquí qué área tocaba cada rol; desde el 20/10
+ * (143) se crean roles y cada uno dice qué puede VER, CREAR, EDITAR y ELIMINAR
+ * en cada módulo — y eso es lo que mira la aplicación entera: el menú, los
+ * botones, las Server Actions y la base.
  *
  * Va aparte de «Usuarios» a propósito, aunque las dos hablen de roles: en
  * Usuarios se dice **qué rol tiene Julio**, y eso cambia cada vez que entra o
@@ -23,22 +21,20 @@ import { MatrizPermisos } from "./matriz-permisos";
  */
 export default async function PaginaConfigPermisos() {
   const perfil = await perfilActual();
-  const rol = perfil?.activo ? perfil.rol : null;
-  const esGerencia = rol === "gerencia";
+  const esGerencia = perfil?.activo === true && perfil.rol === "gerencia";
 
   return (
     <div className="flex flex-col gap-5">
       <CabeceraConfig
         icono="usuarios"
-        titulo="Permisos"
-        descripcion="Qué puede tocar cada rol dentro del sistema."
+        titulo="Roles y permisos"
+        descripcion="Qué puede ver, crear, editar y eliminar cada rol en cada módulo."
       />
 
       {!esGerencia ? (
         <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
-          Puedes ver quién puede hacer qué, pero{" "}
-          <strong>cambiarlo es cosa de Gerencia</strong>. No es solo esta
-          pantalla: la base lo impide también.
+          Puedes ver qué puede hacer cada rol, pero <strong>cambiarlo es cosa de Gerencia</strong>. No es
+          solo esta pantalla: la base lo impide también.
         </p>
       ) : (
         /*
@@ -47,37 +43,24 @@ export default async function PaginaConfigPermisos() {
           ANTES de tocar, no después.
         */
         <p className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
-          Esto cambia lo que los demás pueden hacer, de inmediato y para todos.
-          Si le quitas un grupo a un rol, quien lo tenga verá el módulo pero no
-          podrá guardar nada.
+          Esto cambia lo que los demás pueden hacer, <strong>de inmediato y para todos</strong> los que
+          tengan ese rol: el menú y los botones cambian en cuanto recarguen la página.
         </p>
       )}
 
       <section className="card p-4">
-        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <BloquePermisos puedeEditar={esGerencia} rolPropio={rol} />
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <Bloque puedeEditar={esGerencia} />
         </Suspense>
       </section>
     </div>
   );
 }
 
-async function BloquePermisos({
-  puedeEditar,
-  rolPropio,
-}: {
-  puedeEditar: boolean;
-  rolPropio: Rol | null;
-}) {
-  const r = await permisosGuardados();
+async function Bloque({ puedeEditar }: { puedeEditar: boolean }) {
+  const r = await rolesYPermisos();
   if (!r.ok) {
     return <EstadoError titulo="No se pudieron cargar los permisos" detalle={r.error} />;
   }
-  return (
-    <MatrizPermisos
-      guardados={r.datos}
-      puedeEditar={puedeEditar}
-      rolPropio={rolPropio}
-    />
-  );
+  return <RolesYPermisos {...r.datos} puedeEditar={puedeEditar} />;
 }

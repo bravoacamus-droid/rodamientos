@@ -17,6 +17,7 @@ import {
   estadoInicial,
   type EstadoGuiaEnCurso,
   faltaPeso,
+  formatoPeso,
   pesoCalculado,
   pesoEfectivo,
   reducir,
@@ -619,7 +620,7 @@ export function ConstructorGuia({
                   </p>
                 ) : calculado > 0 ? (
                   <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-                    Calculado del catálogo: {calculado.toFixed(3)} kg. Puedes cambiarlo si
+                    Calculado del catálogo: {formatoPeso(calculado)} kg. Puedes cambiarlo si
                     la balanza dice otra cosa.
                   </p>
                 ) : null}
@@ -850,7 +851,7 @@ export function ConstructorGuia({
               <Fila etiqueta="Bultos" valor={String(estado.numeroBultos)} />
               <Fila
                 etiqueta="Peso bruto"
-                valor={efectivo > 0 ? `${efectivo.toFixed(3)} kg` : "—"}
+                valor={efectivo > 0 ? `${formatoPeso(efectivo)} kg` : "—"}
                 fuerte
               />
             </dl>

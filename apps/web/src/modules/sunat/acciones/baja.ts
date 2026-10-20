@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { conectorSunat } from "@/modules/facturacion/api/configuracion";
 
@@ -22,8 +23,6 @@ import { siguienteCorrelativoBaja, tipoSunatDe, type TipoDocumentoSunat } from "
  * con «Preguntar a SUNAT». La comunican gerencia y admin, como anular.
  */
 
-const ROLES = ["gerencia", "admin"] as const;
-
 const hoyLima = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 
 export type ResultadoBaja = { ok: true; mensaje: string } | { ok: false; error: string };
@@ -33,8 +32,9 @@ export async function comunicarBaja(fechaDocumentos: string): Promise<ResultadoB
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
   // Los mismos que pueden anular (gerencia y admin): es la otra mitad del acto.
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Solo Gerencia o Administración pueden comunicar bajas a SUNAT." };
+  const negado = await sinPermiso("facturacion", "eliminar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   if (!z.string().regex(/^\d{4}-\d{2}-\d{2}$/).safeParse(fechaDocumentos).success) {
     return { ok: false, error: "La fecha no es válida." };
@@ -113,9 +113,8 @@ export async function comunicarBaja(fechaDocumentos: string): Promise<ResultadoB
 export async function consultarBaja(id: string): Promise<ResultadoBaja> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!["gerencia", "admin", "ventas"].includes(perfil.rol)) {
-    return { ok: false, error: "Tu rol no puede consultar a SUNAT." };
-  }
+  const negadoConsulta = (await sinPermiso("facturacion", "editar")) && (await sinPermiso("facturacion", "eliminar"));
+  if (negadoConsulta) return { ok: false, error: negadoConsulta };
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "Esa baja no vale." };
 
   const admin = clienteAdmin();

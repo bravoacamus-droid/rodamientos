@@ -20,6 +20,7 @@ import { AlertTriangle, ChevronRight, Download, Info, UserPlus } from "lucide-re
 
 import { buscarPorDocumento } from "@/modules/clientes/acciones/consultar";
 import { guardarCliente } from "@/modules/clientes/acciones/guardar";
+import { CARGOS, InputSugerencias } from "@/modules/clientes/ui/contacto-campos";
 import type { TipoDocumento } from "@/modules/clientes/dominio/tipos";
 
 import type { ClienteOpcion } from "../../dominio/cliente";
@@ -342,8 +343,11 @@ export function ClienteRapido({
             </div>
 
             <label className="flex flex-col gap-1">
+              {/* Con DNI es una persona: «Razón social» no le dice nada a nadie
+                  (reunión 20/10; el QA lo encontró aquí, en el alta rápida). */}
               <span className="text-sm font-medium">
-                Razón social <span className="text-[var(--danger)]">*</span>
+                {tipo === "DNI" ? "Nombre y apellidos" : "Razón social"}{" "}
+                <span className="text-[var(--danger)]">*</span>
               </span>
               <Input
                 value={razonSocial}
@@ -395,14 +399,20 @@ export function ClienteRapido({
                 />
               </label>
 
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Cargo</span>
-                <Input
-                  value={cargo}
-                  onChange={(e) => setCargo(e.target.value)}
+              {/* Las mismas sugerencias que en la ficha del cliente (QA 20/10:
+                  aquí no salía ninguna). */}
+              <div className="flex flex-col gap-1">
+                <label htmlFor="rapido-cargo" className="text-sm font-medium">
+                  Cargo
+                </label>
+                <InputSugerencias
+                  id="rapido-cargo"
+                  valor={cargo}
+                  onCambio={setCargo}
+                  sugerencias={CARGOS}
                   placeholder="Jefe de mantenimiento…"
                 />
-              </label>
+              </div>
 
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Teléfono</span>

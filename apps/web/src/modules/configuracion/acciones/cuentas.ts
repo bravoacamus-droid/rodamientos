@@ -5,6 +5,7 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { mensajeDeError } from "@/lib/errores";
+import { sinPermiso } from "@/lib/permisos";
 
 import type { ResultadoConfig } from "./guardar";
 
@@ -16,19 +17,15 @@ import type { ResultadoConfig } from "./guardar";
  * 15/09: *«no puedo ver las cuentas que se crearon, que están en cotización»*.
  *
  * Quien las toca es quien administra la empresa, igual que los datos fiscales:
- * `permisos_rol` ya dice `gerencia` y `admin` para esta tabla, y aquí se
+ * la matriz (143) la pone en «Datos de la empresa y numeración», y aquí se
  * comprueba otra vez porque una Server Action es un endpoint público y el
  * mensaje de una política RLS no se le puede enseñar a nadie.
  */
-const ROLES = ["gerencia", "admin"] as const;
-
 async function exigirPermiso(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Solo Gerencia y Administración cambian las cuentas para cobrar.";
-  }
-  return null;
+  // «Configuración · editar» en la matriz (143).
+  return sinPermiso("configuracion", "editar");
 }
 
 /**

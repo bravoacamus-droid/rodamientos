@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio, buttonVariants, cn } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { Volver } from "@/componentes/volver";
 
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
@@ -10,8 +14,6 @@ import { cotizacionesFacturables } from "../api/consultas";
 import { EmisorComprobante } from "./emisor";
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
-const ROLES = ["gerencia", "admin", "ventas"];
-
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -34,12 +36,13 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
 
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const permisos = await misPermisos();
+  if (!permisos.tiene("facturacion", "crear")) {
     return (
-      <EstadoError
-        titulo="No puedes emitir comprobantes"
-        descripcion="Tu rol no tiene permiso de facturación. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <Volver href="/facturacion">Volver a facturación</Volver>
+        <AvisoSinPermiso mensaje={avisoSinPermiso("facturacion", "crear", permisos.nombreRol)} />
+      </div>
     );
   }
 

@@ -18,6 +18,7 @@ import {
 
 import { emitirGuia } from "../acciones/emitir";
 import { faltaParaEmitir } from "../dominio/emitir";
+import { formatoPeso } from "../dominio/constructor";
 import { ETIQUETA_MODALIDAD, type GuiaDetalle } from "../dominio/tipos";
 
 /**
@@ -110,7 +111,7 @@ export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
               etiqueta="Transporte"
               valor={transporte}
             />
-            <Fila ok={guia.peso_bruto_kg > 0} etiqueta="Peso bruto" valor={`${guia.peso_bruto_kg.toFixed(3)} kg`} />
+            <Fila ok={guia.peso_bruto_kg > 0} etiqueta="Peso bruto" valor={`${formatoPeso(guia.peso_bruto_kg)} kg`} />
           </ul>
 
           {/*

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
 import { RotateCcw, Scale } from "lucide-react";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 
 import { detalleCompra } from "../api/consultas";
 import { quienEsperaEstos } from "../api/por-comprar";
@@ -32,7 +34,7 @@ export default async function PaginaDetalleCompra({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, emisor] = await Promise.all([detalleCompra(id), perfilActual(), emisorParaImprimir()]);
+  const [resultado, permisos, emisor] = await Promise.all([detalleCompra(id), misPermisos(), emisorParaImprimir()]);
 
   if (!resultado.ok) {
     return (
@@ -46,8 +48,10 @@ export default async function PaginaDetalleCompra({
   if (!resultado.datos) notFound();
 
   const c = resultado.datos;
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeAnular = rol !== null && ["gerencia", "admin", "compras"].includes(rol);
+  // Lo que dice Configuración › Roles y permisos (143).
+  const puedeComprar = permisos.tiene("compras", "crear");
+  const puedeAnular = permisos.tiene("compras", "eliminar");
+  const puedeEditar = permisos.tiene("compras", "editar");
 
   // Para quién es. Una compra anulada no espera nadie: enseñar clientes
   // encima de un documento muerto mandaría a repartir mercadería que no viene.
@@ -152,7 +156,7 @@ export default async function PaginaDetalleCompra({
             tener botón— y también en una anulada: que se anulara no quita
             que se quiera volver a pedir lo mismo.
           */}
-          {puedeAnular ? (
+          {puedeComprar ? (
             <Link
               href={`/compras/nueva?desde=${c.id}`}
               className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
@@ -161,9 +165,13 @@ export default async function PaginaDetalleCompra({
               Volver a comprar
             </Link>
           ) : null}
-          {puedeAnular && c.estado !== "anulada" ? (
+          {c.estado === "anulada" ? null : puedeAnular ? (
             <AnularCompra id={c.id} numero={c.numero} recibida={recibido > 0} />
-          ) : null}
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("compras", "eliminar", permisos.nombreRol)} className="h-9 md:h-9">
+              Anular
+            </BotonBloqueado>
+          )}
         </div>
       </header>
 
@@ -452,13 +460,13 @@ export default async function PaginaDetalleCompra({
               compra siga sin recibir. Se enseña también sin gastos si todavía
               se pueden añadir: un bloque vacío con su botón es el camino.
             */}
-            {c.gastos_importacion > 0 || (editableGastos && puedeAnular) ? (
+            {c.gastos_importacion > 0 || (editableGastos && puedeEditar) ? (
               <GastosFicha
                 compraId={c.id}
                 gastos={c.gastos}
                 total={c.gastos_importacion}
                 editable={editableGastos}
-                puedeTocar={puedeAnular}
+                puedeTocar={puedeEditar}
                 pedirDesaduanaje={
                   c.via_importacion === "aerea" &&
                   !c.gastos.some((g) => /desaduan|aduana/i.test(g.concepto))
@@ -507,7 +515,7 @@ export default async function PaginaDetalleCompra({
           <DocumentosCompra
             compraId={c.id}
             documentos={c.documentos}
-            puedeTocar={puedeAnular && c.estado !== "anulada"}
+            puedeTocar={puedeEditar && c.estado !== "anulada"}
           />
 
           <section className="card p-4">

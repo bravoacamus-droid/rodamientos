@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import { kitPorId, type KitDetalle } from "../api/kits";
 
 /**
@@ -31,8 +32,6 @@ import { kitPorId, type KitDetalle } from "../api/kits";
  * de registrar que armó cinco.
  */
 
-/** La misma lista que `permisos_rol` tiene para `productos`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export type ResultadoKit = { ok: true; id: string; codigo: string } | { ok: false; error: string };
 
@@ -74,11 +73,12 @@ const esquema = z.object({
 
 type Guardia = { error: string } | { error?: undefined; perfilId: string };
 
-async function guardia(): Promise<Guardia> {
+async function guardia(accion: "crear" | "editar"): Promise<Guardia> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { error: "Tu rol no puede tocar el catálogo. Lo mantienen Compras o Gerencia." };
+  const prohibido = await sinPermiso("productos", accion);
+  if (prohibido) {
+    return { error: prohibido };
   }
   return { perfilId: perfil.id };
 }
@@ -92,7 +92,10 @@ async function guardia(): Promise<Guardia> {
  * llegar al mismo sitio con más maneras de equivocarse.
  */
 export async function guardarKit(datos: unknown): Promise<ResultadoKit> {
-  const g = await guardia();
+  // Sin id es un kit nuevo (crear); con id, corregir uno (editar).
+  const g = await guardia(
+    datos && typeof datos === "object" && "id" in datos && (datos as { id?: unknown }).id ? "editar" : "crear",
+  );
   if (g.error !== undefined) return { ok: false, error: g.error };
 
   const v = esquema.safeParse(datos);

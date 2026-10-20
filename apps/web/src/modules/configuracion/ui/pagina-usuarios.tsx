@@ -3,7 +3,8 @@ import { EstadoError, Skeleton } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 import { hayClaveAdmin } from "@rodatech/db/admin";
 
-import { usuarios } from "../api/consultas";
+import { rolesParaElegir, usuarios } from "../api/consultas";
+import type { RolDef } from "../dominio/tipos";
 import { AltaUsuario } from "./alta-usuario";
 import { CabeceraConfig } from "./cabecera";
 import { TablaUsuarios } from "./usuarios";
@@ -28,6 +29,7 @@ export default async function PaginaConfigUsuarios() {
   const perfil = await perfilActual();
   const rol = perfil?.activo ? perfil.rol : null;
   const esGerencia = rol === "gerencia";
+  const roles = await rolesParaElegir();
 
   return (
     <div className="flex flex-col gap-5">
@@ -55,7 +57,7 @@ export default async function PaginaConfigUsuarios() {
       */}
       {esGerencia ? (
         <section className="card p-4">
-          <AltaUsuario hayClave={hayClaveAdmin()} />
+          <AltaUsuario hayClave={hayClaveAdmin()} roles={roles} />
         </section>
       ) : null}
 
@@ -64,7 +66,7 @@ export default async function PaginaConfigUsuarios() {
           Aquí se cambia el rol y se activa o desactiva a quien ya entra.
         </p>
         <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-          <BloqueUsuarios idPropio={perfil?.id ?? null} puedeEditar={esGerencia} />
+          <BloqueUsuarios idPropio={perfil?.id ?? null} puedeEditar={esGerencia} roles={roles} />
         </Suspense>
       </section>
     </div>
@@ -74,15 +76,17 @@ export default async function PaginaConfigUsuarios() {
 async function BloqueUsuarios({
   idPropio,
   puedeEditar,
+  roles,
 }: {
   idPropio: string | null;
   puedeEditar: boolean;
+  roles: RolDef[];
 }) {
   const r = await usuarios();
   if (!r.ok) {
     return <EstadoError titulo="No se pudieron cargar los usuarios" detalle={r.error} />;
   }
   return (
-    <TablaUsuarios usuarios={r.datos} idPropio={idPropio} puedeEditar={puedeEditar} />
+    <TablaUsuarios usuarios={r.datos} roles={roles} idPropio={idPropio} puedeEditar={puedeEditar} />
   );
 }

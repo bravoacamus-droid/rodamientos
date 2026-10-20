@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { type Accion, sinPermiso } from "@/lib/permisos";
 
 /**
  * Mantener el maestro de transporte.
@@ -25,18 +26,21 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
  */
 
 /** Los mismos roles que la 029 y la 060 dieron a las tres tablas. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 export type ResultadoMaestro = { ok: true; id: string } | { ok: false; error: string };
 
 const limpio = (v: string | null | undefined) =>
   v === null || v === undefined || v.trim() === "" ? null : v.trim();
 
-async function permiso(): Promise<string | null> {
+/** Con id es corregir uno que ya existe; sin id, dar de alta. */
+const tieneId = (crudos: unknown) =>
+  typeof crudos === "object" && crudos !== null && typeof (crudos as { id?: unknown }).id === "string" && (crudos as { id: string }).id !== "";
+
+async function permiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede tocar el maestro de transporte.";
+  const negado = await sinPermiso("transporte", accion);
+  if (negado) {
+    return negado;
   }
   return null;
 }
@@ -67,7 +71,7 @@ const esquemaAgencia = z.object({
 });
 
 export async function guardarAgencia(crudos: unknown): Promise<ResultadoMaestro> {
-  const noPuede = await permiso();
+  const noPuede = await permiso(tieneId(crudos) ? "editar" : "crear");
   if (noPuede) return { ok: false, error: noPuede };
 
   let d: z.infer<typeof esquemaAgencia>;
@@ -138,7 +142,7 @@ function normalizarPlaca(v: string): string {
 }
 
 export async function guardarVehiculo(crudos: unknown): Promise<ResultadoMaestro> {
-  const noPuede = await permiso();
+  const noPuede = await permiso(tieneId(crudos) ? "editar" : "crear");
   if (noPuede) return { ok: false, error: noPuede };
 
   let d: z.infer<typeof esquemaVehiculo>;
@@ -198,7 +202,7 @@ const esquemaConductor = z.object({
 });
 
 export async function guardarConductor(crudos: unknown): Promise<ResultadoMaestro> {
-  const noPuede = await permiso();
+  const noPuede = await permiso(tieneId(crudos) ? "editar" : "crear");
   if (noPuede) return { ok: false, error: noPuede };
 
   let d: z.infer<typeof esquemaConductor>;
@@ -259,7 +263,7 @@ export async function cambiarEstado(
   id: string,
   activo: boolean,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const noPuede = await permiso();
+  const noPuede = await permiso("editar");
   if (noPuede) return { ok: false, error: noPuede };
 
   const tabla = TABLAS[tipo];

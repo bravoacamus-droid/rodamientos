@@ -1,6 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { consultarDocumentoSunat, type ResultadoSunat } from "@/lib/documento-sunat";
 
@@ -19,7 +20,6 @@ import type { TipoDocumento } from "../dominio/tipos";
  * escribe a mano desde la factura que el operador tiene delante.
  */
 
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export async function buscarProveedorPorDocumento(
   tipo: TipoDocumento,
@@ -27,8 +27,9 @@ export async function buscarProveedorPorDocumento(
 ): Promise<ResultadoSunat> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede consultar documentos." };
+  const prohibido = (await sinPermiso("proveedores", "crear")) && (await sinPermiso("proveedores", "editar"));
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
 
   // Los argumentos de una Server Action llegan del navegador: `tipo` podría

@@ -23,7 +23,8 @@ export default async function PaginaInventario() {
   const perfil = await perfilActual();
 
   const rol = perfil?.activo ? perfil.rol : null;
-  // El cuadre es exclusivo de gerencia (26:49). Que el botón aparezca y luego
+  // El cuadre es exclusivo de gerencia (26:49) y no pasa por Configuración ›
+  // Permisos (143). Que el botón aparezca y luego
   // rebote es peor que no verlo.
   const puedeCuadrar = rol !== null && ["gerencia", "admin"].includes(rol);
 

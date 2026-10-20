@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { FilePen, FileWarning, Plus, ShieldCheck, Truck } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
@@ -50,14 +52,12 @@ export default async function PaginaGuias({ searchParams }: Props) {
      el filtro busca contra el servidor. De aquí solo sale el nombre del que
      esté filtrado, para poder pintarlo. */
   const [perfil, cliente, series] = await Promise.all([
-    perfilActual(),
+    misPermisos(),
     filtros.cliente ? nombreDelCliente(filtros.cliente) : Promise.resolve(null),
     seriesDe(["guia_remision"]),
   ]);
 
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeDespachar =
-    rol !== null && ["gerencia", "admin", "ventas", "almacen"].includes(rol);
+  const puedeDespachar = perfil.tiene("guias", "crear");
 
   return (
     <div className="flex flex-col gap-5">
@@ -85,7 +85,11 @@ export default async function PaginaGuias({ searchParams }: Props) {
             <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
             Preparar guía
           </Link>
-        ) : null}
+        ) : (
+          <BotonBloqueado mensaje={avisoSinPermiso("guias", "crear", perfil.nombreRol)} className="md:h-9">
+            Preparar guía
+          </BotonBloqueado>
+        )}
       </div>
 
       <Suspense

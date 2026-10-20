@@ -2,6 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EstadoError, EstadoVacio } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { Volver } from "@/componentes/volver";
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { transportePropioActivo } from "@/modules/transporte";
 
@@ -15,8 +19,6 @@ import {
 import { ConstructorGuia } from "./constructor";
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"];
-
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -34,12 +36,13 @@ export default async function PaginaNuevaGuia({ searchParams }: Props) {
 
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
+  const permisos = await misPermisos();
+  if (!permisos.tiene("guias", "crear")) {
     return (
-      <EstadoError
-        titulo="No puedes preparar guías"
-        descripcion="Tu rol no tiene permiso para despachar mercadería. Habla con Gerencia si crees que debería."
-      />
+      <div className="flex flex-col gap-4">
+        <Volver href="/guias">Volver a guías</Volver>
+        <AvisoSinPermiso mensaje={avisoSinPermiso("guias", "crear", permisos.nombreRol)} />
+      </div>
     );
   }
 

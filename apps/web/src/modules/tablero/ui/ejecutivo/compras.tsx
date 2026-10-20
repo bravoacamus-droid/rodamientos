@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { Clock, Package, PiggyBank, ShoppingCart, TrendingUp, Truck } from "lucide-react";
 import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { FiltroRango, etiquetaPeriodo } from "@/modules/reportes";
 
@@ -46,13 +48,18 @@ const VIAS: { clave: string; texto: string; color: string }[] = [
   { clave: "importacion", texto: "Importación (sin vía)", color: "var(--color-steel-400)" },
 ];
 
-const ROLES = ["gerencia", "admin", "compras"];
 
 export default async function PaginaComprasEjecutiva({ searchParams }: { searchParams: Promise<ParamsBusqueda> }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  if (!ROLES.includes(perfil.rol)) {
-    return <EstadoError titulo="Tu rol no ve el reporte de compras" mostrarReintentar={false} />;
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Tu rol no ve el reporte de compras</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
+    );
   }
 
   const sp = await searchParams;

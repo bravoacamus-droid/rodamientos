@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { mensajeDeError } from "@/lib/errores";
 import { repartoSugerido } from "@/modules/compras/dominio/gastos";
@@ -27,8 +28,6 @@ import { gastosDe } from "../api/consultas";
  * a algo legible.
  */
 
-/** La misma lista que `permisos_rol` tiene para `gastos_importacion`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export type ResultadoGasto =
   | { ok: true; mensaje: string }
@@ -50,8 +49,9 @@ const esquema = z.object({
 async function exigirPermiso(): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return "Tu rol no puede tocar los gastos de importación. Lo hacen Compras o Gerencia.";
+  const prohibido = await sinPermiso("compras", "editar");
+  if (prohibido) {
+    return prohibido;
   }
   return null;
 }

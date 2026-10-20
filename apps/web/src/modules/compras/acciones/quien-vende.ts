@@ -1,6 +1,7 @@
 "use server";
 
 import { perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { proveedoresPorProducto } from "@/modules/proveedores/api/catalogo";
 import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
@@ -22,15 +23,14 @@ import type { ProveedorParaPedir } from "@/modules/proveedores/dominio/pedir";
  * facturación.
  */
 
-/** La misma lista que `permisos_rol` tiene para `compras`. */
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 export async function quienVende(
   productoIds: string[],
 ): Promise<Record<string, ProveedorParaPedir[]>> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return {};
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) return {};
+  const prohibido = await sinPermiso("compras", "ver");
+  if (prohibido) return {};
 
   // Los argumentos llegan del navegador. El tope no es paranoia: esto se
   // llama al añadir productos de uno en uno, y una lista larga aquí sería

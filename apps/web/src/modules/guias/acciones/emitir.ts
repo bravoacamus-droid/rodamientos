@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 
 import { detalleGuia } from "../api/consultas";
 import { faltaParaEmitir } from "../dominio/emitir";
@@ -18,15 +19,14 @@ import { faltaParaEmitir } from "../dominio/emitir";
  */
 
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
-const ROLES = ["gerencia", "admin", "ventas", "almacen"] as const;
-
 export type ResultadoEmisionGuia = { ok: true; numero: string } | { ok: false; error: string };
 
 export async function emitirGuia(id: string): Promise<ResultadoEmisionGuia> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede emitir guías." };
+  const negado = await sinPermiso("guias", "editar");
+  if (negado) {
+    return { ok: false, error: negado };
   }
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) {
     return { ok: false, error: "Esa guía no es válida." };

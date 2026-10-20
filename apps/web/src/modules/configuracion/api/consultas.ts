@@ -5,13 +5,16 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
-import type { PermisoGuardado } from "../dominio/permisos";
+import type { Accion, Modulo } from "@/lib/permisos-comun";
+
+import type { ModuloDef, Permiso } from "../dominio/permisos";
 import { ordenarSeries } from "../dominio/serie";
 import type {
   ConteosCatalogo,
   CuentaBancaria,
   Empresa,
   Rol,
+  RolDef,
   SerieDocumento,
   TipoDocumento,
   Usuario,
@@ -256,31 +259,63 @@ export async function cuentasBancarias(): Promise<Resultado<CuentaBancaria[]>> {
 }
 
 /**
- * La matriz de permisos, tal cual está guardada.
- *
- * La agrupa en áreas la pantalla, no esta consulta: aquí interesa traerlo todo
- * —incluidas las tablas que ningún área reclama— para que `tablasSinArea()`
- * pueda enseñarlas en vez de dejarlas invisibles.
+ * Los roles, los módulos y lo que puede cada rol en cada uno (143). Todo de
+ * una vez: la pantalla los cruza en el navegador para que la casilla cambie
+ * al instante.
  */
-export async function permisosGuardados(): Promise<Resultado<PermisoGuardado[]>> {
+export async function rolesYPermisos(): Promise<
+  Resultado<{ roles: RolDef[]; modulos: ModuloDef[]; permisos: Permiso[] }>
+> {
   try {
     const supabase = await clienteServidor();
-    const { data, error } = await supabase
-      .from("permisos_rol")
-      .select("tabla, rol, escribir")
-      .limit(500);
+    const [r, m, p, u] = await Promise.all([
+      supabase.from("roles").select("clave, nombre, descripcion, sistema, creado_en").order("creado_en").limit(200),
+      supabase.from("modulos").select("clave, nombre, ayuda, acciones, orden").order("orden").limit(100),
+      supabase.from("permisos").select("rol, modulo, accion").limit(5000),
+      supabase.from("perfiles").select("rol").limit(1000),
+    ]);
+    const error = r.error ?? m.error ?? p.error ?? u.error;
+    if (error) return fallo(error, "configuracion/rolesYPermisos");
 
-    if (error) return fallo(error);
+    const cuantos = new Map<string, number>();
+    for (const f of u.data ?? []) cuantos.set(String(f.rol), (cuantos.get(String(f.rol)) ?? 0) + 1);
+
+    // Los seis de siempre en su orden de siempre; los creados, detrás.
+    const ORDEN = ["gerencia", "admin", "ventas", "almacen", "compras", "cobranzas"];
+    const posicion = (c: string) => (ORDEN.includes(c) ? ORDEN.indexOf(c) : ORDEN.length);
 
     return {
       ok: true,
-      datos: (data ?? []).map((p) => ({
-        tabla: String(p.tabla),
-        rol: String(p.rol) as Rol,
-        escribir: Boolean(p.escribir),
-      })),
+      datos: {
+        roles: (r.data ?? [])
+          .map((x) => ({
+            clave: String(x.clave),
+            nombre: String(x.nombre),
+            descripcion: (x.descripcion as string | null) ?? null,
+            sistema: Boolean(x.sistema),
+            usuarios: cuantos.get(String(x.clave)) ?? 0,
+          }))
+          .sort((a, b) => posicion(a.clave) - posicion(b.clave)),
+        modulos: (m.data ?? []).map((x) => ({
+          clave: x.clave as Modulo,
+          nombre: String(x.nombre),
+          ayuda: String(x.ayuda),
+          acciones: (x.acciones ?? []) as Accion[],
+        })),
+        permisos: (p.data ?? []).map((x) => ({
+          rol: String(x.rol),
+          modulo: x.modulo as Modulo,
+          accion: x.accion as Accion,
+        })),
+      },
     };
   } catch (e) {
-    return fallo(e);
+    return fallo(e, "configuracion/rolesYPermisos");
   }
+}
+
+/** Los roles para elegir al dar de alta o cambiar a un usuario. */
+export async function rolesParaElegir(): Promise<RolDef[]> {
+  const r = await rolesYPermisos();
+  return r.ok ? r.datos.roles : [];
 }

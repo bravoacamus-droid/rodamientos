@@ -7,6 +7,7 @@ import {
   bloqueosEmision,
   estadoInicial,
   faltaPeso,
+  formatoPeso,
   pesoCalculado,
   pesoEfectivo,
   reducir,
@@ -482,5 +483,15 @@ describe("la orden de compra del cliente (14/10)", () => {
     expect(aPayload(conOtra).orden_compra_cliente).toBe("OC-9001");
     const vacia = reducir(conCotizacion(), { tipo: "campo", campo: "ordenCompra", valor: "  " });
     expect(aPayload(vacia).orden_compra_cliente).toBeNull();
+  });
+});
+
+describe("formatoPeso", () => {
+  it("enseña lo que se escribió, sin ceros de relleno (QA 20/10)", () => {
+    expect(formatoPeso(20)).toBe("20");
+    expect(formatoPeso(10.5)).toBe("10.50");
+    expect(formatoPeso(10.25)).toBe("10.25");
+    expect(formatoPeso(0.125)).toBe("0.125");
+    expect(formatoPeso(3.1)).toBe("3.10");
   });
 });

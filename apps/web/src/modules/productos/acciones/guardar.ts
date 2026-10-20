@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
+import { sinPermiso } from "@/lib/permisos";
 import { bloqueoQueImpide } from "@/lib/bloqueo";
 
 /**
@@ -13,7 +14,6 @@ import { bloqueoQueImpide } from "@/lib/bloqueo";
  * Crear productos mientras se cotiza es como se llena un catálogo de duplicados.
  */
 
-const ROLES = ["gerencia", "admin", "compras"] as const;
 
 const esquema = z.object({
   id: z.string().uuid().optional(),
@@ -64,12 +64,6 @@ export async function guardarProducto(
 ): Promise<ResultadoProducto> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return {
-      ok: false,
-      error: "Tu rol no puede tocar el maestro de productos. Lo mantienen Compras o Gerencia.",
-    };
-  }
 
   const crudo = formData.get("producto");
   if (typeof crudo !== "string") {
@@ -90,6 +84,10 @@ export async function guardarProducto(
     }
     return { ok: false, error: "Los datos no son válidos." };
   }
+
+  // Con id es corregir uno que ya está; sin id, darlo de alta (143).
+  const prohibido = await sinPermiso("productos", datos.id ? "editar" : "crear");
+  if (prohibido) return { ok: false, error: prohibido };
 
   // El piso por encima del precio de venta lo rechaza la base con un check,
   // pero ese error no se entiende. Mejor decirlo aquí.
@@ -265,8 +263,9 @@ export async function archivarProducto(
 ): Promise<{ ok: boolean; error?: string }> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  if (!ROLES.includes(perfil.rol as (typeof ROLES)[number])) {
-    return { ok: false, error: "Tu rol no puede archivar productos." };
+  const prohibido = await sinPermiso("productos", "eliminar");
+  if (prohibido) {
+    return { ok: false, error: prohibido };
   }
   if (!z.string().uuid().safeParse(id).success) {
     return { ok: false, error: "Producto no válido." };

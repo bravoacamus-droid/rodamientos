@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 
 import { PaginaCotizacionesEjecutiva } from "@/modules/tablero";
+import { sinPermiso } from "@/lib/permisos";
+import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 export const metadata: Metadata = { title: "Cotizado y ganado" };
 
@@ -9,7 +11,17 @@ export const metadata: Metadata = { title: "Cotizado y ganado" };
  * no así como lo tienes compartido; cada uno con su módulo»*. Hasta entonces
  * eran pestañas del Tablero, bajo /dashboard.
  */
-export default function Pagina(props: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function Pagina(props: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  // «Reportes · Ver» en Configuración › Roles y permisos (143).
+  const prohibido = await sinPermiso("reportes", "ver");
+  if (prohibido) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Cotizado y ganado</h1>
+        <AvisoSinPermiso mensaje={prohibido} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-5">
       <div>
