@@ -56,18 +56,17 @@ export interface ClienteLista {
    * La zona de visita y el rubro (141). Willy, 20/10: *«hacemos visitas por
    * zonas»* y *«el sector productivo al que pertenece»*.
    */
-  zona_codigo: string | null;
-  /** El distrito de la zona, ya resuelto: «Callao», «Ate». */
+  zona_id: string | null;
+  /** El nombre de la zona, ya resuelto: «Callao», «Ate». */
   zona_nombre: string | null;
   rubro_id: string | null;
   rubro_nombre: string | null;
 }
 
-/** Una zona que se ofrece: un distrito de Lima Metropolitana o del Callao. */
+/** Una zona de visita (142): nace con los distritos de Lima y el Callao, y se edita. */
 export interface ZonaCliente {
-  codigo: string;
+  id: string;
   nombre: string;
-  provincia: string;
 }
 
 export interface RubroCliente {
@@ -102,7 +101,7 @@ export interface ClienteDetalle extends ClienteLista {
 export interface FiltrosClientes {
   q?: string;
   condicion?: CondicionPago;
-  /** Código de ubigeo de la zona (141). */
+  /** Id de la zona (142). */
   zona?: string;
   /** Id del rubro (141). */
   rubro?: string;
@@ -155,8 +154,8 @@ export interface ClienteEditable {
   ubigeo_distrito?: string | null;
   referencia_direccion: string | null;
   sector: string | null;
-  /** Zona de visita y rubro (141). */
-  zona_codigo: string | null;
+  /** Zona de visita y rubro (141/142). */
+  zona_id: string | null;
   rubro_id: string | null;
   email: string | null;
   telefono: string | null;

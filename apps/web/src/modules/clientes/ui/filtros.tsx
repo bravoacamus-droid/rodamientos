@@ -48,7 +48,7 @@ export function FiltrosClientesBarra({ zonas, rubros }: { zonas: ZonaCliente[]; 
           todos="Todas las zonas"
           buscar="Escribe el distrito…"
           valor={valor("zona")}
-          opciones={zonas.map((z) => ({ valor: z.codigo, etiqueta: z.nombre }))}
+          opciones={zonas.map((z) => ({ valor: z.id, etiqueta: z.nombre }))}
           onCambiar={(v) => aplicar("zona", v)}
         />
         <FiltroBuscable

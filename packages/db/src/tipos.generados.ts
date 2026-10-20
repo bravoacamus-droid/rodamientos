@@ -558,7 +558,7 @@ export type Database = {
           ubigeo_codigo: string | null
           vendedor_id: string | null
           whatsapp: string | null
-          zona_codigo: string | null
+          zona_id: string | null
         }
         Insert: {
           activo?: boolean
@@ -590,7 +590,7 @@ export type Database = {
           ubigeo_codigo?: string | null
           vendedor_id?: string | null
           whatsapp?: string | null
-          zona_codigo?: string | null
+          zona_id?: string | null
         }
         Update: {
           activo?: boolean
@@ -622,7 +622,7 @@ export type Database = {
           ubigeo_codigo?: string | null
           vendedor_id?: string | null
           whatsapp?: string | null
-          zona_codigo?: string | null
+          zona_id?: string | null
         }
         Relationships: [
           {
@@ -647,11 +647,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "clientes_zona_codigo_fkey"
-            columns: ["zona_codigo"]
+            foreignKeyName: "clientes_zona_id_fkey"
+            columns: ["zona_id"]
             isOneToOne: false
-            referencedRelation: "ubigeo"
-            referencedColumns: ["codigo"]
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4557,6 +4557,38 @@ export type Database = {
         }
         Relationships: []
       }
+      zonas: {
+        Row: {
+          creado_en: string
+          id: string
+          nombre: string
+          nombre_norm: string | null
+          ubigeo_codigo: string | null
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          nombre: string
+          nombre_norm?: string | null
+          ubigeo_codigo?: string | null
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          nombre?: string
+          nombre_norm?: string | null
+          ubigeo_codigo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zonas_ubigeo_codigo_fkey"
+            columns: ["ubigeo_codigo"]
+            isOneToOne: false
+            referencedRelation: "ubigeo"
+            referencedColumns: ["codigo"]
+          },
+        ]
+      }
     }
     Views: {
       v_aging_cartera: {
@@ -5341,6 +5373,10 @@ export type Database = {
       }
     }
     Functions: {
+      _nombre_de_catalogo: {
+        Args: { p: string; p_que: string }
+        Returns: string
+      }
       _tres_letras: { Args: { n: number }; Returns: string }
       a_dolares: {
         Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
@@ -5576,6 +5612,7 @@ export type Database = {
         Args: { p_nombre: string; p_subfamilia: string }
         Returns: Json
       }
+      crear_zona: { Args: { p_nombre: string }; Returns: Json }
       despacho_por_item: {
         Args: { p_cotizacion: string; p_excluir_guia?: string }
         Returns: {
@@ -5637,6 +5674,8 @@ export type Database = {
         Returns: number
       }
       eliminar_pedido: { Args: { p_id: string }; Returns: Json }
+      eliminar_rubro: { Args: { p_id: string }; Returns: undefined }
+      eliminar_zona: { Args: { p_id: string }; Returns: undefined }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
       es_gerencia: { Args: never; Returns: boolean }
@@ -5861,6 +5900,14 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      renombrar_rubro: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
+      renombrar_zona: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
       repetir_pedido: {
         Args: { p_id: string; p_lineas: Json; p_oc?: string }
         Returns: Json

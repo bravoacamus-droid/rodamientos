@@ -24,7 +24,14 @@ import { ContactosNuevos, type ContactoNuevo } from "./contactos-nuevos";
 import { EditorContactos } from "./editor-contactos";
 import { SelectorUbigeoCascada, type DistritoUbigeo } from "./selector-ubigeo";
 import { guardarCliente } from "../acciones/guardar";
-import { crearRubro } from "../acciones/rubros";
+import {
+  crearRubro,
+  crearZona,
+  eliminarRubro,
+  eliminarZona,
+  renombrarRubro,
+  renombrarZona,
+} from "../acciones/rubros";
 import { SelectorCatalogo } from "@/modules/cotizaciones/ui/constructor/selector-catalogo";
 import { esConsultable, revisarDocumento } from "../dominio/documento";
 import {
@@ -125,7 +132,7 @@ export function FormularioCliente({
     direccion: cliente?.direccion ?? "",
     ubigeo_codigo: cliente?.ubigeo_codigo ?? "",
     referencia_direccion: cliente?.referencia_direccion ?? "",
-    zona_codigo: cliente?.zona_codigo ?? "",
+    zona_id: cliente?.zona_id ?? "",
     rubro_id: cliente?.rubro_id ?? "",
     linea_credito: String(cliente?.linea_credito ?? "0"),
     dias_credito: String(cliente?.dias_credito ?? "0"),
@@ -136,9 +143,55 @@ export function FormularioCliente({
 
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
 
-  /** Los rubros, con los que se creen aquí mismo (141). */
+  /**
+   * Zonas y rubros, con lo que se cree, corrija o borre aquí mismo (142). Un
+   * solo mensaje de error para los dos: el que diga qué pasó con el último.
+   */
   const [rubros, setRubros] = React.useState(catalogos.rubros);
-  const [errorRubro, setErrorRubro] = React.useState<string | null>(null);
+  const [zonas, setZonas] = React.useState(catalogos.zonas);
+  const [errorCatalogo, setErrorCatalogo] = React.useState<string | null>(null);
+
+  type Opc = { id: string; nombre: string };
+  const ordenar = (xs: Opc[]) => [...xs].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  /** Las tres operaciones de un catálogo, con la lista local al día. */
+  const gestion = (
+    setLista: React.Dispatch<React.SetStateAction<Opc[]>>,
+    campo: "zona_id" | "rubro_id",
+    acciones: {
+      crear: (n: string) => Promise<{ ok: true; datos: Opc } | { ok: false; error: string }>;
+      renombrar: (id: string, n: string) => Promise<{ ok: true; datos: Opc } | { ok: false; error: string }>;
+      eliminar: (id: string) => Promise<{ ok: true; datos: null } | { ok: false; error: string }>;
+    },
+  ) => ({
+    onCrear: async (nombre: string) => {
+      const r = await acciones.crear(nombre);
+      if (!r.ok) return (setErrorCatalogo(r.error), null);
+      setErrorCatalogo(null);
+      setLista((l) => (l.some((x) => x.id === r.datos.id) ? l : ordenar([...l, r.datos])));
+      set(campo, r.datos.id);
+      return r.datos;
+    },
+    onRenombrar: async (id: string, nombre: string) => {
+      const r = await acciones.renombrar(id, nombre);
+      if (!r.ok) return (setErrorCatalogo(r.error), null);
+      setErrorCatalogo(null);
+      setLista((l) => ordenar(l.map((x) => (x.id === id ? r.datos : x))));
+      return r.datos;
+    },
+    onEliminar: async (id: string) => {
+      const r = await acciones.eliminar(id);
+      if (!r.ok) return (setErrorCatalogo(r.error), false);
+      setErrorCatalogo(null);
+      setLista((l) => l.filter((x) => x.id !== id));
+      return true;
+    },
+  });
+  const gestionZonas = gestion(setZonas, "zona_id", { crear: crearZona, renombrar: renombrarZona, eliminar: eliminarZona });
+  const gestionRubros = gestion(setRubros, "rubro_id", {
+    crear: crearRubro,
+    renombrar: renombrarRubro,
+    eliminar: eliminarRubro,
+  });
 
   /**
    * ¿Se está corrigiendo a mano lo que trajo SUNAT?
@@ -350,7 +403,7 @@ export function FormularioCliente({
     ubigeo_codigo: f.ubigeo_codigo || null,
     referencia_direccion: f.referencia_direccion.trim() || null,
     sector: f.sector.trim() || null,
-    zona_codigo: f.zona_codigo || null,
+    zona_id: f.zona_id || null,
     rubro_id: f.rubro_id || null,
     email: f.email.trim() || null,
     telefono: f.telefono.trim() || null,
@@ -756,52 +809,29 @@ export function FormularioCliente({
       <section className="card flex flex-col gap-3 p-4">
         <h2 className="text-sm font-semibold">¿Por dónde lo visitas y a qué se dedica?</h2>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Campo
-            id="zona_codigo"
+          <SelectorCatalogo
+            id="zona_id"
             label="Zona"
             ayuda="El distrito donde se le visita. No tiene que ser el de la dirección fiscal."
-          >
-            <Combobox
-              id="zona_codigo"
-              opciones={catalogos.zonas.map((z) => ({
-                valor: z.codigo,
-                etiqueta: z.nombre,
-                detalle: z.provincia === "Callao" ? "Callao" : undefined,
-              }))}
-              valor={f.zona_codigo || null}
-              onCambio={(v) => set("zona_codigo", v ?? "")}
-              placeholder="Elige el distrito"
-              placeholderBusqueda="Escribe el distrito…"
-              textoVacio="No hay un distrito con ese nombre."
-              limpiable
-            />
-          </Campo>
+            opciones={zonas}
+            valor={f.zona_id}
+            onElegir={(o) => set("zona_id", o?.id ?? "")}
+            placeholder="Elige o escribe la zona"
+            {...gestionZonas}
+          />
           <SelectorCatalogo
             id="rubro_id"
             label="Rubro"
-            ayuda="El sector: textil, pesquera, metalmecánica… Si no está, créalo."
+            masculino
+            ayuda="El sector: textil, pesquera, metalmecánica… Si no está, créalo con el +."
             opciones={rubros}
             valor={f.rubro_id}
             onElegir={(o) => set("rubro_id", o?.id ?? "")}
             placeholder="Elige o escribe el rubro"
-            onCrear={async (nombre) => {
-              const r = await crearRubro(nombre);
-              if (!r.ok) {
-                setErrorRubro(r.error);
-                return null;
-              }
-              setErrorRubro(null);
-              setRubros((lista) =>
-                lista.some((x) => x.id === r.datos.id)
-                  ? lista
-                  : [...lista, r.datos].sort((a, b) => a.nombre.localeCompare(b.nombre, "es")),
-              );
-              set("rubro_id", r.datos.id);
-              return r.datos;
-            }}
+            {...gestionRubros}
           />
         </div>
-        {errorRubro ? <p className="text-sm font-medium text-[var(--danger)]">{errorRubro}</p> : null}
+        {errorCatalogo ? <p className="text-sm font-medium text-[var(--danger)]">{errorCatalogo}</p> : null}
       </section>
 
       {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════

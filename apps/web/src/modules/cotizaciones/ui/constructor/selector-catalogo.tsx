@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, X } from "lucide-react";
+import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Campo, campoBase } from "@rodatech/ui";
 
 export interface OpcionCatalogo {
@@ -44,6 +44,9 @@ export function SelectorCatalogo({
   deshabilitado,
   textoVacio,
   placeholder,
+  onRenombrar,
+  onEliminar,
+  masculino = false,
 }: {
   id: string;
   label: string;
@@ -62,7 +65,23 @@ export function SelectorCatalogo({
   /** Qué decir cuando está apagado. Por ejemplo: «Elige antes la familia». */
   textoVacio?: string;
   placeholder?: string;
+  /**
+   * Corregir y borrar DENTRO del desplegable (Luis, 20/10: *«el CRUD completo
+   * dentro de los select: editar si se equivocaron o eliminar si no lo
+   * necesitan»*). Cada uno devuelve null/false si falló; el porqué lo enseña
+   * quien lo implementa.
+   */
+  onRenombrar?: (id: string, nombre: string) => Promise<OpcionCatalogo | null>;
+  onEliminar?: (id: string) => Promise<boolean>;
+  /** «un rubro nuevo» y no «una rubro nueva». */
+  masculino?: boolean;
 }) {
+  const nueva = masculino ? "nuevo" : "nueva";
+  const una = masculino ? "un" : "una";
+  /** La opción que se está corrigiendo o a punto de borrarse, dentro de la lista. */
+  const [editando, setEditando] = React.useState<{ id: string; nombre: string } | null>(null);
+  const [borrando, setBorrando] = React.useState<string | null>(null);
+  const [ocupado, setOcupado] = React.useState(false);
   const [texto, setTexto] = React.useState("");
   const [abierto, setAbierto] = React.useState(false);
   const [creando, setCreando] = React.useState(false);
@@ -121,6 +140,23 @@ export function SelectorCatalogo({
   const yaExiste = opciones.some((o) => normal(o.nombre) === busca);
   const puedeCrear = Boolean(onCrear) && busca.length >= 2 && !yaExiste;
 
+  async function renombrar() {
+    if (!onRenombrar || !editando || editando.nombre.trim().length < 2) return;
+    setOcupado(true);
+    const r = await onRenombrar(editando.id, editando.nombre.trim());
+    setOcupado(false);
+    if (r) setEditando(null);
+  }
+
+  async function eliminar(idOpcion: string) {
+    if (!onEliminar) return;
+    setOcupado(true);
+    const ok = await onEliminar(idOpcion);
+    setOcupado(false);
+    setBorrando(null);
+    if (ok && valor === idOpcion) onElegir(null);
+  }
+
   async function crear(nombre = texto.trim()) {
     if (!onCrear || nombre.length < 2) return;
     setCreando(true);
@@ -156,7 +192,7 @@ export function SelectorCatalogo({
   */
   if (modoCrear && onCrear) {
     return (
-      <Campo id={id} label={`${label} nueva`} requerido={requerido}>
+      <Campo id={id} label={`${label} ${nueva}`} requerido={requerido}>
         <div className="flex gap-2">
           <input
             id={id}
@@ -177,7 +213,7 @@ export function SelectorCatalogo({
                 setNombreNuevo("");
               }
             }}
-            placeholder={`Nombre de la ${label.toLowerCase()}`}
+            placeholder={`Nombre de${masculino ? "l" : " la"} ${label.toLowerCase()}`}
             className={`${campoBase} h-control-md min-w-0 flex-1 px-3 text-sm`}
           />
           <button
@@ -300,20 +336,113 @@ export function SelectorCatalogo({
 
         {abierto && !elegida && !deshabilitado ? (
           <div className="absolute z-40 mt-1 max-h-60 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
-            {filtradas.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => {
-                  onElegir(o);
-                  setTexto("");
-                  setAbierto(false);
-                }}
-                className="flex min-h-11 w-full items-center px-3 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
-              >
-                {o.nombre}
-              </button>
-            ))}
+            {filtradas.map((o) =>
+              editando?.id === o.id ? (
+                // Corregir el nombre aquí mismo, sin abrir otro diálogo.
+                <div key={o.id} className="flex min-h-11 items-center gap-1.5 px-2 py-1">
+                  <input
+                    autoFocus
+                    aria-label={`Nuevo nombre de ${o.nombre}`}
+                    value={editando.nombre}
+                    onChange={(e) => setEditando({ id: o.id, nombre: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void renombrar();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setEditando(null);
+                      }
+                    }}
+                    className={`${campoBase} h-9 min-w-0 flex-1 px-2 text-sm`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void renombrar()}
+                    disabled={ocupado || editando.nombre.trim().length < 2}
+                    className="inline-flex h-9 shrink-0 items-center gap-1 rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40"
+                  >
+                    <Check className="size-4" aria-hidden="true" />
+                    Guardar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditando(null)}
+                    aria-label="No cambiar"
+                    title="No cambiar"
+                    className="grid size-9 shrink-0 place-items-center rounded-md border border-[var(--border)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)]"
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </button>
+                </div>
+              ) : borrando === o.id ? (
+                // Confirmar dentro de la fila: un `confirm()` del navegador
+                // sale en otra letra, pequeño, y se acepta sin leer.
+                <div key={o.id} className="flex min-h-11 flex-wrap items-center gap-1.5 bg-[var(--danger-bg)] px-3 py-1">
+                  <span className="min-w-0 flex-1 text-sm">
+                    ¿Eliminar <strong>{o.nombre}</strong>?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void eliminar(o.id)}
+                    disabled={ocupado}
+                    className="h-9 shrink-0 rounded-md bg-[var(--danger)] px-3 text-sm font-medium text-white disabled:opacity-40"
+                  >
+                    {ocupado ? "Eliminando…" : "Sí, eliminar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBorrando(null)}
+                    className="h-9 shrink-0 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <div key={o.id} className="flex min-h-11 items-center transition-colors hover:bg-[var(--surface-2)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onElegir(o);
+                      setTexto("");
+                      setAbierto(false);
+                    }}
+                    className="flex min-h-11 min-w-0 flex-1 items-center px-3 text-left text-sm"
+                  >
+                    {o.nombre}
+                  </button>
+                  {onRenombrar ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBorrando(null);
+                        setEditando({ id: o.id, nombre: o.nombre });
+                      }}
+                      aria-label={`Corregir ${o.nombre}`}
+                      title="Corregir el nombre"
+                      className="grid size-8 shrink-0 place-items-center rounded-md text-[var(--fg-muted)] hover:bg-[var(--surface)] hover:text-[var(--fg)]"
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                  {onEliminar ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditando(null);
+                        setBorrando(o.id);
+                      }}
+                      aria-label={`Eliminar ${o.nombre}`}
+                      title="Eliminar"
+                      className="mr-1 grid size-8 shrink-0 place-items-center rounded-md text-[var(--fg-muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              ),
+            )}
 
             {filtradas.length === 0 && !puedeCrear ? (
               <p className="p-3 text-sm text-[var(--fg-muted)]">
@@ -354,8 +483,8 @@ export function SelectorCatalogo({
             setModoCrear(true);
           }}
           disabled={deshabilitado}
-          title={`Crear una ${label.toLowerCase()} nueva`}
-          aria-label={`Crear una ${label.toLowerCase()} nueva`}
+          title={`Crear ${una} ${label.toLowerCase()} ${nueva}`}
+          aria-label={`Crear ${una} ${label.toLowerCase()} ${nueva}`}
           className="grid h-control-md w-control-md shrink-0 place-items-center rounded-md border border-[var(--border)] text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:opacity-40"
         >
           <Plus className="size-[18px]" aria-hidden="true" />

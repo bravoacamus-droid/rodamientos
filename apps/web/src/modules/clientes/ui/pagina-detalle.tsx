@@ -124,8 +124,8 @@ export default async function PaginaDetalleCliente({
           etiqueta="Zona"
           valor={c.zona_nombre ?? "Sin zona"}
           pie={
-            c.zona_codigo ? (
-              <Link href={`/clientes?zona=${c.zona_codigo}`} className="font-medium text-brand-700 underline underline-offset-4">
+            c.zona_id ? (
+              <Link href={`/clientes?zona=${c.zona_id}`} className="font-medium text-brand-700 underline underline-offset-4">
                 Ver los clientes de esta zona
               </Link>
             ) : (

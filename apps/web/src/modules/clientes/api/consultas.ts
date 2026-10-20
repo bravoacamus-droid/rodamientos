@@ -44,8 +44,8 @@ export const POR_PAGINA = 50;
 const COLUMNAS_LISTA_LEFT = `id, codigo, tipo_documento, numero_documento, razon_social,
    nombre_comercial, telefono, whatsapp, email, condicion_pago,
    dias_credito, linea_credito, bloqueado, activo,
-   zona_codigo, rubro_id,
-   zona:ubigeo!clientes_zona_codigo_fkey(distrito),
+   zona_id, rubro_id,
+   zonas(nombre),
    rubros(nombre),
    cliente_contactos(nombre, principal, activo)`;
 
@@ -59,8 +59,8 @@ function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
   zona_nombre: string | null;
   rubro_nombre: string | null;
 } {
-  const { cliente_contactos, zona, rubros, ...resto } = fila as T & {
-    zona?: { distrito: string } | null;
+  const { cliente_contactos, zonas, rubros, ...resto } = fila as T & {
+    zonas?: { nombre: string } | null;
     rubros?: { nombre: string } | null;
   };
   const gente = (cliente_contactos ?? []) as {
@@ -77,7 +77,7 @@ function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
     ...(resto as unknown as T),
     contacto: principal?.nombre ?? null,
     contactos: activos.length,
-    zona_nombre: zona?.distrito ?? null,
+    zona_nombre: zonas?.nombre ?? null,
     rubro_nombre: rubros?.nombre ?? null,
   };
 }
@@ -183,7 +183,7 @@ export async function listarClientes(
     if (!filtros.inactivos) consulta = consulta.eq("activo", true);
     if (!filtros.bloqueados) consulta = consulta.eq("bloqueado", false);
     if (filtros.condicion) consulta = consulta.eq("condicion_pago", filtros.condicion);
-    if (filtros.zona) consulta = consulta.eq("zona_codigo", filtros.zona);
+    if (filtros.zona) consulta = consulta.eq("zona_id", filtros.zona);
     if (filtros.rubro) consulta = consulta.eq("rubro_id", filtros.rubro);
 
     if (filtros.q) {
@@ -458,23 +458,14 @@ export async function ubigeoDistritos(
 }
 
 /**
- * Las zonas que se ofrecen (141): los distritos de Lima Metropolitana y del
- * Callao, que es donde se visita. «Lima» (el Cercado) se llama «Lima Centro»,
- * como lo dice Willy.
+ * Las zonas de visita (142): nacen con los distritos de Lima y el Callao
+ * —«Lima Centro» en vez de «Lima»— y se crean, corrigen y borran desde el
+ * propio desplegable.
  */
 export async function zonasDeVisita(): Promise<ZonaCliente[]> {
   const supabase = await clienteServidor();
-  const { data } = await supabase
-    .from("ubigeo")
-    .select("codigo, distrito, provincia")
-    .or("codigo.like.1501%,codigo.like.0701%")
-    .order("distrito")
-    .limit(100);
-  return (data ?? []).map((u) => ({
-    codigo: String(u.codigo),
-    nombre: u.codigo === "150101" ? "Lima Centro (Cercado)" : String(u.distrito),
-    provincia: String(u.provincia),
-  }));
+  const { data } = await supabase.from("zonas").select("id, nombre").order("nombre").limit(500);
+  return (data ?? []).map((z) => ({ id: String(z.id), nombre: String(z.nombre) }));
 }
 
 /** Los rubros activos, por nombre (141). */
@@ -510,7 +501,7 @@ export async function resumenCartera(
   const [cli, docs, prueba] = await Promise.all([
     supabase
       .from("clientes")
-      .select("id, zona_codigo, rubro_id, zona:ubigeo!clientes_zona_codigo_fkey(distrito), rubros(nombre)")
+      .select("id, zona_id, rubro_id, zonas(nombre), rubros(nombre)")
       .eq("activo", true)
       .limit(5000),
     supabase
@@ -532,9 +523,9 @@ export async function resumenCartera(
 
   const filas = (cli.data ?? []) as unknown as {
     id: string;
-    zona_codigo: string | null;
+    zona_id: string | null;
     rubro_id: string | null;
-    zona: { distrito: string } | null;
+    zonas: { nombre: string } | null;
     rubros: { nombre: string } | null;
   }[];
 
@@ -555,11 +546,11 @@ export async function resumenCartera(
 
   return {
     zonas: agrupar(
-      (f) => f.zona_codigo,
-      (f) => (f.zona_codigo === "150101" ? "Lima Centro (Cercado)" : f.zona?.distrito ?? "—"),
+      (f) => f.zona_id,
+      (f) => f.zonas?.nombre ?? "—",
     ),
     rubros: agrupar((f) => f.rubro_id, (f) => f.rubros?.nombre ?? "—"),
-    conDatos: filas.filter((f) => f.zona_codigo || f.rubro_id).length,
+    conDatos: filas.filter((f) => f.zona_id || f.rubro_id).length,
     total: filas.length,
   };
 }

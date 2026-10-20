@@ -42,7 +42,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
       condicion === "contado" || condicion === "credito"
         ? (condicion as CondicionPago)
         : undefined,
-    zona: /^\d{6}$/.test(uno(sp.zona) ?? "") ? uno(sp.zona) : undefined,
+    zona: /^[0-9a-f-]{36}$/i.test(uno(sp.zona) ?? "") ? uno(sp.zona) : undefined,
     rubro: /^[0-9a-f-]{36}$/i.test(uno(sp.rubro) ?? "") ? uno(sp.rubro) : undefined,
     bloqueados: uno(sp.bloqueados) === "1",
     inactivos: uno(sp.inactivos) === "1",
