@@ -566,14 +566,18 @@ export function GraficoMeta({
 }) {
   const [ref, ancho] = useAncho();
   const caben = ancho > 0 && ancho / Math.max(datos.length, 1) >= 64;
+  // En el teléfono las líneas van sin su etiqueta: fuera se comían medio
+  // gráfico y dentro caían sobre las barras. Lo dicen la leyenda y las cifras
+  // de arriba.
+  const estrecho = ancho > 0 && ancho < 640;
   const techo = Math.max(meta, tope ?? 0, ...datos.map((d) => d.venta + d.resto)) * 1.12;
 
   return (
     <div ref={ref}>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={datos} margin={{ ...MARGEN_EJES, right: 16 }}>
+        <BarChart data={datos} margin={{ ...MARGEN_EJES, right: estrecho ? 12 : 104 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
-          <XAxis dataKey="etiqueta" {...EJE} interval={0} minTickGap={4} />
+          <XAxis dataKey="etiqueta" {...EJE} interval={estrecho ? "preserveStartEnd" : 0} minTickGap={8} />
           <YAxis tickFormatter={corto} {...EJE} width={ANCHO_EJE_Y} domain={[0, Math.ceil(techo)]} />
           <Tooltip
             content={({ active, payload, label }) => {
@@ -603,7 +607,19 @@ export function GraficoMeta({
                 radius={(d.resto > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]) as unknown as number}
               />
             ))}
-            {caben ? <LabelList dataKey="venta" {...CIFRA} /> : null}
+            {caben ? (
+              <LabelList
+                dataKey="venta"
+                {...CIFRA}
+                // El mes en curso sin cifra encima: ahí va el recuadro del ritmo,
+                // y su cifra ya está en «Llevas vendido». Con halo del color del
+                // fondo: la línea de la meta pasa por encima de algunas cifras.
+                stroke="var(--surface)"
+                strokeWidth={4}
+                style={{ paintOrder: "stroke" }}
+                formatter={(v: unknown) => (typeof v === "number" && v !== 0 && !datos.some((d) => d.enCurso && d.venta === v) ? corto(v) : "")}
+              />
+            ) : null}
           </Bar>
           <Bar
             dataKey="resto"
@@ -622,7 +638,7 @@ export function GraficoMeta({
             stroke="var(--ok)"
             strokeWidth={2}
             strokeDasharray="8 4"
-            label={{ value: `Meta ${corto(meta)}`, position: "insideTopLeft", fill: "var(--ok)", fontSize: 14, fontWeight: 600 }}
+            label={estrecho ? undefined : { value: `Meta ${corto(meta)}`, position: "right", fill: "var(--ok)", fontSize: 14, fontWeight: 600 }}
           />
           {tope !== null && tope > meta ? (
             <ReferenceLine
@@ -630,7 +646,7 @@ export function GraficoMeta({
               stroke="var(--fg-muted)"
               strokeWidth={2}
               strokeDasharray="2 4"
-              label={{ value: `Tope ${corto(tope)}`, position: "insideTopLeft", fill: "var(--fg-muted)", fontSize: 14, fontWeight: 600 }}
+              label={estrecho ? undefined : { value: `Tope ${corto(tope)}`, position: "right", fill: "var(--fg-muted)", fontSize: 14, fontWeight: 600 }}
             />
           ) : null}
         </BarChart>

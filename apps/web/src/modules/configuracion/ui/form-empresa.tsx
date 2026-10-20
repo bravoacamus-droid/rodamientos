@@ -225,7 +225,7 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </h3>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
           Lo que quieres vender cada mes. Sale en Informes, en «¿Cómo voy este mes?». Si la dejas
-          vacía, se usa tu promedio de los meses que elijas allí.
+          vacía, la meta es tu promedio de enero al mes anterior.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Campo

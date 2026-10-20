@@ -126,7 +126,7 @@ export async function ComoVoyBloque({
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Cifra
-          etiqueta={`Llevas vendido (del 1 al ${c.dia})`}
+          etiqueta={`Llevas vendido (del 1 al ${c.dia}, sin IGV)`}
           valor={dinero(c.vendido)}
           pie={
             contraMismaFecha === null
@@ -136,7 +136,7 @@ export async function ComoVoyBloque({
           tono={contraMismaFecha === null ? undefined : contraMismaFecha >= 0 ? "ok" : "malo"}
         />
         <Cifra
-          etiqueta="Meta del mes"
+          etiqueta="Meta del mes (sin IGV)"
           valor={c.meta > 0 ? dinero(c.meta) : "—"}
           pie={
             c.metaPuesta

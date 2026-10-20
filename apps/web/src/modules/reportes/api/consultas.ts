@@ -584,7 +584,7 @@ export async function cotizacionesPorCerrar(
   }
 }
 
-/** La meta del mes de Datos de la empresa (140), o null si no se puso. */
+/** La meta del mes de Datos de la empresa (140), sin IGV, o null si no se puso. */
 export async function metaDelMes(): Promise<number | null> {
   try {
     const supabase = await clienteServidor();
