@@ -231,6 +231,9 @@ export function EmisorComprobante({
       // Emitido es emitido, aunque SUNAT no lo haya aceptado: el borrador sobra
       // y ofrecerlo otra vez invitaría a gastar un segundo número.
       if (r.ok) olvidarBorrador();
+      // Se emite desde la previa (20/10): si algo falla, se cierra para que se
+      // lea el mensaje, que está en la pantalla y no dentro del diálogo.
+      if (!r.ok || (r.envio && !r.envio.ok)) setPreviaAbierta(false);
       if (r.ok && !(r.envio && !r.envio.ok)) router.push(`/facturacion/${r.id}`);
       return r;
     },
@@ -507,7 +510,7 @@ export function EmisorComprobante({
     !emitiendo;
 
   return (
-    <form action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
+    <form id="form-emitir" action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="comprobante" value={payload} />
 
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -535,13 +538,17 @@ export function EmisorComprobante({
             previa existía, pero al final de la columna de la derecha y solo
             cuando ya no faltaba nada: no se encontraba.
           */}
-          {cot && bloqueos.length === 0 ? (
+          {/* La previa, en cuanto hay cotización: también con la guía
+              pendiente, para ver cómo sale el papel (20/10). */}
+          {cot ? (
             <Button type="button" variant="outline" onClick={() => setPreviaAbierta(true)}>
               <Eye className="size-[18px] shrink-0" aria-hidden="true" />
               Vista previa
             </Button>
           ) : null}
-          <Button type="submit" disabled={!listo}>
+          {/* No emite: abre la previa, y se emite desde ahí (20/10, Luis:
+              «antes de emitir… así vea la vista previa»). */}
+          <Button type="button" disabled={!listo} onClick={() => setPreviaAbierta(true)}>
             {emitiendo ? "Emitiendo…" : `Emitir ${serie}`}
           </Button>
         </div>
@@ -1083,7 +1090,11 @@ export function EmisorComprobante({
           {/* Debajo del resumen, no encima: primero se mira lo que se cobra y
               después cómo sale el papel. Y pegado al botón de emitir, que es
               lo siguiente que se pulsa. */}
-          {cot && bloqueos.length === 0 ? (
+          {/* Con cotización, aunque falte la guía: la casilla de las cuentas y
+              la previa no dependen de ella, y escondidas no existían (20/10,
+              Luis: «falta un botón de activar o desactivar si quiere que vaya
+              su número de cuenta» — estaba, pero no salía sin la guía). */}
+          {cot ? (
             <div className="mt-4">
               <AntesDeEmitir
                 cot={cot}
@@ -1105,6 +1116,16 @@ export function EmisorComprobante({
                 onCambiar={setOpciones}
                 previaAbierta={previaAbierta}
                 onPrevia={setPreviaAbierta}
+                emitir={{
+                  formId: "form-emitir",
+                  listo,
+                  emitiendo,
+                  motivo: bloqueos.some((b) => b.campo === "guia")
+                    ? "Falta la guía: emítela primero y vuelve."
+                    : bloqueos.length > 0
+                      ? "Hay algo que corregir antes de emitir."
+                      : null,
+                }}
               />
             </div>
           ) : null}

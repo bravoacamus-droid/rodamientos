@@ -53,6 +53,7 @@ import {
   buttonVariants,
   cn,
   formatearFecha,
+  Switch,
 } from "@rodatech/ui";
 
 import { buscarGuiasDelCliente } from "../acciones/cargar";
@@ -116,6 +117,7 @@ export function AntesDeEmitir({
   onCambiar,
   previaAbierta,
   onPrevia,
+  emitir,
 }: {
   cot: CotizacionFacturable;
   /** Lo que se va a emitir de verdad, ya recortado a lo pendiente. */
@@ -158,6 +160,20 @@ export function AntesDeEmitir({
    */
   previaAbierta?: boolean;
   onPrevia?: (abierta: boolean) => void;
+  /**
+   * Se emite DESDE la previa (20/10). Luis: *«antes de emitir, ¿no sería
+   * guardar, así vea la vista previa, y una vez que guarde ya emite?»*. El
+   * botón de arriba ya no emite a ciegas: abre esto, y el de aquí abajo es el
+   * que gasta el número. Es un botón de envío del formulario de fuera
+   * (`form=`), porque el diálogo se pinta en un portal fuera de él.
+   */
+  emitir?: {
+    formId: string;
+    listo: boolean;
+    emitiendo: boolean;
+    /** Por qué no se puede todavía (la guía, sobre todo). */
+    motivo: string | null;
+  };
 }) {
   const [viendoPropio, setViendoPropio] = React.useState(false);
   const viendo = previaAbierta ?? viendoPropio;
@@ -424,15 +440,14 @@ export function AntesDeEmitir({
           (14/10, Willy: «lo primero que tengo que activar es el botón con
           retención o sin retención»). La previa de abajo la respeta. */}
 
-      <Casilla
-        marcada={opciones.mostrarCuenta}
+      {/* Un interruptor y no una casilla (20/10, Luis: «falta un botón de
+          activar o desactivar si quiere que vaya su número de cuenta»): el
+          mismo que la retención, con su palabra al lado. */}
+      <InterruptorCuentas
+        id="fac-cuentas-sw"
+        activo={opciones.mostrarCuenta}
         onCambiar={(v) => onCambiar({ ...opciones, mostrarCuenta: v })}
-        titulo="Imprimir los números de cuenta"
-        detalle={
-          cuentas.length === 0
-            ? "No hay cuentas cargadas todavía: aunque lo marques, no saldría ninguna."
-            : "Salen al pie del documento, para que el cliente sepa dónde pagar."
-        }
+        sinCuentas={cuentas.length === 0}
       />
 
       {/*
@@ -473,6 +488,15 @@ export function AntesDeEmitir({
           <DialogHeader>
             <DialogTitle>Así va a salir</DialogTitle>
           </DialogHeader>
+          {/* También aquí: se ve el papel cambiar al pulsarlo. */}
+          <div className="border-b border-[var(--border)] px-4 py-2">
+            <InterruptorCuentas
+              id="fac-cuentas-sw-previa"
+              activo={opciones.mostrarCuenta}
+              onCambiar={(v) => onCambiar({ ...opciones, mostrarCuenta: v })}
+              sinCuentas={cuentas.length === 0}
+            />
+          </div>
           <DialogBody className="max-h-[70vh] overflow-y-auto bg-[var(--surface-2)] p-4">
             <DocumentoComprobante
               c={borrador}
@@ -484,9 +508,60 @@ export function AntesDeEmitir({
               demás es lo que va a salir impreso.
             </p>
           </DialogBody>
+          {emitir ? (
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
+              {emitir.motivo ? (
+                <p className="mr-auto text-base font-medium text-[var(--warn)]">{emitir.motivo}</p>
+              ) : (
+                <p className="mr-auto text-sm text-[var(--fg-muted)]">
+                  Al emitir se gasta el número {serie} y ya no se puede cambiar.
+                </p>
+              )}
+              <Button type="button" variant="outline" onClick={() => setViendo(false)}>
+                Volver a corregir
+              </Button>
+              <Button type="submit" form={emitir.formId} disabled={!emitir.listo}>
+                {emitir.emitiendo ? "Emitiendo…" : `Sí, emitir ${serie}`}
+              </Button>
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+/** Imprimir o no los números de cuenta, con su palabra al lado. */
+function InterruptorCuentas({
+  id,
+  activo,
+  onCambiar,
+  sinCuentas,
+}: {
+  id: string;
+  activo: boolean;
+  onCambiar: (v: boolean) => void;
+  sinCuentas: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] p-3">
+      <label htmlFor={id} className="flex min-w-0 cursor-pointer flex-col">
+        <span className="text-sm font-semibold">Números de cuenta en la factura</span>
+        <span className="text-sm text-[var(--fg-muted)]">
+          {sinCuentas
+            ? "No hay cuentas cargadas: aunque lo actives, no saldría ninguna."
+            : activo
+              ? "Salen al pie, para que el cliente sepa dónde pagar."
+              : "No salen."}
+        </span>
+      </label>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className={`text-sm font-semibold ${activo ? "text-brand-700 dark:text-brand-300" : "text-[var(--fg-muted)]"}`}>
+          {activo ? "Sí van" : "No van"}
+        </span>
+        <Switch id={id} tamano="lg" checked={activo} onCheckedChange={onCambiar} />
+      </div>
+    </div>
   );
 }
 
