@@ -37,16 +37,18 @@ import {
 } from "./ubl/resumen";
 import { generarBajaXml, idBaja, type ComunicacionBaja } from "./ubl/baja";
 import { firmarXml } from "./firma/firmar";
-import { endpointFacturacion } from "./transporte/endpoints";
+import { endpointConsultaCdr, endpointFacturacion } from "./transporte/endpoints";
 import { comprimirComprobante, extraerCdr } from "./transporte/zip";
 import {
   enviarSendBill,
   enviarSendSummary,
   consultarEstado,
+  consultarCdr,
   probarCredenciales,
   type ResultadoPrueba,
 } from "./transporte/soap";
 import { parsearCdr } from "./cdr/index";
+import type { ResultadoConsultaCdr } from "./red";
 import { generarGuiaXml } from "./ubl/guia";
 import type { GuiaRemision } from "./dominio/guia";
 import { consultarTicketGre, enviarGre, ErrorGre, type CredencialesGre } from "./transporte/gre";
@@ -64,6 +66,22 @@ export { idBaja } from "./ubl/baja";
 
 // Qué hacer ante un rechazo: si reenviar sirve de algo o hay que emitir otro.
 export { clasificarRechazo, sePuedeReenviar, type Rechazo } from "./rechazos";
+
+// Cuando SUNAT no contesta, o contesta 1033 a algo que ya se mandó (21/10).
+export {
+  ErrorRedSunat,
+  MENSAJE_SIN_CONEXION,
+  MENSAJE_RESPUESTA_INCIERTA,
+  MENSAJE_1033_SIN_CONFIRMAR,
+  decidirEnvio,
+  esErrorDeRed,
+  esRespuestaIncierta,
+  estadoDeCdr,
+  hayQueConsultarAntesDeRechazar,
+  mensajeParaPersona,
+  type Decision,
+  type ResultadoConsultaCdr,
+} from "./red";
 
 /** Resultado de enviar un resumen: se obtiene un ticket, no un CDR inmediato. */
 export interface ResultadoResumen {
@@ -160,6 +178,19 @@ export interface ConectorSunat {
 
   /** Cómo quedó una guía enviada, por su ticket. */
   consultarGuia(ticket: string): Promise<ResultadoCdr | { enProceso: true }>;
+
+  /**
+   * La constancia (CDR) que SUNAT tiene de un comprobante, por su número
+   * (getStatusCdr). Para no emitir otro ante un 1033 sobre algo que ya se
+   * mandó. En beta no existe el servicio: devuelve `sinCdr`. Un corte de red
+   * sale como `ErrorRedSunat`.
+   */
+  consultarCdr(
+    ruc: string,
+    tipoDocumento: string,
+    serie: string,
+    correlativo: number,
+  ): Promise<ResultadoConsultaCdr>;
 }
 
 /**
@@ -360,6 +391,27 @@ export function crearConector(config: ConfigSunat): ConectorSunat {
         };
       }
       return { aceptado: false, codigo: r.codigo ?? "99", descripcion: r.mensaje, observaciones: [] };
+    },
+
+    async consultarCdr(ruc, tipoDocumento, serie, correlativo) {
+      const endpoint = endpointConsultaCdr(config.ambiente);
+      if (!endpoint) {
+        return { sinCdr: "SUNAT no ofrece la consulta de constancias en el ambiente de pruebas." };
+      }
+      const resp = await consultarCdr(
+        endpoint,
+        config.usuarioSol,
+        config.claveSol,
+        ruc,
+        tipoDocumento,
+        serie,
+        correlativo,
+      );
+      if (resp.fault) return { sinCdr: resp.fault.message };
+      if (!resp.applicationResponse) {
+        return { sinCdr: resp.statusMessage ?? "SUNAT no devolvió la constancia." };
+      }
+      return { cdr: parsearCdr(await extraerCdr(resp.applicationResponse)) };
     },
 
     async consultarResumen(ticket) {

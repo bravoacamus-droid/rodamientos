@@ -41,7 +41,8 @@ export async function iniciarSesion(
   const espera = await esperaParaEntrar(correo);
   if (espera > 0) {
     return {
-      error: `Demasiados intentos fallidos. Espere ${minutosDeEspera(espera)} y vuelva a probar.`,
+      // Puede ser por intentos de otra persona con este correo: se dice (21/10).
+      error: `Por seguridad, esta cuenta está en pausa ${minutosDeEspera(espera)} porque se escribió mal la contraseña varias veces. Si no fue usted, avise a Gerencia.`,
       correo,
     };
   }

@@ -248,12 +248,15 @@ function Formulario({
  * no la volvemos a ver. Si se cierra esto sin apuntarla, hay que dar una
  * nueva. Por eso el aviso es rotundo y el botón de cerrar dice lo que hace.
  */
-function ContrasenaReciencreada({
+export function ContrasenaReciencreada({
   datos,
   onCerrar,
+  titulo,
 }: {
   datos: { nombre: string; email: string; contrasena: string };
   onCerrar: () => void;
+  /** «Cuenta creada para…» al dar de alta; otra frase al darle una nueva (21/10). */
+  titulo?: string;
 }) {
   const [copiada, setCopiada] = React.useState(false);
 
@@ -273,7 +276,7 @@ function ContrasenaReciencreada({
         <Check className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden />
         <div className="min-w-0">
           <h3 className="text-base font-semibold">
-            Cuenta creada para {datos.nombre}
+            {titulo ?? `Cuenta creada para ${datos.nombre}`}
           </h3>
           <p className="text-sm text-[var(--fg-muted)]">Entra con {datos.email}</p>
         </div>

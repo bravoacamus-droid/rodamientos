@@ -11,7 +11,8 @@
     "./dominio": "./src/dominio/index.ts",
     "./impresion": "./src/impresion/index.ts",
     "./guia": "./src/dominio/guia.ts",
-    "./letras": "./src/ubl/numero-a-letras.ts"
+    "./letras": "./src/ubl/numero-a-letras.ts",
+    "./red": "./src/red.ts"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.6",

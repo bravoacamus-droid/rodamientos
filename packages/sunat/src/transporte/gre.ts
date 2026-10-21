@@ -14,6 +14,7 @@
  */
 import { createHash } from "node:crypto";
 
+import { PLAZO_CONSULTA_MS, PLAZO_ENVIO_MS, PLAZO_TOKEN_MS, pedirConLimite } from "../red";
 import { RUTAS_GRE } from "./endpoints";
 
 export interface CredencialesGre {
@@ -74,8 +75,8 @@ function mensajeDeError(cuerpo: unknown, http: number): { mensaje: string; codig
  * proxy delante del token devolviera el formulario enviado, ese texto lleva
  * el client_secret y la clave SOL, y acabaría en pantalla (auditoría 15/10).
  */
-async function leerJson(r: Response): Promise<unknown> {
-  const texto = await r.text();
+function leerJson(r: { texto: string }): unknown {
+  const texto = r.texto;
   try {
     return texto ? JSON.parse(texto) : null;
   } catch {
@@ -100,12 +101,17 @@ export async function tokenGre(c: CredencialesGre, ahora = Date.now()): Promise<
     username: c.usuarioSol,
     password: c.claveSol,
   });
-  const r = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: cuerpo.toString(),
-  });
-  const datos = (await leerJson(r)) as { access_token?: string; expires_in?: number } | null;
+  // Con tiempo límite (auditoría 21/10): un corte sale como ErrorRedSunat.
+  const r = await pedirConLimite(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: cuerpo.toString(),
+    },
+    PLAZO_TOKEN_MS,
+  );
+  const datos = leerJson(r) as { access_token?: string; expires_in?: number } | null;
   if (!r.ok || !datos?.access_token) {
     const e = mensajeDeError(datos, r.status);
     throw new ErrorGre(`SUNAT no dio acceso para guías: ${e.mensaje}`, e.codigo, r.status);
@@ -134,20 +140,24 @@ export async function enviarGre(c: CredencialesGre, nombre: string, zipB64: stri
   const host = c.hostEnvio ?? RUTAS_GRE.hostEnvio;
   const url = host + RUTAS_GRE.enviar.replace("{filename}", encodeURIComponent(nombre));
   const intentar = async () =>
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await tokenGre(c)}` },
-      body: JSON.stringify({
-        archivo: { nomArchivo: `${nombre}.zip`, arcGreZip: zipB64, hashZip: hashZip(zipB64) },
-      }),
-    });
+    pedirConLimite(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${await tokenGre(c)}` },
+        body: JSON.stringify({
+          archivo: { nomArchivo: `${nombre}.zip`, arcGreZip: zipB64, hashZip: hashZip(zipB64) },
+        }),
+      },
+      PLAZO_ENVIO_MS,
+    );
 
   let r = await intentar();
   if (r.status === 401) {
     olvidarTokenGre(c);
     r = await intentar();
   }
-  const datos = (await leerJson(r)) as { numTicket?: string } | null;
+  const datos = leerJson(r) as { numTicket?: string } | null;
   if (!r.ok || !datos?.numTicket) {
     const e = mensajeDeError(datos, r.status);
     throw new ErrorGre(e.mensaje, e.codigo, r.status);
@@ -165,14 +175,15 @@ export type EstadoTicketGre =
 export async function consultarTicketGre(c: CredencialesGre, ticket: string): Promise<EstadoTicketGre> {
   const host = c.hostEnvio ?? RUTAS_GRE.hostEnvio;
   const url = host + RUTAS_GRE.consultarTicket.replace("{numTicket}", encodeURIComponent(ticket));
-  const intentar = async () => fetch(url, { headers: { Authorization: `Bearer ${await tokenGre(c)}` } });
+  const intentar = async () =>
+    pedirConLimite(url, { headers: { Authorization: `Bearer ${await tokenGre(c)}` } }, PLAZO_CONSULTA_MS);
 
   let r = await intentar();
   if (r.status === 401) {
     olvidarTokenGre(c);
     r = await intentar();
   }
-  const datos = (await leerJson(r)) as {
+  const datos = leerJson(r) as {
     codRespuesta?: string;
     arcCdr?: string;
     error?: { numError?: string; desError?: string };

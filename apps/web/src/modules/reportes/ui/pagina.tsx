@@ -12,6 +12,7 @@ import {
   topProductosRango,
   valorizacionPorFamilia,
 } from "../api/consultas";
+import { margenDeLoFacturado } from "../dominio/margen";
 import { COLORES_FAMILIA, etiquetaAging } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
@@ -406,20 +407,22 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
   const venta = r.datos.reduce((a, p) => a + p.venta, 0);
   const costo = r.datos.reduce((a, p) => a + p.costo, 0);
   const documentos = r.datos.reduce((a, p) => a + p.documentos, 0);
-  const margenPct = costo > 0 ? ((venta - costo) / costo) * 100 : 0;
+  const margen = margenDeLoFacturado(venta, costo);
 
   return (
     <>
-      <GraficoSerieVentas datos={r.datos} mostrarMargen={costo > 0} />
+      <GraficoSerieVentas datos={r.datos} mostrarMargen={margen.tipo === "ok"} />
       <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
         <span className="font-medium text-[var(--fg)]">{dinero(venta)}</span> en{" "}
         {documentos} {documentos === 1 ? "documento" : "documentos"} ·{" "}
         {/* «margen 0.0 %» con el costo en cero no es un margen del cero por
             ciento: es que no se sabe. El histórico se cargó sin costo, así que
             este es el caso normal mirando hacia atrás. */}
-        {costo > 0
-          ? `costo ${dinero(costo)} · margen ${margenPct.toFixed(2)} % sobre el costo`
-          : "sin costo registrado, así que no hay margen que calcular"}
+        {margen.tipo === "ok"
+          ? `costo ${dinero(costo)} · margen ${margen.pct.toFixed(2)} % sobre el costo`
+          : margen.tipo === "incompleto"
+            ? "margen sin calcular: falta el costo en la mayoría de las ventas"
+            : "sin costo registrado, así que no hay margen que calcular"}
       </p>
     </>
   );

@@ -142,7 +142,8 @@ export async function cambiarEstado(
   id: string,
   estado: (typeof DESTINOS)[number],
 ): Promise<ResultadoGestion> {
-  const problema = await exigirPermiso("editar");
+  // Anular pide «eliminar», como en la pantalla de permisos; lo demás, «editar» (21/10).
+  const problema = await exigirPermiso(estado === "anulada" ? "eliminar" : "editar");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
   if (!DESTINOS.includes(estado)) return { ok: false, error: "Estado no permitido." };
@@ -153,11 +154,24 @@ export async function cambiarEstado(
       .from("cotizaciones")
       .update({ estado })
       .eq("id", id);
-    if (error) return { ok: false, error: error.message };
+    /*
+      El error de PostgREST llegaba tal cual a la pantalla (21/10). Lo
+      probable es que la base la rechace por una regla del documento (079):
+      ya tiene guía o factura.
+    */
+    if (error) {
+      return {
+        ok: false,
+        error:
+          error.code === "42501"
+            ? "Tu rol no puede hacer esto con la cotización."
+            : "No se pudo cambiar la cotización. Si ya tiene guía o factura, ya no se puede anular ni rechazar.",
+      };
+    }
     refrescar(id);
     return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "No se pudo actualizar." };
+  } catch {
+    return { ok: false, error: "No se pudo cambiar la cotización. Vuelve a intentarlo en un momento." };
   }
 }
 

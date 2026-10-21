@@ -139,6 +139,23 @@ export function AnalizarCompra({
   );
 
   const incompleta = filas.find((f) => costoUsd(f) === null);
+  /*
+    Qué falta para poder usarlo, dicho junto al botón (auditoría, 21/10): el
+    botón se dejaba pulsar sin proveedor ni precio y la línea se quedaba sin
+    costo sin que nadie lo notara.
+  */
+  const falta =
+    filas.length === 0
+      ? "Añade el proveedor al que llamaste."
+      : incompleta
+        ? incompleta.precio === null
+          ? `Falta el precio de ${incompleta.nombre}, o quítalo.`
+          : `Falta el tipo de cambio de ${incompleta.nombre}.`
+        : !filas.some((f) => f.cantidad > 0)
+          ? "Pon cuántas le compras a algún proveedor."
+          : !(venta > 0)
+            ? "Falta el precio de venta."
+            : null;
   const aplicar = () => {
     if (incompleta) {
       setError(
@@ -560,10 +577,13 @@ export function AnalizarCompra({
         </DialogBody>
 
         <DialogFooter>
+          {falta ? (
+            <p className="mr-auto self-center text-sm font-medium text-[var(--fg-muted)]">{falta}</p>
+          ) : null}
           <Button type="button" variant="outline" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="button" onClick={aplicar}>
+          <Button type="button" onClick={aplicar} disabled={falta !== null}>
             Usar este costo y precio
           </Button>
         </DialogFooter>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { mensajeParaPersona } from "@rodatech/sunat/red";
 import { HandCoins, Printer } from "lucide-react";
 import {
   Badge,
@@ -400,7 +401,8 @@ export default async function PaginaDetalleComprobante({
 
             {c.sunat_mensaje && c.estado_sunat !== "aceptado" ? (
               <p className="mt-2 text-sm text-[var(--fg-muted)]">
-                Último mensaje: {c.sunat_mensaje}
+                {/* Los cortes guardados en crudo («fetch failed») se leen en cristiano (21/10). */}
+                Último mensaje: {mensajeParaPersona(c.sunat_mensaje)}
               </p>
             ) : null}
           </section>

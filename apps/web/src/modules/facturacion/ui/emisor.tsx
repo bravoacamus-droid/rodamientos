@@ -145,19 +145,10 @@ export function EmisorComprobante({
   */
   const [ordenCompra, setOrdenCompra] = useState("");
   /*
-    El stock NUNCA sale con la factura. Ya no es una opción, es un hecho.
-
-    Salía con la guía de remisión, que es el documento que acompaña el
-    movimiento físico, salvo en la venta de mostrador — y desde el 17/09 la
-    venta de mostrador no existe aquí: sin guía no se factura. Así que esto es
-    `false` siempre, y su casilla dejó de enseñarse (ver más abajo).
-
-    Se queda como constante y no se borra del payload porque la base sigue
-    leyendo `descargar_stock`: quitarlo la dejaría con su `coalesce(..., false)`
-    haciendo lo mismo, pero de forma implícita y a través de un campo ausente.
-    Explícito es más fácil de volver a encender el día que haga falta.
+    El stock NUNCA sale con la factura: sale con la guía de remisión, y sin
+    guía no se factura (17/09). Desde el 21/10 la acción ni siquiera acepta
+    el campo, así que tampoco se manda.
   */
-  const descargarStock = false;
 
   /*
     Lo que se decide antes de gastar el correlativo.
@@ -481,7 +472,6 @@ export function EmisorComprobante({
     dias_credito: alCredito ? dias : 0,
     observaciones: observaciones.trim() || null,
     orden_compra_cliente: ordenCompra.trim() || null,
-    descargar_stock: descargarStock,
     cantidades,
     mostrar_cuenta: opciones.mostrarCuenta,
     retencion_aplica: retiene,

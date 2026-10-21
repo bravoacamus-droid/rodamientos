@@ -12,6 +12,19 @@ export function endpointFacturacion(ambiente: Ambiente): string {
 }
 
 /**
+ * billConsultService: la consulta del CDR de un comprobante por su número
+ * (getStatusCdr). Verificado contra Greenter (SunatEndpoints::FE_CONSULTA_CDR).
+ *
+ * SUNAT no lo publica en beta: en beta devuelve `null` y quien llama sabe que
+ * no puede confirmar nada (auditoría 21/10, A4).
+ */
+export function endpointConsultaCdr(ambiente: Ambiente): string | null {
+  return ambiente === "produccion"
+    ? "https://e-factura.sunat.gob.pe/ol-it-wsconscpegem/billConsultService"
+    : null;
+}
+
+/**
  * La guía de remisión YA NO VA POR SOAP. Esta función existe solo para que
  * quien la busque se entere aquí y no después de un día de trabajo.
  *

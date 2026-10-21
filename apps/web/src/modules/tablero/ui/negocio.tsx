@@ -1,5 +1,6 @@
 import { Boxes, FileText, ShoppingCart, Users } from "lucide-react";
 import { EstadoError, KpiCard } from "@rodatech/ui";
+import { misPermisos } from "@/lib/permisos";
 
 import { periodoAnterior, type Rango } from "@/modules/reportes";
 import {
@@ -33,12 +34,22 @@ const dolares = (n: number) =>
 /** Cotizado, comprado, almacén y clientes: las cuatro tarjetas de la segunda fila. */
 export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: string }) {
   const previo = { ...periodoAnterior(rango), grano: rango.grano };
+  /*
+    Lo comprado y el capital en el almacén solo para quien los puede ver
+    (auditoría 21/10): el tablero de Ventas enseñaba «Comprado» sin tener
+    Compras, y el capital al costo es cifra del Informe general. Ni se
+    consultan: lo que no se pinta tampoco tiene por qué viajar.
+  */
+  const permisos = await misPermisos();
+  const verCompras = permisos.tiene("compras", "ver");
+  const verCapital = permisos.tiene("informe", "ver");
+  const sinDatos = { ok: false as const, error: "" };
   const [cot, cotPrevio, compras, comprasPrevio, res, clientes, clientesPrevio] = await Promise.all([
     datosCotizaciones(rango),
     datosCotizaciones(previo),
-    serieCompras(rango),
-    serieCompras(previo),
-    resumen(hoy),
+    verCompras ? serieCompras(rango) : sinDatos,
+    verCompras ? serieCompras(previo) : sinDatos,
+    verCapital ? resumen(hoy) : sinDatos,
     topClientesRango(rango, 1000),
     topClientesRango(previo, 1000),
   ]);
@@ -67,6 +78,7 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         detalle={`${entero(c.cotizaciones)} cotizaciones · se gana el ${pct(tasa)}`}
         href="/reportes/cotizaciones"
       />
+      {verCompras ? (
       <KpiCard
         etiqueta="Comprado"
         icono={<ShoppingCart aria-hidden="true" />}
@@ -81,6 +93,8 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         detalle={`${entero(ordenes)} ${ordenes === 1 ? "compra" : "compras"} · costo puesto en almacén`}
         href="/compras"
       />
+      ) : null}
+      {verCapital ? (
       <KpiCard
         etiqueta="Capital en el almacén"
         icono={<Boxes aria-hidden="true" />}
@@ -95,6 +109,7 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         }
         href="/inventario"
       />
+      ) : null}
       <KpiCard
         etiqueta="Clientes que compraron"
         icono={<Users aria-hidden="true" />}
@@ -111,7 +126,12 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
 
 /** Lo vendido contra lo comprado, por periodo, en la misma escala de dólares. */
 export async function VendidoComprado({ rango }: { rango: Rango }) {
-  const [ventas, compras] = await Promise.all([serieVentas(rango), serieCompras(rango)]);
+  // Sin «Ver» en Compras, la serie de lo comprado no se pide ni se pinta.
+  const verCompras = (await misPermisos()).tiene("compras", "ver");
+  const [ventas, compras] = await Promise.all([
+    serieVentas(rango),
+    verCompras ? serieCompras(rango) : Promise.resolve({ ok: false as const, error: "" }),
+  ]);
   if (!ventas.ok) return <EstadoError titulo="No se pudo cargar la serie" detalle={ventas.error} />;
 
   const porPeriodo = new Map((compras.ok ? compras.datos : []).map((p) => [p.periodo, p.costoTotal]));
@@ -123,15 +143,19 @@ export async function VendidoComprado({ rango }: { rango: Rango }) {
 
   return (
     <Bloque
-      titulo="Lo vendido y lo comprado"
-      descripcion="En dólares sin IGV, por periodo. Si lo comprado pasa a lo vendido, se está llenando el almacén."
+      titulo={verCompras ? "Lo vendido y lo comprado" : "Lo vendido"}
+      descripcion={
+        verCompras
+          ? "En dólares sin IGV, por periodo. Si lo comprado pasa a lo vendido, se está llenando el almacén."
+          : "En dólares sin IGV, por periodo."
+      }
       accion={{ href: "/reportes/facturacion", texto: "Ver lo facturado" }}
     >
       <GraficoBarras
         datos={datos}
         series={[
           { clave: "vendido", nombre: "Vendido", color: "var(--viz-1)" },
-          { clave: "comprado", nombre: "Comprado", color: "var(--viz-3)" },
+          ...(verCompras ? [{ clave: "comprado", nombre: "Comprado", color: "var(--viz-3)" }] : []),
         ]}
       />
     </Bloque>

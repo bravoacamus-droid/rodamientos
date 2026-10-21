@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { mensajeParaPersona } from "@rodatech/sunat/red";
 import { FileText, Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -402,7 +403,8 @@ export default async function PaginaDetalleGuia({
               id={g.id}
               estado={g.estado}
               estadoSunat={g.estado_sunat}
-              mensaje={g.sunat_mensaje}
+              /* Los cortes guardados en crudo («fetch failed») se leen en cristiano (21/10). */
+              mensaje={mensajeParaPersona(g.sunat_mensaje)}
               configurado={config.guias.listo}
               faltaConfig={config.guias.faltan}
               faltaGuia={faltaParaSunat(g).filter((f) => !f.startsWith("Solo se manda"))}

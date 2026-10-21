@@ -87,6 +87,12 @@ async function BloqueUsuarios({
     return <EstadoError titulo="No se pudieron cargar los usuarios" detalle={r.error} />;
   }
   return (
-    <TablaUsuarios usuarios={r.datos} roles={roles} idPropio={idPropio} puedeEditar={puedeEditar} />
+    <TablaUsuarios
+      usuarios={r.datos}
+      roles={roles}
+      idPropio={idPropio}
+      puedeEditar={puedeEditar}
+      hayClave={hayClaveAdmin()}
+    />
   );
 }

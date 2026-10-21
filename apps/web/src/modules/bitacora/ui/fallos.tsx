@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 import { marcarRevisado } from "../acciones/fallos";
 import type { Fallo } from "../api/consultas";
+import { fraseDelFallo } from "../dominio/fallo";
 
 /**
  * Lo que se rompió y nadie te contó.
@@ -60,25 +61,39 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
           className="flex flex-col gap-2 rounded-md border border-[var(--border)] p-3 sm:flex-row sm:items-start sm:gap-3"
         >
           <div className="min-w-0 flex-1">
+            {/*
+              Primero lo que pasó, en palabras (auditoría, 21/10): el error en
+              crudo —`WEBPACK_IMPORTED_MODULE`, «Loading chunk»— no le dice
+              nada a quien abre esto. El original sigue, plegado, para quien
+              lo arregla.
+            */}
             <span className="flex flex-wrap items-center gap-2">
-              <code className="break-words font-mono text-sm font-medium">{f.origen}</code>
+              <span className="font-medium">{fraseDelFallo(f)}</span>
               {f.veces > 1 ? (
-                <Badge tone="danger" size="xs">
+                <Badge tone="danger" size="sm">
                   {f.veces} veces
                 </Badge>
               ) : null}
-              {f.codigo ? (
-                <Badge tone="neutral" size="xs">
-                  {f.codigo}
-                </Badge>
-              ) : null}
             </span>
-            {/*
-              `break-words`: el mensaje de un fallo es una cadena larga y sin
-              espacios —un SQL, una URL, un id— y sin esto no envuelve: estira
-              la caja a 656 px dentro de una pantalla de 390. Medido el 24/09.
-            */}
-            <span className="mt-0.5 block break-words text-sm">{f.mensaje}</span>
+            <details className="mt-1 text-sm">
+              <summary className="cursor-pointer text-[var(--fg-muted)] hover:text-[var(--fg)]">
+                Detalle para el técnico
+              </summary>
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <code className="break-words font-mono text-sm font-medium">{f.origen}</code>
+                {f.codigo ? (
+                  <Badge tone="neutral" size="sm">
+                    {f.codigo}
+                  </Badge>
+                ) : null}
+              </span>
+              {/*
+                `break-words`: el mensaje de un fallo es una cadena larga y sin
+                espacios —un SQL, una URL, un id— y sin esto no envuelve: estira
+                la caja a 656 px dentro de una pantalla de 390. Medido el 24/09.
+              */}
+              <span className="mt-0.5 block break-words">{f.mensaje}</span>
+            </details>
             <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
               {formatearFechaHora(f.ultima_vez)}
               {f.veces > 1 ? ` · la primera, ${formatearFechaHora(f.primera_vez)}` : ""}

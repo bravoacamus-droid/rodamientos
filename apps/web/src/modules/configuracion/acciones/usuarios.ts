@@ -104,14 +104,21 @@ export async function crearUsuario(entrada: {
       cuando ninguno de los 97 clientes —ni la mayoría de los empleados— tiene
       el correo a mano.
 
-      `nombre` y `rol` van en los metadatos porque es de ahí donde los lee
-      `trg_usuario_nuevo` (004) para crear el perfil.
+      `nombre` va en los metadatos porque es de ahí donde lo lee
+      `trg_usuario_nuevo` (004) para crear el perfil; el rol, en los dos.
     */
     const { data, error } = await admin.auth.admin.createUser({
       email,
       password: contrasena,
       email_confirm: true,
       user_metadata: { nombre, rol },
+      /*
+        El rol de verdad va en `app_metadata` (145): esa la escribe solo la
+        clave de servicio, y es la única que el trigger cree. La de
+        `user_metadata` la elige cualquiera que se registre por su cuenta, y
+        con ella se podía nacer gerencia.
+      */
+      app_metadata: { rol },
     });
 
     if (error) {
@@ -151,6 +158,61 @@ export async function crearUsuario(entrada: {
 
     revalidatePath("/configuracion/usuarios");
     return { ok: true, contrasena, nombre, email };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}
+
+export type ResultadoContrasena =
+  | { ok: true; contrasena: string; nombre: string; email: string }
+  | { ok: false; error: string };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Una contraseña nueva para un empleado que olvidó la suya (auditoría, 21/10).
+ *
+ * Hasta hoy la única salida era el panel de Supabase. Va con las mismas
+ * reglas que el alta: solo GERENCIA, la genera el servidor, se enseña UNA vez
+ * y el perfil queda con `debe_cambiar_contrasena`, así que el empleado la
+ * cambia antes de ver nada. La propia no se cambia desde aquí: para eso está
+ * /perfil, que pide la actual.
+ */
+export async function darContrasenaNueva(id: string): Promise<ResultadoContrasena> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (perfil.rol !== "gerencia") {
+    return { ok: false, error: "Solo gerencia puede darle una contraseña nueva a alguien." };
+  }
+  if (!UUID.test(id)) return { ok: false, error: "Ese usuario no existe." };
+  if (id === perfil.id) {
+    return { ok: false, error: "Tu propia contraseña se cambia en «Mi perfil»." };
+  }
+  if (!hayClaveAdmin()) {
+    return {
+      ok: false,
+      error: "No se puede desde aquí: falta una configuración del servidor. Avise a quien mantiene el sistema.",
+    };
+  }
+
+  try {
+    const admin = clienteAdmin();
+    const { data: quien } = await admin
+      .from("perfiles")
+      .select("id, nombre, email")
+      .eq("id", id)
+      .maybeSingle();
+    if (!quien) return { ok: false, error: "Ese usuario no existe." };
+
+    const contrasena = generarContrasenaInicial();
+    const { error } = await admin.auth.admin.updateUserById(id, { password: contrasena });
+    if (error) return { ok: false, error: mensajeDeError(error) };
+
+    // Que la cambie al entrar: esta la ha visto quien se la dio.
+    await admin.from("perfiles").update({ debe_cambiar_contrasena: true }).eq("id", id);
+
+    revalidatePath("/configuracion/usuarios");
+    return { ok: true, contrasena, nombre: quien.nombre ?? "", email: quien.email ?? "" };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
   }

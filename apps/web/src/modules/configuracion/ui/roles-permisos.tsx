@@ -64,6 +64,12 @@ export function RolesYPermisos({
   const [enCurso, setEnCurso] = React.useState<string | null>(null);
   const [dialogo, setDialogo] = React.useState<"crear" | "editar" | null>(null);
   const [borrando, setBorrando] = React.useState(false);
+  /*
+    Quitar «Ver» arrastra Crear, Editar y Eliminar del módulo, y volver a dar
+    «Ver» no los devuelve (auditoría, 21/10). Por eso, si hay algo más
+    marcado, se pregunta antes, en la misma tarjeta o fila del módulo.
+  */
+  const [quitandoVer, setQuitandoVer] = React.useState<string | null>(null);
 
   if (!rol) return null;
   const esGerencia = rol.clave === "gerencia";
@@ -93,6 +99,49 @@ export function RolesYPermisos({
           : "";
     toast.success(`${rol.nombre} · ${modulo.nombre}: ${puede ? "ahora puede" : "ya no puede"} ${ETIQUETA_ACCION[accion].toLowerCase()}.${arrastre}`);
     router.refresh();
+  }
+
+  function pulsar(modulo: ModuloDef, accion: Accion) {
+    if (!rol) return;
+    const arrastra =
+      accion === "ver" &&
+      tiene(lista, rol.clave, modulo.clave, "ver") &&
+      lista.some((p) => p.rol === rol.clave && p.modulo === modulo.clave && p.accion !== "ver");
+    if (arrastra) {
+      setQuitandoVer(modulo.clave);
+      return;
+    }
+    setQuitandoVer(null);
+    void alternar(modulo, accion);
+  }
+
+  /** La pregunta de quitar «Ver», debajo del módulo que se tocó. */
+  function preguntaVer(m: ModuloDef) {
+    if (quitandoVer !== m.clave || !rol) return null;
+    const otras = ACCIONES.filter((a) => a !== "ver" && tiene(lista, rol.clave, m.clave, a))
+      .map((a) => ETIQUETA_ACCION[a])
+      .join(", ");
+    return (
+      <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-left text-sm">
+        <span className="min-w-0 flex-1 basis-56">
+          Quitar <strong>Ver</strong> también quita <strong>{otras}</strong> de {m.nombre} a {rol.nombre}. Si
+          luego le vuelves a dar Ver, eso no vuelve solo.
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            setQuitandoVer(null);
+            void alternar(m, "ver");
+          }}
+          className="h-10 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          Sí, quitar todo
+        </button>
+        <Button type="button" variant="outline" onClick={() => setQuitandoVer(null)}>
+          No
+        </Button>
+      </div>
+    );
   }
 
   async function borrar() {
@@ -126,6 +175,7 @@ export function RolesYPermisos({
                 onClick={() => {
                   setElegido(r.clave);
                   setBorrando(false);
+                  setQuitandoVer(null);
                 }}
                 className={`flex min-h-14 min-w-[8.5rem] flex-col items-start justify-center rounded-lg border px-3 py-2 text-left transition ${
                   activo
@@ -239,11 +289,12 @@ export function RolesYPermisos({
                     etiqueta={`${m.nombre} · ${ETIQUETA_ACCION[a]}`}
                     bloqueada={bloqueado}
                     ocupada={enCurso === `${m.clave}:${a}`}
-                    onClick={() => void alternar(m, a)}
+                    onClick={() => pulsar(m, a)}
                   />
                 </div>
               ))}
             </div>
+            {quitandoVer === m.clave ? <div className="mt-3">{preguntaVer(m)}</div> : null}
           </div>
         ))}
       </div>
@@ -263,7 +314,8 @@ export function RolesYPermisos({
           </thead>
           <tbody>
             {modulos.map((m) => (
-              <tr key={m.clave} className="border-b border-[var(--border)] align-middle last:border-0">
+              <React.Fragment key={m.clave}>
+              <tr className={`${quitandoVer === m.clave ? "" : "border-b"} border-[var(--border)] align-middle last:border-0`}>
                 <td className="px-3 py-3">
                   <p className="font-medium">{m.nombre}</p>
                   <p className="text-sm text-[var(--fg-muted)]">{m.ayuda}</p>
@@ -276,7 +328,7 @@ export function RolesYPermisos({
                         etiqueta={`${m.nombre} · ${ETIQUETA_ACCION[a]}`}
                         bloqueada={bloqueado}
                         ocupada={enCurso === `${m.clave}:${a}`}
-                        onClick={() => void alternar(m, a)}
+                        onClick={() => pulsar(m, a)}
                       />
                     ) : (
                       <span className="text-[var(--fg-subtle)]" title="No aplica en este módulo">
@@ -286,6 +338,14 @@ export function RolesYPermisos({
                   </td>
                 ))}
               </tr>
+              {quitandoVer === m.clave ? (
+                <tr className="border-b border-[var(--border)]">
+                  <td colSpan={ACCIONES.length + 1} className="px-3 pb-3">
+                    {preguntaVer(m)}
+                  </td>
+                </tr>
+              ) : null}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

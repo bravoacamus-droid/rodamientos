@@ -104,8 +104,13 @@ export function OrdenesDeCompra({
         </ul>
       ) : null}
 
-      {/* Registrar la factura de cada orden, todas juntas bajo el pedido (128). */}
-      {vivas.length > 0 ? (
+      {/* Registrar la factura de cada orden, todas juntas bajo el pedido (128).
+          Sin «Compras», la pantalla de destino está cerrada: candado (21/10). */}
+      {vivas.length > 0 && !puedeGenerar && sinPermiso ? (
+        <BotonBloqueado mensaje={sinPermiso} className="w-fit">
+          Registrar compras
+        </BotonBloqueado>
+      ) : vivas.length > 0 ? (
         <Link
           href={`/compras/pedido/${cotizacionId}`}
           className={`inline-flex h-10 w-fit items-center gap-2 rounded-md px-4 text-sm font-medium ${

@@ -23,6 +23,10 @@ import { agregarGasto, quitarGasto } from "@/modules/importaciones/acciones/gast
 
 import { ETIQUETA_REPARTO, repartoSugerido, type Reparto } from "../dominio/gastos";
 import { SelectorReparto } from "./constructor/gastos";
+import { InputSugerencias } from "@/componentes/input-sugerencias";
+
+/** Los gastos de siempre de una importación; se puede escribir otro. */
+const CONCEPTOS_GASTO = ["Desaduanaje", "Courier", "Flete", "Almacenaje", "Agente de aduanas", "Transporte"];
 
 export interface GastoFicha {
   id: string;
@@ -265,27 +269,23 @@ export function GastosFicha({
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="flex flex-col gap-4">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Qué se pagó</span>
-              <Input
-                value={concepto}
-                onChange={(e) => {
-                  setConcepto(e.target.value);
+            <div className="flex flex-col gap-1">
+              <label htmlFor="gasto-concepto" className="text-sm font-medium">
+                Qué se pagó
+              </label>
+              {/* Con flecha y la lista a la vista (21/10), no un `datalist`. */}
+              <InputSugerencias
+                id="gasto-concepto"
+                valor={concepto}
+                onCambio={(v) => {
+                  setConcepto(v);
                   // Lo propuesto sigue al concepto; lo elegido se queda.
-                  if (!repartoAMano && conPesos) setReparto(repartoSugerido(e.target.value));
+                  if (!repartoAMano && conPesos) setReparto(repartoSugerido(v));
                 }}
-                list="conceptos-gasto"
-                autoFocus
+                sugerencias={CONCEPTOS_GASTO}
+                placeholder="Ej.: Desaduanaje"
               />
-              <datalist id="conceptos-gasto">
-                <option value="Desaduanaje" />
-                <option value="Courier" />
-                <option value="Flete" />
-                <option value="Almacenaje" />
-                <option value="Agente de aduanas" />
-                <option value="Transporte" />
-              </datalist>
-            </label>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex flex-col gap-1">

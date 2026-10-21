@@ -7,7 +7,7 @@
 import type * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, EllipsisVertical, Pencil, Send } from "lucide-react";
+import { Check, EllipsisVertical, Lock, Pencil, Send } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  toast,
 } from "@rodatech/ui";
 
 import { cambiarEstado, clonar } from "../../acciones/gestionar";
@@ -46,6 +47,8 @@ export function AccionesCotizacion({
   despachable,
   guias,
   vistaPrevia,
+  puedeAnular = false,
+  sinPermisoAnular = "",
   enSoles = false,
   abrirAprobar = false,
 }: {
@@ -108,6 +111,13 @@ export function AccionesCotizacion({
    * como elemento evita traerse esa maquetación al bundle del cliente.
    */
   vistaPrevia?: React.ReactNode;
+  /**
+   * Anular pide «Eliminar» en Cotizaciones (auditoría, 21/10): la pantalla de
+   * permisos dice que eliminar es borrar o anular. Sin él, sale con candado.
+   */
+  puedeAnular?: boolean;
+  /** Qué decir con el candado. */
+  sinPermisoAnular?: string;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = useTransition();
@@ -115,6 +125,9 @@ export function AccionesCotizacion({
   const enCurso = estado === "borrador" || estado === "enviada";
   const [confirmando, setConfirmando] = useState(abrirAprobar && enCurso);
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  // Anular no se deshace: se pregunta en la pantalla y no con window.confirm,
+  // que sale en letra pequeña y sin estilo (21/10).
+  const [anulando, setAnulando] = useState(false);
 
   const correr = (f: () => Promise<{ ok: boolean; error?: string; id?: string }>) => {
     setError(null);
@@ -372,24 +385,54 @@ export function AccionesCotizacion({
             {viva ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  disabled={pendiente}
-                  className="text-[var(--danger)]"
-                  onSelect={() => {
-                    // Anular no se deshace: si no se pregunta, se anula por error.
-                    if (window.confirm("¿Anular esta cotización? No se puede deshacer.")) {
-                      correr(() => cambiarEstado(id, "anulada"));
-                    }
-                  }}
-                >
-                  Anular
-                </DropdownMenuItem>
+                {puedeAnular ? (
+                  <DropdownMenuItem
+                    disabled={pendiente}
+                    className="text-[var(--danger)]"
+                    onSelect={() => setAnulando(true)}
+                  >
+                    Anular
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    className="text-[var(--fg-muted)]"
+                    onSelect={() => toast.info(sinPermisoAnular, { duration: 8000 })}
+                  >
+                    <Lock className="size-4" aria-hidden="true" />
+                    Anular
+                  </DropdownMenuItem>
+                )}
               </>
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
+      {anulando ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm sm:max-w-md"
+        >
+          <span className="min-w-0 flex-1 basis-48">
+            ¿Anular esta cotización? <strong>No se puede deshacer</strong>: deja de valer para el cliente y su
+            enlace deja de abrirse.
+          </span>
+          <button
+            type="button"
+            disabled={pendiente}
+            onClick={() => {
+              setAnulando(false);
+              correr(() => cambiarEstado(id, "anulada"));
+            }}
+            className="h-10 rounded-md bg-[var(--danger)] px-3 text-sm font-medium text-white disabled:opacity-60"
+          >
+            Sí, anular
+          </button>
+          <Button type="button" variant="outline" disabled={pendiente} onClick={() => setAnulando(false)}>
+            No
+          </Button>
+        </div>
+      ) : null}
       {pendiente ? (
         <span className="text-right text-sm text-[var(--fg-muted)]">Procesando…</span>
       ) : null}

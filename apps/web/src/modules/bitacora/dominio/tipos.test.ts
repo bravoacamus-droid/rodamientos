@@ -58,6 +58,8 @@ describe("las etiquetas", () => {
     for (const t of [
       "comprobantes", "cotizaciones", "compras", "recepciones",
       "ajustes_inventario", "permisos_rol", "perfiles", "clientes", "productos",
+      // 145
+      "permisos", "roles", "cuentas_bancarias", "empresa", "series_documento", "config_sunat",
     ]) {
       expect(ETIQUETA_ENTIDAD[t]).toBeTruthy();
     }

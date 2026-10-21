@@ -10,6 +10,8 @@
  */
 import { XMLParser } from "fast-xml-parser";
 
+import { PLAZO_CONSULTA_MS, PLAZO_ENVIO_MS, pedirConLimite } from "../red";
+
 const WSS_NS =
   "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
 const PASSWORD_TYPE =
@@ -51,19 +53,29 @@ function headerSeguridad(usuario: string, clave: string): string {
 async function postSoap(
   endpoint: string,
   sobre: string,
+  plazoMs: number = PLAZO_ENVIO_MS,
 ): Promise<
   // El body proviene de XML parseado sin esquema fijo; se accede dinámicamente.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   { fault: { code: string; message: string } } | { body: any; texto: string }
 > {
   const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
-  let res: Response | null = null;
+  /*
+    Con tiempo límite (auditoría 21/10, A4): un corte o un cuelgue sale como
+    `ErrorRedSunat` y quien llama lo deja pendiente. Antes no había límite y
+    la acción esperaba hasta que la plataforma la mataba.
+  */
+  let res: { status: number; texto: string } | null = null;
   for (let intento = 0; intento < 4; intento++) {
-    res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: "" },
-      body: sobre,
-    });
+    res = await pedirConLimite(
+      endpoint,
+      {
+        method: "POST",
+        headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: "" },
+        body: sobre,
+      },
+      plazoMs,
+    );
     if (res.status !== 401 && res.status !== 503) break;
     if (intento < 3) await espera(1500 * (intento + 1));
   }
@@ -71,7 +83,7 @@ async function postSoap(
     return { fault: { code: "sin_conexion", message: "No hubo respuesta de SUNAT." } };
   }
 
-  const texto = await res.text();
+  const texto = res.texto;
   const parser = new XMLParser({ ignoreAttributes: false, removeNSPrefix: true });
   const doc = parser.parse(texto);
   const body = (doc?.Envelope ?? doc)?.Body ?? {};
@@ -271,6 +283,62 @@ ${headerSeguridad(usuario, clave)}
     r.body?.getStatusResponse?.["return"]?.status;
   return {
     statusCode: status?.statusCode != null ? String(status.statusCode) : undefined,
+    applicationResponse: status?.content ? String(status.content) : undefined,
+  };
+}
+
+export interface RespuestaConsultaCdr {
+  /** Código de la consulta: «0004» es «la constancia existe». */
+  statusCode?: string;
+  statusMessage?: string;
+  /** ZIP del CDR en base64, cuando SUNAT lo tiene. */
+  applicationResponse?: string;
+  fault?: { code: string; message: string };
+}
+
+/**
+ * Pide a SUNAT la constancia (CDR) de un comprobante por su número
+ * (getStatusCdr del billConsultService).
+ *
+ * Es lo que se pregunta ante un 1033 sobre algo que ya se había mandado
+ * (auditoría 21/10, A4): si SUNAT ya lo tiene aceptado, su CDR lo dice, y no
+ * hace falta —ni se debe— emitir otro.
+ *
+ * Verificado contra Greenter (WsServicesConsultCdrService). Usa las mismas
+ * credenciales SOL que el envío. Solo existe en producción.
+ */
+export async function consultarCdr(
+  endpoint: string,
+  usuario: string,
+  clave: string,
+  ruc: string,
+  tipoDocumento: string,
+  serie: string,
+  correlativo: number,
+): Promise<RespuestaConsultaCdr> {
+  const sobre = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="${BILL_NS}">
+${headerSeguridad(usuario, clave)}
+  <soapenv:Body>
+    <ser:getStatusCdr>
+      <rucComprobante>${escaparXml(ruc)}</rucComprobante>
+      <tipoComprobante>${escaparXml(tipoDocumento)}</tipoComprobante>
+      <serieComprobante>${escaparXml(serie)}</serieComprobante>
+      <numeroComprobante>${correlativo}</numeroComprobante>
+    </ser:getStatusCdr>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+  const r = await postSoap(endpoint, sobre, PLAZO_CONSULTA_MS);
+  if ("fault" in r) return { fault: r.fault };
+
+  const status =
+    r.body?.getStatusCdrResponse?.statusCdr ??
+    r.body?.getStatusCdrResponse?.["return"] ??
+    r.body?.getStatusCdrResponse?.status;
+  return {
+    statusCode: status?.statusCode != null ? String(status.statusCode) : undefined,
+    statusMessage: status?.statusMessage != null ? String(status.statusMessage) : undefined,
     applicationResponse: status?.content ? String(status.content) : undefined,
   };
 }

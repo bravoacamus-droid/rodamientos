@@ -279,6 +279,8 @@ export default async function PaginaDetalleProducto({
         <QuienLoVende
           productoId={p.id}
           proveedores={quienVende.ok ? quienVende.datos : []}
+          puedeComprar={puedeComprar}
+          sinPermiso={avisoSinPermiso("compras", "crear", permisos.nombreRol)}
         />
 
         {/* Debajo de «quién lo vende», que es su continuación: uno dice a

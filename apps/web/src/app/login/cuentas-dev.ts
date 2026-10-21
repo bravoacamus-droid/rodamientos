@@ -77,20 +77,31 @@ export const ATAJOS_VISIBLES = CUENTAS_DEV.filter((c) => c.atajo);
  * una palabra que lo dice.
  *
  * El día de la entrega de verdad: se borra la variable y se acabó.
+ *
+ * ---------------------------------------------------------------------------
+ * 21/10: en producción, nunca
+ * ---------------------------------------------------------------------------
+ * La auditoría del 21/10 encontró dos cosas que el candado de arriba no
+ * cubría:
+ *
+ *  · Fuera de Vercel `VERCEL_ENV` no existe, así que un `RODATECH_ATAJOS=1`
+ *    —el valor que traía `.env.example`— encendía el panel en un servidor de
+ *    producción cualquiera.
+ *  · El botón «Gerencia» entra en `gerencia@rodatech.pe`, que es la ÚNICA
+ *    cuenta de gerencia y la de Willy, con los datos reales.
+ *
+ * Así que con `NODE_ENV=production` el panel no sale, sin excepción y sin
+ * palabra mágica: `demo-publica` ya no abre nada. En `pnpm dev` sigue como
+ * siempre. `RODATECH_ATAJOS` se queda (decisión de Luis) y sirve para
+ * apagarlos también en local con `RODATECH_ATAJOS=0`.
+ *
+ * Consecuencia que hay que saber: en `rodamientos.vercel.app` Willy ya no
+ * tiene los botones y entra con su contraseña, que es justo lo que pide el
+ * pase a producción.
  */
 
-/** Lo que hay que escribir en `RODATECH_ATAJOS` para abrirlos en producción. */
-const PERMISO_EN_PRODUCCION = "demo-publica";
-
 export function hayAtajos(): boolean {
+  if (process.env.NODE_ENV === "production") return false;
   if (!process.env.RODATECH_DEV_PASSWORD) return false;
-
-  const pedido = process.env.RODATECH_ATAJOS;
-
-  if (process.env.VERCEL_ENV === "production") {
-    return pedido === PERMISO_EN_PRODUCCION;
-  }
-
-  if (pedido === "1" || pedido === PERMISO_EN_PRODUCCION) return true;
-  return process.env.NODE_ENV !== "production";
+  return process.env.RODATECH_ATAJOS !== "0";
 }

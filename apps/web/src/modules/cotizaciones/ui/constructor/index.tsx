@@ -38,7 +38,6 @@ import {
   totalesDe,
   type EstadoConstructor,
 } from "../../dominio/constructor";
-import { marcasConocidas } from "@/modules/productos/acciones/alta-rapida";
 
 import { AltaProducto } from "./alta-producto";
 import { BuscadorLineas } from "./buscador";
@@ -185,28 +184,6 @@ export function Constructor({
   /** El código que se está dando de alta, o null. */
   const [creando, setCreando] = useState<string | null>(null);
 
-  /*
-    Las marcas que ya existen, para sugerirlas al escribir la de una línea.
-
-    Alimentan el `<datalist>` del final, que usa «Editar artículo» cuando se
-    elige «solo en esta cotización» — el caso del retén. Ahí la marca es texto
-    y no una clave ajena, así que se puede escribir una que no esté en el
-    catálogo: Willy, 16/09, *«puede ser diversas marcas: LYO, NQK, PHK, NAK…
-    etc»*, y ese «etc» es el motivo de que sugiera en vez de obligar.
-
-    Se piden una vez al montar, no al abrir el diálogo: son 24 nombres, y
-    pedirlos aquí evita que la caja salga sin sugerencias el primer segundo.
-  */
-  const [marcas, setMarcas] = useState<string[]>([]);
-  useEffect(() => {
-    let vivo = true;
-    marcasConocidas().then((m) => {
-      if (vivo) setMarcas(m);
-    });
-    return () => {
-      vivo = false;
-    };
-  }, []);
 
   // Editar y crear van a acciones distintas: crear inserta y devuelve un
   // número nuevo; editar reescribe la que ya existe y NO toca el número.
@@ -814,12 +791,6 @@ export function Constructor({
         Se monta solo cuando hace falta: así las listas de marcas y familias se
         piden la vez que se usa y no en cada cotización.
       */}
-      {/* Las sugerencias de marca, una sola vez para todas las líneas. */}
-      <datalist id="marcas-conocidas">
-        {marcas.map((m) => (
-          <option key={m} value={m} />
-        ))}
-      </datalist>
 
       <Dialog open={preguntando} onOpenChange={setPreguntando}>
         <DialogContent>

@@ -5447,6 +5447,7 @@ export type Database = {
       _solo_gerencia: { Args: never; Returns: undefined }
       _tabla_de_todos: { Args: { p_tabla: string }; Returns: boolean }
       _tres_letras: { Args: { n: number }; Returns: string }
+      _uuid_o_nulo: { Args: { p: string }; Returns: string }
       a_dolares: {
         Args: { p_moneda: string; p_monto: number; p_tipo_cambio: number }
         Returns: number
@@ -5945,6 +5946,7 @@ export type Database = {
         }[]
       }
       puede: { Args: { p_accion: string; p_modulo: string }; Returns: boolean }
+      puede_eliminar: { Args: { p_tabla: string }; Returns: boolean }
       puede_escribir: { Args: { p_tabla: string }; Returns: boolean }
       recalcular_precios_promedio: {
         Args: { p_meses?: number; p_productos?: Json }

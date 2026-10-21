@@ -52,9 +52,16 @@ export function Textarea({ className, ...props }: React.ComponentPropsWithRef<"t
   );
 }
 
-/** Flecha del select dibujada en el fondo: evita un icono extra en el DOM. */
+/**
+ * Flecha del select dibujada en el fondo: evita un icono extra en el DOM.
+ *
+ * Un SVG de fondo no lee los tokens, así que no puede cambiar con el tema. El
+ * color es uno solo elegido para los dos (21/10): #7d8998 da 3,3:1 sobre la
+ * superficie clara más pálida y 4,4:1 sobre la oscura, por encima del 3:1 que
+ * pide un control. El de antes, #8894a2, se quedaba en 2,85:1 en claro.
+ */
 const FLECHA =
-  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238894a2' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237d8998' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
 
 /**
  * Select NATIVO.

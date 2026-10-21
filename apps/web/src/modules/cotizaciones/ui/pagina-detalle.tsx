@@ -255,6 +255,9 @@ export default async function PaginaDetalleCotizacion({
   // Las órdenes de compra (111): solo de un pedido confirmado.
   const confirmado = cabecera.estado === "aprobada" || cabecera.estado === "atendida";
   const idsConProducto = lineas.map((l) => l.producto_id).filter((x): x is string => !!x);
+  // Los permisos, siempre: «Anular» los necesita en cualquier estado, no solo
+  // confirmada (21/10). `misPermisos` va en caché, así que no se pide dos veces.
+  const permisos = await misPermisos();
   const [ordenes, perfil, demanda, pedidos] = confirmado
     ? await Promise.all([
         ordenesDelPedido(cabecera.id),
@@ -361,6 +364,8 @@ export default async function PaginaDetalleCotizacion({
 
           <AccionesCotizacion
             id={cabecera.id}
+            puedeAnular={permisos.tiene("cotizaciones", "eliminar")}
+            sinPermisoAnular={avisoSinPermiso("cotizaciones", "eliminar", permisos.nombreRol)}
             estado={cabecera.estado}
             abrirAprobar={abrirAprobar}
             datosMensaje={datosMensaje}
@@ -518,6 +523,7 @@ export default async function PaginaDetalleCotizacion({
             .filter((l) => l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null))
             .map((l) => l.productoId)}
           puedeGenerar={!!perfil?.tiene("compras", "crear")}
+          sinPermiso={avisoSinPermiso("compras", "crear", perfil?.nombreRol)}
         />
 
         {confirmado ? (

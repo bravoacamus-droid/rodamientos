@@ -45,17 +45,14 @@ const esquema = z.object({
   condicion_pago: z.enum(["contado", "credito"]),
   dias_credito: z.number().int().min(0).max(365),
   observaciones: z.string().max(2000).nullable(),
-  /**
-   * ¿La mercadería sale del almacén con esta factura?
-   *
-   * Por defecto NO, y es la decisión que ya tomó el esquema: el stock sale con
-   * la GUÍA DE REMISIÓN, que es el documento que acompaña el movimiento físico.
-   * Descargarlo también al facturar restaría dos veces lo mismo.
-   *
-   * Se activa para la venta de mostrador: el cliente se lleva el rodamiento y
-   * se le factura ahí mismo, sin guía previa.
-   */
-  descargar_stock: z.boolean(),
+  /*
+    `descargar_stock` ya no se acepta (auditoría 21/10, M1). Era la casilla
+    de la venta de mostrador, retirada el 17/09 porque el stock sale con la
+    GUÍA y marcarla al facturar lo restaba dos veces (CLAUDE.md §6). La casilla
+    se fue de la pantalla, pero el campo seguía aquí: cualquiera con permiso
+    de facturar lo mandaba en un `fetch` y el almacén bajaba otra vez. Si
+    llega, zod lo descarta.
+  */
   /**
    * Cuánto se factura de cada línea pendiente, en el mismo orden.
    *
@@ -291,7 +288,8 @@ export async function emitirComprobante(
       // Lo lee `emitir_comprobante` desde la 071. Antes se quedaba en el
       // `default true` del esquema y las cuentas salían siempre.
       mostrar_cuenta: datos.mostrar_cuenta,
-      descargar_stock: datos.descargar_stock,
+      // Siempre falso: el stock salió con la guía (ver el esquema).
+      descargar_stock: false,
       /*
         Solo `aplica`. El porcentaje y el monto los pone la base.
 
@@ -379,14 +377,6 @@ export async function emitirComprobante(
     revalidatePath("/pedidos");
     revalidatePath(`/cotizaciones/${cot.id}`);
     revalidatePath("/dashboard");
-
-    // Solo si de verdad se movió el almacén. Facturar contra una guía ya
-    // emitida no toca stock —salió con la guía—, así que invalidar el catálogo
-    // ahí sería trabajo para nada.
-    if (datos.descargar_stock) {
-      revalidatePath("/productos");
-      revalidatePath("/inventario");
-    }
 
     /*
       Y si se pidió, mandarlo, sin salir de aquí.

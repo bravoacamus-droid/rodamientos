@@ -31,7 +31,27 @@ const PUBLICAS = ["/ver/"];
  * refrescado: corre antes que cualquier Server Component. Por eso
  * `clienteServidor()` puede ignorar sin riesgo su fallo al escribir cookies.
  */
-export async function refrescarSesion(request: NextRequest) {
+export interface OpcionesSesion {
+  /**
+   * La puerta de «Ver» de cada pantalla (143), decidida AQUÍ y no en el
+   * navegador (auditoría 21/10, M9).
+   *
+   * Hasta entonces la ponía `GuardaVer`, que es un componente de cliente: el
+   * servidor generaba la página entera —con sus datos— y el navegador la
+   * tapaba con «No puedes abrir esta pantalla». Ventas que tecleaba
+   * `/configuracion/usuarios` recibía en la respuesta los correos de las
+   * nueve cuentas. Y ponerla en el layout tampoco basta: Next pinta el layout
+   * y la página en paralelo, así que la página sale igual.
+   *
+   * Es una función que recibe la app porque las reglas (qué ruta pide qué
+   * módulo) viven en su `navegacion.ts`, no en este paquete.
+   */
+  puedeVer?: (ruta: string, rol: string | null, permisos: readonly string[]) => boolean;
+  /** A dónde se reescribe lo que no se puede ver. La URL del navegador no cambia. */
+  rutaSinPermiso?: string;
+}
+
+export async function refrescarSesion(request: NextRequest, opciones: OpcionesSesion = {}) {
   let respuesta = NextResponse.next({ request });
 
   const ruta = request.nextUrl.pathname;
@@ -88,6 +108,37 @@ export async function refrescarSesion(request: NextRequest) {
     destino.pathname = "/dashboard";
     destino.search = "";
     return NextResponse.redirect(destino);
+  }
+
+  /*
+    Solo GET y HEAD: las Server Actions van por POST a la ruta de la página
+    desde la que se llaman, y esas se defienden solas con `sinPermiso`.
+
+    Primero se pregunta sin rol ni permisos: si la ruta no pide nada (el
+    tablero, el perfil, una ruta que no está en el menú) no se gasta la
+    consulta. Solo las que piden un módulo pagan una llamada a
+    `mis_permisos`. Si esa llamada falla, se cierra: vale más un «no puedes»
+    de más que una pantalla abierta.
+  */
+  const { puedeVer } = opciones;
+  if (
+    user &&
+    !esPublica &&
+    puedeVer &&
+    (request.method === "GET" || request.method === "HEAD") &&
+    !puedeVer(ruta, null, [])
+  ) {
+    const { data } = await supabase.rpc("mis_permisos");
+    const mios = (data ?? null) as { rol?: string | null; permisos?: string[] } | null;
+    if (!puedeVer(ruta, mios?.rol ?? null, mios?.permisos ?? [])) {
+      const destino = request.nextUrl.clone();
+      destino.pathname = opciones.rutaSinPermiso ?? "/sin-permiso";
+      destino.search = "";
+      const reescrita = NextResponse.rewrite(destino, { request });
+      // Las cookies del token recién refrescado, que si no se perderían.
+      for (const c of respuesta.cookies.getAll()) reescrita.cookies.set(c);
+      return reescrita;
+    }
   }
 
   return respuesta;

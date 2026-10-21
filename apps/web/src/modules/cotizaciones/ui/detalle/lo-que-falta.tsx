@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PackageX, ShoppingCart } from "lucide-react";
 
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 import type { FaltaDelPedido } from "@/modules/compras";
 
 /**
@@ -35,6 +36,7 @@ export function LoQueFalta({
   falta,
   analizados = [],
   puedeGenerar = false,
+  sinPermiso = "",
 }: {
   falta: readonly FaltaDelPedido[];
   /**
@@ -44,6 +46,12 @@ export function LoQueFalta({
   analizados?: readonly string[];
   /** Si quien mira puede generar las órdenes de compra. */
   puedeGenerar?: boolean;
+  /**
+   * Qué decir con el candado. Sin «Compras: crear», los dos botones llevaban
+   * a una pantalla cerrada (auditoría, 21/10): ahora salen con candado y
+   * dicen a quién pedírselo.
+   */
+  sinPermiso?: string;
 }) {
   /*
     Lo que falta llega YA CALCULADO desde la página.
@@ -118,6 +126,8 @@ export function LoQueFalta({
                 pone el proveedor, y Willy pregunta antes de comprar. Registrar
                 la compra a ciegas se deja como la segunda opción, para cuando
                 ya se sabe a cuánto. */}
+            {puedeGenerar ? (
+            <>
             <Link
               href={`/compras/pedir-precio?items=${items}`}
               className="inline-flex h-10 items-center justify-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
@@ -131,6 +141,12 @@ export function LoQueFalta({
             >
               Registrar la compra a mano
             </Link>
+            </>
+            ) : (
+              <BotonBloqueado mensaje={sinPermiso} className="h-10 md:h-10">
+                Pedir precio de lo que falta
+              </BotonBloqueado>
+            )}
           </div>
         ) : null}
       </div>

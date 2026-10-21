@@ -368,29 +368,51 @@ export async function cambiarUsuario(
     return { ok: false, error: "Ese rol no existe. Elígelo de la lista." };
   }
 
+  /*
+    Desactivar también cierra la puerta en Supabase Auth (revisión del
+    15/10): solo con `perfiles.activo` la cuenta seguía iniciando sesión y
+    veía un ERP vacío. Con la cuenta bloqueada no entra, y las sesiones
+    abiertas no pueden renovar su token.
+
+    Desde el 21/10 (auditoría, M5) una baja a medias no se da por hecha: sin
+    la clave de servicio antes salía un «Ojo» en verde y la persona seguía
+    entrando. Ahora no se toca nada y se dice por qué. Y el bloqueo va ANTES
+    que el perfil: si falla, no queda nadie «de baja» en la pantalla que en
+    realidad sigue entrando.
+  */
+  const cambiaAcceso = datos.data.activo !== undefined;
+  if (cambiaAcceso && !hayClaveAdmin()) {
+    return {
+      ok: false,
+      error:
+        "No se pudo cambiarle el acceso: falta una configuración del servidor. Avise a quien mantiene el sistema.",
+    };
+  }
+  const bloquear = async (si: boolean) =>
+    (await clienteAdmin().auth.admin.updateUserById(id, { ban_duration: si ? "876000h" : "none" })).error;
+
   try {
+    if (cambiaAcceso && datos.data.activo === false && (await bloquear(true))) {
+      return {
+        ok: false,
+        error: "No se pudo cerrarle el acceso. No se cambió nada: vuelva a intentarlo en un momento.",
+      };
+    }
+
     const supabase = await clienteServidor();
     // `as never`: el rol ya se comprobó contra `roles`, y puede ser uno creado
     // después de generar los tipos (143), que el enum de TypeScript no conoce.
     const { error } = await supabase.from("perfiles").update(datos.data as never).eq("id", id);
-    if (error) return { ok: false, error: mensajeDeError(error) };
+    if (error) {
+      // El perfil no cambió: se le devuelve el acceso que se le acababa de quitar.
+      if (cambiaAcceso && datos.data.activo === false) await bloquear(false);
+      return { ok: false, error: mensajeDeError(error) };
+    }
 
-    /*
-      Desactivar también cierra la puerta en Supabase Auth (revisión del
-      15/10): solo con `perfiles.activo` la cuenta seguía iniciando sesión y
-      veía un ERP vacío. Con la cuenta bloqueada no entra, y las sesiones
-      abiertas no pueden renovar su token.
-    */
     let aviso = "";
-    if (datos.data.activo !== undefined) {
-      if (hayClaveAdmin()) {
-        const { error: errorAuth } = await clienteAdmin().auth.admin.updateUserById(id, {
-          ban_duration: datos.data.activo ? "none" : "876000h",
-        });
-        if (errorAuth) aviso = ` Ojo: no se pudo ${datos.data.activo ? "desbloquear" : "bloquear"} su acceso (${errorAuth.message}).`;
-      } else {
-        aviso = " Ojo: falta la clave de servicio, así que su acceso no se bloqueó en el inicio de sesión.";
-      }
+    if (cambiaAcceso && datos.data.activo === true && (await bloquear(false))) {
+      aviso =
+        " Pero no se pudo abrirle el acceso todavía: si no puede entrar, vuelva a pulsar «Activar» en un momento.";
     }
 
     revalidatePath("/configuracion/usuarios");

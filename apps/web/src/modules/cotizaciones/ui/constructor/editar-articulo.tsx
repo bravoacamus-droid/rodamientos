@@ -24,8 +24,10 @@ import {
 import {
   editarProductoRapido,
   fichaParaEditar,
+  marcasConocidas,
   type FichaParaEditar,
 } from "@/modules/productos/acciones/alta-rapida";
+import { InputSugerencias } from "@/componentes/input-sugerencias";
 
 import { SelectorCatalogo, type OpcionCatalogo } from "./selector-catalogo";
 
@@ -103,6 +105,23 @@ export function EditarArticulo({
   const [catalogos, setCatalogos] = React.useState<Catalogos | null>(null);
   const [ficha, setFicha] = React.useState<FichaParaEditar | null>(null);
   const [errorCarga, setErrorCarga] = React.useState<string | null>(null);
+  /*
+    Las marcas que ya existen, para sugerirlas cuando la marca es texto («solo
+    en esta cotización», el caso del retén). Se sugiere y no se obliga: Willy,
+    16/09, *«puede ser diversas marcas: LYO, NQK, PHK, NAK… etc»*. Era un
+    `<datalist>` montado en el constructor; desde el 21/10 es la lista con
+    flecha, como el cargo del contacto, y la pide el diálogo al abrirse.
+  */
+  const [marcasSugeridas, setMarcasSugeridas] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    let vivo = true;
+    void marcasConocidas().then((m) => {
+      if (vivo) setMarcasSugeridas(m);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
   const [guardando, empezar] = React.useTransition();
 
   const [datos, setDatos] = React.useState({
@@ -387,13 +406,11 @@ export function EditarArticulo({
                 />
               ) : (
                 <Campo id="ed-marca-texto" label="Marca">
-                  <Input
+                  <InputSugerencias
                     id="ed-marca-texto"
-                    list="marcas-conocidas"
-                    value={datos.marcaTexto}
-                    onChange={(e) =>
-                      setDatos((d) => ({ ...d, marcaTexto: e.target.value }))
-                    }
+                    valor={datos.marcaTexto}
+                    onCambio={(v) => setDatos((d) => ({ ...d, marcaTexto: v }))}
+                    sugerencias={marcasSugeridas}
                     placeholder="sin marca"
                   />
                 </Campo>

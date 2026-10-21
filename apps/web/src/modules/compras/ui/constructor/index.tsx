@@ -34,6 +34,7 @@ import {
   totalesDe,
   type ProductoParaComprar,
 } from "../../dominio/constructor";
+import { InputSugerencias } from "@/componentes/input-sugerencias";
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import { BuscadorCompra } from "./buscador";
@@ -722,30 +723,27 @@ export function ConstructorCompra({
                   courier lo puedo registrar en un dato maestro, porque esto
                   es selecciones, con una barra desplegable o lo busque».
 
-                  Es un `datalist`: propone los de siempre y los que ya se han
+                  Propone los de siempre y los que ya se han
                   usado en compras anteriores, y deja escribir uno nuevo. Así
                   la lista crece sola con el uso y no hace falta una pantalla
                   aparte para mantenerla —que sería justo la pieza sin camino
                   de siempre—.
                 */}
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">
+                <div className="flex flex-col gap-1">
+                  {/* Con flecha y la lista a la vista (21/10): el `datalist`
+                      solo se abría al escribir, y el QA lo dio por roto en el
+                      cargo del contacto. */}
+                  <label htmlFor="compra-courier" className="text-sm font-medium">
                     {modalidad === "maritima" ? "Naviera o agente de carga" : "Courier"}
-                  </span>
-                  <Input
-                    list="couriers-conocidos"
-                    value={estado.courier}
-                    onChange={(e) =>
-                      despachar({ tipo: "cabecera", campo: "courier", valor: e.target.value })
-                    }
-                    placeholder={modalidad === "maritima" ? "Elige o escribe" : "DHL"}
+                  </label>
+                  <InputSugerencias
+                    id="compra-courier"
+                    valor={estado.courier}
+                    onCambio={(v) => despachar({ tipo: "cabecera", campo: "courier", valor: v })}
+                    sugerencias={couriers}
+                    placeholder={modalidad === "maritima" ? "Elige o escribe" : "Ej.: DHL"}
                   />
-                  <datalist id="couriers-conocidos">
-                    {couriers.map((c) => (
-                      <option key={c} value={c} />
-                    ))}
-                  </datalist>
-                </label>
+                </div>
 
                 <label className="flex flex-col gap-1">
                   {/* El número cambia de nombre con la vía: en aéreo es la guía

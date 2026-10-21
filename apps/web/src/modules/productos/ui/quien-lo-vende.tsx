@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge, Moneda, formatearFecha } from "@rodatech/ui";
 import { MessageCircleQuestion } from "lucide-react";
 
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 import type { ProveedorDeProducto } from "@/modules/proveedores";
 
 /**
@@ -20,9 +21,15 @@ import type { ProveedorDeProducto } from "@/modules/proveedores";
 export function QuienLoVende({
   productoId,
   proveedores,
+  puedeComprar,
+  sinPermiso,
 }: {
   productoId: string;
   proveedores: ProveedorDeProducto[];
+  /** «Compras: crear» (143). Sin él, el botón llevaba a una pantalla cerrada (auditoría, 21/10). */
+  puedeComprar: boolean;
+  /** Qué decir con el candado. */
+  sinPermiso: string;
 }) {
   return (
     <section className="card p-4">
@@ -104,6 +111,7 @@ export function QuienLoVende({
         ajusta en la pantalla siguiente, que es donde además se decide a quién
         se le pregunta.
       */}
+      {puedeComprar ? (
       <Link
         href={`/compras/pedir-precio?items=${productoId}:1`}
         className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
@@ -111,6 +119,11 @@ export function QuienLoVende({
         <MessageCircleQuestion className="size-4" aria-hidden="true" />
         Pedir precio de este producto
       </Link>
+      ) : (
+        <BotonBloqueado mensaje={sinPermiso} className="mt-3 h-9 md:h-9">
+          Pedir precio de este producto
+        </BotonBloqueado>
+      )}
     </section>
   );
 }

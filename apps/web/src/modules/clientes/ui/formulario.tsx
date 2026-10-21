@@ -543,7 +543,9 @@ export function FormularioCliente({
                   setPadron(null);
                   set("numero_documento", e.target.value);
                 }}
-                placeholder={tipoDocumento === "RUC" ? "20512345678" : ""}
+                // «Ej.:» delante (21/10): sin él parecía un RUC ya escrito, y «Traer
+                // datos» salía apagado al lado, como si no hiciera falta.
+                placeholder={tipoDocumento === "RUC" ? "Ej.: 20512345678" : ""}
                 autoFocus={!cliente}
               />
               <Button
@@ -672,7 +674,7 @@ export function FormularioCliente({
                 className={ALTO_TACTIL}
                 value={f.razon_social}
                 onChange={(e) => set("razon_social", e.target.value)}
-                placeholder="INDUSTRIAS SAN MIGUEL S.A.C."
+                placeholder="Ej.: INDUSTRIAS SAN MIGUEL S.A.C."
               />
             </Campo>
 
@@ -732,7 +734,7 @@ export function FormularioCliente({
                   className={ALTO_TACTIL}
                   value={f.referencia_direccion}
                   onChange={(e) => set("referencia_direccion", e.target.value)}
-                  placeholder="Frente al grifo, portón azul"
+                  placeholder="Ej.: frente al grifo, portón azul"
                 />
               </Campo>
             </div>

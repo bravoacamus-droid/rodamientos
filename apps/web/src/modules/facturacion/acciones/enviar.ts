@@ -5,8 +5,15 @@ import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
-import { clasificarRechazo, sePuedeReenviar } from "@rodatech/sunat";
-import type { Comprobante, ItemComprobante, NotaComprobante } from "@rodatech/sunat";
+import {
+  MENSAJE_SIN_CONEXION,
+  clasificarRechazo,
+  decidirEnvio,
+  esErrorDeRed,
+  hayQueConsultarAntesDeRechazar,
+  sePuedeReenviar,
+} from "@rodatech/sunat";
+import type { Comprobante, ItemComprobante, NotaComprobante, ResultadoConsultaCdr } from "@rodatech/sunat";
 import type { Json } from "@rodatech/db/tipos";
 
 import { bloqueoPorSeriePrueba, conectorSunat } from "../api/configuracion";
@@ -211,6 +218,17 @@ export async function enviarASunat(
   // Y es un CANDADO (auditoría 15/10): solo pasa a «enviado» si nadie lo
   // tiene ya en vuelo. Dos clics o dos pestañas mandaban el mismo documento
   // dos veces. Uno «enviado» hace más de 15 minutos se da por muerto (052).
+  /*
+    ¿Pudo haber llegado ya a SUNAT? (auditoría 21/10, A4.) Sí, si un intento
+    anterior acabó sin respuesta: quedó «pendiente» por un corte, o «enviado»
+    y se murió a mitad. Se mira ANTES del candado, que pisa los dos campos.
+
+    Un «rechazado» no cuenta: si fue un 1033 a la primera, ese número es de
+    OTRO documento, y la constancia que tenga SUNAT es la de ese otro.
+  */
+  const yaSeHabiaMandado =
+    c.sunat_enviado_en !== null && (c.estado_sunat === "pendiente" || c.estado_sunat === "enviado");
+
   const admin = clienteAdmin();
   const hace15 = new Date(Date.now() - 15 * 60_000).toISOString();
   const { data: tomado } = await admin
@@ -237,24 +255,56 @@ export async function enviarASunat(
           })
         : await conector.datos.emitir(comprobante);
 
+    /*
+      Un 1033 sobre algo que ya había salido NO es «emite otro» (auditoría
+      21/10, A4): lo más probable es que SUNAT lo aceptara y la respuesta se
+      perdiera. Se le pide la constancia antes de decidir. Si no se puede
+      preguntar (beta, red), queda pendiente y avisado: nunca rechazado.
+    */
+    let consulta: ResultadoConsultaCdr | null | undefined;
+    if (hayQueConsultarAntesDeRechazar(cdr, yaSeHabiaMandado)) {
+      try {
+        consulta = await conector.datos.consultarCdr(
+          empresa.ruc,
+          esNota ? (c.tipo === "nota_debito" ? "08" : "07") : comprobante.tipoDocumento,
+          c.serie,
+          c.correlativo,
+        );
+      } catch {
+        consulta = null;
+      }
+    }
+    const decision = decidirEnvio(cdr, yaSeHabiaMandado, consulta);
+
+    if (decision.estado === "pendiente") {
+      await admin
+        .from("comprobantes")
+        .update({
+          estado_sunat: "pendiente",
+          sunat_codigo_respuesta: cdr.codigo ?? null,
+          sunat_mensaje: decision.mensaje,
+        })
+        .eq("id", c.id);
+      revalidatePath("/facturacion");
+      revalidatePath(`/facturacion/${c.id}`);
+      return { ok: false, error: decision.mensaje };
+    }
+
+    const final = decision.cdr;
     // `clasificarRechazo` traduce el código a algo que pueda leer quien vende;
     // `sePuedeReenviar` responde lo único que importa en ese momento: si vale
     // la pena volver a mandarlo, o hay que emitir otro documento.
-    const rechazo = cdr.aceptado ? null : clasificarRechazo(cdr.codigo);
-    const reintentable = cdr.aceptado ? false : sePuedeReenviar(cdr.codigo);
+    const rechazo = final.aceptado ? null : clasificarRechazo(final.codigo);
+    const reintentable = final.aceptado ? false : sePuedeReenviar(final.codigo);
 
     await admin
       .from("comprobantes")
       .update({
-        estado_sunat: cdr.aceptado
-          ? cdr.observaciones.length > 0
-            ? "observado"
-            : "aceptado"
-          : "rechazado",
-        sunat_codigo_respuesta: cdr.codigo ?? null,
-        sunat_mensaje: cdr.descripcion ?? null,
-        sunat_hash_cdr: (cdr as { hash?: string }).hash ?? null,
-        sunat_respuesta: cdr as unknown as Json,
+        estado_sunat: decision.estado,
+        sunat_codigo_respuesta: final.codigo ?? null,
+        sunat_mensaje: final.descripcion ?? null,
+        sunat_hash_cdr: (final as { hash?: string }).hash ?? null,
+        sunat_respuesta: final as unknown as Json,
       })
       .eq("id", c.id);
 
@@ -263,18 +313,24 @@ export async function enviarASunat(
 
     return {
       ok: true,
-      aceptado: cdr.aceptado,
-      codigo: cdr.codigo ?? null,
+      aceptado: final.aceptado,
+      codigo: final.codigo ?? null,
       mensaje:
-        cdr.descripcion ??
-        rechazo?.motivo ??
-        (cdr.aceptado ? "Aceptado por SUNAT." : "Rechazado."),
-      observaciones: cdr.observaciones ?? [],
+        final.descripcion ||
+        rechazo?.motivo ||
+        (final.aceptado ? "Aceptado por SUNAT." : "Rechazado."),
+      observaciones: final.observaciones ?? [],
       reintentable,
     };
   } catch (e) {
-    const mensaje =
-      e instanceof Error ? e.message : "No se pudo hablar con SUNAT.";
+    // Un corte o un cuelgue se dice en cristiano; «fetch failed» no le sirve a
+    // nadie (auditoría 21/10). Lo demás —un certificado roto, por ejemplo—
+    // sí trae un mensaje útil.
+    const mensaje = esErrorDeRed(e)
+      ? MENSAJE_SIN_CONEXION
+      : e instanceof Error
+        ? e.message
+        : "No se pudo hablar con SUNAT.";
 
     // Un fallo de RED no es un rechazo: el documento vuelve a «pendiente» para
     // que se pueda reenviar. Dejarlo en «enviado» lo escondería de la cola.

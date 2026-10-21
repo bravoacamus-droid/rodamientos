@@ -30,10 +30,18 @@ export const ETIQUETA_ENTIDAD: Record<string, string> = {
   compras: "Compras",
   recepciones: "Recepciones",
   ajustes_inventario: "Ajustes de inventario",
+  // `permisos_rol` se quitó en la 143; queda por las filas que ya lo dicen.
   permisos_rol: "Permisos",
+  // Desde la 145: lo que cambia quién puede qué y adónde va el dinero.
+  permisos: "Permisos",
+  roles: "Roles",
   perfiles: "Usuarios",
   clientes: "Clientes",
   productos: "Productos",
+  cuentas_bancarias: "Cuentas para cobrar",
+  empresa: "Datos de la empresa",
+  series_documento: "Series y numeración",
+  config_sunat: "Configuración de SUNAT",
 };
 
 /** En el orden en que se ofrecen para filtrar. */

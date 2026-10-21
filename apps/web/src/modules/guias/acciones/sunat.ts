@@ -5,7 +5,7 @@ import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
-import { ErrorGre, type ResultadoCdr } from "@rodatech/sunat";
+import { ErrorGre, MENSAJE_SIN_CONEXION, esErrorDeRed, type ResultadoCdr } from "@rodatech/sunat";
 
 import { bloqueoPorSeriePrueba, conectorSunat, modoGuias } from "@/modules/facturacion/api/configuracion";
 
@@ -115,7 +115,12 @@ export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> 
     ticket = envio.ticket;
     await admin.from("guias_remision").update({ sunat_ticket: ticket }).eq("id", id);
   } catch (e) {
-    const mensaje = e instanceof Error ? e.message : "No se pudo hablar con SUNAT.";
+    // Un corte se dice en cristiano, no «fetch failed» (auditoría 21/10).
+    const mensaje = esErrorDeRed(e)
+      ? MENSAJE_SIN_CONEXION
+      : e instanceof Error
+        ? e.message
+        : "No se pudo hablar con SUNAT.";
     // Un 4xx de validación es un rechazo del documento; lo demás (red,
     // credenciales, 5xx) deja la guía pendiente para volver a intentarlo.
     const rechazo = e instanceof ErrorGre && e.http === 422;
@@ -173,6 +178,9 @@ export async function consultarGuiaSunat(id: string): Promise<ResultadoSunatGuia
     if ("enProceso" in r) return { ok: true, estado: "en_proceso", mensaje: "SUNAT todavía la está revisando. Pregunta otra vez en un momento." };
     return guardarRespuesta(id, g.numero ?? "", r);
   } catch (e) {
+    if (esErrorDeRed(e)) {
+      return { ok: false, error: "No se pudo conectar con SUNAT (sin internet o SUNAT caído). La guía sigue enviada: vuelve a preguntar en unos minutos." };
+    }
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo hablar con SUNAT." };
   }
 }
