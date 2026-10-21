@@ -155,7 +155,7 @@ function Tarjeta({
   return (
     <li
       className={`flex min-w-0 flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-        cuenta.activo ? "" : "opacity-60"
+        cuenta.activo ? "" : "border-dashed"
       }`}
     >
       <div className="flex items-start justify-between gap-2">

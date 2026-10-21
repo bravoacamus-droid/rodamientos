@@ -352,8 +352,14 @@ export function CarteraVista({
                 {d.numero}
               </Link>
               {/* Con su «$»: era «1250.00» a secas, la única cifra del
-                  ERP sin moneda (revisión por módulos del 02/10). */}
-              <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
+                  ERP sin moneda (revisión por módulos del 02/10).
+                  Y con «Saldo» encima (21/10): sin la cabecera de la tabla,
+                  esa cifra podía ser el total de la factura o lo que falta,
+                  y para quien está llamando a cobrar no es lo mismo. */}
+              <div className="text-right">
+                <span className="block text-sm text-[var(--fg-muted)]">Saldo</span>
+                <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
+              </div>
             </div>
 
             <p className="mt-1 text-sm">{d.cliente}</p>

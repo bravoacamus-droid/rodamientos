@@ -136,9 +136,14 @@ export const COLOR_AGING: Record<string, string> = {
  * cuál (revisión por módulos del 02/10). El gráfico es de cliente y la lista
  * de servidor; una constante en un archivo "use client" no llega al servidor.
  */
+//
+// Los dos azules son de la rampa del tema y no de la paleta fija: en claro
+// son los mismos (ord-4 = brand-600, ord-2 = brand-400), pero brand-600 en
+// oscuro era la porción más grande del anillo casi fundida con el fondo
+// (visto el 21/10).
 export const COLORES_FAMILIA: readonly string[] = [
-  "var(--color-brand-600)",
-  "var(--color-brand-400)",
+  "var(--viz-ord-4)",
+  "var(--viz-ord-2)",
   "var(--color-accent-400)",
   "var(--ok)",
   "var(--warn)",

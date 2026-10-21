@@ -116,7 +116,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
               <tr
                 key={p.id}
                 className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
-                  p.archivado ? "opacity-60" : ""
+                  p.archivado ? "border-dashed" : ""
                 }`}
               >
                 <td className="px-3 py-2.5">
@@ -191,7 +191,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
           <li
             key={p.id}
             className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-              p.archivado ? "opacity-60" : ""
+              p.archivado ? "border-dashed" : ""
             }`}
           >
             <div className="flex items-start justify-between gap-2">

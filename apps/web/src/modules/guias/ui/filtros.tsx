@@ -6,7 +6,7 @@
 import { CircleDot, Hash } from "lucide-react";
 
 import { FiltroCliente } from "@/componentes/filtro-cliente";
-import { CajaBuscar, FiltroDesplegable, FilaFiltros, useBarraFiltros } from "@/componentes/filtros";
+import { CajaBuscar, FiltroDesplegable, FilaFiltros, LimpiarFiltros, useBarraFiltros } from "@/componentes/filtros";
 
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 
@@ -23,7 +23,10 @@ export function FiltrosGuiasBarra({
   nombreCliente: string | null;
   series: { valor: string; etiqueta: string }[];
 }) {
-  const { valor, aplicar, texto, setTexto } = useBarraFiltros();
+  const { valor, aplicar, limpiar, texto, setTexto } = useBarraFiltros();
+  // «Limpiar», como en clientes, productos y compras (21/10): aquí faltaba,
+  // y con tres desplegables puestos había que deshacerlos uno por uno.
+  const hay = ["q", "cliente", "estado", "serie"].some((k) => valor(k));
 
   return (
     <FilaFiltros>
@@ -55,6 +58,7 @@ export function FiltrosGuiasBarra({
         opciones={series}
         onCambiar={(v) => aplicar("serie", v)}
       />
+      <LimpiarFiltros visible={hay} onLimpiar={limpiar} />
     </FilaFiltros>
   );
 }

@@ -234,7 +234,7 @@ function FilaKit({ kit: k }: { kit: KitDetalle }) {
   const freno = frenoDe(k);
 
   return (
-    <tr className={k.archivado ? "opacity-60" : ""}>
+    <tr className={k.archivado ? "border-dashed" : ""}>
       {/*
         El código ya NO es el enlace.
 
@@ -315,7 +315,7 @@ function TarjetaKit({ kit: k }: { kit: KitDetalle }) {
   return (
     <li
       className={`flex flex-col gap-2.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-        k.archivado ? "opacity-60" : ""
+        k.archivado ? "border-dashed" : ""
       }`}
     >
       <div>

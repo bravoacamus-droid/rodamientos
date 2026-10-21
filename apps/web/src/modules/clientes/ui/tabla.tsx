@@ -87,7 +87,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               <tr
                 key={c.id}
                 className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
-                  c.activo ? "" : "opacity-60"
+                  c.activo ? "" : "border-dashed"
                 }`}
               >
                 <td className="px-4 py-2.5">
@@ -158,7 +158,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
           */
           <li
             key={c.id}
-            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${c.activo ? "" : "opacity-60"}`}
+            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${c.activo ? "" : "border-dashed"}`}
           >
             <div className="flex items-start justify-between gap-2">
               <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">

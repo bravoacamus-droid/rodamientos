@@ -39,7 +39,12 @@ import type {
  * Tres reglas que comparten:
  *
  *  · **Colores por token, no fijos.** Los tokens del tema cambian con él; un
- *    `#0e4c73` escrito a mano se queda oscuro sobre fondo oscuro.
+ *    `#0e4c73` escrito a mano se queda oscuro sobre fondo oscuro. Y
+ *    `--color-brand-600` es lo mismo con otro nombre: es de la paleta fija,
+ *    no del tema. Las barras iban así y en oscuro daban 1,94:1 contra el
+ *    fondo (21/10). Ahora es la rampa `--viz-ord-*`, que en claro da
+ *    exactamente los mismos azules (ord-4 = brand-600, ord-3 = brand-500,
+ *    ord-2 = brand-400) y en oscuro tiene sus propios pasos.
  *  · **Sin leyenda cuando hay una sola serie.** Una leyenda que dice «venta»
  *    encima de un gráfico titulado «Ventas» solo ocupa sitio.
  *  · **Animación de entrada, pero una vez.** Recharts reanima en cada
@@ -198,8 +203,8 @@ export function GraficoVentas({ datos }: { datos: MesVentas[] }) {
       <AreaChart data={datos} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
         <defs>
           <linearGradient id="rt-grad-venta" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity={0.02} />
+            <stop offset="0%" stopColor="var(--viz-ord-3)" stopOpacity={0.45} />
+            <stop offset="100%" stopColor="var(--viz-ord-3)" stopOpacity={0.02} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
@@ -210,7 +215,7 @@ export function GraficoVentas({ datos }: { datos: MesVentas[] }) {
           type="monotone"
           dataKey="ventaNeta"
           name="Venta neta"
-          stroke="var(--color-brand-600)"
+          stroke="var(--viz-ord-4)"
           strokeWidth={2}
           fill="url(#rt-grad-venta)"
           isAnimationActive={ANIMAR}
@@ -275,7 +280,7 @@ export function GraficoTopProductos({ datos }: { datos: ProductoVendido[] }) {
                 p.margenPct >= 20
                   ? "var(--ok)"
                   : p.margenPct >= 10
-                    ? "var(--color-brand-500)"
+                    ? "var(--viz-ord-3)"
                     : "var(--warn)"
               }
             />
@@ -408,7 +413,7 @@ export function GraficoSerieVentas({
             <Bar
               dataKey="venta"
               name="Venta neta"
-              fill="var(--color-brand-600)"
+              fill="var(--viz-ord-4)"
               radius={[4, 4, 0, 0]}
               maxBarSize={72}
               isAnimationActive={ANIMAR}
@@ -432,8 +437,8 @@ export function GraficoSerieVentas({
           <AreaChart data={datos} margin={MARGEN_EJES}>
             <defs>
               <linearGradient id="rt-grad-serie" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--color-brand-500)" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="var(--color-brand-500)" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="var(--viz-ord-3)" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="var(--viz-ord-3)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border-soft)" vertical={false} />
@@ -444,7 +449,7 @@ export function GraficoSerieVentas({
               type="monotone"
               dataKey="venta"
               name="Venta neta"
-              stroke="var(--color-brand-600)"
+              stroke="var(--viz-ord-4)"
               strokeWidth={2}
               fill="url(#rt-grad-serie)"
               isAnimationActive={ANIMAR}
@@ -465,7 +470,7 @@ export function GraficoSerieVentas({
       </ResponsiveContainer>
       <Leyenda
         items={[
-          { color: "var(--color-brand-600)", texto: "Vendido, sin IGV" },
+          { color: "var(--viz-ord-4)", texto: "Vendido, sin IGV" },
           ...(mostrarMargen ? [{ color: "var(--ok)", texto: "Margen" }] : []),
         ]}
       />
@@ -500,7 +505,7 @@ export function GraficoSerieCompras({ datos }: { datos: PuntoCompras[] }) {
             dataKey="subtotal"
             name="Mercadería"
             stackId="costo"
-            fill="var(--color-brand-500)"
+            fill="var(--viz-ord-3)"
             maxBarSize={72}
             isAnimationActive={ANIMAR}
           />
@@ -522,7 +527,7 @@ export function GraficoSerieCompras({ datos }: { datos: PuntoCompras[] }) {
           era lo amarillo (revisión por módulos del 02/10). */}
       <Leyenda
         items={[
-          { color: "var(--color-brand-500)", texto: "Mercadería" },
+          { color: "var(--viz-ord-3)", texto: "Mercadería" },
           ...(conGastos
             ? [{ color: "var(--color-accent-400)", texto: "Gastos de importación" }]
             : []),
@@ -599,40 +604,12 @@ export function GraficoMeta({
             }}
             cursor={{ fill: "var(--surface-2)" }}
           />
-          <Bar dataKey="venta" stackId="m" name="Vendido" maxBarSize={64} isAnimationActive={ANIMAR}>
-            {datos.map((d) => (
-              <Cell
-                key={d.etiqueta}
-                fill={d.enCurso ? "var(--color-brand-400)" : "var(--color-brand-600)"}
-                radius={(d.resto > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]) as unknown as number}
-              />
-            ))}
-            {caben ? (
-              <LabelList
-                dataKey="venta"
-                {...CIFRA}
-                // El mes en curso sin cifra encima: ahí va el recuadro del ritmo,
-                // y su cifra ya está en «Llevas vendido». Con halo del color del
-                // fondo: la línea de la meta pasa por encima de algunas cifras.
-                stroke="var(--surface)"
-                strokeWidth={4}
-                style={{ paintOrder: "stroke" }}
-                formatter={(v: unknown) => (typeof v === "number" && v !== 0 && !datos.some((d) => d.enCurso && d.venta === v) ? corto(v) : "")}
-              />
-            ) : null}
-          </Bar>
-          <Bar
-            dataKey="resto"
-            stackId="m"
-            name="Si sigue a este ritmo"
-            fill="transparent"
-            stroke="var(--color-brand-500)"
-            strokeDasharray="4 3"
-            strokeWidth={2}
-            radius={[4, 4, 0, 0]}
-            maxBarSize={64}
-            isAnimationActive={ANIMAR}
-          />
+          {/*
+            Las líneas van ANTES que las barras, a propósito: Recharts pinta en
+            el orden en que se escriben. Detrás, el halo de las cifras las
+            tapa; delante, la meta tachaba «12 mil» y «11 mil» (visto en
+            /reportes el 21/10, a 1568 px). Una cifra tachada no se lee.
+          */}
           <ReferenceLine
             y={meta}
             stroke="var(--ok)"
@@ -649,12 +626,66 @@ export function GraficoMeta({
               label={estrecho ? undefined : { value: `Tope ${corto(tope)}`, position: "right", fill: "var(--fg-muted)", fontSize: 14, fontWeight: 600 }}
             />
           ) : null}
+          <Bar dataKey="venta" stackId="m" name="Vendido" maxBarSize={64} isAnimationActive={ANIMAR}>
+            {datos.map((d) => (
+              <Cell
+                key={d.etiqueta}
+                fill={d.enCurso ? "var(--viz-ord-2)" : "var(--viz-ord-4)"}
+                radius={(d.resto > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]) as unknown as number}
+              />
+            ))}
+            {caben ? (
+              <LabelList
+                dataKey="venta"
+                // El mes en curso sin cifra encima: ahí va el recuadro del ritmo,
+                // y su cifra ya está en «Llevas vendido».
+                //
+                // Con halo del color del fondo, y dibujado a mano. Antes iba
+                // como `stroke`/`style` sobre el LabelList y no llegaba al
+                // <text>: visto el 21/10, aun con la meta ya detrás de las
+                // barras, seguía tachando «12 mil» y «11 mil». Así, sí.
+                content={(p) => {
+                  const v = p.value;
+                  if (typeof v !== "number" || v === 0 || datos.some((d) => d.enCurso && d.venta === v)) return null;
+                  const x = Number(p.x ?? 0) + Number(p.width ?? 0) / 2;
+                  const y = Number(p.y ?? 0) - 6;
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      textAnchor="middle"
+                      fontSize={14}
+                      fill="var(--fg)"
+                      stroke="var(--surface)"
+                      strokeWidth={4}
+                      strokeLinejoin="round"
+                      paintOrder="stroke"
+                    >
+                      {corto(v)}
+                    </text>
+                  );
+                }}
+              />
+            ) : null}
+          </Bar>
+          <Bar
+            dataKey="resto"
+            stackId="m"
+            name="Si sigue a este ritmo"
+            fill="transparent"
+            stroke="var(--viz-ord-3)"
+            strokeDasharray="4 3"
+            strokeWidth={2}
+            radius={[4, 4, 0, 0]}
+            maxBarSize={64}
+            isAnimationActive={ANIMAR}
+          />
         </BarChart>
       </ResponsiveContainer>
       <Leyenda
         items={[
-          { color: "var(--color-brand-600)", texto: "Vendido en el mes, sin IGV" },
-          { color: "var(--color-brand-400)", texto: "Este mes, hasta hoy" },
+          { color: "var(--viz-ord-4)", texto: "Vendido en el mes, sin IGV" },
+          { color: "var(--viz-ord-2)", texto: "Este mes, hasta hoy" },
           { color: "var(--ok)", texto: "Meta: tu promedio" },
           ...(tope !== null && tope > meta ? [{ color: "var(--fg-muted)", texto: "Tope: tu mejor mes" }] : []),
         ]}

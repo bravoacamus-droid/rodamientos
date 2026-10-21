@@ -98,14 +98,22 @@
     --border-strong: #cfd6de;
     --fg: #14181d;
     --fg-muted: #5c6773;
-    --fg-subtle: #8894a2;
+    /* Era #8894a2: 3,09:1 sobre blanco y 2,80 sobre --surface-3. Medido en
+       pantalla el 21/10: cabeceras de tabla, correos, «Desde/Hasta», la mitad
+       de las etiquetas del ERP por debajo de 4,5:1. Willy no ve bien; un gris
+       bonito que no se lee es una cifra que no existe. #66717f da 4,96 sobre
+       blanco y 4,49 sobre --surface-3. */
+    --fg-subtle: #66717f;
     --fg-inverso: #ffffff;
     --ring: #0e4c73;
     --overlay: rgb(36 36 38 / 0.45);
 
-    --ok: #0f8a5f;
+    /* --ok era #0f8a5f (3,93:1 sobre --ok-bg) y --warn #b57d05 (3,29:1 sobre
+       --warn-bg: la pastilla «19» del menú, «Vence en…»). Oscurecidos el
+       21/10 hasta pasar 4,5:1 en sus fondos; el tono no cambia. */
+    --ok: #0c7a54;
     --ok-bg: #e7f7f0;
-    --warn: #b57d05;
+    --warn: #8f6200;
     --warn-bg: #fdf6e0;
     --danger: #c5313a;
     --danger-bg: #fdecec;
@@ -136,7 +144,7 @@
     --viz-grid: #eaedf1;
     --viz-axis: #cbd2da;
     --viz-ink: #5c6773;
-    --viz-ink-soft: #8894a2;
+    --viz-ink-soft: #66717f; /* = --fg-subtle; era 3,09:1 (21/10) */
 
     /* Sombras: se declaran como variables para poder invertirlas en oscuro
        sin tener que duplicar la regla de cada utilidad. */
@@ -158,7 +166,9 @@
     --border-strong: #33465a;
     --fg: #e7edf3;
     --fg-muted: #93a3b5;
-    --fg-subtle: #6b7d90;
+    /* Era #6b7d90: 3,93:1 sobre --surface-2 y 3,58 sobre --surface-3
+       (21/10). #8293a6 da 5,28 y 4,81 y sigue por debajo de --fg-muted. */
+    --fg-subtle: #8293a6;
     --fg-inverso: #0b1016;
     --ring: #468cbe;
     --overlay: rgb(3 7 12 / 0.62);
@@ -193,7 +203,7 @@
     --viz-grid: #1e2a37;
     --viz-axis: #2d3d4e;
     --viz-ink: #93a3b5;
-    --viz-ink-soft: #6b7d90;
+    --viz-ink-soft: #8293a6; /* = --fg-subtle oscuro; era 3,93:1 (21/10) */
 
     --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
     --elev-2: 0 4px 14px rgb(0 0 0 / 0.45);
@@ -724,6 +734,31 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6b. El azul de marca como TEXTO, en oscuro
+   --------------------------------------------------------------------------
+   `text-brand-600` es el color de los enlaces de casi todas las tablas (el
+   número de la cotización, el cliente, el producto). Es #0e4c73: sobre
+   --surface oscuro da 1,94:1 —medido en /reportes el 21/10—, o sea, el
+   enlace desaparece. Había 125 usos sin su `dark:text-brand-300` al lado y
+   12 con él; ir uno por uno deja el 126 roto el día que se escriba.
+
+   Va SIN capa a propósito: así gana a la utilidad, que vive en
+   `@layer utilities`. Y solo en pantalla: el papel siempre es blanco, y ahí
+   el azul oscuro es el bueno. El fondo (`bg-brand-600`) no se toca: el botón
+   azul con letra blanca se lee igual en los dos temas. */
+@media screen {
+  :where(.dark, [data-theme="dark"]) .text-brand-600,
+  :where(.dark, [data-theme="dark"]) .text-brand-700 {
+    color: var(--color-brand-300);
+  }
+  /* Y al pasar el ratón: sin esto, el enlace se apagaba justo al señalarlo. */
+  :where(.dark, [data-theme="dark"]) .hover\:text-brand-600:hover,
+  :where(.dark, [data-theme="dark"]) .hover\:text-brand-700:hover {
+    color: var(--color-brand-200);
   }
 }
 

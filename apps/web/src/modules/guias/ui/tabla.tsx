@@ -87,7 +87,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
               <tr
                 key={g.id}
                 className={`anim-entrada border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
-                  g.estado === "anulada" ? "opacity-60" : ""
+                  g.estado === "anulada" ? "border-dashed" : ""
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
@@ -215,7 +215,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
           <li
             key={g.id}
             className={`anim-entrada flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-              g.estado === "anulada" ? "opacity-60" : ""
+              g.estado === "anulada" ? "border-dashed" : ""
             }`}
             style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
           >

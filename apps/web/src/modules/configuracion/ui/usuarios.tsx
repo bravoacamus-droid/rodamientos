@@ -225,8 +225,14 @@ function TarjetaUsuario({
   const rol = useRol(usuario.rol);
 
   return (
+    /*
+      Sin `opacity-60` para el inactivo. Medido el 21/10: el correo y la
+      descripción del rol bajaban a 1,86:1 en claro (2,52 a 390 px), justo lo
+      que hay que leer para saber a quién se reactiva. Lo dice el distintivo
+      «Inactivo» y el fondo, no el texto desvaído.
+    */
     <div
-      className={`rounded-lg border border-[var(--border)] p-3 ${usuario.activo ? "" : "opacity-60"}`}
+      className={`rounded-lg border border-[var(--border)] p-3 ${usuario.activo ? "" : "bg-[var(--surface-2)]"}`}
     >
       <p className="font-medium">
         {usuario.nombre}
@@ -288,7 +294,8 @@ function FilaUsuario({
   const rol = useRol(usuario.rol);
 
   return (
-    <tr className={`border-b border-[var(--border-soft)] ${usuario.activo ? "" : "opacity-60"}`}>
+    // Sin `opacity-60`: ver la tarjeta de arriba (1,86:1 medido el 21/10).
+    <tr className={`border-b border-[var(--border-soft)] ${usuario.activo ? "" : "bg-[var(--surface-2)]"}`}>
       <td className="px-3 py-2">
         <span className="font-medium">{usuario.nombre}</span>
         <Distintivos esUnoMismo={esUnoMismo} activo={usuario.activo} />

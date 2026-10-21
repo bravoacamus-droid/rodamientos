@@ -218,8 +218,8 @@ export function RolesYPermisos({
           <Lock className="mt-0.5 size-4 shrink-0 text-[var(--fg-subtle)]" aria-hidden="true" />
           <span>
             <strong>Gerencia lo puede todo, siempre</strong>, y no se cambia desde aquí: quitárselo sería
-            un botón para quedarse fuera del sistema. Es también el único rol que entra a esta pantalla y a
-            Usuarios.
+            un botón para quedarse fuera del sistema. Es también el único rol que puede cambiar esta
+            pantalla y Usuarios; Administración las ve, sin tocar.
           </span>
         </p>
       ) : null}

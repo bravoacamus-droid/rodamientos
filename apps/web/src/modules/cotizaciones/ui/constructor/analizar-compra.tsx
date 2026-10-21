@@ -173,8 +173,16 @@ export function AnalizarCompra({
         <DialogBody className="flex flex-col gap-5">
           {/* Lo que pasó antes: contra eso se mide todo lo de abajo. */}
           <ul className="flex flex-wrap gap-x-5 gap-y-1 rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm">
+            {/* «Lista: —» a secas no decía de qué lista (visto el 21/10):
+                para Willy una etiqueta que hay que adivinar es jerga. */}
             <li>
-              Lista: <strong className="tabular">{linea.precioLista > 0 ? usd(linea.precioLista) : "—"}</strong>
+              {linea.precioLista > 0 ? (
+                <>
+                  Precio de lista: <strong className="tabular">{usd(linea.precioLista)}</strong>
+                </>
+              ) : (
+                <span className="text-[var(--fg-muted)]">Sin precio de lista</span>
+              )}
             </li>
             {ref?.ultimaCompra ? (
               <li title={ref.ultimaCompra.proveedor}>

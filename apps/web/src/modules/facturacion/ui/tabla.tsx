@@ -111,7 +111,7 @@ export async function TablaComprobantes({
                 // allá el usuario ya está leyendo y una fila que aparece tarde
                 // distrae en vez de guiar.
                 className={`anim-entrada group/fila border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)] ${
-                  c.estado === "anulado" ? "opacity-60" : ""
+                  c.estado === "anulado" ? "border-dashed" : ""
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
@@ -207,7 +207,7 @@ export async function TablaComprobantes({
             <li
               key={c.id}
               className={`anim-entrada flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-                c.estado === "anulado" ? "opacity-60" : ""
+                c.estado === "anulado" ? "border-dashed" : ""
               }`}
               style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
             >
