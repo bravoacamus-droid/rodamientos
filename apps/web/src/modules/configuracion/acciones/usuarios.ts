@@ -217,3 +217,74 @@ export async function darContrasenaNueva(id: string): Promise<ResultadoContrasen
     return { ok: false, error: mensajeDeError(e) };
   }
 }
+
+export type ResultadoDatos = { ok: true; mensaje: string } | { ok: false; error: string };
+
+const esquemaDatos = z.object({
+  nombre: z.string().trim().min(3, "El nombre es muy corto.").max(120),
+  email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
+  cargo: z.string().trim().max(120),
+  telefono: z.string().trim().max(30),
+});
+
+/**
+ * Corregir el nombre, el correo, el cargo o el teléfono de un empleado
+ * (Luis, 21/10: «el CRUD completo»). Hasta hoy solo se podía al darlo de alta.
+ *
+ * Borrar no existe a propósito: su nombre está en cotizaciones, cobros y en la
+ * bitácora. Quien se va se da de baja.
+ *
+ * Solo GERENCIA, como el alta, y nunca la propia ficha (eso es /perfil). El
+ * correo es con lo que entra: si cambia, cambia también en Auth, y antes que
+ * en `perfiles` — al revés quedaría una ficha que dice un correo con el que
+ * no se puede entrar.
+ */
+export async function editarDatosUsuario(
+  id: string,
+  entrada: { nombre: string; email: string; cargo: string; telefono: string },
+): Promise<ResultadoDatos> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  if (perfil.rol !== "gerencia") {
+    return { ok: false, error: "Solo gerencia puede cambiar los datos de otra persona." };
+  }
+  if (!UUID.test(id)) return { ok: false, error: "Ese usuario no existe." };
+  if (id === perfil.id) return { ok: false, error: "Tus propios datos se cambian en «Mi perfil»." };
+
+  const datos = esquemaDatos.safeParse(entrada);
+  if (!datos.success) return { ok: false, error: datos.error.issues[0]?.message ?? "Revisa los datos." };
+  if (!hayClaveAdmin()) {
+    return {
+      ok: false,
+      error: "No se puede desde aquí: falta una configuración del servidor. Avise a quien mantiene el sistema.",
+    };
+  }
+
+  try {
+    const admin = clienteAdmin();
+    const { data: antes } = await admin.from("perfiles").select("email").eq("id", id).maybeSingle();
+    if (!antes) return { ok: false, error: "Ese usuario no existe." };
+
+    const { nombre, email, cargo, telefono } = datos.data;
+    if (email !== (antes.email ?? "").toLowerCase()) {
+      const { error } = await admin.auth.admin.updateUserById(id, { email, email_confirm: true });
+      if (error) {
+        if (/already|registered|exists/i.test(error.message)) {
+          return { ok: false, error: `Ya hay una cuenta con el correo ${email}.` };
+        }
+        return { ok: false, error: "No se pudo cambiar el correo con el que entra. No se cambió nada." };
+      }
+    }
+
+    const { error } = await admin
+      .from("perfiles")
+      .update({ nombre, email, cargo: cargo || null, telefono: telefono || null })
+      .eq("id", id);
+    if (error) return { ok: false, error: mensajeDeError(error) };
+
+    revalidatePath("/configuracion/usuarios");
+    return { ok: true, mensaje: `Datos de ${nombre} guardados.` };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}

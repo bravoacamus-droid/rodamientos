@@ -137,6 +137,7 @@ export interface Usuario {
   email: string | null;
   rol: Rol;
   cargo: string | null;
+  telefono: string | null;
   activo: boolean;
   ultimo_acceso: string | null;
 }

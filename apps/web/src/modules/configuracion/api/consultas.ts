@@ -148,7 +148,7 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id, nombre, email, rol, cargo, activo")
+      .select("id, nombre, email, rol, cargo, telefono, activo")
       .order("activo", { ascending: false })
       .order("nombre")
       .limit(200);
@@ -165,6 +165,7 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
         email: (u.email as string | null) ?? null,
         rol: String(u.rol) as Rol,
         cargo: (u.cargo as string | null) ?? null,
+        telefono: (u.telefono as string | null) ?? null,
         activo: Boolean(u.activo),
         // Solo de Auth: la columna de la tabla se quitó en la 103.
         ultimo_acceso: accesos.get(String(u.id)) ?? null,

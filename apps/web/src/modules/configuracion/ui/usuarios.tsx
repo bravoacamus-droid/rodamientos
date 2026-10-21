@@ -6,11 +6,11 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, SelectNativo, toast } from "@rodatech/ui";
-import { KeyRound } from "lucide-react";
+import { Badge, Button, Campo, Input, SelectNativo, toast } from "@rodatech/ui";
+import { KeyRound, Pencil } from "lucide-react";
 
 import { cambiarUsuario, type ResultadoConfig } from "../acciones/guardar";
-import { darContrasenaNueva } from "../acciones/usuarios";
+import { darContrasenaNueva, editarDatosUsuario } from "../acciones/usuarios";
 import type { Rol, RolDef, Usuario } from "../dominio/tipos";
 import { ContrasenaReciencreada } from "./alta-usuario";
 
@@ -126,7 +126,8 @@ export function TablaUsuarios({
  * dejaba sin entrar. Ahora se pregunta en línea, como «Eliminar rol».
  * Reactivar no se pregunta: no quita nada a nadie.
  */
-type Pendiente = { tipo: "rol"; rol: Rol } | { tipo: "baja" } | { tipo: "clave" } | null;
+// «datos» no pregunta: abre el formulario, y lo que se confirma es «Guardar».
+type Pendiente = { tipo: "rol"; rol: Rol } | { tipo: "baja" } | { tipo: "clave" } | { tipo: "datos" } | null;
 
 type Nueva = { nombre: string; email: string; contrasena: string };
 
@@ -157,7 +158,7 @@ function useFicha(usuario: Usuario) {
   );
 
   const confirmar = React.useCallback(async () => {
-    if (!pendiente) return;
+    if (!pendiente || pendiente.tipo === "datos") return;
     if (pendiente.tipo === "rol") {
       await correr(() => cambiarUsuario(usuario.id, { rol: pendiente.rol }));
     } else if (pendiente.tipo === "baja") {
@@ -180,7 +181,16 @@ function useFicha(usuario: Usuario) {
     else void correr(() => cambiarUsuario(usuario.id, { activo: true }));
   }, [usuario.activo, usuario.id, correr]);
 
-  return { ocupado, pendiente, setPendiente, confirmar, cambiarEstado, nueva, setNueva };
+  const guardarDatos = React.useCallback(
+    (d: { nombre: string; email: string; cargo: string; telefono: string }) =>
+      correr(async () => {
+        const r = await editarDatosUsuario(usuario.id, d);
+        return r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error };
+      }),
+    [usuario.id, correr],
+  );
+
+  return { ocupado, pendiente, setPendiente, confirmar, cambiarEstado, nueva, setNueva, guardarDatos };
 }
 
 function Confirmacion({
@@ -191,7 +201,7 @@ function Confirmacion({
   onNo,
 }: {
   usuario: Usuario;
-  pendiente: NonNullable<Pendiente>;
+  pendiente: Exclude<NonNullable<Pendiente>, { tipo: "datos" }>;
   ocupado: boolean;
   onSi: () => void;
   onNo: () => void;
@@ -282,15 +292,23 @@ function Botones({
   hayClave,
   onEstado,
   onClave,
+  onDatos,
 }: {
   usuario: Usuario;
   ocupado: boolean;
   hayClave: boolean;
   onEstado: () => void;
   onClave: () => void;
+  onDatos: () => void;
 }) {
   return (
     <div className="flex flex-wrap justify-end gap-2">
+      {hayClave ? (
+        <Button variant="outline" size="sm" disabled={ocupado} onClick={onDatos} className="gap-1.5 text-sm">
+          <Pencil className="size-4" aria-hidden="true" />
+          Editar datos
+        </Button>
+      ) : null}
       {/* Para quien olvidó la suya (21/10): antes solo desde el panel de Supabase. */}
       {hayClave && usuario.activo ? (
         <Button variant="outline" size="sm" disabled={ocupado} onClick={onClave} className="gap-1.5 text-sm">
@@ -390,19 +408,29 @@ function TarjetaUsuario({
             hayClave={hayClave}
             onEstado={f.cambiarEstado}
             onClave={() => f.setPendiente({ tipo: "clave" })}
+            onDatos={() => f.setPendiente({ tipo: "datos" })}
           />
         ) : null}
       </div>
 
       {f.pendiente ? (
         <div className="mt-3">
-          <Confirmacion
-            usuario={usuario}
-            pendiente={f.pendiente}
-            ocupado={f.ocupado}
-            onSi={() => void f.confirmar()}
-            onNo={() => f.setPendiente(null)}
-          />
+          {f.pendiente.tipo === "datos" ? (
+            <FormDatos
+              usuario={usuario}
+              ocupado={f.ocupado}
+              onGuardar={(d) => void f.guardarDatos(d)}
+              onCancelar={() => f.setPendiente(null)}
+            />
+          ) : (
+            <Confirmacion
+              usuario={usuario}
+              pendiente={f.pendiente}
+              ocupado={f.ocupado}
+              onSi={() => void f.confirmar()}
+              onNo={() => f.setPendiente(null)}
+            />
+          )}
         </div>
       ) : null}
 
@@ -488,6 +516,7 @@ function FilaUsuario({
               hayClave={hayClave}
               onEstado={f.cambiarEstado}
               onClave={() => f.setPendiente({ tipo: "clave" })}
+              onDatos={() => f.setPendiente({ tipo: "datos" })}
             />
           ) : esUnoMismo && puedeEditar ? (
             <span className="text-sm text-[var(--fg-subtle)]">
@@ -500,13 +529,22 @@ function FilaUsuario({
         <tr className={`border-b border-[var(--border-soft)] ${fondo}`}>
           <td colSpan={4} className="px-3 pb-3">
             {f.pendiente ? (
-              <Confirmacion
-                usuario={usuario}
-                pendiente={f.pendiente}
-                ocupado={f.ocupado}
-                onSi={() => void f.confirmar()}
-                onNo={() => f.setPendiente(null)}
-              />
+              f.pendiente.tipo === "datos" ? (
+                <FormDatos
+                  usuario={usuario}
+                  ocupado={f.ocupado}
+                  onGuardar={(d) => void f.guardarDatos(d)}
+                  onCancelar={() => f.setPendiente(null)}
+                />
+              ) : (
+                <Confirmacion
+                  usuario={usuario}
+                  pendiente={f.pendiente}
+                  ocupado={f.ocupado}
+                  onSi={() => void f.confirmar()}
+                  onNo={() => f.setPendiente(null)}
+                />
+              )
             ) : null}
             {f.nueva ? (
               <ContrasenaReciencreada
@@ -519,5 +557,61 @@ function FilaUsuario({
         </tr>
       ) : null}
     </>
+  );
+}
+
+/**
+ * Nombre, correo, cargo y teléfono de otra persona (21/10). El correo es con
+ * lo que entra: lo dice la ayuda, para que nadie lo cambie sin avisarle.
+ */
+function FormDatos({
+  usuario,
+  ocupado,
+  onGuardar,
+  onCancelar,
+}: {
+  usuario: Usuario;
+  ocupado: boolean;
+  onGuardar: (d: { nombre: string; email: string; cargo: string; telefono: string }) => void;
+  onCancelar: () => void;
+}) {
+  const [nombre, setNombre] = React.useState(usuario.nombre);
+  const [email, setEmail] = React.useState(usuario.email ?? "");
+  const [cargo, setCargo] = React.useState(usuario.cargo ?? "");
+  const [telefono, setTelefono] = React.useState(usuario.telefono ?? "");
+  const id = (c: string) => `datos-${c}-${usuario.id}`;
+  const listo = nombre.trim().length >= 3 && email.includes("@") && !ocupado;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (listo) onGuardar({ nombre, email, cargo, telefono });
+      }}
+      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo id={id("nombre")} label="Nombre y apellidos" requerido>
+          <Input id={id("nombre")} value={nombre} onChange={(e) => setNombre(e.target.value)} required autoFocus />
+        </Campo>
+        <Campo id={id("email")} label="Correo" requerido ayuda="Con este correo entra. Si lo cambias, avísale.">
+          <Input id={id("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </Campo>
+        <Campo id={id("cargo")} label="Cargo">
+          <Input id={id("cargo")} value={cargo} onChange={(e) => setCargo(e.target.value)} />
+        </Campo>
+        <Campo id={id("telefono")} label="Teléfono">
+          <Input id={id("telefono")} value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+        </Campo>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button type="submit" disabled={!listo}>
+          {ocupado ? "Guardando…" : "Guardar"}
+        </Button>
+        <Button type="button" variant="outline" disabled={ocupado} onClick={onCancelar}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
   );
 }
