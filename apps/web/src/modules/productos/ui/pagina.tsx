@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { FileSpreadsheet } from "lucide-react";
 import { Skeleton, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -65,26 +66,48 @@ export default async function PaginaProductos({ searchParams }: Props) {
           </p>
         </div>
 
-        {puedeCrear ? (
-          <div className="flex items-center gap-2">
-            <Link
-              href="/productos/cargar"
-              className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-            >
-              Cargar desde Excel
-            </Link>
-            <Link
-              href="/productos/nuevo"
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-            >
+        <div className="flex flex-wrap items-center gap-2">
+          {/*
+            Bajar el catálogo (Luis, 21/10: «descargar en Excel todos los
+            productos… por familia, sub, activos o no»). Lleva los filtros de
+            la lista: lo que se ve es lo que se baja. Basta con «Ver».
+          */}
+          <a
+            href={`/productos/excel?${new URLSearchParams(
+              Object.entries({
+                q: filtros.q ?? "",
+                marca: filtros.marca ?? "",
+                familia: filtros.familia ?? "",
+                subfamilia: filtros.subfamilia ?? "",
+                archivados: filtros.archivados ? "1" : "",
+              }).filter(([, v]) => v),
+            ).toString()}`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+          >
+            <FileSpreadsheet className="size-4" aria-hidden="true" />
+            Descargar en Excel
+          </a>
+          {puedeCrear ? (
+            <>
+              <Link
+                href="/productos/cargar"
+                className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              >
+                Cargar desde Excel
+              </Link>
+              <Link
+                href="/productos/nuevo"
+                className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              >
+                Nuevo producto
+              </Link>
+            </>
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
               Nuevo producto
-            </Link>
-          </div>
-        ) : (
-          <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
-            Nuevo producto
-          </BotonBloqueado>
-        )}
+            </BotonBloqueado>
+          )}
+        </div>
       </div>
 
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>
