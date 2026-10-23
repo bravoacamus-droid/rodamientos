@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
+import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import type { Json } from "@rodatech/db/tipos";
 
 import { cotizacionParaFacturar } from "../api/consultas";
@@ -268,6 +269,24 @@ export async function emitirComprobante(
     ? vencimientoDe(datos.fecha_emision, datos.dias_credito)
     : null;
 
+  /*
+    El cambio de SUNAT del día, para la factura en dólares (148).
+
+    Lo pide el contador, no SUNAT: el Registro de Ventas va en soles y cada
+    factura en dólares se lleva a soles con el venta publicado el día de
+    emisión. Se pregunta aquí porque es el único momento en que se sabe la
+    fecha y hay alguien con sesión.
+
+    Es una ayuda y no una puerta: si SUNAT no contesta o se acabó la cuota,
+    la factura sale igual, sin cambio, y se completa después. No se deja de
+    vender por un dato contable.
+  */
+  let tipoCambioSunat: number | null = null;
+  if (cot.moneda !== "PEN") {
+    const tc = await consultarTipoCambio(datos.fecha_emision);
+    if (tc.ok) tipoCambioSunat = tc.venta;
+  }
+
   try {
     const supabase = await clienteServidor();
 
@@ -287,6 +306,8 @@ export async function emitirComprobante(
       // Lo lee `emitir_comprobante` desde la 071. Antes se quedaba en el
       // `default true` del esquema y las cuentas salían siempre.
       mostrar_cuenta: datos.mostrar_cuenta,
+      // En soles la base usa el cambio de la cotización y esto lo ignora.
+      tipo_cambio_sunat: tipoCambioSunat,
       // Siempre falso: el stock salió con la guía (ver el esquema).
       descargar_stock: false,
       /*

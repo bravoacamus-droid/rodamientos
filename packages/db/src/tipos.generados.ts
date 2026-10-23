@@ -4569,6 +4569,30 @@ export type Database = {
           },
         ]
       }
+      tipos_cambio_sunat: {
+        Row: {
+          compra: number | null
+          creado_en: string
+          fecha: string
+          origen: string
+          venta: number
+        }
+        Insert: {
+          compra?: number | null
+          creado_en?: string
+          fecha: string
+          origen?: string
+          venta: number
+        }
+        Update: {
+          compra?: number | null
+          creado_en?: string
+          fecha?: string
+          origen?: string
+          venta?: number
+        }
+        Relationships: []
+      }
       ubigeo: {
         Row: {
           busqueda: string | null
@@ -5619,6 +5643,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cambio_sunat_del_dia: { Args: { p_fecha: string }; Returns: number }
       clientes_de_producto: {
         Args: { p_desde: string; p_hasta: string; p_producto: string }
         Returns: {

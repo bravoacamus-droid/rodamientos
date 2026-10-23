@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PaginaFacturacionEjecutiva } from "@/modules/tablero";
 import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { ExcelContador } from "@/modules/reportes/ui/excel-contador";
 
 export const metadata: Metadata = { title: "Lo facturado" };
 
@@ -28,6 +29,7 @@ export default async function Pagina(props: { searchParams: Promise<Record<strin
         <h1 className="text-2xl font-semibold tracking-tight">Lo facturado</h1>
         <p className="text-base text-[var(--fg-muted)]">Lo facturado por periodo, por cliente y contra el periodo anterior.</p>
       </div>
+      <ExcelContador hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date())} />
       <PaginaFacturacionEjecutiva {...props} />
     </div>
   );

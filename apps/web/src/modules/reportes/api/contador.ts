@@ -1,0 +1,328 @@
+import "server-only";
+
+import { clienteServidor } from "@rodatech/db/servidor";
+
+import {
+  filaCompra,
+  filaRegistro,
+  nombreMes,
+  totalesRegistro,
+  type ComprobanteContable,
+  type FilaCompra,
+  type FilaRegistro,
+} from "../dominio/contador";
+
+/**
+ * El Excel del mes para el contador: ventas y compras en soles.
+ *
+ * Tres hojas: **Ventas** y **Compras**, una fila por documento con las
+ * columnas que lleva cada registro, y **Léeme**, con los totales y lo que
+ * falta —documentos sin cambio, compras sin factura del proveedor— dicho en
+ * castellano, para que el contador no lo descubra al cuadrar.
+ *
+ * El cambio de cada documento en dólares sale de la factura (148) y, si no lo
+ * tiene, del día en `tipos_cambio_sunat` (149), con el último publicado para
+ * domingos y feriados. Las notas usan el de su comprobante.
+ */
+
+const AZUL = "FF0E4C73";
+const SOLES = '"S/ "#,##0.00;[Red]-"S/ "#,##0.00';
+const NUMERO = "#,##0.00;[Red]-#,##0.00";
+
+function fechaExcel(iso: string): Date {
+  return new Date(`${iso.slice(0, 10)}T12:00:00Z`);
+}
+
+type Uno<T> = T | T[] | null | undefined;
+const uno = <T,>(v: Uno<T>): T | null => (Array.isArray(v) ? (v[0] ?? null) : (v ?? null));
+
+/** El cambio de cada día del rango, más una semana antes para los lunes. */
+async function cambiosDelRango(desde: string, hasta: string): Promise<(fecha: string) => number | null> {
+  const supabase = await clienteServidor();
+  const antes = new Date(`${desde}T12:00:00Z`);
+  antes.setUTCDate(antes.getUTCDate() - 7);
+  const { data, error } = await supabase
+    .from("tipos_cambio_sunat")
+    .select("fecha, venta")
+    .gte("fecha", antes.toISOString().slice(0, 10))
+    .lte("fecha", hasta)
+    .order("fecha");
+  if (error) throw new Error(error.message);
+  const dias = (data ?? []).map((d) => ({ fecha: String(d.fecha), venta: Number(d.venta) }));
+  return (fecha) => {
+    // El del día o el último publicado antes, como `cambio_sunat_del_dia`.
+    let elegido: number | null = null;
+    for (const d of dias) {
+      if (d.fecha > fecha) break;
+      elegido = d.venta;
+    }
+    return elegido;
+  };
+}
+
+async function leerVentas(desde: string, hasta: string, cambio: (f: string) => number | null): Promise<FilaRegistro[]> {
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase
+    .from("comprobantes")
+    .select(
+      `tipo, numero, fecha_emision, fecha_vencimiento, estado, moneda, tipo_cambio,
+       op_gravada, igv, total, retencion_monto, pen_gravada, pen_igv, pen_total, pen_retencion,
+       clientes!comprobantes_cliente_id_fkey(razon_social, tipo_documento, numero_documento),
+       referencia:comprobantes!referencia_id(tipo, numero, fecha_emision, tipo_cambio)`,
+    )
+    .gte("fecha_emision", desde)
+    .lte("fecha_emision", hasta)
+    .order("fecha_emision")
+    .order("numero")
+    .limit(5000);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((d) => {
+    const cli = uno(d.clientes as Uno<{ razon_social: string; tipo_documento: string; numero_documento: string }>);
+    const ref = uno(
+      d.referencia as Uno<{ tipo: string; numero: string; fecha_emision: string; tipo_cambio: number | null }>,
+    );
+    const moneda = d.moneda === "PEN" ? "PEN" : "USD";
+    // En dólares: el de la factura; si no lo tiene, el de su día — y una
+    // nota, el de su comprobante, que es con el que se registra.
+    const propio = Number(d.tipo_cambio) > 0 ? Number(d.tipo_cambio) : null;
+    const tipoCambio =
+      moneda === "PEN"
+        ? propio
+        : (propio ??
+          (ref ? (Number(ref.tipo_cambio) > 0 ? Number(ref.tipo_cambio) : cambio(ref.fecha_emision)) : cambio(String(d.fecha_emision))));
+    const c: ComprobanteContable = {
+      tipo: d.tipo as ComprobanteContable["tipo"],
+      numero: String(d.numero),
+      fecha: String(d.fecha_emision),
+      vence: d.fecha_vencimiento ? String(d.fecha_vencimiento) : null,
+      estado: String(d.estado),
+      moneda,
+      tipoCambio,
+      gravada: Number(d.op_gravada ?? 0),
+      igv: Number(d.igv ?? 0),
+      total: Number(d.total ?? 0),
+      retencion: Number(d.retencion_monto ?? 0),
+      penGravada: d.pen_gravada == null ? null : Number(d.pen_gravada),
+      penIgv: d.pen_igv == null ? null : Number(d.pen_igv),
+      penTotal: d.pen_total == null ? null : Number(d.pen_total),
+      penRetencion: d.pen_retencion == null ? null : Number(d.pen_retencion),
+      cliente: cli?.razon_social ?? "",
+      clienteTipoDoc: cli?.tipo_documento ?? null,
+      clienteDoc: cli?.numero_documento ?? null,
+      referencia: ref
+        ? { tipo: ref.tipo as ComprobanteContable["tipo"], numero: ref.numero, fecha: ref.fecha_emision }
+        : null,
+    };
+    return filaRegistro(c);
+  });
+}
+
+async function leerCompras(desde: string, hasta: string, cambio: (f: string) => number | null): Promise<FilaCompra[]> {
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase
+    .from("compras")
+    .select(
+      `numero, fecha, tipo, estado, documento_proveedor, moneda, tipo_cambio, subtotal, igv, total,
+       proveedores!compras_proveedor_id_fkey(razon_social, tipo_documento, numero_documento)`,
+    )
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    // Una orden sin comprar todavía no es una compra para el contador.
+    .in("estado", ["registrada", "recibida_parcial", "recibida"])
+    .order("fecha")
+    .limit(5000);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((d) => {
+    const p = uno(d.proveedores as Uno<{ razon_social: string; tipo_documento: string; numero_documento: string }>);
+    const moneda = d.moneda === "PEN" ? "PEN" : "USD";
+    return filaCompra({
+      fecha: String(d.fecha),
+      numero: String(d.numero),
+      documento: (d.documento_proveedor as string | null)?.trim() || null,
+      tipo: String(d.tipo),
+      moneda,
+      tipoCambio: moneda === "PEN" ? Number(d.tipo_cambio) || null : cambio(String(d.fecha)),
+      base: Number(d.subtotal ?? 0),
+      igv: Number(d.igv ?? 0),
+      total: Number(d.total ?? 0),
+      proveedor: p?.razon_social ?? "",
+      proveedorTipoDoc: p?.tipo_documento ?? null,
+      proveedorDoc: p?.numero_documento ?? null,
+    });
+  });
+}
+
+export async function libroContador(mes: string, desde: string, hasta: string): Promise<Buffer> {
+  const cambio = await cambiosDelRango(desde, hasta);
+  const [ventas, compras] = await Promise.all([leerVentas(desde, hasta, cambio), leerCompras(desde, hasta, cambio)]);
+
+  const { default: ExcelJS } = await import("exceljs");
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Rodatech ERP";
+  wb.created = new Date();
+
+  const cabecera = (h: import("exceljs").Worksheet) => {
+    const r = h.getRow(1);
+    r.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    r.fill = { type: "pattern", pattern: "solid", fgColor: { argb: AZUL } };
+    r.alignment = { vertical: "middle", wrapText: true };
+    r.height = 32;
+  };
+  const totalFila = (h: import("exceljs").Worksheet, columnas: number[]) => {
+    const n = h.rowCount;
+    if (n < 2) return;
+    const fila = h.addRow([]);
+    fila.getCell(1).value = "TOTAL";
+    for (const c of columnas) {
+      const letra = h.getColumn(c).letter;
+      fila.getCell(c).value = { formula: `SUM(${letra}2:${letra}${n})` };
+    }
+    fila.font = { bold: true };
+  };
+
+  // ------------------------------------------------------------------ Léeme --
+  const t = totalesRegistro(ventas);
+  const comprasSinCambio = compras.filter((c) => c.base == null).length;
+  const comprasSinFactura = compras.filter((c) => !c.serie && !c.correlativo).length;
+  const leeme = wb.addWorksheet("Léeme");
+  leeme.columns = [{ width: 44 }, { width: 22 }];
+  const linea = (a: string, b?: string | number, formato?: string) => {
+    const f = leeme.addRow([a, b ?? ""]);
+    if (formato) f.getCell(2).numFmt = formato;
+    return f;
+  };
+  linea(`Inversiones Rodatech · ${nombreMes(mes)}`).font = { bold: true, size: 14 };
+  linea(`Del ${desde.split("-").reverse().join("/")} al ${hasta.split("-").reverse().join("/")}. Importes en soles.`);
+  linea("");
+  linea("VENTAS").font = { bold: true };
+  linea("Documentos", t.documentos);
+  linea("De ellos, anulados (van en cero)", t.anulados);
+  linea("Base imponible", t.base, SOLES);
+  linea("IGV", t.igv, SOLES);
+  linea("Total", t.total, SOLES);
+  linea("Retenciones que nos hicieron", t.retencion, SOLES);
+  linea("");
+  linea("COMPRAS").font = { bold: true };
+  linea("Documentos", compras.length);
+  linea("Base imponible", compras.reduce((s, c) => s + (c.base ?? 0), 0), SOLES);
+  linea("IGV", compras.reduce((s, c) => s + (c.igv ?? 0), 0), SOLES);
+  linea("");
+  linea("CÓMO SE PASÓ A SOLES").font = { bold: true };
+  for (const texto of [
+    "Cada documento en dólares, con el tipo de cambio venta de SUNAT de su fecha de emisión.",
+    "Domingos y feriados: el último publicado antes.",
+    "Notas de crédito: con el cambio del comprobante que modifican, y en negativo.",
+    "Facturas emitidas en soles: los importes impresos, sin convertir.",
+  ]) {
+    linea(texto);
+  }
+  if (t.sinCambio || comprasSinCambio || comprasSinFactura) {
+    linea("");
+    const aviso = linea("FALTA REVISAR");
+    aviso.font = { bold: true, color: { argb: "FFB45309" } };
+    if (t.sinCambio) linea("Ventas sin tipo de cambio (importes en blanco)", t.sinCambio);
+    if (comprasSinCambio) linea("Compras sin tipo de cambio (importes en blanco)", comprasSinCambio);
+    if (comprasSinFactura) linea("Compras sin el número de factura del proveedor", comprasSinFactura);
+  }
+
+  // ----------------------------------------------------------------- Ventas --
+  const hv = wb.addWorksheet("Ventas", { views: [{ state: "frozen", ySplit: 1 }] });
+  hv.columns = [
+    { header: "Fecha de emisión", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Vencimiento", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Tipo (tabla 10)", width: 9 },
+    { header: "Serie", width: 8 },
+    { header: "Número", width: 11 },
+    { header: "Tipo doc. cliente (tabla 2)", width: 11 },
+    { header: "RUC / DNI", width: 14 },
+    { header: "Cliente", width: 40 },
+    { header: "Base imponible S/", width: 15, style: { numFmt: NUMERO } },
+    { header: "IGV S/", width: 13, style: { numFmt: NUMERO } },
+    { header: "Total S/", width: 15, style: { numFmt: NUMERO } },
+    { header: "Moneda", width: 8 },
+    { header: "Tipo de cambio", width: 9, style: { numFmt: "0.000" } },
+    { header: "Total en su moneda", width: 14, style: { numFmt: NUMERO } },
+    { header: "Retención S/", width: 12, style: { numFmt: NUMERO } },
+    { header: "Ref. fecha", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Ref. tipo", width: 8 },
+    { header: "Ref. serie", width: 8 },
+    { header: "Ref. número", width: 11 },
+    { header: "Estado", width: 10 },
+    { header: "Observación", width: 22 },
+  ];
+  cabecera(hv);
+  for (const f of ventas) {
+    hv.addRow([
+      fechaExcel(f.fecha),
+      f.vence ? fechaExcel(f.vence) : "",
+      f.tipo,
+      f.serie,
+      f.numero,
+      f.clienteTipoDoc,
+      f.clienteDoc,
+      f.cliente,
+      f.base ?? "",
+      f.igv ?? "",
+      f.total ?? "",
+      f.moneda,
+      f.tipoCambio ?? "",
+      f.totalOriginal,
+      f.retencion || "",
+      f.refFecha ? fechaExcel(f.refFecha) : "",
+      f.refTipo,
+      f.refSerie,
+      f.refNumero,
+      f.anulado ? "ANULADO" : "",
+      f.falta ?? "",
+    ]);
+  }
+  totalFila(hv, [9, 10, 11, 15]);
+  if (hv.rowCount > 1) hv.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: hv.columnCount } };
+
+  // ---------------------------------------------------------------- Compras --
+  const hc = wb.addWorksheet("Compras", { views: [{ state: "frozen", ySplit: 1 }] });
+  hc.columns = [
+    { header: "Fecha", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+    { header: "Serie", width: 8 },
+    { header: "Número", width: 12 },
+    { header: "Tipo doc. proveedor (tabla 2)", width: 11 },
+    { header: "RUC", width: 14 },
+    { header: "Proveedor", width: 40 },
+    { header: "Base imponible S/", width: 15, style: { numFmt: NUMERO } },
+    { header: "IGV S/", width: 13, style: { numFmt: NUMERO } },
+    { header: "Total S/", width: 15, style: { numFmt: NUMERO } },
+    { header: "Moneda", width: 8 },
+    { header: "Tipo de cambio", width: 9, style: { numFmt: "0.000" } },
+    { header: "Total en su moneda", width: 14, style: { numFmt: NUMERO } },
+    { header: "Local / importación", width: 12 },
+    { header: "Nuestra compra", width: 15 },
+    { header: "Observación", width: 30 },
+  ];
+  cabecera(hc);
+  for (const f of compras) {
+    hc.addRow([
+      fechaExcel(f.fecha),
+      f.serie,
+      f.correlativo,
+      f.proveedorTipoDoc,
+      f.proveedorDoc,
+      f.proveedor,
+      f.base ?? "",
+      f.igv ?? "",
+      f.total ?? "",
+      f.moneda,
+      f.tipoCambio ?? "",
+      f.totalOriginal,
+      f.tipo,
+      f.numero,
+      f.falta ?? "",
+    ]);
+  }
+  totalFila(hc, [7, 8, 9]);
+  if (hc.rowCount > 1) hc.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: hc.columnCount } };
+
+  const datos = await wb.xlsx.writeBuffer();
+  return Buffer.from(datos as ArrayBuffer);
+}
