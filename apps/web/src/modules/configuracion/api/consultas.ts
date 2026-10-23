@@ -8,6 +8,7 @@ import { fallo } from "@/lib/errores";
 import type { Accion, Modulo } from "@/lib/permisos-comun";
 
 import type { ModuloDef, Permiso } from "../dominio/permisos";
+import type { Respaldo } from "../dominio/respaldo";
 import { ordenarSeries } from "../dominio/serie";
 import type {
   ConteosCatalogo,
@@ -319,4 +320,38 @@ export async function rolesYPermisos(): Promise<
 export async function rolesParaElegir(): Promise<RolDef[]> {
   const r = await rolesYPermisos();
   return r.ok ? r.datos.roles : [];
+}
+
+/**
+ * La última copia de seguridad buena y la última que se intentó (147). Solo
+ * las ven gerencia y admin: a cualquier otro la RLS le devuelve cero filas, y
+ * la pantalla no debe leer eso como «nunca se hizo una copia».
+ */
+export async function ultimosRespaldos(): Promise<
+  Resultado<{ ultimaBuena: Respaldo | null; ultima: Respaldo | null }>
+> {
+  try {
+    const supabase = await clienteServidor();
+    const columnas = "fecha, ok, tablas, filas, archivos";
+    const [buena, cualquiera] = await Promise.all([
+      supabase.from("respaldos").select(columnas).eq("ok", true).order("fecha", { ascending: false }).limit(1),
+      supabase.from("respaldos").select(columnas).order("fecha", { ascending: false }).limit(1),
+    ]);
+    const error = buena.error ?? cualquiera.error;
+    if (error) return fallo(error, "configuracion/ultimosRespaldos");
+
+    const leer = (f: Record<string, unknown> | undefined): Respaldo | null =>
+      f
+        ? {
+            fecha: String(f.fecha),
+            ok: Boolean(f.ok),
+            tablas: Number(f.tablas),
+            filas: Number(f.filas),
+            archivos: Number(f.archivos),
+          }
+        : null;
+    return { ok: true, datos: { ultimaBuena: leer(buena.data?.[0]), ultima: leer(cualquiera.data?.[0]) } };
+  } catch (e) {
+    return fallo(e, "configuracion/ultimosRespaldos");
+  }
 }

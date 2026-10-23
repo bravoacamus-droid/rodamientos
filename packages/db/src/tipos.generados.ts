@@ -4249,6 +4249,42 @@ export type Database = {
           },
         ]
       }
+      respaldos: {
+        Row: {
+          archivos: number
+          bytes_archivos: number
+          detalle: string | null
+          equipo: string | null
+          fecha: string
+          filas: number
+          id: number
+          ok: boolean
+          tablas: number
+        }
+        Insert: {
+          archivos?: number
+          bytes_archivos?: number
+          detalle?: string | null
+          equipo?: string | null
+          fecha?: string
+          filas?: number
+          id?: never
+          ok: boolean
+          tablas?: number
+        }
+        Update: {
+          archivos?: number
+          bytes_archivos?: number
+          detalle?: string | null
+          equipo?: string | null
+          fecha?: string
+          filas?: number
+          id?: never
+          ok?: boolean
+          tablas?: number
+        }
+        Relationships: []
+      }
       roles: {
         Row: {
           clave: string

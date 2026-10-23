@@ -3741,7 +3741,7 @@ puede volver a dar porque salieron de un Excel que se armó una vez.
 Un `delete` sin `where`, una migración mal escrita o que alguien borre el
 proyecto del panel, y no hay vuelta atrás.
 
-**Mitigado, no resuelto:** `pnpm db:respaldar` vuelca las 43 tablas a JSON en
+**Mitigado, no resuelto:** `pnpm db:respaldar` vuelca todas las tablas (desde el 23/10 las lee de la base, más archivos y cuentas: ver `docs/RESPALDO.md`) a JSON en
 `documentosrodamiento/respaldos/` (gitignorado), con manifiesto de recuentos y
 el orden de dependencias para poder restaurar. La primera copia de la historia
 de este proyecto son 4.800 filas. **Correrlo antes de cada migración que borre
