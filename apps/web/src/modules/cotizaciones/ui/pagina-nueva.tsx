@@ -64,7 +64,7 @@ export default async function PaginaNuevaCotizacion({
     <Constructor
       sugeridos={resultado.datos.sugeridos}
       clienteInicial={resultado.datos.inicial}
-      hoy={new Date().toISOString().slice(0, 10)}
+      hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date())}
       puedeEditarKit={puedeEditarKit}
       // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
       puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}

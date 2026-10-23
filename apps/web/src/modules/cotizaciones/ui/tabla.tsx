@@ -87,7 +87,7 @@ export async function TablaCotizaciones({
     );
   }
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
   const vencida = (c: CotizacionLista) =>
     c.estado === "enviada" && c.fecha_vencimiento < hoy;
 

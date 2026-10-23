@@ -88,7 +88,7 @@ export function PanelGastos({
         // La fecha del gasto es hoy salvo que alguien la cambie. Se manda
         // desde el navegador y no desde el servidor a propósito: el que anota
         // el flete lo hace el día que le llega la factura del courier.
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date()),
         documento: documento.trim() || null,
       });
       if (!r.ok) {

@@ -99,9 +99,8 @@ const esquema = z.object({
    *
    * Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos guías»*.
    *
-   * No viajan en el payload de `emitir_comprobante`: se vinculan justo
-   * después con `vincular_guias_comprobante`, que comprueba que cada una sea
-   * del MISMO cliente y no esté anulada. Ver el porqué en la 084.
+   * Viajan en el payload de `emitir_comprobante`, que comprueba que cada una
+   * sea del MISMO cliente, esté emitida y no facturada, y las vincula (146).
    */
   /*
     `default([])` aunque emitir SIN guía esté prohibido.
@@ -300,14 +299,13 @@ export async function emitirComprobante(
       */
       retencion: { aplica: datos.retencion_aplica },
       /*
-        Las guías, DECLARADAS aquí además de vinculadas después.
+        Las guías que ampara.
 
         `emitir_comprobante` las exige desde la 089 —sin guía no se factura, y
         esa regla tenía que bajar a la base porque la función es
         `security definer` y se llega a ella por PostgREST sin pasar por
-        ninguna pantalla—. El vínculo de verdad lo escribe
-        `vincular_guias_comprobante` justo después (084); esto es la
-        declaración que la función comprueba antes de gastar el correlativo.
+        ninguna pantalla—, y desde la 146 escribe también el vínculo, en la
+        misma transacción.
 
         Si esto faltara, la base rechazaría TODAS las facturas. Van juntos.
       */
@@ -347,30 +345,13 @@ export async function emitirComprobante(
     const r = data as unknown as { id: string; numero: string; total: number };
 
     /*
-      Las guías que ampara, justo después de emitir.
-
-      Va en una RPC aparte y no dentro de `emitir_comprobante` por riesgo:
-      aquella gasta el correlativo, mueve stock y arma el cronograma de
-      cuotas. Meterle mano para una referencia sería arriesgar la emisión
-      entera por un dato que no es un importe.
-
-      Por eso un fallo aquí NO convierte esto en `ok: false`, igual que el
-      envío a SUNAT: el comprobante ya existe y el número ya se gastó. Decir
-      que no se emitió mandaría a emitirlo otra vez, y eso sí sería un
-      problema. Lo que queda es una factura sin sus guías anotadas, que se
-      arregla volviendo a vincularlas.
-
-      `vincular_guias_comprobante` comprueba que cada guía sea del MISMO
-      cliente y no esté anulada: una factura que ampara la guía de otro dice
-      ante SUNAT que la mercadería viajó a donde no fue.
+      Las guías que ampara las vincula `emitir_comprobante` en la misma
+      transacción (146). Antes iban aquí, en una RPC aparte, y desde la 137 esa
+      RPC las rechazaba siempre —el comprobante nace 'pendiente' y ella solo
+      acepta 'no_enviado'— sin que nadie mirara el error: la misma guía se
+      podía facturar dos veces.
     */
-    if (datos.guias.length > 0) {
-      await supabase.rpc("vincular_guias_comprobante", {
-        p_comprobante: r.id,
-        p_guias: datos.guias,
-      });
-      revalidatePath("/guias");
-    }
+    if (datos.guias.length > 0) revalidatePath("/guias");
 
     revalidatePath("/facturacion");
     revalidatePath("/cotizaciones");
