@@ -384,6 +384,23 @@ export default async function PaginaFacturacionEjecutiva({
         </Bloque>
       </div>
 
+      {/* Por marca (154): con quién se negocia, en cifras. */}
+      <Bloque
+        titulo="Por marca"
+        descripcion={`Lo facturado de cada marca en el periodo${nombreCliente ? ` a ${nombreCliente}` : ""}, sin IGV.`}
+      >
+        <Ranking
+          color="var(--viz-2)"
+          filas={a.porMarca.map((m) => ({
+            clave: m.marca,
+            nombre: m.marca === "SIN MARCA" ? "Sin marca" : m.marca,
+            detalle: `${pct(r.venta > 0 ? (m.venta / r.venta) * 100 : 0)} del total · ${entero(m.documentos)} ${m.documentos === 1 ? "comprobante" : "comprobantes"} · ${entero(m.clientes)} ${m.clientes === 1 ? "cliente" : "clientes"}`,
+            valor: m.venta,
+            cifra: dinero(m.venta),
+          }))}
+        />
+      </Bloque>
+
       {historia.ok && historia.datos.serie.length > 0 ? (
         <Bloque
           titulo="Año por año"

@@ -68,6 +68,8 @@ export interface DatosFacturacion {
     venta: number;
     documentos: number;
   }[];
+  /** Lo facturado por marca, sin IGV (154). */
+  porMarca: { marca: string; venta: number; documentos: number; clientes: number }[];
 }
 
 export async function datosFacturacion(
@@ -134,6 +136,12 @@ export async function datosFacturacion(
           unidades: n(p.unidades),
           venta: n(p.venta),
           documentos: n(p.documentos),
+        })),
+        porMarca: lista(d.por_marca).map((m) => ({
+          marca: txt(m.marca),
+          venta: n(m.venta),
+          documentos: n(m.documentos),
+          clientes: n(m.clientes),
         })),
       },
     };
