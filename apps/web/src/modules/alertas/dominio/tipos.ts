@@ -16,7 +16,7 @@
 /** Los cinco niveles del enum `severidad_alerta`. */
 export type Severidad = "info" | "baja" | "media" | "alta" | "critica";
 
-/** Los once valores que admite la restricción `alerta_tipo_ok`. */
+/** Los trece valores que admite la restricción `alerta_tipo_ok` (156). */
 export type TipoAlerta =
   | "quiebre_stock"
   | "stock_bajo"
@@ -28,10 +28,12 @@ export type TipoAlerta =
   | "cotizacion_por_vencer"
   | "sunat_rechazo"
   | "sin_rotacion"
-  | "margen_bajo";
+  | "margen_bajo"
+  | "sunat_atascado"
+  | "certificado_por_vencer";
 
 /**
- * Los siete tipos que `generar_alertas()` produce hoy.
+ * Los tipos que `generar_alertas()` produce hoy.
  *
  * `sin_rotacion` y `margen_bajo` están permitidos por la restricción pero
  * todavía no los genera nadie: quedaron reservados en el esquema. Se listan
@@ -48,6 +50,10 @@ export const TIPOS_QUE_SE_GENERAN: readonly TipoAlerta[] = [
   "linea_credito",
   "cotizacion_por_vencer",
   "sunat_rechazo",
+  // 102: un envío que se quedó sin respuesta. Se generaba y la pantalla no
+  // le tenía nombre (visto el 23/10).
+  "sunat_atascado",
+  "certificado_por_vencer",
 ];
 
 export const ETIQUETA_TIPO: Record<TipoAlerta, string> = {
@@ -62,6 +68,8 @@ export const ETIQUETA_TIPO: Record<TipoAlerta, string> = {
   sunat_rechazo: "Rechazo de SUNAT",
   sin_rotacion: "Sin rotación",
   margen_bajo: "Margen bajo",
+  sunat_atascado: "Envío a SUNAT sin respuesta",
+  certificado_por_vencer: "Certificado digital por caducar",
 };
 
 export const ETIQUETA_SEVERIDAD: Record<Severidad, string> = {
