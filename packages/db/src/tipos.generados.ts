@@ -454,6 +454,117 @@ export type Database = {
           },
         ]
       }
+      cambios_precio: {
+        Row: {
+          creado_en: string
+          creado_por: string | null
+          deshecho_en: string | null
+          deshecho_por: string | null
+          id: number
+          marca_id: string
+          porcentaje: number
+          productos: number
+        }
+        Insert: {
+          creado_en?: string
+          creado_por?: string | null
+          deshecho_en?: string | null
+          deshecho_por?: string | null
+          id?: never
+          marca_id: string
+          porcentaje: number
+          productos: number
+        }
+        Update: {
+          creado_en?: string
+          creado_por?: string | null
+          deshecho_en?: string | null
+          deshecho_por?: string | null
+          id?: never
+          marca_id?: string
+          porcentaje?: number
+          productos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cambios_precio_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cambios_precio_deshecho_por_fkey"
+            columns: ["deshecho_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cambios_precio_marca_id_fkey"
+            columns: ["marca_id"]
+            isOneToOne: false
+            referencedRelation: "marcas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cambios_precio_items: {
+        Row: {
+          cambio_id: number
+          minimo_antes: number | null
+          minimo_despues: number | null
+          producto_id: string
+          venta_antes: number
+          venta_despues: number
+        }
+        Insert: {
+          cambio_id: number
+          minimo_antes?: number | null
+          minimo_despues?: number | null
+          producto_id: string
+          venta_antes: number
+          venta_despues: number
+        }
+        Update: {
+          cambio_id?: number
+          minimo_antes?: number | null
+          minimo_despues?: number | null
+          producto_id?: string
+          venta_antes?: number
+          venta_despues?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cambios_precio_items_cambio_id_fkey"
+            columns: ["cambio_id"]
+            isOneToOne: false
+            referencedRelation: "cambios_precio"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cambios_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cambios_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_productos_stock"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cambios_precio_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "v_reposicion"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_contactos: {
         Row: {
           activo: boolean
@@ -5643,6 +5754,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cambiar_precios_por_marca: {
+        Args: { p_aplicar?: boolean; p_marca: string; p_porcentaje: number }
+        Returns: Json
+      }
       cambio_sunat_del_dia: { Args: { p_fecha: string }; Returns: number }
       clientes_de_producto: {
         Args: { p_desde: string; p_hasta: string; p_producto: string }
@@ -5757,6 +5872,7 @@ export type Database = {
         Returns: Json
       }
       crear_zona: { Args: { p_nombre: string }; Returns: Json }
+      deshacer_cambio_precios: { Args: { p_cambio: number }; Returns: Json }
       despacho_por_item: {
         Args: { p_cotizacion: string; p_excluir_guia?: string }
         Returns: {

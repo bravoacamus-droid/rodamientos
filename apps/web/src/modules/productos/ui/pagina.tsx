@@ -10,6 +10,7 @@ import { opcionesDeFiltro } from "../api/consultas";
 import type { FiltrosProductos } from "../dominio/tipos";
 import { FiltrosProductosBarra } from "./filtros";
 import { ResumenProductos } from "./resumen";
+import { PreciosPorMarca } from "./precios-por-marca";
 import { TablaProductos } from "./tabla";
 
 interface Props {
@@ -50,6 +51,7 @@ export default async function PaginaProductos({ searchParams }: Props) {
   // Configuración › Roles y permisos (143). Sin permiso, el botón sale con candado y
   // dice por qué, en vez de esconderse (QA, 20/10).
   const puedeCrear = permisos.tiene("productos", "crear");
+  const puedeEditar = permisos.tiene("productos", "editar");
   const catalogos = opciones.ok
     ? opciones.datos
     : { marcas: [], familias: [], subfamilias: [] };
@@ -87,6 +89,8 @@ export default async function PaginaProductos({ searchParams }: Props) {
             <FileSpreadsheet className="size-4" aria-hidden="true" />
             Descargar en Excel
           </a>
+          {/* Subir o bajar la lista de una marca de una vez (155). */}
+          {puedeEditar ? <PreciosPorMarca marcas={catalogos.marcas} /> : null}
           {puedeCrear ? (
             <>
               <Link
