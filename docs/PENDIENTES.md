@@ -8355,3 +8355,18 @@ comunicación de baja con su ticket—.
 
 **Sigue sin probar:** el certificado y el usuario SOL de Willy (beta no los
 mira) y la guía (la GRE no tiene beta).
+
+### §CJ.2 · El resto del 23/10 (153-156)
+
+| | Qué |
+|---|---|
+| 153 | La nota de crédito por **devolución** (06/07) devuelve la mercadería al almacén con la casilla «La mercadería volvió al almacén» (marcada por defecto; lo devuelto puede venir dañado). Al costo promedio, sin tocar el último costo de compra; un kit vuelve en piezas. Tope: ninguna nota acredita más unidades que su factura. Anular la nota saca lo que entró |
+| 154 | **Por marca** en Lo facturado. El 23 % de lo facturado en 12 meses es «Sin marca»: líneas del histórico que entraron sin ella |
+| 155 | **Cambiar precios por marca** en Productos: vista previa con cuántos y cinco ejemplos, entre −50 % y +100 %, y «Deshacer» que respeta lo cambiado a mano después. Probado en pantalla solo hasta la vista previa (SKF +5 % = 192 precios); aplicar se probó en el centinela |
+| 156 | Aviso de **certificado digital por caducar** desde 30 días antes. Y la alerta `sunat_atascado` (102) no tenía nombre en la bandeja |
+
+**Quedan, y no son de código o no se deciden solos:** cuentas por pagar
+(preguntar a Willy si lo quiere), el resumen diario de alertas por correo (no
+hay correo de dominio), la ubicación del producto (el campo existe y está
+vacío en los 7 801), la marca «MARCAPRUEBA» y «ZZ MARCA PRUEBA» que siguen en
+la lista de marcas (van con la limpieza), desplegar y el pase a producción.
