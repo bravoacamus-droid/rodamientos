@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
+  CheckboxCampo,
   Dialog,
   DialogBody,
   DialogContent,
@@ -113,11 +114,15 @@ export function EmisorNota({
   const ver = (usd: number) => (tcDoc ? Math.round(usd * tcDoc * 100) / 100 : usd);
   const monedaDoc = tcDoc ? "PEN" : "USD";
   const [enSoles, setEnSoles] = React.useState("");
+  // Marcada: lo normal es que lo devuelto vuelva a la venta (153).
+  const [reingresar, setReingresar] = React.useState(true);
   const delTipo = motivos.filter((m) => m.tipo === tipo);
   const total = esMotivoTotal(motivo);
   const importeFijo = total || esCorreccionSinImporte(motivo);
   const porItem = esMotivoPorItem(motivo);
   const esDevolucion = motivo === MOTIVOS_CREDITO.DEVOLUCION_ITEM;
+  // Total (06) o por ítem (07): las dos traen mercadería de vuelta.
+  const devuelve = tipo === "nota_credito" && (esDevolucion || motivo === "06");
   const elegidos: EleccionItem[] = Object.entries(porLinea).map(([i, v]) => {
     const n = Number(v) || 0;
     return esDevolucion
@@ -182,6 +187,7 @@ export function EmisorNota({
     fecha_emision: fecha,
     monto: importe,
     items: porItem ? elegidos : [],
+    reingresar_stock: devuelve && reingresar,
     concepto: concepto.trim(),
     observaciones: observaciones.trim() || null,
   });
@@ -336,6 +342,26 @@ export function EmisorNota({
                     : ": todavía no marcaste ninguno."}
                 </p>
               </div>
+            ) : null}
+
+            {/*
+              La devolución vuelve al almacén (153). Antes no movía nada: el
+              stock sale con la guía y la nota no lo tocaba, así que lo devuelto
+              no aparecía en el almacén hasta un ajuste a mano. Es casilla y no
+              automático porque lo devuelto puede venir dañado.
+            */}
+            {devuelve ? (
+              <CheckboxCampo
+                id="nota-reingresar"
+                checked={reingresar}
+                onCheckedChange={(v) => setReingresar(Boolean(v))}
+                label="La mercadería volvió al almacén"
+                ayuda={
+                  reingresar
+                    ? "Las unidades devueltas se suman al stock al emitir la nota."
+                    : "El stock no cambia: por ejemplo, si lo devuelto vino dañado."
+                }
+              />
             ) : null}
 
             {!porItem ? (

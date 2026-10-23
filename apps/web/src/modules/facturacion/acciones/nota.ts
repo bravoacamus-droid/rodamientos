@@ -52,6 +52,8 @@ const esquema = z.object({
     )
     .max(200)
     .default([]),
+  /** Devolución (06/07): si lo devuelto vuelve al almacén (153). */
+  reingresar_stock: z.boolean().default(false),
   concepto: z.string().max(500),
   observaciones: z.string().max(2000).nullable(),
 });
@@ -160,6 +162,9 @@ export async function emitirNota(
       condicion_pago: "contado",
       dias_credito: 0,
       observaciones: datos.observaciones,
+      // Solo cuenta en una devolución; la base lo ignora en cualquier otro motivo.
+      reingresar_stock:
+        datos.tipo === "nota_credito" && ["06", "07"].includes(datos.motivo_codigo) && datos.reingresar_stock,
       items: lineas.map((l) => ({
         producto_id: l.producto_id,
         codigo: l.codigo,
