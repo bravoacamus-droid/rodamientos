@@ -8329,3 +8329,29 @@ pantalla; el tablero ya resta las notas desde la 104).
 **Sigue pendiente del consultor:** cuentas por pagar (preguntar a Willy),
 devoluciones (la nota de crédito no reingresa stock), probar SUNAT en beta,
 desplegar, y la lista del pase a producción.
+
+### §CJ.1 · La primera prueba contra SUNAT (beta), y lo que habría pasado sin ella
+
+`pnpm sunat:beta` (`apps/web/src/modules/facturacion/dominio/beta.sunat.ts`)
+manda a `e-beta.sunat.gob.pe`, con `MODDATOS` y un certificado autofirmado,
+lo mismo que el botón «Enviar a SUNAT»: la conversión se sacó de la Server
+Action a `dominio/para-sunat.ts` para que la prueba y el botón usen la misma
+función. No toca la base.
+
+**Primera corrida: SUNAT rechazó las tres facturas y la nota.** La app
+mandaba la tasa del IGV como `0.18` y el paquete la escribe tal cual en
+`cbc:Percent`, que SUNAT lee como PORCENTAJE: calculaba el IGV de cada línea
+como base × 0,18 % y no cuadraba (3103; en la nota, 3462). Los tests del
+paquete pasaban `18`; la app, `0.18`; nadie había cruzado las dos. **En
+producción se habría rechazado cada factura.** Arreglado en `para-sunat.ts`, y
+el paquete ahora LANZA si le llega una fracción.
+
+Segunda corrida: aceptadas, con tres observaciones en cada documento (4096-4098:
+faltaban provincia, departamento y distrito del emisor). Ahora salen de
+`ubigeo`. Tercera: las seis limpias —factura USD contado, USD a crédito con
+retención y cuotas, PEN a crédito, 27 líneas con descuentos (IGV de la base
+288,78 contra 288,80 de las líneas: SUNAT lo acepta), nota de crédito 07 y
+comunicación de baja con su ticket—.
+
+**Sigue sin probar:** el certificado y el usuario SOL de Willy (beta no los
+mira) y la guía (la GRE no tiene beta).

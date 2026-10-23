@@ -21,7 +21,8 @@
     "db:tipos": "node scripts/generar-tipos.mjs",
     "db:usuarios": "node scripts/sembrar-usuarios.mjs",
     "db:estructura": "node scripts/importar-estructura.mjs",
-    "db:plantillas": "node scripts/importar-estructura.mjs && node scripts/generar-plantilla-productos.mjs"
+    "db:plantillas": "node scripts/importar-estructura.mjs && node scripts/generar-plantilla-productos.mjs",
+    "sunat:beta": "vitest run --config vitest.sunat.mts"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.1",

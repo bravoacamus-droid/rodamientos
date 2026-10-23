@@ -107,6 +107,13 @@ export function contenidoLinea(
   tasaIgv: number,
   nombreCantidad: string,
 ): Record<string, unknown> {
+  // En PORCENTAJE (18), que es como va en `cbc:Percent`. La app le pasó 0.18
+  // hasta el 23/10 y SUNAT beta rechazó todo con 3103: calculaba el IGV de
+  // la línea como base × 0,18 % y no le cuadraba. Se para aquí, ruidosamente,
+  // en vez de dejar salir un XML que SUNAT va a rechazar.
+  if (tasaIgv > 0 && tasaIgv < 1) {
+    throw new Error(`tasaIgv va en porcentaje (18), no en fracción: llegó ${tasaIgv}`);
+  }
   const afect = tributoDeAfectacion(item.afectacionIgv);
   return {
     "cbc:ID": indice,

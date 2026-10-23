@@ -105,7 +105,10 @@ export interface Comprobante {
   receptor: Receptor;
   items: ItemComprobante[];
   totales: Totales;
-  /** Tasa de IGV aplicada, para reflejarla en el XML. */
+  /**
+   * Tasa de IGV EN PORCENTAJE (18, no 0.18): va tal cual a `cbc:Percent`.
+   * Con 0.18, SUNAT rechaza cada línea con 3103 (probado en beta el 23/10).
+   */
   tasaIgv: number;
   /** Forma de pago. Si no se manda, se declara al contado. */
   formaPago?: FormaPagoComprobante;

@@ -13,14 +13,13 @@ import {
   hayQueConsultarAntesDeRechazar,
   sePuedeReenviar,
 } from "@rodatech/sunat";
-import type { Comprobante, ItemComprobante, NotaComprobante, ResultadoConsultaCdr } from "@rodatech/sunat";
+import type { ResultadoConsultaCdr } from "@rodatech/sunat";
 import type { Json } from "@rodatech/db/tipos";
 
 import { bloqueoPorSeriePrueba, conectorSunat } from "../api/configuracion";
 import { detalleComprobante } from "../api/consultas";
-import { cuotasDe, docSunatDe, unidadSunat } from "../dominio/emision";
-import { cuotasNetas } from "../dominio/retencion";
 import { enMonedaDelDocumento } from "../dominio/moneda-documento";
+import { comprobanteParaSunat, notaParaSunat } from "../dominio/para-sunat";
 
 /**
  * Envío de un comprobante ya emitido a SUNAT.
@@ -97,17 +96,25 @@ export async function enviarASunat(
 
   // Los datos del emisor salen de `empresa`, que es la fila única del negocio.
   const supabase = await clienteServidor();
-  const { data: empresa } = await supabase
+  const { data: filaEmpresa } = await supabase
     .from("empresa")
     .select("ruc, razon_social, nombre_comercial, direccion, ubigeo_codigo, igv_porcentaje")
     .eq("id", 1)
     .maybeSingle();
 
-  if (!empresa) {
+  if (!filaEmpresa) {
     return { ok: false, error: "No están los datos fiscales de la empresa." };
   }
-
-  const tasaIgv = Number(empresa.igv_porcentaje ?? 18) / 100;
+  // El distrito, la provincia y el departamento del domicilio fiscal: sin
+  // ellos SUNAT acepta con tres observaciones en cada documento (beta, 23/10).
+  const { data: lugar } = filaEmpresa.ubigeo_codigo
+    ? await supabase
+        .from("ubigeo")
+        .select("departamento, provincia, distrito")
+        .eq("codigo", filaEmpresa.ubigeo_codigo)
+        .maybeSingle()
+    : { data: null };
+  const empresa = { ...filaEmpresa, ...(lugar ?? {}) };
 
   // De una nota, lo que SUNAT pide además: el documento que corrige y el motivo.
   let afectado: { tipoDocumento: "01" | "03"; serie: string; correlativo: number } | null = null;
@@ -134,81 +141,7 @@ export async function enviarASunat(
     descripcionMotivo = mot?.descripcion ?? "Corrección";
   }
 
-  const items: ItemComprobante[] = c.lineas.map((l) => {
-    const neto = l.valor_unitario * (1 - l.descuento_pct / 100);
-    const valorVenta = Math.round(l.cantidad * neto * 100) / 100;
-    const igvLinea = Math.round(valorVenta * tasaIgv * 100) / 100;
-    return {
-      descripcion: l.descripcion,
-      cantidad: l.cantidad,
-      unidad: unidadSunat(l.unidad) as ItemComprobante["unidad"],
-      valorUnitario: Math.round(neto * 10000) / 10000,
-      // Precio con IGV: es referencial (catálogo 16) pero SUNAT lo valida
-      // contra el valor unitario y la tasa, así que se deriva, no se inventa.
-      precioUnitario: Math.round(neto * (1 + tasaIgv) * 10000) / 10000,
-      afectacionIgv: "10",
-      igv: igvLinea,
-      valorVenta,
-      codigoProducto: l.codigo,
-    };
-  });
-
-  const alCredito = c.condicion_pago === "credito" && c.dias_credito > 0;
-
-  const comprobante: Comprobante = {
-    tipoDocumento: c.tipo === "boleta" ? "03" : "01",
-    serie: c.serie,
-    correlativo: c.correlativo,
-    // Con su zona: sin ella, en un servidor en UTC salía fechada un día antes.
-    fechaEmision: new Date(`${c.fecha_emision.slice(0, 10)}T00:00:00-05:00`),
-    // Casi siempre dólares; en soles si la venta se aprobó en soles (116).
-    moneda: c.moneda,
-    emisor: {
-      ruc: empresa.ruc,
-      razonSocial: empresa.razon_social,
-      nombreComercial: empresa.nombre_comercial ?? undefined,
-      direccion: empresa.direccion ?? "",
-      ubigeo: empresa.ubigeo_codigo ?? "150101",
-    },
-    receptor: {
-      tipoDoc: docSunatDe(c.cliente_tipo_documento) as "0" | "1" | "4" | "6" | "7",
-      numDoc: c.cliente_documento ?? "",
-      razonSocial: c.cliente ?? "",
-      direccion: c.cliente_direccion ?? undefined,
-      email: c.cliente_email ?? undefined,
-    },
-    items,
-    totales: {
-      gravadas: c.op_gravada,
-      exoneradas: c.op_exonerada || undefined,
-      inafectas: c.op_inafecta || undefined,
-      igv: c.igv,
-      total: c.total,
-    },
-    tasaIgv,
-    formaPago: alCredito
-      ? {
-          tipo: "credito",
-          /*
-            Con retención, el pendiente y las cuotas son el total MENOS lo
-            retenido (14/10): así lo pide SUNAT y así lo imprime su F002-564.
-            La base guarda las cuotas sobre el total porque la retención entra
-            luego como un cobro.
-          */
-          pendiente: c.retencion_aplica
-            ? Math.round((c.total - c.retencion_monto) * 100) / 100
-            : c.saldo,
-          cuotas: cuotasNetas(
-            cuotasDe(c.total, c.dias_credito, c.fecha_emision),
-            c.retencion_aplica ? c.retencion_monto : 0,
-          ).map((q) => ({
-            numero: q.numero,
-            monto: q.monto,
-            vencimiento: q.vencimiento,
-          })),
-        }
-      : { tipo: "contado" },
-  };
+  const comprobante = comprobanteParaSunat(c, empresa);
 
   // El estado pasa a «enviado» ANTES de la llamada. Si el proceso muere a
   // mitad, el documento queda marcado como en vuelo y no como pendiente: es
@@ -244,15 +177,7 @@ export async function enviarASunat(
   try {
     const cdr =
       esNota && afectado
-        ? await conector.datos.emitirNota({
-            ...comprobante,
-            tipoDocumento: c.tipo === "nota_debito" ? "08" : "07",
-            motivo: c.motivo_nota_codigo as NotaComprobante["motivo"],
-            descripcionMotivo,
-            documentoAfectado: afectado,
-            // Una nota va al contado: ajusta una deuda, no abre otra a plazo.
-            formaPago: { tipo: "contado" },
-          })
+        ? await conector.datos.emitirNota(notaParaSunat(c, empresa, { afectado, descripcionMotivo }))
         : await conector.datos.emitir(comprobante);
 
     /*
