@@ -27,6 +27,14 @@ export function mensajeDeError(e: unknown): string {
 
   if (e && typeof e === "object") {
     const o = e as Record<string, unknown>;
+
+    // Un id mal escrito en la URL («/cotizaciones/abc») llega como 22P02,
+    // «invalid input syntax for type uuid». Es lo único que ve quien pegó un
+    // enlace cortado, así que se le dice en su idioma (QA, 23/10).
+    if (o.code === "22P02" && typeof o.message === "string" && o.message.includes("uuid")) {
+      return "Ese enlace no lleva a ningún documento: puede que esté incompleto. Vuelve a la lista y ábrelo desde allí.";
+    }
+
     const partes: string[] = [];
 
     if (typeof o.message === "string" && o.message) partes.push(o.message);

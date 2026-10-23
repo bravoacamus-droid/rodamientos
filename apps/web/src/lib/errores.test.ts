@@ -49,6 +49,13 @@ describe("mensajeDeError", () => {
     expect(mensajeDeError(42)).toBe("Error desconocido.");
   });
 
+  it("un id mal escrito en la URL se dice en castellano", () => {
+    const m = mensajeDeError({ code: "22P02", message: 'invalid input syntax for type uuid: "abc"' });
+    expect(m).toMatch(/enlace no lleva a ningún documento/);
+    // Otro 22P02 (un número mal escrito) sigue diciendo lo suyo.
+    expect(mensajeDeError({ code: "22P02", message: "invalid input syntax for type numeric" })).toMatch(/numeric/);
+  });
+
   it("un Error sin mensaje no se traga el resto", () => {
     expect(mensajeDeError(new Error(""))).toBe("Error desconocido.");
   });
