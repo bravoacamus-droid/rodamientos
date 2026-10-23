@@ -8289,3 +8289,43 @@ responsivo»*.
     compra con el último costo de cada proveedor.
 - **134:** `v_ventas_lineas` (lo vendido línea a línea, misma regla que la
   132) y `tablero_producto`.
+
+---
+
+## §CJ · 23/10 — Lo que encontraron el QA y el consultor (146-152)
+
+Dos agentes nuevos en `.claude/agents/` (fuera de git): `qa-punta-a-punta`
+recorre el flujo por la base dentro de transacciones deshechas, y
+`consultor-erp` compara módulo por módulo con un ERP maduro. De lo que
+dijeron:
+
+| | Qué | Dónde |
+|---|---|---|
+| 146 | La factura queda unida a su guía en la misma transacción (la guía ya no se factura dos veces ni se anula facturada); la compra en soles vuelve a entrar al costo en dólares; tope de la guía en `emitir_guia`; la base en hora de Lima | migración |
+| 147 | **La copia de seguridad copiaba 45 tablas de 72, sin archivos.** Ahora lee las tablas de la base, cuenta cada una, copia Storage, cuentas y esquema vivo, y apunta cada corrida; Datos de la empresa avisa a los 8 días | `scripts/respaldar.mjs`, `docs/RESPALDO.md` |
+| 148-149 | La factura en dólares guarda el venta de SUNAT de su día (la nota, el de su comprobante); `tipos_cambio_sunat` uno por día | `emitir.ts`, migraciones |
+| — | **«Excel para el contador»** en Lo facturado: ventas y compras del mes en soles | `/reportes/contador?mes=` |
+| 150 | El buscador encuentra «6205 2RSH» y «6205 skf» (cada palabra en algún sitio) | `buscar_productos` |
+| 151 | Una alerta por cosa, y se archiva sola cuando deja de ser verdad: de 126 a 39 | `generar_alertas` |
+| 152 | Ni cobros del futuro o de 1900, ni cotizaciones sin productos | `registrar_pagos`, `crear_cotizacion` |
+| — | Aviso al cotizar a un cliente con facturas vencidas | constructor |
+
+**Datos cargados por SQL directo, no por migración (23/10):**
+- `tipos_cambio_sunat`: 783 días (01/09/2024 → 23/10/2026), de Decolecta por
+  mes (26 consultas, sumadas a mano a `consultas_cuota`). Cruzados 157 días
+  con apis.net.pe: cero diferencias.
+- `comprobantes.tipo_cambio` de las 545 facturas y 4 notas en dólares que no
+  lo tenían. Lista para deshacer en el scratchpad de la sesión
+  (`tc/deshacer-ids.json`).
+
+**Comprobado:** el Excel de septiembre 2026 da S/ 39 992,90, igual que la suma
+en SQL. **Sin comprobar:** que el contador lo pueda importar tal cual en su
+programa; mandarle el de septiembre y preguntarle.
+
+**Lo que no se tocó a propósito:** recibir de más (la pantalla avisa),
+facturar más de lo confirmado (138), `kpis_dashboard` (no la usa ninguna
+pantalla; el tablero ya resta las notas desde la 104).
+
+**Sigue pendiente del consultor:** cuentas por pagar (preguntar a Willy),
+devoluciones (la nota de crédito no reingresa stock), probar SUNAT en beta,
+desplegar, y la lista del pase a producción.
