@@ -192,3 +192,47 @@ export async function historialDe(
     return fallo(e);
   }
 }
+
+export interface DeudaCliente {
+  /** Saldo de lo ya vencido, en dólares. */
+  vencido: number;
+  documentosVencidos: number;
+  /** Los días del más atrasado. */
+  diasMasAtrasado: number;
+  /** Todo lo que debe, vencido o no. */
+  total: number;
+}
+
+/**
+ * Lo que debe el cliente, para avisar AL COTIZARLE (consultor ERP, 23/10).
+ *
+ * Es el aviso que tienen todos los ERP en la venta y aquí no estaba: Willy
+ * cotizaba y despachaba a un cliente con facturas vencidas de hace meses sin
+ * que la pantalla lo dijera. Solo avisa; no bloquea. Decidir si se le vende
+ * es de Willy, no del sistema.
+ */
+export async function deudaDelCliente(clienteId: string): Promise<Resultado<DeudaCliente>> {
+  if (!(await haySesion())) return { ok: false, error: "Tu sesión expiró." };
+  if (!uuid.safeParse(clienteId).success) return { ok: false, error: "Cliente no válido." };
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("v_cartera")
+      .select("saldo, dias_vencido")
+      .eq("cliente_id", clienteId);
+    if (error) return fallo(error);
+    const filas = (data ?? []).map((d) => ({ saldo: Number(d.saldo ?? 0), dias: Number(d.dias_vencido ?? 0) }));
+    const vencidas = filas.filter((f) => f.dias > 0);
+    return {
+      ok: true,
+      datos: {
+        vencido: Math.round(vencidas.reduce((s, f) => s + f.saldo, 0) * 100) / 100,
+        documentosVencidos: vencidas.length,
+        diasMasAtrasado: vencidas.reduce((m, f) => Math.max(m, f.dias), 0),
+        total: Math.round(filas.reduce((s, f) => s + f.saldo, 0) * 100) / 100,
+      },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}

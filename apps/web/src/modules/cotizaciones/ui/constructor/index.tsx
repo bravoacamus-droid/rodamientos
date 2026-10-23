@@ -55,6 +55,7 @@ import {
   valeLaPena,
   type Borrador,
 } from "../../dominio/borrador";
+import { AvisoDeuda } from "./aviso-deuda";
 import { SelectorCondiciones } from "./selector-condiciones";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
@@ -428,6 +429,8 @@ export function Constructor({
                 </div>
               </label>
             </div>
+
+            <AvisoDeuda clienteId={estado.clienteId} />
 
             {/*
               Fuera del desplegable (06/10). El aviso solo estaba DENTRO de
