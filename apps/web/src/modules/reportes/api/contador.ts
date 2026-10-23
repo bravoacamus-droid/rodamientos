@@ -65,10 +65,9 @@ async function leerVentas(desde: string, hasta: string, cambio: (f: string) => n
   const { data, error } = await supabase
     .from("comprobantes")
     .select(
-      `tipo, numero, fecha_emision, fecha_vencimiento, estado, moneda, tipo_cambio,
+      `tipo, numero, fecha_emision, fecha_vencimiento, estado, moneda, tipo_cambio, referencia_id,
        op_gravada, igv, total, retencion_monto, pen_gravada, pen_igv, pen_total, pen_retencion,
-       clientes!comprobantes_cliente_id_fkey(razon_social, tipo_documento, numero_documento),
-       referencia:comprobantes!referencia_id(tipo, numero, fecha_emision, tipo_cambio)`,
+       clientes!comprobantes_cliente_id_fkey(razon_social, tipo_documento, numero_documento)`,
     )
     .gte("fecha_emision", desde)
     .lte("fecha_emision", hasta)
@@ -77,11 +76,27 @@ async function leerVentas(desde: string, hasta: string, cambio: (f: string) => n
     .limit(5000);
   if (error) throw new Error(error.message);
 
+  // El comprobante al que apunta cada nota, en una consulta aparte: la
+  // relación de `comprobantes` consigo misma PostgREST la resolvía en el
+  // sentido contrario (las notas DE este) y la referencia salía vacía.
+  const idsRef = [...new Set((data ?? []).map((d) => d.referencia_id).filter((x): x is string => !!x))];
+  const refs = new Map<string, { tipo: string; numero: string; fecha_emision: string; tipo_cambio: number | null }>();
+  if (idsRef.length > 0) {
+    const r = await supabase.from("comprobantes").select("id, tipo, numero, fecha_emision, tipo_cambio").in("id", idsRef);
+    if (r.error) throw new Error(r.error.message);
+    for (const x of r.data ?? []) {
+      refs.set(String(x.id), {
+        tipo: String(x.tipo),
+        numero: String(x.numero),
+        fecha_emision: String(x.fecha_emision),
+        tipo_cambio: x.tipo_cambio == null ? null : Number(x.tipo_cambio),
+      });
+    }
+  }
+
   return (data ?? []).map((d) => {
     const cli = uno(d.clientes as Uno<{ razon_social: string; tipo_documento: string; numero_documento: string }>);
-    const ref = uno(
-      d.referencia as Uno<{ tipo: string; numero: string; fecha_emision: string; tipo_cambio: number | null }>,
-    );
+    const ref = d.referencia_id ? (refs.get(String(d.referencia_id)) ?? null) : null;
     const moneda = d.moneda === "PEN" ? "PEN" : "USD";
     // En dólares: el de la factura; si no lo tiene, el de su día — y una
     // nota, el de su comprobante, que es con el que se registra.
@@ -206,8 +221,8 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
   linea("");
   linea("COMPRAS").font = { bold: true };
   linea("Documentos", compras.length);
-  linea("Base imponible", compras.reduce((s, c) => s + (c.base ?? 0), 0), SOLES);
-  linea("IGV", compras.reduce((s, c) => s + (c.igv ?? 0), 0), SOLES);
+  linea("Base imponible", Math.round(compras.reduce((s, c) => s + (c.base ?? 0), 0) * 100) / 100, SOLES);
+  linea("IGV", Math.round(compras.reduce((s, c) => s + (c.igv ?? 0), 0) * 100) / 100, SOLES);
   linea("");
   linea("CÓMO SE PASÓ A SOLES").font = { bold: true };
   for (const texto of [
@@ -215,6 +230,7 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
     "Domingos y feriados: el último publicado antes.",
     "Notas de crédito: con el cambio del comprobante que modifican, y en negativo.",
     "Facturas emitidas en soles: los importes impresos, sin convertir.",
+    "Importaciones: con la factura del proveedor del exterior. El IGV de importación va en la DUA, que no está en el sistema.",
   ]) {
     linea(texto);
   }
