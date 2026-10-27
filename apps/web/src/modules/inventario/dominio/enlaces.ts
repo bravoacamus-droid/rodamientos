@@ -28,13 +28,11 @@ export type TipoReferencia = (typeof TIPOS_REFERENCIA)[number];
 /**
  * La ficha del documento que movió el stock, o `null` si no hay dónde ir.
  *
- * Los dos que devuelven `null` lo hacen por motivos distintos y ninguno es un
- * descuido:
+ * El único que devuelve `null` lo hace a propósito, y el ajuste ya no:
  *
- *  · `ajuste` SÍ trae su id, pero un ajuste de inventario no tiene ficha: la
- *    pantalla `/inventario/ajuste` es el formulario para hacer uno nuevo, no
- *    para mirar uno viejo. Enlazar ahí llevaría a empezar otro ajuste, que es
- *    peor que no enlazar.
+ *  · `ajuste` lleva a `/inventario/ajustes/<id>`, su ficha de solo lectura
+ *    (27/10). Antes no enlazaba: `/inventario/ajuste` (singular) es el
+ *    formulario para hacer uno nuevo, y enlazar ahí llevaba a empezar otro.
  *  · `importacion` no trae id siquiera. Y ojo con el nombre, que engaña: NO es
  *    el módulo de importaciones —los envíos que vienen de fuera— sino la carga
  *    inicial del maestro desde el Excel (`importar_productos`). Un stock que
@@ -53,6 +51,7 @@ export function enlaceDeReferencia(
     case "guia":
       return `/guias/${id}`;
     case "ajuste":
+      return `/inventario/ajustes/${id}`;
     case "importacion":
       return null;
     default:

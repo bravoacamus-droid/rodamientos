@@ -8,6 +8,7 @@ import {
   PaginacionKeyset,
   Skeleton,
   formatearFechaHora,
+  leerTamano,
 } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 import { puedo, sinPermiso } from "@/lib/permisos";
@@ -24,9 +25,12 @@ import {
   ETIQUETA_ACCION,
   ETIQUETA_ENTIDAD,
   TONO_ACCION,
+  QUE_PASO,
   describir,
   enlaceDe,
+  referenciaDe,
   type FiltrosBitacora,
+  type Movimiento,
 } from "../dominio/tipos";
 import { Fallos } from "./fallos";
 import { FiltrosBarra } from "./filtros";
@@ -71,8 +75,15 @@ export default async function PaginaBitacora({ searchParams }: Props) {
     usuario: uno(sp.usuario),
     desde: uno(sp.desde),
     hasta: uno(sp.hasta),
+    // Los tres que escribe la barra desde el 27/10. Un filtro que se escribe
+    // en la URL y no se lee es el cable que faltaba del 10/09 (CLAUDE.md §2).
+    q: uno(sp.q),
+    que: uno(sp.que) && Object.hasOwn(QUE_PASO, uno(sp.que)!) ? uno(sp.que) : undefined,
+    cargas: uno(sp.cargas) === "1",
     cursor: uno(sp.cursor),
     direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
+    // El selector de filas escribe `?n=`; sin él, las 50 de siempre.
+    limite: uno(sp.n) ? leerTamano(uno(sp.n)) : POR_PAGINA,
   };
 
   const personas = await quienesAparecen();
@@ -155,7 +166,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
 
   if (filas.length === 0) {
     const filtrando = Boolean(
-      filtros.entidad || filtros.usuario || filtros.desde || filtros.hasta,
+      filtros.entidad || filtros.usuario || filtros.desde || filtros.hasta || filtros.q || filtros.que,
     );
     return (
       <EstadoVacio
@@ -163,7 +174,9 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
         titulo={filtrando ? "Nada coincide" : "Todavía no ha pasado nada"}
         descripcion={
           filtrando
-            ? "Prueba con menos filtros."
+            ? filtros.cargas
+              ? "Prueba con menos filtros."
+              : "Prueba con menos filtros, o enciende «Incluir cargas de datos»."
             : "Se irá llenando según se emitan documentos, se muevan precios o se cambien permisos."
         }
       />
@@ -183,20 +196,14 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
       */}
       <ul className="flex flex-col gap-2.5 p-3 pt-0 @3xl:hidden">
         {filas.map((m) => {
-          const href = enlaceDe(m.entidad, m.entidad_id);
+          const href = enlaceDeFila(m);
           return (
             <li key={m.id} className="rounded-lg border border-[var(--border)] p-3">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <Badge tone={TONO_ACCION[m.accion] ?? "neutral"} size="sm">
                   {ETIQUETA_ACCION[m.accion] ?? m.accion}
                 </Badge>
-                {href ? (
-                  <Link href={href} className="text-sm text-brand-600 hover:underline">
-                    {ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}
-                  </Link>
-                ) : (
-                  <span className="text-sm">{ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}</span>
-                )}
+                <SobreQue m={m} href={href} />
               </div>
 
               {describir(m.descripcion) ? (
@@ -228,7 +235,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
           </thead>
           <tbody>
             {filas.map((m) => {
-              const href = enlaceDe(m.entidad, m.entidad_id);
+              const href = enlaceDeFila(m);
               return (
                 <tr key={m.id} className="border-b border-[var(--border-soft)]">
                   <td className="whitespace-nowrap px-4 py-2.5 tabular text-[var(--fg-muted)]">
@@ -239,13 +246,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
                     <Badge tone={TONO_ACCION[m.accion] ?? "neutral"} size="sm">
                       {ETIQUETA_ACCION[m.accion] ?? m.accion}
                     </Badge>{" "}
-                    {href ? (
-                      <Link href={href} className="text-brand-600 hover:underline">
-                        {ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}
-                      </Link>
-                    ) : (
-                      <span>{ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad}</span>
-                    )}
+                    <SobreQue m={m} href={href} />
                   </td>
                   <td className="px-4 py-2.5 text-[var(--fg-muted)]">
                     {describir(m.descripcion)}
@@ -272,8 +273,47 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
         cantidadEnPagina={filas.length}
         cursorSiguiente={siguiente}
         cursorAnterior={anterior}
-        porPagina={POR_PAGINA}
+        porPagina={filtros.limite ?? POR_PAGINA}
       />
     </>
+  );
+}
+
+/** A dónde lleva la fila; un cobro, a su factura (158). */
+function enlaceDeFila(m: Movimiento): string | null {
+  const comprobante = m.metadata?.comprobante_id;
+  return enlaceDe(m.entidad, m.entidad_id, {
+    accion: m.accion,
+    comprobanteId: typeof comprobante === "string" ? comprobante : null,
+  });
+}
+
+/**
+ * «Usuarios · **Carlos Aguirre**», «Compras · **CMP-26-00016**» (TR-01).
+ *
+ * Antes solo decía la tabla, y seis «Usuarios · Rol: gerencia → ventas»
+ * seguidos no decían de quién. La referencia va en negrita porque es lo que
+ * se busca; el enlace, subrayado, porque es un enlace.
+ */
+function SobreQue({ m, href }: { m: Movimiento; href: string | null }) {
+  const entidad = ETIQUETA_ENTIDAD[m.entidad] ?? m.entidad;
+  const ref = referenciaDe(m);
+  const texto = (
+    <>
+      {entidad}
+      {ref ? (
+        <>
+          {" · "}
+          <strong className="font-semibold">{ref}</strong>
+        </>
+      ) : null}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="text-sm text-brand-600 underline underline-offset-2 hover:text-brand-700">
+      {texto}
+    </Link>
+  ) : (
+    <span className="text-sm">{texto}</span>
   );
 }

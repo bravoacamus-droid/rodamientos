@@ -4,13 +4,52 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
-import { ENTIDADES, type FiltrosBitacora, type Movimiento } from "../dominio/tipos";
+import {
+  ENTIDADES,
+  ENTIDADES_DE_CARGA,
+  ENTIDADES_DE_PERMISOS,
+  QUIEN_SISTEMA,
+  limitesDelDiaEnLima,
+  textoDeBusqueda,
+  type FiltrosBitacora,
+  type Movimiento,
+  type QuePaso,
+} from "../dominio/tipos";
 
 export type Resultado<T> =
   | { ok: true; datos: T }
   | { ok: false; error: string };
 
 export const POR_PAGINA = 50;
+
+/**
+ * Una fila de `actividad` como la lee la pantalla.
+ *
+ * `referencia` la añade la 158; hasta que esté aplicada la columna no existe,
+ * y por eso se pide con `*` y se lee si viene: PostgREST tumba la consulta
+ * entera si se le nombra una columna que no existe (CLAUDE.md §5).
+ */
+function aMovimiento(f: Record<string, unknown>): Movimiento {
+  return {
+    id: Number(f.id),
+    usuario_id: (f.usuario_id as string | null) ?? null,
+    usuario_nombre: String(f.usuario_nombre ?? "sistema"),
+    accion: String(f.accion),
+    entidad: String(f.entidad),
+    entidad_id: (f.entidad_id as string | null) ?? null,
+    descripcion: (f.descripcion as string | null) ?? null,
+    creado_en: String(f.creado_en),
+    referencia: (f.referencia as string | null | undefined) ?? null,
+    metadata: (f.metadata as Record<string, unknown> | null | undefined) ?? null,
+  };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** ¿La consulta cayó porque `referencia` todavía no existe (158 sin aplicar)? */
+function faltaLaColumna(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === "42703" || /referencia/.test(error.message ?? "")));
+}
 
 /**
  * La bitácora, de lo más reciente a lo más antiguo.
@@ -32,43 +71,79 @@ export async function movimientos(
     const supabase = await clienteServidor();
 
     const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
+    const porPagina = filtros.limite ?? POR_PAGINA;
+    const texto = textoDeBusqueda(filtros.q);
 
-    let consulta = supabase
-      .from("actividad")
-      .select("id, usuario_id, usuario_nombre, accion, entidad, entidad_id, descripcion, creado_en")
-      .order("id", { ascending: atras })
-      // Uno de más, para saber si hay página siguiente sin contar la tabla.
-      .limit((filtros.limite ?? POR_PAGINA) + 1);
+    const consultar = (conReferencia: boolean) => {
+      let consulta = supabase
+        .from("actividad")
+        .select("*")
+        .order("id", { ascending: atras })
+        // Uno de más, para saber si hay página siguiente sin contar la tabla.
+        .limit(porPagina + 1);
 
-    // Hacia atrás, lo que está POR ENCIMA del cursor y en orden ascendente;
-    // el array se da la vuelta al final.
-    if (filtros.cursor) {
-      const n = Number(filtros.cursor);
-      if (Number.isFinite(n)) consulta = atras ? consulta.gt("id", n) : consulta.lt("id", n);
-    }
-    // La entidad se compara contra la lista conocida y no se pasa tal cual: es
-    // un valor que llega de la barra de direcciones.
-    const entidad = ENTIDADES.find((e) => e === filtros.entidad);
-    if (entidad) consulta = consulta.eq("entidad", entidad);
-    if (filtros.usuario) consulta = consulta.eq("usuario_id", filtros.usuario);
-    if (filtros.desde) consulta = consulta.gte("creado_en", `${filtros.desde}T00:00:00Z`);
-    if (filtros.hasta) consulta = consulta.lte("creado_en", `${filtros.hasta}T23:59:59Z`);
+      // Hacia atrás, lo que está POR ENCIMA del cursor y en orden ascendente;
+      // el array se da la vuelta al final.
+      if (filtros.cursor) {
+        const n = Number(filtros.cursor);
+        if (Number.isFinite(n)) consulta = atras ? consulta.gt("id", n) : consulta.lt("id", n);
+      }
+      // La entidad se compara contra la lista conocida y no se pasa tal cual: es
+      // un valor que llega de la barra de direcciones. «Permisos» incluye las
+      // filas viejas de `permisos_rol`, que se llaman igual.
+      const entidad = ENTIDADES.find((e) => e === filtros.entidad);
+      if (entidad === "permisos") consulta = consulta.in("entidad", ["permisos", "permisos_rol"]);
+      else if (entidad) consulta = consulta.eq("entidad", entidad);
 
-    const { data, error } = await consulta;
+      const sistema = filtros.usuario === QUIEN_SISTEMA;
+      if (sistema) consulta = consulta.is("usuario_id", null);
+      else if (filtros.usuario && UUID.test(filtros.usuario)) consulta = consulta.eq("usuario_id", filtros.usuario);
+
+      // Las cargas de datos se ocultan salvo que se pidan, o que se pida ver
+      // justo lo que hizo «sistema». Sus borrados se ven siempre.
+      if (!filtros.cargas && !sistema) {
+        consulta = consulta.or(
+          `usuario_id.not.is.null,accion.eq.borrado,entidad.not.in.(${ENTIDADES_DE_CARGA.join(",")})`,
+        );
+      }
+
+      switch (filtros.que as QuePaso | undefined) {
+        case "graves":
+          consulta = consulta.or(
+            'accion.eq.borrado,descripcion.ilike."%→ anulad%",' +
+              'descripcion.ilike."%anulada: false → true%",descripcion.ilike."%anulado: false → true%"',
+          );
+          break;
+        case "precios":
+          consulta = consulta.eq("entidad", "productos").ilike("descripcion", "%precio%");
+          break;
+        case "permisos":
+          consulta = consulta.in("entidad", [...ENTIDADES_DE_PERMISOS]);
+          break;
+      }
+
+      if (texto) {
+        consulta = consulta.or(
+          conReferencia
+            ? `referencia.ilike."%${texto}%",usuario_nombre.ilike."%${texto}%"`
+            : `descripcion.ilike."%${texto}%",usuario_nombre.ilike."%${texto}%"`,
+        );
+      }
+
+      const { desde, hasta } = limitesDelDiaEnLima(filtros.desde, filtros.hasta);
+      if (desde) consulta = consulta.gte("creado_en", desde);
+      if (hasta) consulta = consulta.lte("creado_en", hasta);
+      return consulta;
+    };
+
+    let { data, error } = await consultar(true);
+    // Mientras la 158 no esté aplicada, buscar por número no puede mirar
+    // `referencia`: se busca en la descripción y en quién lo hizo.
+    if (error && texto && faltaLaColumna(error)) ({ data, error } = await consultar(false));
     if (error) return fallo(error);
 
-    const todas = (data ?? []).map((f) => ({
-      id: Number(f.id),
-      usuario_id: (f.usuario_id as string | null) ?? null,
-      usuario_nombre: String(f.usuario_nombre ?? "sistema"),
-      accion: String(f.accion),
-      entidad: String(f.entidad),
-      entidad_id: (f.entidad_id as string | null) ?? null,
-      descripcion: (f.descripcion as string | null) ?? null,
-      creado_en: String(f.creado_en),
-    }));
+    const todas = ((data ?? []) as Record<string, unknown>[]).map(aMovimiento);
 
-    const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
     const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
 
@@ -108,7 +183,7 @@ export async function historialDe(
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("actividad")
-      .select("id, usuario_id, usuario_nombre, accion, entidad, entidad_id, descripcion, creado_en")
+      .select("*")
       .eq("entidad", entidad)
       .eq("entidad_id", id)
       .order("id", { ascending: false })
@@ -118,16 +193,7 @@ export async function historialDe(
 
     return {
       ok: true,
-      datos: (data ?? []).map((f) => ({
-        id: Number(f.id),
-        usuario_id: (f.usuario_id as string | null) ?? null,
-        usuario_nombre: String(f.usuario_nombre ?? "sistema"),
-        accion: String(f.accion),
-        entidad: String(f.entidad),
-        entidad_id: (f.entidad_id as string | null) ?? null,
-        descripcion: (f.descripcion as string | null) ?? null,
-        creado_en: String(f.creado_en),
-      })),
+      datos: ((data ?? []) as Record<string, unknown>[]).map(aMovimiento),
     };
   } catch (e) {
     return fallo(e);

@@ -40,3 +40,30 @@ export async function marcarRevisado(id: number): Promise<ResultadoFallo> {
     };
   }
 }
+
+/**
+ * Marcar como revisados todos los que quedan (TR-11, 27/10).
+ *
+ * Había 73 sin revisar, casi todos del entorno de desarrollo («Loading chunk»,
+ * «is not defined»). Uno a uno no los marca nadie, y el día que falle algo de
+ * verdad quedaría debajo de ellos. Mismo permiso que marcar uno.
+ */
+export async function marcarTodosRevisados(): Promise<ResultadoFallo> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  const prohibido = await sinPermiso("bitacora", "editar");
+  if (prohibido) return { ok: false, error: prohibido };
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.from("fallos").update({ revisado: true }).eq("revisado", false);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/actividad");
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudieron marcar.",
+    };
+  }
+}

@@ -109,10 +109,15 @@ describe("los enlaces del kardex", () => {
     expect(enlaceDeReferencia(null, "algo")).toBeNull();
   });
 
-  it("el ajuste y la carga inicial no enlazan, y es a propósito", () => {
-    // El ajuste TRAE su id, pero `/inventario/ajuste` es el formulario para
-    // hacer uno nuevo: enlazar ahí llevaría a empezar otro.
-    expect(enlaceDeReferencia("ajuste", "6f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b")).toBeNull();
+  it("el ajuste lleva a su ficha, no al formulario de hacer otro", () => {
+    // `/inventario/ajuste` (singular) es el formulario para hacer uno nuevo;
+    // la ficha de uno hecho es `/inventario/ajustes/<id>` (27/10).
+    expect(enlaceDeReferencia("ajuste", "6f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b")).toBe(
+      "/inventario/ajustes/6f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b",
+    );
+  });
+
+  it("la carga inicial no enlaza, y es a propósito", () => {
     // «importacion» es la carga del Excel, no el módulo de importaciones.
     expect(enlaceDeReferencia("importacion", "6f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b")).toBeNull();
   });

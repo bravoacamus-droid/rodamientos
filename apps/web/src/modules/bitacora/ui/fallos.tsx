@@ -4,12 +4,12 @@
 
 import * as React from "react";
 import { Badge, Button, formatearFechaHora } from "@rodatech/ui";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, CheckCheck, ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { marcarRevisado } from "../acciones/fallos";
+import { marcarRevisado, marcarTodosRevisados } from "../acciones/fallos";
 import type { Fallo } from "../api/consultas";
-import { fraseDelFallo } from "../dominio/fallo";
+import { fraseDelFallo, queFallo } from "../dominio/fallo";
 
 /**
  * Lo que se rompió y nadie te contó.
@@ -41,6 +41,29 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
 
   return (
     <div className="flex flex-col gap-2">
+      {/* Todos de una vez: eran 73, casi todos del entorno de desarrollo, y
+          uno a uno no los marca nadie (27/10). Arriba, para que no haya que
+          desplegar la lista para encontrarlo. */}
+      {puedeRevisar && fallos.length > 1 ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="self-start"
+          disabled={marcando}
+          onClick={() => {
+            if (!window.confirm(`¿Marcar los ${fallos.length} como revisados? No se borra nada: si alguno vuelve a pasar, saldrá otra vez.`)) return;
+            marcar(async () => {
+              const r = await marcarTodosRevisados();
+              if (!r.ok) setError(r.error);
+              else router.refresh();
+            });
+          }}
+        >
+          <CheckCheck aria-hidden="true" />
+          Marcar todos como revisados
+        </Button>
+      ) : null}
+
       {error ? (
         <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm">
           {error}
@@ -67,14 +90,17 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
               nada a quien abre esto. El original sigue, plegado, para quien
               lo arregla.
             */}
+            {/* El titular dice DÓNDE (27/10): «la ficha de una cotización», no
+                `navegador` y un id. La frase de debajo dice qué pasó. */}
             <span className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{fraseDelFallo(f)}</span>
+              <span className="font-semibold">{queFallo(f.origen, f.ruta)}</span>
               {f.veces > 1 ? (
                 <Badge tone="danger" size="sm">
                   {f.veces} veces
                 </Badge>
               ) : null}
             </span>
+            <p className="mt-0.5 text-sm">{fraseDelFallo(f)}</p>
             <details className="mt-1 text-sm">
               <summary className="cursor-pointer text-[var(--fg-muted)] hover:text-[var(--fg)]">
                 Detalle para el técnico
@@ -93,11 +119,11 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
                 la caja a 656 px dentro de una pantalla de 390. Medido el 24/09.
               */}
               <span className="mt-0.5 block break-words">{f.mensaje}</span>
+              {f.ruta ? <span className="mt-0.5 block break-words">En {f.ruta}</span> : null}
             </details>
             <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
               {formatearFechaHora(f.ultima_vez)}
               {f.veces > 1 ? ` · la primera, ${formatearFechaHora(f.primera_vez)}` : ""}
-              {f.ruta ? ` · en ${f.ruta}` : ""}
               {` · lo vio ${f.usuario_nombre}`}
             </span>
           </div>
