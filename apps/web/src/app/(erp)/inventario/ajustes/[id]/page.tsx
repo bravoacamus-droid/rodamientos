@@ -91,8 +91,8 @@ export default async function PaginaFichaAjuste({ params }: { params: Promise<{ 
               </Link>
               <p className="mt-0.5 text-[var(--fg-muted)]">{l.descripcion}</p>
               <p className="mt-1.5 tabular">
-                Había {formatearNumero(l.cantidad_sistema, 0)} · se contaron{" "}
-                {formatearNumero(l.cantidad_fisica, 0)} ·{" "}
+                Había {cantidad(l.cantidad_sistema)} · se contaron{" "}
+                {cantidad(l.cantidad_fisica)} ·{" "}
                 <Diferencia valor={l.diferencia} />
               </p>
             </li>
@@ -122,8 +122,8 @@ export default async function PaginaFichaAjuste({ params }: { params: Promise<{ 
                     </Link>
                     <span className="ml-2 text-[var(--fg-muted)]">{l.descripcion}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-right tabular">{formatearNumero(l.cantidad_sistema, 0)}</td>
-                  <td className="px-4 py-2.5 text-right tabular">{formatearNumero(l.cantidad_fisica, 0)}</td>
+                  <td className="px-4 py-2.5 text-right tabular">{cantidad(l.cantidad_sistema)}</td>
+                  <td className="px-4 py-2.5 text-right tabular">{cantidad(l.cantidad_fisica)}</td>
                   <td className="px-4 py-2.5 text-right tabular">
                     <Diferencia valor={l.diferencia} />
                   </td>
@@ -152,12 +152,20 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   );
 }
 
+/**
+ * Una cantidad con los decimales que tenga: hay 30 productos en metros, y
+ * 2,5 m redondeado a entero se leería «faltaron 3».
+ */
+function cantidad(v: number): string {
+  return formatearNumero(v, Number.isInteger(v) ? 0 : 2);
+}
+
 /** «+3» en verde, «−2» en rojo: sobró o faltó. */
 function Diferencia({ valor }: { valor: number }) {
   if (valor === 0) return <span>sin diferencia</span>;
   return (
     <span className={`font-semibold ${valor > 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"}`}>
-      {valor > 0 ? `sobraron ${formatearNumero(valor, 0)}` : `faltaron ${formatearNumero(-valor, 0)}`}
+      {valor > 0 ? `sobraron ${cantidad(valor)}` : `faltaron ${cantidad(-valor)}`}
     </span>
   );
 }

@@ -47,16 +47,28 @@ export async function marcarRevisado(id: number): Promise<ResultadoFallo> {
  * Había 73 sin revisar, casi todos del entorno de desarrollo («Loading chunk»,
  * «is not defined»). Uno a uno no los marca nadie, y el día que falle algo de
  * verdad quedaría debajo de ellos. Mismo permiso que marcar uno.
+ *
+ * Recibe los ids que la pantalla está enseñando y marca esos, no «todos los
+ * pendientes»: la lista trae como mucho 50 y el aviso dice cuántos. Marcar
+ * 73 tras confirmar 50 se llevaba también lo que nadie había visto.
  */
-export async function marcarTodosRevisados(): Promise<ResultadoFallo> {
+const IDS = z.array(z.number().int().positive()).min(1).max(200);
+
+export async function marcarTodosRevisados(ids: number[]): Promise<ResultadoFallo> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
   const prohibido = await sinPermiso("bitacora", "editar");
   if (prohibido) return { ok: false, error: prohibido };
+  const leidos = IDS.safeParse(ids);
+  if (!leidos.success) return { ok: false, error: "No hay fallos que marcar." };
 
   try {
     const supabase = await clienteServidor();
-    const { error } = await supabase.from("fallos").update({ revisado: true }).eq("revisado", false);
+    const { error } = await supabase
+      .from("fallos")
+      .update({ revisado: true })
+      .in("id", leidos.data)
+      .eq("revisado", false);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/actividad");
     return { ok: true };

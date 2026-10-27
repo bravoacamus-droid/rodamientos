@@ -5,9 +5,11 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 
 import {
+  CLAVES_DE_REFERENCIA,
   ENTIDADES,
   ENTIDADES_DE_CARGA,
   ENTIDADES_DE_PERMISOS,
+  FIN_DE_LAS_CARGAS,
   QUIEN_SISTEMA,
   limitesDelDiaEnLima,
   textoDeBusqueda,
@@ -100,10 +102,12 @@ export async function movimientos(
       else if (filtros.usuario && UUID.test(filtros.usuario)) consulta = consulta.eq("usuario_id", filtros.usuario);
 
       // Las cargas de datos se ocultan salvo que se pidan, o que se pida ver
-      // justo lo que hizo «sistema». Sus borrados se ven siempre.
+      // justo lo que hizo «sistema». Sus borrados se ven siempre, y lo de
+      // después de las cargas también: el envío a SUNAT escribe como sistema.
       if (!filtros.cargas && !sistema) {
         consulta = consulta.or(
-          `usuario_id.not.is.null,accion.eq.borrado,entidad.not.in.(${ENTIDADES_DE_CARGA.join(",")})`,
+          `usuario_id.not.is.null,accion.eq.borrado,entidad.not.in.(${ENTIDADES_DE_CARGA.join(",")}),` +
+            `creado_en.gte."${FIN_DE_LAS_CARGAS}"`,
         );
       }
 
@@ -126,7 +130,13 @@ export async function movimientos(
         consulta = consulta.or(
           conReferencia
             ? `referencia.ilike."%${texto}%",usuario_nombre.ilike."%${texto}%"`
-            : `descripcion.ilike."%${texto}%",usuario_nombre.ilike."%${texto}%"`,
+            : // Sin la columna, el número de un borrado está en metadata.antes,
+              // que es de donde lo pinta la fila: si se ve, se encuentra.
+              [
+                `descripcion.ilike."%${texto}%"`,
+                `usuario_nombre.ilike."%${texto}%"`,
+                ...CLAVES_DE_REFERENCIA.map((k) => `metadata->antes->>${k}.ilike."%${texto}%"`),
+              ].join(","),
         );
       }
 

@@ -89,7 +89,7 @@ export function FiltrosBarra({ personas }: { personas: { id: string; nombre: str
           <span className="font-medium">Incluir cargas de datos</span>
           <span className="text-[var(--fg-muted)]">
             {" "}
-            · los productos y el histórico que entraron del Excel
+            · los productos, clientes y el histórico que entraron del Excel hasta el 23/10
           </span>
         </label>
       </div>

@@ -144,12 +144,15 @@ export function enlaceDe(
  * De qué es la fila, aunque la 158 no haya rellenado `referencia`: en un
  * borrado el número sigue en `metadata.antes`.
  */
+/** Dónde guarda un borrado su número o su nombre, por orden de preferencia. */
+export const CLAVES_DE_REFERENCIA = ["numero", "serie", "codigo", "razon_social", "nombre"] as const;
+
 export function referenciaDe(m: Movimiento): string | null {
   if (m.referencia) return m.referencia;
   if (m.accion !== "borrado") return null;
   const antes = (m.metadata?.antes ?? null) as Record<string, unknown> | null;
   if (!antes || typeof antes !== "object") return null;
-  for (const k of ["numero", "serie", "codigo", "razon_social", "nombre"]) {
+  for (const k of CLAVES_DE_REFERENCIA) {
     const v = antes[k];
     if (typeof v === "string" && v.trim()) return v.trim();
   }
@@ -177,6 +180,12 @@ export const ENTIDADES_DE_PERMISOS = ["permisos_rol", "permisos", "roles", "perf
  * persona, y entierra lo demás: de 10 114 filas, 8 300 eran eso. Los
  * BORRADOS de sistema se ven siempre, porque son limpiezas y alguien
  * preguntará por ellas.
+ *
+ * Y solo lo de ANTES de `FIN_DE_LAS_CARGAS`. «Sistema» no es solo el Excel:
+ * el envío a SUNAT escribe en `comprobantes` con la llave de servicio, sin
+ * sesión, así que «SUNAT aceptó», «SUNAT rechazó» y las bajas también llegan
+ * como sistema. Ocultar por tabla los habría escondido para siempre; por
+ * fecha, lo que pase desde el pase a producción se ve siempre.
  */
 export const ENTIDADES_DE_CARGA = [
   "productos",
@@ -185,6 +194,13 @@ export const ENTIDADES_DE_CARGA = [
   "clientes",
   "permisos_rol",
 ] as const;
+
+/**
+ * El día siguiente a la última carga conocida (23/10: marcas por SQL y el
+ * borrado del producto 20126), en hora de Lima. Una carga posterior se verá
+ * en la lista: es el lado bueno para equivocarse.
+ */
+export const FIN_DE_LAS_CARGAS = "2026-10-24T00:00:00-05:00";
 
 /** El valor de «Quién» para las filas sin persona. */
 export const QUIEN_SISTEMA = "sistema";

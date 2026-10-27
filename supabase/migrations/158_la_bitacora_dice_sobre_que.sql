@@ -347,6 +347,46 @@ begin
       raise exception '158: la baja de % no dice a quién', v_otro_nombre;
     end if;
 
+    -- 2 · Los cuatro disparadores de columnas: se cambia la columna vigilada
+    -- y se mira la fila. Vigilar una columna que no existe no da error, solo
+    -- silencio (051 con `estado` y `total`), y eso solo lo ve un centinela
+    -- que cambia el valor.
+    update guias_remision set motivo_anulacion = 'Centinela 158'
+     where id = (select id from guias_remision order by creado_en limit 1)
+    returning numero into v_ped_num;
+    if v_ped_num is not null and not exists (
+         select 1 from actividad where entidad = 'guias_remision' and accion = 'cambiado'
+            and referencia = v_ped_num and descripcion like 'motivo_anulacion:%') then
+      raise exception '158: cambiar la guía % no dejó fila', v_ped_num;
+    end if;
+
+    update recepciones set anulada = true
+     where id = (select id from recepciones where not anulada order by creado_en limit 1)
+    returning numero into v_ped_num;
+    if v_ped_num is not null and not exists (
+         select 1 from actividad where entidad = 'recepciones' and accion = 'cambiado'
+            and referencia = v_ped_num and descripcion = 'anulada: false → true') then
+      raise exception '158: anular la recepción % no dejó fila', v_ped_num;
+    end if;
+
+    insert into ajustes_inventario (numero, motivo, usuario_id)
+    values ('AJU-C158', 'Centinela 158', v_usr) returning id into v_cot;
+    update ajustes_inventario set anulado = true where id = v_cot;
+    if not exists (select 1 from actividad where entidad = 'ajustes_inventario' and entidad_id = v_cot
+                     and accion = 'cambiado' and referencia = 'AJU-C158'
+                     and descripcion = 'anulado: false → true') then
+      raise exception '158: anular un ajuste no dejó fila';
+    end if;
+
+    insert into sunat_bajas (fecha_comunicacion, correlativo, identificador, fecha_documentos, comprobantes)
+    values (current_date, 99158, 'RA-C158', current_date, array[v_fac]) returning id into v_cot;
+    update sunat_bajas set estado = 'aceptada', codigo = '0' where id = v_cot;
+    if not exists (select 1 from actividad where entidad = 'sunat_bajas' and entidad_id = v_cot
+                     and accion = 'cambiado' and referencia = 'RA-C158'
+                     and descripcion like '%estado: enviada → aceptada%') then
+      raise exception '158: la respuesta de SUNAT a una baja no dejó fila';
+    end if;
+
     -- 4 · Sin el permiso no se lee: un rol sin «bitacora/ver».
     perform set_config('request.jwt.claims',
       json_build_object('sub', (select p.id from perfiles p
@@ -373,5 +413,5 @@ begin
                                   from series_documento) then
     raise exception '158: el centinela movió las series';
   end if;
-  raise notice '158: cada fila dice sobre qué; pedido, cobro y baja de usuario quedan apuntados; un cobro no se borra con sesión; la bitácora pide su permiso.';
+  raise notice '158: cada fila dice sobre qué; pedido, cobro, baja de usuario, guía, recepción, ajuste y baja en SUNAT quedan apuntados; un cobro no se borra con sesión; la bitácora pide su permiso.';
 end $$;

@@ -43,7 +43,9 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
     <div className="flex flex-col gap-2">
       {/* Todos de una vez: eran 73, casi todos del entorno de desarrollo, y
           uno a uno no los marca nadie (27/10). Arriba, para que no haya que
-          desplegar la lista para encontrarlo. */}
+          desplegar la lista para encontrarlo. Marca los de la lista y no
+          más: trae como mucho 50, y lo que llegó después de abrir la
+          pantalla nadie lo ha visto. */}
       {puedeRevisar && fallos.length > 1 ? (
         <Button
           type="button"
@@ -53,7 +55,7 @@ export function Fallos({ fallos, puedeRevisar = true }: { fallos: Fallo[]; puede
           onClick={() => {
             if (!window.confirm(`¿Marcar los ${fallos.length} como revisados? No se borra nada: si alguno vuelve a pasar, saldrá otra vez.`)) return;
             marcar(async () => {
-              const r = await marcarTodosRevisados();
+              const r = await marcarTodosRevisados(fallos.map((f) => f.id));
               if (!r.ok) setError(r.error);
               else router.refresh();
             });
