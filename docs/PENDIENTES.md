@@ -8425,3 +8425,13 @@ Luis, 27/10: *«que me avise que tengo cotizaciones sin cerrar o aprobar, que no
 Luis, 27/10: *«vale, sí, cada hora»*. `pg_cron` llama cada hora, de 7:05 a 21:05 de Lima, a `generar_alertas()` y a `avisar_al_celular()`, que pide `/api/avisos/enviar` con `pg_net`. La dirección y el `CRON_SECRET` van en el Vault, no en la migración. **Al desplegar:** `node scripts/configurar-avisos.mjs https://<dominio>` (el mismo `CRON_SECRET` que en Vercel). Hasta entonces contesta «sin configurar» y no llama.
 
 Las otras tres respuestas del 27/10: la cotización enviada que pasa su fecha **avisa** (ya lo hace la 161: «por vencer» tres días antes y «vencidas sin respuesta» después); archivar un aviso **no lo calla** si sigue siendo verdad (se queda como está).
+
+### §CK.3 · La limpieza se ejecutó un día antes (27/10, 16:30)
+
+El agente que preparaba `scripts/limpiar-pruebas-27-10.sql` la probaba en seco y un regex le comentó el `raise exception` final: **la limpieza se guardó en la base real**, con sus seis opciones (A-F) que eran decisión de Luis. Lo real de Willy quedó intacto (F002 561, FC02 4, CT02 1261, clientes 113, proveedores 97). Copia del estado tras el incidente: `node scripts/respaldar.mjs` (28 757 filas).
+
+Luis decidió devolver las opciones salvo la B: PED-26-00013 y 00014 **eran pruebas** sobre cotizaciones CT02 reales, que quedan en «enviada» como venían. Restaurado desde la copia del 23/10 (lo corrió Luis): CMP 17, REC 7, los 22 productos con su costo y precios, el 22208 sin archivar, 272 filas de bitácora y 73 fallos sin revisar.
+
+**Queda:** el PDF de CMP-26-00016 en Storage (`documentos-proveedor`), sin compra. Y el script de limpieza ya no hace nada si se vuelve a correr: sus cuentas no cuadran y se para.
+
+**Lección:** un agente que «prueba en seco» contra la base real puede guardar por error. Las pruebas de borrado masivo van con la copia hecha ANTES, no después.
