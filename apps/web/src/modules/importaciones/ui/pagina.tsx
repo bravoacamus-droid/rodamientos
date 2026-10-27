@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
-  Badge,
   CifraAnimada,
+  EstadoBadge,
   EstadoError,
   EstadoVacio,
   Skeleton,
@@ -12,15 +12,14 @@ import { misPermisos } from "@/lib/permisos";
 
 import { importaciones } from "../api/consultas";
 import {
+  claveEstadoTransito,
   diasDeAtraso,
   diasParaLlegar,
   estadoTransito,
   incidenciaGastos,
   resumir,
-  tonoTransito,
 } from "../dominio/transito";
 import {
-  ETIQUETA_TRANSITO,
   type FiltrosImportaciones,
   type Importacion,
 } from "../dominio/tipos";
@@ -335,9 +334,7 @@ function Tarjeta({
           <p className="truncate text-sm font-medium">{compra.proveedor}</p>
         </div>
         <span className="shrink-0">
-          <Badge tone={tonoTransito(estado)} size="xs">
-            {ETIQUETA_TRANSITO[estado]}
-          </Badge>
+          <EstadoBadge estado={claveEstadoTransito(estado)} size="xs" />
         </span>
       </div>
 
@@ -444,9 +441,7 @@ function Fila({
       </td>
 
       <td className="whitespace-nowrap px-4 py-2.5">
-        <Badge tone={tonoTransito(estado)} size="xs">
-          {ETIQUETA_TRANSITO[estado]}
-        </Badge>
+        <EstadoBadge estado={claveEstadoTransito(estado)} size="xs" />
         <span className="mt-0.5 block text-sm text-[var(--fg-subtle)]">
           {cuandoLlega(compra, hoy)}
         </span>

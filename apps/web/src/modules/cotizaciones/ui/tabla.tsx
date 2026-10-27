@@ -251,25 +251,41 @@ export async function TablaCotizaciones({
 
               <p className="mt-0.5 truncate text-sm">{c.cliente}</p>
 
-              {/* En 14 px, no en 12. Esta línea lleva la fecha, el aviso de
-                  vencida y el MARGEN —el número por el que Willy abre esta
-                  pantalla—, y los tres iban al tamaño de una etiqueta. */}
+              {/* El estado y «vencida» arriba, que es lo primero que se mira. */}
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                 <EstadoBadge
                   estado={c.estado}
                   etiqueta={ETIQUETA_ESTADO[c.estado]}
                   size="xs"
                 />
-                <span className="tabular text-[var(--fg-muted)]">
-                  {fechaCorta(c.fecha)}
-                </span>
                 {vencida(c) ? (
                   <span className="font-medium text-[var(--warn)]">vencida</span>
                 ) : null}
-                <span className="ml-auto">
-                  <Margen valor={c.margen_pct} costo={c.costo_total} />
-                </span>
               </div>
+
+              {/* Cada cifra con su etiqueta encima, como en facturación, guías
+                  y pedidos. Iban sueltas en una línea —«17/10/26 115.88%»— sin
+                  decir cuál era cuál, y el margen es el número por el que
+                  Willy abre esta pantalla. «Ítems» no baja: en una tarjeta
+                  pequeña es lo que menos dice, y se ve al abrirla. */}
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
+                <div className="min-w-0">
+                  <dt className="text-sm text-[var(--fg-subtle)]">Fecha</dt>
+                  <dd className="tabular">{fechaCorta(c.fecha)}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-sm text-[var(--fg-subtle)]">Margen</dt>
+                  <dd>
+                    <Margen valor={c.margen_pct} costo={c.costo_total} />
+                  </dd>
+                </div>
+                {c.orden_compra_cliente ? (
+                  <div className="col-span-2 min-w-0">
+                    <dt className="text-sm text-[var(--fg-subtle)]">Orden de compra</dt>
+                    <dd className="break-words font-mono">{c.orden_compra_cliente}</dd>
+                  </div>
+                ) : null}
+              </dl>
 
               <div className="mt-3">
                 <AccionesFilaCotizacion c={c} ancho />

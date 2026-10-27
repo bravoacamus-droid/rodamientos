@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
+import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 
 import { listarProveedores } from "../api/consultas";
@@ -199,9 +199,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">
                 {p.codigo}
               </span>
-              <Badge tone={p.activo ? "success" : "neutral"} size="xs">
-                {p.activo ? "Activo" : "De baja"}
-              </Badge>
+              <EstadoBadge estado={p.activo ? "activo" : "de_baja"} size="xs" />
             </div>
 
             {/* Sin `truncate`: en la tabla el nombre compite con seis columnas;

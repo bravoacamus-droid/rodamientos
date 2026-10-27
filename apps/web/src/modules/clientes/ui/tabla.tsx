@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
+import { Badge, EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 
 import { listarClientes } from "../api/consultas";
@@ -279,18 +279,9 @@ function Estado({ c }: { c: ClienteLista }) {
       </Badge>
     );
   }
-  if (!c.activo) {
-    return (
-      <Badge tone="warning" size="xs">
-        Desactivado
-      </Badge>
-    );
-  }
-  return (
-    <Badge tone="success" size="xs">
-      Activo
-    </Badge>
-  );
+  // «De baja» y no «Desactivado»: la misma palabra que en proveedores,
+  // agencias, usuarios y series, y con la forma del punto además del color.
+  return <EstadoBadge estado={c.activo ? "activo" : "de_baja"} size="xs" />;
 }
 
 /**

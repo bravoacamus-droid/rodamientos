@@ -91,22 +91,20 @@ export function costoEnAlmacen(
   return Math.round(costoUnitario * factor * 10000) / 10000;
 }
 
-/** Tono de la insignia según el estado. */
-export function tonoTransito(
+/**
+ * La clave de `EstadoBadge` para cada estado del envío.
+ *
+ * Antes había aquí un `tonoTransito` con su propio color y, en tipos.ts, sus
+ * propias palabras: la misma compra decía «Llegó a medias» aquí y «Parcial»
+ * en /compras, y el color era el único canal. Lo parcial y lo recibido son
+ * ahora las mismas claves que usa compras; el resto, las de tránsito del
+ * catálogo común.
+ */
+export function claveEstadoTransito(
   estado: EstadoTransito,
-): "brand" | "danger" | "warning" | "success" | "neutral" {
-  switch (estado) {
-    case "en_camino":
-      return "brand";
-    case "atrasada":
-      return "danger";
-    case "parcial":
-      return "warning";
-    case "recibida":
-      return "success";
-    default:
-      return "neutral";
-  }
+): "en_camino" | "atrasada" | "sin_fecha" | "recibida_parcial" | "recibida" {
+  if (estado === "parcial") return "recibida_parcial";
+  return estado;
 }
 
 /**

@@ -956,30 +956,34 @@ export function FilaLinea({
 
           No se esconden —siguen siendo dos botones con su `aria-label`—; se
           mudan a donde significan algo.
+
+          Y con borde y a 24 × 28 px: eran de 16 × 20, en gris y sin contorno,
+          y siendo la única forma de reordenar una línea Willy no los
+          distinguía ni les atinaba.
         */}
         <td className="align-top">
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <span className="tabular text-[var(--fg-muted)]">{indice + 1}</span>
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-0.5">
               <button
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
                 disabled={indice === 0}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                className="flex h-6 w-7 items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40"
                 aria-label={`Subir ${linea.codigo}`}
                 title="Subir"
               >
-                <ChevronUp className="size-3.5" />
+                <ChevronUp className="size-4" />
               </button>
               <button
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
                 disabled={indice === total - 1}
-                className="flex h-4 w-5 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-25"
+                className="flex h-6 w-7 items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40"
                 aria-label={`Bajar ${linea.codigo}`}
                 title="Bajar"
               >
-                <ChevronDown className="size-3.5" />
+                <ChevronDown className="size-4" />
               </button>
             </div>
           </div>

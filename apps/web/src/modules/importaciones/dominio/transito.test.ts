@@ -9,7 +9,7 @@ import {
   ordenarImportaciones,
   resumir,
   sumarGastos,
-  tonoTransito,
+  claveEstadoTransito,
 } from "./transito";
 import type { EstadoTransito, Importacion } from "./tipos";
 
@@ -207,14 +207,16 @@ describe("sumarGastos", () => {
   });
 });
 
-describe("tonoTransito", () => {
+describe("claveEstadoTransito", () => {
+  // Lo parcial y lo recibido con las mismas claves que /compras: la misma
+  // compra no puede llamarse distinto en dos pantallas.
   it.each([
-    ["atrasada", "danger"],
-    ["en_camino", "brand"],
-    ["parcial", "warning"],
-    ["recibida", "success"],
-    ["sin_fecha", "neutral"],
-  ] as Array<[EstadoTransito, string]>)("%s → %s", (estado, tono) => {
-    expect(tonoTransito(estado)).toBe(tono);
+    ["atrasada", "atrasada"],
+    ["en_camino", "en_camino"],
+    ["parcial", "recibida_parcial"],
+    ["recibida", "recibida"],
+    ["sin_fecha", "sin_fecha"],
+  ] as Array<[EstadoTransito, string]>)("%s → %s", (estado, clave) => {
+    expect(claveEstadoTransito(estado)).toBe(clave);
   });
 });

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import {
   Badge,
   Button,
+  EstadoBadge,
   Campo,
   Dialog,
   DialogBody,
@@ -360,11 +361,9 @@ function InsigniasSerie({ serie }: { serie: SerieDocumento }) {
           Por defecto
         </Badge>
       ) : null}
-      {!serie.activo ? (
-        <Badge tone="neutral" size="xs" className="ml-2">
-          Inactiva
-        </Badge>
-      ) : null}
+      {/* «De baja» y no «Inactiva»: la misma insignia que todo lo que se da
+          de baja en vez de borrarse. */}
+      {!serie.activo ? <EstadoBadge estado="de_baja" size="xs" className="ml-2" /> : null}
       {/*
         Se dice cuáles son de ensayo, porque desde la 093 cambia lo que el
         sistema deja hacer con ellas: en producción se niega a emitir. Sin

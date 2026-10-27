@@ -93,7 +93,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Informes</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Informe general</h1>
         <p className="text-sm text-[var(--fg-muted)]">
           Cómo va el negocio {describirRango(rango, hoy)}: qué se vende, qué margen
           deja, qué falta por cobrar y cuánto capital hay parado en el almacén.

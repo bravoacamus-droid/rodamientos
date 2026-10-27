@@ -17,7 +17,7 @@ export type NombreIcono =
   | "compra" | "porcomprar" | "precios" | "importacion"
   | "reporte" | "alerta" | "bitacora" | "configuracion" | "transporte"
   | "empresa" | "sunat" | "usuarios"
-  | "panelClientes" | "panelCotizaciones" | "panelFacturacion";
+  | "panelClientes" | "panelCotizaciones" | "panelFacturacion" | "panelCompras";
 
 export interface ItemNav {
   etiqueta: string;
@@ -164,8 +164,14 @@ export const NAVEGACION: readonly GrupoNav[] = [
       { etiqueta: "Ventas por cliente", ruta: "/reportes/clientes", permiso: "reportes", icono: "panelClientes" },
       { etiqueta: "Cotizado y ganado", ruta: "/reportes/cotizaciones", permiso: "reportes", icono: "panelCotizaciones" },
       { etiqueta: "Lo facturado", ruta: "/reportes/facturacion", permiso: "reportes", icono: "panelFacturacion" },
-      // Compras (133): cuánto, a quién, qué, quién lo deja más barato.
-      { etiqueta: "Compras", ruta: "/reportes/compras", icono: "compra", permiso: "compras" },
+      /*
+        El reporte de compras (133): cuánto, a quién, qué, quién lo deja más
+        barato. «Lo comprado» y no «Compras», que ya es el ítem del grupo de
+        abajo y llevaba el mismo carrito: es la regla de arriba —dos enlaces
+        con el mismo nombre a pantallas distintas hacen dudar a Willy—, y va
+        en paralelo con «Lo facturado».
+      */
+      { etiqueta: "Lo comprado", ruta: "/reportes/compras", icono: "panelCompras", permiso: "compras" },
       // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
       // solo para quien manda, como cuando vivía en «Gestión».
       { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", permiso: "informe" },

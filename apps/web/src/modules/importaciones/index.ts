@@ -16,13 +16,12 @@ export {
   incidenciaGastos,
   ordenarImportaciones,
   resumir,
+  claveEstadoTransito,
   sumarGastos,
-  tonoTransito,
 } from "./dominio/transito";
 
 export {
   CONCEPTOS_HABITUALES,
-  ETIQUETA_TRANSITO,
   type EstadoTransito,
   type FiltrosImportaciones,
   type GastoImportacion,

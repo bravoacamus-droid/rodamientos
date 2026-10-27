@@ -65,7 +65,26 @@ export type EstadoDocumento =
   | "recibida"
   | "archivado"
   // Guía de remisión
-  | "emitida";
+  | "emitida"
+  /*
+    Una compra del exterior, vista desde Importaciones. Antes la pintaba su
+    propio catálogo (`tonoTransito`, solo color, sin punto), y la misma compra
+    salía «Recibida» o «Parcial» en /compras y «Llegó a medias» allí: dos
+    nombres para el mismo hecho. Lo parcial y lo recibido usan las claves de
+    compra de arriba; estas tres son las que solo existen en tránsito.
+  */
+  | "en_camino"
+  | "atrasada"
+  | "sin_fecha"
+  /*
+    Fichas que se dan de baja en vez de borrarse: clientes, proveedores,
+    agencias, usuarios, series. Se decía de cinco maneras —«Desactivado»,
+    «De baja», «Inactivo», «Inactiva»— y solo con color. Una sola palabra,
+    «De baja», que es como se llama la acción en usuarios.
+  */
+  | "activo"
+  | "de_baja"
+  | "anulado";
 
 type Tono = "gris" | "azul" | "verde" | "ambar" | "rojo" | "marca";
 type Forma = "relleno" | "hueco" | "anillo" | "raya";
@@ -127,6 +146,14 @@ const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
   recibida_parcial: { etiqueta: "Parcial", tono: "ambar", forma: "anillo", matiz: "falta parte por llegar" },
   recibida: { etiqueta: "Recibida", tono: "verde", forma: "relleno" },
   archivado: { etiqueta: "Archivado", tono: "gris", forma: "hueco", matiz: "fuera de las cotizaciones" },
+
+  en_camino: { etiqueta: "En camino", tono: "azul", forma: "anillo", matiz: "todavía no llega" },
+  atrasada: { etiqueta: "Atrasada", tono: "ambar", forma: "raya", matiz: "pasó la fecha estimada" },
+  sin_fecha: { etiqueta: "Sin fecha estimada", tono: "gris", forma: "hueco" },
+
+  activo: { etiqueta: "Activo", tono: "verde", forma: "relleno" },
+  de_baja: { etiqueta: "De baja", tono: "gris", forma: "raya", matiz: "ya no sale en los buscadores" },
+  anulado: { etiqueta: "Anulado", tono: "rojo", forma: "raya", matiz: "sin efecto" },
 };
 
 const CLASES_TONO: Record<Tono, string> = {
@@ -180,7 +207,7 @@ export function EstadoBadge({ estado, etiqueta, size = "sm", className }: Estado
         CLASES_TONO[def.tono],
         TAMANOS[size],
         // Un documento anulado se lee tachado además de en rojo.
-        (estado === "anulada" || estado === "baja_aceptada") && "line-through decoration-1",
+        (estado === "anulada" || estado === "anulado" || estado === "baja_aceptada") && "line-through decoration-1",
         className,
       )}
     >

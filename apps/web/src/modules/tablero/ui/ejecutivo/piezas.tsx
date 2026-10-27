@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, FileSpreadsheet } from "lucide-react";
-import { formatearMoneda } from "@rodatech/ui";
+import { Button, formatearMoneda } from "@rodatech/ui";
 
 import {
   etiquetaPeriodo,
@@ -310,14 +310,21 @@ export function BotonExcel({
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-base text-[var(--fg-muted)]">{explicacion}</p>
-      <a
-        href={`${tipo === "compras" ? "/reportes/compras/excel" : "/reportes/excel"}?${q.toString()}`}
-        download
-        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#1d6f42] px-4 text-base font-semibold text-white shadow-sm hover:bg-[#185c37]"
-      >
-        <FileSpreadsheet className="size-5" aria-hidden="true" />
-        Descargar en Excel
-      </a>
+      {/*
+        El botón de siempre, no el verde de Excel en hexadecimal que tenía:
+        ese color no estaba en los tokens, no se ajustaba al tema oscuro y hacía
+        que la misma acción —bajar un Excel— tuviera dos aspectos. El icono de
+        hoja de cálculo es lo que dice que sale un Excel.
+      */}
+      <Button asChild size="lg" className="shrink-0 text-base [&_svg]:size-5">
+        <a
+          href={`${tipo === "compras" ? "/reportes/compras/excel" : "/reportes/excel"}?${q.toString()}`}
+          download
+        >
+          <FileSpreadsheet aria-hidden="true" />
+          Descargar en Excel
+        </a>
+      </Button>
     </div>
   );
 }

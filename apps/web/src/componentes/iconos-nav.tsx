@@ -5,6 +5,7 @@ import {
   Boxes,
   Building2,
   CarFront,
+  ChartBarBig,
   ChartColumn,
   Factory,
   FileBadge,
@@ -101,6 +102,10 @@ const ICONOS: Record<NombreIcono, LucideIcon> = {
   panelClientes: UsersRound,
   panelCotizaciones: ChartPie,
   panelFacturacion: TrendingUp,
+  // «Lo comprado»: barras tumbadas, el ranking de a quién se compra. No el
+  // carrito, que es el de «Compras» en el grupo de abajo, ni las barras de
+  // pie del «Informe general», que está justo al lado.
+  panelCompras: ChartBarBig,
   // Alerta: campana.
   alerta: Bell,
   // Transporte: el vehículo de frente. Distinto del camión de perfil de la

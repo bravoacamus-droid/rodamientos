@@ -252,10 +252,17 @@ export function TablaPedidos({
         </table>
       </div>
 
-      {/* ------------------------------------------------ Tarjetas */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] @4xl:hidden">
+      {/* ------------------------------------------------ Tarjetas
+          Sueltas, cada una con su borde, como cotizaciones, facturación y
+          guías: separadas por una raya era lo que Luis rechazó el 11/09
+          («todo junto, apegado»). Pasan a tabla en @4xl y no en @3xl, como
+          las demás, porque esta tabla lleva diez columnas y a @3xl no caben. */}
+      <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
         {filas.map((p) => (
-          <li key={p.id} className="flex flex-col gap-2 px-4 py-3">
+          <li
+            key={p.id}
+            className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <Link href={`/pedidos/${p.id}`} className="font-mono text-base font-semibold text-brand-600 hover:underline">

@@ -1,5 +1,5 @@
 import { FileSpreadsheet } from "lucide-react";
-import { SelectNativo } from "@rodatech/ui";
+import { Button, SelectNativo } from "@rodatech/ui";
 
 import { nombreMes } from "../dominio/contador";
 
@@ -42,13 +42,16 @@ export function ExcelContador({ hoy }: { hoy: string }) {
             </option>
           ))}
         </SelectNativo>
-        <button
-          type="submit"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#1d6f42] px-4 text-base font-semibold text-white shadow-sm hover:bg-[#185c37]"
-        >
-          <FileSpreadsheet className="size-5" aria-hidden="true" />
+        {/*
+        El botón de siempre, no el verde de Excel en hexadecimal que tenía:
+        ese color no estaba en los tokens, no se ajustaba al tema oscuro y hacía
+        que la misma acción —bajar un Excel— tuviera dos aspectos. El icono de
+        hoja de cálculo es lo que dice que sale un Excel.
+        */}
+        <Button type="submit" size="lg" className="text-base [&_svg]:size-5">
+          <FileSpreadsheet aria-hidden="true" />
           Descargar
-        </button>
+        </Button>
       </div>
     </form>
   );

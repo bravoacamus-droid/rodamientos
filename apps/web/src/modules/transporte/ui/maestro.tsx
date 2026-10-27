@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Badge,
+  EstadoBadge,
   Button,
   Campo,
   Dialog,
@@ -174,7 +174,7 @@ export function Maestro({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-base font-medium">{f.titulo}</span>
-                  {f.activo ? null : <Badge tone="neutral" size="xs">De baja</Badge>}
+                  {f.activo ? null : <EstadoBadge estado="de_baja" size="xs" />}
                 </div>
                 {f.detalle ? (
                   <p className="text-sm text-[var(--fg-muted)]">{f.detalle}</p>

@@ -19,14 +19,6 @@ export type EstadoTransito =
   | "recibida"
   | "sin_fecha";
 
-export const ETIQUETA_TRANSITO: Record<EstadoTransito, string> = {
-  en_camino: "En camino",
-  atrasada: "Atrasada",
-  parcial: "Llegó a medias",
-  recibida: "Recibida",
-  sin_fecha: "Sin fecha estimada",
-};
-
 /** Una compra del exterior. */
 export interface Importacion {
   id: string;

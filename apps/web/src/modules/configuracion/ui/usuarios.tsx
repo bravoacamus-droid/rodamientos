@@ -6,7 +6,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Campo, Input, SelectNativo, toast } from "@rodatech/ui";
+import { Badge, Button, Campo, EstadoBadge, Input, SelectNativo, toast } from "@rodatech/ui";
 import { KeyRound, Pencil } from "lucide-react";
 
 import { cambiarUsuario, type ResultadoConfig } from "../acciones/guardar";
@@ -338,11 +338,9 @@ function Distintivos({ esUnoMismo, activo }: { esUnoMismo: boolean; activo: bool
           Tú
         </Badge>
       ) : null}
-      {!activo ? (
-        <Badge tone="neutral" size="sm" className="ml-2">
-          Inactivo
-        </Badge>
-      ) : null}
+      {/* «De baja», como clientes, proveedores y agencias: es lo que se le
+          hace a un usuario, que no se borra. */}
+      {!activo ? <EstadoBadge estado="de_baja" size="sm" className="ml-2" /> : null}
     </>
   );
 }
@@ -367,7 +365,7 @@ function TarjetaUsuario({
       Sin `opacity-60` para el inactivo. Medido el 21/10: el correo y la
       descripción del rol bajaban a 1,86:1 en claro (2,52 a 390 px), justo lo
       que hay que leer para saber a quién se reactiva. Lo dice el distintivo
-      «Inactivo» y el fondo, no el texto desvaído.
+      «De baja» y el fondo, no el texto desvaído.
     */
     <div
       className={`rounded-lg border border-[var(--border)] p-3 ${usuario.activo ? "" : "bg-[var(--surface-2)]"}`}

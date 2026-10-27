@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HistorialCliente } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { Badge, Button, EstadoError, Skeleton } from "@rodatech/ui";
+import { Badge, Button, EstadoBadge, EstadoError, Skeleton } from "@rodatech/ui";
 import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
@@ -67,11 +67,7 @@ export default async function PaginaDetalleCliente({
                 Bloqueado
               </Badge>
             ) : null}
-            {!c.activo ? (
-              <Badge tone="warning" size="xs">
-                Desactivado
-              </Badge>
-            ) : null}
+            {!c.activo ? <EstadoBadge estado="de_baja" size="xs" /> : null}
           </div>
           {c.nombre_comercial ? (
             <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{c.nombre_comercial}</p>
