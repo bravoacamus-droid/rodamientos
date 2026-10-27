@@ -8406,3 +8406,16 @@ está vacía) y una guía parcial facturada.
 **Quedan:** quién y cuándo anuló una compra (faltan columnas), «Desactivar» vs
 «Dar de baja» en usuarios y series, y anular un cobro (la 158 quita el DELETE
 de `pagos`: hoy un cobro mal apuntado solo se corrige por SQL).
+
+### §CK.1 · Avisos del día a día y al celular (161-162)
+
+Luis, 27/10: *«que me avise que tengo cotizaciones sin cerrar o aprobar, que no se haya sacado una guía… que el app sea interactivo y ayude al sr Willy en su día a día con notificaciones móviles»*.
+
+| | Qué |
+|---|---|
+| 161 | Siete avisos nuevos: guía sin facturar (7 días), pedido sin guía (alta si ya llegó lo comprado), pedido a medio despachar, cotización sin respuesta (5 días), cotizaciones vencidas sin cerrar (uno solo que las cuenta), cotización en borrador (3 días), compra que no llega (`fecha_estimada`, que nadie llena: si no, +7 días local, +60 importación). Vista `v_pedido_avance`; etapa «Salió una parte: faltan X de Y»; «¿Cómo va el pedido?» en la ficha; «Lo que se está quedando atrás» en el tablero |
+| 162 | Web Push: `suscripciones_push`, «Avisos en el celular» en `/perfil`, ruta `/api/avisos/enviar` con `CRON_SECRET`, `apps/web/vercel.json` a las 7:10 y 16:00 de Lima. Más de 3 avisos → un resumen. Probado en Chromium headless con push real de Google; **sin probar en un celular** hasta desplegar |
+
+**En Vercel:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` (de `.env.local`).
+
+**Por decidir:** que las cotizaciones enviadas pasen solas a vencidas; si archivar un aviso lo silencia; avisos urgentes de SUNAT cada hora (pg_cron + pg_net o Vercel Pro); que la orden de compra pida la fecha estimada de llegada.
