@@ -147,10 +147,10 @@ export async function estadoConfiguracion(): Promise<EstadoConfiguracion> {
     ]);
 
     if (!visible?.gre_client_id && !envOpcional("SUNAT_GRE_CLIENT_ID")) {
-      faltanGuias.push("Falta el ID de las credenciales de API de SUNAT (para guías).");
+      faltanGuias.push("Falta el código de acceso de SUNAT para guías (se genera en SOL).");
     }
     if (!secretos?.gre_client_secret_cifrado && !envOpcional("SUNAT_GRE_CLIENT_SECRET")) {
-      faltanGuias.push("Falta la CLAVE de las credenciales de API de SUNAT (para guías).");
+      faltanGuias.push("Falta la clave de acceso de SUNAT para guías (se genera en SOL).");
     }
 
     ambiente = (visible?.ambiente as "beta" | "produccion") ?? "beta";

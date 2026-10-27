@@ -25,6 +25,11 @@ import {
 import { ETIQUETA_MODALIDAD, type ModalidadTraslado, type MotivoTraslado } from "../dominio/tipos";
 import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
+import { Pencil, Plus } from "lucide-react";
+import { SelectorUbigeoCascada } from "@/modules/clientes/ui/selector-ubigeo";
+import { departamentosUbigeo, distritosUbigeo, provinciasUbigeo } from "@/modules/clientes/acciones/ubigeo";
+import { nombreDelUbigeo } from "@/modules/configuracion/acciones/ubigeo";
+
 import { DialogoAgencia } from "./dialogo-agencia";
 import { TransportePropio } from "./transporte-propio";
 import { sinEnvioConEnter } from "@/lib/formularios";
@@ -48,6 +53,9 @@ export interface AgenciaOpcion {
   razon_social: string;
   nombre_corto: string | null;
   numero_documento: string | null;
+  /** Para «Editar» (FS-07): sin ellos, corregir el RUC borraría el teléfono. */
+  telefono?: string | null;
+  direccion?: string | null;
 }
 
 export function ConstructorGuia({
@@ -121,12 +129,59 @@ export function ConstructorGuia({
     manda y esto solo rellena el hueco hasta que llegue.
   */
   const [agenciasNuevas, setAgenciasNuevas] = useState<AgenciaOpcion[]>([]);
-  const [altaAgencia, setAltaAgencia] = useState(false);
+  /*
+    Las corregidas aquí con «Editar» (FS-07, 27/10), por id. Mismo patrón que
+    las nuevas: parches encima de la lista del servidor.
+  */
+  const [agenciasEditadas, setAgenciasEditadas] = useState<Record<string, AgenciaOpcion>>({});
+  /** El diálogo de la agencia: cerrado, dando de alta una, o corrigiendo esa. */
+  const [dialogoAgencia, setDialogoAgencia] = useState<null | "nueva" | AgenciaOpcion>(null);
 
   const listaAgencias = useMemo(() => {
     const vistas = new Set(agencias.map((a) => a.id));
-    return [...agencias, ...agenciasNuevas.filter((a) => !vistas.has(a.id))];
-  }, [agencias, agenciasNuevas]);
+    return [...agencias, ...agenciasNuevas.filter((a) => !vistas.has(a.id))].map(
+      (a) => agenciasEditadas[a.id] ?? a,
+    );
+  }, [agencias, agenciasNuevas, agenciasEditadas]);
+  const agenciaElegida = listaAgencias.find((a) => a.id === agenciaId) ?? null;
+
+  /** Lo mismo que elegirla en el desplegable: la guía copia el RUC y la razón social, no el id. */
+  const copiarAgencia = (a: AgenciaOpcion) => {
+    despachar({ tipo: "campo", campo: "transportistaDocumento", valor: a.numero_documento ?? "" });
+    despachar({ tipo: "campo", campo: "transportistaRazonSocial", valor: a.razon_social });
+  };
+
+  /*
+    Dónde está parada la cascada del distrito de entrega (FS-06, 27/10).
+
+    La guía solo guarda el CÓDIGO (`ubigeoLlegada`), y lo rellena la
+    cotización al cargarse con el del cliente. La cascada necesita además el
+    departamento y la provincia para enseñarlo, así que cuando el código llega
+    de fuera se pregunta qué distrito es — con `nombreDelUbigeo`, la misma
+    consulta que ya usa «Datos de la empresa». Cuando lo elige la persona, la
+    cascada ya los trae y no se pregunta nada.
+  */
+  const [lugar, setLugar] = useState({ codigo: "", departamento: "", provincia: "", distrito: "" });
+  useEffect(() => {
+    const codigo = estado.ubigeoLlegada;
+    if (codigo === lugar.codigo) return;
+    if (!/^[0-9]{6}$/.test(codigo)) {
+      setLugar({ codigo, departamento: "", provincia: "", distrito: "" });
+      return;
+    }
+    let vigente = true;
+    void nombreDelUbigeo(codigo).then((r) => {
+      if (!vigente) return;
+      // «Distrito · Provincia, Departamento»: ninguno de los nombres del
+      // padrón del INEI lleva « · » ni coma.
+      const [distrito = "", resto = ""] = r.ok ? r.nombre.split(" · ") : [];
+      const [provincia = "", departamento = ""] = resto.split(", ");
+      setLugar({ codigo, departamento, provincia, distrito });
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [estado.ubigeoLlegada, lugar.codigo]);
   const [cargando, cargar] = useTransition();
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
@@ -547,7 +602,7 @@ export function ConstructorGuia({
                 </label>
               </div>
 
-              <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
+              <div className="mt-3 flex flex-col gap-3">
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">
                     Dirección de entrega <span className="text-[var(--danger)]">*</span>
@@ -569,22 +624,41 @@ export function ConstructorGuia({
                   </span>
                 </label>
 
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Código del distrito de llegada (6 cifras, SUNAT)</span>
-                  <Input
-                    value={estado.ubigeoLlegada}
-                    onChange={(e) =>
-                      despachar({
-                        tipo: "campo",
-                        campo: "ubigeoLlegada",
-                        valor: e.target.value.replace(/\D/g, "").slice(0, 6),
-                      })
-                    }
-                    placeholder="150101"
-                    className="tabular"
-                    inputMode="numeric"
+                {/*
+                  El distrito se ELIGE, no se teclea su código (FS-06, 27/10).
+                  Antes era «Código del distrito de llegada (6 cifras,
+                  SUNAT)» con 150101 de ejemplo: jerga, y obligaba a saberse
+                  el ubigeo justo cuando se entrega en obra, que es cuando no
+                  es el del cliente. El código sigue debajo, para quien lo
+                  quiera ver; es lo único que viaja a la guía.
+                */}
+                <fieldset className="flex flex-col gap-1">
+                  <legend className="mb-1 text-sm font-medium">Distrito de entrega</legend>
+                  <SelectorUbigeoCascada
+                    id="guia-ubigeo-llegada"
+                    codigo={lugar.codigo}
+                    departamento={lugar.departamento}
+                    provincia={lugar.provincia}
+                    ayudaDistrito={null}
+                    onElegir={(v) => {
+                      setLugar(v);
+                      despachar({ tipo: "campo", campo: "ubigeoLlegada", valor: v.codigo });
+                    }}
+                    cargarDepartamentos={departamentosUbigeo}
+                    cargarProvincias={provinciasUbigeo}
+                    cargarDistritos={distritosUbigeo}
                   />
-                </label>
+                  <span className="text-sm text-[var(--fg-muted)]">
+                    {estado.ubigeoLlegada ? (
+                      <>
+                        Código SUNAT del distrito:{" "}
+                        <span className="tabular font-medium text-[var(--fg)]">{estado.ubigeoLlegada}</span>
+                      </>
+                    ) : (
+                      "Sale el del cliente al elegir la cotización. Cámbialo si se entrega en otro distrito."
+                    )}
+                  </span>
+                </fieldset>
               </div>
 
               {/* --------------------------------------------------- Peso */}
@@ -685,15 +759,34 @@ export function ConstructorGuia({
                           con el texto a 14px: nada por debajo de eso, que es
                           lo que subimos para que Willy leyera la pantalla.
                         */}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-sm"
-                          onClick={() => setAltaAgencia(true)}
-                        >
-                          Nueva agencia
-                        </Button>
+                        {/* «Editar» al lado, como el vehículo y la persona
+                            del transporte propio (FS-07, 27/10): corregir el
+                            RUC o el teléfono de la agencia obligaba a ir a
+                            /transporte y perder la guía. */}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-sm"
+                            disabled={!agenciaElegida}
+                            title={agenciaElegida ? undefined : "Elige antes una agencia de la lista"}
+                            onClick={() => agenciaElegida && setDialogoAgencia(agenciaElegida)}
+                          >
+                            <Pencil className="size-4" aria-hidden="true" />
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-sm"
+                            onClick={() => setDialogoAgencia("nueva")}
+                          >
+                            <Plus className="size-4" aria-hidden="true" />
+                            Nueva agencia
+                          </Button>
+                        </div>
                       </div>
                       <SelectNativo
                         id="guia-agencia"
@@ -702,17 +795,7 @@ export function ConstructorGuia({
                           const id = e.target.value;
                           setAgenciaId(id);
                           const a = listaAgencias.find((x) => x.id === id);
-                          if (!a) return;
-                          despachar({
-                            tipo: "campo",
-                            campo: "transportistaDocumento",
-                            valor: a.numero_documento ?? "",
-                          });
-                          despachar({
-                            tipo: "campo",
-                            campo: "transportistaRazonSocial",
-                            valor: a.razon_social,
-                          });
+                          if (a) copiarAgencia(a);
                         }}
                       >
                         <option value="">
@@ -887,7 +970,18 @@ export function ConstructorGuia({
                 <p className="mb-1 text-sm font-medium">Conviene mirar:</p>
                 <ul className="flex flex-col gap-1 text-sm">
                   {avisos.map((a, i) => (
-                    <li key={`${a.key}-${i}`}>· {a.mensaje}</li>
+                    <li key={`${a.key}-${i}`}>
+                      · {a.mensaje}
+                      {a.detalle && a.detalle.length > 0 ? (
+                        <ul className="mt-0.5 flex flex-col gap-0.5 pl-4">
+                          {a.detalle.map((d) => (
+                            <li key={d} className="font-medium">
+                              {d}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -909,24 +1003,21 @@ export function ConstructorGuia({
         perdería lo tecleado.
       */}
       <DialogoAgencia
-        abierto={altaAgencia}
-        onCerrar={() => setAltaAgencia(false)}
+        abierto={dialogoAgencia !== null}
+        agencia={dialogoAgencia !== null && dialogoAgencia !== "nueva" ? dialogoAgencia : undefined}
+        onCerrar={() => setDialogoAgencia(null)}
         onGuardada={(a) => {
-          setAgenciasNuevas((previas) => [...previas, a]);
+          if (dialogoAgencia !== null && dialogoAgencia !== "nueva") {
+            setAgenciasEditadas((previas) => ({ ...previas, [a.id]: a }));
+          } else {
+            setAgenciasNuevas((previas) => [...previas, a]);
+          }
           setAgenciaId(a.id);
           // Lo mismo que hace elegirla en el desplegable: la guía guarda el
-          // RUC y la razón social copiados, no el id.
-          despachar({
-            tipo: "campo",
-            campo: "transportistaDocumento",
-            valor: a.numero_documento ?? "",
-          });
-          despachar({
-            tipo: "campo",
-            campo: "transportistaRazonSocial",
-            valor: a.razon_social,
-          });
-          setAltaAgencia(false);
+          // RUC y la razón social copiados, no el id. Al corregirla, también:
+          // si se arregló el RUC es para que salga bien en esta guía.
+          copiarAgencia(a);
+          setDialogoAgencia(null);
         }}
       />
     </form>

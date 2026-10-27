@@ -3,7 +3,7 @@
 // Cliente: la jerarquía es en cascada y el precio de venta se calcula solo
 // mientras se teclea el costo. Eso es estado local, no navegación.
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Combobox, Input } from "@rodatech/ui";
 
@@ -14,6 +14,10 @@ import {
   crearFamilia,
   crearMarca,
   crearSubfamilia,
+  darDeBajaMarca,
+  renombrarFamilia,
+  renombrarMarca,
+  renombrarSubfamilia,
   type NodoCreado,
 } from "../acciones/catalogos";
 import { guardarProducto, type ResultadoProducto } from "../acciones/guardar";
@@ -149,21 +153,40 @@ export function FormularioProducto({
     proveedores: { id: string; razon_social: string }[];
   }>({ marcas: [], familias: [], subfamilias: [], proveedores: [] });
 
+  /*
+    Lo corregido aquí mismo (160, FS-04): los nombres nuevos por id y las
+    marcas dadas de baja. Mismo patrón que `nuevas` —parches encima de lo que
+    mandó el servidor— por la misma razón.
+  */
+  const [renombres, setRenombres] = useState<Record<string, string>>({});
+  const [bajas, setBajas] = useState<string[]>([]);
+  const corregir = useCallback(
+    <T extends { id: string; nombre: string }>(lista: T[]) =>
+      lista
+        .filter((x) => !bajas.includes(x.id))
+        .map((x) => (renombres[x.id] ? { ...x, nombre: renombres[x.id]! } : x)),
+    [renombres, bajas],
+  );
+  const alRenombrar = (n: NodoCreado) => setRenombres((r) => ({ ...r, [n.id]: n.nombre }));
+
   const marcas = useMemo(
-    () => [...catalogos.marcas, ...nuevas.marcas],
-    [catalogos.marcas, nuevas.marcas],
+    () => corregir([...catalogos.marcas, ...nuevas.marcas]),
+    [catalogos.marcas, nuevas.marcas, corregir],
   );
   const familias = useMemo(
-    () => [...catalogos.familias, ...nuevas.familias],
-    [catalogos.familias, nuevas.familias],
+    () => corregir([...catalogos.familias, ...nuevas.familias]),
+    [catalogos.familias, nuevas.familias, corregir],
   );
   const subfamilias = useMemo(
     () =>
-      [...catalogos.subfamilias, ...nuevas.subfamilias].filter(
+      corregir([...catalogos.subfamilias, ...nuevas.subfamilias]).filter(
         (s) => s.familia_id === f.familia_id,
       ),
-    [catalogos.subfamilias, nuevas.subfamilias, f.familia_id],
+    [catalogos.subfamilias, nuevas.subfamilias, f.familia_id, corregir],
   );
+  const marcaElegida = marcas.find((m) => m.id === f.marca_id) ?? null;
+  const familiaElegida = familias.find((x) => x.id === f.familia_id) ?? null;
+  const subfamiliaElegida = subfamilias.find((x) => x.id === f.subfamilia_id) ?? null;
   const proveedores = useMemo(
     () => [...catalogos.proveedores, ...nuevas.proveedores],
     [catalogos.proveedores, nuevas.proveedores],
@@ -338,6 +361,15 @@ export function FormularioProducto({
             {/* Willy, 01/09: «de pronto se presenta alguna marca que no está
                 registrada y tengo que crearla para crear el producto en sí».
                 Faltaba: la 028 dejaba crear familia y sub-familia, no marca. */}
+            {/* Una marca dada de baja ya no viene en la lista: el producto
+                que la tenía la conserva, pero aquí saldría en blanco sin
+                decir por qué. */}
+            {f.marca_id && !marcaElegida ? (
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">
+                La marca de este producto está dada de baja. Elige otra, o escríbela en «Nueva marca» para
+                volver a darla de alta.
+              </p>
+            ) : null}
             <NuevoNodo
               etiqueta="marca"
               crear={crearMarca}
@@ -348,8 +380,17 @@ export function FormularioProducto({
                     ? x.marcas
                     : [...x.marcas, { id: n.id, nombre: n.nombre }],
                 }));
+                // Si era una dada de baja, `crear_marca` la reactiva.
+                setBajas((b) => b.filter((id) => id !== n.id));
                 setF((x) => ({ ...x, marca_id: n.id }));
               }}
+              elegido={marcaElegida}
+              renombrar={renombrarMarca}
+              onRenombrado={alRenombrar}
+              darDeBaja={darDeBajaMarca}
+              // No se le quita a ESTE producto: la conserva, como todos los
+              // suyos, y debajo se dice que está dada de baja.
+              onDadoDeBaja={(id) => setBajas((b) => [...b, id])}
             />
           </Campo>
 
@@ -426,6 +467,9 @@ export function FormularioProducto({
                 }));
                 setF((x) => ({ ...x, familia_id: n.id, subfamilia_id: "" }));
               }}
+              elegido={familiaElegida}
+              renombrar={renombrarFamilia}
+              onRenombrado={alRenombrar}
             />
           </Campo>
 
@@ -461,6 +505,9 @@ export function FormularioProducto({
                 }));
                 setF((x) => ({ ...x, subfamilia_id: n.id }));
               }}
+              elegido={subfamiliaElegida}
+              renombrar={renombrarSubfamilia}
+              onRenombrado={alRenombrar}
             />
           </Campo>
         </div>

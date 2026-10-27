@@ -10,6 +10,7 @@ import {
   Badge,
   BuscadorProductos,
   Button,
+  Combobox,
   Input,
   Moneda,
   SelectNativo,
@@ -221,14 +222,18 @@ export function QueVende({
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]" aria-hidden="true" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Código o descripción" className="pl-9" />
           </label>
-          <SelectNativo value={marca} onChange={(e) => setMarca(e.target.value)} aria-label="Marca">
-            <option value="">Marca: todas</option>
-            {marcas.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </SelectNativo>
+          {/* Con buscador (FS-11, 27/10): son tantas marcas como vende, y un
+              desplegable plano de 60 se recorre con la rueda. La ✕ vuelve a
+              «todas». */}
+          <Combobox
+            id="que-vende-marca"
+            opciones={marcas.map((m) => ({ valor: m, etiqueta: m }))}
+            valor={marca || null}
+            onCambio={(v) => setMarca(v ?? "")}
+            placeholder="Marca: todas"
+            placeholderBusqueda="Escribe la marca"
+            textoVacio="Ninguna marca coincide."
+          />
           <SelectNativo value={como} onChange={(e) => setComo(e.target.value)} aria-label="Cómo se sabe">
             <option value="">Cómo se sabe: todos</option>
             <option value="comprado">Comprado</option>

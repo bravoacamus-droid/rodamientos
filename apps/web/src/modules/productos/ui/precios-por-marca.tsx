@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
   Button,
+  Combobox,
   Dialog,
   DialogBody,
   DialogContent,
@@ -13,15 +14,21 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
-  SelectNativo,
   buttonVariants,
   cn,
+  formatearFechaHora,
   formatearMoneda,
   toast,
 } from "@rodatech/ui";
-import { Percent, Undo2 } from "lucide-react";
+import { ArrowRight, Percent, Undo2 } from "lucide-react";
 
-import { cambiarPreciosPorMarca, deshacerCambioPrecios, type VistaCambio } from "../acciones/precios-marca";
+import {
+  cambiarPreciosPorMarca,
+  deshacerCambioPrecios,
+  ultimosCambiosPrecio,
+  type CambioPrecio,
+  type VistaCambio,
+} from "../acciones/precios-marca";
 
 /**
  * «Cambiar precios por marca» (155).
@@ -30,6 +37,12 @@ import { cambiarPreciosPorMarca, deshacerCambioPrecios, type VistaCambio } from 
  * elegir marca y porcentaje → «Ver qué cambia» (cuántos y cinco ejemplos,
  * sin tocar nada) → «Cambiar N precios». Y después, «Deshacer» ahí mismo: un
  * dedo que se va en el porcentaje no puede costar una tarde arreglándolo.
+ *
+ * Desde el 27/10 (QA-08) también DESPUÉS: debajo van los últimos cambios, cada
+ * uno con su «Deshacer». La historia la guardaba `cambios_precio` desde la
+ * 155 y ninguna pantalla la leía; cerrado el diálogo, ya no había botón. La
+ * base (160) obliga a deshacer en orden —el último primero— y no marca
+ * deshecho lo que no devolvió ningún precio.
  */
 export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: string }[] }) {
   const router = useRouter();
@@ -39,11 +52,28 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
   const [vista, setVista] = React.useState<VistaCambio | null>(null);
   const [hecho, setHecho] = React.useState<VistaCambio | null>(null);
   const [ocupado, setOcupado] = React.useState(false);
+  const [cambios, setCambios] = React.useState<CambioPrecio[] | null>(null);
+  const [errorCambios, setErrorCambios] = React.useState<string | null>(null);
 
   const porcentaje = Number(texto.replace(",", "."));
   const valido = marca !== "" && Number.isFinite(porcentaje) && porcentaje !== 0;
   const nombreMarca = marcas.find((m) => m.id === marca)?.nombre ?? "";
   const frase = porcentaje > 0 ? `suben un ${porcentaje} %` : `bajan un ${Math.abs(porcentaje)} %`;
+
+  const cargarCambios = React.useCallback(async () => {
+    const r = await ultimosCambiosPrecio();
+    if (r.ok) {
+      setCambios(r.datos);
+      setErrorCambios(null);
+    } else {
+      setErrorCambios(r.error);
+    }
+  }, []);
+
+  // Se piden al abrir, no antes: la lista de productos no los necesita.
+  React.useEffect(() => {
+    if (abierto) void cargarCambios();
+  }, [abierto, cargarCambios]);
 
   const reiniciar = () => {
     setVista(null);
@@ -62,6 +92,7 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
         setHecho(r.datos);
         setVista(null);
         toast.success(`Listo: ${r.datos.productos} precios de ${nombreMarca} ${frase}.`);
+        void cargarCambios();
         router.refresh();
       } else {
         setVista(r.datos);
@@ -71,21 +102,27 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
     }
   };
 
-  const deshacer = async () => {
-    if (!hecho?.cambioId) return;
+  const deshacer = async (cambioId: number) => {
     setOcupado(true);
     try {
-      const r = await deshacerCambioPrecios(hecho.cambioId);
+      const r = await deshacerCambioPrecios(cambioId);
       if (!r.ok) {
         toast.error(r.error);
         return;
       }
-      toast.success(
-        r.datos.respetados > 0
-          ? `Deshecho: ${r.datos.devueltos} precios vuelven a como estaban; ${r.datos.respetados} se habían cambiado a mano después y se dejan.`
-          : `Deshecho: los ${r.datos.devueltos} precios vuelven a como estaban.`,
-      );
-      setHecho(null);
+      if (!r.datos.deshecho) {
+        toast.error(
+          "No se devolvió ningún precio: todos se cambiaron a mano después de este cambio. No hay nada que deshacer.",
+        );
+      } else {
+        toast.success(
+          r.datos.respetados > 0
+            ? `Deshecho: ${r.datos.devueltos} precios vuelven a como estaban; ${r.datos.respetados} se habían cambiado a mano después y se dejan.`
+            : `Deshecho: los ${r.datos.devueltos} precios vuelven a como estaban.`,
+        );
+      }
+      if (hecho?.cambioId === cambioId) setHecho(null);
+      void cargarCambios();
       router.refresh();
     } finally {
       setOcupado(false);
@@ -120,29 +157,33 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
                 <strong>{hecho.productos} precios de {nombreMarca}</strong> {frase}.
               </p>
               <p className="mt-1 text-sm text-[var(--fg-muted)]">
-                Si fue un error, se deshace aquí mismo. También después: lo que alguien cambie a mano se respeta.
+                Si fue un error, se deshace aquí mismo. También después, desde «Últimos cambios de precio»: lo que
+                alguien cambie a mano se respeta.
               </p>
             </div>
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
-                <label className="flex flex-col gap-1">
-                  <span className="text-sm font-medium">Marca</span>
-                  <SelectNativo
-                    value={marca}
-                    onChange={(e) => {
-                      setMarca(e.target.value);
+                {/* Con buscador (FS-11, 27/10), como en la ficha del
+                    producto: son 60 marcas, y un desplegable plano de 60 se
+                    recorre con la rueda. */}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="precios-marca" className="text-sm font-medium">
+                    Marca
+                  </label>
+                  <Combobox
+                    id="precios-marca"
+                    opciones={marcas.map((m) => ({ valor: m.id, etiqueta: m.nombre }))}
+                    valor={marca || null}
+                    onCambio={(v) => {
+                      setMarca(v ?? "");
                       setVista(null);
                     }}
-                  >
-                    <option value="">Elige la marca…</option>
-                    {marcas.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.nombre}
-                      </option>
-                    ))}
-                  </SelectNativo>
-                </label>
+                    placeholder="Elige la marca…"
+                    placeholderBusqueda="Escribe la marca"
+                    textoVacio="Ninguna marca coincide."
+                  />
+                </div>
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">Cuánto (%)</span>
                   <Input
@@ -175,8 +216,10 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
                       {vista.ejemplos.map((e) => (
                         <li key={e.codigo} className="flex justify-between gap-3">
                           <span className="truncate font-medium">{e.codigo}</span>
-                          <span className="tabular shrink-0">
-                            {formatearMoneda(e.antes)} → <strong>{formatearMoneda(e.despues)}</strong>
+                          <span className="tabular inline-flex shrink-0 items-center gap-1">
+                            {formatearMoneda(e.antes)}
+                            <ArrowRight className="inline size-4 align-[-2px]" aria-label="pasa a" />
+                            <strong>{formatearMoneda(e.despues)}</strong>
                           </span>
                         </li>
                       ))}
@@ -186,12 +229,65 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
               ) : null}
             </>
           )}
+
+          <section className="border-t border-[var(--border-soft)] pt-3">
+            <h3 className="text-sm font-semibold">Últimos cambios de precio</h3>
+            {errorCambios ? (
+              <p className="mt-1 text-sm text-[var(--danger)]">{errorCambios}</p>
+            ) : cambios === null ? (
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">Cargando…</p>
+            ) : cambios.length === 0 ? (
+              <p className="mt-1 text-sm text-[var(--fg-muted)]">Todavía no se ha cambiado ningún precio por marca.</p>
+            ) : (
+              <ul className="mt-1 flex flex-col divide-y divide-[var(--border-soft)]">
+                {cambios.map((c) => (
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p>
+                        <strong>{c.marca}</strong>{" "}
+                        <span className="tabular">
+                          {c.porcentaje > 0 ? "+" : "−"}
+                          {Math.abs(c.porcentaje)} %
+                        </span>{" "}
+                        · {c.productos} {c.productos === 1 ? "producto" : "productos"}
+                      </p>
+                      <p className="text-[var(--fg-muted)]">
+                        {formatearFechaHora(c.creadoEn)}
+                        {c.quien ? ` · ${c.quien}` : ""}
+                      </p>
+                    </div>
+                    {c.deshechoEn ? (
+                      <span className="text-[var(--fg-muted)]">Deshecho el {formatearFechaHora(c.deshechoEn)}</span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-sm"
+                        disabled={ocupado}
+                        onClick={() => void deshacer(c.id)}
+                        aria-label={`Deshacer el cambio de ${c.marca} del ${formatearFechaHora(c.creadoEn)}`}
+                      >
+                        <Undo2 className="size-4" aria-hidden="true" />
+                        Deshacer
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </DialogBody>
 
         <DialogFooter>
           {hecho ? (
             <>
-              <Button variant="outline" disabled={ocupado} onClick={() => void deshacer()} className="gap-1.5">
+              <Button
+                variant="outline"
+                disabled={ocupado || !hecho.cambioId}
+                onClick={() => hecho.cambioId && void deshacer(hecho.cambioId)}
+                className="gap-1.5"
+              >
                 <Undo2 className="size-4" aria-hidden="true" />
                 Deshacer
               </Button>

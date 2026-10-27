@@ -61,7 +61,9 @@ export async function cambiarPreciosPorMarca(entrada: unknown): Promise<Resultad
   };
 }
 
-export async function deshacerCambioPrecios(cambioId: unknown): Promise<Resultado<{ devueltos: number; respetados: number }>> {
+export async function deshacerCambioPrecios(
+  cambioId: unknown,
+): Promise<Resultado<{ devueltos: number; respetados: number; deshecho: boolean }>> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
   const negado = await sinPermiso("productos", "editar");
@@ -73,6 +75,67 @@ export async function deshacerCambioPrecios(cambioId: unknown): Promise<Resultad
   const { data, error } = await supabase.rpc("deshacer_cambio_precios", { p_cambio: id.data });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/productos");
-  const d = data as { devueltos: number; respetados: number };
-  return { ok: true, datos: { devueltos: Number(d.devueltos ?? 0), respetados: Number(d.respetados ?? 0) } };
+  const d = data as { devueltos: number; respetados: number; deshecho?: boolean };
+  const devueltos = Number(d.devueltos ?? 0);
+  return {
+    ok: true,
+    datos: {
+      devueltos,
+      respetados: Number(d.respetados ?? 0),
+      // Antes de la 160 la base no lo devolvía y marcaba siempre.
+      deshecho: d.deshecho ?? devueltos > 0,
+    },
+  };
+}
+
+/**
+ * Los últimos cambios de precio, para deshacerlos DESPUÉS (QA-08, 27/10).
+ *
+ * `cambios_precio` guardaba la historia desde la 155 y ninguna pantalla la
+ * leía: solo se podía deshacer con el diálogo abierto, justo después. Si el
+ * dedo se fue y alguien lo nota mañana, ya no había botón.
+ */
+export interface CambioPrecio {
+  id: number;
+  creadoEn: string;
+  marca: string;
+  porcentaje: number;
+  productos: number;
+  quien: string | null;
+  deshechoEn: string | null;
+}
+
+export async function ultimosCambiosPrecio(): Promise<Resultado<CambioPrecio[]>> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  const negado = await sinPermiso("productos", "editar");
+  if (negado) return { ok: false, error: negado };
+
+  const supabase = await clienteServidor();
+  // Dos claves a `perfiles` (creado_por y deshecho_por): sin decir cuál,
+  // PostgREST tumba la consulta entera (PGRST201, §AN).
+  const { data, error } = await supabase
+    .from("cambios_precio")
+    .select("id, creado_en, porcentaje, productos, deshecho_en, marcas(nombre), quien:perfiles!cambios_precio_creado_por_fkey(nombre)")
+    .order("id", { ascending: false })
+    .limit(15);
+  if (error) return { ok: false, error: error.message };
+
+  return {
+    ok: true,
+    datos: (data ?? []).map((c) => {
+      const marca = c.marcas as { nombre: string } | { nombre: string }[] | null;
+      const quien = c.quien as { nombre: string | null } | { nombre: string | null }[] | null;
+      const uno = <T,>(x: T | T[] | null): T | null => (Array.isArray(x) ? (x[0] ?? null) : x);
+      return {
+        id: Number(c.id),
+        creadoEn: String(c.creado_en),
+        marca: uno(marca)?.nombre ?? "—",
+        porcentaje: Number(c.porcentaje),
+        productos: Number(c.productos),
+        quien: uno(quien)?.nombre ?? null,
+        deshechoEn: (c.deshecho_en as string | null) ?? null,
+      };
+    }),
+  };
 }

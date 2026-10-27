@@ -41,6 +41,7 @@ import { sinEnvioConEnter } from "@/lib/formularios";
   —que es cliente— arrastra `lib/emisor.ts` con su `server-only` y el build
   falla. Se probó, y falló. Los tres archivos de abajo son clientes puros.
 */
+import { AltaProducto } from "@/modules/cotizaciones/ui/constructor/alta-producto";
 import { BuscadorLineas } from "@/modules/cotizaciones/ui/constructor/buscador";
 import { EditarArticulo } from "@/modules/cotizaciones/ui/constructor/editar-articulo";
 import { PreciosYStock } from "@/modules/cotizaciones/ui/constructor/precios-y-stock";
@@ -320,6 +321,16 @@ export function FormularioKit({
     resalta un momento.
   */
   const [recien, setRecien] = React.useState<string | null>(null);
+  /*
+    El alta de un producto que no está, sin salir del kit (FS-09, 27/10).
+
+    El comentario de arriba ya lo prometía —«el que sabe crear un producto que
+    no existe sin salir de aquí»— y el buscador se montaba sin `onCrear`, así
+    que una pieza que faltaba en el maestro obligaba a dejar el kit a medias.
+    Willy pasa los kits por máquina: las piezas raras son justo las que faltan.
+    Es el MISMO diálogo que la cotización, con lo tecleado ya escrito.
+  */
+  const [creando, setCreando] = React.useState<string | null>(null);
   const listaRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -645,11 +656,17 @@ export function FormularioKit({
         {/* Con su título: «Buscar por código…» a secas no decía que esto es
             por donde se AÑADE una pieza (Luis, 25/09). */}
         <div className="flex flex-col gap-1.5">
-          <span className="flex items-center gap-1.5 text-sm font-medium">
-            <Plus className="size-4" aria-hidden="true" />
-            Añadir un producto al kit
-          </span>
-          <BuscadorLineas onElegir={agregar} />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-sm font-medium">
+              <Plus className="size-4" aria-hidden="true" />
+              Añadir un producto al kit
+            </span>
+            <Button type="button" variant="outline" size="sm" className="text-sm" onClick={() => setCreando("")}>
+              <Plus className="size-4" aria-hidden="true" />
+              Nuevo producto
+            </Button>
+          </div>
+          <BuscadorLineas onElegir={agregar} onCrear={(codigo) => setCreando(codigo)} />
         </div>
 
         <div ref={listaRef}>
@@ -1290,6 +1307,14 @@ export function FormularioKit({
             />
           );
         })()
+      ) : null}
+
+      {creando !== null ? (
+        <AltaProducto
+          codigoInicial={creando}
+          onCerrar={() => setCreando(null)}
+          onCreado={(producto) => agregar(producto)}
+        />
       ) : null}
     </form>
   );

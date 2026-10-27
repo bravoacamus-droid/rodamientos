@@ -46,10 +46,10 @@ const nombre = z
 
 const uuid = z.string().uuid();
 
-async function exigirPermiso(): Promise<string | null> {
+async function exigirPermiso(accion: "crear" | "editar" = "crear"): Promise<string | null> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return "Hay que iniciar sesión.";
-  const prohibido = await sinPermiso("productos", "crear");
+  const prohibido = await sinPermiso("productos", accion);
   if (prohibido) {
     return prohibido;
   }
@@ -194,6 +194,92 @@ export async function crearMarca(texto: string): Promise<ResultadoCatalogo> {
 
     revalidar();
     return { ok: true, datos: aNodo(data) };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Corregir y dar de baja (160, FS-04 · 27/10)
+// ---------------------------------------------------------------------------
+/*
+  Hasta la 160 el catálogo de producto solo tenía alta: una marca mal escrita
+  con prisa en el alta rápida de la cotización («TIMKEM») solo se arreglaba
+  por SQL. Es el mismo CRUD que zonas y rubros tienen desde la 142
+  (clientes/acciones/rubros.ts), con dos diferencias:
+
+    · La marca se DA DE BAJA y no se borra: tiene productos, cotizaciones y
+      facturas detrás. Solo deja de salir al elegir. Escribirla otra vez en
+      «Nueva marca» la vuelve a dar de alta (`crear_marca` la reactiva).
+    · Familias y sub-familias solo se renombran. Darlas de baja dejaría
+      productos colgando de algo que no se puede elegir, y nadie lo ha pedido.
+
+  Las reglas viven en la base: el nombre normalizado no se puede repetir y
+  «SIN MARCA», «OTROS» y «POR CLASIFICAR» no se tocan, porque el producto no
+  registrado de la cotización las busca por su nombre.
+*/
+
+export type ResultadoBaja =
+  | { ok: true; datos: { id: string; nombre: string; productos: number } }
+  | { ok: false; error: string };
+
+/** Los RPC de la 160 todavía no están en los tipos generados (`pnpm db:tipos` tras aplicarla). */
+async function llamar(rpc: string, args: Record<string, unknown>): Promise<{ data: unknown; error: string | null }> {
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc(rpc as never, args as never);
+  // El mensaje de la base tal cual: aquí las frases las escribe la 160 para
+  // leerlas («Ya hay una marca «SKF»»). El código entre paréntesis sobra.
+  return { data, error: error ? error.message || mensajeDeError(error) : null };
+}
+
+async function renombrar(
+  rpc: "renombrar_marca" | "renombrar_familia" | "renombrar_subfamilia",
+  idNodo: string,
+  texto: string,
+): Promise<ResultadoCatalogo> {
+  const problema = await exigirPermiso("editar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(idNodo).success) return { ok: false, error: "No es válido." };
+  const valido = nombre.safeParse(texto);
+  if (!valido.success) {
+    return { ok: false, error: valido.error.issues[0]?.message ?? "Nombre no válido." };
+  }
+  try {
+    const { data, error } = await llamar(rpc, { p_id: idNodo, p_nombre: valido.data });
+    if (error) return { ok: false, error };
+    revalidar();
+    return { ok: true, datos: { ...aNodo(data), creada: false } };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}
+
+export async function renombrarMarca(idMarca: string, texto: string): Promise<ResultadoCatalogo> {
+  return renombrar("renombrar_marca", idMarca, texto);
+}
+
+export async function renombrarFamilia(idFamilia: string, texto: string): Promise<ResultadoCatalogo> {
+  return renombrar("renombrar_familia", idFamilia, texto);
+}
+
+export async function renombrarSubfamilia(idSubfamilia: string, texto: string): Promise<ResultadoCatalogo> {
+  return renombrar("renombrar_subfamilia", idSubfamilia, texto);
+}
+
+/** Deja de ofrecerla al elegir. Sus productos se quedan con ella. */
+export async function darDeBajaMarca(idMarca: string): Promise<ResultadoBaja> {
+  const problema = await exigirPermiso("editar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(idMarca).success) return { ok: false, error: "No es válido." };
+  try {
+    const { data, error } = await llamar("cambiar_activo_marca", { p_id: idMarca, p_activo: false });
+    if (error) return { ok: false, error };
+    revalidar();
+    const o = (data ?? {}) as Record<string, unknown>;
+    return {
+      ok: true,
+      datos: { id: String(o.id), nombre: String(o.nombre), productos: Number(o.productos ?? 0) },
+    };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
   }

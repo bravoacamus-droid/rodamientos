@@ -14,6 +14,8 @@ import {
   Input,
 } from "@rodatech/ui";
 
+import { guardarAgencia } from "@/modules/transporte/acciones/guardar";
+
 import { registrarAgencia, type AgenciaCreada } from "../acciones/agencia";
 import { consultarRucAgencia } from "../acciones/consultar-ruc";
 
@@ -43,20 +45,41 @@ import { consultarRucAgencia } from "../acciones/consultar-ruc";
  *
  * El foco entra en el RUC, que es lo primero que se hace.
  *
+ * ---------------------------------------------------------------------------
+ * Y corregir una que ya está (FS-07, 27/10)
+ * ---------------------------------------------------------------------------
+ * Con `agencia`, el mismo diálogo sale relleno y titulado «Editar agencia», y
+ * guarda con `guardarAgencia` de /transporte —la que ya distingue alta de
+ * edición por el id—. El vehículo y la persona del transporte propio ya
+ * tenían su «Editar»; la agencia era la única que obligaba a salir de la guía.
+ *
  * Y todo sigue siendo OPCIONAL: sin internet, sin cuota o con una agencia que
  * no está en el padrón, se escribe a mano y se guarda igual. El botón es un
  * atajo, no una puerta.
  */
+export type AgenciaDelDialogo = AgenciaCreada & { telefono?: string | null; direccion?: string | null };
+
 export function DialogoAgencia({
   abierto,
+  agencia: agenciaPedida,
   onCerrar,
   onGuardada,
 }: {
   abierto: boolean;
+  /** La que se corrige. Sin ella, el diálogo da de alta una nueva. */
+  agencia?: AgenciaDelDialogo;
   onCerrar: () => void;
   /** La agencia ya guardada, para que quien llama la meta en su lista y la elija. */
-  onGuardada: (agencia: AgenciaCreada, yaExistia: boolean) => void;
+  onGuardada: (agencia: AgenciaDelDialogo, yaExistia: boolean) => void;
 }) {
+  /*
+    La agencia del diálogo se fija AL ABRIR. Al cerrar, quien lo monta la
+    suelta enseguida, y sin esto el título saltaba a «Nueva agencia» durante
+    la animación de salida.
+  */
+  const [agencia, setAgencia] = React.useState(agenciaPedida);
+  if (abierto && agenciaPedida !== agencia) setAgencia(agenciaPedida);
+
   const [nombre, setNombre] = React.useState("");
   const [razon, setRazon] = React.useState("");
   const [ruc, setRuc] = React.useState("");
@@ -71,14 +94,14 @@ export function DialogoAgencia({
 
   React.useEffect(() => {
     if (!abierto) return;
-    setNombre("");
-    setRazon("");
-    setRuc("");
-    setTelefono("");
+    setNombre(agencia?.nombre_corto ?? "");
+    setRazon(agencia?.razon_social ?? "");
+    setRuc(agencia?.numero_documento ?? "");
+    setTelefono(agencia?.telefono ?? "");
     setError(null);
     setAviso(null);
     setTraido(false);
-  }, [abierto]);
+  }, [abierto, agencia]);
 
   /*
     Traer la razón social del padrón.
@@ -134,6 +157,24 @@ export function DialogoAgencia({
     }
 
     empezar(async () => {
+      if (agencia) {
+        const datos = {
+          id: agencia.id,
+          razon_social: razon.trim(),
+          nombre_corto: nombre.trim() || null,
+          numero_documento: ruc.trim() || null,
+          telefono: telefono.trim() || null,
+          // No se pregunta aquí: se deja la que tenía, para no borrarla.
+          direccion: agencia.direccion ?? null,
+        };
+        const r = await guardarAgencia(datos);
+        if (!r.ok) {
+          setError(r.error);
+          return;
+        }
+        onGuardada(datos, true);
+        return;
+      }
       const r = await registrarAgencia({
         razon_social: razon.trim(),
         nombre_corto: nombre.trim(),
@@ -153,10 +194,11 @@ export function DialogoAgencia({
     <Dialog open={abierto} onOpenChange={(v) => (!v ? onCerrar() : null)}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nueva agencia</DialogTitle>
+          <DialogTitle>{agencia ? "Editar agencia" : "Nueva agencia"}</DialogTitle>
           <DialogDescription>
-            Queda en la lista para las próximas guías. No se pierde nada de lo
-            que llevas escrito aquí.
+            {agencia
+              ? "Lo que corrijas queda para las próximas guías, y esta toma el RUC y la razón social nuevos. No se pierde nada de lo que llevas escrito."
+              : "Queda en la lista para las próximas guías. No se pierde nada de lo que llevas escrito aquí."}
           </DialogDescription>
         </DialogHeader>
 
@@ -293,7 +335,7 @@ export function DialogoAgencia({
             Cancelar
           </Button>
           <Button type="button" onClick={guardar} disabled={guardando}>
-            {guardando ? "Guardando…" : "Guardar agencia"}
+            {guardando ? "Guardando…" : agencia ? "Guardar cambios" : "Guardar agencia"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -326,8 +326,10 @@ describe("avisos", () => {
   it("avisa cuando sale más de lo que hay, y dice cuánto hay", () => {
     const aviso = avisos(conCotizacion()).find((a) => a.key === "stock");
     expect(aviso).toBeDefined();
-    expect(aviso!.mensaje).toContain("6205-2RS1/C3");
-    expect(aviso!.mensaje).toContain("hay 3");
+    // Cada producto en su fila, no amontonados en la frase (UI1-10).
+    expect(aviso!.detalle).toEqual([expect.stringContaining("6205-2RS1/C3")]);
+    expect(aviso!.detalle![0]).toContain("hay 3");
+    expect(aviso!.mensaje).not.toContain("6205-2RS1/C3");
   });
 
   it("no avisa si lo que sale cabe en lo que hay", () => {

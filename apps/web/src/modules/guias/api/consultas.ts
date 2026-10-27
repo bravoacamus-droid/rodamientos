@@ -639,13 +639,24 @@ export async function cotizacionParaDespachar(
  * que la citan— pero no tiene por qué ofrecerse al despachar hoy.
  */
 export async function agenciasActivas(): Promise<
-  Resultado<{ id: string; razon_social: string; nombre_corto: string | null; numero_documento: string | null }[]>
+  Resultado<
+    {
+      id: string;
+      razon_social: string;
+      nombre_corto: string | null;
+      numero_documento: string | null;
+      telefono: string | null;
+      direccion: string | null;
+    }[]
+  >
 > {
   try {
     const supabase = await clienteServidor();
+    // Teléfono y dirección para el «Editar» de la guía (FS-07): sin ellos,
+    // guardar la agencia corregida los dejaría en blanco.
     const { data, error } = await supabase
       .from("agencias_transporte")
-      .select("id, razon_social, nombre_corto, numero_documento")
+      .select("id, razon_social, nombre_corto, numero_documento, telefono, direccion")
       .eq("activo", true)
       .order("nombre_corto", { nullsFirst: false })
       .limit(100);
@@ -659,6 +670,8 @@ export async function agenciasActivas(): Promise<
         razon_social: String(a.razon_social),
         nombre_corto: (a.nombre_corto as string | null) ?? null,
         numero_documento: (a.numero_documento as string | null) ?? null,
+        telefono: (a.telefono as string | null) ?? null,
+        direccion: (a.direccion as string | null) ?? null,
       })),
     };
   } catch (e) {

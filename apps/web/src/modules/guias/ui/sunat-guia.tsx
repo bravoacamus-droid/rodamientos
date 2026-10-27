@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck, RefreshCw, Send } from "lucide-react";
-import { Button } from "@rodatech/ui";
+import Link from "next/link";
+import { ArrowRight, CircleCheck, RefreshCw, Send } from "lucide-react";
+import { Button, buttonVariants, cn } from "@rodatech/ui";
 
 import { consultarGuiaSunat, enviarGuiaASunat } from "../acciones/sunat";
 
@@ -57,6 +58,33 @@ export function SunatGuia({
   const aceptada = estadoSunat === "aceptado" || estadoSunat === "observado";
   const enviada = estadoSunat === "enviado";
 
+  /*
+    Qué falta para mandarla Y dónde se arregla (UI1-01, 27/10).
+
+    Antes era una lista en gris, fuera del recuadro y sin camino: decía «Falta
+    el ID de las credenciales de API» y no adónde ir. Facturación y /sunat ya
+    llevaban su botón a la configuración; la guía era la única hermana sin él.
+    Ahora va dentro del mismo recuadro de aviso, en el color de leer, con el
+    botón al final.
+  */
+  const faltaConfigurar = (
+    <div className="text-[var(--fg)]">
+      <p className="font-medium">Para mandarla falta configurar el envío:</p>
+      <ul className="mt-1 list-inside list-disc">
+        {faltaConfig.map((f) => (
+          <li key={f}>{f}</li>
+        ))}
+      </ul>
+      <Link
+        href="/configuracion/sunat"
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "mt-2 gap-1.5 text-sm")}
+      >
+        Completar en SUNAT y numeración
+        <ArrowRight className="size-4" aria-hidden="true" />
+      </Link>
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-2 text-sm">
       {aceptada ? (
@@ -73,21 +101,17 @@ export function SunatGuia({
           <strong>Enviada:</strong> SUNAT la está revisando.
         </p>
       ) : (
-        <p className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
-          <strong>Todavía no está en SUNAT.</strong> Tiene que estar aceptada antes de que salga la mercadería.
-          {mensaje ? <span className="mt-1 block text-[var(--fg-muted)]">Último intento: {mensaje}</span> : null}
-        </p>
+        <div className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">
+          <p>
+            <strong>Todavía no está en SUNAT.</strong> Tiene que estar aceptada antes de que salga la mercadería.
+          </p>
+          {mensaje ? <p className="mt-1 text-[var(--fg-muted)]">Último intento: {mensaje}</p> : null}
+          {configurado ? null : <div className="mt-2 border-t border-[var(--warn)] pt-2">{faltaConfigurar}</div>}
+        </div>
       )}
 
-      {!aceptada && !configurado ? (
-        <div className="text-[var(--fg-muted)]">
-          <p>Falta configurar el envío:</p>
-          <ul className="list-inside list-disc">
-            {faltaConfig.map((f) => (
-              <li key={f}>{f}</li>
-            ))}
-          </ul>
-        </div>
+      {!aceptada && !configurado && (estadoSunat === "rechazado" || enviada) ? (
+        <div className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5">{faltaConfigurar}</div>
       ) : null}
       {!aceptada && configurado && faltaGuia.length > 0 ? (
         <div className="text-[var(--danger)]">

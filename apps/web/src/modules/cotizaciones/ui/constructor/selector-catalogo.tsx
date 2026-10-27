@@ -1,13 +1,43 @@
 "use client";
 
 import * as React from "react";
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
-import { Campo, campoBase } from "@rodatech/ui";
+import { Ban, Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Campo, campoBase, toast } from "@rodatech/ui";
+
+import {
+  darDeBajaMarca,
+  renombrarFamilia,
+  renombrarMarca,
+  renombrarSubfamilia,
+} from "@/modules/productos/acciones/catalogos";
 
 export interface OpcionCatalogo {
   id: string;
   nombre: string;
 }
+
+/** Los tres catálogos del producto que se corrigen desde aquí (160). */
+export type CatalogoProducto = "marca" | "familia" | "subfamilia";
+
+/*
+  Cuál de ellos es este selector, si no se dice.
+
+  El alta rápida de la cotización, «Editar artículo» y el alta en bloque de
+  compras montan este selector con `label` «Marca», «Familia» o «Sub-familia»
+  y un `onCrear`. Deducirlo de ahí es lo que hace que los cuatro sitios ganen
+  «Editar» y «Dar de baja» sin tocar cada uno (FS-04, 27/10).
+*/
+const CATALOGO_POR_ETIQUETA: Record<string, CatalogoProducto> = {
+  Marca: "marca",
+  Familia: "familia",
+  "Sub-familia": "subfamilia",
+};
+
+const RENOMBRAR = {
+  marca: renombrarMarca,
+  familia: renombrarFamilia,
+  subfamilia: renombrarSubfamilia,
+} as const;
 
 /**
  * Un selector de catálogo que se busca escribiendo y que deja crear lo que no
@@ -47,6 +77,7 @@ export function SelectorCatalogo({
   onRenombrar,
   onEliminar,
   masculino = false,
+  catalogo,
 }: {
   id: string;
   label: string;
@@ -75,7 +106,71 @@ export function SelectorCatalogo({
   onEliminar?: (id: string) => Promise<boolean>;
   /** «un rubro nuevo» y no «una rubro nueva». */
   masculino?: boolean;
+  /**
+   * Marca, familia o sub-familia del producto: el selector se corrige solo,
+   * con las acciones de la 160. Sin decirlo se deduce del `label` cuando hay
+   * `onCrear` y nadie pasó `onRenombrar`.
+   */
+  catalogo?: CatalogoProducto;
 }) {
+  const tipo: CatalogoProducto | undefined =
+    catalogo ?? (onCrear && !onRenombrar && !onEliminar ? CATALOGO_POR_ETIQUETA[label] : undefined);
+
+  /*
+    Lo corregido aquí, encima de `opciones`. La lista es de quien monta el
+    selector y no se puede tocar desde dentro; un nombre corregido o una marca
+    dada de baja se aplican como parches hasta que la lista vuelva a llegar
+    (el mismo patrón que las altas: estado del servidor + parches locales).
+  */
+  const [nombresNuevos, setNombresNuevos] = React.useState<Record<string, string>>({});
+  const [retiradas, setRetiradas] = React.useState<string[]>([]);
+  const vistas = React.useMemo(
+    () =>
+      tipo
+        ? opciones
+            .filter((o) => !retiradas.includes(o.id))
+            .map((o) => (nombresNuevos[o.id] ? { ...o, nombre: nombresNuevos[o.id]! } : o))
+        : opciones,
+    [tipo, opciones, retiradas, nombresNuevos],
+  );
+
+  const renombrarCatalogo = tipo
+    ? async (idOpcion: string, nombre: string): Promise<OpcionCatalogo | null> => {
+        const r = await RENOMBRAR[tipo](idOpcion, nombre);
+        if (!r.ok) {
+          toast.error(r.error);
+          return null;
+        }
+        setNombresNuevos((n) => ({ ...n, [idOpcion]: r.datos.nombre }));
+        toast.success(`Ahora se llama «${r.datos.nombre}».`);
+        return { id: idOpcion, nombre: r.datos.nombre };
+      }
+    : undefined;
+
+  // Solo la marca se retira: tiene productos y facturas detrás, así que se da
+  // de BAJA —deja de salir al elegir— y no se borra.
+  const bajaDeMarca =
+    tipo === "marca"
+      ? async (idOpcion: string): Promise<boolean> => {
+          const r = await darDeBajaMarca(idOpcion);
+          if (!r.ok) {
+            toast.error(r.error);
+            return false;
+          }
+          setRetiradas((x) => [...x, idOpcion]);
+          toast.success(
+            r.datos.productos > 0
+              ? `«${r.datos.nombre}» ya no sale al elegir. Sus ${r.datos.productos} productos la conservan.`
+              : `«${r.datos.nombre}» ya no sale al elegir.`,
+          );
+          return true;
+        }
+      : undefined;
+
+  const alRenombrar = onRenombrar ?? renombrarCatalogo;
+  const alEliminar = onEliminar ?? bajaDeMarca;
+  /** «Dar de baja» en vez de «Eliminar»: lo que hace es retirarla de la lista. */
+  const esBaja = !onEliminar && Boolean(bajaDeMarca);
   const nueva = masculino ? "nuevo" : "nueva";
   const una = masculino ? "un" : "una";
   /** La opción que se está corrigiendo o a punto de borrarse, dentro de la lista. */
@@ -93,7 +188,7 @@ export function SelectorCatalogo({
   /** Si el desplegable se abrió por la ✕, y no por pulsar el campo. */
   const alCambiar = React.useRef(false);
 
-  const elegida = opciones.find((o) => o.id === valor) ?? null;
+  const elegida = vistas.find((o) => o.id === valor) ?? null;
 
   /*
     Al pulsar la ✕, el foco tiene que ir a la caja de búsqueda.
@@ -132,26 +227,26 @@ export function SelectorCatalogo({
       .replace(/[̀-ͯ]/g, "");
 
   const busca = normal(texto.trim());
-  const filtradas = busca === "" ? opciones : opciones.filter((o) => normal(o.nombre).includes(busca));
+  const filtradas = busca === "" ? vistas : vistas.filter((o) => normal(o.nombre).includes(busca));
 
   // Solo se ofrece crear si lo escrito no existe YA, comparando sin tildes ni
   // mayúsculas: dar de alta «Rodamiento» teniendo «RODAMIENTO» es duplicar el
   // catálogo sin que nadie lo note.
-  const yaExiste = opciones.some((o) => normal(o.nombre) === busca);
+  const yaExiste = vistas.some((o) => normal(o.nombre) === busca);
   const puedeCrear = Boolean(onCrear) && busca.length >= 2 && !yaExiste;
 
   async function renombrar() {
-    if (!onRenombrar || !editando || editando.nombre.trim().length < 2) return;
+    if (!alRenombrar || !editando || editando.nombre.trim().length < 2) return;
     setOcupado(true);
-    const r = await onRenombrar(editando.id, editando.nombre.trim());
+    const r = await alRenombrar(editando.id, editando.nombre.trim());
     setOcupado(false);
     if (r) setEditando(null);
   }
 
   async function eliminar(idOpcion: string) {
-    if (!onEliminar) return;
+    if (!alEliminar) return;
     setOcupado(true);
-    const ok = await onEliminar(idOpcion);
+    const ok = await alEliminar(idOpcion);
     setOcupado(false);
     setBorrando(null);
     if (ok && valor === idOpcion) onElegir(null);
@@ -381,7 +476,8 @@ export function SelectorCatalogo({
                 // sale en otra letra, pequeño, y se acepta sin leer.
                 <div key={o.id} className="flex min-h-11 flex-wrap items-center gap-1.5 bg-[var(--danger-bg)] px-3 py-1">
                   <span className="min-w-0 flex-1 text-sm">
-                    ¿Eliminar <strong>{o.nombre}</strong>?
+                    {esBaja ? "¿Dar de baja " : "¿Eliminar "}
+                    <strong>{o.nombre}</strong>?{esBaja ? " Sus productos la conservan." : ""}
                   </span>
                   <button
                     type="button"
@@ -389,7 +485,7 @@ export function SelectorCatalogo({
                     disabled={ocupado}
                     className="h-9 shrink-0 rounded-md bg-[var(--danger)] px-3 text-sm font-medium text-white disabled:opacity-40"
                   >
-                    {ocupado ? "Eliminando…" : "Sí, eliminar"}
+                    {ocupado ? (esBaja ? "Dando de baja…" : "Eliminando…") : esBaja ? "Sí, dar de baja" : "Sí, eliminar"}
                   </button>
                   <button
                     type="button"
@@ -412,7 +508,7 @@ export function SelectorCatalogo({
                   >
                     {o.nombre}
                   </button>
-                  {onRenombrar ? (
+                  {alRenombrar ? (
                     <button
                       type="button"
                       onClick={() => {
@@ -426,18 +522,22 @@ export function SelectorCatalogo({
                       <Pencil className="size-4" aria-hidden="true" />
                     </button>
                   ) : null}
-                  {onEliminar ? (
+                  {alEliminar ? (
                     <button
                       type="button"
                       onClick={() => {
                         setEditando(null);
                         setBorrando(o.id);
                       }}
-                      aria-label={`Eliminar ${o.nombre}`}
-                      title="Eliminar"
+                      aria-label={`${esBaja ? "Dar de baja" : "Eliminar"} ${o.nombre}`}
+                      title={esBaja ? "Dar de baja" : "Eliminar"}
                       className="mr-1 grid size-8 shrink-0 place-items-center rounded-md text-[var(--fg-muted)] hover:bg-[var(--surface)] hover:text-[var(--danger)]"
                     >
-                      <Trash2 className="size-4" aria-hidden="true" />
+                      {esBaja ? (
+                        <Ban className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      )}
                     </button>
                   ) : null}
                 </div>

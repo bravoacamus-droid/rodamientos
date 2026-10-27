@@ -425,6 +425,12 @@ export function bloqueosEmision(estado: EstadoGuiaEnCurso): Bloqueo[] {
 export interface Aviso {
   key: string;
   mensaje: string;
+  /**
+   * Una fila por producto, cuando el aviso habla de varios. Van aparte y no
+   * dentro de la frase (UI1-10, 27/10): «UKFC208D1 (salen 1, hay 0) ·
+   * UCFC207D1 (…) · H2308 (…)» seguidos en un párrafo no se leían.
+   */
+  detalle?: string[];
 }
 
 /** Lo que conviene mirar dos veces, pero NO impide guardar. */
@@ -457,19 +463,18 @@ export function avisos(estado: EstadoGuiaEnCurso): Aviso[] {
 
     Va en UN solo aviso y no en uno por línea: con seis líneas sin stock,
     seis avisos iguales empujan fuera de la pantalla al del peso y al del
-    ubigeo, que sí piden hacer algo. Los códigos van dentro del mensaje.
+    ubigeo, que sí piden hacer algo. Los códigos van en `detalle`, uno por
+    fila: dentro de la frase se amontonaban (UI1-10).
   */
   const sinStock = estado.lineas.filter((l) => l.cantidad > 0 && l.stock < l.cantidad);
   if (sinStock.length > 0) {
-    const detalle = sinStock
-      .map((l) => `${l.codigo} (salen ${l.cantidad}, hay ${l.stock})`)
-      .join(" · ");
     lista.push({
       key: "stock",
       mensaje:
         sinStock.length === 1
-          ? `Sale más de lo que hay en almacén: ${detalle}. El saldo quedará en negativo al emitir.`
-          : `${sinStock.length} líneas salen con más de lo que hay en almacén: ${detalle}. El saldo quedará en negativo al emitir.`,
+          ? "Un producto sale con más de lo que hay en almacén. El saldo quedará en negativo al emitir:"
+          : `${sinStock.length} líneas salen con más de lo que hay en almacén. El saldo quedará en negativo al emitir:`,
+      detalle: sinStock.map((l) => `${l.codigo} — salen ${l.cantidad}, hay ${l.stock}`),
     });
   }
 
