@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
 
 import { misPermisos } from "@/lib/permisos";
+import { misAvisos, PanelAvisos } from "@/modules/avisos";
 
 import { miPerfil } from "../api/consultas";
 import { FormContrasena, FormMisDatos } from "./formulario";
@@ -20,7 +21,7 @@ import { FormContrasena, FormMisDatos } from "./formulario";
  */
 export default async function PaginaMiPerfil() {
   // El nombre del rol sale de la base: puede ser uno creado por gerencia (143).
-  const [r, { nombreRol }] = await Promise.all([miPerfil(), misPermisos()]);
+  const [r, { nombreRol }, avisos] = await Promise.all([miPerfil(), misPermisos(), misAvisos()]);
 
   if (!r.ok) {
     return (
@@ -62,6 +63,21 @@ export default async function PaginaMiPerfil() {
       <section className="card p-4">
         <h2 className="mb-3 text-sm font-semibold">Tus datos</h2>
         <FormMisDatos perfil={perfil} />
+      </section>
+
+      {/*
+        162. Willy: «pero no te llega como una alerta, tú tienes que entrar y
+        ver» (25:21). Aquí es donde se enciende que le llegue.
+      */}
+      <section id="avisos" className="card scroll-mt-20 p-4">
+        <h2 className="mb-3 text-sm font-semibold">Avisos en el celular</h2>
+        {avisos.ok ? (
+          <PanelAvisos aparatos={avisos.datos.aparatos} clavePublica={avisos.datos.clavePublica} />
+        ) : (
+          <p className="text-sm text-[var(--danger)]">
+            No se pudieron leer tus aparatos: {avisos.error}
+          </p>
+        )}
       </section>
 
       <section className="card p-4">

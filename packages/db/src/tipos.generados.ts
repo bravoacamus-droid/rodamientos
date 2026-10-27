@@ -4670,6 +4670,62 @@ export type Database = {
           },
         ]
       }
+      suscripciones_push: {
+        Row: {
+          activa: boolean
+          agente: string | null
+          aparato: string | null
+          auth: string
+          creada_en: string
+          endpoint: string
+          id: string
+          p256dh: string
+          severidad_minima: Database["public"]["Enums"]["severidad_alerta"]
+          ultima_vez: string
+          ultimo_envio: string | null
+          ultimo_error: string | null
+          usuario_id: string
+        }
+        Insert: {
+          activa?: boolean
+          agente?: string | null
+          aparato?: string | null
+          auth: string
+          creada_en?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          severidad_minima?: Database["public"]["Enums"]["severidad_alerta"]
+          ultima_vez?: string
+          ultimo_envio?: string | null
+          ultimo_error?: string | null
+          usuario_id: string
+        }
+        Update: {
+          activa?: boolean
+          agente?: string | null
+          aparato?: string | null
+          auth?: string
+          creada_en?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          severidad_minima?: Database["public"]["Enums"]["severidad_alerta"]
+          ultima_vez?: string
+          ultimo_envio?: string | null
+          ultimo_error?: string | null
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suscripciones_push_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tipos: {
         Row: {
           activo: boolean
@@ -6233,6 +6289,16 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      registrar_suscripcion_push: {
+        Args: {
+          p_agente: string
+          p_aparato: string
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+        }
+        Returns: string
+      }
       renombrar_familia: {
         Args: { p_id: string; p_nombre: string }
         Returns: Json

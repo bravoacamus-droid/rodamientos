@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@rodatech/ui";
 
 import { FiltroRango, leerRango } from "@/modules/reportes";
+import { RecordatorioAvisos } from "@/modules/avisos";
 
 import { PanelAlertas } from "./panel-alertas";
 import { PanelCartera } from "./panel-cartera";
@@ -75,6 +76,9 @@ export default async function PaginaTablero({ searchParams }: Props) {
           Cómo va todo el negocio, de un vistazo. El detalle de cada parte está en Reportes.
         </p>
       </div>
+
+      {/* 162: solo sale si este aparato puede recibir avisos y todavía no los recibe. */}
+      <RecordatorioAvisos />
 
       {/* 161: lo pendiente es de hoy, así que va antes del filtro de fechas
           y no depende de él. */}

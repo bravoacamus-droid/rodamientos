@@ -39,6 +39,10 @@ export const metadata: Metadata = {
   },
   description:
     "ERP comercial de Inversiones Rodatech E.I.R.L. — distribución de rodamientos y repuestos de mantenimiento industrial.",
+  // 162: en iPhone los avisos solo llegan si el ERP está «en pantalla de
+  // inicio», y estos dos datos son el nombre y el icono que pone ahí.
+  appleWebApp: { capable: true, title: "Rodatech", statusBarStyle: "default" },
+  icons: { apple: "/iconos/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
