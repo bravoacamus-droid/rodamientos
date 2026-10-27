@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { clienteServidor, usuarioActual } from "@rodatech/db/servidor";
 
 import type { ProveedorOpcion } from "../dominio/opcion";
@@ -31,6 +32,46 @@ export type Resultado<T> =
 /** Toda acción es un endpoint público: sin sesión no se responde. */
 async function haySesion(): Promise<boolean> {
   return (await usuarioActual()) !== null;
+}
+
+export interface ContactoProveedor {
+  id: string;
+  telefono: string | null;
+  whatsapp: string | null;
+  email: string | null;
+}
+
+/**
+ * El teléfono, el WhatsApp y el correo de unos proveedores ya elegidos.
+ *
+ * «Analizar precio de compra» propone proveedores desde lo cotizado y lo
+ * comprado, que llegan con el nombre y el precio pero sin el número
+ * (auditoría 27/10). Willy los llama desde esa pantalla, así que el número
+ * tiene que estar ahí. Lectura sin más: el maestro de proveedores lo ve
+ * cualquiera con sesión.
+ */
+export async function contactoDeProveedores(
+  ids: unknown,
+): Promise<Resultado<ContactoProveedor[]>> {
+  if (!(await haySesion())) return { ok: false, error: "Sesión expirada." };
+  const valido = z.array(z.string().uuid()).max(50).safeParse(ids);
+  if (!valido.success) return { ok: false, error: "Proveedores no válidos." };
+  if (valido.data.length === 0) return { ok: true, datos: [] };
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("proveedores")
+      .select("id, telefono, whatsapp, email")
+      .in("id", valido.data);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, datos: data ?? [] };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "No se pudo consultar.",
+    };
+  }
 }
 
 export async function buscarProveedores(

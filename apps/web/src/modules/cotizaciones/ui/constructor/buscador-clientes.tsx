@@ -4,10 +4,11 @@
 // abierto. Es el mismo motivo por el que `BuscadorLineas` lo es.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Button } from "@rodatech/ui";
-import { Building2, Check, Search, X } from "lucide-react";
+import { Badge, Button, campoBase, cn } from "@rodatech/ui";
+import { Building2, Check, Pencil, Phone, Search, X } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
+import { DialogoEditarCliente } from "@/modules/clientes/ui/dialogo-editar-cliente";
 
 import {
   digitosDe,
@@ -60,6 +61,7 @@ export function BuscadorClientes({
   elegido,
   onElegir,
   onQuitar,
+  onCorregido,
   hoy,
 }: {
   /** Los últimos cotizados, del servidor. Se enseñan con la caja vacía. */
@@ -67,12 +69,19 @@ export function BuscadorClientes({
   elegido: ClienteOpcion | null;
   onElegir: (c: ClienteOpcion) => void;
   onQuitar: () => void;
+  /**
+   * El mismo cliente, corregido desde «Editar cliente». Va aparte de
+   * `onElegir` porque no es elegir otro: no debe tocar nada más de la
+   * cotización.
+   */
+  onCorregido: (c: ClienteOpcion) => void;
   /** `aaaa-mm-dd`. Lo inyecta el servidor: el dominio no lee el reloj. */
   hoy: string;
 }) {
   const [termino, setTermino] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
+  const [editando, setEditando] = useState(false);
   const contenedor = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
 
@@ -152,7 +161,7 @@ export function BuscadorClientes({
           <Building2 className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{elegido.razon_social}</p>
+            <p className="text-sm font-semibold [overflow-wrap:anywhere]">{elegido.razon_social}</p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-[var(--fg-muted)]">
               <span className="tabular">
                 {elegido.numero_documento
@@ -168,26 +177,64 @@ export function BuscadorClientes({
                 </>
               ) : null}
             </p>
+            {/* El teléfono a la vista: Willy cotiza por teléfono, y sin
+                apuntarlo no hay WhatsApp al mandar (auditoría 27/10). */}
+            <p className="mt-0.5 flex items-center gap-1.5 text-sm">
+              <Phone className="size-4 shrink-0 text-[var(--fg-subtle)]" aria-hidden="true" />
+              {elegido.telefono ? (
+                <a href={`tel:${elegido.telefono.replace(/\s/g, "")}`} className="tabular underline">
+                  {elegido.telefono}
+                </a>
+              ) : (
+                <span className="text-[var(--fg-muted)]">Sin teléfono</span>
+              )}
+            </p>
             {aviso ? (
               <p className="mt-1 text-sm font-medium text-[var(--danger)]">{aviso}</p>
             ) : null}
-          </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => {
-              onQuitar();
-              // El foco vuelve a la caja: quitar cliente es casi siempre el
-              // primer paso de elegir otro.
-              requestAnimationFrame(() => campo.current?.focus());
-            }}
-          >
-            <X aria-hidden="true" />
-            Cambiar
-          </Button>
+            {/* Corregir y cambiar, los dos con borde y con palabra. «Cambiar»
+                era un botón fantasma pequeño y corregir no existía: había que
+                irse a Clientes y perder la cotización (auditoría 27/10). */}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-sm"
+                onClick={() => setEditando(true)}
+              >
+                <Pencil aria-hidden="true" />
+                Editar cliente
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-sm"
+                onClick={() => {
+                  onQuitar();
+                  // El foco vuelve a la caja: quitar cliente es casi siempre el
+                  // primer paso de elegir otro.
+                  requestAnimationFrame(() => campo.current?.focus());
+                }}
+              >
+                <X aria-hidden="true" />
+                Cambiar
+              </Button>
+            </div>
+          </div>
         </div>
+
+        <DialogoEditarCliente
+          abierto={editando}
+          clienteId={elegido.id}
+          onCerrar={() => setEditando(false)}
+          onGuardado={(c) => {
+            setEditando(false);
+            onCorregido({ ...elegido, razon_social: c.razon_social, telefono: c.telefono });
+          }}
+        />
       </div>
     );
   }
@@ -225,7 +272,7 @@ export function BuscadorClientes({
             aria-expanded={abierto}
             aria-controls="cot-cliente-lista"
             aria-autocomplete="list"
-            className="h-control-md w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-9 pr-20 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
+            className={cn(campoBase, "h-control-md pl-9 pr-20 text-sm")}
           />
           {buscando ? (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">

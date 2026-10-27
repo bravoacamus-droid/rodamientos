@@ -4,8 +4,8 @@
 // abierto. Mismo motivo que `BuscadorClientes`.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Button } from "@rodatech/ui";
-import { Check, Search, Truck, X } from "lucide-react";
+import { Badge, Button, campoBase, cn } from "@rodatech/ui";
+import { Check, ExternalLink, Pencil, Phone, Search, Truck, X } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 import { digitosDe, pareceDocumento, resaltar } from "@/lib/texto-busqueda";
@@ -18,6 +18,7 @@ import {
   ultimaVez,
   type ProveedorOpcion,
 } from "../dominio/opcion";
+import { DialogoContactoProveedor } from "./dialogo-contacto";
 import { ProveedorRapido } from "./rapido";
 
 /**
@@ -74,6 +75,17 @@ export function BuscadorProveedores({
   const [termino, setTermino] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
+  const [editando, setEditando] = useState(false);
+  /*
+    Lo corregido desde «Editar proveedor», encima de lo que llegó al elegir.
+    Se guarda aquí y no se le devuelve a la pantalla con `onElegir`: elegir
+    proveedor en una compra o una recepción reinicia cosas, y apuntarle el
+    teléfono no es elegir otro. Vale solo para el proveedor al que se le
+    apuntó: al cambiar de proveedor deja de aplicarse.
+  */
+  const [corregido, setCorregido] = useState<
+    { id: string; telefono: string | null; whatsapp: string | null; email: string | null } | null
+  >(null);
   const contenedor = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLInputElement>(null);
 
@@ -139,6 +151,11 @@ export function BuscadorProveedores({
   if (elegido) {
     const aviso = motivoNoSeleccionable(elegido);
     const marcas = resumenMarcas(elegido.marcas);
+    const contacto =
+      corregido?.id === elegido.id
+        ? corregido
+        : { telefono: elegido.telefono, whatsapp: elegido.whatsapp, email: elegido.email };
+    const numero = contacto.telefono ?? contacto.whatsapp;
     return (
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium">
@@ -173,27 +190,82 @@ export function BuscadorProveedores({
             {marcas ? (
               <p className="mt-0.5 truncate text-sm text-[var(--fg-subtle)]">{marcas}</p>
             ) : null}
+            {/* El número a la vista (auditoría 27/10): los proveedores
+                entraron del Excel sin ninguno, y es a quien se llama. */}
+            <p className="mt-0.5 flex items-center gap-1.5 text-sm">
+              <Phone className="size-4 shrink-0 text-[var(--fg-subtle)]" aria-hidden="true" />
+              {numero ? (
+                <a href={`tel:${numero.replace(/\s/g, "")}`} className="tabular underline">
+                  {numero}
+                </a>
+              ) : (
+                <span className="text-[var(--fg-muted)]">Sin teléfono</span>
+              )}
+            </p>
             {aviso ? (
               <p className="mt-1 text-sm font-medium text-[var(--danger)]">{aviso}</p>
             ) : null}
-          </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 text-sm"
-            onClick={() => {
-              onQuitar();
-              // El foco vuelve a la caja: quitar proveedor es casi siempre el
-              // primer paso de elegir otro.
-              requestAnimationFrame(() => campo.current?.focus());
-            }}
-          >
-            <X aria-hidden="true" />
-            Cambiar
-          </Button>
+            {/* Corregir sin perder la compra: el teléfono aquí mismo, y lo
+                demás —pago, plazo, marcas— en su ficha, en otra pestaña. */}
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-sm"
+                onClick={() => setEditando(true)}
+              >
+                <Pencil aria-hidden="true" />
+                Editar proveedor
+              </Button>
+              <a
+                href={`/proveedores/${elegido.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-control-sm items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <ExternalLink className="size-4" aria-hidden="true" />
+                Abrir ficha del proveedor
+              </a>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-sm"
+                onClick={() => {
+                  onQuitar();
+                  // El foco vuelve a la caja: quitar proveedor es casi siempre el
+                  // primer paso de elegir otro.
+                  requestAnimationFrame(() => campo.current?.focus());
+                }}
+              >
+                <X aria-hidden="true" />
+                Cambiar
+              </Button>
+            </div>
+          </div>
         </div>
+
+        <DialogoContactoProveedor
+          abierto={editando}
+          proveedorId={elegido.id}
+          proveedor={elegido.razon_social}
+          titulo="Editar proveedor"
+          telefono={contacto.telefono ?? ""}
+          whatsapp={contacto.whatsapp ?? ""}
+          email={contacto.email ?? ""}
+          onCerrar={() => setEditando(false)}
+          onGuardado={(v) => {
+            setEditando(false);
+            setCorregido({
+              id: elegido.id,
+              telefono: v.telefono || null,
+              whatsapp: v.whatsapp || null,
+              email: v.email || null,
+            });
+          }}
+        />
       </div>
     );
   }
@@ -235,7 +307,7 @@ export function BuscadorProveedores({
             aria-expanded={abierto}
             aria-controls={`${id}-lista`}
             aria-autocomplete="list"
-            className="h-control-md w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-9 pr-20 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
+            className={cn(campoBase, "h-control-md pl-9 pr-20 text-sm")}
           />
           {buscando ? (
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">

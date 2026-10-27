@@ -385,6 +385,9 @@ export function Constructor({
                   setCliente(null);
                   despachar({ tipo: "cabecera", campo: "clienteId", valor: null });
                 }}
+                // Corregido desde «Editar cliente»: es el mismo, así que solo
+                // se repinta la tarjeta; la cabecera no cambia.
+                onCorregido={setCliente}
               />
 
               {/* Aquí y no dentro de «Más datos del documento», que está

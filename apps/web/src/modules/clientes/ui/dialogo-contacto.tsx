@@ -49,6 +49,7 @@ export function DialogoContacto({
   clienteId,
   cliente,
   nombreInicial = "",
+  contacto,
   /** Ya hay otros: entonces «principal» arranca sin marcar. */
   hayOtros,
   onCerrar,
@@ -59,6 +60,12 @@ export function DialogoContacto({
   /** Para que el título diga a qué empresa se le está añadiendo. */
   cliente?: string | null;
   nombreInicial?: string;
+  /**
+   * Si llega, se CORRIGE este contacto en vez de crear otro (auditoría
+   * 27/10): apuntarle el teléfono es lo que hace aparecer el WhatsApp, y
+   * desde la cotización solo se podía añadir.
+   */
+  contacto?: ContactoCliente | null;
   hayOtros: boolean;
   onCerrar: () => void;
   onGuardado: (contacto: ContactoCliente) => void;
@@ -74,11 +81,23 @@ export function DialogoContacto({
   // roce que hace que se deje de usar el botón.
   React.useEffect(() => {
     if (!abierto) return;
-    setValor({ ...CONTACTO_VACIO, nombre: nombreInicial.trim() });
-    setPrincipal(!hayOtros);
+    if (contacto) {
+      setValor({
+        nombre: contacto.nombre,
+        cargo: contacto.cargo ?? "",
+        area: contacto.area ?? "",
+        email: contacto.email ?? "",
+        telefono: contacto.telefono ?? "",
+        whatsapp: contacto.whatsapp ?? "",
+      });
+      setPrincipal(contacto.principal);
+    } else {
+      setValor({ ...CONTACTO_VACIO, nombre: nombreInicial.trim() });
+      setPrincipal(!hayOtros);
+    }
     setError(null);
     setErrorNombre(undefined);
-  }, [abierto, nombreInicial, hayOtros]);
+  }, [abierto, nombreInicial, hayOtros, contacto]);
 
   function guardar() {
     setError(null);
@@ -100,6 +119,8 @@ export function DialogoContacto({
       fd.set(
         "contacto",
         JSON.stringify({
+          // Con id, `guardarContacto` corrige en vez de crear.
+          ...(contacto ? { id: contacto.id } : {}),
           cliente_id: clienteId,
           nombre: valor.nombre.trim(),
           cargo: valor.cargo.trim(),
@@ -138,10 +159,11 @@ export function DialogoContacto({
     <Dialog open={abierto} onOpenChange={(v) => (!v ? onCerrar() : null)}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nuevo contacto</DialogTitle>
+          <DialogTitle>{contacto ? "Editar contacto" : "Nuevo contacto"}</DialogTitle>
           <DialogDescription>
-            Se guarda en la ficha de {cliente ?? "este cliente"} y queda para las
-            próximas cotizaciones.
+            {contacto
+              ? `Se corrige en la ficha de ${cliente ?? "este cliente"}, también para las próximas cotizaciones.`
+              : `Se guarda en la ficha de ${cliente ?? "este cliente"} y queda para las próximas cotizaciones.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -160,7 +182,9 @@ export function DialogoContacto({
             onCheckedChange={(v) => setPrincipal(Boolean(v))}
             label="Es el contacto principal"
             ayuda={
-              hayOtros
+              contacto?.principal
+                ? "Es el que se propone por defecto."
+                : hayOtros
                 ? "Pasará a ser el que se proponga por defecto, en lugar del actual."
                 : "Es el primero, así que se propondrá por defecto."
             }

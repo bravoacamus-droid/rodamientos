@@ -35,6 +35,7 @@ export function DialogoContactoProveedor({
   telefono = "",
   whatsapp = "",
   email = "",
+  titulo = "Ponerle el número",
   onCerrar,
   onGuardado,
 }: {
@@ -44,6 +45,8 @@ export function DialogoContactoProveedor({
   telefono?: string;
   whatsapp?: string;
   email?: string;
+  /** «Editar proveedor» desde el selector; «Ponerle el número» desde una fila. */
+  titulo?: string;
   onCerrar: () => void;
   /** Los tres valores ya limpios, para que quien llama repinte sin recargar. */
   onGuardado: (v: { telefono: string; whatsapp: string; email: string }) => void;
@@ -89,7 +92,7 @@ export function DialogoContactoProveedor({
     <Dialog open={abierto} onOpenChange={(v) => (!v ? onCerrar() : null)}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Ponerle el número</DialogTitle>
+          <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>
             Se guarda en la ficha de {proveedor} y queda para siempre. No se
             pierde nada de lo que llevas en esta pantalla.

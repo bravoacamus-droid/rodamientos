@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CircleCheck, Plus, Scale, TriangleAlert, Trash2, UserPlus, X } from "lucide-react";
+import { CircleCheck, Phone, Plus, Scale, TriangleAlert, Trash2, UserPlus, X } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -17,6 +17,8 @@ import {
 } from "@rodatech/ui";
 
 import { BuscadorProveedor } from "@/modules/compras/ui/pedir-precio/anadir";
+import { contactoDeProveedores, type ContactoProveedor } from "@/modules/proveedores/acciones/buscar";
+import { DialogoContactoProveedor } from "@/modules/proveedores/ui/dialogo-contacto";
 
 import { datosParaAnalizar, type DatosParaAnalizar } from "../../acciones/analizar-compra";
 import {
@@ -69,6 +71,41 @@ export function AnalizarCompra({
   const [datos, setDatos] = React.useState<DatosParaAnalizar | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [buscando, setBuscando] = React.useState(linea.proveedores.length === 0);
+
+  /*
+    El teléfono de cada proveedor de la lista (auditoría 27/10).
+
+    Willy cotiza LLAMANDO a sus proveedores desde aquí, y la fila solo decía
+    el nombre. Va en un mapa aparte y no dentro de cada `ProveedorLinea` a
+    propósito: es para la pantalla, y la línea es lo que se guarda con la
+    cotización —un número viejo copiado ahí se quedaría viejo—. Los que entran
+    por el buscador traen el suyo; los que entran por «Usar» o por un precio
+    ya conocido, o los que ya estaban, se leen por id.
+  */
+  const [contactos, setContactos] = React.useState<Record<string, ContactoProveedor>>({});
+  const pedidos = React.useRef(new Set<string>());
+  const [apuntando, setApuntando] = React.useState<ProveedorLinea | null>(null);
+  const idsFilas = filas.map((f) => f.proveedorId).join(",");
+  React.useEffect(() => {
+    const faltan = idsFilas
+      .split(",")
+      .filter((id) => id !== "" && !pedidos.current.has(id));
+    if (faltan.length === 0) return;
+    for (const id of faltan) pedidos.current.add(id);
+    void contactoDeProveedores(faltan).then((r) => {
+      if (!r.ok) {
+        // Que se vuelva a intentar con el siguiente cambio de la lista.
+        for (const id of faltan) pedidos.current.delete(id);
+        return;
+      }
+      setContactos((c) => {
+        const nuevo = { ...c };
+        // Lo que ya se sabía (del buscador, o recién apuntado) no se pisa.
+        for (const p of r.datos) if (!nuevo[p.id]) nuevo[p.id] = p;
+        return nuevo;
+      });
+    });
+  }, [idsFilas]);
 
   React.useEffect(() => {
     if (!linea.productoId) return;
@@ -244,6 +281,37 @@ export function AnalizarCompra({
                         {f.fecha ? (
                           <span className="text-sm text-[var(--fg-subtle)]">precio del {formatearFecha(f.fecha)}</span>
                         ) : null}
+                        {(() => {
+                          const c = contactos[f.proveedorId];
+                          const numero = c?.telefono ?? c?.whatsapp ?? null;
+                          return (
+                            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                              {numero ? (
+                                <a
+                                  href={`tel:${numero.replace(/\s/g, "")}`}
+                                  className="inline-flex items-center gap-1.5 text-sm font-medium tabular underline"
+                                >
+                                  <Phone className="size-4 shrink-0" aria-hidden="true" />
+                                  {numero}
+                                </a>
+                              ) : (
+                                <span className="text-sm text-[var(--fg-muted)]">
+                                  {c ? "Sin teléfono" : "Buscando su teléfono…"}
+                                </span>
+                              )}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 text-sm"
+                                onClick={() => setApuntando(f)}
+                              >
+                                <Phone className="size-4" aria-hidden="true" />
+                                {numero ? "Cambiar teléfono" : "Apuntar teléfono"}
+                              </Button>
+                            </div>
+                          );
+                        })()}
                       </div>
                       <label className="flex flex-col gap-1 text-sm">
                         Cantidad
@@ -374,6 +442,12 @@ export function AnalizarCompra({
                   yaEstan={yaEstan}
                   enfocar={filas.length > 0}
                   onElegir={(p) => {
+                    // Su número llega con él: no hace falta volver a leerlo.
+                    pedidos.current.add(p.id);
+                    setContactos((c) => ({
+                      ...c,
+                      [p.id]: { id: p.id, telefono: p.telefono, whatsapp: p.whatsapp, email: p.email },
+                    }));
                     anadir({ id: p.id, nombre: p.razon_social });
                     setBuscando(false);
                   }}
@@ -587,6 +661,29 @@ export function AnalizarCompra({
             Usar este costo y precio
           </Button>
         </DialogFooter>
+
+        {/* Estaba escrito para esto y nadie lo abría desde el 09/09
+            (5567288): apuntar el número sin salir de la pantalla. */}
+        {apuntando ? (
+          <DialogoContactoProveedor
+            abierto
+            proveedorId={apuntando.proveedorId}
+            proveedor={apuntando.nombre}
+            titulo={`Teléfono de ${apuntando.nombre}`}
+            telefono={contactos[apuntando.proveedorId]?.telefono ?? ""}
+            whatsapp={contactos[apuntando.proveedorId]?.whatsapp ?? ""}
+            email={contactos[apuntando.proveedorId]?.email ?? ""}
+            onCerrar={() => setApuntando(null)}
+            onGuardado={(v) => {
+              const id = apuntando.proveedorId;
+              setContactos((c) => ({
+                ...c,
+                [id]: { id, telefono: v.telefono || null, whatsapp: v.whatsapp || null, email: v.email || null },
+              }));
+              setApuntando(null);
+            }}
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
   );

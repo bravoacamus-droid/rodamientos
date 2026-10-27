@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { Input, SelectNativo } from "@rodatech/ui";
-import { UserPlus } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 
 import { contactosDeCliente } from "@/modules/clientes/acciones/contactos";
 import { DialogoContacto } from "@/modules/clientes/ui/dialogo-contacto";
@@ -65,6 +65,9 @@ export function SelectorContacto({
   // «Otro»: la caja de texto en vez del desplegable.
   const [aMano, setAMano] = React.useState(false);
   const [dandoDeAlta, setDandoDeAlta] = React.useState(false);
+  // El contacto que se está corrigiendo, o null si el diálogo es de alta.
+  const [corrigiendo, setCorrigiendo] = React.useState<ContactoCliente | null>(null);
+  const elegido = !aMano && contactoId ? (lista.find((c) => c.id === contactoId) ?? null) : null;
 
   // Al cambiar de cliente se recarga y se limpia lo elegido: dejar puesto al
   // comprador de la empresa anterior imprimiría un nombre ajeno en el PDF.
@@ -196,10 +199,29 @@ export function SelectorContacto({
           El texto del botón cambia según haya algo escrito: con un nombre puesto
           dice qué se va a guardar, que es lo que quita el miedo a pulsarlo.
         */}
+        {/* Corregir al elegido: apuntarle el teléfono es lo que hace
+            aparecer el WhatsApp al mandar (auditoría 27/10). */}
+        {elegido && !cargando ? (
+          <button
+            type="button"
+            onClick={() => {
+              setCorrigiendo(elegido);
+              setDandoDeAlta(true);
+            }}
+            className={BOTON_PEQUENO}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            Editar contacto
+          </button>
+        ) : null}
+
         {!sinCliente && !cargando ? (
           <button
             type="button"
-            onClick={() => setDandoDeAlta(true)}
+            onClick={() => {
+              setCorrigiendo(null);
+              setDandoDeAlta(true);
+            }}
             className={BOTON_PEQUENO}
           >
             <UserPlus className="size-3.5" aria-hidden="true" />
@@ -216,19 +238,29 @@ export function SelectorContacto({
           clienteId={clienteId}
           cliente={cliente}
           nombreInicial={contactoId === null ? contacto : ""}
-          hayOtros={lista.length > 0}
-          onCerrar={() => setDandoDeAlta(false)}
+          contacto={corrigiendo}
+          hayOtros={lista.some((c) => c.id !== corrigiendo?.id)}
+          onCerrar={() => {
+            setDandoDeAlta(false);
+            setCorrigiendo(null);
+          }}
           onGuardado={(nuevo) => {
             setDandoDeAlta(false);
-            // Entra en la lista y queda ELEGIDO. Guardarlo y tener que buscarlo
-            // en el desplegable sería dejar el trabajo a medias.
-            setLista((prev) =>
+            setCorrigiendo(null);
+            // Entra en la lista —o sustituye al que se corrigió— y queda
+            // ELEGIDO. Guardarlo y tener que buscarlo en el desplegable sería
+            // dejar el trabajo a medias.
+            setLista((prev) => {
               // El principal es uno como mucho: si el nuevo lo es, los demás
               // dejan de serlo aquí también, no solo en la base.
-              (nuevo.principal ? prev.map((c) => ({ ...c, principal: false })) : prev).concat(
-                nuevo,
-              ),
-            );
+              const resto = prev
+                .filter((c) => c.id !== nuevo.id)
+                .map((c) => (nuevo.principal ? { ...c, principal: false } : c));
+              const sitio = prev.findIndex((c) => c.id === nuevo.id);
+              if (sitio === -1) return resto.concat(nuevo);
+              resto.splice(sitio, 0, nuevo);
+              return resto;
+            });
             setAMano(false);
             onElegir(nuevo.id, nuevo.nombre);
           }}
