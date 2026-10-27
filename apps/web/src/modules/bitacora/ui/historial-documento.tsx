@@ -24,6 +24,10 @@ export async function HistorialDocumento({ entidad, id }: { entidad: string; id:
   if (!(await puedo("bitacora", "ver"))) return null;
 
   const r = await historialDe(entidad, id);
+  // En orden de lectura: lo primero que pasó, arriba. `historialDe` trae lo
+  // último primero (y solo las 50 últimas), que sirve a una lista general pero
+  // no a la historia de un documento, donde «Lo creó» tiene que abrir.
+  const filas = r.ok ? juntarIdaYVuelta([...r.datos].reverse()) : [];
 
   return (
     <details className="card group no-print print:hidden">
@@ -34,10 +38,10 @@ export async function HistorialDocumento({ entidad, id }: { entidad: string; id:
               flex, a 390 px se partía en una columna aparte. */}
           <span>
             Quién lo hizo y cuándo
-            {r.ok && r.datos.length > 0 ? (
+            {filas.length > 0 ? (
               <span className="whitespace-nowrap font-normal text-[var(--fg-muted)]">
                 {" "}
-                · {r.datos.length} {r.datos.length === 1 ? "anotación" : "anotaciones"}
+                · {filas.length} {filas.length === 1 ? "anotación" : "anotaciones"}
               </span>
             ) : null}
           </span>
@@ -55,11 +59,11 @@ export async function HistorialDocumento({ entidad, id }: { entidad: string; id:
           <p role="alert" className="text-[var(--danger)]">
             No se pudo leer el historial: {r.error}
           </p>
-        ) : r.datos.length === 0 ? (
+        ) : filas.length === 0 ? (
           <p className="text-[var(--fg-muted)]">Todavía no hay nada apuntado de este documento.</p>
         ) : (
           <ol className="flex flex-col divide-y divide-[var(--border-soft)]">
-            {r.datos.map((m) => (
+            {filas.map((m) => (
               <li key={m.id} className="py-1.5">
                 <span className="tabular text-[var(--fg-muted)]">{fechaHora(m.creado_en)}</span>
                 {" · "}
@@ -102,7 +106,61 @@ function frase(m: Movimiento): string {
       return detalle ? `Lo creó · ${detalle}` : "Lo creó";
     case "borrado":
       return detalle ? `Lo borró · ${detalle}` : "Lo borró";
+    case "editado_igual":
+      // describir() pone el nombre del campo en castellano («Total: 161.16»).
+      return detalle ? `Lo editó · ${detalle}, igual que antes` : "Lo editó";
+    case "editado":
+      return detalle ? `Lo editó · ${detalle}` : "Lo editó";
     default:
       return detalle ?? "Lo cambió";
   }
+}
+
+/**
+ * Junta la ida y vuelta que deja guardar una cotización.
+ *
+ * Al reescribir las líneas, el disparador apunta en la MISMA transacción
+ * «total: 161.16 → 0.00» (se borran las líneas) y «total: 0.00 → 161.16»
+ * (se vuelven a poner). Leído en la ficha parecía que el total llegó a cero:
+ * de ocho anotaciones de una cotización, seis eran eso. Si dos filas seguidas
+ * son de la misma persona, del mismo instante y del mismo campo, y la segunda
+ * arranca donde acabó la primera, se dicen como lo que fueron: una edición
+ * («Total: 108.93 → 116.43», o «Total: 161.16, igual que antes»).
+ */
+function juntarIdaYVuelta(filas: Movimiento[]): Movimiento[] {
+  const salida: Movimiento[] = [];
+  for (let i = 0; i < filas.length; i++) {
+    const a = filas[i]!;
+    const b = filas[i + 1];
+    const ida = cambioSimple(a);
+    const vuelta = b ? cambioSimple(b) : null;
+    if (
+      b &&
+      ida &&
+      vuelta &&
+      a.usuario_nombre === b.usuario_nombre &&
+      a.creado_en === b.creado_en &&
+      ida.campo === vuelta.campo &&
+      ida.despues === vuelta.antes
+    ) {
+      // Si el total cambió de verdad, se dice de dónde a dónde, sin el cero
+      // de en medio; si quedó igual, se dice que quedó igual.
+      salida.push(
+        ida.antes === vuelta.despues
+          ? { ...a, accion: "editado_igual", descripcion: `${ida.campo}: ${ida.antes}` }
+          : { ...a, accion: "editado", descripcion: `${ida.campo}: ${ida.antes} → ${vuelta.despues}` },
+      );
+      i++;
+      continue;
+    }
+    salida.push(a);
+  }
+  return salida;
+}
+
+/** «total: 161.16 → 0.00», un solo campo, en sus tres piezas; null si no. */
+function cambioSimple(m: Movimiento): { campo: string; antes: string; despues: string } | null {
+  if (m.accion !== "cambiado" || !m.descripcion || m.descripcion.includes(" · ")) return null;
+  const x = /^([^:]+): (.*) → (.*)$/.exec(m.descripcion.trim());
+  return x ? { campo: x[1]!.trim(), antes: x[2]!.trim(), despues: x[3]!.trim() } : null;
 }

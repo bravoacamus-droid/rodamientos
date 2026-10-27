@@ -132,7 +132,7 @@ async function Contenido({
             detalle:
               c.porRegistrarCompra + c.porFacturar === 0
                 ? "nada pendiente de compra ni de facturar"
-                : `${c.porRegistrarCompra} sin registrar la compra · ${c.porFacturar} por facturar`,
+                : `${c.porRegistrarCompra} sin la factura del proveedor ·${c.porFacturar} por facturar`,
             tono: c.porRegistrarCompra + c.porFacturar > 0 ? "aviso" : "ok",
             icono: c.porFacturar > 0 ? <Truck aria-hidden="true" /> : <ShoppingCart aria-hidden="true" />,
             href: c.porRegistrarCompra > 0 ? "/pedidos?etapa=por_registrar_compra" : c.porFacturar > 0 ? "/pedidos?etapa=por_facturar" : undefined,

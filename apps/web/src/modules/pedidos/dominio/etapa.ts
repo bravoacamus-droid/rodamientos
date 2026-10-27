@@ -26,7 +26,10 @@ export const ETAPAS: readonly Etapa[] = [
 ];
 
 export const ETIQUETA_ETAPA: Record<Etapa, string> = {
-  por_registrar_compra: "Falta registrar la compra",
+  // Lo que falta, con su nombre (UI2-02): la orden ya está pedida, falta la
+  // factura del proveedor. Con «registrar la compra» la insignia del pedido
+  // y la fila de su orden parecían dos pendientes distintos.
+  por_registrar_compra: "Falta la factura del proveedor",
   esperando_mercaderia: "Esperando la mercadería",
   por_entregar: "Por entregar",
   por_facturar: "Entregado · por facturar",

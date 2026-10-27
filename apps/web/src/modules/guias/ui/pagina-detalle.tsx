@@ -360,7 +360,9 @@ export default async function PaginaDetalleGuia({
                 <div className="flex gap-3">
                   <dt className="w-32 shrink-0 text-[var(--fg-muted)]">Pedido</dt>
                   <dd className="min-w-0 flex-1">
-                    <Link href={`/pedidos/${g.pedido.id}`} className="font-mono font-semibold text-brand-600 underline-offset-4 hover:underline">
+                    {/* Subrayado, como la cotización de arriba: un enlace
+                        que solo se subraya al pasar el ratón no se ve. */}
+                    <Link href={`/pedidos/${g.pedido.id}`} className="font-mono font-semibold text-brand-600 underline underline-offset-4">
                       {g.pedido.numero}
                     </Link>
                   </dd>
