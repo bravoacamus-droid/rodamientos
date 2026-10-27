@@ -8370,3 +8370,39 @@ mira) y la guía (la GRE no tiene beta).
 hay correo de dominio), la ubicación del producto (el campo existe y está
 vacío en los 7 801), la marca «MARCAPRUEBA» y «ZZ MARCA PRUEBA» que siguen en
 la lista de marcas (van con la limpieza), desplegar y el pase a producción.
+
+## §CK · 27/10 — Auditoría con agentes y los ocho paquetes (157-160)
+
+Luis pidió agentes que se coordinen para mejorar todo el sistema: diseño,
+selectores que dejen crear y corregir sin salir, pruebas y trazabilidad para
+que el dueño vea cómo funciona. Cinco auditores y un planificador dieron el
+veredicto «no está listo» por cuatro fallos de dinero; luego cada paquete lo
+implementó un agente y lo verificó otro, abriendo las pantallas.
+
+| Paquete | Qué | Migración |
+|---|---|---|
+| P1 dinero | La nota de crédito baja el saldo (sin tocar las F002 históricas pagadas sin cobro); se factura lo despachado en guía, no lo confirmado; anular reabre la cotización; costo promedio correcto con stock negativo; no se recibe contra orden anulada; pedidos sin saltos; Excel del contador sin series de prueba y con las órdenes sin factura aparte | 157 |
+| P2 selectores | «Editar cliente», «Editar contacto», «Editar proveedor» y «Apuntar teléfono» donde se eligen | — |
+| P3 fichas | «Quién lo hizo y cuándo», cobros con voucher, enlaces de ida y vuelta entre cotización, pedido, guía y factura | — |
+| P4 bitácora | Sobre qué documento es cada fila, buscar por número o persona, pedidos, guías, cobros y bajas dejan rastro, fallos con titular | 158 |
+| P5 avisos | Copia atrasada, rechazos de SUNAT, errores sin revisar; importes y fechas legibles; «Abrir» en cada aviso | 159 |
+| P6 catálogo y guía | Editar y dar de baja marcas y familias donde se eligen; deshacer cambios de precio en orden; distrito por nombre en la guía | 160 |
+| P7 compras | «Ver» en todas las filas, motivo de anulación, alta de producto desde la recepción | — |
+| P8 estados y listas | «Lo comprado», insignias, menú | — |
+
+**Las cuatro aplicadas** el 27/10, cada una con su centinela ejecutando y
+deshaciendo. Los avisos vivos que apuntaban a `/cobranzas/<id>` (38) y a
+`/inventario/ajustes` (2), páginas que no existen, se corrigieron por SQL.
+
+**Cambio de comportamiento:** ya no se factura menos de lo que lleva la guía
+marcada. Si el cliente devolvió parte, se factura lo salido y se emite nota de
+crédito por devolución (153).
+
+**Sin probar guardando de verdad** (escribe en datos del cliente): editar
+cliente/contacto/proveedor, alta de producto desde la recepción, editar y dar
+de baja una marca, la sección «Cobros» con un cobro real (la tabla `pagos`
+está vacía) y una guía parcial facturada.
+
+**Quedan:** quién y cuándo anuló una compra (faltan columnas), «Desactivar» vs
+«Dar de baja» en usuarios y series, y anular un cobro (la 158 quita el DELETE
+de `pagos`: hoy un cobro mal apuntado solo se corrige por SQL).

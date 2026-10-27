@@ -29,6 +29,7 @@ export type Database = {
           entidad_id: string | null
           id: number
           metadata: Json
+          referencia: string | null
           usuario_id: string | null
           usuario_nombre: string | null
         }
@@ -40,6 +41,7 @@ export type Database = {
           entidad_id?: string | null
           id?: never
           metadata?: Json
+          referencia?: string | null
           usuario_id?: string | null
           usuario_nombre?: string | null
         }
@@ -51,6 +53,7 @@ export type Database = {
           entidad_id?: string | null
           id?: never
           metadata?: Json
+          referencia?: string | null
           usuario_id?: string | null
           usuario_nombre?: string | null
         }
@@ -5615,6 +5618,23 @@ export type Database = {
         Args: { p: string; p_que: string }
         Returns: string
       }
+      _nombre_de_producto_catalogo: {
+        Args: { p: string; p_que: string }
+        Returns: string
+      }
+      _referencia_de: {
+        Args: { p_fila: Json; p_tabla: string }
+        Returns: string
+      }
+      _referencia_de_actividad: {
+        Args: {
+          p_accion: string
+          p_entidad: string
+          p_entidad_id: string
+          p_metadata: Json
+        }
+        Returns: string
+      }
       _solo_gerencia: { Args: never; Returns: undefined }
       _tabla_de_todos: { Args: { p_tabla: string }; Returns: boolean }
       _tres_letras: { Args: { n: number }; Returns: string }
@@ -5744,6 +5764,10 @@ export type Database = {
           provincia: string
           relevancia: number
         }[]
+      }
+      cambiar_activo_marca: {
+        Args: { p_activo: boolean; p_id: string }
+        Returns: Json
       }
       cambiar_permiso: {
         Args: {
@@ -6168,11 +6192,23 @@ export type Database = {
         Returns: Json
       }
       registrar_pagos: { Args: { p_pagos: Json }; Returns: Json }
+      renombrar_familia: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
+      renombrar_marca: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
       renombrar_rol: {
         Args: { p_clave: string; p_descripcion: string; p_nombre: string }
         Returns: Json
       }
       renombrar_rubro: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
+      renombrar_subfamilia: {
         Args: { p_id: string; p_nombre: string }
         Returns: Json
       }
