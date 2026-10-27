@@ -289,8 +289,30 @@ export interface CotizacionFacturable {
    * Con esto el mensaje puede decir lo único que sirve: emite la que ya tienes.
    */
   guias_borrador: { id: string; numero: string }[];
+  /**
+   * Las EMITIDAS que ya ampara otra factura (157). Sin esto, con la guía
+   * facturada y un resto sin despachar, la pantalla decía «todavía no hay
+   * ninguna guía emitida», y la había.
+   */
+  guias_facturadas: { id: string; numero: string }[];
+  /**
+   * Qué lleva cada guía libre de cada línea, en unidades de la línea (un kit,
+   * en kits), sin pasar de lo pendiente (157).
+   *
+   * Es lo que permite cuadrar la factura con las guías MARCADAS: la tabla
+   * ofrece lo que salió en todas, y si solo se marca una, facturar el resto
+   * con ella es facturar lo que esa guía no llevó.
+   */
+  despacho: {
+    guia_id: string;
+    linea_id: string;
+    codigo: string;
+    unidades: number;
+  }[];
   /** Solo lo que queda por facturar. Lo entregado ya no está aquí. */
   lineas: {
+    /** La línea de la cotización, para cuadrarla con `despacho`. */
+    linea_id: string;
     producto_id: string;
     codigo: string;
     descripcion: string;

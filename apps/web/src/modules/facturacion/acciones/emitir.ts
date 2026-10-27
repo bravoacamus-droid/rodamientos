@@ -8,7 +8,13 @@ import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import type { Json } from "@rodatech/db/tipos";
 
 import { cotizacionParaFacturar } from "../api/consultas";
-import { bloqueosEmision, cuotasDe, totalesDe, vencimientoDe } from "../dominio/emision";
+import {
+  bloqueosEmision,
+  cuadreConGuias,
+  cuotasDe,
+  totalesDe,
+  vencimientoDe,
+} from "../dominio/emision";
 import { enviarASunat } from "./enviar";
 
 /**
@@ -199,9 +205,9 @@ export async function emitirComprobante(
   // La cotización se relee del servidor y NO se acepta del formulario: los
   // importes que van a acabar en un documento fiscal no pueden venir del
   // navegador.
-  // Con las guías marcadas: el tope de cada línea es lo que salió EN ELLAS
-  // (157), no lo que confirmó el cliente.
-  const cotizacion = await cotizacionParaFacturar(datos.cotizacion_id, datos.guias);
+  // La MISMA lectura que la pantalla: las cantidades del formulario viajan
+  // por posición, y si las líneas se leyeran distinto se cruzarían.
+  const cotizacion = await cotizacionParaFacturar(datos.cotizacion_id);
   if (!cotizacion.ok) return { ok: false, error: cotizacion.error };
   if (!cotizacion.datos) return { ok: false, error: "La cotización no existe." };
 
@@ -250,9 +256,8 @@ export async function emitirComprobante(
 
   // Lo que de verdad se va a emitir: lo pedido, recortado contra lo
   // pendiente que acaba de releerse del servidor. `l.cantidad` YA es el
-  // pendiente sin pasar de lo que salió en las guías marcadas
-  // (api/consultas.ts, 157), así que este `min` es el techo. Una línea que
-  // esas guías no llevan llega en cero y se descarta abajo.
+  // pendiente sin pasar de lo que salió en las guías libres (157), así que
+  // este `min` es el techo.
   const aEmitir = cot.lineas
     .map((l, i) => {
       const pedido = datos.cantidades?.[i];
@@ -266,6 +271,21 @@ export async function emitirComprobante(
 
   if (aEmitir.length === 0) {
     return { ok: false, error: "No hay nada que facturar: todas las cantidades están en cero." };
+  }
+
+  /*
+    Y que cuadre con las guías MARCADAS (157), con la misma regla que enseña
+    la pantalla. Hasta el 27/10 esto recortaba en silencio contra ellas: la
+    previa aprobada decía 3 y salía una factura de 1. Lo que se emite tiene
+    que ser lo que se vio, así que se rechaza y se dice por qué.
+  */
+  const descuadre = cuadreConGuias(cot, aEmitir, datos.guias);
+  if (descuadre.length > 0) {
+    return {
+      ok: false,
+      error: "La factura no cuadra con las guías marcadas.",
+      bloqueos: descuadre.map((b) => b.mensaje),
+    };
   }
 
   const alCredito = datos.condicion_pago === "credito" && datos.dias_credito > 0;

@@ -61,6 +61,24 @@
 --     PED. La secuencia va por 34 y el último pedido es PED-26-00014. Ahora
 --     el número sale del último que existe, bajo un candado de transacción,
 --     así que lo deshecho no deja hueco.
+--
+-- 7 · **Reaplicada el 27/10 por la tarde**, tras la verificación. El tope del
+--     punto 2 tenía tres huecos:
+--     a) Solo miraba los productos de la cotización: una llamada directa a la
+--        RPC facturaba 50 de un producto que no salió en ninguna guía, y una
+--        factura sin cotización no se comprobaba. Ahora cuenta todo, y una
+--        línea sin producto se rechaza (no salió en ninguna guía).
+--     b) Una factura que cobraba menos de lo que llevaba su guía dejaba ese
+--        resto sin cobrar para siempre: la guía queda facturada y no se puede
+--        volver a declarar, y el tope impedía cobrarlo con la guía siguiente.
+--        Ahora lo que salió en las guías ya facturadas de la cotización y no
+--        se cobró sigue disponible. La pantalla, además, ya no deja facturar
+--        menos de lo que lleva la guía (`cuadreConGuias`).
+--     c) Con el saldo que sigue negativo tras una entrada (−15 y +10), el
+--        promedio quedaba en 0 en el stock y el kardex.
+--     Cada parche mira antes si ya está puesto, y el del tope sustituye su
+--     primera versión, así que esta migración se puede aplicar otra vez
+--     entera.
 
 -- ---------------------------------------------------------------------------
 -- 1 · Lo pagado cuenta las notas de crédito
@@ -189,11 +207,14 @@ do $$
 declare
   v_def text;
   v_viejo text;
+  v_nuevo text;
 begin
   -- 2.1 · registrar_pagos: la nota de crédito ya no es un medio de cobro.
   v_def := replace(pg_get_functiondef('public.registrar_pagos(jsonb)'::regprocedure), E'\r\n', E'\n');
   v_viejo := $a$  -- 152: ni de antes de 2020 ni del futuro.$a$;
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré el ancla en registrar_pagos'; end if;
+  -- Esta migración se reaplica (ver «Reaplicarla»): cada parche mira antes si ya está.
+  if position('157: la nota de crédito baja lo que se debe' in v_def) = 0 then
   v_def := replace(v_def, v_viejo, $a$  -- 157: la nota de crédito baja lo que se debe al emitirse. Apuntarla
   -- además como cobro la aplicaría dos veces, y sin enlace a ninguna nota se
   -- podía «cobrar con nota de crédito» sin que existiera.
@@ -205,18 +226,39 @@ begin
 
 $a$ || v_viejo);
   execute v_def;
+  end if;
 
   -- 2.2 · emitir_comprobante: no se factura más de lo que salió en la guía.
-  v_def := replace(pg_get_functiondef('public.emitir_comprobante(jsonb)'::regprocedure), E'\r\n', E'\n');
+  -- Si ya está la primera versión de este bloque (la del 27/10 por la
+  -- mañana), se sustituye entera: va del marcador hasta el ancla de la 153.
+  v_def := replace(pg_get_functiondef('public.emitir_comprobante(jsonb)'::regprocedure), E'
+', E'
+');
   v_viejo := $a$  -- 153: una nota de crédito no acredita más unidades de un producto de las$a$;
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré el ancla en emitir_comprobante'; end if;
-  v_def := replace(v_def, v_viejo, $a$  -- 157: no se factura más de lo que salió en las guías declaradas. Por
-  -- producto de la cotización, y un kit en kits, igual que `despacho_por_item`.
-  if v_tipo in ('factura','boleta')
-     and nullif(p_datos ->> 'cotizacion_id','') is not null
-     and exists (
-       with filas as (
+  v_nuevo := $a$  -- 157: no se factura más de lo que salió en las guías. Por producto, y un
+  -- kit en kits, igual que `despacho_por_item`.
+  -- Cuenta TODO lo que se factura: un producto que no es de la cotización,
+  -- una factura sin cotización y una línea sin producto, que no salió en
+  -- ninguna guía. La primera versión miraba solo los productos de la
+  -- cotización y dejaba facturar 50 de uno ajeno.
+  -- Y lo que salió en una guía de la cotización que ya ampara otra factura,
+  -- y esa factura no cobró, sigue disponible: una guía facturada no se puede
+  -- volver a declarar, así que sin esto ese resto no se cobraba nunca.
+  if v_tipo in ('factura','boleta') and exists (
+       with declaradas as (
+         select distinct g.id::uuid as id
+           from jsonb_array_elements_text(p_datos -> 'guias') g(id)
+       ), anteriores as (
+         select gr.id from guias_remision gr
+          where nullif(p_datos ->> 'cotizacion_id','') is not null
+            and gr.cotizacion_id = (p_datos ->> 'cotizacion_id')::uuid
+            and gr.estado = 'emitida'
+            and gr.id not in (select id from declaradas)
+            and public.guia_esta_facturada(gr.id)
+       ), filas as (
          select gi.guia_id, gi.cotizacion_item_id,
+                gi.guia_id in (select id from declaradas) as declarada,
                 coalesce(ci.producto_id, gi.producto_id) as producto_id,
                 case when coalesce(p.es_kit, false)
                      then gi.cantidad / nullif(kc.cantidad, 0)
@@ -226,35 +268,59 @@ $a$ || v_viejo);
            left join cotizacion_items ci on ci.id = gi.cotizacion_item_id
            left join productos p on p.id = ci.producto_id
            left join kit_componentes kc on kc.kit_id = ci.producto_id and kc.producto_id = gi.producto_id
-          where gi.guia_id in (select g.id::uuid from jsonb_array_elements_text(p_datos -> 'guias') g(id))
+          where gi.guia_id in (select id from declaradas)
+             or gi.guia_id in (select id from anteriores)
        ), por_guia as (
-         select guia_id, producto_id,
+         select guia_id, bool_or(declarada) as declarada, producto_id,
                 case when bool_or(es_kit) then max(unidades) else sum(unidades) end as unidades
            from filas
           group by guia_id, cotizacion_item_id, producto_id
        ), despachado as (
-         select producto_id, sum(unidades) as unidades from por_guia group by producto_id
+         select producto_id,
+                coalesce(sum(unidades) filter (where declarada), 0) as ahora,
+                coalesce(sum(unidades) filter (where not declarada), 0) as antes
+           from por_guia group by producto_id
+       ), cobrado_antes as (
+         select ci.producto_id, sum(ci.cantidad) as cantidad
+           from comprobante_items ci
+          where ci.producto_id is not null
+            and ci.comprobante_id in (
+              select c.id from comprobantes c
+               where c.id <> v_id and c.tipo in ('factura','boleta') and c.estado <> 'anulado'
+                 and (c.guia_id in (select id from anteriores)
+                      or exists (select 1 from comprobante_guias cg
+                                  where cg.comprobante_id = c.id
+                                    and cg.guia_id in (select id from anteriores))))
+          group by ci.producto_id
        ), facturado as (
          select producto_id, sum(cantidad) as cantidad
            from comprobante_items
-          where comprobante_id = v_id and producto_id is not null
-            and producto_id in (select producto_id from cotizacion_items
-                                 where cotizacion_id = (p_datos ->> 'cotizacion_id')::uuid)
+          where comprobante_id = v_id
           group by producto_id
        )
        select 1 from facturado f
          left join despachado d on d.producto_id = f.producto_id
-        where f.cantidad > coalesce(d.unidades, 0) + 0.005)
+         left join cobrado_antes a on a.producto_id = f.producto_id
+        where f.producto_id is null
+           or f.cantidad > coalesce(d.ahora, 0)
+                         + greatest(coalesce(d.antes, 0) - coalesce(a.cantidad, 0), 0) + 0.005)
   then
     raise exception 'Se factura más de lo que salió en la guía'
       using errcode = 'check_violation';
   end if;
 
-$a$ || v_viejo);
+$a$;
+  if position('  -- 157: no se factura más de lo que salió en las guía' in v_def) > 0 then
+    v_def := left(v_def, position('  -- 157: no se factura más de lo que salió en las guía' in v_def) - 1)
+             || v_nuevo || substr(v_def, position(v_viejo in v_def));
+  else
+    v_def := replace(v_def, v_viejo, v_nuevo || v_viejo);
+  end if;
   execute v_def;
 
   -- 2.3 · anular_comprobante: lo facturado vuelve a estar pendiente.
   v_def := replace(pg_get_functiondef('public.anular_comprobante(uuid,text)'::regprocedure), E'\r\n', E'\n');
+  if position('157: para devolver lo atendido' in v_def) = 0 then
   v_viejo := $a$declare v_movs jsonb;
 begin$a$;
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré la cabecera de anular_comprobante'; end if;
@@ -311,10 +377,12 @@ begin$a$);
 
 $a$ || v_viejo);
   execute v_def;
+  end if;
 
   -- 2.4 · registrar_movimientos: con el saldo en cero o negativo, lo que queda
   -- va al costo de la entrada.
   v_def := replace(pg_get_functiondef('public.registrar_movimientos(jsonb,uuid)'::regprocedure), E'\r\n', E'\n');
+  if position('157: en −5' in v_def) = 0 then
   v_viejo := $a$    v_new_val  := v_prev_val  + (v_signo * v_cantidad * v_costo_mov);
 $a$;
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré el ancla en registrar_movimientos'; end if;
@@ -327,10 +395,31 @@ $a$;
     end if;
 $a$);
   execute v_def;
+  end if;
+
+  -- 2.4b · registrar_movimientos: con el saldo que sigue en cero o negativo,
+  -- el promedio no se queda en 0.
+  v_def := replace(pg_get_functiondef('public.registrar_movimientos(jsonb,uuid)'::regprocedure), E'
+', E'
+');
+  if position('157: si el saldo sigue en cero o negativo' in v_def) = 0 then
+  v_viejo := $a$    if v_new_cant <= 0 then
+      v_new_val := 0;
+$a$;
+  if position(v_viejo in v_def) = 0 then raise exception '157: no encontré el saldo agotado en registrar_movimientos'; end if;
+  v_def := replace(v_def, v_viejo, v_viejo || $a$      -- 157: si el saldo sigue en cero o negativo, el promedio conserva el
+      -- último válido, como dice el comentario de arriba: el de antes o, si
+      -- no lo había, el de este movimiento. En −15 entraban 10 a $ 2 y el
+      -- stock y el kardex quedaban con promedio 0.
+      v_costo_prom := coalesce(nullif(v_costo_prom, 0), v_costo_mov);
+$a$);
+  execute v_def;
+  end if;
 
   -- 2.5 · recepcionar_mercaderia: ni contra una orden anulada, ni lo que la
   -- orden no tiene.
   v_def := replace(pg_get_functiondef('public.recepcionar_mercaderia(jsonb)'::regprocedure), E'\r\n', E'\n');
+  if position('157: una orden anulada no recibe nada' in v_def) = 0 then
   v_viejo := $a$    perform 1 from compras where id = v_compra for update;
   end if;
 $a$;
@@ -360,9 +449,11 @@ $a$;
   end if;
 $a$);
   execute v_def;
+  end if;
 
   -- 2.6 · crear_pedido: numeración que se deshace con la transacción.
   v_def := replace(pg_get_functiondef('public.crear_pedido(uuid,jsonb,date)'::regprocedure), E'\r\n', E'\n');
+  if position('157: el siguiente al último que existe' in v_def) = 0 then
   v_viejo := $a$  v_id      uuid;
 begin$a$;
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré la cabecera de crear_pedido'; end if;
@@ -382,6 +473,7 @@ $a$ || v_viejo);
   if position(v_viejo in v_def) = 0 then raise exception '157: no encontré el nextval de crear_pedido'; end if;
   v_def := replace(v_def, v_viejo, $a$lpad(v_num::text, 5, '0')$a$);
   execute v_def;
+  end if;
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -392,7 +484,7 @@ declare
   v_usr  uuid := (select id from perfiles where rol = 'gerencia' and activo order by creado_en limit 1);
   v_cli  uuid; v_prov uuid; p1 uuid; p2 uuid; p3 uuid;
   v_cot  uuid; i1 uuid; v_g uuid; v_fac uuid; v_nc uuid; v_comp uuid;
-  v_cot2 uuid; i2 uuid; v_g2 uuid; v_fac2 uuid;
+  v_cot2 uuid; i2 uuid; v_g2 uuid; v_fac2 uuid; v_g3 uuid; v_g4 uuid; p4 uuid;
   r      jsonb;
   v_ok   boolean;
   v_total numeric; v_saldo numeric;
@@ -416,6 +508,21 @@ begin
     end if;
 
     select max(substring(numero from '(\d+)$')::int) into v_max from pedidos;
+
+    -- 7c · En −15 entran 10 a $ 2: el saldo sigue negativo y el promedio no
+    -- se queda en 0.
+    select p.id into p4 from productos p left join stock s on s.producto_id = p.id
+     where not p.archivado and not p.es_kit and coalesce(s.cantidad, 0) = 0 and p.id <> p3
+     order by p.codigo limit 1;
+    perform public.registrar_movimientos(jsonb_build_array(
+      jsonb_build_object('producto_id', p4, 'tipo', 'salida', 'cantidad', 15, 'motivo', 'Centinela 157')));
+    perform public.registrar_movimientos(jsonb_build_array(
+      jsonb_build_object('producto_id', p4, 'tipo', 'ingreso', 'cantidad', 10, 'costo_unitario', 2,
+                         'motivo', 'Centinela 157')));
+    if (select costo_promedio from stock where producto_id = p4) <> 2 then
+      raise exception '157: tras −15 y +10 a 2, el costo promedio quedó en %',
+        (select costo_promedio from stock where producto_id = p4);
+    end if;
 
     perform set_config('request.jwt.claims',
       json_build_object('sub', v_usr, 'role', 'authenticated')::text, true);
@@ -463,12 +570,86 @@ begin
     end;
     if not v_ok then raise exception '157: se facturaron 10 con una guía de 4'; end if;
 
+    -- 7a · Un producto que no está en la cotización ni salió en la guía.
+    v_ok := false;
+    begin
+      perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+        'cotizacion_id', v_cot, 'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g),
+        'items', jsonb_build_array(
+          jsonb_build_object('producto_id', p1, 'cantidad', 4, 'valor_unitario', 10),
+          jsonb_build_object('producto_id', p2, 'cantidad', 50, 'valor_unitario', 10))));
+    exception when check_violation then
+      v_ok := sqlerrm like 'Se factura más de lo que salió en la guía%';
+    end;
+    if not v_ok then raise exception '157: se facturaron 50 de un producto que no salió en la guía'; end if;
+
+    -- Sin cotización también se mira.
+    v_ok := false;
+    begin
+      perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+        'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g),
+        'items', jsonb_build_array(jsonb_build_object('producto_id', p1, 'cantidad', 5, 'valor_unitario', 10))));
+    exception when check_violation then
+      v_ok := sqlerrm like 'Se factura más de lo que salió en la guía%';
+    end;
+    if not v_ok then raise exception '157: una factura sin cotización facturó 5 con una guía de 4'; end if;
+
+    -- Y una línea sin producto no salió en ninguna guía.
+    v_ok := false;
+    begin
+      perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+        'cotizacion_id', v_cot, 'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g),
+        'items', jsonb_build_array(
+          jsonb_build_object('producto_id', p1, 'cantidad', 4, 'valor_unitario', 10),
+          jsonb_build_object('codigo', 'X', 'descripcion', 'Centinela 157 sin producto',
+                             'unidad_codigo', 'NIU', 'cantidad', 1, 'valor_unitario', 10))));
+    exception when check_violation then
+      v_ok := sqlerrm like 'Se factura más de lo que salió en la guía%';
+    end;
+    if not v_ok then raise exception '157: se facturó una línea sin producto'; end if;
+
     r := public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
            'cotizacion_id', v_cot, 'condicion_pago', 'credito', 'dias_credito', 30,
            'guias', jsonb_build_array(v_g),
            'items', jsonb_build_array(jsonb_build_object('producto_id', p1, 'cantidad', 4, 'valor_unitario', 10))));
     v_fac := (r ->> 'id')::uuid;
     select total into v_total from comprobantes where id = v_fac;
+
+    -- 7b · Una factura corta no deja el resto sin cobrar: guía de 4 y factura
+    -- de 2; con la guía siguiente, de 2, se facturan 4 (2 + el resto), y 5 no.
+    r := public.generar_guia_desde_cotizacion(jsonb_build_object('cotizacion_id', v_cot,
+           'peso_bruto_kg', 1, 'modalidad_traslado', '02', 'a_pie', true,
+           'conductor_documento', '12345678', 'ubigeo_llegada', '150101', 'direccion_llegada', 'C157',
+           'items', jsonb_build_array(jsonb_build_object('cotizacion_item_id', i1,
+             'producto_id', p1, 'cantidad', 4, 'unidad_codigo', 'NIU'))));
+    v_g3 := (r ->> 'id')::uuid;
+    perform public.emitir_guia(v_g3);
+    perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+      'cotizacion_id', v_cot, 'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g3),
+      'items', jsonb_build_array(jsonb_build_object('producto_id', p1, 'cantidad', 2, 'valor_unitario', 10))));
+    r := public.generar_guia_desde_cotizacion(jsonb_build_object('cotizacion_id', v_cot,
+           'peso_bruto_kg', 1, 'modalidad_traslado', '02', 'a_pie', true,
+           'conductor_documento', '12345678', 'ubigeo_llegada', '150101', 'direccion_llegada', 'C157',
+           'items', jsonb_build_array(jsonb_build_object('cotizacion_item_id', i1,
+             'producto_id', p1, 'cantidad', 2, 'unidad_codigo', 'NIU'))));
+    v_g4 := (r ->> 'id')::uuid;
+    perform public.emitir_guia(v_g4);
+    v_ok := false;
+    begin
+      perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+        'cotizacion_id', v_cot, 'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g4),
+        'items', jsonb_build_array(jsonb_build_object('producto_id', p1, 'cantidad', 5, 'valor_unitario', 10))));
+    exception when check_violation then
+      v_ok := sqlerrm like 'Se factura más de lo que salió en la guía%';
+    end;
+    if not v_ok then raise exception '157: con 2 de resto y una guía de 2 se facturaron 5'; end if;
+    perform public.emitir_comprobante(jsonb_build_object('tipo', 'factura', 'cliente_id', v_cli,
+      'cotizacion_id', v_cot, 'condicion_pago', 'contado', 'guias', jsonb_build_array(v_g4),
+      'items', jsonb_build_array(jsonb_build_object('producto_id', p1, 'cantidad', 4, 'valor_unitario', 10))));
+    if (select cantidad_atendida from cotizacion_items where id = i1) <> 10 then
+      raise exception '157: tras facturar el resto, la línea quedó con % atendidas de 10',
+        (select cantidad_atendida from cotizacion_items where id = i1);
+    end if;
 
     -- 1 · Cobro de 10 y nota de crédito: el saldo baja por los dos.
     perform public.registrar_pagos(jsonb_build_array(jsonb_build_object(
@@ -571,5 +752,5 @@ begin
     perform set_config('role', 'postgres', true);
     if sqlerrm <> '__157_DESHACER__' then raise; end if;
   end;
-  raise notice '157: la nota baja el saldo, se factura lo despachado, anular reabre, el costo no se dobla, la orden anulada no recibe y el pedido no salta.';
+  raise notice '157: la nota baja el saldo, se factura lo despachado (y solo eso, sin perder el resto), anular reabre, el costo no se dobla ni se queda en 0, la orden anulada no recibe y el pedido no salta.';
 end $$;

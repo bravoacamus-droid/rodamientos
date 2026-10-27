@@ -539,16 +539,16 @@ const yaFacturada = (g: GuiaDeCotizacion) =>
   );
 
 /**
- * `guiasElegidas`: las que marcó quien factura (157). Sin ella, el tope de
- * cada línea es lo que salió en TODAS las guías emitidas y sin facturar, que
- * es lo que la pantalla enseña. Con ella, lo que salió en esas, que es lo que
- * la Server Action deja emitir. Las líneas son las mismas en los dos casos
- * —solo cambia su cantidad, que puede quedar en cero—, porque las cantidades
- * del formulario viajan por posición.
+ * El tope de cada línea es lo que salió en TODAS las guías emitidas y sin
+ * facturar (157). Cuál de ellas ampara la factura lo decide quien emite, y
+ * para cuadrarlo va `despacho`: qué lleva cada guía de cada línea. La pantalla
+ * y la Server Action lo comprueban igual, con `cuadreConGuias`.
+ *
+ * Antes la acción releía esto con las guías marcadas y RECORTABA en silencio:
+ * la previa enseñaba 3, se marcaba una guía de 1 y salía una factura de 1.
  */
 export async function cotizacionParaFacturar(
   id: string,
-  guiasElegidas?: readonly string[],
 ): Promise<Resultado<CotizacionFacturable | null>> {
   try {
     const supabase = await clienteServidor();
@@ -674,13 +674,6 @@ export async function cotizacionParaFacturar(
     }
 
     const despachado = despachadoPorLinea(filasDe(guiasLibres), piezasDeKit);
-    const elegidas = guiasElegidas ? new Set(guiasElegidas) : null;
-    const despachadoElegidas = elegidas
-      ? despachadoPorLinea(
-          filasDe(guiasLibres.filter((g) => elegidas.has(g.id))),
-          piezasDeKit,
-        )
-      : despachado;
     // Lo que se puede facturar hoy de la línea: lo confirmado y no facturado,
     // sin pasar de lo que salió.
     const facturableDe = (l: (typeof lineasCrudas)[number], porLinea: Map<string, number>) =>
@@ -727,16 +720,29 @@ export async function cotizacionParaFacturar(
           .filter((g) => g.estado === "borrador")
           .map((g) => ({ id: g.id, numero: g.numero }))
           .sort((a, b) => a.numero.localeCompare(b.numero)),
+        guias_facturadas: ((c.guias_remision ?? []) as GuiaDeCotizacion[])
+          .filter((g) => g.estado === "emitida" && yaFacturada(g))
+          .map((g) => ({ id: g.id, numero: g.numero }))
+          .sort((a, b) => a.numero.localeCompare(b.numero)),
+        // Guía por guía, y solo de lo que todavía se debe facturar.
+        despacho: guiasLibres.flatMap((g) =>
+          [...despachadoPorLinea(filasDe([g]), piezasDeKit)].flatMap(([lineaId, unidades]) => {
+            const l = lineasCrudas.find((x) => x.id === lineaId);
+            const tope = l ? Math.min(pendienteDe(l), unidades) : 0;
+            return l && tope > 0
+              ? [{ guia_id: g.id, linea_id: lineaId, codigo: l.codigo ?? "—", unidades: tope }]
+              : [];
+          }),
+        ),
         lineas: lineasCrudas
           // Solo lo que queda por facturar Y ya salió. Una línea ya entregada
           // entera no puede volver a salir en otro comprobante, y una que no
           // ha salido todavía no se factura (157).
           .filter((i) => facturableDe(i, despachado) > 0)
           .map((i) => {
-            // Con las guías elegidas puede quedar en cero: la Server Action
-            // la descarta, y las demás no se mueven de su posición.
-            const cantidad = facturableDe(i, despachadoElegidas);
+            const cantidad = facturableDe(i, despachado);
             return {
+              linea_id: i.id,
               producto_id: i.producto_id,
               codigo: i.codigo ?? "—",
               descripcion: i.descripcion ?? "—",

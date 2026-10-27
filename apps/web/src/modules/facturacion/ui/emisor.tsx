@@ -416,9 +416,12 @@ export function EmisorComprobante({
             // umbral de la boleta se mira contra lo que se cobra.
             { ...cot, lineas: aEmitir, total: totales.total },
             tipo,
+            // Y contra las guías marcadas (157): la Server Action rechaza lo
+            // que no cuadre, así que se avisa aquí antes de pulsar.
+            opciones.guias,
           )
         : [],
-    [cot, aEmitir, totales.total, tipo],
+    [cot, aEmitir, totales.total, tipo, opciones.guias],
   );
 
   const serie = tipo === "factura" ? serieFactura : serieBoleta;
@@ -1051,7 +1054,27 @@ export function EmisorComprobante({
               </div>
             ) : null}
 
-            {bloqueos.some((b) => b.campo !== "guia") ? (
+            {/*
+              El descuadre con las guías marcadas (157) tampoco es de SUNAT:
+              es la regla de Willy de facturar lo que salió. Va aparte y con
+              lo que hay que hacer en cada línea.
+            */}
+            {bloqueos.some((b) => b.campo === "cantidades") ? (
+              <div className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3">
+                <p className="text-sm font-medium text-[var(--warn)]">
+                  La factura no cuadra con la guía
+                </p>
+                <ul className="mt-1 flex flex-col gap-1 text-sm">
+                  {bloqueos
+                    .filter((b) => b.campo === "cantidades")
+                    .map((b) => (
+                      <li key={b.mensaje}>· {b.mensaje}</li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {bloqueos.some((b) => b.campo !== "guia" && b.campo !== "cantidades") ? (
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
                 <p className="mb-1 text-sm font-medium text-[var(--danger)]">
                   SUNAT lo rechazaría:
@@ -1061,9 +1084,9 @@ export function EmisorComprobante({
                     no baja de 14 px (17/09). */}
                 <ul className="flex flex-col gap-1 text-sm">
                   {bloqueos
-                    .filter((b) => b.campo !== "guia")
+                    .filter((b) => b.campo !== "guia" && b.campo !== "cantidades")
                     .map((b) => (
-                      <li key={b.campo}>· {b.mensaje}</li>
+                      <li key={b.mensaje}>· {b.mensaje}</li>
                     ))}
                 </ul>
               </div>

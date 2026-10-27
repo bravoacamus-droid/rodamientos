@@ -4,6 +4,7 @@ import {
   DOC_SUNAT,
   aplicaDetraccion,
   bloqueosEmision,
+  cuadreConGuias,
   cuotasDe,
   despachadoPorLinea,
   docSunatDe,
@@ -38,8 +39,18 @@ const COT: CotizacionFacturable = {
   // factura. Sin ella no se puede emitir (17/09).
   guias: [{ id: "99999999-9999-9999-9999-999999999999", numero: "T001-00000012", fecha: "2026-08-26" }],
   guias_borrador: [],
+  guias_facturadas: [],
+  despacho: [
+    {
+      guia_id: "99999999-9999-9999-9999-999999999999",
+      linea_id: "44444444-4444-4444-4444-444444444444",
+      codigo: "6205-2RS1/C3",
+      unidades: 10,
+    },
+  ],
   lineas: [
     {
+      linea_id: "44444444-4444-4444-4444-444444444444",
       producto_id: "33333333-3333-3333-3333-333333333333",
       codigo: "6205-2RS1/C3",
       descripcion: "RODAMIENTO RIGIDO DE BOLAS 1 HIL.",
@@ -420,5 +431,112 @@ describe("despachadoPorLinea (157)", () => {
       kits,
     );
     expect(r.get("lk")).toBe(3);
+  });
+});
+
+/*
+  157, tras la verificación: la tabla ofrece lo que salió en TODAS las guías
+  libres, y la factura tiene que llevar lo mismo que las MARCADAS. Antes la
+  acción recortaba en silencio (salía una factura de 1 tras aprobar una previa
+  de 3), y facturar de menos dejaba el resto de la guía sin cobrar.
+*/
+describe("cuadreConGuias (157)", () => {
+  const A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+  const L = "44444444-4444-4444-4444-444444444444";
+  const dosGuias = {
+    guias: [
+      { id: A, numero: "T001-00000003", fecha: "2026-10-27" },
+      { id: B, numero: "T001-00000004", fecha: "2026-10-27" },
+    ],
+    despacho: [
+      { guia_id: A, linea_id: L, codigo: "6205", unidades: 1 },
+      { guia_id: B, linea_id: L, codigo: "6205", unidades: 2 },
+    ],
+  };
+
+  it("con las dos guías marcadas y las 3 unidades, cuadra", () => {
+    expect(cuadreConGuias(dosGuias, [{ linea_id: L, cantidad: 3 }], [A, B])).toEqual([]);
+  });
+
+  it("3 con solo la guía de 1 marcada: pide marcar la otra o bajar a 1", () => {
+    const r = cuadreConGuias(dosGuias, [{ linea_id: L, cantidad: 3 }], [A]);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.campo).toBe("cantidades");
+    expect(r[0]!.mensaje).toBe(
+      "6205: se facturan 3 y la guía T001-00000003 lleva 1. Marca también la guía T001-00000004, o baja la cantidad a 1.",
+    );
+  });
+
+  it("1 con la guía de 1 marcada, cuadra", () => {
+    expect(cuadreConGuias(dosGuias, [{ linea_id: L, cantidad: 1 }], [A])).toEqual([]);
+  });
+
+  it("de menos: avisa que el resto se quedaría sin cobrar", () => {
+    const r = cuadreConGuias(dosGuias, [{ linea_id: L, cantidad: 1 }], [A, B]);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.mensaje).toContain("se quedarían sin cobrar");
+    expect(r[0]!.mensaje).toContain("Factura 3");
+  });
+
+  it("quitar la línea entera cuenta como cero", () => {
+    const r = cuadreConGuias(dosGuias, [], [A]);
+    expect(r.map((b) => b.mensaje)).toEqual([
+      "6205: la guía T001-00000003 lleva 1 y se facturan 0. Una guía facturada ya no se puede volver a facturar, así que esa 1 se quedaría sin cobrar. Factura 1; si el cliente devolvió parte, emite después una nota de crédito por la devolución.",
+    ]);
+  });
+
+  it("una línea que ninguna guía marcada lleva, dice cuál la lleva", () => {
+    const r = cuadreConGuias(
+      { ...dosGuias, despacho: [{ guia_id: B, linea_id: L, codigo: "6205", unidades: 2 }] },
+      [{ linea_id: L, cantidad: 2 }],
+      [A],
+    );
+    expect(r[0]!.mensaje).toBe(
+      "6205: se facturan 2 y ninguna de las guías marcadas lo lleva. Marca también la guía T001-00000004, o baja la cantidad a 0.",
+    );
+  });
+
+  it("bloqueosEmision lo incluye solo si recibe las guías marcadas", () => {
+    const cot = { ...COT, ...dosGuias, lineas: COT.lineas.map((l) => ({ ...l, cantidad: 3 })) };
+    expect(bloqueosEmision(cot, "factura").some((b) => b.campo === "cantidades")).toBe(false);
+    expect(bloqueosEmision(cot, "factura", [A]).some((b) => b.campo === "cantidades")).toBe(true);
+  });
+});
+
+describe("guía ya facturada y un resto sin despachar (157)", () => {
+  it("no dice que no hay ninguna guía: dice cuál está facturada", () => {
+    const r = bloqueosEmision(
+      {
+        ...COT,
+        guias: [],
+        lineas: [],
+        lineas_sin_despachar: 1,
+        guias_facturadas: [{ id: "x", numero: "T001-00000002" }],
+      },
+      "factura",
+    );
+    const guia = r.filter((b) => b.campo === "guia");
+    expect(guia).toHaveLength(1);
+    expect(guia[0]!.mensaje).toBe(
+      "La guía T001-00000002 ya está facturada, y lo que queda por facturar todavía no salió en ninguna. Emite la guía de lo que falta y luego factura.",
+    );
+  });
+
+  it("con todo facturado no pide guía", () => {
+    const r = bloqueosEmision(
+      {
+        ...COT,
+        guias: [],
+        lineas: [],
+        lineas_ya_facturadas: 1,
+        guias_facturadas: [{ id: "x", numero: "T001-00000002" }],
+      },
+      "factura",
+    );
+    expect(r.some((b) => b.campo === "guia")).toBe(false);
+    expect(r.map((b) => b.mensaje)).toContain(
+      "Ya se facturó todo lo que el cliente confirmó de esta cotización.",
+    );
   });
 });

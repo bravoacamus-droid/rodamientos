@@ -52,7 +52,7 @@ export function tipoSugerido(tipoDocumento: string | null): TipoComprobante {
 }
 
 export interface Bloqueo {
-  campo: "cliente" | "documento" | "lineas" | "tipo" | "montos" | "guia";
+  campo: "cliente" | "documento" | "lineas" | "tipo" | "montos" | "guia" | "cantidades";
   mensaje: string;
 }
 
@@ -66,6 +66,8 @@ export interface Bloqueo {
 export function bloqueosEmision(
   cotizacion: CotizacionFacturable,
   tipo: TipoComprobante,
+  /** Las guías marcadas para amparar la factura. Sin ellas no se cuadra. */
+  guiasMarcadas?: readonly string[],
 ): Bloqueo[] {
   const lista: Bloqueo[] = [];
   const doc = docSunatDe(cotizacion.cliente_tipo_documento);
@@ -124,11 +126,22 @@ export function bloqueosEmision(
     filtra `cotizacionParaFacturar`, así que aquí basta con contar.
   */
   if (cotizacion.guias.length === 0) {
-    lista.push({
-      campo: "guia",
-      mensaje:
-        "Todavía no hay ninguna guía emitida de esta cotización. La mercadería sale primero: emite la guía y luego factura.",
-    });
+    const facturadas = cotizacion.guias_facturadas.map((g) => g.numero);
+    if (facturadas.length === 0) {
+      lista.push({
+        campo: "guia",
+        mensaje:
+          "Todavía no hay ninguna guía emitida de esta cotización. La mercadería sale primero: emite la guía y luego factura.",
+      });
+    } else if (cotizacion.lineas_sin_despachar > 0) {
+      // Hay guía, pero ya está facturada y lo que queda no salió en ninguna
+      // (157). Decir «no hay ninguna guía emitida» era falso.
+      lista.push({
+        campo: "guia",
+        mensaje: `${facturadas.length === 1 ? `La guía ${facturadas[0]} ya está facturada` : `Las guías ${unirNumeros(facturadas)} ya están facturadas`}, y lo que queda por facturar todavía no salió en ninguna. Emite la guía de lo que falta y luego factura.`,
+      });
+    }
+    // Con todo facturado no falta ninguna guía: lo dice el aviso de las líneas.
   }
 
   if (cotizacion.lineas.length === 0) {
@@ -164,6 +177,98 @@ export function bloqueosEmision(
     });
   }
 
+  if (guiasMarcadas && cotizacion.guias.length > 0) {
+    lista.push(...cuadreConGuias(cotizacion, cotizacion.lineas, guiasMarcadas));
+  }
+
+  return lista;
+}
+
+/** «T001-1», «T001-1 y T001-2», «T001-1, T001-2 y T001-3». */
+function unirNumeros(numeros: readonly string[]): string {
+  if (numeros.length <= 1) return numeros.join("");
+  return `${numeros.slice(0, -1).join(", ")} y ${numeros[numeros.length - 1]}`;
+}
+
+/**
+ * Que la factura lleve lo mismo que las guías que la amparan (157).
+ *
+ * La tabla ofrece, de cada línea, lo que salió en TODAS las guías libres de la
+ * cotización; quien factura marca cuáles amparan esta factura. Las dos cosas
+ * se pueden descuadrar, y en los dos sentidos sale caro:
+ *
+ * - **De más**: se factura lo que la guía marcada no llevó. La base lo rechaza
+ *   («Se factura más de lo que salió en la guía»); hasta el 27/10 la acción lo
+ *   recortaba en silencio y salía una factura menor que la previa aprobada.
+ * - **De menos**: la guía queda facturada y no se puede volver a declarar, así
+ *   que lo que llevó y no se facturó se queda sin cobrar. Si el cliente
+ *   devolvió parte, lo que toca es facturar lo que salió y emitir después una
+ *   nota de crédito por la devolución, que reingresa el stock (153).
+ *
+ * `lineas` son las que se van a emitir, con su cantidad: una línea en cero o
+ * quitada cuenta como cero. Las guías marcadas que no son de esta cotización
+ * (el «+») no se cuadran aquí: no se sabe qué llevan de ella, y la base sí
+ * las cuenta.
+ */
+export function cuadreConGuias(
+  cotizacion: Pick<CotizacionFacturable, "guias" | "despacho">,
+  lineas: readonly { linea_id: string; cantidad: number }[],
+  guiasMarcadas: readonly string[],
+): Bloqueo[] {
+  const marcadas = new Set(guiasMarcadas);
+  const numeroDe = new Map(cotizacion.guias.map((g) => [g.id, g.numero]));
+
+  const porLinea = new Map<
+    string,
+    { codigo: string; lleva: number; conMarcadas: string[]; otras: string[] }
+  >();
+  for (const d of cotizacion.despacho) {
+    const fila = porLinea.get(d.linea_id) ?? {
+      codigo: d.codigo,
+      lleva: 0,
+      conMarcadas: [],
+      otras: [],
+    };
+    const numero = numeroDe.get(d.guia_id) ?? "—";
+    if (marcadas.has(d.guia_id)) {
+      fila.lleva = redondear2(fila.lleva + d.unidades);
+      fila.conMarcadas.push(numero);
+    } else {
+      fila.otras.push(numero);
+    }
+    porLinea.set(d.linea_id, fila);
+  }
+
+  const sale = new Map<string, number>();
+  for (const l of lineas) {
+    sale.set(l.linea_id, redondear2((sale.get(l.linea_id) ?? 0) + Math.max(l.cantidad, 0)));
+  }
+
+  const lista: Bloqueo[] = [];
+  for (const [lineaId, f] of porLinea) {
+    const factura = sale.get(lineaId) ?? 0;
+    const llevan =
+      f.conMarcadas.length === 0
+        ? "ninguna de las guías marcadas lo lleva"
+        : f.conMarcadas.length === 1
+          ? `la guía ${f.conMarcadas[0]} lleva ${f.lleva}`
+          : `las guías ${unirNumeros(f.conMarcadas)} llevan ${f.lleva}`;
+    if (factura > f.lleva + 0.005) {
+      lista.push({
+        campo: "cantidades",
+        mensaje:
+          f.otras.length > 0
+            ? `${f.codigo}: se facturan ${factura} y ${llevan}. Marca también ${f.otras.length === 1 ? `la guía ${f.otras[0]}` : `las guías ${unirNumeros(f.otras)}`}, o baja la cantidad a ${f.lleva}.`
+            : `${f.codigo}: se facturan ${factura} y ${llevan}. Baja la cantidad a ${f.lleva}.`,
+      });
+    } else if (factura < f.lleva - 0.005) {
+      const falta = redondear2(f.lleva - factura);
+      lista.push({
+        campo: "cantidades",
+        mensaje: `${f.codigo}: ${llevan} y se facturan ${factura}. Una guía facturada ya no se puede volver a facturar, así que ${falta === 1 ? "esa 1 se quedaría" : `esas ${falta} se quedarían`} sin cobrar. Factura ${f.lleva}; si el cliente devolvió parte, emite después una nota de crédito por la devolución.`,
+      });
+    }
+  }
   return lista;
 }
 
