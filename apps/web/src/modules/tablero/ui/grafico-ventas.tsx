@@ -5,6 +5,7 @@
 // en la demo se importaba estáticamente y viajaba en cada carga del tablero.
 
 import { useEffect, useRef, useState } from "react";
+import { formatearMoneda } from "@rodatech/ui";
 import {
   Area,
   AreaChart,
@@ -21,8 +22,8 @@ import {
 
 import type { PuntoSerie } from "../api/consultas";
 
-const dolaresExactos = (n: number) =>
-  n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
+// «$ 1,234.50» como el resto del ERP, no «USD 1,234.50» (auditoría 27/10).
+const dolaresExactos = (n: number) => formatearMoneda(n);
 
 /**
  * La cifra corta del eje y de las etiquetas: «20 mil», «4.5 mil», «850».

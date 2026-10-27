@@ -5,7 +5,7 @@ import {
   TrendingUp,
   TriangleAlert,
 } from "lucide-react";
-import { EstadoError, EstadoVacio, KpiCard } from "@rodatech/ui";
+import { EstadoError, EstadoVacio, KpiCard, formatearMoneda } from "@rodatech/ui";
 
 import { describirRango, type Rango } from "@/modules/reportes";
 
@@ -17,12 +17,14 @@ import { periodoEnCurso } from "../dominio/periodo";
 // decenas de veces al día. En la demo se importaba estáticamente.
 import { GraficoVentasLazy } from "./grafico-lazy";
 
-const dolares = (n: number) =>
-  n.toLocaleString("es-PE", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  });
+/**
+ * «$ 3,020», como Cartera, las listas y el papel (auditoría 27/10, UI1-06).
+ * Con `style: "currency"` es-PE escribía «USD 3,020», y en el mismo tablero
+ * otras tarjetas decían «$ 18,850.70»: parecían dos monedas. Sale del
+ * formateador común —símbolo, espacio que no se parte y el signo delante— y
+ * sin céntimos, que en una tarjeta resumen solo estorban.
+ */
+const dolares = (n: number) => formatearMoneda(Math.round(n)).replace(/.00$/, "");
 
 /**
  * Los indicadores del periodo elegido.

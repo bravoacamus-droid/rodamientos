@@ -16,7 +16,7 @@
 /** Los cinco niveles del enum `severidad_alerta`. */
 export type Severidad = "info" | "baja" | "media" | "alta" | "critica";
 
-/** Los trece valores que admite la restricción `alerta_tipo_ok` (156). */
+/** Los diecisiete valores que admite la restricción `alerta_tipo_ok` (159). */
 export type TipoAlerta =
   | "quiebre_stock"
   | "stock_bajo"
@@ -30,7 +30,11 @@ export type TipoAlerta =
   | "sin_rotacion"
   | "margen_bajo"
   | "sunat_atascado"
-  | "certificado_por_vencer";
+  | "certificado_por_vencer"
+  | "respaldo_atrasado"
+  | "gre_rechazo"
+  | "baja_rechazada"
+  | "fallos_pendientes";
 
 /**
  * Los tipos que `generar_alertas()` produce hoy.
@@ -54,6 +58,11 @@ export const TIPOS_QUE_SE_GENERAN: readonly TipoAlerta[] = [
   // le tenía nombre (visto el 23/10).
   "sunat_atascado",
   "certificado_por_vencer",
+  // 159: lo que solo se veía en «Datos de la empresa», /sunat y /actividad.
+  "respaldo_atrasado",
+  "gre_rechazo",
+  "baja_rechazada",
+  "fallos_pendientes",
 ];
 
 export const ETIQUETA_TIPO: Record<TipoAlerta, string> = {
@@ -70,6 +79,10 @@ export const ETIQUETA_TIPO: Record<TipoAlerta, string> = {
   margen_bajo: "Margen bajo",
   sunat_atascado: "Envío a SUNAT sin respuesta",
   certificado_por_vencer: "Certificado digital por caducar",
+  respaldo_atrasado: "Copia de seguridad atrasada",
+  gre_rechazo: "Guía rechazada por SUNAT",
+  baja_rechazada: "Baja rechazada por SUNAT",
+  fallos_pendientes: "Errores sin revisar",
 };
 
 export const ETIQUETA_SEVERIDAD: Record<Severidad, string> = {

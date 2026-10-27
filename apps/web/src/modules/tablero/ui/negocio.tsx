@@ -1,5 +1,5 @@
 import { Boxes, FileText, ShoppingCart, Users } from "lucide-react";
-import { EstadoError, KpiCard } from "@rodatech/ui";
+import { EstadoError, KpiCard, formatearMoneda } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 
 import { periodoAnterior, type Rango } from "@/modules/reportes";
@@ -28,8 +28,14 @@ import { Bloque, Partes, Ranking, dinero, entero, pct } from "./ejecutivo/piezas
  * repite aquí: para eso están los reportes.
  */
 
-const dolares = (n: number) =>
-  n.toLocaleString("es-PE", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+/**
+ * «$ 3,020», como Cartera, las listas y el papel (auditoría 27/10, UI1-06).
+ * Con `style: "currency"` es-PE escribía «USD 3,020», y en el mismo tablero
+ * otras tarjetas decían «$ 18,850.70»: parecían dos monedas. Sale del
+ * formateador común —símbolo, espacio que no se parte y el signo delante— y
+ * sin céntimos, que en una tarjeta resumen solo estorban.
+ */
+const dolares = (n: number) => formatearMoneda(Math.round(n)).replace(/.00$/, "");
 
 /** Cotizado, comprado, almacén y clientes: las cuatro tarjetas de la segunda fila. */
 export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: string }) {

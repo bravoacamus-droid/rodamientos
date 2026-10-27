@@ -22,9 +22,16 @@ const COLOR_SEVERIDAD: Record<Severidad, string> = {
  * Alertas prioritarias.
  *
  * El cliente fue explícito: «pero no te llega como una alerta, tú tienes que
- * entrar y ver» (25:21). Por eso se muestra cuántas están **sin notificar**:
- * es el indicador de que el envío está funcionando o no. Mientras no exista el
+ * entrar y ver» (25:21). Por eso se dice cuántas están **sin mandar**: es el
+ * indicador de que el envío está funcionando o no. Mientras no exista el
  * worker que las empuja, ese contador dice la verdad en vez de disimularla.
+ *
+ * Auditoría del 27/10 (UI1-02, UI1-07): ese dato era una pastilla «43 sin
+ * avisar» que no decía a quién, más un punto naranja de 6 px en cada fila cuyo
+ * significado solo salía al pasar el ratón. Ahora es una frase entera, una
+ * vez, y el punto no está. El mensaje ya no se corta en «…» justo antes de la
+ * cifra y la fecha, que es lo único que dice algo, y cada alerta con enlace
+ * lleva un botón «Abrir» en vez de ser una fila pulsable sin aspecto de nada.
  */
 export async function PanelAlertas() {
   const [lista, pendientes] = await Promise.all([
@@ -37,23 +44,22 @@ export async function PanelAlertas() {
 
   return (
     <section className="card flex flex-col">
-      <header className="flex items-center justify-between gap-2 border-b border-[var(--border-soft)] px-4 py-3">
-        <h2 className="text-sm font-semibold">Alertas</h2>
-        <div className="flex items-center gap-2">
-          {sinNotificar > 0 ? (
-            <span
-              className="rounded-sm bg-[var(--warn-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--warn)]"
-              title="Generadas pero todavía no enviadas a nadie"
-            >
-              {sinNotificar} sin avisar
-            </span>
-          ) : null}
+      <header className="border-b border-[var(--border-soft)] px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Alertas</h2>
           {/* Botón y no enlace suelto, como el de la cartera (revisión del 02/10). */}
           <Link href="/alertas" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Ver todas
             <ArrowRight aria-hidden="true" />
           </Link>
         </div>
+        {sinNotificar > 0 ? (
+          <p className="mt-1 text-sm text-[var(--fg-muted)]">
+            {sinNotificar === 1
+              ? "1 alerta todavía no se mandó por WhatsApp ni por correo."
+              : `${sinNotificar} alertas todavía no se mandaron por WhatsApp ni por correo.`}
+          </p>
+        ) : null}
       </header>
 
       {alertas.length === 0 ? (
@@ -65,47 +71,37 @@ export async function PanelAlertas() {
         </div>
       ) : (
         <ul className="divide-y divide-[var(--border-soft)]">
-          {alertas.map((a) => {
-            const contenido = (
-              <div className="flex items-start gap-3 px-4 py-2.5">
-                <span
-                  className={`mt-0.5 shrink-0 rounded-sm px-1.5 py-0.5 text-sm font-medium ${
-                    COLOR_SEVERIDAD[a.severidad] ?? COLOR_SEVERIDAD.baja
-                  }`}
-                >
-                  {ETIQUETA_SEVERIDAD[a.severidad] ?? a.severidad}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{a.titulo}</p>
-                  <p className="truncate text-sm text-[var(--fg-muted)]">
-                    {a.mensaje}
-                  </p>
-                </div>
-                {a.notificado_en === null ? (
-                  <span
-                    aria-label="Sin notificar"
-                    title="Sin notificar"
-                    className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[var(--warn)]"
-                  />
-                ) : null}
+          {alertas.map((a) => (
+            // En el móvil el botón baja a su propia fila: a su lado, el mensaje
+            // tenía 150 px y se cortaba justo en la cifra (visto a 390 px).
+            <li key={a.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-2.5">
+              <span
+                className={`mt-0.5 shrink-0 rounded-sm px-1.5 py-0.5 text-sm font-medium ${
+                  COLOR_SEVERIDAD[a.severidad] ?? COLOR_SEVERIDAD.baja
+                }`}
+              >
+                {ETIQUETA_SEVERIDAD[a.severidad] ?? a.severidad}
+              </span>
+              <div className="min-w-0 flex-1 basis-56">
+                <p className="text-sm font-medium">{a.titulo}</p>
+                {/* Dos líneas y no una: lo que se cortaba era la cifra y la
+                    fecha. En el móvil, entero. */}
+                <p className="text-sm text-[var(--fg-muted)] sm:line-clamp-2" title={a.mensaje}>
+                  {a.mensaje}
+                </p>
               </div>
-            );
-
-            return (
-              <li key={a.id}>
-                {a.accion_url ? (
-                  <Link
-                    href={a.accion_url}
-                    className="block transition-colors hover:bg-[var(--surface-2)]"
-                  >
-                    {contenido}
-                  </Link>
-                ) : (
-                  contenido
-                )}
-              </li>
-            );
-          })}
+              {a.accion_url ? (
+                <Link
+                  href={a.accion_url}
+                  aria-label={`Abrir: ${a.titulo}`}
+                  className={`ml-auto shrink-0 ${buttonVariants({ variant: "outline", size: "sm" })}`}
+                >
+                  Abrir
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              ) : null}
+            </li>
+          ))}
         </ul>
       )}
     </section>

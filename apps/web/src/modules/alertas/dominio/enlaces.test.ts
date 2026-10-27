@@ -88,7 +88,11 @@ function existeLaPagina(ruta: string): boolean {
 }
 
 describe("los enlaces de las alertas", () => {
-  const rutas = rutasDeclaradas("021_alertas.sql");
+  // La 159 reescribe la función entera y trae las rutas de los avisos nuevos
+  // (guía, baja, copia de seguridad, errores): se vigilan las dos.
+  const rutas = [
+    ...new Set([...rutasDeclaradas("021_alertas.sql"), ...rutasDeclaradas("159_avisos_que_faltaban.sql")]),
+  ];
 
   it("declara al menos una ruta por cada familia de alerta", () => {
     // Si el regex deja de encontrarlas, la prueba pasaría en vacío y no
