@@ -1030,6 +1030,13 @@ export type Database = {
             foreignKeyName: "compras_pedido_id_fkey"
             columns: ["pedido_id"]
             isOneToOne: false
+            referencedRelation: "v_pedido_avance"
+            referencedColumns: ["pedido_id"]
+          },
+          {
+            foreignKeyName: "compras_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
             referencedRelation: "v_pedido_lineas"
             referencedColumns: ["pedido_id"]
           },
@@ -1568,6 +1575,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_avance"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "comprobantes_pedido_id_fkey"
@@ -3144,6 +3158,13 @@ export type Database = {
             foreignKeyName: "guias_remision_pedido_id_fkey"
             columns: ["pedido_id"]
             isOneToOne: false
+            referencedRelation: "v_pedido_avance"
+            referencedColumns: ["pedido_id"]
+          },
+          {
+            foreignKeyName: "guias_remision_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
             referencedRelation: "v_pedido_lineas"
             referencedColumns: ["pedido_id"]
           },
@@ -3577,6 +3598,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "pedidos"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_avance"
+            referencedColumns: ["pedido_id"]
           },
           {
             foreignKeyName: "pedido_items_pedido_id_fkey"
@@ -5138,6 +5166,19 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      v_pedido_avance: {
+        Row: {
+          compras: number | null
+          compras_recibidas: number | null
+          confirmado: number | null
+          despachado: number | null
+          facturado: number | null
+          guias_borrador: number | null
+          pedido_id: string | null
+          ultima_guia: string | null
+        }
+        Relationships: []
       }
       v_pedido_lineas: {
         Row: {

@@ -61,8 +61,10 @@ function rutasDeclaradas(archivo: string): string[] {
     .filter((l) => !l.trimStart().startsWith("--"))
     .join("\n");
 
-  const encontradas = sinComentarios.match(/'(\/[a-z0-9/-]*)'/g) ?? [];
-  return [...new Set(encontradas.map((m) => m.slice(1, -1)))];
+  // La 161 trae la primera ruta con filtro (`/cotizaciones?estado=enviada`):
+  // se vigila la pantalla y se deja fuera el `?…`, que la pantalla lee.
+  const encontradas = sinComentarios.match(/'(\/[a-z0-9/-]*)(\?[a-z0-9=&_-]*)?'/g) ?? [];
+  return [...new Set(encontradas.map((m) => m.slice(1, -1).split("?")[0] ?? ""))];
 }
 
 /** ¿Sirve esta ruta alguna `page.tsx`? */
@@ -90,9 +92,21 @@ function existeLaPagina(ruta: string): boolean {
 describe("los enlaces de las alertas", () => {
   // La 159 reescribe la función entera y trae las rutas de los avisos nuevos
   // (guía, baja, copia de seguridad, errores): se vigilan las dos.
+  // La 161 la vuelve a reescribir con los avisos de lo que se queda atrás
+  // (pedidos, compras, cotizaciones y guías).
   const rutas = [
-    ...new Set([...rutasDeclaradas("021_alertas.sql"), ...rutasDeclaradas("159_avisos_que_faltaban.sql")]),
+    ...new Set([
+      ...rutasDeclaradas("021_alertas.sql"),
+      ...rutasDeclaradas("159_avisos_que_faltaban.sql"),
+      ...rutasDeclaradas("161_avisos_del_dia_a_dia.sql"),
+    ]),
   ];
+
+  it("la 161 declara las rutas de sus avisos nuevos", () => {
+    for (const r of ["/pedidos/", "/compras/", "/guias/", "/cotizaciones/", "/cotizaciones"]) {
+      expect(rutas).toContain(r);
+    }
+  });
 
   it("declara al menos una ruta por cada familia de alerta", () => {
     // Si el regex deja de encontrarlas, la prueba pasaría en vacío y no

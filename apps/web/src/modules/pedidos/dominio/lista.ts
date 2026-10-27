@@ -11,7 +11,7 @@
  * simple y más honesto que un keyset sobre seis columnas ordenables.
  */
 
-import { ETAPAS, type Etapa } from "./etapa";
+import { ETAPAS, type DespachoDelPedido, type Etapa } from "./etapa";
 
 export type EstadoSunatFactura = "aceptado" | "pendiente" | "rechazado";
 
@@ -50,6 +50,8 @@ export interface FilaPedido {
   guia: { id: string; numero: string; emitida: boolean } | null;
   facturas: FacturaDelPedido[];
   etapa: Etapa;
+  /** Cuánto salió y cuánto se facturó (161), para «faltan 4 de 10». */
+  despacho?: DespachoDelPedido | null;
   productos: { codigo: string; cantidad: number }[];
   /**
    * Es el último de su cotización. Lo nuevo —guía, órdenes, factura, otro

@@ -11,13 +11,12 @@ import {
   ETIQUETA_FAMILIA,
   ETIQUETA_SEVERIDAD,
   ETIQUETA_TIPO,
+  FAMILIAS,
   TIPOS_QUE_SE_GENERAN,
-  type Familia,
   type Severidad,
 } from "../dominio/tipos";
 
 const SEVERIDADES: readonly Severidad[] = ["critica", "alta", "media", "baja", "info"];
-const FAMILIAS: readonly Familia[] = ["almacen", "dinero", "documentos"];
 
 /**
  * La bandeja de alertas (13/10): una fila de desplegables, como el resto de

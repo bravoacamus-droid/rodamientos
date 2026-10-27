@@ -1,6 +1,6 @@
 import { CircleCheck, CircleDot, TriangleAlert } from "lucide-react";
 
-import { ETIQUETA_ETAPA, TONO_ETAPA, type Etapa } from "../dominio/etapa";
+import { TONO_ETAPA, textoEtapa, type DespachoDelPedido, type Etapa } from "../dominio/etapa";
 
 const ESTILO = {
   aviso: "border-[var(--warn)] bg-[var(--warn-bg)] text-[var(--fg)]",
@@ -12,7 +12,16 @@ const ESTILO = {
  * La etapa del pedido con su icono: el color no puede ser la única pista
  * (quien no distingue el ámbar del verde lee el icono y la palabra).
  */
-export function InsigniaEtapa({ etapa, grande = false }: { etapa: Etapa; grande?: boolean }) {
+export function InsigniaEtapa({
+  etapa,
+  grande = false,
+  despacho,
+}: {
+  etapa: Etapa;
+  grande?: boolean;
+  /** Con él, «Salió una parte: faltan 4 de 10» (161). */
+  despacho?: DespachoDelPedido | null;
+}) {
   const tono = TONO_ETAPA[etapa];
   const Icono = tono === "ok" ? CircleCheck : tono === "aviso" ? TriangleAlert : CircleDot;
   return (
@@ -22,7 +31,7 @@ export function InsigniaEtapa({ etapa, grande = false }: { etapa: Etapa; grande?
       }`}
     >
       <Icono className={grande ? "size-5" : "size-4"} aria-hidden="true" />
-      {ETIQUETA_ETAPA[etapa]}
+      {textoEtapa(etapa, despacho)}
     </span>
   );
 }

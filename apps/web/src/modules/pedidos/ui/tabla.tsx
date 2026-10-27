@@ -241,7 +241,7 @@ export function TablaPedidos({
                 </td>
                 <td className={`whitespace-nowrap px-3 py-2.5 ${SUNAT[sunatDe(p)].clase}`}>{SUNAT[sunatDe(p)].texto}</td>
                 <td className="px-3 py-2.5">
-                  <InsigniaEtapa etapa={p.etapa} />
+                  <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
                   <AccionesPedido p={paraAcciones(p)} />
@@ -273,7 +273,7 @@ export function TablaPedidos({
                   {p.cotizacion} · {formatearFecha(p.fecha)}
                 </p>
               </div>
-              <InsigniaEtapa etapa={p.etapa} />
+              <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
             </div>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
               <div>

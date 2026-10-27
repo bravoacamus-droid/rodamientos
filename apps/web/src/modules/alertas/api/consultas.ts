@@ -5,10 +5,12 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 
 import { familiaDe, ordenarBandeja } from "../dominio/alerta";
+import { resumirDelDia, type FilaDelDia } from "../dominio/del-dia";
 import {
+  FAMILIAS,
+  TIPOS_DEL_DIA_A_DIA,
   TIPOS_QUE_SE_GENERAN,
   type Alerta,
-  type Familia,
   type FiltrosBandeja,
   type ResumenBandeja,
   type Severidad,
@@ -18,7 +20,6 @@ import {
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
 const SEVERIDADES: readonly Severidad[] = ["info", "baja", "media", "alta", "critica"];
-const FAMILIAS: readonly Familia[] = ["almacen", "dinero", "documentos"];
 
 const CAMPOS = `id, tipo, severidad, titulo, mensaje, entidad_tipo, entidad_id,
   entidad_nombre, valor, accion_url, leida, archivada, notificado_en, generada_en`;
@@ -149,6 +150,31 @@ export async function resumenBandeja(): Promise<Resultado<ResumenBandeja>> {
         },
         ultima: data?.ultima ? String(data.ultima) : null,
       },
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Las alertas vivas de lo que se queda atrás (161), para el recuadro del
+ * tablero. Pocas filas: una por pedido, compra, guía o cotización pendiente.
+ */
+export async function pendientesDelDia(): Promise<Resultado<FilaDelDia[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("alertas")
+      .select("tipo, valor")
+      .eq("archivada", false)
+      .in("tipo", [...TIPOS_DEL_DIA_A_DIA])
+      .limit(1000);
+    if (error) return fallo(error);
+    return {
+      ok: true,
+      datos: resumirDelDia(
+        (data ?? []).map((d) => ({ tipo: String(d.tipo), valor: d.valor === null ? null : Number(d.valor) })),
+      ),
     };
   } catch (e) {
     return fallo(e);

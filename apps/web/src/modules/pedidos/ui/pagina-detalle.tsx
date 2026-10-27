@@ -22,11 +22,12 @@ import { GenerarOrdenes } from "@/modules/cotizaciones/ui/detalle/ordenes-compra
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
 import { detallePedido, recepcionesDeLasOrdenes } from "../api/consultas";
-import { ETIQUETA_ETAPA } from "../dominio/etapa";
+import { textoEtapa } from "../dominio/etapa";
 import { papelDelPedido } from "../dominio/hoja";
 import { OtroPedido } from "@/modules/cotizaciones/ui/detalle/otro-pedido";
 import { AccionesPedido } from "./acciones";
 import { ComprasDelPedido } from "./compras-del-pedido";
+import { CuadreDelPedido } from "./cuadre";
 import { DescargarHojaPedido } from "./descargar-hoja";
 import { DocumentoPedido } from "./documento";
 import { InsigniaEtapa } from "./insignia";
@@ -169,7 +170,7 @@ export default async function PaginaDetallePedido({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <InsigniaEtapa etapa={p.etapa} grande />
+          <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} grande />
           {/* La hoja de pedido (Luis, 15/10: «se puede imprimir, igual
               descargar la hoja de pedido»). */}
           {p.lineas.length > 0 ? (
@@ -229,6 +230,9 @@ export default async function PaginaDetallePedido({
           )}
         </nav>
       ) : null}
+
+      {/* 161: lo despachado, lo facturado y lo cobrado, de un vistazo. */}
+      <CuadreDelPedido despacho={p.despacho} facturas={p.facturas} />
 
       {/* ------------------------------------------------ Qué pidió */}
       <section className="card p-4">
@@ -348,7 +352,7 @@ export default async function PaginaDetallePedido({
         ) : null}
       </section>
 
-      <p className="text-sm text-[var(--fg-subtle)]">Etapa: {ETIQUETA_ETAPA[p.etapa]}.</p>
+      <p className="text-sm text-[var(--fg-subtle)]">Etapa: {textoEtapa(p.etapa, p.despacho)}.</p>
 
       {/* Quién lo creó o lo cambió (TR-03). */}
       <HistorialDocumento entidad="pedidos" id={p.id} />

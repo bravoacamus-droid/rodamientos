@@ -79,8 +79,17 @@ describe("familiaDe", () => {
     ["credito_vencido", "dinero"],
     ["linea_credito", "dinero"],
     ["margen_bajo", "dinero"],
-    ["cotizacion_por_vencer", "documentos"],
+    ["cotizacion_por_vencer", "pedidos"],
     ["sunat_rechazo", "documentos"],
+    // 161
+    ["guia_sin_facturar", "pedidos"],
+    ["pedido_sin_guia", "pedidos"],
+    ["pedido_por_despachar", "pedidos"],
+    ["cotizacion_sin_respuesta", "pedidos"],
+    ["cotizaciones_sin_cerrar", "pedidos"],
+    ["cotizacion_borrador", "pedidos"],
+    ["compra_sin_recibir", "pedidos"],
+    ["fallos_pendientes", "documentos"],
   ];
 
   it.each(casos)("%s va a %s", (tipo, esperada) => {
@@ -96,6 +105,15 @@ describe("agruparPorFamilia", () => {
     ]);
 
     expect(grupos.map((g) => g.familia)).toEqual(["almacen", "documentos"]);
+  });
+
+  it("lo que se queda atrás va el primero", () => {
+    const grupos = agruparPorFamilia([
+      alerta({ tipo: "quiebre_stock" }),
+      alerta({ tipo: "guia_sin_facturar" }),
+    ]);
+
+    expect(grupos.map((g) => g.familia)).toEqual(["pedidos", "almacen"]);
   });
 
   it("conserva el orden de entrada dentro del grupo", () => {

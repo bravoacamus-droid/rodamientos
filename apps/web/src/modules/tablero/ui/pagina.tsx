@@ -5,6 +5,7 @@ import { FiltroRango, leerRango } from "@/modules/reportes";
 
 import { PanelAlertas } from "./panel-alertas";
 import { PanelCartera } from "./panel-cartera";
+import { PanelPendientes } from "./panel-pendientes";
 import { CotizacionesEnQueQuedan, LosQueMas, TarjetasNegocio, VendidoComprado } from "./negocio";
 import { SeccionVentas } from "./ventas";
 
@@ -74,6 +75,12 @@ export default async function PaginaTablero({ searchParams }: Props) {
           Cómo va todo el negocio, de un vistazo. El detalle de cada parte está en Reportes.
         </p>
       </div>
+
+      {/* 161: lo pendiente es de hoy, así que va antes del filtro de fechas
+          y no depende de él. */}
+      <Suspense fallback={<Skeleton className="h-32 w-full" />}>
+        <PanelPendientes />
+      </Suspense>
 
       <FiltroRango
         desde={rango.desde}

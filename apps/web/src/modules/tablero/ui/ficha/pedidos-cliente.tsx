@@ -118,7 +118,7 @@ export function PedidosDelClienteLista({ pedidos }: { pedidos: FilaPedido[] }) {
                   </span>
                   <span className="tabular">{m === null ? "sin costo" : `margen ${m.toFixed(1)} %`}</span>
                   <span>{c === "pagado" ? "cobrado" : c === "vencido" ? "vencido" : c === "pendiente" ? "por cobrar" : "sin factura"}</span>
-                  <InsigniaEtapa etapa={p.etapa} />
+                  <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
                 </div>
               </li>
             );

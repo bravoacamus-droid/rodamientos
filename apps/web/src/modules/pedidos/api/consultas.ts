@@ -5,7 +5,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 import { bandejaPorComprar, loQueFaltaDe } from "@/modules/compras";
 
-import { etapaDe, type Etapa } from "../dominio/etapa";
+import { etapaDe, type DespachoDelPedido, type Etapa } from "../dominio/etapa";
 import type { EstadoSunatFactura, FilaPedido } from "../dominio/lista";
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
@@ -22,6 +22,8 @@ export interface PedidoLista {
   etapa: Etapa;
   /** «6202-2Z × 4 · 729865B × 3». */
   productos: { codigo: string; cantidad: number }[];
+  /** Cuánto salió y cuánto se facturó (161). Null si no se pudo leer. */
+  despacho: DespachoDelPedido | null;
   /** Órdenes sin registrar la compra: lo que más se olvida. */
   porRegistrar: number;
 }
@@ -33,7 +35,7 @@ type ColgadoCrudo = {
 };
 
 /** Lo que cuelga del pedido, como lo pide `etapaDe`. */
-function colgado(f: ColgadoCrudo) {
+function colgado(f: ColgadoCrudo, despacho: DespachoDelPedido | null = null) {
   const compras = (f.compras ?? []).filter((k) => k.estado !== "anulada");
   return {
     compras,
@@ -41,7 +43,41 @@ function colgado(f: ColgadoCrudo) {
     facturas: (f.comprobantes ?? [])
       .filter((c) => (c.tipo === "factura" || c.tipo === "boleta") && c.estado !== "anulado")
       .map((c) => ({ saldo: Number(c.saldo ?? 0) })),
+    despacho,
   };
+}
+
+type Cliente = Awaited<ReturnType<typeof clienteServidor>>;
+
+/**
+ * Cuánto salió y cuánto se facturó de cada pedido (161, `v_pedido_avance`):
+ * la misma cuenta que usa el aviso de pedido a medio despachar.
+ *
+ * Si la lectura falla se apunta y se devuelve el mapa vacío: la etapa se
+ * decide entonces como antes de la 161 (`etapaDe` sin despacho), que es peor
+ * pero no miente con una cifra inventada.
+ */
+async function avanceDe(supabase: Cliente, ids: readonly string[]): Promise<Map<string, DespachoDelPedido>> {
+  const mapa = new Map<string, DespachoDelPedido>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data, error } = await supabase
+      .from("v_pedido_avance")
+      .select("pedido_id, confirmado, despachado, facturado")
+      .in("pedido_id", ids.slice(i, i + 200));
+    if (error) {
+      fallo(error, "pedidos/avanceDe");
+      return new Map();
+    }
+    for (const a of data ?? []) {
+      if (!a.pedido_id) continue;
+      mapa.set(String(a.pedido_id), {
+        confirmado: Number(a.confirmado ?? 0),
+        despachado: Number(a.despachado ?? 0),
+        facturado: Number(a.facturado ?? 0),
+      });
+    }
+  }
+  return mapa;
 }
 
 export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Promise<Resultado<PedidoLista[]>> {
@@ -87,11 +123,13 @@ export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Pro
         lineas.set(k, [...(lineas.get(k) ?? []), { codigo: String(l.codigo), cantidad: Number(l.cantidad) }]);
       }
     }
+    const avance = await avanceDe(supabase, ids);
 
     return {
       ok: true,
       datos: filas.map((f) => {
-        const c = colgado(f);
+        const despacho = avance.get(f.id) ?? null;
+        const c = colgado(f, despacho);
         return {
           id: f.id,
           numero: f.numero,
@@ -101,6 +139,7 @@ export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Pro
           cotizacion: f.cotizaciones?.numero ?? "—",
           cliente: f.clientes?.razon_social ?? "—",
           etapa: etapaDe(c),
+          despacho,
           productos: lineas.get(f.id) ?? [],
           porRegistrar: c.compras.filter((k) => k.falta_factura && k.estado === "registrada").length,
         };
@@ -117,6 +156,8 @@ export interface PedidoDetalle {
   secuencia: number;
   fecha: string;
   etapa: Etapa;
+  /** Cuánto salió y cuánto se facturó (161). Null si no se pudo leer. */
+  despacho: DespachoDelPedido | null;
   cotizacion: { id: string; numero: string; ordenCompraCliente: string | null; estado: string };
   cliente: string;
   /** Para el botón «Ficha del cliente» (FS-08). */
@@ -206,7 +247,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         | null;
     };
 
-    const [{ data: hermanos }, { data: lineas }, { data: marcas }] = await Promise.all([
+    const [{ data: hermanos }, { data: lineas }, { data: marcas }, avance] = await Promise.all([
       supabase.from("pedidos").select("id, numero, secuencia").eq("cotizacion_id", f.cotizacion_id).order("secuencia"),
       supabase
         .from("v_pedido_lineas")
@@ -216,7 +257,9 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         .order("orden"),
       // La marca no está en la vista; sale de la línea de la cotización.
       supabase.from("cotizacion_items").select("id, marca").eq("cotizacion_id", f.cotizacion_id),
+      avanceDe(supabase, [id]),
     ]);
+    const despacho = avance.get(id) ?? null;
     const marcaDe = new Map((marcas ?? []).map((m) => [m.id, m.marca]));
     const tc = Number(f.cotizaciones?.tipo_cambio ?? 0);
 
@@ -227,7 +270,8 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         numero: f.numero,
         secuencia: f.secuencia,
         fecha: String(f.fecha),
-        etapa: etapaDe(colgado(f)),
+        etapa: etapaDe(colgado(f, despacho)),
+        despacho,
         cotizacion: {
           id: f.cotizacion_id,
           numero: f.cotizaciones?.numero ?? "—",
@@ -413,6 +457,8 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       }
     }
 
+    const avance = await avanceDe(supabase, ids);
+
     // El último pedido de cada cotización, aunque caiga fuera del periodo.
     const ultimo = new Map<string, number>();
     const cots = [...new Set(filas.map((f) => f.cotizacion_id))];
@@ -463,10 +509,12 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
         const facturas = (f.comprobantes ?? []).filter(
           (c) => (c.tipo === "factura" || c.tipo === "boleta") && c.estado !== "anulado",
         );
+        const despacho = avance.get(f.id) ?? null;
         const colg = {
           compras,
           guiasEmitidas: guias.filter((g) => g.estado === "emitida").length,
           facturas: facturas.map((c) => ({ saldo: Number(c.saldo ?? 0) })),
+          despacho,
         };
         return {
           id: f.id,
@@ -501,6 +549,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
             };
           }),
           etapa: etapaDe(colg),
+          despacho,
           productos: d.productos,
           vigente: (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
         };

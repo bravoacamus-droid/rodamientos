@@ -7,7 +7,7 @@
  * sin congelar el tiempo.
  */
 
-import type { Alerta, Familia, Severidad, TipoAlerta } from "./tipos";
+import { FAMILIAS, type Alerta, type Familia, type Severidad, type TipoAlerta } from "./tipos";
 
 /**
  * Peso de cada severidad, de mayor a menor urgencia.
@@ -60,6 +60,18 @@ export function familiaDe(tipo: TipoAlerta): Familia {
     case "linea_credito":
     case "margen_bajo":
       return "dinero";
+    // 161: lo que se queda atrás entre la cotización y la factura. La
+    // cotización por vencer estaba en «Documentos» y es lo mismo: una venta
+    // que se enfría.
+    case "cotizacion_borrador":
+    case "cotizacion_sin_respuesta":
+    case "cotizacion_por_vencer":
+    case "cotizaciones_sin_cerrar":
+    case "compra_sin_recibir":
+    case "pedido_sin_guia":
+    case "pedido_por_despachar":
+    case "guia_sin_facturar":
+      return "pedidos";
     default:
       return "documentos";
   }
@@ -130,7 +142,7 @@ export function haceCuanto(iso: string, ahora: Date): string {
 export function agruparPorFamilia(
   alertas: readonly Alerta[],
 ): Array<{ familia: Familia; alertas: Alerta[] }> {
-  const orden: readonly Familia[] = ["almacen", "dinero", "documentos"];
+  const orden = FAMILIAS;
   const mapa = new Map<Familia, Alerta[]>();
 
   for (const a of alertas) {

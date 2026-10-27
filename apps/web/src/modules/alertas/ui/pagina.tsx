@@ -68,8 +68,8 @@ export default async function PaginaAlertas({ searchParams }: Props) {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Lo que hay que mirar hoy: quiebres, sobrestock, cartera vencida y
-            documentos rechazados.
+            Lo que hay que mirar hoy: pedidos, guías y cotizaciones que se
+            quedan atrás, quiebres, cartera vencida y documentos rechazados.
           </p>
         </div>
         <div className="flex items-center gap-1">
