@@ -1,8 +1,11 @@
 import { cuentasParaCobrar } from "@/lib/emisor";
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EstadoBadge } from "@rodatech/ui";
+import { Building2 } from "lucide-react";
+import { EstadoBadge, buttonVariants, cn } from "@rodatech/ui";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 
 import {
   comprobantesDelPedido,
@@ -354,12 +357,22 @@ export default async function PaginaDetalleCotizacion({
             <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
               {cabecera.cliente.razon_social}
             </h1>
-            <p className="mt-1 text-sm text-[var(--fg-muted)]">
-              {cabecera.cliente.numero_documento
-                ? `${cabecera.cliente.tipo_documento} ${cabecera.cliente.numero_documento} · `
-                : ""}
-              {fechaCorta(cabecera.fecha)}
-            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <p className="text-sm text-[var(--fg-muted)]">
+                {cabecera.cliente.numero_documento
+                  ? `${cabecera.cliente.tipo_documento} ${cabecera.cliente.numero_documento} · `
+                  : ""}
+                {fechaCorta(cabecera.fecha)}
+              </p>
+              {/* Al cliente, para corregir sus datos antes de mandarla (FS-08). */}
+              <Link
+                href={`/clientes/${cabecera.cliente_id}`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
+              >
+                <Building2 className="size-4" aria-hidden="true" />
+                Ficha del cliente
+              </Link>
+            </div>
           </div>
 
           <AccionesCotizacion
@@ -793,6 +806,9 @@ export default async function PaginaDetalleCotizacion({
             )}
           </div>
         </section>
+
+        {/* Quién la hizo, la mandó, la aprobó o la anuló (TR-03). */}
+        <HistorialDocumento entidad="cotizaciones" id={cabecera.id} />
       </div>
 
       {/* ------------------------------------------------------- El papel */}

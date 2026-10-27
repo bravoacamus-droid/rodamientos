@@ -119,6 +119,8 @@ export interface PedidoDetalle {
   etapa: Etapa;
   cotizacion: { id: string; numero: string; ordenCompraCliente: string | null; estado: string };
   cliente: string;
+  /** Para el botón «Ficha del cliente» (FS-08). */
+  clienteId: string | null;
   /** Los demás pedidos de la misma cotización, para ir de uno a otro. */
   hermanos: { id: string; numero: string; secuencia: number }[];
   lineas: {
@@ -156,7 +158,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
     const { data, error } = await supabase
       .from("pedidos")
       .select(
-        `id, numero, secuencia, fecha, cotizacion_id,
+        `id, numero, secuencia, fecha, cotizacion_id, cliente_id,
          cotizaciones(id, numero, orden_compra_cliente, estado, moneda, tipo_cambio),
          clientes(razon_social, tipo_documento, numero_documento, direccion),
          compras(estado, falta_factura),
@@ -174,6 +176,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
       secuencia: number;
       fecha: string;
       cotizacion_id: string;
+      cliente_id: string | null;
       cotizaciones: {
         id: string;
         numero: string | null;
@@ -232,6 +235,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
           estado: f.cotizaciones?.estado ?? "",
         },
         cliente: f.clientes?.razon_social ?? "—",
+        clienteId: f.cliente_id ?? null,
         hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia })),
         lineas: (lineas ?? []).map((l) => ({
           codigo: String(l.codigo),
@@ -273,6 +277,54 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
     };
   } catch (e) {
     return fallo(e, "pedidos/detallePedido");
+  }
+}
+
+/** Una recepción de una orden del pedido, para decir si la mercadería ya entró. */
+export interface RecepcionDeOrden {
+  id: string;
+  numero: string;
+  fecha: string;
+}
+
+/**
+ * Las recepciones de cada orden del pedido, por id de compra (TR-13).
+ *
+ * «¿Ya llegó lo del pedido?» obligaba a abrir cada compra: la ficha del
+ * pedido enlazaba la orden y la orden enlazaba su recepción. Las anuladas no
+ * cuentan: una recepción anulada es mercadería que no entró.
+ *
+ * Si la consulta falla devuelve un mapa vacío y la ficha dice «Todavía no ha
+ * llegado» — que es lo que diría también si no hubiera nada. Por eso el fallo
+ * se apunta (`fallo`) en vez de tragárselo.
+ */
+export async function recepcionesDeLasOrdenes(pedidoId: string): Promise<Map<string, RecepcionDeOrden[]>> {
+  const porCompra = new Map<string, RecepcionDeOrden[]>();
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compras")
+      .select("id, recepciones(id, numero, fecha, anulada)")
+      .eq("pedido_id", pedidoId);
+    if (error) {
+      fallo(error, "pedidos/recepcionesDeLasOrdenes");
+      return porCompra;
+    }
+    const filas = (data ?? []) as unknown as {
+      id: string;
+      recepciones: { id: string; numero: string | null; fecha: string; anulada: boolean | null }[] | null;
+    }[];
+    for (const f of filas) {
+      const vivas = (f.recepciones ?? [])
+        .filter((r) => r.anulada !== true)
+        .map((r) => ({ id: r.id, numero: r.numero ?? "—", fecha: String(r.fecha) }))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha));
+      if (vivas.length > 0) porCompra.set(f.id, vivas);
+    }
+    return porCompra;
+  } catch (e) {
+    fallo(e, "pedidos/recepcionesDeLasOrdenes");
+    return porCompra;
   }
 }
 

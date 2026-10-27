@@ -339,17 +339,17 @@ function Insignias({ c }: { c: ComprobanteLista }) {
         etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
         size="xs"
       />
-      {c.estado === "anulado" ? (
-        <span className="rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
-          Anulado
-        </span>
-      ) : null}
+      {/* El de la casa, con su raya y su tachado (UI1-05): era un <span> rojo
+          hecho a mano, y en la ficha un `Badge` plano. Dos versiones del
+          mismo estado que solo el color separaba de «vigente». */}
+      {c.estado === "anulado" ? <EstadoBadge estado="anulada" etiqueta="Anulado" size="xs" /> : null}
       {/* Con retención: si ya tiene su CR o falta (120). */}
       {c.retencion && c.estado !== "anulado" ? (
         <span
           className={`rounded-sm px-1.5 py-0.5 text-sm font-medium ${c.conCr ? "bg-[var(--surface-2)] text-[var(--ok)]" : "bg-[var(--warn-bg)] text-[var(--warn)]"}`}
         >
-          {c.conCr ? "Retención · CR ok" : "Retención · falta CR"}
+          {/* Sin «CR» ni «ok» (UI1-05): es jerga de contador. */}
+          {c.conCr ? "Retención · con su comprobante" : "Retención · falta el comprobante del cliente"}
         </span>
       ) : null}
     </span>

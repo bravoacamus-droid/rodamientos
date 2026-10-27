@@ -201,8 +201,20 @@ async function nombresDeUbigeo(
   return { partida_lugar: nombre(partida), llegada_lugar: nombre(llegada) };
 }
 
+/**
+ * Cuándo y quién anuló la guía (TR-07).
+ *
+ * La ficha decía «Anulada: <motivo>» y no quién ni cuándo, aunque la base
+ * guarda las dos cosas. Va aquí y no en `GuiaDetalle` porque solo lo pinta la
+ * pantalla: el papel y el envío a SUNAT no lo necesitan.
+ */
+export interface AnulacionGuia {
+  anulada_en: string | null;
+  anulada_por: string | null;
+}
+
 /** La ficha de una guía, con sus líneas. */
-export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | null>> {
+export async function detalleGuia(id: string): Promise<Resultado<(GuiaDetalle & AnulacionGuia) | null>> {
   try {
     const supabase = await clienteServidor();
 
@@ -218,9 +230,10 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
          conductor_documento, conductor_nombre, conductor_licencia,
          conductor_telefono, a_pie,
          entregado_por, recibido_por, estado, estado_sunat, sunat_mensaje,
-         observaciones, motivo_anulacion, creado_en,
+         observaciones, motivo_anulacion, creado_en, anulada_en,
          clientes(razon_social, numero_documento, telefono, direccion),
          cotizaciones(numero), pedidos(id, numero),
+         anulador:perfiles!guias_remision_anulada_por_fkey(nombre),
          guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg,
                     productos(es_kit, stock(cantidad)))`,
       )
@@ -318,6 +331,8 @@ export async function detalleGuia(id: string): Promise<Resultado<GuiaDetalle | n
         sunat_mensaje: (g.sunat_mensaje as string | null) ?? null,
         observaciones: (g.observaciones as string | null) ?? null,
         motivo_anulacion: (g.motivo_anulacion as string | null) ?? null,
+        anulada_en: (g.anulada_en as string | null) ?? null,
+        anulada_por: (g.anulador as { nombre: string | null } | null)?.nombre ?? null,
         creado_en: String(g.creado_en),
         lineas,
         comprobante: comp ? { id: String(comp.id), numero: String(comp.numero) } : null,

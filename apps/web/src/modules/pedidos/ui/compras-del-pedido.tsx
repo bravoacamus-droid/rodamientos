@@ -1,10 +1,12 @@
 import type * as React from "react";
 import Link from "next/link";
-import { CircleCheck, FileText, Receipt } from "lucide-react";
+import { CircleCheck, Clock, FileText, PackageCheck, Receipt } from "lucide-react";
 import { Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 
 import type { OrdenDePedido } from "@/modules/compras/api/consultas";
 import { ETIQUETA_MODALIDAD, modalidadDe } from "@/modules/compras/dominio/gastos";
+
+import type { RecepcionDeOrden } from "../api/consultas";
 
 /**
  * Las órdenes de compra del pedido (128, 130).
@@ -19,8 +21,14 @@ export function ComprasDelPedido({
   puede,
   cotizacionId,
   generar,
+  recepciones,
 }: {
   ordenes: OrdenDePedido[];
+  /**
+   * Con qué recepción entró cada orden, por id de compra (TR-13). Sin esto,
+   * «¿ya llegó?» obligaba a abrir cada compra.
+   */
+  recepciones?: Map<string, RecepcionDeOrden[]>;
   puede: boolean;
   cotizacionId: string;
   /**
@@ -95,7 +103,9 @@ export function ComprasDelPedido({
                     {o.productos.map((x) => `${x.codigo} × ${x.cantidad}`).join(" · ")}
                   </p>
                   {porRegistrar ? (
-                    <p className="mt-1 text-sm font-medium">Pedida · falta registrar la compra</p>
+                    // Lo que falta dicho con su nombre (UI2-02): «falta registrar la
+                    // compra» al lado de una orden «Registrada» se contradecía.
+                    <p className="mt-1 text-sm font-medium">Pedida · falta la factura del proveedor</p>
                   ) : (
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
                       <CircleCheck className="size-4 text-[var(--ok)]" aria-hidden="true" />
@@ -106,6 +116,8 @@ export function ComprasDelPedido({
                       <Moneda valor={o.total} moneda={o.moneda} tamano="sm" />
                     </p>
                   )}
+                  {/* Si la mercadería ya entró (TR-13), con la recepción enlazada. */}
+                  {recepciones ? <Llegada recepciones={recepciones.get(o.id) ?? []} /> : null}
                 </div>
                 {porRegistrar && puede ? (
                   <Link href={`/compras/${o.id}/factura`} className={cn(buttonVariants(), "h-11 px-5 text-base")}>
@@ -124,5 +136,33 @@ export function ComprasDelPedido({
         </ol>
       )}
     </section>
+  );
+}
+
+/** «Entró con REC-… el …», una por recepción, o «Todavía no ha llegado». */
+function Llegada({ recepciones }: { recepciones: RecepcionDeOrden[] }) {
+  if (recepciones.length === 0) {
+    return (
+      <p className="mt-1 flex items-center gap-2 text-sm text-[var(--fg-muted)]">
+        <Clock className="size-4 shrink-0" aria-hidden="true" />
+        Todavía no ha llegado
+      </p>
+    );
+  }
+  return (
+    <ul className="mt-1 flex flex-col gap-0.5">
+      {recepciones.map((r) => (
+        <li key={r.id} className="flex flex-wrap items-center gap-x-2 text-sm">
+          <PackageCheck className="size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+          <span>
+            Entró con{" "}
+            <Link href={`/recepciones/${r.id}`} className="font-mono font-semibold text-brand-600 underline underline-offset-4">
+              {r.numero}
+            </Link>{" "}
+            el {formatearFecha(r.fecha)}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

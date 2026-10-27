@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { HandCoins, Printer } from "lucide-react";
+import { Building2, HandCoins, Printer } from "lucide-react";
 import {
   Badge,
   EstadoBadge,
@@ -12,9 +12,12 @@ import {
   formatearFecha,
 } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
+import { ETIQUETA_MEDIO, VoucherDelPago, pagosDe } from "@/modules/cobranzas";
 
 import { estadoConfiguracion } from "../api/configuracion";
 import { crDe, detalleComprobante, motivosNota, notasDe, seriesDeNota, yaAcreditadoDe } from "../api/consultas";
+import { enlacesDelComprobante } from "../api/ficha-enlaces";
 import { RegistrarCr } from "./registrar-cr";
 import { cuotasNetas } from "../dominio/retencion";
 import { ETIQUETA_SUNAT, ETIQUETA_TIPO } from "../dominio/tipos";
@@ -45,7 +48,7 @@ export default async function PaginaDetalleComprobante({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series, cr] = await Promise.all([
+  const [resultado, perfil, config, motivos, acreditado, emisor, cuentas, notas, series, cr, enlaces, pagos] = await Promise.all([
     detalleComprobante(id),
     misPermisos(),
     estadoConfiguracion(),
@@ -56,6 +59,9 @@ export default async function PaginaDetalleComprobante({
     notasDe(id),
     seriesDeNota(),
     crDe(id),
+    // De dónde viene y quién la anuló (TR-05, TR-07), y sus cobros (TR-06).
+    enlacesDelComprobante(id),
+    pagosDe(id),
   ]);
 
   if (!resultado.ok) {
@@ -102,6 +108,17 @@ export default async function PaginaDetalleComprobante({
     new Date(),
   );
 
+  // Si los enlaces no cargan, la ficha cae al texto de siempre: es un dato de
+  // más, no uno sin el que no se pueda trabajar.
+  const enl = enlaces.ok ? enlaces.datos : null;
+  const anulacion = enl?.anulacion ?? null;
+  // Los pagos se guardan en dólares; en una factura en soles, a la misma
+  // proporción que el saldo (116), para que sumen lo que dice la tarjeta.
+  const original = resultado.datos;
+  const factorPagos =
+    original.moneda === "PEN" && original.pen && original.total > 0 ? original.pen.total / original.total : 1;
+  const puedeSubirVoucher = perfil.tiene("cobranzas", "editar");
+
   return (
     <>
     {/*
@@ -125,12 +142,16 @@ export default async function PaginaDetalleComprobante({
               estado={c.estado_sunat}
               etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
             />
-            {c.estado === "anulado" ? <Badge tone="danger">Anulado</Badge> : null}
+            {/* El mismo de la lista, con su raya y su tachado (UI1-05). */}
+            {c.estado === "anulado" ? <EstadoBadge estado="anulada" etiqueta="Anulado" /> : null}
           </div>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            {c.cliente ?? "—"}
-            {c.cliente_documento ? ` · ${c.cliente_documento}` : ""}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <p className="text-sm text-[var(--fg-muted)]">
+              {c.cliente ?? "—"}
+              {c.cliente_documento ? ` · ${c.cliente_documento}` : ""}
+            </p>
+            <BotonFichaCliente id={c.cliente_id} />
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-2 no-print">
@@ -188,6 +209,18 @@ export default async function PaginaDetalleComprobante({
           </div>
         </div>
       </header>
+
+      {/*
+        Quién la anuló, cuándo y por qué (TR-07). Decía «No se cobra · El
+        comprobante está anulado» y nada más, aunque la base guarda las tres
+        cosas. Las bajas por SUNAT no apuntan a la persona: sale sin nombre.
+      */}
+      {anulacion ? (
+        <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
+          <strong>{fraseAnulacion(anulacion.en, anulacion.por)}</strong>
+          {anulacion.motivo ? <> Motivo: {anulacion.motivo}</> : null}
+        </p>
+      ) : null}
 
       {/* --------------------------------------------------------- Cifras */}
       {/*
@@ -447,13 +480,26 @@ export default async function PaginaDetalleComprobante({
                   )
                 }
               />
-              <Dato etiqueta="Cotización" valor={c.cotizacion_numero ?? "—"} />
+              {/* Enlazada, como el pedido de abajo (TR-05): era texto, y para
+                  ir a ella había que saberse el número y buscarlo. */}
+              <Dato
+                etiqueta="Cotización"
+                valor={
+                  enl?.cotizacion ? (
+                    <Link href={`/cotizaciones/${enl.cotizacion.id}`} className={ENLACE_DOC}>
+                      {enl.cotizacion.numero}
+                    </Link>
+                  ) : (
+                    (c.cotizacion_numero ?? "—")
+                  )
+                }
+              />
               {/* Al pedido que factura (revisión del 15/10). */}
               {c.pedido ? (
                 <Dato
                   etiqueta="Pedido"
                   valor={
-                    <Link href={`/pedidos/${c.pedido.id}`} className="font-mono font-semibold text-brand-600 underline-offset-4 hover:underline">
+                    <Link href={`/pedidos/${c.pedido.id}`} className={ENLACE_DOC}>
                       {c.pedido.numero}
                     </Link>
                   }
@@ -464,12 +510,30 @@ export default async function PaginaDetalleComprobante({
                 guía es lo que justifica que esta factura exista. Salía en el
                 papel y no en la ficha: para comprobarlo había que imprimir.
               */}
-              <Dato
-                etiqueta={
-                  c.guia_numero?.includes(",") ? "Guías de remisión" : "Guía de remisión"
-                }
-                valor={c.guia_numero ?? "—"}
-              />
+              {/* Y cada guía es un enlace, una por línea (TR-05). */}
+              {enl && enl.guias.length > 0 ? (
+                <Dato
+                  etiqueta={enl.guias.length > 1 ? "Guías de remisión" : "Guía de remisión"}
+                  valor={
+                    <ul className="flex flex-col gap-0.5">
+                      {enl.guias.map((g) => (
+                        <li key={g.id}>
+                          <Link href={`/guias/${g.id}`} className={ENLACE_DOC}>
+                            {g.numero}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  }
+                />
+              ) : (
+                <Dato
+                  etiqueta={
+                    c.guia_numero?.includes(",") ? "Guías de remisión" : "Guía de remisión"
+                  }
+                  valor={c.guia_numero ?? "—"}
+                />
+              )}
               <Dato etiqueta="Orden de compra" valor={c.orden_compra_cliente ?? "—"} />
                 </>
               )}
@@ -551,13 +615,84 @@ export default async function PaginaDetalleComprobante({
               </p>
             ) : null}
           </section>
+
+          {/*
+            Sus cobros (TR-06): cuándo, cuánto, por qué medio, quién lo
+            registró y con qué voucher. Decía «Pagado X» y nada más; el resto
+            solo se veía desde Cobranzas. Una nota no se cobra: no lleva esto.
+          */}
+          {!esNota ? (
+            <section className="card p-4">
+              <h2 className="mb-3 text-sm font-semibold">Cobros</h2>
+              {!pagos.ok ? (
+                <p role="alert" className="text-sm text-[var(--danger)]">
+                  No se pudieron leer los cobros: {pagos.error}
+                </p>
+              ) : pagos.datos.length === 0 ? (
+                <p className="text-sm text-[var(--fg-muted)]">Todavía no se ha cobrado nada.</p>
+              ) : (
+                <ul className="flex flex-col divide-y divide-[var(--border-soft)] text-sm">
+                  {pagos.datos.map((p) => (
+                    <li key={p.id} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
+                      <p>
+                        <span className="tabular">{formatearFecha(p.fecha)}</span>
+                        {" · "}
+                        <Moneda
+                          moneda={c.moneda}
+                          valor={Math.round(p.monto * factorPagos * 100) / 100}
+                          tamano="sm"
+                          enfasis="fuerte"
+                        />
+                        {" · "}
+                        {ETIQUETA_MEDIO[p.medio] ?? p.medio}
+                        {p.referencia ? ` · Op. ${p.referencia}` : ""}
+                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-[var(--fg-muted)]">
+                          {p.registrado_por ? `Lo registró ${p.registrado_por}` : "Sin persona apuntada"}
+                        </span>
+                        <VoucherDelPago pagoId={p.id} tiene={p.tiene_voucher} puedeSubir={puedeSubirVoucher} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : null}
         </div>
       </div>
+
+      {/* Quién la emitió, la cambió o la anuló (TR-03). */}
+      <HistorialDocumento entidad="comprobantes" id={c.id} />
     </div>
     <div className="hidden print:block">
       <DocumentoComprobante c={c} emisor={emisor} cuentas={cuentas} qr={qr} />
     </div>
     </>
+  );
+}
+
+/** El enlace a otro documento de la cadena: el mismo que el del pedido. */
+const ENLACE_DOC = "font-mono font-semibold text-brand-600 underline underline-offset-4";
+
+/** «Anulada el 07/10/2026 por Willy Fernández.», o sin persona si no la hay. */
+function fraseAnulacion(en: string | null, por: string | null): string {
+  const cuando = en ? ` el ${formatearFecha(en)}` : "";
+  const quien = por ? ` por ${por}` : "";
+  return `Anulada${cuando}${quien}.`;
+}
+
+/**
+ * «Ficha del cliente», junto a su nombre (FS-08). Para corregir su dirección
+ * fiscal o su teléfono no había camino desde ninguna ficha de documento.
+ */
+function BotonFichaCliente({ id }: { id: string | null }) {
+  if (!id) return null;
+  return (
+    <Link href={`/clientes/${id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}>
+      <Building2 className="size-4" aria-hidden="true" />
+      Ficha del cliente
+    </Link>
   );
 }
 

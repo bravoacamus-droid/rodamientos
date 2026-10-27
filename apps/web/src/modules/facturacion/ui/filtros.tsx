@@ -82,7 +82,7 @@ export function FiltrosFacturacionBarra({
         etiqueta="Retención"
         todos="Retención: todas"
         valor={valor("cr")}
-        opciones={[{ valor: "sin", etiqueta: "Falta el CR" }]}
+        opciones={[{ valor: "sin", etiqueta: "Falta el comprobante de retención" }]}
         onCambiar={(v) => aplicar("cr", v)}
       />
       <FiltroDesplegable

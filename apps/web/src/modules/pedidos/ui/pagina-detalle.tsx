@@ -1,13 +1,14 @@
 import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { FileText, Receipt, Truck, Wallet } from "lucide-react";
+import { Building2, FileText, Receipt, Truck, Wallet } from "lucide-react";
 import { EstadoError, Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { Volver } from "@/componentes/volver";
 import { emisorParaImprimir } from "@/lib/emisor";
 import { misPermisos } from "@/lib/permisos";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 import { ordenesDelPedido } from "@/modules/compras/api/consultas";
 import {
   cotizacionPorId,
@@ -20,7 +21,7 @@ import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { GenerarOrdenes } from "@/modules/cotizaciones/ui/detalle/ordenes-compra";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
-import { detallePedido } from "../api/consultas";
+import { detallePedido, recepcionesDeLasOrdenes } from "../api/consultas";
 import { ETIQUETA_ETAPA } from "../dominio/etapa";
 import { papelDelPedido } from "../dominio/hoja";
 import { OtroPedido } from "@/modules/cotizaciones/ui/detalle/otro-pedido";
@@ -60,7 +61,13 @@ export default async function PaginaDetallePedido({
   const puedeFacturar = permisos.tiene("facturacion", "crear");
   const puedeCobrar = permisos.tiene("cobranzas", "crear");
 
-  const [r, ordenes, emisor] = await Promise.all([detallePedido(id), ordenesDelPedido(id), emisorParaImprimir()]);
+  // Y con qué recepción entró cada orden (TR-13).
+  const [r, ordenes, emisor, recepciones] = await Promise.all([
+    detallePedido(id),
+    ordenesDelPedido(id),
+    emisorParaImprimir(),
+    recepcionesDeLasOrdenes(id),
+  ]);
   if (!r.ok) return <EstadoError titulo="No se pudo cargar el pedido" detalle={r.error} />;
   if (!r.datos) notFound();
   const p = r.datos;
@@ -144,10 +151,22 @@ export default async function PaginaDetallePedido({
           <h1 className="text-2xl font-semibold tracking-tight">
             {p.numero} · {p.cliente}
           </h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Confirmado el {formatearFecha(p.fecha)}
-            {p.cotizacion.ordenCompraCliente && vigente ? ` · O/C del cliente ${p.cotizacion.ordenCompraCliente}` : ""}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <p className="text-sm text-[var(--fg-muted)]">
+              Confirmado el {formatearFecha(p.fecha)}
+              {p.cotizacion.ordenCompraCliente && vigente ? ` · O/C del cliente ${p.cotizacion.ordenCompraCliente}` : ""}
+            </p>
+            {/* Al cliente, para corregir sus datos sin buscarlo (FS-08). */}
+            {p.clienteId ? (
+              <Link
+                href={`/clientes/${p.clienteId}`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
+              >
+                <Building2 className="size-4" aria-hidden="true" />
+                Ficha del cliente
+              </Link>
+            ) : null}
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <InsigniaEtapa etapa={p.etapa} grande />
@@ -238,6 +257,7 @@ export default async function PaginaDetallePedido({
           puede={puedeComprar}
           cotizacionId={p.cotizacion.id}
           generar={generar}
+          recepciones={recepciones}
         />
       ) : (
         <EstadoError titulo="No se pudieron cargar las compras" detalle={ordenes.error} />
@@ -329,6 +349,9 @@ export default async function PaginaDetallePedido({
       </section>
 
       <p className="text-sm text-[var(--fg-subtle)]">Etapa: {ETIQUETA_ETAPA[p.etapa]}.</p>
+
+      {/* Quién lo creó o lo cambió (TR-03). */}
+      <HistorialDocumento entidad="pedidos" id={p.id} />
     </div>
 
     {/* El papel: montado siempre, visible solo al imprimir (como la cotización). */}

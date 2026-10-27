@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { FileText, Printer, Pencil } from "lucide-react";
+import { Building2, FileText, Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
@@ -95,10 +96,22 @@ export default async function PaginaDetalleGuia({
                 según se mirara en la lista o dentro. */}
             <EstadoBadge estado={g.estado} etiqueta={ETIQUETA_ESTADO[g.estado]} />
           </div>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            {g.cliente ?? "—"}
-            {g.cliente_documento ? ` · ${g.cliente_documento}` : ""}
-          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <p className="text-sm text-[var(--fg-muted)]">
+              {g.cliente ?? "—"}
+              {g.cliente_documento ? ` · ${g.cliente_documento}` : ""}
+            </p>
+            {/* Para corregir su dirección antes de despachar (FS-08). */}
+            {g.cliente_id ? (
+              <Link
+                href={`/clientes/${g.cliente_id}`}
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3 no-print")}
+              >
+                <Building2 className="size-4" aria-hidden="true" />
+                Ficha del cliente
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {/* `flex-wrap`: sin él, en el teléfono los cinco botones iban en
@@ -211,9 +224,15 @@ export default async function PaginaDetalleGuia({
         </p>
       ) : null}
 
-      {g.estado === "anulada" && g.motivo_anulacion ? (
+      {/* Quién, cuándo y por qué (TR-07). Decía el motivo y nada más, y si
+          no había motivo, ni el aviso. */}
+      {g.estado === "anulada" ? (
         <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
-          <strong>Anulada:</strong> {g.motivo_anulacion}
+          <strong>
+            Anulada{g.anulada_en ? ` el ${formatearFecha(g.anulada_en)}` : ""}
+            {g.anulada_por ? ` por ${g.anulada_por}` : ""}.
+          </strong>
+          {g.motivo_anulacion ? <> Motivo: {g.motivo_anulacion}</> : null}
         </p>
       ) : null}
 
@@ -319,7 +338,22 @@ export default async function PaginaDetalleGuia({
               <Dato etiqueta="Llega a" valor={g.direccion_llegada ?? "—"} />
               <Dato etiqueta="Código del distrito" valor={g.ubigeo_llegada ?? "—"} />
               <Dato etiqueta="Emisión" valor={formatearFecha(g.fecha_emision)} />
-              <Dato etiqueta="Cotización" valor={g.cotizacion_numero ?? "—"} />
+              {/* Enlazada, como el pedido (TR-05): era texto suelto. */}
+              {g.cotizacion_id && g.cotizacion_numero ? (
+                <div className="flex gap-3">
+                  <dt className="w-32 shrink-0 text-[var(--fg-muted)]">Cotización</dt>
+                  <dd className="min-w-0 flex-1">
+                    <Link
+                      href={`/cotizaciones/${g.cotizacion_id}`}
+                      className="font-mono font-semibold text-brand-600 underline underline-offset-4"
+                    >
+                      {g.cotizacion_numero}
+                    </Link>
+                  </dd>
+                </div>
+              ) : (
+                <Dato etiqueta="Cotización" valor={g.cotizacion_numero ?? "—"} />
+              )}
               {/* Al pedido del que sale (revisión del 15/10): desde la guía no
                   se llegaba, y el pedido es donde se hace lo que sigue. */}
               {g.pedido ? (
@@ -413,6 +447,9 @@ export default async function PaginaDetalleGuia({
           </section>
         </div>
       </div>
+
+      {/* Quién la hizo, la emitió o la anuló (TR-03). */}
+      <HistorialDocumento entidad="guias_remision" id={g.id} />
     </div>
     <div className="hidden print:block">
       <DocumentoGuia g={g} emisor={emisor} />

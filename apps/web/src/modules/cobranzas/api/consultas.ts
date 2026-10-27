@@ -257,6 +257,61 @@ export async function ultimosPagos(
   }
 }
 
+/**
+ * Los cobros de UN comprobante, del más antiguo al más reciente (TR-06).
+ *
+ * La ficha de la factura decía «Pagado X» y nada más: ni cuándo, ni por qué
+ * medio, ni quién lo registró, ni con qué voucher. Todo eso existía y solo se
+ * veía desde Cobranzas. Aquí «¿qué pasó después?» deja de cortarse en la
+ * factura.
+ *
+ * `perfiles` va con el nombre de la clave delante: hoy `pagos` solo tiene una
+ * hacia perfiles, pero el día que tenga dos PostgREST tumbaría la consulta
+ * (PGRST201), como ya pasó con las guías de la factura.
+ *
+ * Los importes salen como están guardados, en dólares: la ficha los pasa a la
+ * moneda del documento.
+ */
+export async function pagosDe(comprobanteId: string): Promise<Resultado<PagoRegistrado[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("pagos")
+      .select(
+        `id, comprobante_id, fecha, monto, medio, referencia, observaciones, voucher_ruta,
+         perfiles!pagos_registrado_por_fkey(nombre)`,
+      )
+      .eq("comprobante_id", comprobanteId)
+      .order("fecha", { ascending: true })
+      .order("creado_en", { ascending: true });
+
+    if (error) return fallo(error, "cobranzas/pagosDe");
+
+    const crudos = (data ?? []) as unknown as Array<
+      Record<string, unknown> & { perfiles: { nombre: string } | null }
+    >;
+
+    return {
+      ok: true,
+      datos: crudos.map((p) => ({
+        id: String(p.id),
+        comprobante_id: String(p.comprobante_id),
+        comprobante_numero: "",
+        cliente: null,
+        fecha: String(p.fecha),
+        monto: Number(p.monto ?? 0),
+        medio: (p.medio as MedioPago) ?? "transferencia",
+        referencia: (p.referencia as string | null) ?? null,
+        observaciones: (p.observaciones as string | null) ?? null,
+        registrado_por: p.perfiles?.nombre ?? null,
+        tiene_voucher: Boolean(p.voucher_ruta),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "cobranzas/pagosDe");
+  }
+}
+
 /** Las gestiones de cobranza más recientes. */
 export async function gestiones(
   clienteId?: string,

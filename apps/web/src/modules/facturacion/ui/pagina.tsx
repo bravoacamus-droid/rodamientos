@@ -104,7 +104,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
             className={cn(buttonVariants({ variant: "outline" }), "px-3")}
           >
             <FileArchive className="size-4" aria-hidden="true" />
-            Descargar CR
+            Descargar comprobantes de retención
           </a>
           {esGerencia ? (
             <Link

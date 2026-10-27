@@ -94,7 +94,7 @@ export function OrdenesDeCompra({
               <span className="tabular font-medium">{dinero(o.total, o.moneda)}</span>
               {o.faltaFactura && o.estado !== "anulada" ? (
                 <span className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                  Falta registrar la compra
+                  Falta la factura del proveedor
                 </span>
               ) : (
                 <EstadoBadge estado={o.estado as EstadoDocumento} />
