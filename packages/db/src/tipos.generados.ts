@@ -6129,6 +6129,10 @@ export type Database = {
         Args: { p_meses?: number; p_productos?: Json }
         Returns: number
       }
+      recalcular_saldo_comprobante: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       recepcionar_mercaderia: { Args: { p_datos: Json }; Returns: Json }
       refrescar_alertas: { Args: never; Returns: Json }
       registrar_ajuste_inventario: { Args: { p_datos: Json }; Returns: Json }

@@ -199,7 +199,9 @@ export async function emitirComprobante(
   // La cotización se relee del servidor y NO se acepta del formulario: los
   // importes que van a acabar en un documento fiscal no pueden venir del
   // navegador.
-  const cotizacion = await cotizacionParaFacturar(datos.cotizacion_id);
+  // Con las guías marcadas: el tope de cada línea es lo que salió EN ELLAS
+  // (157), no lo que confirmó el cliente.
+  const cotizacion = await cotizacionParaFacturar(datos.cotizacion_id, datos.guias);
   if (!cotizacion.ok) return { ok: false, error: cotizacion.error };
   if (!cotizacion.datos) return { ok: false, error: "La cotización no existe." };
 
@@ -248,7 +250,9 @@ export async function emitirComprobante(
 
   // Lo que de verdad se va a emitir: lo pedido, recortado contra lo
   // pendiente que acaba de releerse del servidor. `l.cantidad` YA es el
-  // pendiente (api/consultas.ts), así que este `min` es el techo.
+  // pendiente sin pasar de lo que salió en las guías marcadas
+  // (api/consultas.ts, 157), así que este `min` es el techo. Una línea que
+  // esas guías no llevan llega en cero y se descarta abajo.
   const aEmitir = cot.lineas
     .map((l, i) => {
       const pedido = datos.cantidades?.[i];

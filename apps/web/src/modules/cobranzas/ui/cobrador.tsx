@@ -325,9 +325,11 @@ export function Cobrador({
                   onChange={(e) => setMedio(e.target.value as MedioPago)}
                 >
                   {/* Sin «Detracción» (14/10): Willy vende productos y a él
-                      solo le retienen. Se sigue leyendo en el historial. */}
+                      solo le retienen. Sin «Nota de crédito» (157): la nota
+                      baja el saldo sola al emitirse. Las dos se siguen
+                      leyendo en el historial. */}
                   {Object.entries(ETIQUETA_MEDIO)
-                    .filter(([v]) => v !== "detraccion")
+                    .filter(([v]) => v !== "detraccion" && v !== "nota_credito")
                     .map(([v, t]) => (
                     <option key={v} value={v}>
                       {t}

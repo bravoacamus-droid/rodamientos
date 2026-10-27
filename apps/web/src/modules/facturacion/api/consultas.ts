@@ -6,7 +6,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
-import { totalesDe } from "../dominio/emision";
+import { despachadoPorLinea, totalesDe, type FilaDespacho } from "../dominio/emision";
 
 import type {
   ComprobanteDetalle,
@@ -529,6 +529,7 @@ interface GuiaDeCotizacion {
   fecha_emision: string;
   estado: string;
   comprobante_guias?: { comprobantes: { estado: string; tipo: string } | null }[] | null;
+  guia_items?: { cotizacion_item_id: string | null; producto_id: string; cantidad: number }[] | null;
 }
 
 /** Ya ampara una factura o boleta viva: no se vuelve a ofrecer (revisión del 15/10). */
@@ -537,8 +538,17 @@ const yaFacturada = (g: GuiaDeCotizacion) =>
     (x) => x.comprobantes && x.comprobantes.estado !== "anulado" && (x.comprobantes.tipo === "factura" || x.comprobantes.tipo === "boleta"),
   );
 
+/**
+ * `guiasElegidas`: las que marcó quien factura (157). Sin ella, el tope de
+ * cada línea es lo que salió en TODAS las guías emitidas y sin facturar, que
+ * es lo que la pantalla enseña. Con ella, lo que salió en esas, que es lo que
+ * la Server Action deja emitir. Las líneas son las mismas en los dos casos
+ * —solo cambia su cantidad, que puede quedar en cero—, porque las cantidades
+ * del formulario viajan por posición.
+ */
 export async function cotizacionParaFacturar(
   id: string,
+  guiasElegidas?: readonly string[],
 ): Promise<Resultado<CotizacionFacturable | null>> {
   try {
     const supabase = await clienteServidor();
@@ -549,12 +559,13 @@ export async function cotizacionParaFacturar(
         `id, numero, fecha, cliente_id, orden_compra_cliente, total, moneda, tipo_cambio,
          clientes(razon_social, numero_documento, tipo_documento, direccion, condicion_pago, dias_credito, agente_retencion),
          cotizacion_items(
-           producto_id, orden, codigo, descripcion, unidad_codigo,
+           id, producto_id, orden, codigo, descripcion, unidad_codigo,
            cantidad, cantidad_aprobada, cantidad_atendida,
            valor_unitario, descuento_pct, importe
          ),
          guias_remision(id, numero, fecha_emision, estado, orden_compra_cliente,
-           comprobante_guias(comprobantes(estado, tipo)))`,
+           comprobante_guias(comprobantes(estado, tipo)),
+           guia_items(cotizacion_item_id, producto_id, cantidad))`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -573,6 +584,7 @@ export async function cotizacionParaFacturar(
         agente_retencion: boolean | null;
       } | null;
       cotizacion_items: Array<{
+        id: string;
         producto_id: string;
         orden: number;
         codigo: string | null;
@@ -611,6 +623,69 @@ export async function cotizacionParaFacturar(
       }
     }
 
+    /*
+      Cuánto salió en las guías que todavía no ampara ninguna factura (157).
+
+      Se factura lo DESPACHADO, no lo confirmado: con una guía de 1 de 3 se
+      facturaban las 3, y la segunda guía —la de las otras 2— se quedaba sin
+      facturar para siempre. `emitir_comprobante` lo rechaza en la base con
+      la misma cuenta; aquí es para que la pantalla no ofrezca lo que la base
+      va a rechazar.
+
+      A diferencia del stock, si esto falla la pantalla NO abre: es un tope, y
+      sin él ofrecería facturar de más.
+    */
+    const guiasLibres = ((c.guias_remision ?? []) as GuiaDeCotizacion[]).filter(
+      (g) => g.estado === "emitida" && !yaFacturada(g),
+    );
+    const filasDe = (guias: GuiaDeCotizacion[]): FilaDespacho[] =>
+      guias.flatMap((g) =>
+        (g.guia_items ?? []).map((gi) => ({
+          guia_id: g.id,
+          cotizacion_item_id: gi.cotizacion_item_id,
+          producto_id: gi.producto_id,
+          cantidad: Number(gi.cantidad ?? 0),
+        })),
+      );
+
+    // Un kit sale como sus piezas: hace falta cuántas lleva de cada una.
+    const piezasDeKit = new Map<string, Map<string, number>>();
+    if (idsProducto.length > 0) {
+      const { data: kits, error: errKits } = await supabase
+        .from("productos")
+        .select("id, kit_componentes!kit_componentes_kit_id_fkey(producto_id, cantidad)")
+        .in("id", idsProducto)
+        .eq("es_kit", true);
+      if (errKits) return fallo(errKits, "facturacion/cotizacionParaFacturar/kits");
+      const piezasPorKit = new Map<string, Map<string, number>>();
+      for (const k of (kits ?? []) as unknown as {
+        id: string;
+        kit_componentes: { producto_id: string; cantidad: number }[] | null;
+      }[]) {
+        piezasPorKit.set(
+          k.id,
+          new Map((k.kit_componentes ?? []).map((p) => [p.producto_id, Number(p.cantidad)])),
+        );
+      }
+      for (const l of lineasCrudas) {
+        const piezas = piezasPorKit.get(l.producto_id);
+        if (piezas) piezasDeKit.set(l.id, piezas);
+      }
+    }
+
+    const despachado = despachadoPorLinea(filasDe(guiasLibres), piezasDeKit);
+    const elegidas = guiasElegidas ? new Set(guiasElegidas) : null;
+    const despachadoElegidas = elegidas
+      ? despachadoPorLinea(
+          filasDe(guiasLibres.filter((g) => elegidas.has(g.id))),
+          piezasDeKit,
+        )
+      : despachado;
+    // Lo que se puede facturar hoy de la línea: lo confirmado y no facturado,
+    // sin pasar de lo que salió.
+    const facturableDe = (l: (typeof lineasCrudas)[number], porLinea: Map<string, number>) =>
+      Math.min(pendienteDe(l), porLinea.get(l.id) ?? 0);
+
     return {
       ok: true,
       datos: {
@@ -635,13 +710,15 @@ export async function cotizacionParaFacturar(
         tipo_cambio: Number(c.tipo_cambio) > 0 ? Number(c.tipo_cambio) : null,
         cliente_agente_retencion: Boolean(c.clientes?.agente_retencion),
         lineas_ya_facturadas: lineasCrudas.filter((l) => pendienteDe(l) <= 0).length,
+        lineas_sin_despachar: lineasCrudas.filter(
+          (l) => pendienteDe(l) > 0 && facturableDe(l, despachado) <= 0,
+        ).length,
         /*
           Solo las EMITIDAS. Una guía en borrador no tiene número todavía, y
           una anulada no ampara nada — vincularla sería decir que la
           mercadería viajó con un documento que ya no existe.
         */
-        guias: ((c.guias_remision ?? []) as GuiaDeCotizacion[])
-          .filter((g) => g.estado === "emitida" && !yaFacturada(g))
+        guias: guiasLibres
           .map((g) => ({ id: g.id, numero: g.numero, fecha: g.fecha_emision }))
           .sort((a, b) => a.numero.localeCompare(b.numero)),
         // Las de BORRADOR, solo para poder decir «emite la que ya tienes» en
@@ -651,11 +728,14 @@ export async function cotizacionParaFacturar(
           .map((g) => ({ id: g.id, numero: g.numero }))
           .sort((a, b) => a.numero.localeCompare(b.numero)),
         lineas: lineasCrudas
-          // Solo lo que queda por facturar. Una línea ya entregada entera
-          // no puede volver a salir en otro comprobante.
-          .filter((i) => pendienteDe(i) > 0)
+          // Solo lo que queda por facturar Y ya salió. Una línea ya entregada
+          // entera no puede volver a salir en otro comprobante, y una que no
+          // ha salido todavía no se factura (157).
+          .filter((i) => facturableDe(i, despachado) > 0)
           .map((i) => {
-            const cantidad = pendienteDe(i);
+            // Con las guías elegidas puede quedar en cero: la Server Action
+            // la descarta, y las demás no se mueven de su posición.
+            const cantidad = facturableDe(i, despachadoElegidas);
             return {
               producto_id: i.producto_id,
               codigo: i.codigo ?? "—",

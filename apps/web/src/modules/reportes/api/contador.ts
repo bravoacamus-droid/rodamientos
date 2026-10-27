@@ -6,10 +6,13 @@ import {
   filaCompra,
   filaRegistro,
   nombreMes,
+  separarCompras,
+  sinSeriesDePrueba,
   totalesRegistro,
   type ComprobanteContable,
-  type FilaCompra,
+  type CompraContable,
   type FilaRegistro,
+  type OrdenSinFactura,
 } from "../dominio/contador";
 
 /**
@@ -17,8 +20,13 @@ import {
  *
  * Tres hojas: **Ventas** y **Compras**, una fila por documento con las
  * columnas que lleva cada registro, y **Léeme**, con los totales y lo que
- * falta —documentos sin cambio, compras sin factura del proveedor— dicho en
- * castellano, para que el contador no lo descubra al cuadrar.
+ * falta —documentos sin cambio— dicho en castellano, para que el contador no
+ * lo descubra al cuadrar.
+ *
+ * Y dos cosas que NO van al registro (157), dichas en vez de calladas: los
+ * documentos de las series de prueba (se cuentan en «Léeme») y las órdenes
+ * de compra sin factura del proveedor (van a su propia hoja, «Órdenes sin
+ * factura del proveedor», para pedírsela).
  *
  * El cambio de cada documento en dólares sale de la factura (148) y, si no lo
  * tiene, del día en `tipos_cambio_sunat` (149), con el último publicado para
@@ -60,26 +68,47 @@ async function cambiosDelRango(desde: string, hasta: string): Promise<(fecha: st
   };
 }
 
-async function leerVentas(desde: string, hasta: string, cambio: (f: string) => number | null): Promise<FilaRegistro[]> {
+/** Las series marcadas `es_prueba` (093): sus documentos no son ventas. */
+async function seriesDePrueba(): Promise<Set<string>> {
   const supabase = await clienteServidor();
-  const { data, error } = await supabase
-    .from("comprobantes")
-    .select(
-      `tipo, numero, fecha_emision, fecha_vencimiento, estado, moneda, tipo_cambio, referencia_id,
-       op_gravada, igv, total, retencion_monto, pen_gravada, pen_igv, pen_total, pen_retencion,
-       clientes!comprobantes_cliente_id_fkey(razon_social, tipo_documento, numero_documento)`,
-    )
-    .gte("fecha_emision", desde)
-    .lte("fecha_emision", hasta)
-    .order("fecha_emision")
-    .order("numero")
-    .limit(5000);
+  const { data, error } = await supabase.from("series_documento").select("serie").eq("es_prueba", true);
   if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((s) => String(s.serie)));
+}
+
+async function leerVentas(
+  desde: string,
+  hasta: string,
+  cambio: (f: string) => number | null,
+): Promise<{ filas: FilaRegistro[]; omitidos: number }> {
+  const supabase = await clienteServidor();
+  const [{ data: todos, error }, prueba] = await Promise.all([
+    supabase
+      .from("comprobantes")
+      .select(
+        `tipo, serie, numero, fecha_emision, fecha_vencimiento, estado, moneda, tipo_cambio, referencia_id,
+         op_gravada, igv, total, retencion_monto, pen_gravada, pen_igv, pen_total, pen_retencion,
+         clientes!comprobantes_cliente_id_fkey(razon_social, tipo_documento, numero_documento)`,
+      )
+      .gte("fecha_emision", desde)
+      .lte("fecha_emision", hasta)
+      .order("fecha_emision")
+      .order("numero")
+      .limit(5000),
+    seriesDePrueba(),
+  ]);
+  if (error) throw new Error(error.message);
+
+  // F001, FC01, T001…: las de prueba se quitan del registro y se cuentan.
+  const { quedan: data, omitidos } = sinSeriesDePrueba(
+    (todos ?? []).map((d) => ({ ...d, serie: String(d.serie) })),
+    prueba,
+  );
 
   // El comprobante al que apunta cada nota, en una consulta aparte: la
   // relación de `comprobantes` consigo misma PostgREST la resolvía en el
   // sentido contrario (las notas DE este) y la referencia salía vacía.
-  const idsRef = [...new Set((data ?? []).map((d) => d.referencia_id).filter((x): x is string => !!x))];
+  const idsRef = [...new Set(data.map((d) => d.referencia_id).filter((x): x is string => !!x))];
   const refs = new Map<string, { tipo: string; numero: string; fecha_emision: string; tipo_cambio: number | null }>();
   if (idsRef.length > 0) {
     const r = await supabase.from("comprobantes").select("id, tipo, numero, fecha_emision, tipo_cambio").in("id", idsRef);
@@ -94,7 +123,7 @@ async function leerVentas(desde: string, hasta: string, cambio: (f: string) => n
     }
   }
 
-  return (data ?? []).map((d) => {
+  const filas = data.map((d) => {
     const cli = uno(d.clientes as Uno<{ razon_social: string; tipo_documento: string; numero_documento: string }>);
     const ref = d.referencia_id ? (refs.get(String(d.referencia_id)) ?? null) : null;
     const moneda = d.moneda === "PEN" ? "PEN" : "USD";
@@ -131,9 +160,14 @@ async function leerVentas(desde: string, hasta: string, cambio: (f: string) => n
     };
     return filaRegistro(c);
   });
+  return { filas, omitidos };
 }
 
-async function leerCompras(desde: string, hasta: string, cambio: (f: string) => number | null): Promise<FilaCompra[]> {
+async function leerCompras(
+  desde: string,
+  hasta: string,
+  cambio: (f: string) => number | null,
+): Promise<{ filas: ReturnType<typeof filaCompra>[]; sinFactura: OrdenSinFactura[] }> {
   const supabase = await clienteServidor();
   const { data, error } = await supabase
     .from("compras")
@@ -149,10 +183,10 @@ async function leerCompras(desde: string, hasta: string, cambio: (f: string) => 
     .limit(5000);
   if (error) throw new Error(error.message);
 
-  return (data ?? []).map((d) => {
+  const compras: CompraContable[] = (data ?? []).map((d) => {
     const p = uno(d.proveedores as Uno<{ razon_social: string; tipo_documento: string; numero_documento: string }>);
     const moneda = d.moneda === "PEN" ? "PEN" : "USD";
-    return filaCompra({
+    return {
       fecha: String(d.fecha),
       numero: String(d.numero),
       documento: (d.documento_proveedor as string | null)?.trim() || null,
@@ -165,13 +199,19 @@ async function leerCompras(desde: string, hasta: string, cambio: (f: string) => 
       proveedor: p?.razon_social ?? "",
       proveedorTipoDoc: p?.tipo_documento ?? null,
       proveedorDoc: p?.numero_documento ?? null,
-    });
+    };
   });
+  // Al registro, solo lo que tiene factura del proveedor (157).
+  const { registro, sinFactura } = separarCompras(compras);
+  return { filas: registro.map(filaCompra), sinFactura };
 }
 
 export async function libroContador(mes: string, desde: string, hasta: string): Promise<Buffer> {
   const cambio = await cambiosDelRango(desde, hasta);
-  const [ventas, compras] = await Promise.all([leerVentas(desde, hasta, cambio), leerCompras(desde, hasta, cambio)]);
+  const [{ filas: ventas, omitidos: ventasDePrueba }, { filas: compras, sinFactura }] = await Promise.all([
+    leerVentas(desde, hasta, cambio),
+    leerCompras(desde, hasta, cambio),
+  ]);
 
   const { default: ExcelJS } = await import("exceljs");
   const wb = new ExcelJS.Workbook();
@@ -200,7 +240,6 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
   // ------------------------------------------------------------------ Léeme --
   const t = totalesRegistro(ventas);
   const comprasSinCambio = compras.filter((c) => c.base == null).length;
-  const comprasSinFactura = compras.filter((c) => !c.serie && !c.correlativo).length;
   const leeme = wb.addWorksheet("Léeme");
   leeme.columns = [{ width: 44 }, { width: 22 }];
   const linea = (a: string, b?: string | number, formato?: string) => {
@@ -218,11 +257,22 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
   linea("IGV", t.igv, SOLES);
   linea("Total", t.total, SOLES);
   linea("Retenciones que nos hicieron", t.retencion, SOLES);
+  if (ventasDePrueba > 0) {
+    linea(
+      ventasDePrueba === 1
+        ? "Se omitió 1 documento de una serie de prueba"
+        : `Se omitieron ${ventasDePrueba} documentos de series de prueba`,
+      ventasDePrueba,
+    );
+  }
   linea("");
   linea("COMPRAS").font = { bold: true };
   linea("Documentos", compras.length);
   linea("Base imponible", Math.round(compras.reduce((s, c) => s + (c.base ?? 0), 0) * 100) / 100, SOLES);
   linea("IGV", Math.round(compras.reduce((s, c) => s + (c.igv ?? 0), 0) * 100) / 100, SOLES);
+  if (sinFactura.length > 0) {
+    linea("Órdenes sin factura del proveedor (no van al registro: ver la hoja «Órdenes sin factura»)", sinFactura.length);
+  }
   linea("");
   linea("CÓMO SE PASÓ A SOLES").font = { bold: true };
   for (const texto of [
@@ -234,13 +284,13 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
   ]) {
     linea(texto);
   }
-  if (t.sinCambio || comprasSinCambio || comprasSinFactura) {
+  if (t.sinCambio || comprasSinCambio || sinFactura.length) {
     linea("");
     const aviso = linea("FALTA REVISAR");
     aviso.font = { bold: true, color: { argb: "FFB45309" } };
     if (t.sinCambio) linea("Ventas sin tipo de cambio (importes en blanco)", t.sinCambio);
     if (comprasSinCambio) linea("Compras sin tipo de cambio (importes en blanco)", comprasSinCambio);
-    if (comprasSinFactura) linea("Compras sin el número de factura del proveedor", comprasSinFactura);
+    if (sinFactura.length) linea("Órdenes a las que les falta la factura del proveedor", sinFactura.length);
   }
 
   // ----------------------------------------------------------------- Ventas --
@@ -338,6 +388,25 @@ export async function libroContador(mes: string, desde: string, hasta: string): 
   }
   totalFila(hc, [7, 8, 9]);
   if (hc.rowCount > 1) hc.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: hc.columnCount } };
+
+  // ------------------------------------- Órdenes sin factura del proveedor --
+  // Fuera del registro: sin el documento del proveedor no hay crédito fiscal
+  // que sustentar. Aquí, para que Willy sepa qué factura le falta pedir. El
+  // nombre de la hoja es corto porque Excel no admite más de 31 letras.
+  if (sinFactura.length > 0) {
+    const hs = wb.addWorksheet("Órdenes sin factura", { views: [{ state: "frozen", ySplit: 1 }] });
+    hs.columns = [
+      { header: "Fecha", width: 12, style: { numFmt: "dd/mm/yyyy" } },
+      { header: "Nuestra orden", width: 15 },
+      { header: "Proveedor", width: 40 },
+      { header: "Moneda", width: 8 },
+      { header: "Total en su moneda", width: 14, style: { numFmt: NUMERO } },
+    ];
+    cabecera(hs);
+    for (const o of sinFactura) {
+      hs.addRow([fechaExcel(o.fecha), o.numero, o.proveedor, o.moneda, o.total]);
+    }
+  }
 
   const datos = await wb.xlsx.writeBuffer();
   return Buffer.from(datos as ArrayBuffer);

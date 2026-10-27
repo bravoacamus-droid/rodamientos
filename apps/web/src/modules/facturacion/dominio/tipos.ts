@@ -261,6 +261,12 @@ export interface CotizacionFacturable {
    */
   lineas_ya_facturadas: number;
   /**
+   * Cuántas líneas tienen algo por facturar que todavía NO salió en una guía
+   * emitida, y por eso no salen abajo (157). Sin esto, una cotización con la
+   * guía pendiente se leía como «no tiene líneas».
+   */
+  lineas_sin_despachar: number;
+  /**
    * Las guías EMITIDAS de esta cotización, para amparar la factura.
    *
    * Willy, 16/09 (48:10): *«a veces hay que hacer una factura de dos guías;
@@ -291,7 +297,8 @@ export interface CotizacionFacturable {
     unidad: string;
     /**
      * Lo PENDIENTE de facturar: lo que el cliente confirmó menos lo que ya
-     * se le emitió. No es lo que se cotizó.
+     * se le emitió, y nunca más de lo que salió en las guías emitidas sin
+     * facturar (157). No es lo que se cotizó.
      *
      * Era `cantidad` a secas —lo cotizado— y ese era el fallo de la 047: al
      * cliente que confirmaba 4 de 6 se le facturaban 6.

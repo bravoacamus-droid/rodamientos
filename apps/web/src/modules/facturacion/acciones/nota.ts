@@ -187,7 +187,9 @@ export async function emitirNota(
     revalidatePath("/facturacion");
     revalidatePath(`/facturacion/${doc.id}`);
     revalidatePath(`/facturacion/${r.id}`);
-    // Una nota de crédito cambia lo que se debe.
+    // Una nota de crédito cambia lo que se debe: desde la 157 la base baja el
+    // saldo de la factura al emitirla (y lo devuelve al anularla), y la nota
+    // misma nace saldada.
     revalidatePath("/cobranzas");
     revalidatePath("/reportes");
     revalidatePath("/dashboard");

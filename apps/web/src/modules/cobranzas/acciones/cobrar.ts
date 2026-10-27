@@ -24,7 +24,14 @@ import { BUCKET_VOUCHERS, revisarVoucher, subirVoucher } from "./archivo-voucher
  * viajes y tres oportunidades de dejarlo a medias.
  */
 
-/** La misma lista que `permisos_rol` tiene para `pagos`. */
+/**
+ * La lista que `permisos_rol` tiene para `pagos`, menos `nota_credito`.
+ *
+ * Desde la 157 la nota de crédito baja el saldo de la factura al EMITIRSE.
+ * Apuntarla además como cobro la aplicaría dos veces, y como cobro no iba
+ * enlazada a ninguna nota ni tenía tope: se podía «cobrar con nota de
+ * crédito» sin que existiera ninguna. `registrar_pagos` también la rechaza.
+ */
 const MEDIOS = [
   "efectivo",
   "transferencia",
@@ -33,7 +40,6 @@ const MEDIOS = [
   "letra",
   "detraccion",
   "retencion",
-  "nota_credito",
 ] as const;
 
 const esquemaPago = z.object({

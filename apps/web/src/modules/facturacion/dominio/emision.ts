@@ -132,15 +132,27 @@ export function bloqueosEmision(
   }
 
   if (cotizacion.lineas.length === 0) {
-    // Los dos casos acaban sin líneas y llevan a sitios distintos: uno se
-    // arregla editando la cotización y el otro no se arregla, ya está hecho.
-    lista.push({
-      campo: "lineas",
-      mensaje:
-        cotizacion.lineas_ya_facturadas > 0
-          ? "Ya se facturó todo lo que el cliente confirmó de esta cotización."
-          : "La cotización no tiene líneas.",
-    });
+    // Los tres casos acaban sin líneas y llevan a sitios distintos: uno se
+    // arregla editando la cotización, otro emitiendo la guía de lo que falta
+    // (157: se factura lo que salió), y el último no se arregla, ya está hecho.
+    if (cotizacion.lineas_sin_despachar > 0) {
+      // Sin ninguna guía emitida ya lo dice el aviso de arriba.
+      if (cotizacion.guias.length > 0) {
+        lista.push({
+          campo: "lineas",
+          mensaje:
+            "Lo que queda por facturar todavía no salió en una guía. Emite la guía de lo que falta y luego factura.",
+        });
+      }
+    } else {
+      lista.push({
+        campo: "lineas",
+        mensaje:
+          cotizacion.lineas_ya_facturadas > 0
+            ? "Ya se facturó todo lo que el cliente confirmó de esta cotización."
+            : "La cotización no tiene líneas.",
+      });
+    }
   }
 
   // Una línea a valor cero no es ilegal, pero un comprobante ENTERO a cero sí
@@ -317,4 +329,57 @@ export function enMonedaDocumento<T extends { valor_unitario: number }>(
 ): T[] {
   if (!tipoCambio || !(tipoCambio > 0)) return [...lineas];
   return lineas.map((l) => ({ ...l, valor_unitario: redondear2(l.valor_unitario * tipoCambio) }));
+}
+
+/**
+ * Una línea de guía, tal como sale de `guia_items`, para contar lo despachado.
+ */
+export interface FilaDespacho {
+  guia_id: string;
+  cotizacion_item_id: string | null;
+  /** El producto de la GUÍA: en un kit, la pieza. */
+  producto_id: string;
+  cantidad: number;
+}
+
+/**
+ * Cuánto salió en las guías de cada línea de la cotización (157).
+ *
+ * La misma cuenta que `despacho_por_item` en la base: una línea normal suma
+ * sus unidades; un kit sale como sus piezas, y cada pieza dice «cantidad /
+ * lo que lleva el kit» kits —se toma una por guía, porque todas dicen lo
+ * mismo—. Una fila sin línea de cotización no es de ninguna y no cuenta.
+ *
+ * `piezasDeKit` va por línea de cotización: pieza → unidades por kit.
+ */
+export function despachadoPorLinea(
+  filas: readonly FilaDespacho[],
+  piezasDeKit: ReadonlyMap<string, ReadonlyMap<string, number>>,
+): Map<string, number> {
+  const porGuia = new Map<string, { linea: string; unidades: number }>();
+  for (const f of filas) {
+    if (!f.cotizacion_item_id) continue;
+    const clave = `${f.guia_id}|${f.cotizacion_item_id}`;
+    const piezas = piezasDeKit.get(f.cotizacion_item_id);
+    const previo = porGuia.get(clave);
+    if (piezas) {
+      const porKit = piezas.get(f.producto_id);
+      if (!porKit || porKit <= 0) continue;
+      const kits = Number(f.cantidad) / porKit;
+      porGuia.set(clave, {
+        linea: f.cotizacion_item_id,
+        unidades: Math.max(previo?.unidades ?? 0, kits),
+      });
+    } else {
+      porGuia.set(clave, {
+        linea: f.cotizacion_item_id,
+        unidades: (previo?.unidades ?? 0) + Number(f.cantidad),
+      });
+    }
+  }
+  const total = new Map<string, number>();
+  for (const { linea, unidades } of porGuia.values()) {
+    total.set(linea, redondear2((total.get(linea) ?? 0) + unidades));
+  }
+  return total;
 }

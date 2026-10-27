@@ -5,6 +5,7 @@ import {
   aplicaDetraccion,
   bloqueosEmision,
   cuotasDe,
+  despachadoPorLinea,
   docSunatDe,
   enMonedaDocumento,
   montoDetraccion,
@@ -32,6 +33,7 @@ const COT: CotizacionFacturable = {
   tipo_cambio: null,
   cliente_agente_retencion: false,
   lineas_ya_facturadas: 0,
+  lineas_sin_despachar: 0,
   // Con guía, que es el caso normal: primero sale la mercadería y luego se
   // factura. Sin ella no se puede emitir (17/09).
   guias: [{ id: "99999999-9999-9999-9999-999999999999", numero: "T001-00000012", fecha: "2026-08-26" }],
@@ -122,6 +124,24 @@ describe("bloqueosEmision", () => {
 
   it("con guía, ese bloqueo desaparece", () => {
     expect(bloqueosEmision(COT, "factura").some((b) => b.campo === "guia")).toBe(false);
+  });
+
+  /*
+    157: se factura lo que SALIÓ. Lo confirmado que todavía no tiene guía no
+    sale abajo, y la cotización no está vacía ni facturada: falta la guía.
+  */
+  it("sin líneas porque lo pendiente no salió en ninguna guía, pide la guía", () => {
+    const r = bloqueosEmision({ ...COT, lineas: [], lineas_sin_despachar: 1 }, "factura");
+    expect(r.map((b) => b.mensaje)).toContain(
+      "Lo que queda por facturar todavía no salió en una guía. Emite la guía de lo que falta y luego factura.",
+    );
+    expect(r.map((b) => b.mensaje)).not.toContain("La cotización no tiene líneas.");
+  });
+
+  it("sin ninguna guía, el aviso de la guía basta y no se repite", () => {
+    const r = bloqueosEmision({ ...COT, guias: [], lineas: [], lineas_sin_despachar: 1 }, "factura");
+    expect(r.filter((b) => b.campo === "lineas")).toEqual([]);
+    expect(r.some((b) => b.campo === "guia")).toBe(true);
   });
 
   it("sin líneas porque ya se facturó todo, lo dice así", () => {
@@ -356,5 +376,49 @@ describe("la factura en soles (116)", () => {
   it("en dólares no toca nada", () => {
     const l = [{ cantidad: 1, valor_unitario: 10.8765 }];
     expect(enMonedaDocumento(l, null)).toEqual(l);
+  });
+});
+
+describe("despachadoPorLinea (157)", () => {
+  const sinKits = new Map<string, Map<string, number>>();
+
+  it("suma lo que salió de cada línea en todas las guías", () => {
+    const r = despachadoPorLinea(
+      [
+        { guia_id: "g1", cotizacion_item_id: "l1", producto_id: "p1", cantidad: 1 },
+        { guia_id: "g2", cotizacion_item_id: "l1", producto_id: "p1", cantidad: 2 },
+        { guia_id: "g2", cotizacion_item_id: "l2", producto_id: "p2", cantidad: 5 },
+      ],
+      sinKits,
+    );
+    expect(r.get("l1")).toBe(3);
+    expect(r.get("l2")).toBe(5);
+  });
+
+  it("una fila sin línea de cotización no cuenta para ninguna", () => {
+    const r = despachadoPorLinea(
+      [{ guia_id: "g1", cotizacion_item_id: null, producto_id: "p1", cantidad: 4 }],
+      sinKits,
+    );
+    expect(r.size).toBe(0);
+  });
+
+  /*
+    Un kit sale como sus piezas: 2 kits de (2 rodamientos + 1 retén) son 4 y
+    2 en la guía. Cada pieza dice «2 kits»; se cuenta una vez por guía, como
+    `despacho_por_item` en la base.
+  */
+  it("un kit cuenta en kits, una vez por guía", () => {
+    const kits = new Map([["lk", new Map([["rod", 2], ["ret", 1]])]]);
+    const r = despachadoPorLinea(
+      [
+        { guia_id: "g1", cotizacion_item_id: "lk", producto_id: "rod", cantidad: 4 },
+        { guia_id: "g1", cotizacion_item_id: "lk", producto_id: "ret", cantidad: 2 },
+        { guia_id: "g2", cotizacion_item_id: "lk", producto_id: "rod", cantidad: 2 },
+        { guia_id: "g2", cotizacion_item_id: "lk", producto_id: "ret", cantidad: 1 },
+      ],
+      kits,
+    );
+    expect(r.get("lk")).toBe(3);
   });
 });

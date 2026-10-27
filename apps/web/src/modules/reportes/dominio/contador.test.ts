@@ -5,6 +5,8 @@ import {
   filaRegistro,
   nombreMes,
   rangoDeMes,
+  separarCompras,
+  sinSeriesDePrueba,
   tipoDocumentoSunat,
   totalesRegistro,
   type ComprobanteContable,
@@ -147,5 +149,46 @@ describe("filaCompra", () => {
     expect(filaCompra({ ...compra, tipoCambio: null, documento: null }).falta).toBe(
       "Sin tipo de cambio; sin factura del proveedor",
     );
+  });
+});
+
+describe("lo que no va al registro (157)", () => {
+  it("las series de prueba se quitan y se cuentan", () => {
+    const docs = [
+      { serie: "F002", numero: "F002-00000560" },
+      { serie: "F001", numero: "F001-00000001" },
+      { serie: "FC01", numero: "FC01-00000001" },
+    ];
+    const r = sinSeriesDePrueba(docs, new Set(["F001", "FC01", "T001"]));
+    expect(r.quedan.map((d) => d.numero)).toEqual(["F002-00000560"]);
+    expect(r.omitidos).toBe(2);
+  });
+
+  it("sin series de prueba no quita nada", () => {
+    expect(sinSeriesDePrueba([{ serie: "F002" }], new Set()).omitidos).toBe(0);
+  });
+
+  it("una orden sin factura del proveedor va aparte, con su total", () => {
+    const base = {
+      fecha: "2026-10-04",
+      tipo: "local",
+      moneda: "USD" as const,
+      tipoCambio: 3.442,
+      base: 100,
+      igv: 18,
+      total: 118,
+      proveedorTipoDoc: "RUC",
+      proveedorDoc: "20111111111",
+    };
+    const r = separarCompras([
+      { ...base, numero: "CMP-26-00015", documento: "452528", proveedor: "CON FACTURA SAC" },
+      { ...base, numero: "CMP-26-00010", documento: null, proveedor: "SIN FACTURA SAC", total: 344.944 },
+      { ...base, numero: "CMP-26-00011", documento: "  ", proveedor: "EN BLANCO SAC" },
+    ]);
+    expect(r.registro.map((c) => c.numero)).toEqual(["CMP-26-00015"]);
+    expect(r.sinFactura).toEqual([
+      { fecha: "2026-10-04", numero: "CMP-26-00010", proveedor: "SIN FACTURA SAC", moneda: "USD", total: 344.94 },
+      { fecha: "2026-10-04", numero: "CMP-26-00011", proveedor: "EN BLANCO SAC", moneda: "USD", total: 118 },
+    ]);
   });
 });

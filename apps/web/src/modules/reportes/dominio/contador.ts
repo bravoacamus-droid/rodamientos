@@ -279,3 +279,57 @@ export function filaCompra(c: CompraContable): FilaCompra {
     falta,
   };
 }
+
+/**
+ * Lo que NO va al registro de ventas: los documentos de las series de prueba
+ * (`series_documento.es_prueba`, 093). F001-00000001 —una prueba del 14/10—
+ * salía en el registro de octubre como una venta de verdad. Se devuelve
+ * cuántos se quitaron para decirlo en «Léeme»: quitar sin avisar es lo mismo
+ * que esconder.
+ */
+export function sinSeriesDePrueba<T extends { serie: string }>(
+  documentos: readonly T[],
+  seriesDePrueba: ReadonlySet<string>,
+): { quedan: T[]; omitidos: number } {
+  const quedan = documentos.filter((d) => !seriesDePrueba.has(d.serie));
+  return { quedan, omitidos: documentos.length - quedan.length };
+}
+
+/** Una orden de compra sin la factura del proveedor, para pedírsela. */
+export interface OrdenSinFactura {
+  fecha: string;
+  numero: string;
+  proveedor: string;
+  moneda: "USD" | "PEN";
+  /** En la moneda de la orden. */
+  total: number;
+}
+
+/**
+ * Las compras con factura del proveedor van al registro; las demás, aparte.
+ *
+ * Una orden sin el documento del proveedor todavía no es una compra para el
+ * contador: registrarla sería crédito fiscal sin sustento. Pero tampoco se
+ * calla: va en su propia hoja, para que Willy sepa qué factura le falta pedir.
+ */
+export function separarCompras(compras: readonly CompraContable[]): {
+  registro: CompraContable[];
+  sinFactura: OrdenSinFactura[];
+} {
+  const registro: CompraContable[] = [];
+  const sinFactura: OrdenSinFactura[] = [];
+  for (const c of compras) {
+    if (c.documento?.trim()) {
+      registro.push(c);
+    } else {
+      sinFactura.push({
+        fecha: c.fecha,
+        numero: c.numero,
+        proveedor: c.proveedor,
+        moneda: c.moneda,
+        total: r2(c.total),
+      });
+    }
+  }
+  return { registro, sinFactura };
+}
