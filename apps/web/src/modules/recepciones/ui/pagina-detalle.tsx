@@ -8,6 +8,7 @@ import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
 import { Volver } from "@/componentes/volver";
 
 import { misPermisos } from "@/lib/permisos";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 
 import { detalleRecepcion, papelesDeRecepcion } from "../api/consultas";
 import {
@@ -279,6 +280,9 @@ export default async function PaginaDetalleRecepcion({
       )}
 
       <AvisarAQuien />
+
+      {/* Quién la recibió o la anuló, y cuándo (TR-03). */}
+      <HistorialDocumento entidad="recepciones" id={r.id} />
     </div>
   );
 }

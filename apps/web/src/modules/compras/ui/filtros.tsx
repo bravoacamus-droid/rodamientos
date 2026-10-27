@@ -30,10 +30,13 @@ export function FiltrosComprasBarra({ proveedores }: { proveedores: ProveedorOpc
     <div className="flex flex-col gap-3 px-4 pb-4">
       <BarraPeriodo />
       <FilaFiltros>
+        {/* «guía aérea» y no «tracking», que es como se llama el campo en la
+            compra (auditoría 27/10). Sin «del proveedor»: con él, la frase se
+            cortaba a 1280 y a 1440. */}
         <CajaBuscar
           valor={texto}
           onCambiar={setTexto}
-          placeholder="Número, factura del proveedor o tracking"
+          placeholder="Número, factura o guía aérea"
           etiqueta="Buscar compras"
         />
         <FiltroBuscable

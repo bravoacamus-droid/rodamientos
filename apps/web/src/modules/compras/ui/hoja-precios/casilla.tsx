@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { campoBase, cn } from "@rodatech/ui";
 import { Check, Undo2, X } from "lucide-react";
 
 import type { Casilla } from "../../dominio/hoja-precios";
@@ -101,7 +102,7 @@ export function CasillaPrecio({
             const n = Number(limpio);
             onPrecio(limpio === "" || !Number.isFinite(n) ? null : n);
           }}
-          className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] pl-8 pr-2 text-right text-base tabular focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15 disabled:bg-[var(--surface-2)]"
+          className={cn(campoBase, "h-10 pl-8 pr-2 text-right text-base tabular")}
         />
       </div>
 

@@ -111,11 +111,14 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     </span>
                   ) : null}
                 </td>
-                <td className="max-w-[12rem] px-3 py-2.5">
-                  <span className="block truncate">{c.proveedor ?? "—"}</span>
+                {/* Hasta dos líneas y no cortado con «…» (auditoría 27/10): el
+                    cliente es por lo que Willy sabe para quién compró, y en el
+                    `title` solo lo ve quien pasa el ratón. */}
+                <td className="min-w-[14rem] max-w-[18rem] px-3 py-2.5">
+                  <span className="line-clamp-2 break-words">{c.proveedor ?? "—"}</span>
                   {/* Para quién (111): la orden salió de un pedido. */}
                   {c.para ? (
-                    <span className="block truncate text-sm text-[var(--fg-muted)]" title={c.para.cliente}>
+                    <span className="line-clamp-2 break-words text-sm text-[var(--fg-muted)]" title={c.para.cliente}>
                       para {c.para.numero} · {c.para.cliente}
                     </span>
                   ) : null}
@@ -131,7 +134,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 </td>
                 <td className="hidden px-3 py-2.5 text-right tabular 2xl:table-cell">{c.items}</td>
                 <td className="px-3 py-2.5">
-                  <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} />
+                  <BarraAvance valor={c.avance} anulada={c.estado === "anulada"} apilada />
                 </td>
                 <td className="px-3 py-2.5 text-right">
                   <Moneda valor={c.total} moneda={c.moneda} tamano="sm" />
@@ -153,18 +156,31 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                   {/* La orden del pedido sin la factura del proveedor (128). */}
                   {c.falta_factura && c.estado === "registrada" ? (
                     <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                      Falta registrar la compra
+                      Falta la factura del proveedor
                     </span>
                   ) : null}
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
-                  {faltaRecibir(c.estado) ? (
+                  {/* «Ver» en TODAS las filas (auditoría 27/10): en las
+                      recibidas y anuladas la columna quedaba vacía y la única
+                      entrada era el número azul, justo lo que Luis pidió no
+                      tener que hacer (ver `faltaRecibir`). Ancho fijo, como en
+                      recepciones, y «Ver» siempre en el mismo sitio, para que
+                      la columna quede a plomo. Uno debajo del otro cuando la
+                      caja es estrecha: lado a lado, a 1280 la tabla pedía
+                      123 px más y el total quedaba detrás del scroll. */}
+                  <div className="ml-auto flex w-[96px] flex-col gap-1.5 @5xl:w-[152px] @5xl:flex-row @5xl:items-center">
                     <Button asChild variant="outline">
-                      <Link href={`/recepciones/nueva?compra=${c.id}`}>
-                        Recibir
-                      </Link>
+                      <Link href={`/compras/${c.id}`}>Ver</Link>
                     </Button>
-                  ) : null}
+                    {faltaRecibir(c.estado) ? (
+                      <Button asChild>
+                        <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                          Recibir
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -208,7 +224,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 <EstadoBadge estado={c.estado} size="xs" />
                 {c.falta_factura && c.estado === "registrada" ? (
                     <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-2 py-0.5 text-sm font-medium">
-                      Falta registrar la compra
+                      Falta la factura del proveedor
                     </span>
                   ) : null}
               </span>
@@ -314,7 +330,20 @@ function faltaRecibir(estado: EstadoCompra): boolean {
  * Es la columna que de verdad se mira en un listado de compras: el estado dice
  * «parcial», pero no si falta el 5 % o el 90 %.
  */
-function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
+function BarraAvance({
+  valor,
+  anulada,
+  apilada = false,
+}: {
+  valor: number;
+  anulada: boolean;
+  /**
+   * El porcentaje debajo de la barra, en la tabla. Es lo que le deja sitio al
+   * nombre en dos líneas y a «Ver»: sin esto, la tabla pedía 39 px de más a
+   * 1280 y 38 a 1536 (donde entran «Documento» y «Líneas»).
+   */
+  apilada?: boolean;
+}) {
   if (anulada) return <span className="text-[var(--fg-subtle)]">—</span>;
 
   const color =
@@ -325,7 +354,13 @@ function BarraAvance({ valor, anulada }: { valor: number; anulada: boolean }) {
         : "bg-[var(--border-strong)]";
 
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className={
+        apilada
+          ? "flex flex-col items-start gap-1"
+          : "flex items-center gap-2"
+      }
+    >
       <div
         className="h-1.5 w-16 overflow-hidden rounded-full bg-[var(--surface-3,var(--surface-2))]"
         role="progressbar"

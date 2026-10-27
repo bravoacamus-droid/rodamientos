@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Badge, Input } from "@rodatech/ui";
+import { useEffect, useId, useRef, useState } from "react";
+import { Badge, Button, campoBase, cn } from "@rodatech/ui";
+import { Plus, Search } from "lucide-react";
+
+import { AltaProducto } from "@/modules/cotizaciones/ui/constructor/alta-producto";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 
@@ -32,6 +35,13 @@ export function BuscadorRecepcion({
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
   const contenedor = useRef<HTMLDivElement>(null);
+  const id = useId();
+  /*
+    Dar de alta el producto sin salir de la recepción (auditoría 27/10), como
+    ya hace la compra. Si llega mercadería que no está en el maestro, hasta hoy
+    había que salir a /productos/nuevo y perder lo apuntado.
+  */
+  const [creando, setCreando] = useState<string | null>(null);
 
   // La espera al teclear y el DESCARTE DE RESPUESTAS TARDÍAS viven en el hook.
   // Sin lo segundo, la respuesta de «620» puede llegar después que la de
@@ -93,29 +103,56 @@ export function BuscadorRecepcion({
 
   return (
     <div ref={contenedor} className="relative">
-      <Input
-        value={termino}
-        onChange={(e) => setTermino(e.target.value)}
-        onFocus={() => resultados.length > 0 && setAbierto(true)}
-        onKeyDown={teclas}
-        // Se cortaba a 390 px (revisión por módulos del 02/10).
-        placeholder="Buscar por código o descripción…"
-        aria-label="Buscar producto para recibir"
-        autoComplete="off"
-      />
-
-      {buscando ? (
-        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
-          buscando…
-        </span>
-      ) : null}
+      {/* Etiqueta y lupa, como en la compra (auditoría 27/10). Sin `flex` en
+          la caja: la lista es `absolute` y en un flex taparía la etiqueta. */}
+      <label htmlFor={id} className="mb-1 block text-sm font-medium">
+        Productos que llegan
+      </label>
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
+          aria-hidden="true"
+        />
+        <input
+          id={id}
+          value={termino}
+          onChange={(e) => setTermino(e.target.value)}
+          onFocus={() => resultados.length > 0 && setAbierto(true)}
+          onKeyDown={teclas}
+          // Se cortaba a 390 px (revisión por módulos del 02/10).
+          placeholder="Buscar por código o descripción…"
+          autoComplete="off"
+          className={cn(campoBase, "h-control-md pl-9 pr-24 text-sm")}
+        />
+        {buscando ? (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
+            buscando…
+          </span>
+        ) : null}
+      </div>
 
       {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
           {resultados.length === 0 ? (
-            <p className="p-3 text-sm text-[var(--fg-muted)]">
-              {error ?? "Sin resultados."}
-            </p>
+            <div className="flex flex-col items-start gap-2 p-3">
+              <p className="text-sm text-[var(--fg-muted)]">
+                {error ?? `Ningún producto coincide con «${termino.trim()}».`}
+              </p>
+              {error ? null : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-1.5"
+                  onClick={() => {
+                    setCreando(termino.trim());
+                    setAbierto(false);
+                  }}
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  Crear el producto «{termino.trim()}»
+                </Button>
+              )}
+            </div>
           ) : null}
 
           {resultados.length > 0 ? (
@@ -164,6 +201,29 @@ export function BuscadorRecepcion({
             );
           })}
         </div>
+      ) : null}
+
+      {creando !== null ? (
+        <AltaProducto
+          codigoInicial={creando}
+          onCerrar={() => setCreando(null)}
+          onCreado={(p) => {
+            setCreando(null);
+            // Nace sin stock y sin costo: el costo lo pone esta recepción, con
+            // lo que diga la factura del proveedor.
+            elegir({
+              id: p.id,
+              codigo: p.codigo,
+              descripcion: p.descripcion,
+              marca: p.marca,
+              unidad: p.unidad,
+              stock: 0,
+              costo_promedio: undefined,
+              codigo_fabricante: null,
+              estado_stock: "sin_stock",
+            });
+          }}
+        />
       ) : null}
     </div>
   );

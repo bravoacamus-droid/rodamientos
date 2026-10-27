@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
 import { RotateCcw, Scale } from "lucide-react";
 import { misPermisos } from "@/lib/permisos";
+import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 
@@ -183,7 +184,7 @@ export default async function PaginaDetalleCompra({
       {c.falta_factura && c.estado === "registrada" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
           <div>
-            <p className="text-base font-semibold">Orden pedida: falta registrar la compra</p>
+            <p className="text-base font-semibold">Orden pedida: falta la factura del proveedor</p>
             <p className="text-sm">
               Cuando la compres, regístrala con su factura: cómo llegó, el número, el PDF y lo que cobró.
             </p>
@@ -213,9 +214,12 @@ export default async function PaginaDetalleCompra({
         </div>
       ) : null}
 
+      {/* Solo el motivo: `compras` no guarda quién anuló ni cuándo (no tiene
+          `anulada_por` ni `anulada_en`, a diferencia de guías y facturas).
+          Lo apunta la bitácora, y se lee al pie en «Quién lo hizo y cuándo». */}
       {c.estado === "anulada" && c.motivo_anulacion ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
-          <strong>Anulada:</strong> {c.motivo_anulacion}
+          <strong>Anulada.</strong> Motivo: {c.motivo_anulacion}
         </p>
       ) : null}
 
@@ -543,6 +547,9 @@ export default async function PaginaDetalleCompra({
           </section>
         </div>
       </div>
+
+      {/* Quién la registró, la recibió o la anuló, y cuándo (TR-03). */}
+      <HistorialDocumento entidad="compras" id={c.id} />
     </div>
 
     {/* El papel: montado siempre, visible solo al imprimir (como la cotización). */}

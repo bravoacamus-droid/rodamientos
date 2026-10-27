@@ -3,7 +3,7 @@
 // «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { Button, Input } from "@rodatech/ui";
-import { Trash2 } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 
 import type { Accion, LineaRecibida } from "../../dominio/constructor";
 import type { LineaCosteada } from "../../dominio/costeo";
@@ -103,7 +103,7 @@ export function FilaRecepcion({
       ) : null}
 
       <td className="px-2 py-2 text-right text-sm text-[var(--fg-muted)] tabular">
-        {linea.stockAnterior} → <span className="font-medium text-[var(--fg)]">{stockResultante}</span>
+        {linea.stockAnterior} <ArrowRight className="inline size-4 align-[-2px]" aria-label="pasa a" /> <span className="font-medium text-[var(--fg)]">{stockResultante}</span>
       </td>
 
       <td className="px-2 py-2 text-right">
@@ -215,7 +215,7 @@ export function TarjetaRecepcion({
       <div className="mt-3 flex items-end justify-between gap-3 border-t border-[var(--border-soft)] pt-2 text-sm">
         <p>
           <span className="text-[var(--fg-muted)]">Stock </span>
-          <span className="tabular">{linea.stockAnterior} → </span>
+          <span className="tabular">{linea.stockAnterior} <ArrowRight className="inline size-4 align-[-2px]" aria-label="pasa a" /> </span>
           <span className="tabular font-medium">{stockResultante}</span>
         </p>
         <p className="text-right">

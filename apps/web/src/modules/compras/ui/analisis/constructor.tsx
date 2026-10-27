@@ -564,6 +564,7 @@ export function ConstructorAnalisis({
                 ¿No recuerdas el código? Búscalo por descripción
               </span>
               <BuscadorCompra
+                etiqueta={null}
                 ultimosCostos={{}}
                 onElegir={(p) =>
                   despachar({

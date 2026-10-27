@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Button, Input, formatearFecha } from "@rodatech/ui";
+import { Button, Input, SelectNativo, campoBase, cn, formatearFecha } from "@rodatech/ui";
 import { CircleCheck, Plus, Save, Search, Trash2, TriangleAlert, X } from "lucide-react";
 
 import { datosDeProveedor, guardarHojaPrecios, referenciasParaHoja } from "../../acciones/hoja-precios";
@@ -246,6 +246,7 @@ export function HojaPrecios({
               </span>
               <BuscadorCompra
                 recientes={recientes}
+                etiqueta={null}
                 ultimosCostos={{}}
                 onElegir={(p) =>
                   anadirProductos([
@@ -636,15 +637,18 @@ function CabeceraProveedor({
         </span>
       ) : (
         <div className="flex flex-wrap items-center gap-1.5 font-normal">
-          <select
+          {/* SelectNativo y campoBase, no clases copiadas (CLAUDE.md §5):
+              en la cabecera de la columna va el tamaño pequeño del sistema,
+              el mismo para la moneda y el tipo de cambio. */}
+          <SelectNativo
             value={proveedor.moneda}
             aria-label={`Moneda de ${proveedor.nombre}`}
             onChange={(e) => onMoneda(e.target.value === "PEN" ? "PEN" : "USD", proveedor.tipoCambio)}
-            className="h-8 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 text-sm"
+            className="h-control-sm w-auto"
           >
             <option value="USD">Dólares</option>
             <option value="PEN">Soles</option>
-          </select>
+          </SelectNativo>
           {proveedor.moneda === "PEN" ? (
             <input
               type="number"
@@ -654,7 +658,7 @@ function CabeceraProveedor({
               aria-label={`Tipo de cambio de ${proveedor.nombre}`}
               value={proveedor.tipoCambio ?? ""}
               onChange={(e) => onMoneda("PEN", Number(e.target.value) || null)}
-              className="h-8 w-20 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 text-right text-sm tabular"
+              className={cn(campoBase, "h-control-sm w-20 px-1.5 text-right text-sm tabular")}
             />
           ) : null}
           <label className="flex items-center gap-1 text-sm">

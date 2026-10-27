@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Input } from "@rodatech/ui";
-import { Plus } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Badge, Button, campoBase, cn } from "@rodatech/ui";
+import { Plus, Search } from "lucide-react";
 
 import { AltaProducto } from "@/modules/cotizaciones/ui/constructor/alta-producto";
 
@@ -22,8 +22,15 @@ export function BuscadorCompra({
   onElegir,
   ultimosCostos,
   recientes = [],
+  etiqueta = "Productos de la compra",
 }: {
   onElegir: (p: ProductoComprable) => void;
+  /**
+   * El título visible encima de la caja. `null` donde la pantalla ya pone el
+   * suyo justo encima (la hoja de precios y el análisis de importación): dos
+   * títulos seguidos para la misma caja se leen como dos cosas distintas.
+   */
+  etiqueta?: string | null;
   /** Último costo pagado a ESTE proveedor, por producto. */
   ultimosCostos: Record<string, { costo: number; numero: string; fecha: string }>;
   /**
@@ -37,6 +44,7 @@ export function BuscadorCompra({
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
   const contenedor = useRef<HTMLDivElement>(null);
+  const id = useId();
   /*
     Crear el producto sin salir de la compra (14/10). Lo que se compra es justo
     lo que todavía no está en el catálogo —el repuesto nuevo, la marca que no se
@@ -105,22 +113,39 @@ export function BuscadorCompra({
 
   return (
     <div ref={contenedor} className="relative">
-      <Input
-        value={termino}
-        onChange={(e) => setTermino(e.target.value)}
-        onFocus={() => resultados.length > 0 && setAbierto(true)}
-        onClick={() => resultados.length > 0 && setAbierto(true)}
-        onKeyDown={teclas}
-        placeholder="Buscar por código, marca o descripción…"
-        aria-label="Buscar producto para comprar"
-        autoComplete="off"
-      />
-
-      {buscando ? (
-        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
-          buscando…
-        </span>
-      ) : null}
+      {/* Etiqueta y lupa, como «Proveedor» encima (auditoría 27/10): es el
+          campo principal de la pantalla y era una caja sin título, explicada
+          solo por un párrafo gris debajo. Sin `flex` en la caja: la lista
+          desplegable es `absolute` y en un flex se pintaría encima de la
+          etiqueta. */}
+      <label
+        htmlFor={id}
+        className={etiqueta === null ? "sr-only" : "mb-1 block text-sm font-medium"}
+      >
+        {etiqueta ?? "Buscar producto"}
+      </label>
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--fg-subtle)]"
+          aria-hidden="true"
+        />
+        <input
+          id={id}
+          value={termino}
+          onChange={(e) => setTermino(e.target.value)}
+          onFocus={() => resultados.length > 0 && setAbierto(true)}
+          onClick={() => resultados.length > 0 && setAbierto(true)}
+          onKeyDown={teclas}
+          placeholder="Buscar por código, marca o descripción…"
+          autoComplete="off"
+          className={cn(campoBase, "h-control-md pl-9 pr-24 text-sm")}
+        />
+        {buscando ? (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
+            buscando…
+          </span>
+        ) : null}
+      </div>
 
       {abierto && (resultados.length > 0 || (!sinTexto && (error || crudos?.length === 0))) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
