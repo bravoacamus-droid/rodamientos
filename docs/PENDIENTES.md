@@ -8419,3 +8419,9 @@ Luis, 27/10: *«que me avise que tengo cotizaciones sin cerrar o aprobar, que no
 **En Vercel:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET` (de `.env.local`).
 
 **Por decidir:** que las cotizaciones enviadas pasen solas a vencidas; si archivar un aviso lo silencia; avisos urgentes de SUNAT cada hora (pg_cron + pg_net o Vercel Pro); que la orden de compra pida la fecha estimada de llegada.
+
+### §CK.2 · Avisos cada hora (163)
+
+Luis, 27/10: *«vale, sí, cada hora»*. `pg_cron` llama cada hora, de 7:05 a 21:05 de Lima, a `generar_alertas()` y a `avisar_al_celular()`, que pide `/api/avisos/enviar` con `pg_net`. La dirección y el `CRON_SECRET` van en el Vault, no en la migración. **Al desplegar:** `node scripts/configurar-avisos.mjs https://<dominio>` (el mismo `CRON_SECRET` que en Vercel). Hasta entonces contesta «sin configurar» y no llama.
+
+Las otras tres respuestas del 27/10: la cotización enviada que pasa su fecha **avisa** (ya lo hace la 161: «por vencer» tres días antes y «vencidas sin respuesta» después); archivar un aviso **no lo calla** si sigue siendo verdad (se queda como está).

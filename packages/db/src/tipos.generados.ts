@@ -5773,6 +5773,7 @@ export type Database = {
         }
         Returns: string
       }
+      avisar_al_celular: { Args: never; Returns: string }
       bloqueo_ajeno: {
         Args: { p_entidad: string; p_registro: string }
         Returns: string
