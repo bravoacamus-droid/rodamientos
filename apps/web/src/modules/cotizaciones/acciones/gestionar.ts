@@ -8,6 +8,8 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 
+import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
+
 /**
  * Lo que le pasa a una cotización después de emitirla: aprobarla, rechazarla,
  * o clonarla para volver a cotizar.
@@ -414,5 +416,61 @@ export async function repetirPedido(
     return { ok: true, id, ...(pedidoId ? { pedidoId } : {}) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo registrar el pedido." };
+  }
+}
+
+/**
+ * Lo que el diálogo de «Eliminar cotización» enseña antes de confirmar (164):
+ * si se puede, y qué pasa con su número. Pide el mismo permiso que eliminar.
+ */
+export async function previaEliminarCotizacion(
+  id: string,
+): Promise<{ ok: true; previa: PreviaEliminar } | { ok: false; error: string }> {
+  const problema = await exigirPermiso("eliminar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("previa_eliminar_cotizacion", { p_id: id });
+    if (error) return { ok: false, error: error.message };
+    const previa = leerPrevia(data);
+    if (!previa) return { ok: false, error: "No se pudo leer la cotización." };
+    return { ok: true, previa };
+  } catch {
+    return { ok: false, error: "No se pudo revisar la cotización. Vuelve a intentarlo en un momento." };
+  }
+}
+
+/**
+ * Eliminar una cotización (164). Luis, 27/10: *«ponte que elimino la
+ * COT-010, la cotización que voy a crear tiene que ser la 010, no la 11»*.
+ *
+ * Las reglas viven en `eliminar_cotizacion`: nada colgando (pedido, guía,
+ * comprobante, orden de compra) y, si era la última de su serie, el contador
+ * vuelve atrás bajo candado.
+ */
+export async function eliminarCotizacion(
+  id: string,
+): Promise<{ ok: true; numero: string; ultima: boolean; siguiente: string | null } | { ok: false; error: string }> {
+  const problema = await exigirPermiso("eliminar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("eliminar_cotizacion", { p_id: id });
+    if (error) {
+      return {
+        ok: false,
+        error: error.code === "42501" ? "Tu rol no puede eliminar cotizaciones." : error.message,
+      };
+    }
+    const r = leerPrevia(data);
+    if (!r) return { ok: false, error: "La cotización se eliminó, pero no se pudo leer su número." };
+    revalidatePath("/cotizaciones");
+    revalidatePath("/dashboard");
+    revalidatePath("/alertas");
+    return { ok: true, numero: r.numero, ultima: r.ultima, siguiente: r.siguiente };
+  } catch {
+    return { ok: false, error: "No se pudo eliminar la cotización. Vuelve a intentarlo en un momento." };
   }
 }

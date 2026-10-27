@@ -7,7 +7,7 @@
 import type * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, EllipsisVertical, Lock, Pencil, Send } from "lucide-react";
+import { Check, EllipsisVertical, Lock, Pencil, Send, Trash2 } from "lucide-react";
 import {
   Button,
   DropdownMenu,
@@ -24,6 +24,7 @@ import type { DatosMensaje } from "../../dominio/whatsapp";
 import { DialogoEnviar } from "./dialogo-enviar";
 import { DialogoConfirmar, type LineaParaConfirmar } from "./confirmar";
 import { OtroPedido } from "./otro-pedido";
+import { DialogoEliminarCotizacion } from "../dialogo-eliminar";
 
 /**
  * Acciones de una cotización.
@@ -38,6 +39,7 @@ import { OtroPedido } from "./otro-pedido";
  */
 export function AccionesCotizacion({
   id,
+  numero,
   estado,
   datosMensaje,
   cliente,
@@ -53,6 +55,8 @@ export function AccionesCotizacion({
   abrirAprobar = false,
 }: {
   id: string;
+  /** Para el diálogo de eliminar, mientras la base contesta. */
+  numero: string;
   estado: EstadoCotizacion;
   /** Viene de «Aprobar» en la lista (`?aprobar=1`): el diálogo, ya abierto. */
   abrirAprobar?: boolean;
@@ -128,6 +132,7 @@ export function AccionesCotizacion({
   // Anular no se deshace: se pregunta en la pantalla y no con window.confirm,
   // que sale en letra pequeña y sin estilo (21/10).
   const [anulando, setAnulando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
 
   const correr = (f: () => Promise<{ ok: boolean; error?: string; id?: string }>) => {
     setError(null);
@@ -404,9 +409,38 @@ export function AccionesCotizacion({
                 )}
               </>
             ) : null}
+
+            {/*
+              Eliminar (164), en cualquier estado: si no se puede, el diálogo
+              dice por qué —«Tiene el pedido PED-…»—. Esconderlo enseñaría que
+              no existe. Pide el mismo permiso que anular.
+            */}
+            <DropdownMenuSeparator />
+            {puedeAnular ? (
+              <DropdownMenuItem
+                disabled={pendiente}
+                className="font-medium text-[var(--danger)]"
+                onSelect={() => setEliminando(true)}
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+                Eliminar cotización
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-[var(--fg-muted)]"
+                onSelect={() => toast.info(sinPermisoAnular, { duration: 8000 })}
+              >
+                <Lock className="size-4" aria-hidden="true" />
+                Eliminar cotización
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {eliminando ? (
+        <DialogoEliminarCotizacion id={id} numero={numero} onCerrar={() => setEliminando(false)} />
+      ) : null}
 
       {anulando ? (
         <div

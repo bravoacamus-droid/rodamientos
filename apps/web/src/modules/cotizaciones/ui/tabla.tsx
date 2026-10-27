@@ -7,6 +7,9 @@ import {
   PaginacionKeyset,
 } from "@rodatech/ui";
 
+import { misPermisos } from "@/lib/permisos";
+import { avisoSinPermiso } from "@/lib/permisos-comun";
+
 import { listarCotizaciones } from "../api/consultas";
 import { AccionesFilaCotizacion } from "./acciones-fila";
 import {
@@ -49,7 +52,12 @@ export async function TablaCotizaciones({
 }: {
   filtros: FiltrosCotizaciones;
 }) {
-  const resultado = await listarCotizaciones(filtros);
+  const [resultado, permisos] = await Promise.all([listarCotizaciones(filtros), misPermisos()]);
+  // «Eliminar cotización» (164) pide «Eliminar» en Cotizaciones; sin él, sale con candado.
+  const eliminar = {
+    puede: permisos.tiene("cotizaciones", "eliminar"),
+    aviso: avisoSinPermiso("cotizaciones", "eliminar", permisos.nombreRol),
+  };
 
   if (!resultado.ok) {
     return (
@@ -215,7 +223,7 @@ export async function TablaCotizaciones({
                     todas las filas, así que la columna queda a plomo. */}
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover:bg-[var(--surface-2)] px-4 py-2.5">
                   <div className="flex justify-end">
-                    <AccionesFilaCotizacion c={c} />
+                    <AccionesFilaCotizacion c={c} eliminar={eliminar} />
                   </div>
                 </td>
               </tr>
@@ -288,7 +296,7 @@ export async function TablaCotizaciones({
               </dl>
 
               <div className="mt-3">
-                <AccionesFilaCotizacion c={c} ancho />
+                <AccionesFilaCotizacion c={c} ancho eliminar={eliminar} />
               </div>
             </div>
           </li>

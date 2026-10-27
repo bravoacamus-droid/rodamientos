@@ -377,6 +377,7 @@ export default async function PaginaDetalleCotizacion({
 
           <AccionesCotizacion
             id={cabecera.id}
+            numero={cabecera.numero}
             puedeAnular={permisos.tiene("cotizaciones", "eliminar")}
             sinPermisoAnular={avisoSinPermiso("cotizaciones", "eliminar", permisos.nombreRol)}
             estado={cabecera.estado}

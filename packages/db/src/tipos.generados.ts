@@ -5719,6 +5719,10 @@ export type Database = {
         Args: { p: string; p_que: string }
         Returns: string
       }
+      _por_que_no_se_elimina_cotizacion: {
+        Args: { p_id: string }
+        Returns: string
+      }
       _referencia_de: {
         Args: { p_fila: Json; p_tabla: string }
         Returns: string
@@ -6055,6 +6059,7 @@ export type Database = {
         Args: { p_disp: Database["public"]["Enums"]["disponibilidad_item"] }
         Returns: number
       }
+      eliminar_cotizacion: { Args: { p_id: string }; Returns: Json }
       eliminar_pedido: { Args: { p_id: string }; Returns: Json }
       eliminar_rol: { Args: { p_clave: string }; Returns: undefined }
       eliminar_rubro: { Args: { p_id: string }; Returns: undefined }
@@ -6163,6 +6168,7 @@ export type Database = {
         Args: { p_id: string; p_oc: string }
         Returns: undefined
       }
+      previa_eliminar_cotizacion: { Args: { p_id: string }; Returns: Json }
       productos_pagina: {
         Args: {
           p_archivados?: boolean
