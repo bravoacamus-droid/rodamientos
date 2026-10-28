@@ -41,6 +41,13 @@ export interface ProductoBusqueda extends ProductoParaCotizar {
   subfamilia: string | null;
   tipo: string | null;
   estado_stock: "sin_stock" | "bajo" | "ok";
+  /**
+   * Cuántas alternativas tiene y cuántas con stock (170). Se enseña en la
+   * fila de la búsqueda: antes solo se sabía tras añadir el producto y abrir
+   * «Alternativas» (Luis, 28/10). Ausente si la cuenta falló: buscar no se
+   * cae por esto.
+   */
+  alternativas?: { total: number; con_stock: number };
 }
 
 /** Caja única de búsqueda del constructor. */
@@ -63,7 +70,20 @@ export async function buscarParaCotizar(
       p_solo_con_stock: soloConStock,
     });
     if (error) return { ok: false, error: error.message };
-    return { ok: true, datos: (data ?? []) as unknown as ProductoBusqueda[] };
+    const productos = (data ?? []) as unknown as ProductoBusqueda[];
+    if (productos.length === 0) return { ok: true, datos: productos };
+
+    const { data: cuentas } = await supabase.rpc("cuantas_alternativas", {
+      p_ids: productos.map((p) => p.id),
+    });
+    const porId = new Map((cuentas ?? []).map((c) => [c.producto_id, c]));
+    return {
+      ok: true,
+      datos: productos.map((p) => {
+        const c = porId.get(p.id);
+        return c ? { ...p, alternativas: { total: c.total, con_stock: c.con_stock } } : p;
+      }),
+    };
   } catch (e) {
     return fallo(e);
   }

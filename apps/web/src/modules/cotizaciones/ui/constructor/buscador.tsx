@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Badge, Input } from "@rodatech/ui";
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 
@@ -224,6 +224,23 @@ export function BuscadorLineas({
                   {p.descripcion}
                 </span>
               </span>
+              {/* Cuántas alternativas tiene (170), en el sitio que quedaba en
+                  blanco. Luis, 28/10: «¿podemos poner ahí si tengo
+                  alternativas, y que se vea bien?». Con las que tienen stock
+                  en verde: es lo que decide si se vende hoy. */}
+              {p.alternativas && p.alternativas.total > 0 ? (
+                <span
+                  className={`order-last inline-flex shrink-0 basis-full items-center gap-1.5 whitespace-nowrap text-sm font-medium sm:order-none sm:basis-auto ${
+                    p.alternativas.con_stock > 0
+                      ? "text-emerald-700 dark:text-emerald-400"
+                      : "text-brand-700 dark:text-brand-300"
+                  }`}
+                >
+                  <ArrowLeftRight className="size-4" aria-hidden="true" />
+                  {p.alternativas.total === 1 ? "1 alternativa" : `${p.alternativas.total} alternativas`}
+                  {p.alternativas.con_stock > 0 ? ` · ${p.alternativas.con_stock} con stock` : ""}
+                </span>
+              ) : null}
               <Badge
                 className="ml-auto sm:ml-0"
                 tone={

@@ -6025,6 +6025,14 @@ export type Database = {
         Returns: Json
       }
       crear_zona: { Args: { p_nombre: string }; Returns: Json }
+      cuantas_alternativas: {
+        Args: { p_ids: string[] }
+        Returns: {
+          con_stock: number
+          producto_id: string
+          total: number
+        }[]
+      }
       deshacer_cambio_precios: { Args: { p_cambio: number }; Returns: Json }
       despacho_por_item: {
         Args: { p_cotizacion: string; p_excluir_guia?: string }
