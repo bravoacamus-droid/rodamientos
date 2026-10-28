@@ -530,7 +530,7 @@ export function Constructor({
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="outline" onClick={() => setCreando("")} className="gap-1.5">
                     <Plus className="size-4" aria-hidden="true" />
-                    Nuevo producto
+                    Crear nuevo producto
                   </Button>
                   <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
                 </div>

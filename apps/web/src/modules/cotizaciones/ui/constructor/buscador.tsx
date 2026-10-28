@@ -100,6 +100,10 @@ export function BuscadorLineas({
     onCrear(codigo);
   };
 
+  // La fila «Registrar un nuevo producto» va después de los resultados y se
+  // alcanza con ↓ como uno más.
+  const hayFilaCrear = Boolean(onCrear) && resultados.length > 0 && termino.trim().length > 0;
+
   const teclas = (e: React.KeyboardEvent) => {
     /*
       Enter en esta caja NUNCA envía el formulario.
@@ -114,7 +118,7 @@ export function BuscadorLineas({
     if (!abierto || resultados.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setResaltado((i) => Math.min(i + 1, resultados.length - 1));
+      setResaltado((i) => Math.min(i + 1, hayFilaCrear ? resultados.length : resultados.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setResaltado((i) => Math.max(i - 1, 0));
@@ -122,6 +126,7 @@ export function BuscadorLineas({
       e.preventDefault();
       const p = resultados[resaltado];
       if (p) elegir(p);
+      else if (hayFilaCrear && resaltado === resultados.length) crear();
     } else if (e.key === "Escape") {
       setAbierto(false);
     }
@@ -150,22 +155,6 @@ export function BuscadorLineas({
             </span>
           ) : null}
         </div>
-        {/*
-          Crear, al lado de la caja mientras se busca (Willy, 29/10, por Luis:
-          «que salga al lado, no que baje»). Con «6205» salen veinte y
-          ninguno es de la marca que pide el cliente: la salida del vacío no
-          aparecía porque había resultados.
-        */}
-        {onCrear && termino.trim().length > 0 ? (
-          <button
-            type="button"
-            onClick={crear}
-            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-          >
-            <Plus className="size-4 shrink-0" aria-hidden="true" />
-            Crear «{termino.trim()}»
-          </button>
-        ) : null}
       </div>
 
       {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
@@ -284,6 +273,29 @@ export function BuscadorLineas({
               </span>
             </button>
           ))}
+
+          {/*
+            Registrar, como una fila más al final de la lista (Luis, 29/10:
+            «abajo del select, como si fuera un producto más, que diga
+            registrar un nuevo producto»). Sale aunque haya resultados: con
+            «6205» salen veinte y ninguno es de la marca que pide el cliente.
+          */}
+          {hayFilaCrear ? (
+            <button
+              type="button"
+              onClick={crear}
+              onMouseEnter={() => setResaltado(resultados.length)}
+              className={`flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-[var(--border)] px-3 py-2 text-left text-sm font-medium text-brand-700 transition-colors dark:text-brand-300 ${
+                resaltado === resultados.length ? "bg-brand-50 dark:bg-brand-950" : "hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              <Plus className="size-4 shrink-0" aria-hidden="true" />
+              Registrar un nuevo producto
+              <span className="basis-full pl-7 font-normal text-[var(--fg-muted)] sm:basis-auto sm:pl-0">
+                con el código <span className="font-mono">«{termino.trim()}»</span>
+              </span>
+            </button>
+          ) : null}
 
         </div>
       ) : null}
