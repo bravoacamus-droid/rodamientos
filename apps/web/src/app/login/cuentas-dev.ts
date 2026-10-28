@@ -11,7 +11,7 @@ import "server-only";
  * accidente a un componente cliente.
  */
 export const CUENTAS_DEV = [
-  { correo: "gerencia@rodatech.pe", nombre: "Willy Fernández", rol: "Gerencia", atajo: true },
+  { correo: "wfernandez@rodatechperu.com", nombre: "Willy Fernández", rol: "Gerencia", atajo: true },
   { correo: "admin@rodatech.pe", nombre: "Ana Salazar", rol: "Administración", atajo: false },
   { correo: "ventas@rodatech.pe", nombre: "Carlos Mendoza", rol: "Ventas", atajo: true },
   { correo: "almacen@rodatech.pe", nombre: "Julio Ramos", rol: "Almacén", atajo: false },
@@ -87,7 +87,7 @@ export const ATAJOS_VISIBLES = CUENTAS_DEV.filter((c) => c.atajo);
  *  · Fuera de Vercel `VERCEL_ENV` no existe, así que un `RODATECH_ATAJOS=1`
  *    —el valor que traía `.env.example`— encendía el panel en un servidor de
  *    producción cualquiera.
- *  · El botón «Gerencia» entra en `gerencia@rodatech.pe`, que es la ÚNICA
+ *  · El botón «Gerencia» entra en `wfernandez@rodatechperu.com`, que es la ÚNICA
  *    cuenta de gerencia y la de Willy, con los datos reales.
  *
  * Así que con `NODE_ENV=production` el panel no sale, sin excepción y sin
