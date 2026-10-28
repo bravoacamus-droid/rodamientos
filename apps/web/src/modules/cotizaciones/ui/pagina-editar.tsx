@@ -113,6 +113,7 @@ export default async function PaginaEditarCotizacion({
     sirven —al guardar se borran y se reinsertan (069)— así que usar el
     contador del propio constructor es más honesto que fingir permanencia.
   */
+  const keyDeId = new Map(lineas.map((l, i) => [l.id, `k${i + 1}`]));
   const estado: EstadoConstructor = {
     ...estadoInicial(cabecera.cliente_id),
     validezDias: cabecera.validez_dias,
@@ -168,6 +169,8 @@ export default async function PaginaEditarCotizacion({
       nota: l.nota ?? "",
       // 114: en un pedido aprobado, lo que el cliente confirmó de cada línea.
       confirmada: cabecera.estado === "aprobada" ? Number(l.cantidad_aprobada ?? l.cantidad) : null,
+      // 169: el id de la base se traduce a la key de esta edición.
+      alternativaDe: l.alternativa_de ? (keyDeId.get(l.alternativa_de) ?? null) : null,
     })),
     proximaKey: lineas.length + 1,
   };

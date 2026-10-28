@@ -4,6 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { filasDePedidos } from "@/modules/pedidos/api/consultas";
 import { ETIQUETA_ETAPA } from "@/modules/pedidos/dominio/etapa";
 import { margenPct, sunatDe } from "@/modules/pedidos/dominio/lista";
+import { numerosDeItem } from "@/modules/cotizaciones/dominio/numeracion";
 
 /**
  * El detalle de lo vendido o lo cotizado, como libro de Excel (105).
@@ -52,6 +53,11 @@ interface Linea {
   vence?: string | null;
   cantidadAprobada?: number | null;
   entrega?: string | null;
+  /** 169: la posición de la línea y la de su principal, si es alternativa. */
+  orden?: number;
+  alternativaDeOrden?: number | null;
+  /** «1», «1.1», «2»… como en el papel. */
+  item?: string;
 }
 
 const ESTADO_VENTA: Record<string, string> = {
@@ -117,9 +123,27 @@ async function leerLineas(
         vence: (f.vence as string | null | undefined) ?? null,
         cantidadAprobada: f.cantidad_aprobada === undefined || f.cantidad_aprobada === null ? null : n(f.cantidad_aprobada),
         entrega: (f.entrega as string | null | undefined) ?? null,
+        orden: f.orden === undefined || f.orden === null ? undefined : n(f.orden),
+        alternativaDeOrden:
+          f.alternativa_de_orden === undefined || f.alternativa_de_orden === null ? null : n(f.alternativa_de_orden),
       });
     }
     if (filas.length < PAGINA) break;
+  }
+
+  // El número de ítem de cada cotización (169), con la misma función que el
+  // papel. Las líneas de una cotización llegan juntas y en orden.
+  if (tipo === "cotizaciones") {
+    const porNumero = new Map<string, Linea[]>();
+    for (const l of salida) porNumero.set(l.numero, [...(porNumero.get(l.numero) ?? []), l]);
+    for (const lineas of porNumero.values()) {
+      const numeros = numerosDeItem(
+        lineas.map((l, i) => ({ id: l.orden ?? `#${i}`, alternativaDe: l.alternativaDeOrden ?? null })),
+      );
+      lineas.forEach((l, i) => {
+        l.item = numeros[i];
+      });
+    }
   }
   return salida;
 }
@@ -190,6 +214,8 @@ export async function libroDetalle(opciones: {
       : [
           { titulo: "Fecha", ancho: 12, valor: (l) => fechaExcel(l.fecha), formato: "dd/mm/yyyy" },
           { titulo: "Número", ancho: 15, valor: (l) => l.numero },
+          // 169: 1, 1.1, 2… — la alternativa con el número de su principal.
+          { titulo: "Ítem", ancho: 7, valor: (l) => l.item ?? "" },
           { titulo: "Estado", ancho: 13, valor: (l) => ESTADO_COTIZACION[l.estado] ?? l.estado },
           { titulo: "Vence", ancho: 12, valor: (l) => (l.vence ? fechaExcel(l.vence) : ""), formato: "dd/mm/yyyy" },
           { titulo: "Cliente", ancho: 38, valor: (l) => l.cliente },

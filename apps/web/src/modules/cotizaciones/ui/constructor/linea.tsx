@@ -22,12 +22,14 @@ import {
   ArrowLeftRight,
   Boxes,
   ChevronDown,
+  CornerDownRight,
   ChevronUp,
   DollarSign,
   History,
   MoreVertical,
   Package,
   Pencil,
+  Plus,
   SquareArrowOutUpRight,
   Trash2,
   Ban,
@@ -96,8 +98,15 @@ const dolar = (n: number) =>
 
 interface PropsLinea {
   linea: LineaConstructor;
-  indice: number;
-  total: number;
+  /** El ítem de la línea: «1», «1.1», «2»… (169). */
+  numero: string;
+  /** Lo que diría «Añadir como …» en sus alternativas: «1.3». */
+  numeroAlternativa: string;
+  /** Las flechas, ya resueltas por grupos (169). */
+  puedeSubir: boolean;
+  puedeBajar: boolean;
+  /** En qué ítem está ya cada producto de la cotización, para avisarlo. */
+  enLaCotizacion: Map<string, string>;
   clienteId: string | null;
   mostrarDescuento: boolean;
   despachar: (a: Accion) => void;
@@ -123,8 +132,11 @@ export function TarjetaLinea(props: Omit<PropsLinea, "vista">) {
 
 export function FilaLinea({
   linea,
-  indice,
-  total,
+  numero,
+  numeroAlternativa,
+  puedeSubir,
+  puedeBajar,
+  enLaCotizacion,
   clienteId,
   mostrarDescuento,
   despachar,
@@ -154,6 +166,18 @@ export function FilaLinea({
   const [cargando, iniciar] = useTransition();
 
   const revision = revisionDe(linea);
+  /*
+    Una alternativa (169) se distingue por su número —1.1— y por esta marca,
+    con su palabra: una sangría sola no le dice nada a quien no sabe que
+    existe. Lo demás de la línea es igual que cualquier otra, porque lo es.
+  */
+  const esAlternativa = Boolean(linea.alternativaDe);
+  const marcaAlternativa = esAlternativa ? (
+    <span className="flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[var(--info)]">
+      <CornerDownRight className="size-4 shrink-0" aria-hidden />
+      Alternativa de {numero.split(".")[0]}
+    </span>
+  ) : null;
   /** Al editar un pedido aprobado, la línea que el cliente no quiso (114). */
   const excluida = linea.confirmada === 0;
   const avisoExcluida = (
@@ -744,15 +768,22 @@ export function FilaLinea({
           <DialogHeader>
             <DialogTitle>Alternativas de {linea.codigo}</DialogTitle>
             <DialogDescription>
-              Productos que entran en el mismo sitio. La que conviene es la que
-              tiene stock y mejor precio.
+              Productos que entran en el mismo sitio. «Añadir como {numeroAlternativa}»
+              la pone debajo como otro ítem, que también suma al total;
+              «Cambiar por esta» reemplaza a {linea.codigo}.
             </DialogDescription>
           </DialogHeader>
           <DialogBody>
             <PanelSustitutos
               cargando={cargando}
               sustitutos={sustitutos}
-              onElegir={(p) => {
+              numeroNuevo={numeroAlternativa}
+              enLaCotizacion={enLaCotizacion}
+              onAnadir={(p) => {
+                despachar({ tipo: "agregarAlternativa", key: linea.key, producto: p });
+                setPanel("ninguno");
+              }}
+              onCambiar={(p) => {
                 despachar({ tipo: "sustituir", key: linea.key, producto: p });
                 setPanel("ninguno");
               }}
@@ -828,12 +859,13 @@ export function FilaLinea({
     */
     return (
       <li
-        className={`rounded-md border p-3 ${
+        className={`rounded-md border p-3 ${esAlternativa ? "ml-6 border-l-4 border-l-[var(--info)]" : ""} ${
           revision.ok
             ? "border-[var(--border)]"
             : "border-[var(--danger)] bg-[var(--danger-bg)]"
         }`}
       >
+        {marcaAlternativa}
         {/* Junto al menú, solo el código y el stock; la descripción va
             DEBAJO y a todo lo ancho. Revisión por módulos del 02/10: al lado
             del botón le quedaban 150 px, y una faja de 200 caracteres salía
@@ -841,7 +873,7 @@ export function FilaLinea({
         <div className="flex items-start gap-2">
           <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
             <span className="tabular text-sm text-[var(--fg-muted)]">
-              {indice + 1}.
+              {numero}.
             </span>
             <span className="whitespace-nowrap font-semibold">{linea.codigo}</span>
             {textoStock}
@@ -903,7 +935,7 @@ export function FilaLinea({
             apagados: se quitan. Un botón gris que no responde se lee como
             roto (revisión por módulos del 02/10). */}
         <div className="mt-2 flex flex-wrap gap-2 [&>*]:flex-1 @2xl:justify-end @2xl:[&>*]:flex-none">
-          {indice > 0 ? (
+          {puedeSubir ? (
             <Button
               type="button"
               variant="outline"
@@ -915,7 +947,7 @@ export function FilaLinea({
               Subir
             </Button>
           ) : null}
-          {indice < total - 1 ? (
+          {puedeBajar ? (
             <Button
               type="button"
               variant="outline"
@@ -963,12 +995,12 @@ export function FilaLinea({
         */}
         <td className="align-top">
           <div className="flex items-center gap-1">
-            <span className="tabular text-[var(--fg-muted)]">{indice + 1}</span>
+            <span className="tabular text-[var(--fg-muted)]">{numero}</span>
             <div className="flex flex-col gap-0.5">
               <button
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: -1 })}
-                disabled={indice === 0}
+                disabled={!puedeSubir}
                 className="flex h-6 w-7 items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40"
                 aria-label={`Subir ${linea.codigo}`}
                 title="Subir"
@@ -978,7 +1010,7 @@ export function FilaLinea({
               <button
                 type="button"
                 onClick={() => despachar({ tipo: "mover", key: linea.key, direccion: 1 })}
-                disabled={indice === total - 1}
+                disabled={!puedeBajar}
                 className="flex h-6 w-7 items-center justify-center rounded-sm border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40"
                 aria-label={`Bajar ${linea.codigo}`}
                 title="Bajar"
@@ -1003,7 +1035,8 @@ export function FilaLinea({
         */}
         {/* Un código no se parte: «6310-2Z/C3» en dos renglones deja de
             parecerse a lo que el cliente tiene escrito en su orden. */}
-        <td className="min-w-[6.5rem]">
+        <td className={`min-w-[6.5rem] ${esAlternativa ? "border-l-4 border-l-[var(--info)] !pl-4" : ""}`}>
+          {marcaAlternativa}
           <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
           {textoStock}
           {/* Si otros piden lo mismo (09/10): pequeño, con su «Ver». */}
@@ -1174,12 +1207,67 @@ const ETIQUETA_ORIGEN: Record<Sustituto["origen"], string> = {
 function PanelSustitutos({
   cargando,
   sustitutos,
-  onElegir,
+  numeroNuevo,
+  enLaCotizacion,
+  onAnadir,
+  onCambiar,
 }: {
   cargando: boolean;
   sustitutos: Sustituto[];
-  onElegir: (p: Sustituto) => void;
+  /** «1.3»: el ítem que le tocaría a la que se añada. */
+  numeroNuevo: string;
+  enLaCotizacion: Map<string, string>;
+  onAnadir: (p: Sustituto) => void;
+  onCambiar: (p: Sustituto) => void;
 }) {
+  /*
+    Dos botones por alternativa, y el principal es AÑADIR (169).
+
+    Luis, 28/10: la alternativa *«se añade como ítem pero no con el número
+    siguiente… sería ítem 1.1, no 2»*. El botón dice el número que le va a
+    tocar, para que no haya que adivinar dónde cae.
+
+    «Cambiar por esta» es lo que hacía «Usar esta» hasta hoy: reemplazar el
+    producto de la línea. Se queda, con borde y en segundo lugar, porque
+    sigue siendo lo correcto cuando el cliente no quiere el original.
+
+    Si el producto ya está en la cotización se dice en qué ítem, como aviso:
+    añadirlo otra vez puede ser lo que se quiere (otra cantidad, otra
+    entrega), pero que sea a sabiendas.
+  */
+  const botones = (s: Sustituto, ancho: boolean) => {
+    const ya = enLaCotizacion.get(s.id);
+    return (
+      <div className={`flex flex-col gap-1.5 ${ancho ? "mt-2" : "items-end"}`}>
+        {ya ? (
+          <span className="text-sm font-medium text-[var(--warn)]">Ya está en el ítem {ya}</span>
+        ) : null}
+        <div className={`flex gap-2 ${ancho ? "flex-col" : "flex-wrap justify-end"}`}>
+          <Button
+            type="button"
+            variant="accent"
+            size="sm"
+            className={`gap-1.5 whitespace-nowrap ${ancho ? "w-full" : ""}`}
+            onClick={() => onAnadir(s)}
+          >
+            <Plus className="size-4 shrink-0" aria-hidden />
+            Añadir como {numeroNuevo}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={`gap-1.5 whitespace-nowrap ${ancho ? "w-full" : ""}`}
+            onClick={() => onCambiar(s)}
+          >
+            <SquareArrowOutUpRight className="size-4 shrink-0" aria-hidden />
+            Cambiar por esta
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (cargando) {
     return <p className="text-sm text-[var(--fg-muted)]">Buscando alternativas…</p>;
   }
@@ -1201,14 +1289,15 @@ function PanelSustitutos({
     pulsables no valen—. Yo mismo lo dejé así al mover esto a un diálogo el
     08/09, mirando los botones de la fila y no los de dentro.
 
-    Ahora hay columnas con encabezado y un «Usar esta» por alternativa, que
-    es lo que hay en el prototipo de Luis.
+    Ahora hay columnas con encabezado y botones por alternativa, que es lo
+    que hay en el prototipo de Luis (desde el 28/10, «Añadir como 1.1» y
+    «Cambiar por esta»; ver arriba).
   */
   return (
     <>
     {/*
       En el teléfono, una tarjeta por alternativa. Revisión por módulos del
-      02/10: a 390 px la tabla se desplazaba de lado y «Usar esta» —lo único
+      02/10: a 390 px la tabla se desplazaba de lado y el botón —lo único
       que se viene a pulsar— quedaba fuera de la vista.
     */}
     <ul className="flex flex-col gap-2 sm:hidden">
@@ -1254,16 +1343,7 @@ function PanelSustitutos({
               <Badge tone="success" size="xs">la que conviene</Badge>
             ) : null}
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-2 w-full"
-            onClick={() => onElegir(s)}
-          >
-            <SquareArrowOutUpRight className="size-4 shrink-0" aria-hidden />
-            Usar esta
-          </Button>
+          {botones(s, true)}
         </li>
       ))}
     </ul>
@@ -1351,16 +1431,7 @@ function PanelSustitutos({
                 )}
               </td>
 
-              <td className="py-2.5 pl-3 text-right align-top">
-                <button
-                  type="button"
-                  onClick={() => onElegir(s)}
-                  className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-                >
-                  <SquareArrowOutUpRight className="size-4 shrink-0" />
-                  Usar esta
-                </button>
-              </td>
+              <td className="py-2.5 pl-3 text-right align-top">{botones(s, false)}</td>
             </tr>
           ))}
         </tbody>

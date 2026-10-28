@@ -64,6 +64,9 @@ const esquemaItem = z.object({
   nota: z.string().max(300, "Una nota no puede pasar de 300 letras.").nullable().default(null),
   // 114. Lo confirmado de la línea al editar un pedido aprobado.
   cantidad_aprobada: z.number().min(0).finite().nullable().default(null),
+  // 169. El `orden` de la línea de la que esta es alternativa (1.1, 1.2…).
+  // La base comprueba que exista, que vaya antes y que sea principal.
+  alternativa_de_orden: z.number().int().positive().nullable().default(null),
 });
 
 const esquema = z.object({

@@ -16,6 +16,7 @@ import {
 } from "../api/consultas";
 import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresion";
+import { esSubitem, numerosDeItem } from "../dominio/numeracion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
@@ -67,6 +68,12 @@ export default async function PaginaDetalleCotizacion({
   }
 
   const { cabecera, lineas, emisor } = resultado.datos;
+  /** El número de ítem de cada línea en la ficha: 1, 1.1, 2… (169). */
+  const numeroDeLinea = new Map(
+    numerosDeItem(lineas.map((l) => ({ id: l.id, alternativaDe: l.alternativa_de }))).map(
+      (n, i) => [lineas[i]?.id ?? "", n],
+    ),
+  );
 
   // Lo que ya salió facturado de este pedido. Después de `cotizacionPorId` y
   // no en paralelo porque solo hace falta si el documento existe: pedirlo
@@ -124,6 +131,9 @@ export default async function PaginaDetalleCotizacion({
     mostrarDescuento: cabecera.mostrar_descuento,
     mostrarDisponibilidad: cabecera.mostrar_disponibilidad,
     lineas: lineas.filter((l) => cantidadEnPapel(l) > 0).map((l) => ({
+      // 169: para numerar 1, 1.1, 1.2…
+      id: l.id,
+      alternativaDe: l.alternativa_de,
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
@@ -608,7 +618,9 @@ export default async function PaginaDetalleCotizacion({
             <table className="w-full text-sm">
               <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
                 <tr>
-                  <th className="px-4 py-2.5 font-medium">Código</th>
+                  {/* El ítem, como en el papel: 1, 1.1, 2… (169). */}
+                  <th className="py-2.5 pl-4 pr-1 font-medium">#</th>
+                  <th className="px-3 py-2.5 font-medium">Código</th>
                   <th className="px-3 py-2.5 font-medium">Descripción</th>
                   <th className="px-3 py-2.5 text-right font-medium">Cantidad</th>
                   {/*
@@ -628,8 +640,16 @@ export default async function PaginaDetalleCotizacion({
                     key={l.id}
                     className={`border-b border-[var(--border-soft)] ${lleva(l) === 0 ? "bg-[var(--danger-bg)]" : ""}`}
                   >
-                    <td className="whitespace-nowrap px-4 py-2.5">
+                    <td className="whitespace-nowrap py-2.5 pl-4 pr-1 align-top tabular text-[var(--fg-muted)]">
+                      {numeroDeLinea.get(l.id)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5">
                       <span className="block font-medium">{l.codigo}</span>
+                      {esSubitem(numeroDeLinea.get(l.id) ?? "") ? (
+                        <span className="block text-sm text-[var(--fg-muted)]">
+                          Alternativa de {numeroDeLinea.get(l.id)?.split(".")[0]}
+                        </span>
+                      ) : null}
                       {l.marca ? (
                         <span className="block text-sm text-[var(--fg-subtle)]">
                           {l.marca}
@@ -704,7 +724,15 @@ export default async function PaginaDetalleCotizacion({
                 className={`flex flex-col gap-2 px-4 py-3 ${lleva(l) === 0 ? "bg-[var(--danger-bg)]" : ""}`}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold">{l.codigo}</span>
+                  <span className="text-sm">
+                    <span className="tabular text-[var(--fg-muted)]">{numeroDeLinea.get(l.id)}. </span>
+                    <span className="font-mono font-semibold">{l.codigo}</span>
+                    {esSubitem(numeroDeLinea.get(l.id) ?? "") ? (
+                      <span className="text-[var(--fg-muted)]">
+                        {" "}· alternativa de {numeroDeLinea.get(l.id)?.split(".")[0]}
+                      </span>
+                    ) : null}
+                  </span>
                   <span
                     className={`shrink-0 tabular text-sm font-medium ${lleva(l) === 0 ? "text-[var(--fg-subtle)] line-through" : ""}`}
                   >

@@ -397,6 +397,8 @@ export async function cotizacionPorId(id: string): Promise<
       importe: number;
       /** La nota de la línea (112). */
       nota: string | null;
+      /** El `id` de la línea de la que esta es alternativa, o null (169). */
+      alternativa_de: string | null;
       /** A quién se le compraría y a cuánto (111). */
       cotizacion_item_proveedores: {
         proveedor_id: string;
@@ -460,7 +462,7 @@ export async function cotizacionPorId(id: string): Promise<
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,
-                            cantidad_aprobada, cantidad_atendida, nota,
+                            cantidad_aprobada, cantidad_atendida, nota, alternativa_de,
                             cotizacion_item_proveedores(proveedor_id, orden, cantidad,
                               costo_unitario, moneda, incluye_igv, tipo_cambio,
                               costo_usd, fecha, proveedores(razon_social)),

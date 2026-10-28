@@ -92,6 +92,9 @@ export default async function PaginaCotizacionPublica({
     mostrarDescuento: cot.mostrar_descuento,
     mostrarDisponibilidad: cot.mostrar_disponibilidad,
     lineas: cot.lineas.map((l) => ({
+      // 169: el mismo 1, 1.1, 2… que el papel de la ficha, por posición.
+      id: l.orden,
+      alternativaDe: l.alternativa_de_orden ?? null,
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,

@@ -42,3 +42,16 @@ describe("papelDelPedido", () => {
     expect(h.filas[0]?.importe).toBe("18.00");
   });
 });
+
+describe("169 · la hoja numera las alternativas como la cotización", () => {
+  it("1, 1.1", () => {
+    const h = papelDelPedido({
+      ...base,
+      lineas: [
+        { ...base.lineas[0]!, id: "a" },
+        { ...base.lineas[1]!, id: "b", alternativaDe: "a" },
+      ],
+    });
+    expect(h.filas.map((f) => f.n)).toEqual(["1", "1.1"]);
+  });
+});

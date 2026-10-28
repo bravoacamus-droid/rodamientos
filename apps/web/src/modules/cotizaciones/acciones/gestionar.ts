@@ -201,9 +201,9 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
       .select(
         `cliente_id, validez_dias, tiempo_entrega, contacto, condiciones,
          observaciones, mostrar_descuento,
-         cotizacion_items(producto_id, orden, codigo, marca, descripcion,
+         cotizacion_items(id, producto_id, orden, codigo, marca, descripcion,
                           cantidad, unidad_codigo, valor_unitario,
-                          descuento_pct, costo_unitario)`,
+                          descuento_pct, costo_unitario, alternativa_de)`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -236,6 +236,10 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
       }
     }
 
+    const ordenadas = [...items].sort((a, b) => Number(a.orden) - Number(b.orden));
+    // 169: la copia conserva qué línea es alternativa de cuál, por posición.
+    const posicion = new Map(ordenadas.map((i, n) => [i.id as string, n + 1]));
+
     const payload = {
       cliente_id: data.cliente_id,
       validez_dias: data.validez_dias,
@@ -247,9 +251,7 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
       observaciones: data.observaciones,
       mostrar_descuento: data.mostrar_descuento,
       estado: "borrador",
-      items: [...items]
-        .sort((a, b) => Number(a.orden) - Number(b.orden))
-        .map((i, n) => {
+      items: ordenadas.map((i, n) => {
           const pid = i.producto_id as string | null;
           const vigente = pid ? vigentes.get(pid) : undefined;
           return {
@@ -263,6 +265,9 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
             valor_unitario: vigente?.precio_venta ?? i.valor_unitario,
             descuento_pct: i.descuento_pct,
             costo_unitario: vigente?.costo_promedio ?? i.costo_unitario,
+            alternativa_de_orden: i.alternativa_de
+              ? (posicion.get(i.alternativa_de as string) ?? null)
+              : null,
           };
         }),
     };

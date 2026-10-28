@@ -514,3 +514,27 @@ describe("el papel en soles (13/10)", () => {
     expect(enSoles(d, { valor: 0, fecha: "" })).toBe(d);
   });
 });
+
+describe("169 · el número de ítem de las alternativas", () => {
+  it("una alternativa lleva el número de su principal: 1, 1.1, 2", () => {
+    const linea = base().lineas[0]!;
+    const c = armarCotizacionImpresa(
+      base({
+        lineas: [
+          { ...linea, id: "a" },
+          { ...linea, id: "b", alternativaDe: "a" },
+          { ...linea, id: "c" },
+        ],
+      }),
+    );
+    expect(c.lineas.map((l) => l.n)).toEqual(["1", "1.1", "2"]);
+    // Y suma como cualquier línea.
+    expect(c.subtotal).toBeCloseTo(3 * 4 * 12.84, 2);
+  });
+
+  it("sin datos de alternativa, 1, 2, 3 como siempre", () => {
+    const linea = base().lineas[0]!;
+    const c = armarCotizacionImpresa(base({ lineas: [linea, linea] }));
+    expect(c.lineas.map((l) => l.n)).toEqual(["1", "2"]);
+  });
+});

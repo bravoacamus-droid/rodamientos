@@ -7,6 +7,9 @@ import {
   bloqueos,
   estadoInicial,
   lineasSinStock,
+  numeroDeLaSiguienteAlternativa,
+  numerosDe,
+  puedeMover,
   reducir,
   revisionDe,
   totalesDe,
@@ -673,5 +676,95 @@ describe("actualizar stock desde la cotización (06/10)", () => {
     const r = reducir(e, { tipo: "stock", productoId: id, valor: 3 });
     expect(r.lineas[0]!.stock).toBe(3);
     expect(r.lineas[1]!.stock).toBe(e.lineas[1]!.stock);
+  });
+});
+
+describe("alternativas como sub-ítem (169)", () => {
+  const P3: ProductoParaCotizar = { ...FAG6209, id: "p-3", codigo: "6209 NTN" };
+  // 6209 (l1) con dos alternativas, y 7210 (l4) con una.
+  const base = () =>
+    correr(
+      estadoInicial("c1"),
+      { tipo: "agregar", producto: P6209, cantidad: 4 },
+      { tipo: "agregarAlternativa", key: "l1", producto: FAG6209 },
+      { tipo: "agregarAlternativa", key: "l1", producto: P3 },
+      { tipo: "agregar", producto: P7210 },
+      { tipo: "agregarAlternativa", key: "l4", producto: FAG6209 },
+    );
+
+  it("numera 1, 1.1, 1.2, 2, 2.1, como lo pidió Luis", () => {
+    expect(numerosDe(base())).toEqual(["1", "1.1", "1.2", "2", "2.1"]);
+  });
+
+  it("la alternativa nace debajo, con la cantidad del principal", () => {
+    const e = base();
+    expect(e.lineas.map((l) => l.codigo)).toEqual([
+      "6209-2RS1/C3",
+      "6209 2RSR-C3",
+      "6209 NTN",
+      "7210 BEP",
+      "6209 2RSR-C3",
+    ]);
+    expect(e.lineas[1]?.cantidad).toBe(4);
+    expect(e.lineas[1]?.alternativaDe).toBe("l1");
+  });
+
+  it("suma al total como cualquier línea", () => {
+    const e = base();
+    // 4 × 12.84 + 4 × 11.90 + 4 × 11.90 + 1 × 41.32 + 1 × 11.90
+    expect(totalesDe(e).subtotal).toBeCloseTo(51.36 + 47.6 + 47.6 + 41.32 + 11.9, 2);
+  });
+
+  it("la alternativa de una alternativa cuelga del mismo principal", () => {
+    const e = reducir(base(), { tipo: "agregarAlternativa", key: "l2", producto: P7210 });
+    expect(numerosDe(e)).toEqual(["1", "1.1", "1.2", "1.3", "2", "2.1"]);
+    expect(e.lineas[3]?.alternativaDe).toBe("l1");
+  });
+
+  it("dice qué número le tocaría a la siguiente", () => {
+    expect(numeroDeLaSiguienteAlternativa(base(), "l1")).toBe("1.3");
+    expect(numeroDeLaSiguienteAlternativa(base(), "l3")).toBe("1.3");
+    expect(numeroDeLaSiguienteAlternativa(base(), "l4")).toBe("2.2");
+  });
+
+  it("quitar el principal deja sus alternativas como ítems normales", () => {
+    const e = reducir(base(), { tipo: "quitar", key: "l1" });
+    expect(numerosDe(e)).toEqual(["1", "2", "3", "3.1"]);
+    expect(e.lineas.slice(0, 2).every((l) => !l.alternativaDe)).toBe(true);
+  });
+
+  it("el principal se mueve con sus alternativas", () => {
+    const e = reducir(base(), { tipo: "mover", key: "l4", direccion: -1 });
+    expect(e.lineas.map((l) => l.key)).toEqual(["l4", "l5", "l1", "l2", "l3"]);
+    expect(numerosDe(e)).toEqual(["1", "1.1", "2", "2.1", "2.2"]);
+  });
+
+  it("una alternativa solo se mueve dentro de su grupo", () => {
+    const e = base();
+    expect(puedeMover(e, "l2", -1)).toBe(false);
+    expect(puedeMover(e, "l2", 1)).toBe(true);
+    expect(puedeMover(e, "l3", 1)).toBe(false);
+    expect(puedeMover(e, "l5", -1)).toBe(false);
+    const movida = reducir(e, { tipo: "mover", key: "l2", direccion: 1 });
+    expect(movida.lineas.map((l) => l.key)).toEqual(["l1", "l3", "l2", "l4", "l5"]);
+  });
+
+  it("cambiar el producto de una alternativa la deja como alternativa", () => {
+    const e = reducir(base(), { tipo: "sustituir", key: "l2", producto: P7210 });
+    expect(e.lineas[1]?.alternativaDe).toBe("l1");
+    expect(e.lineas[1]?.codigo).toBe("7210 BEP");
+  });
+
+  it("el payload lleva la posición del principal", () => {
+    const items = aPayload(base()).items;
+    expect(items.map((i) => i.alternativa_de_orden)).toEqual([null, 1, 1, null, 4]);
+  });
+
+  it("un estado cargado con la alternativa lejos de su principal se reordena", () => {
+    const e = base();
+    const desordenado = { ...e, lineas: [e.lineas[1]!, e.lineas[3]!, e.lineas[0]!] };
+    const r = reducir(estadoInicial(), { tipo: "cargar", estado: desordenado });
+    expect(r.lineas.map((l) => l.key)).toEqual(["l4", "l1", "l2"]);
+    expect(numerosDe(r)).toEqual(["1", "2", "2.1"]);
   });
 });

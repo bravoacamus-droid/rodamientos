@@ -1,5 +1,6 @@
 import { proveedoresAPayload, resumirCompra, type ProveedorLinea } from "./compra-linea";
 import { lineasBajoPiso, revisarPiso, type RevisionPiso } from "./piso";
+import { numerosDeItem } from "./numeracion";
 import { calcularTotales, redondear2, redondear4, type TotalesCotizacion } from "./totales";
 
 /**
@@ -112,6 +113,14 @@ export interface LineaConstructor {
    * puede volver a incluir (Luis, 13/10: *«seguro se animó a última hora»*).
    */
   confirmada: number | null;
+  /**
+   * De qué línea es ALTERNATIVA (su `key`), o null/ausente si es un ítem
+   * principal (169). Luis, 28/10: la alternativa se añade como un producto
+   * normal —suma, se aprueba, se compra y se factura— y solo cambia su número
+   * en la cotización: 1.1, 1.2… debajo del 1. Opcional para que un borrador
+   * guardado antes de la 169 se siga pudiendo recuperar.
+   */
+  alternativaDe?: string | null;
 }
 
 export interface EstadoConstructor {
@@ -257,6 +266,12 @@ export type Accion =
   | { tipo: "diasEntrega"; key: string; valor: number | null }
   | { tipo: "sustituir"; key: string; producto: ProductoParaCotizar }
   /**
+   * «Añadir como 1.1» (169): el producto entra como una línea NUEVA, debajo
+   * de `key` y de sus alternativas anteriores, con la cantidad del principal.
+   * Si `key` ya es una alternativa, la nueva cuelga del mismo principal.
+   */
+  | { tipo: "agregarAlternativa"; key: string; producto: ProductoParaCotizar }
+  /**
    * El kit se editó desde la cotización y hay que traer sus datos nuevos.
    * `anterior` es cómo estaba el kit antes de editarlo, para saber si la
    * línea lo seguía o alguien la había cambiado a mano (ver el caso).
@@ -378,7 +393,7 @@ function desdeProducto(
  * Y así ningún caso nuevo se puede olvidar de recalcularlo.
  */
 export function reducir(estado: EstadoConstructor, accion: Accion): EstadoConstructor {
-  const siguiente = reducirCrudo(estado, accion);
+  const siguiente = agrupar(reducirCrudo(estado, accion));
 
   // Elegirla a mano apaga la propuesta. A partir de ahí manda la persona.
   if (accion.tipo === "cabecera" && accion.campo === "tiempoEntrega") {
@@ -397,6 +412,67 @@ export function reducir(estado: EstadoConstructor, accion: Accion): EstadoConstr
 
   const propuesta = entregaDelDocumento(libre.lineas);
   return libre.tiempoEntrega === propuesta ? libre : { ...libre, tiempoEntrega: propuesta };
+}
+
+/**
+ * Cada alternativa, justo debajo de su principal (169).
+ *
+ * Es la invariante de la que depende el número —1, 1.1, 1.2, 2—: si una
+ * alternativa se quedara lejos de su principal, el papel diría «1.1» debajo
+ * del 3. Se impone aquí, después de CUALQUIER acción, y no en cada caso:
+ * quitar el principal, recuperar un borrador o cargar una cotización guardada
+ * pasan todos por este embudo.
+ *
+ *   - Una alternativa cuyo principal ya no está pasa a ser ítem normal: es lo
+ *     que se pidió al quitar el principal (se renumera sola).
+ *   - Una alternativa de una alternativa cuelga del principal de aquella.
+ *   - El orden de los principales, y el de las alternativas dentro de su
+ *     grupo, se respeta.
+ *
+ * Devuelve el MISMO estado si no hay nada que mover, para no repintar.
+ */
+function agrupar(estado: EstadoConstructor): EstadoConstructor {
+  const lineas = estado.lineas;
+  if (!lineas.some((l) => l.alternativaDe)) return estado;
+
+  const porKey = new Map(lineas.map((l) => [l.key, l]));
+  // Un nivel hacia arriba como mucho: la alternativa de una alternativa.
+  const resuelta = lineas.map((l) => {
+    const p = l.alternativaDe ?? null;
+    if (p === null) return l;
+    const padre = porKey.get(p);
+    const raiz = padre ? (padre.alternativaDe && porKey.has(padre.alternativaDe) ? padre.alternativaDe : p) : null;
+    return raiz === p ? l : { ...l, alternativaDe: raiz };
+  });
+  // Si la raíz resultó ser a su vez una alternativa (cadena más larga de lo
+  // que la pantalla deja hacer), la línea queda como ítem normal.
+  const principales = new Set(resuelta.filter((l) => !l.alternativaDe).map((l) => l.key));
+  const limpia = resuelta.map((l) =>
+    l.alternativaDe && !principales.has(l.alternativaDe) ? { ...l, alternativaDe: null } : l,
+  );
+
+  const hijos = new Map<string, LineaConstructor[]>();
+  for (const l of limpia) {
+    if (l.alternativaDe) hijos.set(l.alternativaDe, [...(hijos.get(l.alternativaDe) ?? []), l]);
+  }
+  const ordenadas: LineaConstructor[] = [];
+  for (const l of limpia) {
+    if (!l.alternativaDe) ordenadas.push(l, ...(hijos.get(l.key) ?? []));
+  }
+
+  const igual = ordenadas.length === lineas.length && ordenadas.every((l, i) => l === lineas[i]);
+  return igual ? estado : { ...estado, lineas: ordenadas };
+}
+
+/** Los grupos [principal, …sus alternativas], en orden. Supone `agrupar`. */
+function grupos(lineas: LineaConstructor[]): LineaConstructor[][] {
+  const out: LineaConstructor[][] = [];
+  for (const l of lineas) {
+    const ultimo = out[out.length - 1];
+    if (l.alternativaDe && ultimo && ultimo[0]?.key === l.alternativaDe) ultimo.push(l);
+    else out.push([l]);
+  }
+  return out;
 }
 
 function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstructor {
@@ -582,9 +658,42 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
       // cuántos necesita el cliente.
       const linea = estado.lineas.find((l) => l.key === accion.key);
       if (!linea) return estado;
-      return mapear(estado, accion.key, (l) =>
-        desdeProducto(accion.producto, l.key, l.cantidad),
-      );
+      // Si era una alternativa, lo sigue siendo: cambia el artículo, no el sitio.
+      return mapear(estado, accion.key, (l) => ({
+        ...desdeProducto(accion.producto, l.key, l.cantidad),
+        alternativaDe: l.alternativaDe ?? null,
+      }));
+    }
+
+    case "agregarAlternativa": {
+      /*
+        Se AÑADE, no se cambia (169). Luis, 28/10: *«suman todos, porque si
+        están pidiendo alternativas también van a comprar; se añaden como un
+        producto normal»*. Va debajo del principal y de las alternativas que
+        ya tenga, con la cantidad del principal: es la misma necesidad del
+        cliente, con otro artículo.
+
+        No se suma a una línea existente aunque el producto ya esté, a
+        diferencia de «agregar»: aquí la línea nueva ES el dato. La pantalla
+        avisa antes de que ya está en la cotización.
+      */
+      const base = estado.lineas.find((l) => l.key === accion.key);
+      if (!base) return estado;
+      const principalKey =
+        base.alternativaDe && estado.lineas.some((l) => l.key === base.alternativaDe)
+          ? base.alternativaDe
+          : base.key;
+      const principal = estado.lineas.find((l) => l.key === principalKey) ?? base;
+      let pos = estado.lineas.findIndex((l) => l.key === principalKey);
+      while (estado.lineas[pos + 1]?.alternativaDe === principalKey) pos += 1;
+
+      const nueva: LineaConstructor = {
+        ...desdeProducto(accion.producto, `l${estado.proximaKey}`, principal.cantidad),
+        alternativaDe: principalKey,
+      };
+      const lineas = [...estado.lineas];
+      lineas.splice(pos + 1, 0, nueva);
+      return { ...estado, lineas, proximaKey: estado.proximaKey + 1 };
     }
 
     case "refrescarKit": {
@@ -627,16 +736,37 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
     }
 
     case "mover": {
+      /*
+        Con alternativas (169), se mueve por GRUPOS: el principal arrastra a
+        sus alternativas y salta al grupo de al lado entero, y una alternativa
+        solo cambia de sitio con otra del mismo principal. Así ninguna flecha
+        puede sacar un 1.1 de debajo del 1 —dejaría de ser 1.1— ni meterlo en
+        medio del grupo de otro.
+      */
       const i = estado.lineas.findIndex((l) => l.key === accion.key);
-      const j = i + accion.direccion;
-      if (i < 0 || j < 0 || j >= estado.lineas.length) return estado;
-      const lineas = [...estado.lineas];
-      const a = lineas[i];
-      const b = lineas[j];
-      if (!a || !b) return estado;
-      lineas[i] = b;
-      lineas[j] = a;
-      return { ...estado, lineas };
+      const a = estado.lineas[i];
+      if (!a) return estado;
+
+      if (a.alternativaDe) {
+        const j = i + accion.direccion;
+        const b = estado.lineas[j];
+        if (!b || b.alternativaDe !== a.alternativaDe) return estado;
+        const lineas = [...estado.lineas];
+        lineas[i] = b;
+        lineas[j] = a;
+        return { ...estado, lineas };
+      }
+
+      const gs = grupos(estado.lineas);
+      const gi = gs.findIndex((g) => g[0]?.key === a.key);
+      const gj = gi + accion.direccion;
+      if (gi < 0 || gj < 0 || gj >= gs.length) return estado;
+      const ga = gs[gi];
+      const gb = gs[gj];
+      if (!ga || !gb) return estado;
+      gs[gi] = gb;
+      gs[gj] = ga;
+      return { ...estado, lineas: gs.flat() };
     }
 
     default:
@@ -651,6 +781,38 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
 /** Lo que la línea lleva: lo confirmado en un pedido aprobado, si no lo cotizado. */
 export function cantidadQueLleva(l: LineaConstructor): number {
   return l.confirmada === null ? l.cantidad : l.confirmada;
+}
+
+/** El número de ítem de cada línea, en orden: «1», «1.1», «2»… (169). */
+export function numerosDe(estado: EstadoConstructor): string[] {
+  return numerosDeItem(estado.lineas.map((l) => ({ id: l.key, alternativaDe: l.alternativaDe ?? null })));
+}
+
+/**
+ * El número que le tocaría a una alternativa nueva de `key`: «1.3» si el 1 ya
+ * tiene dos (169). Es lo que dice el botón «Añadir como 1.3», para que se sepa
+ * antes de pulsar dónde va a caer.
+ */
+export function numeroDeLaSiguienteAlternativa(estado: EstadoConstructor, key: string): string {
+  const numeros = numerosDe(estado);
+  const linea = estado.lineas.find((l) => l.key === key);
+  if (!linea) return "";
+  const principal =
+    linea.alternativaDe && estado.lineas.some((l) => l.key === linea.alternativaDe)
+      ? linea.alternativaDe
+      : linea.key;
+  const i = estado.lineas.findIndex((l) => l.key === principal);
+  const cuantas = estado.lineas.filter((l) => l.alternativaDe === principal).length;
+  return `${numeros[i]}.${cuantas + 1}`;
+}
+
+/**
+ * ¿La flecha hace algo? Con grupos (169) no basta con mirar si es la primera
+ * o la última línea: el 1.2 no baja si debajo empieza el 2. Se pregunta al
+ * propio reducer, que es quien decide.
+ */
+export function puedeMover(estado: EstadoConstructor, key: string, direccion: -1 | 1): boolean {
+  return reducirCrudo(estado, { tipo: "mover", key, direccion }) !== estado;
 }
 
 export function totalesDe(estado: EstadoConstructor): TotalesCotizacion {
@@ -850,6 +1012,9 @@ export function lineasSinStock(estado: EstadoConstructor): LineaConstructor[] {
 
 /** El payload que espera `crear_cotizacion()`. */
 export function aPayload(estado: EstadoConstructor) {
+  // El vínculo de la alternativa viaja por POSICIÓN (169): al guardar se
+  // borran y reinsertan las líneas, y la key solo existe en esta pantalla.
+  const posicion = new Map(estado.lineas.map((l, i) => [l.key, i + 1]));
   return {
     cliente_id: estado.clienteId,
     validez_dias: estado.validezDias,
@@ -885,6 +1050,8 @@ export function aPayload(estado: EstadoConstructor) {
       nota: l.nota.trim() || null,
       // Solo al editar un pedido aprobado; la base no deja pasar de lo cotizado.
       cantidad_aprobada: l.confirmada,
+      // 169: el `orden` del principal, si esta línea es su alternativa.
+      alternativa_de_orden: l.alternativaDe ? (posicion.get(l.alternativaDe) ?? null) : null,
       // OJO: `precio_minimo_ref` NO va aquí. Lo impone el trigger
       // `trg_cotiz_items_piso` desde el maestro. Mandarlo sería ofrecerle a
       // quien llame la posibilidad de desactivar el piso.

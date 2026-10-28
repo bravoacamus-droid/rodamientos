@@ -165,6 +165,9 @@ export interface PedidoDetalle {
   /** Los demás pedidos de la misma cotización, para ir de uno a otro. */
   hermanos: { id: string; numero: string; secuencia: number }[];
   lineas: {
+    /** La línea de la cotización (169: para numerar 1, 1.1…). */
+    id: string;
+    alternativaDe: string | null;
     codigo: string;
     marca: string | null;
     descripcion: string;
@@ -255,12 +258,14 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         .eq("pedido_id", id)
         .gt("cantidad", 0)
         .order("orden"),
-      // La marca no está en la vista; sale de la línea de la cotización.
-      supabase.from("cotizacion_items").select("id, marca").eq("cotizacion_id", f.cotizacion_id),
+      // La marca no está en la vista; sale de la línea de la cotización. Y de
+      // ahí también de qué línea es alternativa (169).
+      supabase.from("cotizacion_items").select("id, marca, alternativa_de").eq("cotizacion_id", f.cotizacion_id),
       avanceDe(supabase, [id]),
     ]);
     const despacho = avance.get(id) ?? null;
     const marcaDe = new Map((marcas ?? []).map((m) => [m.id, m.marca]));
+    const alternativaDe = new Map((marcas ?? []).map((m) => [m.id, m.alternativa_de]));
     const tc = Number(f.cotizaciones?.tipo_cambio ?? 0);
 
     return {
@@ -282,6 +287,8 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         clienteId: f.cliente_id ?? null,
         hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia })),
         lineas: (lineas ?? []).map((l) => ({
+          id: String(l.cotizacion_item_id),
+          alternativaDe: alternativaDe.get(String(l.cotizacion_item_id)) ?? null,
           codigo: String(l.codigo),
           marca: marcaDe.get(String(l.cotizacion_item_id)) ?? null,
           descripcion: String(l.descripcion),

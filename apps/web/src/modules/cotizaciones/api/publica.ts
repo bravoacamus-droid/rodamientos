@@ -73,6 +73,8 @@ export interface CotizacionPublica {
     descuento_pct: number;
     disponibilidad: string;
     dias_entrega: number | null;
+    /** El `orden` de la línea de la que esta es alternativa (169), o null. */
+    alternativa_de_orden?: number | null;
   }[];
 }
 

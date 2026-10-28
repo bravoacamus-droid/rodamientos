@@ -12,6 +12,8 @@
  * (119) y la misma cuenta que su ficha: unitario redondeado y luego importe.
  */
 
+import { numerosDeItem } from "@/modules/cotizaciones/dominio/numeracion";
+
 export interface PedidoParaHoja {
   numero: string;
   fecha: string;
@@ -25,6 +27,9 @@ export interface PedidoParaHoja {
     unidad: string;
     valorUnitario: number;
     descuentoPct: number;
+    /** 169: la línea de la cotización y de cuál es alternativa (1.1, 1.2…). */
+    id?: string;
+    alternativaDe?: string | null;
   }[];
   papel: {
     moneda: "USD" | "PEN";
@@ -63,6 +68,10 @@ export function papelDelPedido(p: PedidoParaHoja, unidad: (u: string) => string 
     return { ...l, unitario, importe: r2(l.cantidad * unitario * (1 - l.descuentoPct / 100)) };
   });
   const subtotal = r2(lineas.reduce((t, l) => t + l.importe, 0));
+  // El ítem como en la cotización (169): 1, 1.1, 2… sobre lo que lleva este pedido.
+  const numeros = numerosDeItem(
+    p.lineas.map((l, i) => ({ id: l.id ?? `#${i}`, alternativaDe: l.alternativaDe ?? null })),
+  );
   const igv = r2(subtotal * IGV);
 
   return {
@@ -87,7 +96,7 @@ export function papelDelPedido(p: PedidoParaHoja, unidad: (u: string) => string 
       { clave: "importe", titulo: "Importe", alinear: "derecha" },
     ],
     filas: lineas.map((l, i) => ({
-      n: String(i + 1),
+      n: numeros[i] ?? String(i + 1),
       codigo: l.codigo,
       marca: l.marca ?? "—",
       descripcion: l.descripcion,

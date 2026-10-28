@@ -34,6 +34,9 @@ import {
   avisosDeVenta,
   bloqueos as calcularBloqueos,
   estadoInicial,
+  numeroDeLaSiguienteAlternativa,
+  numerosDe,
+  puedeMover,
   reducir,
   totalesDe,
   type EstadoConstructor,
@@ -204,6 +207,23 @@ export function Constructor({
   }, null);
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
+  /** 1, 1.1, 1.2, 2… (169): el número de ítem de cada línea, en orden. */
+  const numeros = useMemo(() => numerosDe(estado), [estado]);
+  /** En qué ítem está ya cada producto, para avisar al añadir una alternativa. */
+  const enLaCotizacion = useMemo(() => {
+    const m = new Map<string, string>();
+    estado.lineas.forEach((l, i) => {
+      if (l.productoId && !m.has(l.productoId)) m.set(l.productoId, numeros[i] ?? "");
+    });
+    return m;
+  }, [estado, numeros]);
+  const propsDeLinea = (key: string, i: number) => ({
+    numero: numeros[i] ?? String(i + 1),
+    numeroAlternativa: numeroDeLaSiguienteAlternativa(estado, key),
+    puedeSubir: puedeMover(estado, key, -1),
+    puedeBajar: puedeMover(estado, key, 1),
+    enLaCotizacion,
+  });
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
   // Lo que conviene mirar y NO impide guardar (17/09): hoy, el precio mínimo.
   /* Dos avisos distintos y los dos hacen falta: el piso es la regla comercial
@@ -599,8 +619,7 @@ export function Constructor({
                   <TarjetaLinea
                     key={l.key}
                     linea={l}
-                    indice={i}
-                    total={estado.lineas.length}
+                    {...propsDeLinea(l.key, i)}
                     clienteId={estado.clienteId}
                     mostrarDescuento={estado.mostrarDescuento}
                     despachar={despachar}
@@ -642,8 +661,7 @@ export function Constructor({
                       <FilaLinea
                         key={l.key}
                         linea={l}
-                        indice={i}
-                        total={estado.lineas.length}
+                        {...propsDeLinea(l.key, i)}
                         clienteId={estado.clienteId}
                         mostrarDescuento={estado.mostrarDescuento}
                         despachar={despachar}

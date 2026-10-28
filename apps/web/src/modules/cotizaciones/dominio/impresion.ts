@@ -4,6 +4,7 @@ import { IGV } from "@rodatech/config";
 import { montoEnLetras } from "@rodatech/sunat/letras";
 
 import { textoEntrega, type Disponibilidad } from "./disponibilidad";
+import { numerosDeItem } from "./numeracion";
 import { importeLinea, redondear2 } from "./totales";
 import { unidadLegible } from "./unidades";
 
@@ -75,6 +76,12 @@ export interface LineaCruda {
   contiene?: { cantidad: number; codigo: string; descripcion: string }[];
   /** La nota de la línea (112), debajo de la descripción. */
   nota?: string | null;
+  /**
+   * Para el número de ítem (169): lo que identifica la línea y de cuál es
+   * alternativa. Sin ellos, cada línea es un ítem normal (1, 2, 3…).
+   */
+  id?: string | number;
+  alternativaDe?: string | number | null;
 }
 
 export interface DatosImpresion {
@@ -104,7 +111,8 @@ export interface DatosImpresion {
 }
 
 export interface LineaImpresa {
-  n: number;
+  /** «1», «1.1», «2»… (169): una alternativa lleva el número de su principal. */
+  n: string;
   codigo: string;
   marca: string;
   descripcion: string;
@@ -202,8 +210,13 @@ export function limpiarDescripcion(
 }
 
 export function armarCotizacionImpresa(d: DatosImpresion): CotizacionImpresa {
+  // Sobre las líneas que van al papel: si el principal no va (el cliente no
+  // lo quiso), su alternativa sale como ítem normal.
+  const numeros = numerosDeItem(
+    d.lineas.map((l, i) => ({ id: l.id ?? `#${i}`, alternativaDe: l.alternativaDe ?? null })),
+  );
   const lineas: LineaImpresa[] = d.lineas.map((l, i) => ({
-    n: i + 1,
+    n: numeros[i] ?? String(i + 1),
     codigo: l.codigo,
     // C2: columna propia. Sin marca se pone una raya, no vacío: una celda en
     // blanco en un papel se lee como un olvido.

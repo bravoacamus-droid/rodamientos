@@ -57,7 +57,7 @@ export function hojaDeCotizacion(c: CotizacionImpresa, cuentas: readonly CuentaP
     datos: datosDelPapel(c),
     columnas: columnasDelPapel(c),
     filas: c.lineas.map((l) => ({
-      n: String(l.n),
+      n: l.n,
       codigo: l.codigo,
       marca: l.marca,
       descripcion: {
