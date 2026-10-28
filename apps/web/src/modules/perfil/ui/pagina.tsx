@@ -55,7 +55,6 @@ export default async function PaginaMiPerfil() {
           <h1 className="text-2xl font-semibold tracking-tight">{perfil.nombre}</h1>
           <p className="text-sm text-[var(--fg-muted)]">
             {nombreRol ?? perfil.rol}
-            {perfil.cargo ? ` · ${perfil.cargo}` : ""}
           </p>
         </div>
       </div>

@@ -182,7 +182,7 @@ function useFicha(usuario: Usuario) {
   }, [usuario.activo, usuario.id, correr]);
 
   const guardarDatos = React.useCallback(
-    (d: { nombre: string; email: string; cargo: string; telefono: string }) =>
+    (d: { nombre: string; email: string; telefono: string }) =>
       correr(async () => {
         const r = await editarDatosUsuario(usuario.id, d);
         return r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error };
@@ -376,7 +376,6 @@ function TarjetaUsuario({
       </p>
       <p className="text-sm text-[var(--fg-muted)]">
         {usuario.email ?? "sin correo"}
-        {usuario.cargo ? ` · ${usuario.cargo}` : ""}
       </p>
 
       <div className="mt-3">
@@ -481,7 +480,6 @@ function FilaUsuario({
           */}
           <span className="block text-sm text-[var(--fg-subtle)]">
             {usuario.email ?? "sin correo"}
-            {usuario.cargo ? ` · ${usuario.cargo}` : ""}
           </span>
         </td>
 
@@ -570,12 +568,11 @@ function FormDatos({
 }: {
   usuario: Usuario;
   ocupado: boolean;
-  onGuardar: (d: { nombre: string; email: string; cargo: string; telefono: string }) => void;
+  onGuardar: (d: { nombre: string; email: string; telefono: string }) => void;
   onCancelar: () => void;
 }) {
   const [nombre, setNombre] = React.useState(usuario.nombre);
   const [email, setEmail] = React.useState(usuario.email ?? "");
-  const [cargo, setCargo] = React.useState(usuario.cargo ?? "");
   const [telefono, setTelefono] = React.useState(usuario.telefono ?? "");
   const id = (c: string) => `datos-${c}-${usuario.id}`;
   const listo = nombre.trim().length >= 3 && email.includes("@") && !ocupado;
@@ -584,7 +581,7 @@ function FormDatos({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (listo) onGuardar({ nombre, email, cargo, telefono });
+        if (listo) onGuardar({ nombre, email, telefono });
       }}
       className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
     >
@@ -594,9 +591,6 @@ function FormDatos({
         </Campo>
         <Campo id={id("email")} label="Correo" requerido ayuda="Con este correo entra. Si lo cambias, avísale.">
           <Input id={id("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </Campo>
-        <Campo id={id("cargo")} label="Cargo">
-          <Input id={id("cargo")} value={cargo} onChange={(e) => setCargo(e.target.value)} />
         </Campo>
         <Campo id={id("telefono")} label="Teléfono">
           <Input id={id("telefono")} value={telefono} onChange={(e) => setTelefono(e.target.value)} />

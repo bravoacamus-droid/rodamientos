@@ -23,7 +23,6 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
   const [datos, setDatos] = React.useState({
     nombre: perfil.nombre,
     telefono: perfil.telefono ?? "",
-    cargo: perfil.cargo ?? "",
   });
   const router = useRouter();
 
@@ -39,8 +38,7 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
 
   const sinCambios =
     datos.nombre === perfil.nombre &&
-    datos.telefono === (perfil.telefono ?? "") &&
-    datos.cargo === (perfil.cargo ?? "");
+    datos.telefono === (perfil.telefono ?? "");
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +46,6 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
       const r = await guardarMiPerfil({
         nombre: datos.nombre,
         telefono: datos.telefono || null,
-        cargo: datos.cargo || null,
       });
       if (r.ok) {
         toast.success(r.mensaje);
@@ -68,14 +65,6 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
             value={datos.nombre}
             onChange={(e) => setDatos((d) => ({ ...d, nombre: e.target.value }))}
             required
-          />
-        </Campo>
-
-        <Campo id="cargo" label="Cargo" ayuda="Por ejemplo: Asesor comercial.">
-          <Input
-            id="cargo"
-            value={datos.cargo}
-            onChange={(e) => setDatos((d) => ({ ...d, cargo: e.target.value }))}
           />
         </Campo>
 

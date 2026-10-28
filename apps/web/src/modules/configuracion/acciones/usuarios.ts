@@ -223,7 +223,6 @@ export type ResultadoDatos = { ok: true; mensaje: string } | { ok: false; error:
 const esquemaDatos = z.object({
   nombre: z.string().trim().min(3, "El nombre es muy corto.").max(120),
   email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
-  cargo: z.string().trim().max(120),
   telefono: z.string().trim().max(30),
 });
 
@@ -241,7 +240,7 @@ const esquemaDatos = z.object({
  */
 export async function editarDatosUsuario(
   id: string,
-  entrada: { nombre: string; email: string; cargo: string; telefono: string },
+  entrada: { nombre: string; email: string; telefono: string },
 ): Promise<ResultadoDatos> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
@@ -265,7 +264,7 @@ export async function editarDatosUsuario(
     const { data: antes } = await admin.from("perfiles").select("email").eq("id", id).maybeSingle();
     if (!antes) return { ok: false, error: "Ese usuario no existe." };
 
-    const { nombre, email, cargo, telefono } = datos.data;
+    const { nombre, email, telefono } = datos.data;
     if (email !== (antes.email ?? "").toLowerCase()) {
       const { error } = await admin.auth.admin.updateUserById(id, { email, email_confirm: true });
       if (error) {
@@ -278,7 +277,7 @@ export async function editarDatosUsuario(
 
     const { error } = await admin
       .from("perfiles")
-      .update({ nombre, email, cargo: cargo || null, telefono: telefono || null })
+      .update({ nombre, email, telefono: telefono || null })
       .eq("id", id);
     if (error) return { ok: false, error: mensajeDeError(error) };
 

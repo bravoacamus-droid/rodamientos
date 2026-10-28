@@ -97,7 +97,6 @@ function Formulario({
 }) {
   const [nombre, setNombre] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [cargo, setCargo] = React.useState("");
   const [telefono, setTelefono] = React.useState("");
   const [rol, setRol] = React.useState<Rol>("ventas");
   const [enviando, empezar] = React.useTransition();
@@ -113,13 +112,12 @@ function Formulario({
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "usuario",
     id: null,
-    datos: { nombre, email, cargo, telefono, rol },
+    datos: { nombre, email, telefono, rol },
     valeLaPena: (d) =>
-      Boolean(d.nombre.trim() || d.email.trim() || d.cargo.trim() || d.telefono.trim()),
+      Boolean(d.nombre.trim() || d.email.trim() || d.telefono.trim()),
     recuperar: (d) => {
       setNombre(d.nombre);
       setEmail(d.email);
-      setCargo(d.cargo);
       setTelefono(d.telefono);
       setRol(d.rol);
     },
@@ -133,7 +131,6 @@ function Formulario({
       const r = await crearUsuario({
         nombre: nombre.trim(),
         email: email.trim(),
-        cargo: cargo.trim() || undefined,
         telefono: telefono.trim() || undefined,
         rol,
       });
@@ -177,10 +174,6 @@ function Formulario({
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-        </Campo>
-
-        <Campo id="alta-cargo" label="Cargo" ayuda="Como se le llama en la empresa.">
-          <Input id="alta-cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} />
         </Campo>
 
         <Campo id="alta-telefono" label="Teléfono">

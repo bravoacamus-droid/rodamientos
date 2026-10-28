@@ -26,7 +26,6 @@ const esquema = z
   .object({
     nombre: z.string().trim().min(2, "El nombre es demasiado corto.").max(120),
     telefono: z.string().trim().max(40).nullable(),
-    cargo: z.string().trim().max(80).nullable(),
   })
   .strict();
 
@@ -45,7 +44,6 @@ const esquema = z
 export async function guardarMiPerfil(cambios: {
   nombre: string;
   telefono: string | null;
-  cargo: string | null;
 }): Promise<ResultadoPerfil> {
   const usuario = await usuarioActual();
   if (!usuario) return { ok: false, error: "Hay que iniciar sesión." };
@@ -77,7 +75,6 @@ export async function guardarMiPerfil(cambios: {
         // uno que no se ve». La diferencia importa en las consultas que
         // preguntan si hay con qué avisar.
         telefono: datos.data.telefono || null,
-        cargo: datos.data.cargo || null,
       })
       .eq("id", usuario.id)
       .select("id");
