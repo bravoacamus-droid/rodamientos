@@ -8452,3 +8452,41 @@ Auditoría de solo lectura a partir de `D:\Integraciones\auditoria-integracion-s
 `pnpm sunat:beta`: **7/7 aceptados** (4 facturas, NC, ND y baja). Tests: 1717.
 
 **Sin verificar:** un `.pfx` real de Llama.pe (en qué campo trae el RUC), la GRE contra SUNAT real y la producción. Tampoco hay todavía pantalla para descargar el CDR guardado.
+
+## §CL · 29/10 — El stock real de Willy
+
+Luis, 29/10: *«nos olvidamos de este documento de su stock con los productos,
+su familia, todo»*. Es `STOCK RODATECH AL 26-10-26.xlsx` (fuera del repo, en
+los documentos de Luis). Se cargó por SQL directo, con respaldo antes, y
+ensayado primero dentro de un bloque que se deshace.
+
+**Qué entró:** el ajuste **AJU-26-00001** («cuadre inicial», fecha 26/10):
+**1781 unidades en 215 productos**. Antes la base tenía stock 0 y ningún
+movimiento. Va por `registrar_ajuste_inventario`, así que sale en el kárdex
+como cualquier ajuste y se corrige con otro.
+
+- La hoja que manda es **TOTAL** (260 filas, la única con familia y
+  descripción). Las hojas por marca (SKF, NTN, INA-FAG, OTROS) **no cuadran
+  con ella** —p. ej. `6000-2Z/C3` SKF: 20 en TOTAL, 0 en SKF—; suman 2108
+  contra 1791. **Hay que preguntarle a Willy cuál es la buena.**
+- `UCP207D1` NTN sale dos veces (ítems 131 y 244, 10 y 10): se tomó como una
+  fila repetida → 10, no 20. Por eso 1781 y no 1791.
+- **177 ya existían** (incluidos los que el sistema anterior guardaba como
+  `código-MARCA`, p. ej. `6305-2Z/C3-SKF`, y ocho escritos distinto: el
+  «Lw» de Optibelt, `-XL` de INA y `D1` de NTN). **78 se crearon**, con la
+  descripción `código + descripción + marca` como el resto. Si el código ya
+  era de otra marca, el nuevo lleva `-MARCA` (el código canónico es único).
+- `40X50X6TC` y `L-075` estaban «SIN MARCA»: se les puso TTO y KOR.
+- Marcas nuevas: TRISUM, KOR, JML. Los V-ring decían «NBR» de marca, que es
+  el material (nitrilo): van «SIN MARCA». Subfamilia nueva: ACCESORIOS →
+  ARANDELAS.
+- **La familia del Excel manda** sobre la que traía el producto (p. ej.
+  `22217 EK/C3` estaba en «de bolas a rótula» y es de rodillos esféricos),
+  traducida a las familias que ya hay: RETEN → SELLADO/RETENES, O-RING →
+  SELLADO/ORINGS, FAJAS y POLEAS y ACOPLAMIENTOS → TRANSMISION, V-RING y
+  SELLO MECANICO → SELLADO/SELLOS Y JUNTAS, LUBRICANTE → LUBRICANTES.
+
+**Sin resolver:** el Excel no trae costo, así que casi todo entra a costo 0 y
+el «Valor a costo» del inventario sale bajo (USD 2,718). Se arregla con las
+primeras compras o pidiéndole a Willy sus costos. Los scripts del cruce están
+en el scratchpad de la sesión (`stock/cruzar.cjs`, `stock/generar-sql.cjs`).
