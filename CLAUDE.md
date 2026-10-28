@@ -160,11 +160,11 @@ dos commits por dar por hecho que la factura se comportaría como la cotización
 | `documentosrodamiento/` y `.env.local` **fuera de git** | Datos comerciales reales y credenciales vivas |
 | Los datos del cliente **no van en migraciones** | Las migraciones se versionan. Cárgalos por SQL directo |
 | **No regenerar** `SUNAT_ENCRYPTION_KEY` | Descifra lo ya guardado |
-| `RODATECH_ATAJOS` **se queda** por ahora | Decisión de Luis |
 | Los tests e2e **nunca** contra la base del cliente | Escriben: mueven stock y consumen correlativos |
 
 **Al entregar:** rotar credenciales de `.env.local` (por USB o gestor de
-contraseñas, nunca por chat ni correo) y quitar `RODATECH_ATAJOS`.
+contraseñas, nunca por chat ni correo). Los botones de acceso rápido del login
+se quitaron el 29/10 (Luis): cada uno entra con su correo y su contraseña.
 
 ---
 

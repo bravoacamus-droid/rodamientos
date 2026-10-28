@@ -5,7 +5,6 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { apuntarIntento, esperaParaEntrar, minutosDeEspera } from "@/lib/limite-login";
 
-import { ATAJOS_VISIBLES, hayAtajos } from "./cuentas-dev";
 import { destinoSeguro, esquemaLogin } from "./validar";
 
 export interface ResultadoLogin {
@@ -72,47 +71,6 @@ export async function iniciarSesion(
 
   // redirect() lanza para cortar el flujo, así que va fuera de cualquier
   // try/catch y después de que la cookie de sesión ya quedó escrita.
-  redirect(destinoSeguro(datos.get("destino")));
-}
-
-/**
- * Atajo de desarrollo: entra como una de las cuentas sembradas.
- *
- * La demo anterior hacía esto con la contraseña escrita en el código, así que
- * viajaba en el bundle del navegador y cualquiera podía leerla. Aquí la clave
- * sale de RODATECH_DEV_PASSWORD, que es una variable de SERVIDOR: el navegador
- * solo envía qué cuenta quiere.
- *
- * Tres puertas independientes, y basta que falle una para que no haga nada:
- *   1. hayAtajos(): fuera de producción, o RODATECH_ATAJOS=1 puesto a mano
- *   2. RODATECH_DEV_PASSWORD definida
- *   3. el correo pedido es uno de los que el panel ofrece (ATAJOS_VISIBLES)
- */
-export async function entrarComoDev(datos: FormData): Promise<void> {
-  if (!hayAtajos()) return;
-
-  const clave = process.env.RODATECH_DEV_PASSWORD;
-  if (!clave) return;
-
-  /*
-    Solo las cuentas que el panel ofrece, no las seis.
-
-    Auditoría del 11/09: se pintaban dos botones —gerencia y ventas— pero la
-    acción aceptaba las seis cuentas de `CUENTAS_DEV`, y una Server Action se
-    llama con un `fetch` a mano sin pasar por la pantalla. La lista visible
-    tiene que ser la lista aceptada; si mañana alguien quiere entrar como
-    almacén, se le pone su botón moviendo el `atajo`.
-  */
-  const correo = String(datos.get("correo") ?? "");
-  if (!ATAJOS_VISIBLES.some((c) => c.correo === correo)) return;
-
-  const supabase = await clienteServidor();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: correo,
-    password: clave,
-  });
-  if (error) return;
-
   redirect(destinoSeguro(datos.get("destino")));
 }
 

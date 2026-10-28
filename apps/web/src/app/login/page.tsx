@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Logo } from "@/componentes/logo";
 import { FormularioLogin } from "./formulario";
-import { AtajosDev } from "./atajos";
 
 export const metadata: Metadata = { title: "Acceso" };
 
@@ -52,7 +51,6 @@ export default async function PaginaLogin({
           ) : null}
 
           <FormularioLogin destino={destino} />
-          <AtajosDev destino={destino} />
         </div>
 
         <p className="mt-6 text-center text-sm text-[var(--fg-subtle)]">
