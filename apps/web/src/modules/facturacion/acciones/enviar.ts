@@ -175,10 +175,40 @@ export async function enviarASunat(
   }
 
   try {
-    const cdr =
+    /*
+      Firmar, GUARDAR y mandar, en tres pasos (auditoría SUNAT 28/10, M3).
+
+      Antes era un solo `emitir()` que tiraba el XML firmado: lo que se mandó
+      a SUNAT no quedaba en ninguna parte —la columna `sunat_xml_firmado`
+      estaba desde la 002 sin que nadie la escribiera— y el hash que imprime
+      el papel (`sunat_hash_cdr`) salía siempre vacío, porque se buscaba en el
+      CDR y el CDR no lo trae: es el DigestValue de NUESTRA firma.
+
+      Se guarda ANTES de mandar: si la red se corta a mitad, lo que pudo
+      llegar a SUNAT ya está archivado. Cada reenvío firma de nuevo y lo
+      sobrescribe, así que queda siempre el último que salió.
+
+      En una columna y no en Storage: son 10-30 kB de texto por documento,
+      entra en el respaldo de tablas (147) con todo lo demás, y se escribe en
+      el mismo `update` que el estado, sin un segundo sitio que pueda quedar
+      a medias. El comentario de la 002 hablaba de una «ruta en Storage» que
+      nunca se construyó.
+    */
+    const firmado =
       esNota && afectado
-        ? await conector.datos.emitirNota(notaParaSunat(c, empresa, { afectado, descripcionMotivo }))
-        : await conector.datos.emitir(comprobante);
+        ? await conector.datos.generarYFirmarNota(notaParaSunat(c, empresa, { afectado, descripcionMotivo }))
+        : await conector.datos.generarYFirmar(comprobante);
+    await admin
+      .from("comprobantes")
+      .update({ sunat_xml_firmado: firmado.xmlFirmado, sunat_hash_cdr: firmado.hash || null })
+      .eq("id", c.id);
+
+    const cdr = await conector.datos.enviar(
+      firmado,
+      esNota && afectado ? (c.tipo === "nota_debito" ? "08" : "07") : comprobante.tipoDocumento,
+      c.serie,
+      c.correlativo,
+    );
 
     /*
       Un 1033 sobre algo que ya había salido NO es «emite otro» (auditoría
@@ -228,7 +258,8 @@ export async function enviarASunat(
         estado_sunat: decision.estado,
         sunat_codigo_respuesta: final.codigo ?? null,
         sunat_mensaje: final.descripcion ?? null,
-        sunat_hash_cdr: (final as { hash?: string }).hash ?? null,
+        // El hash ya se guardó al firmar: es el DigestValue de la firma, que
+        // el CDR no trae. No se pisa aquí.
         sunat_respuesta: final as unknown as Json,
       })
       .eq("id", c.id);
