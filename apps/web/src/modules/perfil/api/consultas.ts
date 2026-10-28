@@ -27,7 +27,7 @@ export async function miPerfil(): Promise<Resultado<MiPerfil | null>> {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id, nombre, email, telefono, cargo, rol")
+      .select("id, nombre, email, usuario, telefono, cargo, rol")
       .eq("id", usuario.id)
       .maybeSingle();
 
@@ -40,6 +40,7 @@ export async function miPerfil(): Promise<Resultado<MiPerfil | null>> {
         id: String(data.id),
         nombre: String(data.nombre ?? ""),
         email: (data.email as string | null) ?? null,
+        usuario: (data.usuario as string | null) ?? null,
         telefono: (data.telefono as string | null) ?? null,
         cargo: (data.cargo as string | null) ?? null,
         rol: String(data.rol),

@@ -6,11 +6,12 @@ import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 
 import { mensajeDeError } from "@/lib/errores";
+import { esquemaUsuarioOpcional, esUsuarioRepetido, MENSAJE_USUARIO_REPETIDO } from "@/lib/usuario";
 import { generarContrasenaInicial } from "../dominio/contrasena";
 import type { Rol } from "../dominio/tipos";
 
 export type ResultadoAlta =
-  | { ok: true; contrasena: string; nombre: string; email: string }
+  | { ok: true; contrasena: string; nombre: string; email: string; usuario: string | null }
   | { ok: false; error: string };
 
 const esquema = z.object({
@@ -18,8 +19,22 @@ const esquema = z.object({
   email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
   cargo: z.string().trim().max(120).optional(),
   telefono: z.string().trim().max(30).optional(),
+  // Con el que también entra (171). Opcional: sin él, entra con el correo.
+  usuario: esquemaUsuarioOpcional.optional(),
   rol: z.string().min(2).max(41),
 });
+
+/**
+ * ¿Lo tiene ya otra persona? Antes de escribir nada, para no dejar a medias
+ * un alta o un cambio de correo por un usuario repetido. El índice único de
+ * la 171 sigue siendo la última palabra, por si dos lo eligen a la vez.
+ */
+async function usuarioOcupado(usuario: string, salvo?: string): Promise<boolean> {
+  let q = clienteAdmin().from("perfiles").select("id").eq("usuario", usuario).limit(1);
+  if (salvo) q = q.neq("id", salvo);
+  const { data } = await q;
+  return Boolean(data && data.length > 0);
+}
 
 /**
  * El rol tiene que existir en `roles` (143). Ya no es una lista fija: los
@@ -69,6 +84,7 @@ export async function crearUsuario(entrada: {
   email: string;
   cargo?: string;
   telefono?: string;
+  usuario?: string;
   rol: Rol;
 }): Promise<ResultadoAlta> {
   const perfil = await perfilActual();
@@ -91,7 +107,9 @@ export async function crearUsuario(entrada: {
   }
 
   const { nombre, email, cargo, telefono, rol } = datos.data;
+  const usuario = datos.data.usuario ?? null;
   if (!(await rolExiste(rol))) return { ok: false, error: "Ese rol no existe. Elígelo de la lista." };
+  if (usuario && (await usuarioOcupado(usuario))) return { ok: false, error: MENSAJE_USUARIO_REPETIDO };
   const contrasena = generarContrasenaInicial();
 
   try {
@@ -139,25 +157,22 @@ export async function crearUsuario(entrada: {
       un trigger y no queremos que un fallo de RLS aquí deje la cuenta a medias
       sin que nadie se entere.
     */
-    if (cargo || telefono) {
+    if (cargo || telefono || usuario) {
       const { error: errorPerfil } = await admin
         .from("perfiles")
-        .update({ cargo: cargo || null, telefono: telefono || null })
+        .update({ cargo: cargo || null, telefono: telefono || null, usuario })
         .eq("id", data.user.id);
 
-      // No se aborta: la cuenta ya existe y entra. El cargo se edita luego.
+      // No se aborta: la cuenta ya existe y entra con su correo. El usuario
+      // se le pone luego en «Editar datos»; por eso no se enseña.
       if (errorPerfil) {
-        return {
-          ok: true,
-          contrasena,
-          nombre,
-          email,
-        };
+        revalidatePath("/configuracion/usuarios");
+        return { ok: true, contrasena, nombre, email, usuario: null };
       }
     }
 
     revalidatePath("/configuracion/usuarios");
-    return { ok: true, contrasena, nombre, email };
+    return { ok: true, contrasena, nombre, email, usuario };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
   }
@@ -224,10 +239,11 @@ const esquemaDatos = z.object({
   nombre: z.string().trim().min(3, "El nombre es muy corto.").max(120),
   email: z.string().trim().toLowerCase().email("Ese correo no es válido."),
   telefono: z.string().trim().max(30),
+  usuario: esquemaUsuarioOpcional,
 });
 
 /**
- * Corregir el nombre, el correo, el cargo o el teléfono de un empleado
+ * Corregir el nombre, el correo, el usuario (171), el cargo o el teléfono de un empleado
  * (Luis, 21/10: «el CRUD completo»). Hasta hoy solo se podía al darlo de alta.
  *
  * Borrar no existe a propósito: su nombre está en cotizaciones, cobros y en la
@@ -240,7 +256,7 @@ const esquemaDatos = z.object({
  */
 export async function editarDatosUsuario(
   id: string,
-  entrada: { nombre: string; email: string; telefono: string },
+  entrada: { nombre: string; email: string; telefono: string; usuario: string },
 ): Promise<ResultadoDatos> {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
@@ -264,7 +280,9 @@ export async function editarDatosUsuario(
     const { data: antes } = await admin.from("perfiles").select("email").eq("id", id).maybeSingle();
     if (!antes) return { ok: false, error: "Ese usuario no existe." };
 
-    const { nombre, email, telefono } = datos.data;
+    const { nombre, email, telefono, usuario } = datos.data;
+    // Antes que el correo de Auth: si el usuario está ocupado, no se cambia nada.
+    if (usuario && (await usuarioOcupado(usuario, id))) return { ok: false, error: MENSAJE_USUARIO_REPETIDO };
     if (email !== (antes.email ?? "").toLowerCase()) {
       const { error } = await admin.auth.admin.updateUserById(id, { email, email_confirm: true });
       if (error) {
@@ -277,9 +295,12 @@ export async function editarDatosUsuario(
 
     const { error } = await admin
       .from("perfiles")
-      .update({ nombre, email, telefono: telefono || null })
+      .update({ nombre, email, telefono: telefono || null, usuario })
       .eq("id", id);
-    if (error) return { ok: false, error: mensajeDeError(error) };
+    if (error) {
+      if (esUsuarioRepetido(error)) return { ok: false, error: MENSAJE_USUARIO_REPETIDO };
+      return { ok: false, error: mensajeDeError(error) };
+    }
 
     revalidatePath("/configuracion/usuarios");
     return { ok: true, mensaje: `Datos de ${nombre} guardados.` };

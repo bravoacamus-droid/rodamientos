@@ -14,9 +14,19 @@ describe("esquemaLogin", () => {
   });
 
   it("rechaza espacios en medio del correo y correos mal escritos", () => {
-    expect(error({ correo: "wi lly@rodatech.pe", clave: "x" })).toBe("El correo no puede tener espacios.");
+    expect(error({ correo: "wi lly@rodatech.pe", clave: "x" })).toBe("El correo o el usuario no puede tener espacios.");
     expect(error({ correo: "willy@", clave: "x" })).toMatch(/no es válido/);
-    expect(error({ correo: "   ", clave: "x" })).toBe("Escriba su correo.");
+    expect(error({ correo: "   ", clave: "x" })).toBe("Escriba su correo o su usuario.");
+  });
+
+  it("acepta un usuario sin «@» y lo pasa a minúsculas (171)", () => {
+    const r = esquemaLogin.parse({ correo: "  WFernandez ", clave: "secreta1" });
+    expect(r.correo).toBe("wfernandez");
+  });
+
+  it("un usuario mal escrito dice qué corregir", () => {
+    expect(error({ correo: "ab", clave: "x" })).toMatch(/de 3 a 30/);
+    expect(error({ correo: "josé", clave: "x" })).toMatch(/sin tilde/);
   });
 
   it("rechaza la contraseña vacía, de solo espacios o con espacios en los bordes", () => {

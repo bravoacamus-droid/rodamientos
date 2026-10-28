@@ -3733,6 +3733,7 @@ export type Database = {
           nombre: string
           rol: Database["public"]["Enums"]["rol_usuario"]
           telefono: string | null
+          usuario: string | null
         }
         Insert: {
           activo?: boolean
@@ -3745,6 +3746,7 @@ export type Database = {
           nombre: string
           rol?: Database["public"]["Enums"]["rol_usuario"]
           telefono?: string | null
+          usuario?: string | null
         }
         Update: {
           activo?: boolean
@@ -3757,6 +3759,7 @@ export type Database = {
           nombre?: string
           rol?: Database["public"]["Enums"]["rol_usuario"]
           telefono?: string | null
+          usuario?: string | null
         }
         Relationships: []
       }
@@ -6001,6 +6004,7 @@ export type Database = {
         Args: { p_guia: string; p_items: Json }
         Returns: Json
       }
+      correo_de_usuario: { Args: { p_usuario: string }; Returns: string }
       cotizacion_por_token: { Args: { p_token: string }; Returns: Json }
       crear_compra: { Args: { p_datos: Json }; Returns: Json }
       crear_consulta_precio: { Args: { p_datos: Json }; Returns: Json }

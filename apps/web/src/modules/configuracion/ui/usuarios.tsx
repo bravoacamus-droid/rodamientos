@@ -12,6 +12,8 @@ import { KeyRound, Pencil } from "lucide-react";
 import { cambiarUsuario, type ResultadoConfig } from "../acciones/guardar";
 import { darContrasenaNueva, editarDatosUsuario } from "../acciones/usuarios";
 import type { Rol, RolDef, Usuario } from "../dominio/tipos";
+import { normalizarUsuario, problemaUsuario } from "@/lib/usuario";
+
 import { ContrasenaReciencreada } from "./alta-usuario";
 
 /**
@@ -182,7 +184,7 @@ function useFicha(usuario: Usuario) {
   }, [usuario.activo, usuario.id, correr]);
 
   const guardarDatos = React.useCallback(
-    (d: { nombre: string; email: string; telefono: string }) =>
+    (d: { nombre: string; email: string; telefono: string; usuario: string }) =>
       correr(async () => {
         const r = await editarDatosUsuario(usuario.id, d);
         return r.ok ? { ok: true, mensaje: r.mensaje } : { ok: false, error: r.error };
@@ -377,6 +379,9 @@ function TarjetaUsuario({
       <p className="text-sm text-[var(--fg-muted)]">
         {usuario.email ?? "sin correo"}
       </p>
+      {usuario.usuario ? (
+        <p className="text-sm text-[var(--fg-muted)]">Usuario: {usuario.usuario}</p>
+      ) : null}
 
       <div className="mt-3">
         {editable ? (
@@ -481,6 +486,10 @@ function FilaUsuario({
           <span className="block text-sm text-[var(--fg-subtle)]">
             {usuario.email ?? "sin correo"}
           </span>
+          {/* Con el que también entra (171): si hay que dictárselo, se lee aquí. */}
+          {usuario.usuario ? (
+            <span className="block text-sm text-[var(--fg-subtle)]">Usuario: {usuario.usuario}</span>
+          ) : null}
         </td>
 
         <td className="px-3 py-2">
@@ -557,7 +566,7 @@ function FilaUsuario({
 }
 
 /**
- * Nombre, correo, cargo y teléfono de otra persona (21/10). El correo es con
+ * Nombre, correo, usuario (171), cargo y teléfono de otra persona (21/10). El correo es con
  * lo que entra: lo dice la ayuda, para que nadie lo cambie sin avisarle.
  */
 function FormDatos({
@@ -568,20 +577,24 @@ function FormDatos({
 }: {
   usuario: Usuario;
   ocupado: boolean;
-  onGuardar: (d: { nombre: string; email: string; telefono: string }) => void;
+  onGuardar: (d: { nombre: string; email: string; telefono: string; usuario: string }) => void;
   onCancelar: () => void;
 }) {
   const [nombre, setNombre] = React.useState(usuario.nombre);
   const [email, setEmail] = React.useState(usuario.email ?? "");
   const [telefono, setTelefono] = React.useState(usuario.telefono ?? "");
+  const [nombreUsuario, setNombreUsuario] = React.useState(usuario.usuario ?? "");
   const id = (c: string) => `datos-${c}-${usuario.id}`;
-  const listo = nombre.trim().length >= 3 && email.includes("@") && !ocupado;
+  // El mismo aviso que dará el servidor, mientras se escribe (171).
+  const limpio = normalizarUsuario(nombreUsuario);
+  const problemaDelUsuario = limpio ? problemaUsuario(limpio) : null;
+  const listo = nombre.trim().length >= 3 && email.includes("@") && !problemaDelUsuario && !ocupado;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (listo) onGuardar({ nombre, email, telefono });
+        if (listo) onGuardar({ nombre, email, telefono, usuario: nombreUsuario });
       }}
       className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
     >
@@ -591,6 +604,22 @@ function FormDatos({
         </Campo>
         <Campo id={id("email")} label="Correo" requerido ayuda="Con este correo entra. Si lo cambias, avísale.">
           <Input id={id("email")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </Campo>
+        <Campo
+          id={id("usuario")}
+          label="Usuario"
+          ayuda="También entra con este, además del correo. Vacío: solo con el correo."
+          error={problemaDelUsuario ?? undefined}
+        >
+          <Input
+            id={id("usuario")}
+            value={nombreUsuario}
+            onChange={(e) => setNombreUsuario(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-invalid={problemaDelUsuario ? true : undefined}
+          />
         </Campo>
         <Campo id={id("telefono")} label="Teléfono">
           <Input id={id("telefono")} value={telefono} onChange={(e) => setTelefono(e.target.value)} />

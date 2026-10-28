@@ -8,6 +8,8 @@ import { Check, Copy, UserPlus } from "lucide-react";
 
 import { useBorrador } from "@/componentes/borrador";
 
+import { normalizarUsuario, problemaUsuario } from "@/lib/usuario";
+
 import { crearUsuario } from "../acciones/usuarios";
 import type { Rol, RolDef } from "../dominio/tipos";
 
@@ -41,6 +43,7 @@ export function AltaUsuario({ hayClave, roles }: { hayClave: boolean; roles: Rol
   const [creada, setCreada] = React.useState<{
     nombre: string;
     email: string;
+    usuario: string | null;
     contrasena: string;
   } | null>(null);
 
@@ -93,10 +96,11 @@ function Formulario({
 }: {
   roles: RolDef[];
   onCancelar: () => void;
-  onCreada: (d: { nombre: string; email: string; contrasena: string }) => void;
+  onCreada: (d: { nombre: string; email: string; usuario: string | null; contrasena: string }) => void;
 }) {
   const [nombre, setNombre] = React.useState("");
   const [email, setEmail] = React.useState("");
+  const [usuario, setUsuario] = React.useState("");
   const [telefono, setTelefono] = React.useState("");
   const [rol, setRol] = React.useState<Rol>("ventas");
   const [enviando, empezar] = React.useTransition();
@@ -112,18 +116,22 @@ function Formulario({
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "usuario",
     id: null,
-    datos: { nombre, email, telefono, rol },
+    datos: { nombre, email, telefono, rol, usuario },
     valeLaPena: (d) =>
-      Boolean(d.nombre.trim() || d.email.trim() || d.telefono.trim()),
+      Boolean(d.nombre.trim() || d.email.trim() || d.telefono.trim() || d.usuario?.trim()),
     recuperar: (d) => {
       setNombre(d.nombre);
       setEmail(d.email);
+      // Un borrador de antes de la 171 no lo trae.
+      setUsuario(d.usuario ?? "");
       setTelefono(d.telefono);
       setRol(d.rol);
     },
   });
 
-  const listo = nombre.trim().length >= 3 && email.includes("@") && !enviando;
+  // El mismo aviso que dará el servidor, mientras se escribe (171).
+  const problemaDelUsuario = normalizarUsuario(usuario) ? problemaUsuario(normalizarUsuario(usuario)) : null;
+  const listo = nombre.trim().length >= 3 && email.includes("@") && !problemaDelUsuario && !enviando;
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -132,6 +140,7 @@ function Formulario({
         nombre: nombre.trim(),
         email: email.trim(),
         telefono: telefono.trim() || undefined,
+        usuario: usuario.trim() || undefined,
         rol,
       });
       if (!r.ok) {
@@ -140,7 +149,7 @@ function Formulario({
       }
       // Ya está en la base: el borrador sobra.
       olvidarBorrador();
-      onCreada({ nombre: r.nombre, email: r.email, contrasena: r.contrasena });
+      onCreada({ nombre: r.nombre, email: r.email, usuario: r.usuario, contrasena: r.contrasena });
     });
   }
 
@@ -173,6 +182,24 @@ function Formulario({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+          />
+        </Campo>
+
+        <Campo
+          id="alta-usuario"
+          label="Usuario (opcional)"
+          ayuda="Para entrar sin escribir el correo. Letras sin tilde, números, punto o guion; de 3 a 30. Luego lo puede cambiar él."
+          error={problemaDelUsuario ?? undefined}
+        >
+          <Input
+            id="alta-usuario"
+            value={usuario}
+            onChange={(e) => setUsuario(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="por ejemplo, cventas"
+            aria-invalid={problemaDelUsuario ? true : undefined}
           />
         </Campo>
 
@@ -246,7 +273,7 @@ export function ContrasenaReciencreada({
   onCerrar,
   titulo,
 }: {
-  datos: { nombre: string; email: string; contrasena: string };
+  datos: { nombre: string; email: string; usuario?: string | null; contrasena: string };
   onCerrar: () => void;
   /** «Cuenta creada para…» al dar de alta; otra frase al darle una nueva (21/10). */
   titulo?: string;
@@ -271,7 +298,14 @@ export function ContrasenaReciencreada({
           <h3 className="text-base font-semibold">
             {titulo ?? `Cuenta creada para ${datos.nombre}`}
           </h3>
-          <p className="text-sm text-[var(--fg-muted)]">Entra con {datos.email}</p>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Entra con {datos.email}
+            {datos.usuario ? (
+              <>
+                {" "}o con el usuario <strong className="text-[var(--fg)]">{datos.usuario}</strong>
+              </>
+            ) : null}
+          </p>
         </div>
       </div>
 

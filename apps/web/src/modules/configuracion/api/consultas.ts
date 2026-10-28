@@ -149,7 +149,7 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
       .from("perfiles")
-      .select("id, nombre, email, rol, cargo, telefono, activo")
+      .select("id, nombre, email, usuario, rol, cargo, telefono, activo")
       .order("activo", { ascending: false })
       .order("nombre")
       .limit(200);
@@ -164,6 +164,7 @@ export async function usuarios(): Promise<Resultado<Usuario[]>> {
         id: String(u.id),
         nombre: String(u.nombre),
         email: (u.email as string | null) ?? null,
+        usuario: (u.usuario as string | null) ?? null,
         rol: String(u.rol) as Rol,
         cargo: (u.cargo as string | null) ?? null,
         telefono: (u.telefono as string | null) ?? null,

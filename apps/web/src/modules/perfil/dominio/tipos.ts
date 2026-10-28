@@ -18,6 +18,12 @@ export interface MiPerfil {
   id: string;
   nombre: string;
   email: string | null;
+  /**
+   * El usuario con el que también se entra (171). Este SÍ lo cambia cada uno:
+   * Luis, 29/10, «cada uno puede cambiar su usuario y contraseña, menos el
+   * correo». No es la credencial que da Auth, es un nombre para encontrarla.
+   */
+  usuario: string | null;
   telefono: string | null;
   cargo: string | null;
   /** Solo para enseñarlo. No se edita aquí. */

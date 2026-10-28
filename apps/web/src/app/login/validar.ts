@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { esCorreo, problemaUsuario } from "@/lib/usuario";
+
 /**
  * Lo que se escribe en el login, validado antes de molestar a Supabase
  * (revisión de producción del 15/10). Luis: *«que no acepte espacios, que
@@ -13,19 +15,39 @@ import { z } from "zod";
  * Pura y sin Next, para probarla.
  */
 export const esquemaLogin = z.object({
+  /*
+    El campo se sigue llamando `correo`, pero desde la 171 acepta también el
+    usuario (Luis, 29/10: «aparte de ingresar por correo también pueda
+    ingresar por usuario»). Con «@» es un correo; sin «@», un usuario.
+  */
   correo: z
     .string()
     .trim()
     .toLowerCase()
-    .min(1, "Escriba su correo.")
-    .refine((v) => !/\s/.test(v), "El correo no puede tener espacios.")
-    .pipe(z.string().email("Ese correo no es válido. Revise que esté bien escrito.")),
+    .min(1, "Escriba su correo o su usuario.")
+    .refine((v) => !/\s/.test(v), "El correo o el usuario no puede tener espacios.")
+    .superRefine((v, ctx) => {
+      if (/\s/.test(v)) return; // ya lo dijo el refine de arriba
+      const problema = esCorreo(v)
+        ? z.string().email().safeParse(v).success
+          ? null
+          : "Ese correo no es válido. Revise que esté bien escrito."
+        : problemaUsuario(v);
+      if (problema) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problema });
+    }),
   clave: z
     .string()
     .refine((v) => v.trim().length > 0, "Escriba su contraseña.")
     .refine((v) => v === v.trim(), "La contraseña no puede empezar ni terminar con un espacio.")
     .refine((v) => v.length <= 72, "La contraseña es demasiado larga."),
 });
+
+/**
+ * El único mensaje para «no entra»: correo que no existe, usuario que no
+ * existe o contraseña mala. Si fueran distintos, el login serviría para
+ * averiguar qué cuentas hay (171).
+ */
+export const MENSAJE_CREDENCIALES = "Correo, usuario o contraseña incorrectos.";
 
 /**
  * Solo una ruta interna, para que `destino` no sirva de trampolín a otro

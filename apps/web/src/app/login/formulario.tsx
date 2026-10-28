@@ -31,18 +31,25 @@ export function FormularioLogin({ destino }: { destino: string }) {
       <input type="hidden" name="destino" value={destino} />
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="correo">Correo</Label>
+        <Label htmlFor="correo">Correo o usuario</Label>
+        {/*
+          `type="text"` y no `email` desde la 171: con `email`, el teclado del
+          celular esconde letras y el navegador marca «wfernandez» como mal
+          escrito. `name` sigue siendo `correo`, que es lo que lee la acción.
+        */}
         <Input
           id="correo"
           name="correo"
-          type="email"
+          type="text"
+          inputMode="email"
           autoComplete="username"
           required
           defaultValue={estado.correo ?? ""}
           key={estado.correo ?? ""}
           autoCapitalize="none"
+          autoCorrect="off"
           spellCheck={false}
-          placeholder="nombre@rodatech.pe"
+          placeholder="nombre@rodatech.pe o su usuario"
         />
       </div>
 

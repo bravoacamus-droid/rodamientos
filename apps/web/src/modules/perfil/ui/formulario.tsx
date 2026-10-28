@@ -10,12 +10,14 @@ import { useRouter } from "next/navigation";
 import { Button, Campo, Input, toast } from "@rodatech/ui";
 
 import { cambiarMiContrasena, guardarMiPerfil } from "../acciones/guardar";
+import { normalizarUsuario, problemaUsuario } from "@/lib/usuario";
+
 import { MINIMO_CONTRASENA, type MiPerfil } from "../dominio/tipos";
 
 /**
  * Mis datos.
  *
- * Tres campos y ninguno es una credencial. El correo y el rol se enseñan al
+ * Nombre, teléfono y el usuario con el que también se entra (171). El correo y el rol se enseñan al
  * lado, apagados, porque la pregunta «¿y esto por qué no lo puedo cambiar?» se
  * responde mejor enseñando el dato que escondiéndolo.
  */
@@ -23,6 +25,7 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
   const [datos, setDatos] = React.useState({
     nombre: perfil.nombre,
     telefono: perfil.telefono ?? "",
+    usuario: perfil.usuario ?? "",
   });
   const router = useRouter();
 
@@ -38,7 +41,12 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
 
   const sinCambios =
     datos.nombre === perfil.nombre &&
-    datos.telefono === (perfil.telefono ?? "");
+    datos.telefono === (perfil.telefono ?? "") &&
+    normalizarUsuario(datos.usuario) === (perfil.usuario ?? "");
+
+  // El mismo aviso que dará el servidor, mientras se escribe (171).
+  const usuarioLimpio = normalizarUsuario(datos.usuario);
+  const problemaDelUsuario = usuarioLimpio ? problemaUsuario(usuarioLimpio) : null;
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +54,7 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
       const r = await guardarMiPerfil({
         nombre: datos.nombre,
         telefono: datos.telefono || null,
+        usuario: datos.usuario,
       });
       if (r.ok) {
         toast.success(r.mensaje);
@@ -75,10 +84,34 @@ export function FormMisDatos({ perfil }: { perfil: MiPerfil }) {
             onChange={(e) => setDatos((d) => ({ ...d, telefono: e.target.value }))}
           />
         </Campo>
+
+        {/*
+          171. Luis, 29/10: «aparte de ingresar por correo también pueda
+          ingresar por usuario. Cada uno puede cambiar su usuario y
+          contraseña, menos el correo».
+        */}
+        <Campo
+          id="usuario"
+          label="Usuario para entrar"
+          ayuda="Puedes entrar con este usuario o con tu correo. Letras sin tilde, números, punto o guion; de 3 a 30."
+          error={problemaDelUsuario ?? undefined}
+        >
+          <Input
+            id="usuario"
+            value={datos.usuario}
+            onChange={(e) => setDatos((d) => ({ ...d, usuario: e.target.value }))}
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="por ejemplo, wfernandez"
+            aria-invalid={problemaDelUsuario ? true : undefined}
+          />
+        </Campo>
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={guardando || sinCambios}>
+        <Button type="submit" disabled={guardando || sinCambios || Boolean(problemaDelUsuario)}>
           {guardando ? "Guardando…" : "Guardar cambios"}
         </Button>
         {sinCambios ? (

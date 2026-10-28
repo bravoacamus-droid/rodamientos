@@ -8,6 +8,7 @@ import { clienteAdmin, hayClaveAdmin } from "@rodatech/db/admin";
 import { mensajeDeError } from "@/lib/errores";
 import { apuntarIntento, esperaParaEntrar, minutosDeEspera } from "@/lib/limite-login";
 import { problemaContrasenaNueva } from "@/app/login/validar";
+import { esquemaUsuarioOpcional, esUsuarioRepetido, MENSAJE_USUARIO_REPETIDO } from "@/lib/usuario";
 
 import { MINIMO_CONTRASENA } from "../dominio/tipos";
 
@@ -26,6 +27,8 @@ const esquema = z
   .object({
     nombre: z.string().trim().min(2, "El nombre es demasiado corto.").max(120),
     telefono: z.string().trim().max(40).nullable(),
+    // El usuario con el que también se entra (171). Vacío es «no tengo».
+    usuario: esquemaUsuarioOpcional,
   })
   .strict();
 
@@ -38,12 +41,15 @@ const esquema = z
  * el identificador en vez de comprobarlo.
  *
  * Y tres cosas que NO se escriben nunca aquí: `rol`, `activo` y `email`. Las
- * dos primeras las defiende además la base desde la 077; el correo es la
- * credencial con la que se entra y se cambia por otro camino.
+ * dos primeras las defiende además la base desde la 077, y el correo desde la
+ * 171: es la credencial con la que se entra y la cambia gerencia. El USUARIO
+ * sí (171): Luis, 29/10, «cada uno puede cambiar su usuario y contraseña,
+ * menos el correo».
  */
 export async function guardarMiPerfil(cambios: {
   nombre: string;
   telefono: string | null;
+  usuario: string;
 }): Promise<ResultadoPerfil> {
   const usuario = await usuarioActual();
   if (!usuario) return { ok: false, error: "Hay que iniciar sesión." };
@@ -75,11 +81,15 @@ export async function guardarMiPerfil(cambios: {
         // uno que no se ve». La diferencia importa en las consultas que
         // preguntan si hay con qué avisar.
         telefono: datos.data.telefono || null,
+        usuario: datos.data.usuario,
       })
       .eq("id", usuario.id)
       .select("id");
 
-    if (error) return { ok: false, error: mensajeDeError(error) };
+    if (error) {
+      if (esUsuarioRepetido(error)) return { ok: false, error: MENSAJE_USUARIO_REPETIDO };
+      return { ok: false, error: mensajeDeError(error) };
+    }
     if (!data || data.length === 0) {
       return {
         ok: false,

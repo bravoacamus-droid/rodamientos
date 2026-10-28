@@ -322,6 +322,8 @@ export const ETIQUETA_CAMPO: Record<string, string> = {
   detraccion_monto_minimo: "Detracción desde",
   agente_retencion: "Agente de retención",
   email: "Correo",
+  // 171: el usuario con el que también se entra.
+  usuario: "Usuario para entrar",
   telefono: "Teléfono",
   celular: "Celular",
 };

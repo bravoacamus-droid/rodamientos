@@ -135,6 +135,8 @@ export interface Usuario {
   id: string;
   nombre: string;
   email: string | null;
+  /** Con el que también entra, además del correo (171). */
+  usuario: string | null;
   rol: Rol;
   cargo: string | null;
   telefono: string | null;
