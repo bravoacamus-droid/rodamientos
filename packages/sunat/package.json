@@ -12,7 +12,8 @@
     "./impresion": "./src/impresion/index.ts",
     "./guia": "./src/dominio/guia.ts",
     "./letras": "./src/ubl/numero-a-letras.ts",
-    "./red": "./src/red.ts"
+    "./red": "./src/red.ts",
+    "./certificado": "./src/firma/certificado.ts"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.6",
