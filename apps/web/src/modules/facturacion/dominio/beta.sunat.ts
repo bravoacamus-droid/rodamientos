@@ -243,6 +243,28 @@ describe("SUNAT beta", () => {
     expect(r.aceptado).toBe(true);
   });
 
+  it("nota de débito por aumento en el valor, sobre la primera", async () => {
+    // Auditoría SUNAT 28/10 (M9): la 08 tenía XML, firma y botón, y nunca
+    // había salido a SUNAT. Va con la línea que arma `lineasDeNota` para un
+    // motivo que no es por producto: «NOTA», 1 unidad, el importe sin IGV.
+    const nota = detalle({
+      correlativo: BASE,
+      tipo: "nota_debito",
+      serie: "FD01",
+      numero: `FD01-${BASE}`,
+      motivo_nota_codigo: "02",
+      lineas: [{ ...linea("NOTA", 1, 8.47), descripcion: `Ajuste de precio sobre F001-${BASE}`, marca: null }],
+    });
+    const r = await conector.emitirNota(
+      notaParaSunat(enMonedaDelDocumento(nota), EMPRESA, {
+        afectado: { tipoDocumento: "01", serie: "F001", correlativo: BASE },
+        descripcionMotivo: "Aumento en el valor",
+      }),
+    );
+    informe("Nota de débito 02", r);
+    expect(r.aceptado).toBe(true);
+  });
+
   it("comunicación de baja de la factura en soles", async () => {
     const r = await conector.emitirComunicacionBaja({
       correlativo: 1 + (BASE % 900),
