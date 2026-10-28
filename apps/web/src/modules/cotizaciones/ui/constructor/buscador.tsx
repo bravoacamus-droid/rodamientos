@@ -78,6 +78,28 @@ export function BuscadorLineas({
     setAbierto(false);
   };
 
+  const crear = () => {
+    if (!onCrear) return;
+    /*
+      Se limpia igual que al elegir un producto.
+
+      Sin esto, la caja se queda con el término de antes y con
+      el «no hay ningún producto» encima —una respuesta que ya
+      no es verdad, porque acaba de crearse—. Probado en
+      pantalla el 16/09: la línea entraba bien y el aviso viejo
+      seguía tapándola.
+
+      Se limpia AL ABRIR el diálogo y no al crear: el código ya
+      viaja dentro, y si se cancela, el sitio donde se vuelve a
+      escribir es una caja vacía, que es lo que se espera.
+    */
+    const codigo = termino.trim();
+    setTermino("");
+    limpiar();
+    setAbierto(false);
+    onCrear(codigo);
+  };
+
   const teclas = (e: React.KeyboardEvent) => {
     /*
       Enter en esta caja NUNCA envía el formulario.
@@ -107,24 +129,44 @@ export function BuscadorLineas({
 
   return (
     <div ref={contenedor} className="relative">
-      <Input
-        value={termino}
-        onChange={(e) => setTermino(e.target.value)}
-        onFocus={() => resultados.length > 0 && setAbierto(true)}
-        onKeyDown={teclas}
-        // Corto: el largo («…código de fabricante o descripción») salía
-        // cortado a 390 px. El del fabricante también se encuentra; lo dice
-        // el texto de la sección (revisión por módulos del 02/10).
-        placeholder="Buscar por código o descripción…"
-        aria-label="Buscar producto"
-        autoComplete="off"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1 basis-60">
+          <Input
+            value={termino}
+            onChange={(e) => setTermino(e.target.value)}
+            onFocus={() => resultados.length > 0 && setAbierto(true)}
+            onKeyDown={teclas}
+            // Corto: el largo («…código de fabricante o descripción») salía
+            // cortado a 390 px. El del fabricante también se encuentra; lo dice
+            // el texto de la sección (revisión por módulos del 02/10).
+            placeholder="Buscar por código o descripción…"
+            aria-label="Buscar producto"
+            autoComplete="off"
+          />
 
-      {buscando ? (
-        <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
-          buscando…
-        </span>
-      ) : null}
+          {buscando ? (
+            <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
+              buscando…
+            </span>
+          ) : null}
+        </div>
+        {/*
+          Crear, al lado de la caja mientras se busca (Willy, 29/10, por Luis:
+          «que salga al lado, no que baje»). Con «6205» salen veinte y
+          ninguno es de la marca que pide el cliente: la salida del vacío no
+          aparecía porque había resultados.
+        */}
+        {onCrear && termino.trim().length > 0 ? (
+          <button
+            type="button"
+            onClick={crear}
+            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+          >
+            <Plus className="size-4 shrink-0" aria-hidden="true" />
+            Crear «{termino.trim()}»
+          </button>
+        ) : null}
+      </div>
 
       {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
         <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
@@ -149,26 +191,7 @@ export function BuscadorLineas({
               {onCrear ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    /*
-                      Se limpia igual que al elegir un producto.
-
-                      Sin esto, la caja se queda con el término de antes y con
-                      el «no hay ningún producto» encima —una respuesta que ya
-                      no es verdad, porque acaba de crearse—. Probado en
-                      pantalla el 16/09: la línea entraba bien y el aviso viejo
-                      seguía tapándola.
-
-                      Se limpia AL ABRIR el diálogo y no al crear: el código ya
-                      viaja dentro, y si se cancela, el sitio donde se vuelve a
-                      escribir es una caja vacía, que es lo que se espera.
-                    */
-                    const codigo = termino.trim();
-                    setTermino("");
-                    limpiar();
-                    setAbierto(false);
-                    onCrear(codigo);
-                  }}
+                  onClick={crear}
                   className="mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
                 >
                   <Plus className="size-4 shrink-0" aria-hidden="true" />
@@ -261,6 +284,7 @@ export function BuscadorLineas({
               </span>
             </button>
           ))}
+
         </div>
       ) : null}
     </div>

@@ -49,7 +49,7 @@ import { SelectorContacto } from "./selector-contacto";
 import { FilaLinea, TarjetaLinea } from "./linea";
 import { ResumenConstructor } from "./resumen";
 import { NoRegistrado } from "./no-registrado";
-import { History } from "lucide-react";
+import { History, Plus } from "lucide-react";
 import {
   armarBorrador,
   claveBorrador,
@@ -523,8 +523,17 @@ export function Constructor({
                     anteriores de cada uno.
                   </p>
                 </div>
-                {/* Arriba a la derecha (Luis, 09/10): lo que no está en el catálogo. */}
-                <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
+                {/* Arriba a la derecha (Luis, 09/10): lo que no está en el catálogo.
+                    Y al lado, darlo de alta en el catálogo sin tener que
+                    buscarlo antes (Willy, 29/10, por Luis: «un botón de crear
+                    un nuevo producto al costado de producto no registrado»). */}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={() => setCreando("")} className="gap-1.5">
+                    <Plus className="size-4" aria-hidden="true" />
+                    Nuevo producto
+                  </Button>
+                  <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
+                </div>
               </div>
               {/*
                 Y la salida cuando el código no existe.
