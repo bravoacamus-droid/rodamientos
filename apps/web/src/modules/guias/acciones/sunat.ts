@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteAdmin } from "@rodatech/db/admin";
+import type { Json } from "@rodatech/db/tipos";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
-import { ErrorGre, MENSAJE_SIN_CONEXION, esErrorDeRed, type ResultadoCdr } from "@rodatech/sunat";
+import { esErrorDeRed } from "@rodatech/sunat";
 
 import { bloqueoPorSeriePrueba, conectorSunat, modoGuias } from "@/modules/facturacion/api/configuracion";
 
 import { detalleGuia } from "../api/consultas";
+import { mandarGuia, preguntarGuia, type CambiosGuia, type Desenlace, type PuertoGuia } from "../dominio/envio-sunat";
 import { faltaParaSunat, guiaParaSunat } from "../dominio/sunat";
 
 /**
@@ -21,16 +23,15 @@ import { faltaParaSunat, guiaParaSunat } from "../dominio/sunat";
  * stock e imprimía, y no la mandaba.
  *
  * Va por la API REST de la GRE (`emitirGuia` del conector): se manda, SUNAT
- * da un ticket, y la respuesta se pregunta. Casi siempre tarda segundos, así
- * que se pregunta aquí mismo un par de veces antes de devolver; si no ha
- * contestado, queda «enviada» y se pregunta luego con su botón.
+ * da un ticket, y la respuesta se pregunta. El viaje entero —preguntar por el
+ * ticket anterior antes de reenviar, guardar el CDR, no dar por rechazada una
+ * guía que SUNAT ya tiene— está en `dominio/envio-sunat.ts` (auditoría SUNAT
+ * 28/10, M4 y M5); aquí quedan los permisos, el candado y la base.
  */
 
-export type ResultadoSunatGuia =
-  | { ok: true; estado: "aceptada" | "rechazada" | "en_proceso"; mensaje: string }
-  | { ok: false; error: string };
+export type ResultadoSunatGuia = Desenlace;
 
-const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const esperar = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const hoyLima = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 
 async function puede(): Promise<string | null> {
@@ -41,22 +42,26 @@ async function puede(): Promise<string | null> {
   return null;
 }
 
-/** Guarda lo que contestó SUNAT y lo traduce para la pantalla. */
-async function guardarRespuesta(id: string, numero: string, r: ResultadoCdr): Promise<ResultadoSunatGuia> {
-  await clienteAdmin()
-    .from("guias_remision")
-    .update({
-      estado_sunat: r.aceptado ? (r.observaciones.length > 0 ? "observado" : "aceptado") : "rechazado",
-      sunat_codigo_respuesta: r.codigo ?? null,
-      sunat_mensaje: r.descripcion ?? null,
-    })
-    .eq("id", id);
+/** Escribe en la guía con service_role (127: las columnas de SUNAT solo las toca el servidor). */
+function puertoGuia(id: string): PuertoGuia {
+  return {
+    async guardar(cambios: CambiosGuia) {
+      const { sunat_respuesta, ...resto } = cambios;
+      await clienteAdmin()
+        .from("guias_remision")
+        .update({
+          ...resto,
+          ...(sunat_respuesta !== undefined ? { sunat_respuesta: sunat_respuesta as unknown as Json } : {}),
+        })
+        .eq("id", id);
+    },
+  };
+}
+
+function refrescar(id: string) {
   revalidatePath(`/guias/${id}`);
   revalidatePath("/guias");
   revalidatePath("/sunat");
-  return r.aceptado
-    ? { ok: true, estado: "aceptada", mensaje: `SUNAT aceptó la guía ${numero}. Ya puede salir la mercadería.` }
-    : { ok: true, estado: "rechazada", mensaje: `SUNAT rechazó la guía ${numero}: ${r.descripcion}` };
 }
 
 export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> {
@@ -95,6 +100,14 @@ export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> 
   const emitidaEn = fecha === hoyLima() ? new Date() : new Date(`${fecha}T12:00:00-05:00`);
 
   const admin = clienteAdmin();
+  // Lo del intento anterior, ANTES de que el candado lo pise: el ticket es lo
+  // único con lo que se puede preguntar a SUNAT qué pasó (M5).
+  const { data: antes } = await admin
+    .from("guias_remision")
+    .select("sunat_ticket, sunat_enviado_en")
+    .eq("id", id)
+    .maybeSingle();
+
   // «Enviada» ANTES de llamar, como la factura, y como CANDADO: solo si
   // nadie la tiene en vuelo. Una enviada se pregunta, no se reenvía; pasados
   // 15 minutos sin ticket se da por muerta.
@@ -109,53 +122,19 @@ export async function enviarGuiaASunat(id: string): Promise<ResultadoSunatGuia> 
     return { ok: false, error: `${g.numero} ya se mandó y SUNAT la está revisando: pulsa «Preguntar a SUNAT».` };
   }
 
-  let ticket: string;
-  try {
-    const envio = await conector.datos.emitirGuia(guiaParaSunat(g, { ruc: empresa.ruc, razonSocial: empresa.razon_social }, emitidaEn));
-    ticket = envio.ticket;
-    await admin.from("guias_remision").update({ sunat_ticket: ticket }).eq("id", id);
-  } catch (e) {
-    // Un corte se dice en cristiano, no «fetch failed» (auditoría 21/10).
-    const mensaje = esErrorDeRed(e)
-      ? MENSAJE_SIN_CONEXION
-      : e instanceof Error
-        ? e.message
-        : "No se pudo hablar con SUNAT.";
-    // Un 4xx de validación es un rechazo del documento; lo demás (red,
-    // credenciales, 5xx) deja la guía pendiente para volver a intentarlo.
-    const rechazo = e instanceof ErrorGre && e.http === 422;
-    await admin
-      .from("guias_remision")
-      .update({
-        estado_sunat: rechazo ? "rechazado" : "pendiente",
-        sunat_codigo_respuesta: e instanceof ErrorGre ? e.codigo : null,
-        sunat_mensaje: mensaje,
-      })
-      .eq("id", id);
-    revalidatePath(`/guias/${id}`);
-    revalidatePath("/sunat");
-    return rechazo
-      ? { ok: true, estado: "rechazada", mensaje: `SUNAT rechazó la guía ${g.numero}: ${mensaje}` }
-      : { ok: false, error: mensaje };
-  }
-
-  // SUNAT suele contestar en segundos: se pregunta aquí un par de veces.
-  for (const pausa of [1500, 2500, 4000]) {
-    await esperar(pausa);
-    try {
-      const r = await conector.datos.consultarGuia(ticket);
-      if (!("enProceso" in r)) return guardarRespuesta(id, g.numero, r);
-    } catch {
-      break;
-    }
-  }
-  revalidatePath(`/guias/${id}`);
-  revalidatePath("/sunat");
-  return {
-    ok: true,
-    estado: "en_proceso",
-    mensaje: `Enviada. SUNAT todavía la está revisando: pulsa «Preguntar a SUNAT» en un momento.`,
-  };
+  const datos = conector.datos;
+  const resultado = await mandarGuia({
+    numero: g.numero,
+    previo: { ticket: antes?.sunat_ticket ?? null, yaSeMando: Boolean(antes?.sunat_enviado_en) },
+    sunat: {
+      enviar: () => datos.emitirGuia(guiaParaSunat(g, { ruc: empresa.ruc, razonSocial: empresa.razon_social }, emitidaEn)),
+      consultar: (ticket) => datos.consultarGuia(ticket),
+    },
+    guia: puertoGuia(id),
+    esperar,
+  });
+  refrescar(id);
+  return resultado;
 }
 
 /** Pregunta a SUNAT cómo quedó una guía ya enviada. */
@@ -166,17 +145,23 @@ export async function consultarGuiaSunat(id: string): Promise<ResultadoSunatGuia
 
   const { data: g } = await clienteAdmin()
     .from("guias_remision")
-    .select("id, numero, sunat_ticket, estado_sunat")
+    .select("id, numero, sunat_ticket")
     .eq("id", id)
     .maybeSingle();
   if (!g?.sunat_ticket) return { ok: false, error: "Esa guía todavía no se mandó a SUNAT." };
 
   const conector = await conectorSunat();
   if (!conector.ok) return { ok: false, error: conector.error };
+  const datos = conector.datos;
   try {
-    const r = await conector.datos.consultarGuia(g.sunat_ticket);
-    if ("enProceso" in r) return { ok: true, estado: "en_proceso", mensaje: "SUNAT todavía la está revisando. Pregunta otra vez en un momento." };
-    return guardarRespuesta(id, g.numero ?? "", r);
+    const r = await preguntarGuia({
+      numero: g.numero ?? "",
+      ticket: g.sunat_ticket,
+      sunat: { consultar: (ticket) => datos.consultarGuia(ticket) },
+      guia: puertoGuia(id),
+    });
+    refrescar(id);
+    return r;
   } catch (e) {
     if (esErrorDeRed(e)) {
       return { ok: false, error: "No se pudo conectar con SUNAT (sin internet o SUNAT caído). La guía sigue enviada: vuelve a preguntar en unos minutos." };

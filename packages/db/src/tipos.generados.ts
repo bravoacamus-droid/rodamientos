@@ -2964,6 +2964,7 @@ export type Database = {
           sunat_enviado_en: string | null
           sunat_hash_cdr: string | null
           sunat_mensaje: string | null
+          sunat_respuesta: Json | null
           sunat_ticket: string | null
           sunat_xml_url: string | null
           transportista_documento: string | null
@@ -3015,6 +3016,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
           transportista_documento?: string | null
@@ -3066,6 +3068,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
           transportista_documento?: string | null

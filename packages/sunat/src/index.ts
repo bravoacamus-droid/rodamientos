@@ -53,7 +53,9 @@ import { generarGuiaXml } from "./ubl/guia";
 import type { GuiaRemision } from "./dominio/guia";
 import { consultarTicketGre, enviarGre, ErrorGre, type CredencialesGre } from "./transporte/gre";
 
-export { ErrorGre, hashZip } from "./transporte/gre";
+// `enviarGre` sale también para las pruebas del viaje de la guía (M5): con un
+// SUNAT falso por `fetch`, el envío real sin tener que firmar.
+export { ErrorGre, enviarGre, hashZip } from "./transporte/gre";
 export type { CredencialesGre } from "./transporte/gre";
 
 export type { ResultadoPrueba } from "./transporte/soap";
