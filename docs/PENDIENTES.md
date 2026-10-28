@@ -8468,7 +8468,7 @@ como cualquier ajuste y se corrige con otro.
 - La hoja que manda es **TOTAL** (260 filas, la única con familia y
   descripción). Las hojas por marca (SKF, NTN, INA-FAG, OTROS) **no cuadran
   con ella** —p. ej. `6000-2Z/C3` SKF: 20 en TOTAL, 0 en SKF—; suman 2108
-  contra 1791. **Hay que preguntarle a Willy cuál es la buena.**
+  contra 1791. Luis, 29/10: *«ese es su stock actual»* → manda TOTAL.
 - `UCP207D1` NTN sale dos veces (ítems 131 y 244, 10 y 10): se tomó como una
   fila repetida → 10, no 20. Por eso 1781 y no 1791.
 - **177 ya existían** (incluidos los que el sistema anterior guardaba como
