@@ -27,14 +27,24 @@ export const MOTIVOS_CREDITO = {
   BONIFICACION: "08",
   DISMINUCION_VALOR: "09",
   OTROS: "10",
+  // Faltan a propósito el 11 (exportación), el 12 (IVAP) y el 13 (corregir
+  // cuotas o monto neto pendiente). Están en la tabla, inactivos (167): el 13
+  // va por importe cero y lleva `PaymentTerms` con las cuotas, que la nota no
+  // arma todavía. Lo que no está aquí, la Server Action lo rechaza.
 } as const;
 
-/** Los motivos del catálogo 10 (nota de débito). */
+/**
+ * Los motivos del catálogo 10 (nota de débito) que el ERP emite.
+ *
+ * Hasta la 167 había un `AJUSTE_EXPORTACION: "11"`: en el catálogo vigente
+ * exportación es el 10 y el 11 es IVAP, así que esa nota habría salido a
+ * SUNAT como «Ajustes afectos al IVAP». Rodatech no exporta: ni el uno ni el
+ * otro se ofrecen.
+ */
 export const MOTIVOS_DEBITO = {
   INTERESES_MORA: "01",
   AUMENTO_VALOR: "02",
   PENALIDADES: "03",
-  AJUSTE_EXPORTACION: "11",
 } as const;
 
 export type TipoNota = "nota_credito" | "nota_debito";

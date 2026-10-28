@@ -74,6 +74,10 @@ export const TRIBUTO = {
 } as const;
 
 // ---- Catálogo 09: Tipo de nota de crédito ----
+// Completo según el Anexo III de la RS 193-2020/SUNAT (01 a 13). Que un
+// código esté aquí no quiere decir que el ERP lo emita: eso lo deciden
+// `MOTIVOS_CREDITO` en la app y `motivos_nota.activo` (167). El 13, por
+// ejemplo, exige `PaymentTerms` con las cuotas, y `generarNotaXml` no lo arma.
 export const MOTIVO_NOTA_CREDITO = {
   ANULACION_OPERACION: "01",
   ANULACION_ERROR_RUC: "02",
@@ -82,15 +86,26 @@ export const MOTIVO_NOTA_CREDITO = {
   DESCUENTO_POR_ITEM: "05",
   DEVOLUCION_TOTAL: "06",
   DEVOLUCION_POR_ITEM: "07",
+  BONIFICACION: "08",
+  DISMINUCION_VALOR: "09",
+  OTROS_CONCEPTOS: "10",
+  AJUSTE_EXPORTACION: "11",
+  AJUSTE_IVAP: "12",
+  CORRECCION_CUOTAS: "13",
 } as const;
 export type MotivoNotaCredito =
   (typeof MOTIVO_NOTA_CREDITO)[keyof typeof MOTIVO_NOTA_CREDITO];
 
 // ---- Catálogo 10: Tipo de nota de débito ----
+// Según el Anexo V de la RS 340-2017/SUNAT, vigente para UBL 2.1: exportación
+// es el 10 y el 11 es IVAP. No es la numeración del catálogo 09, y la 007 los
+// confundió (corregido en la 167).
 export const MOTIVO_NOTA_DEBITO = {
   INTERESES_MORA: "01",
   AUMENTO_VALOR: "02",
   PENALIDADES: "03",
+  AJUSTE_EXPORTACION: "10",
+  AJUSTE_IVAP: "11",
 } as const;
 export type MotivoNotaDebito =
   (typeof MOTIVO_NOTA_DEBITO)[keyof typeof MOTIVO_NOTA_DEBITO];

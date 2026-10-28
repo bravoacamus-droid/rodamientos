@@ -150,12 +150,31 @@ describe("bloqueosNota", () => {
   });
 
   it("el motivo tiene que ser del catálogo del tipo", () => {
-    // «11 · ajustes de exportación» es de débito: en una nota de crédito no
-    // existe, y SUNAT rechaza el código.
+    // El 08 «Bonificación» es de crédito: en una nota de débito no existe, y
+    // SUNAT rechaza el código.
     expect(
-      bloqueosNota(FACTURA, "nota_credito", MOTIVOS_DEBITO.AJUSTE_EXPORTACION, 100, HOY)
+      bloqueosNota(FACTURA, "nota_debito", MOTIVOS_CREDITO.BONIFICACION, 100, HOY)
         .some((b) => b.campo === "motivo"),
     ).toBe(true);
+    expect(
+      bloqueosNota(FACTURA, "nota_debito", MOTIVOS_DEBITO.AUMENTO_VALOR, 100, HOY)
+        .some((b) => b.campo === "motivo"),
+    ).toBe(false);
+  });
+
+  it("no deja emitir los motivos del catálogo que el ERP no sabe armar (167)", () => {
+    // 13: corregir cuotas, va por importe cero y con PaymentTerms. 11/12 de
+    // crédito y 10/11 de débito: exportación e IVAP.
+    for (const codigo of ["11", "12", "13"]) {
+      expect(
+        bloqueosNota(FACTURA, "nota_credito", codigo, 100, HOY).some((b) => b.campo === "motivo"),
+      ).toBe(true);
+    }
+    for (const codigo of ["10", "11"]) {
+      expect(
+        bloqueosNota(FACTURA, "nota_debito", codigo, 100, HOY).some((b) => b.campo === "motivo"),
+      ).toBe(true);
+    }
   });
 
   /** SUNAT rechaza una nota en cero con el error 2800. */
