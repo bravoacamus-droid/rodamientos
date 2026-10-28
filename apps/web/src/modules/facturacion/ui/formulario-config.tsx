@@ -166,26 +166,16 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
             )}
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Serie factura</span>
-              <Input
-                name="serie_factura"
-                defaultValue={config.serie_factura}
-                className="font-mono"
-                maxLength={4}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Serie boleta</span>
-              <Input
-                name="serie_boleta"
-                defaultValue={config.serie_boleta}
-                className="font-mono"
-                maxLength={4}
-              />
-            </label>
-          </div>
+          {/*
+            Aquí estaban «Serie factura» y «Serie boleta» (B1, 28/10). La
+            factura numeraba por ese campo y no por la tabla de series, así que
+            marcar F002 «Usar por defecto» no la movía. Ahora la serie de cada
+            documento es la marcada «Por defecto» en «Series y correlativos».
+          */}
+          <p className="self-end text-sm text-[var(--fg-muted)]">
+            La serie de la factura, de las notas y de la guía es la que está marcada{" "}
+            <strong>«Por defecto»</strong> en <strong>Series y correlativos</strong>, más abajo.
+          </p>
         </div>
 
         {/*

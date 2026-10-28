@@ -7,7 +7,7 @@ import { sinPermiso } from "@/lib/permisos";
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import type { Json } from "@rodatech/db/tipos";
 
-import { cotizacionParaFacturar } from "../api/consultas";
+import { cotizacionParaFacturar, serieFacturaPredeterminada } from "../api/consultas";
 import {
   bloqueosEmision,
   cuadreConGuias,
@@ -47,7 +47,8 @@ import { enviarASunat } from "./enviar";
 const esquema = z.object({
   cotizacion_id: z.string().uuid(),
   tipo: z.enum(["factura", "boleta"]),
-  serie: z.string().regex(/^[BF][A-Z0-9]{3}$/, "La serie no tiene el formato de SUNAT."),
+  /** Solo para comprobar que se emite en la serie que se vio (ver abajo). */
+  serie: z.string().regex(/^[BF][A-Z0-9]{3}$/, "La serie no tiene el formato de SUNAT.").optional(),
   fecha_emision: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida."),
   condicion_pago: z.enum(["contado", "credito"]),
   dias_credito: z.number().int().min(0).max(365),
@@ -247,11 +248,41 @@ export async function emitirComprobante(
   // La serie tiene que casar con el tipo: SUNAT exige F para factura y B para
   // boleta, y un cruce se rechaza con el correlativo ya gastado.
   const inicial = datos.tipo === "factura" ? "F" : "B";
-  if (!datos.serie.startsWith(inicial)) {
+  if (datos.serie && !datos.serie.startsWith(inicial)) {
     return {
       ok: false,
       error: `Una ${datos.tipo} tiene que ir en una serie que empiece por ${inicial}.`,
     };
+  }
+
+  /*
+    La factura sale en la serie PREDETERMINADA de su tipo (B1, 28/10), la de
+    «Series y correlativos», como las notas, la guía y la cotización. Ya no
+    la decide el campo «Serie factura» de las credenciales.
+
+    Lo que manda la pantalla solo sirve para comprobar que se emite lo que se
+    vio: si alguien cambió la predeterminada entre medias, se para y se dice,
+    en vez de numerar en otra serie que la que enseñaba la vista previa.
+  */
+  let serieEmision: string | null = null;
+  if (datos.tipo === "factura") {
+    const pred = await serieFacturaPredeterminada();
+    if (!pred) {
+      return {
+        ok: false,
+        error:
+          "No hay serie de factura por defecto. Márcala con «Usar por defecto» en Configuración › SUNAT y numeración.",
+      };
+    }
+    if (datos.serie && datos.serie !== pred.serie) {
+      return {
+        ok: false,
+        error: `La serie por defecto cambió a ${pred.serie} mientras preparabas esta factura. Vuelve a cargar la pantalla para emitirla en ${pred.serie}.`,
+      };
+    }
+    serieEmision = pred.serie;
+  } else {
+    serieEmision = datos.serie ?? null;
   }
 
   // Lo que de verdad se va a emitir: lo pedido, recortado contra lo
@@ -316,7 +347,8 @@ export async function emitirComprobante(
 
     const payload = {
       tipo: datos.tipo,
-      serie: datos.serie,
+      // `null` → la base toma la predeterminada de su tipo (138).
+      serie: serieEmision,
       cliente_id: cot.cliente_id,
       cotizacion_id: cot.id,
       // Lo tecleado al facturar manda sobre lo que traía la cotización: la

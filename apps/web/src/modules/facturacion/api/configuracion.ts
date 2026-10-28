@@ -39,7 +39,7 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
       .from("config_sunat")
       .select(
         `ambiente, usuario_sol, certificado_nombre, certificado_sujeto,
-         certificado_caduca_en, serie_factura, serie_boleta,
+         certificado_caduca_en,
          probado_en, probado_ok, probado_mensaje, actualizado_en, gre_client_id`,
       )
       .eq("id", 1)
@@ -64,8 +64,6 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
         certificado_nombre: data.certificado_nombre ?? null,
         certificado_sujeto: data.certificado_sujeto ?? null,
         certificado_caduca_en: data.certificado_caduca_en ?? null,
-        serie_factura: data.serie_factura ?? "F001",
-        serie_boleta: data.serie_boleta ?? "B001",
         probado_en: data.probado_en ?? null,
         probado_ok: data.probado_ok ?? null,
         gre_client_id: data.gre_client_id ?? null,

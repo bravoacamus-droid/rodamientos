@@ -206,8 +206,6 @@ export interface ConfigFiscal {
   certificado_nombre: string | null;
   certificado_sujeto: string | null;
   certificado_caduca_en: string | null;
-  serie_factura: string;
-  serie_boleta: string;
   probado_en: string | null;
   probado_ok: boolean | null;
   probado_mensaje: string | null;

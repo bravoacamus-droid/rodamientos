@@ -856,7 +856,9 @@ export type SeriesDeNota = Partial<Record<"nota_credito" | "nota_debito", { seri
  * La nota salía siempre en «FC01» —escrito en el código—, que es la serie de
  * prueba: en producción la base la rechaza (093) y no se habría podido emitir
  * ni una. Ahora sale la que se marque en «SUNAT y numeración», igual que la
- * factura. Solo series de factura (F…): las boletas se quitaron.
+ * factura (desde el 28/10; antes la factura leía otro campo, ver
+ * `serieFacturaPredeterminada`). Solo series de factura (F…): las boletas se
+ * quitaron.
  */
 export async function seriesDeNota(): Promise<SeriesDeNota> {
   try {
@@ -875,6 +877,36 @@ export async function seriesDeNota(): Promise<SeriesDeNota> {
     return r;
   } catch {
     return {};
+  }
+}
+
+/**
+ * La serie PREDETERMINADA de la factura (auditoría SUNAT 28/10, B1).
+ *
+ * La factura tomaba la serie del campo «Serie factura» del formulario de
+ * credenciales (`config_sunat.serie_factura`), y la tabla «Series y
+ * correlativos» —la que dice «Por defecto», la que manda a cambiar el aviso
+ * de la 093 y la que ya usaban las notas, la guía y la cotización— no la
+ * movía. Marcar F002 «Usar por defecto» dejaba la factura en F001, y en
+ * producción la base la rechazaba pidiendo hacer lo que ya estaba hecho.
+ *
+ * Ahora hay una sola fuente: la tabla. `null` si no hay ninguna marcada.
+ */
+export async function serieFacturaPredeterminada(): Promise<{ serie: string; prueba: boolean } | null> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("series_documento")
+      .select("serie, es_prueba")
+      .eq("tipo", "factura")
+      .eq("predeterminada", true)
+      .eq("activo", true)
+      .like("serie", "F%")
+      .limit(1)
+      .maybeSingle();
+    return data ? { serie: String(data.serie), prueba: Boolean(data.es_prueba) } : null;
+  } catch {
+    return null;
   }
 }
 

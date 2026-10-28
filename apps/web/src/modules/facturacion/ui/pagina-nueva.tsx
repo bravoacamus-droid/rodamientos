@@ -9,8 +9,8 @@ import { Volver } from "@/componentes/volver";
 
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
-import { configFiscal, estadoConfiguracion } from "../api/configuracion";
-import { cotizacionesFacturables } from "../api/consultas";
+import { estadoConfiguracion } from "../api/configuracion";
+import { cotizacionesFacturables, serieFacturaPredeterminada } from "../api/consultas";
 import { EmisorComprobante } from "./emisor";
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
@@ -48,9 +48,9 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
 
   // El emisor y las cuentas van para la VISTA PREVIA: se pinta con el mismo
   // componente que imprime, así que necesita los mismos datos que el papel.
-  const [cotizaciones, config, estado, emisor, cuentas] = await Promise.all([
+  const [cotizaciones, serie, estado, emisor, cuentas] = await Promise.all([
     cotizacionesFacturables(),
-    configFiscal(),
+    serieFacturaPredeterminada(),
     estadoConfiguracion(),
     emisorParaImprimir(),
     cuentasParaCobrar(),
@@ -90,6 +90,22 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
     );
   }
 
+  // Sin serie predeterminada la base no tiene por dónde numerar. Se dice aquí,
+  // antes de rellenar nada, y no al pulsar «Emitir».
+  if (!serie) {
+    return (
+      <EstadoVacio
+        titulo="No hay serie de factura por defecto"
+        descripcion="Marca una serie de factura con «Usar por defecto» en Configuración › SUNAT y numeración, en la tabla «Series y correlativos»."
+        accion={
+          <Link href="/configuracion/sunat" className={cn(buttonVariants({ variant: "primary" }), "px-3")}>
+            Ir a SUNAT y numeración
+          </Link>
+        }
+      />
+    );
+  }
+
   // `sv-SE` da `yyyy-mm-dd`, que es lo que espera un <input type="date"> y lo
   // que valida el dominio. La zona es explícita: el servidor corre en UTC y sin
   // fijarla una venta de las 7 de la tarde en Lima se fecharía al día siguiente
@@ -108,13 +124,26 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         </p>
       ) : null}
 
+      {serie.prueba && estado.ambiente === "produccion" ? (
+        <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
+          La serie por defecto es <strong>{serie.serie}</strong>, que es de <strong>pruebas</strong>, y
+          el sistema está en producción: la base no dejará emitir. Marca la serie real con «Usar por
+          defecto» en{" "}
+          <Link href="/configuracion/sunat" className="font-semibold underline">
+            SUNAT y numeración
+          </Link>
+          .
+        </p>
+      ) : null}
+
       <EmisorComprobante
         cotizaciones={cotizaciones.datos}
         hoy={hoy}
-        // Si la configuración no se puede leer —porque quien mira no es
-        // gerencia— se usan las series por defecto del esquema.
-        serieFactura={config.ok ? config.datos.serie_factura : "F001"}
-        serieBoleta={config.ok ? config.datos.serie_boleta : "B001"}
+        // La predeterminada de «Series y correlativos», la misma que usan las
+        // notas, la guía y la cotización (B1, 28/10). Antes salía del campo
+        // «Serie factura» de las credenciales, y marcar F002 por defecto no
+        // la movía.
+        serieFactura={serie.serie}
         cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
         guiaInicial={guia && guia.length > 0 ? guia : null}
         emisor={emisor}

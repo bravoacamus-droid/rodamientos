@@ -91,7 +91,6 @@ export function EmisorComprobante({
   cotizaciones,
   hoy,
   serieFactura,
-  serieBoleta,
   cotizacionInicial,
   guiaInicial,
   emisor,
@@ -101,8 +100,8 @@ export function EmisorComprobante({
   cotizaciones: { id: string; numero: string; fecha: string; cliente: string; total: number }[];
   /** La fecha la fija el servidor: el dominio no lee reloj. */
   hoy: string;
+  /** La predeterminada de su tipo en «Series y correlativos». */
   serieFactura: string;
-  serieBoleta: string;
   cotizacionInicial?: string | null;
   /**
    * Se llega desde «Facturar» en una guía: se marca SOLO esa. Con «Atender
@@ -424,7 +423,8 @@ export function EmisorComprobante({
     [cot, aEmitir, totales.total, tipo, opciones.guias],
   );
 
-  const serie = tipo === "factura" ? serieFactura : serieBoleta;
+  // Solo facturas (14/10), en la serie predeterminada de su tipo (28/10).
+  const serie = serieFactura;
 
   // En soles el umbral se mira directo; en dólares, al cambio del día.
   const llegaAlUmbral = tcDoc ? totalesDoc.total >= UMBRAL_RETENCION_SOLES : alcanzaUmbral(totales.total, tc);
