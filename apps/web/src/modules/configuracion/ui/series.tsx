@@ -122,9 +122,11 @@ export function TablaSeries({
         {/* `text-sm`: esto explica cómo funciona el correlativo, y es de lo
             que más falta hace leer de toda la pantalla. */}
         <p className="text-sm text-[var(--fg-subtle)]">
-          «Desde» es el número en el que se quedó el sistema anterior. «Va por»
-          es el último que se emitió aquí. El próximo documento se lleva el
-          mayor de los dos, más uno — los correlativos nunca retroceden.
+          <strong>«Primer número»</strong> es el primero que emitirá el ERP, no
+          el último que se usó: si tu última factura en el sistema anterior fue
+          la 567, pon 568. «Va por» es el último que se emitió aquí. El próximo
+          documento se lleva el mayor de estos dos: el primer número, o «Va
+          por» más uno. Los correlativos nunca retroceden.
         </p>
         {puedeEditar ? <DialogNuevaSerie /> : null}
       </div>
@@ -153,7 +155,7 @@ export function TablaSeries({
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-3 py-2 font-medium">Documento</th>
               <th className="px-3 py-2 font-medium">Serie</th>
-              <th className="px-3 py-2 text-right font-medium">Desde</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Primer número</th>
               <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Va por</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">El próximo</th>
               <th className="px-3 py-2 font-medium" />
@@ -321,7 +323,7 @@ function TarjetaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
 
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <div className="col-span-2 flex items-center justify-between gap-3">
-          <dt className="text-[var(--fg-subtle)]">Desde</dt>
+          <dt className="text-[var(--fg-subtle)]">Primer número</dt>
           <dd>
             <CampoDesde
               serie={serie}
@@ -391,7 +393,7 @@ function CampoDesde({
       value={inicial}
       onChange={(e) => setInicial(e.target.value.replace(/[^0-9]/g, ""))}
       inputMode="numeric"
-      aria-label={`Correlativo inicial de ${serie.serie}`}
+      aria-label={`Primer número que emitirá ${serie.serie}`}
       className={className}
     />
   ) : (
@@ -561,7 +563,7 @@ function DialogNuevaSerie() {
             </Campo>
 
             <div className="grid grid-cols-2 gap-3">
-              <Campo id="nueva-inicial" label="Empieza en">
+              <Campo id="nueva-inicial" label="Primer número">
                 <Input
                   id="nueva-inicial"
                   value={inicial}

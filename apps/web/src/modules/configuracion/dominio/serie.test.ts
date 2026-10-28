@@ -126,6 +126,17 @@ describe("avisosDelInicial", () => {
     const avisos = avisosDelInicial(serie({ correlativo_actual: 12 }), 1235);
     expect(avisos.at(-1)?.texto).toContain("F001-00001235");
   });
+
+  it("el número tecleado es el PRIMERO que se emitirá, y el anterior se da por usado", () => {
+    // Auditoría SUNAT 28/10: la última del sistema viejo fue la F002-567, así
+    // que se teclea 568. Lo mismo que hace `siguiente_correlativo()`.
+    const s = serie({ serie: "F002", correlativo_actual: 561 });
+    const avisos = avisosDelInicial(s, 568);
+    expect(avisos.at(-1)?.texto).toBe(
+      "El próximo documento será F002-00000568. El 567 y los anteriores se dan por usados.",
+    );
+    expect(proximoCorrelativo({ correlativo_actual: 561, correlativo_inicial: 568 })).toBe(568);
+  });
 });
 
 describe("serieValida", () => {

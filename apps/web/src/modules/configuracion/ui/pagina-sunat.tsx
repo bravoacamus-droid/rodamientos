@@ -104,8 +104,8 @@ export default async function PaginaConfigSunat() {
             sirve.
           </li>
           <li>
-            Los <strong>correlativos de partida</strong> por serie: desde qué
-            número sigue su sistema actual, para no repetir ni saltarse ninguno.
+            El <strong>primer número</strong> de cada serie: el último que dio
+            su sistema actual, más uno, para no repetir ni saltarse ninguno.
           </li>
         </ul>
       </section>

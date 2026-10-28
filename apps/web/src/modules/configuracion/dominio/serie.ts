@@ -104,7 +104,14 @@ export function avisosDelInicial(
 
   avisos.push({
     tono: "info",
-    texto: `El próximo documento será ${formatearNumero(serie, Math.max(nuevoInicial, serie.correlativo_actual + 1))}.`,
+    // Aquí `nuevoInicial` ya es mayor que «Va por», así que es el próximo. Se
+    // dice además cuál se da por usado: hasta el 28/10 la pantalla llamaba a
+    // este número «en el que se quedó el sistema anterior», y quien lo
+    // creyera teclearía 567 para seguir en la 568 y emitiría otra 567.
+    texto:
+      nuevoInicial > 1
+        ? `El próximo documento será ${formatearNumero(serie, nuevoInicial)}. El ${nuevoInicial - 1} y los anteriores se dan por usados.`
+        : `El próximo documento será ${formatearNumero(serie, nuevoInicial)}.`,
   });
 
   return avisos;
