@@ -8435,3 +8435,20 @@ Luis decidió devolver las opciones salvo la B: PED-26-00013 y 00014 **eran prue
 **Queda:** el PDF de CMP-26-00016 en Storage (`documentos-proveedor`), sin compra. Y el script de limpieza ya no hace nada si se vuelve a correr: sus cuentas no cuadran y se para.
 
 **Lección:** un agente que «prueba en seco» contra la base real puede guardar por error. Las pruebas de borrado masivo van con la copia hecha ANTES, no después.
+
+### §CK.4 · Auditoría SUNAT y arreglos antes del certificado (28/10, 166-168)
+
+Auditoría de solo lectura a partir de `D:\Integraciones\auditoria-integracion-sunat.md`: **LISTO CON AJUSTES**. Ya están arreglados:
+
+- **La factura sale en la serie «Por defecto»** de la tabla de series, y no en `config_sunat.serie_factura`, que se quitó de la pantalla.
+- **El `.pfx` se abre al subirlo.** Si la contraseña no es correcta, si es de otro RUC o si está vencido o todavía no vale, no se guarda nada. Se guardan `certificado_sujeto` y `certificado_caduca_en`, con lo que el aviso de la 156 ya puede saltar.
+- **La firma usa el certificado de la llave privada** y no el primero de la cadena.
+- **XML firmado y hash** (`sunat_hash_cdr`) guardados al enviar.
+- **«Desde» pasa a llamarse «Primer número»**: es el primero que se emitirá, no el último usado.
+- **167:** catálogos 09 y 10 corregidos. El 11 de débito era IVAP, no exportación. El 13 de crédito (cuotas) queda inactivo porque el XML no lo arma.
+- **168:** la guía guarda su CDR. Si se cortó la red después de enviarla, primero consulta el ticket, y un «ya la tengo» de SUNAT la deja pendiente, no rechazada.
+- **`maxDuration = 60`** en las pantallas que envían a SUNAT.
+
+`pnpm sunat:beta`: **7/7 aceptados** (4 facturas, NC, ND y baja). Tests: 1717.
+
+**Sin verificar:** un `.pfx` real de Llama.pe (en qué campo trae el RUC), la GRE contra SUNAT real y la producción. Tampoco hay todavía pantalla para descargar el CDR guardado.
