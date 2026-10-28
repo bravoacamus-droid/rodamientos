@@ -145,6 +145,10 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
               placeholder="•••••••• (en blanco = no cambiar)"
               autoComplete="new-password"
             />
+            <span className="text-sm text-[var(--fg-subtle)]">
+              Al guardar se abre el certificado con esta clave y se comprueba que sea de la empresa y
+              que esté vigente. Si algo no cuadra, no se guarda nada.
+            </span>
           </label>
         </div>
 
@@ -152,12 +156,20 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Certificado digital (.pfx)</span>
             <CampoCertificado />
-            {config.certificado_nombre ? (
+            {config.certificado_sujeto && config.certificado_caduca_en ? (
+              // Lo que se leyó DENTRO del certificado al subirlo (B2, 28/10),
+              // no el nombre del archivo: así se ve a quién pertenece.
+              <span className="text-sm text-[var(--fg)]">
+                Certificado de <strong>{config.certificado_sujeto}</strong> · vence el{" "}
+                <strong>{config.certificado_caduca_en.split("-").reverse().join("/")}</strong>
+                {config.certificado_nombre ? (
+                  <span className="text-[var(--fg-muted)]"> · archivo {config.certificado_nombre}</span>
+                ) : null}
+              </span>
+            ) : config.certificado_nombre ? (
               <span className="text-sm text-[var(--fg-muted)]">
-                Cargado: {config.certificado_nombre}
-                {config.certificado_caduca_en
-                  ? ` · caduca el ${config.certificado_caduca_en}`
-                  : ""}
+                Cargado: {config.certificado_nombre}. Se subió antes de que el sistema lo revisara:
+                vuelve a subirlo con su clave para ver a quién pertenece y cuándo vence.
               </span>
             ) : (
               <span className="text-sm text-[var(--fg-subtle)]">

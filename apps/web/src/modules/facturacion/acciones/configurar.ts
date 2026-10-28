@@ -5,9 +5,11 @@ import { z } from "zod";
 import { clienteAdmin, exigirAdmin } from "@rodatech/db/admin";
 import { clienteServidor } from "@rodatech/db/servidor";
 
-import { cifrar, cifrarBinario, hayLlaveMaestra } from "@/lib/cifrado";
+import { ErrorCertificado, datosCertificado, type DatosCertificado } from "@rodatech/sunat/certificado";
+import { cifrar, cifrarBinario, descifrar, descifrarBinario, hayLlaveMaestra } from "@/lib/cifrado";
 
 import { conectorSunat } from "../api/configuracion";
+import { revisarDatosCertificado, type RevisionCertificado } from "../dominio/certificado";
 
 /**
  * Configuración fiscal: credenciales SOL y certificado.
@@ -93,12 +95,20 @@ export async function guardarConfigSunat(
   try {
     const admin = clienteAdmin();
 
+    // ---------------------------------------------------- el certificado
+    // Se abre ANTES de guardar nada (B2, 28/10): una clave equivocada o el
+    // .pfx de otra empresa se descubrían al mandar la primera factura real.
+    const revision = await revisarCertificado(admin, hayCertificado, datos.certificado_clave);
+    if (!revision.ok) return { ok: false, error: revision.error };
+
     // ---------------------------------------------------- lo visible
     const visible: {
       ambiente: string;
       actualizado_en: string;
       usuario_sol?: string;
       certificado_nombre?: string;
+      certificado_sujeto?: string;
+      certificado_caduca_en?: string;
       gre_client_id?: string;
     } = {
       ambiente: datos.ambiente,
@@ -107,6 +117,12 @@ export async function guardarConfigSunat(
     if (datos.usuario_sol) visible.usuario_sol = datos.usuario_sol;
     if (datos.gre_client_id) visible.gre_client_id = datos.gre_client_id;
     if (hayCertificado) visible.certificado_nombre = hayCertificado.name;
+    if (revision.datos) {
+      // Lo que lee el aviso de caducidad de la 156/161, que hasta hoy no
+      // escribía nadie y por eso no podía saltar.
+      visible.certificado_sujeto = revision.datos.sujeto;
+      visible.certificado_caduca_en = revision.datos.caducaEn;
+    }
 
     const { error: errorVisible } = await admin
       .from("config_sunat")
@@ -148,12 +164,13 @@ export async function guardarConfigSunat(
     revalidatePath("/configuracion/sunat");
     revalidatePath("/facturacion");
 
+    const base =
+      datos.ambiente === "produccion"
+        ? "Guardado. Ojo: estás en PRODUCCIÓN, lo que se emita tiene valor fiscal."
+        : "Guardado. Estás en homologación (beta): lo que se emita no tiene valor fiscal.";
     return {
       ok: true,
-      mensaje:
-        datos.ambiente === "produccion"
-          ? "Guardado. Ojo: estás en PRODUCCIÓN, lo que se emita tiene valor fiscal."
-          : "Guardado. Estás en homologación (beta): lo que se emita no tiene valor fiscal.",
+      mensaje: revision.datos ? `${base} ${revision.datos.frase}` : base,
     };
   } catch (e) {
     return {
@@ -161,6 +178,69 @@ export async function guardarConfigSunat(
       error: e instanceof Error ? e.message : "No se pudo guardar la configuración.",
     };
   }
+}
+
+/**
+ * Abre el certificado con su contraseña y dice si sirve para esta empresa.
+ *
+ * Cubre los tres casos de la pantalla, donde la clave en blanco es «no la
+ * toques»:
+ *  · se sube un .pfx con su clave → se prueban los dos nuevos;
+ *  · se sube un .pfx sin clave → con la clave guardada (renovación con la
+ *    misma clave); si no hay ninguna, se pide;
+ *  · se cambia solo la clave → contra el .pfx guardado.
+ * Si no se toca ninguno de los dos, no hay nada que revisar (`datos: null`).
+ */
+async function revisarCertificado(
+  admin: ReturnType<typeof clienteAdmin>,
+  archivo: File | null,
+  claveNueva: string,
+): Promise<{ ok: true; datos: Extract<RevisionCertificado, { ok: true }> | null } | { ok: false; error: string }> {
+  if (!archivo && !claveNueva) return { ok: true, datos: null };
+
+  const { data: secretos } = await admin
+    .from("config_sunat_secretos")
+    .select("certificado_pfx_cifrado, certificado_clave_cifrada")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const pfx = archivo
+    ? Buffer.from(await archivo.arrayBuffer())
+    : secretos?.certificado_pfx_cifrado
+      ? descifrarBinario(secretos.certificado_pfx_cifrado)
+      : null;
+  // Solo la clave, sin certificado todavía: no hay contra qué probarla. Se
+  // guarda y se probará cuando llegue el .pfx.
+  if (!pfx) return { ok: true, datos: null };
+
+  const clave = claveNueva
+    ? claveNueva
+    : secretos?.certificado_clave_cifrada
+      ? descifrar(secretos.certificado_clave_cifrada)
+      : null;
+  if (clave === null) {
+    return { ok: false, error: "Escribe la clave del certificado junto con el archivo. No se guardó nada." };
+  }
+
+  let datos: DatosCertificado;
+  try {
+    datos = datosCertificado(pfx, clave);
+  } catch (e) {
+    if (e instanceof ErrorCertificado) {
+      // La frase pedida tal cual, y que quede claro que no se tocó nada.
+      return { ok: false, error: `${e.message} No se guardó nada.` };
+    }
+    return { ok: false, error: "No se pudo abrir el certificado. No se guardó nada." };
+  }
+
+  const { data: empresa } = await admin.from("empresa").select("ruc").eq("id", 1).maybeSingle();
+  if (!empresa?.ruc) {
+    return { ok: false, error: "Falta el RUC de la empresa en Datos de la empresa: sin él no se puede comprobar el certificado." };
+  }
+
+  const r = revisarDatosCertificado(datos, empresa.ruc, new Date());
+  if (!r.ok) return { ok: false, error: r.error };
+  return { ok: true, datos: r };
 }
 
 export type ResultadoPrueba =
