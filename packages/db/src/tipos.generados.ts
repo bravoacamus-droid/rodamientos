@@ -2217,6 +2217,7 @@ export type Database = {
       }
       cotizacion_items: {
         Row: {
+          alternativa_de: string | null
           cantidad: number
           cantidad_aprobada: number | null
           cantidad_atendida: number
@@ -2239,6 +2240,7 @@ export type Database = {
           valor_unitario: number
         }
         Insert: {
+          alternativa_de?: string | null
           cantidad?: number
           cantidad_aprobada?: number | null
           cantidad_atendida?: number
@@ -2261,6 +2263,7 @@ export type Database = {
           valor_unitario?: number
         }
         Update: {
+          alternativa_de?: string | null
           cantidad?: number
           cantidad_aprobada?: number | null
           cantidad_atendida?: number
@@ -2283,6 +2286,27 @@ export type Database = {
           valor_unitario?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_alternativa_de_fkey"
+            columns: ["alternativa_de"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_alternativa_de_fkey"
+            columns: ["alternativa_de"]
+            isOneToOne: false
+            referencedRelation: "v_comprometido"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_alternativa_de_fkey"
+            columns: ["alternativa_de"]
+            isOneToOne: false
+            referencedRelation: "v_pedido_lineas"
+            referencedColumns: ["cotizacion_item_id"]
+          },
           {
             foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
             columns: ["cotizacion_id"]
@@ -6012,6 +6036,7 @@ export type Database = {
       detalle_cotizaciones: {
         Args: { p_cliente?: string; p_desde: string; p_hasta: string }
         Returns: {
+          alternativa_de_orden: number
           cantidad: number
           cantidad_aprobada: number
           cliente: string
@@ -6026,6 +6051,7 @@ export type Database = {
           importe: number
           marca: string
           numero: string
+          orden: number
           subfamilia: string
           unidad: string
           valor_unitario: number
@@ -6069,6 +6095,10 @@ export type Database = {
       eliminar_zona: { Args: { p_id: string }; Returns: undefined }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
+      enlazar_alternativas: {
+        Args: { p_cotizacion: string; p_items: Json }
+        Returns: undefined
+      }
       es_gerencia: { Args: never; Returns: boolean }
       escribe_una_funcion: { Args: never; Returns: boolean }
       frecuencia_de_venta: {
