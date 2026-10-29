@@ -248,19 +248,30 @@ export async function modoGuias(): Promise<ModoGuias> {
   };
 }
 
+/** Las credenciales ya descifradas. Nunca salen de este archivo. */
+interface Credenciales {
+  ambiente: "beta" | "produccion";
+  usuarioSol: string;
+  claveSol: string;
+  certificadoPfx: Buffer;
+  certificadoClave: string;
+  greClientId: string | null;
+  greClientSecret: string | null;
+}
+
 /**
- * Construye el conector con las credenciales descifradas.
- *
- * ES LA ÚNICA FUNCIÓN QUE TOCA LOS SECRETOS. No los devuelve: devuelve el
- * conector, que solo sabe firmar y enviar. Quien la llame no puede filtrar una
- * clave aunque quiera.
+ * ES LA ÚNICA FUNCIÓN QUE TOCA LOS SECRETOS, y no se exporta: los de fuera
+ * reciben un conector, que solo sabe firmar y enviar. Quien lo use no puede
+ * filtrar una clave aunque quiera.
  *
  * Si la base no tiene configuración, cae a las variables de entorno. Eso
  * permite arrancar en un entorno de pruebas sin pasar por el panel, que es lo
  * que hace falta mientras el cliente no entrega el certificado.
  */
-export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
-  try {
+async function credenciales(): Promise<Resultado<Credenciales>> {
+  // Sin try: quien llama ya lo envuelve, y un fallo al descifrar tiene que
+  // llegarle con su mensaje («la llave no es la misma que cifró…»).
+  {
     const admin = clienteAdmin();
 
     const [{ data: visible }, { data: secretos }] = await Promise.all([
@@ -300,15 +311,29 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
 
     // Las de la guía son opcionales aquí: sin ellas se factura igual, y es
     // `emitirGuia` quien dice que faltan.
-    const greClientId = visible?.gre_client_id ?? envOpcional("SUNAT_GRE_CLIENT_ID");
+    const greClientId = visible?.gre_client_id || envOpcional("SUNAT_GRE_CLIENT_ID") || null;
     const greClientSecret = secretos?.gre_client_secret_cifrado
       ? descifrar(secretos.gre_client_secret_cifrado)
-      : envOpcional("SUNAT_GRE_CLIENT_SECRET");
+      : (envOpcional("SUNAT_GRE_CLIENT_SECRET") ?? null);
 
     const ambienteEnv = envOpcional("SUNAT_AMBIENTE");
     const ambiente =
       (visible?.ambiente as "beta" | "produccion" | undefined) ??
       (ambienteEnv === "produccion" ? "produccion" : "beta");
+
+    return {
+      ok: true,
+      datos: { ambiente, usuarioSol, claveSol, certificadoPfx, certificadoClave, greClientId, greClientSecret },
+    };
+  }
+}
+
+/** El conector con el que se emite, en el ambiente configurado. */
+export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
+  try {
+    const c = await credenciales();
+    if (!c.ok) return c;
+    const { ambiente, certificadoPfx, certificadoClave, usuarioSol, claveSol, greClientId, greClientSecret } = c.datos;
 
     return {
       ok: true,
@@ -331,6 +356,48 @@ export async function conectorSunat(): Promise<Resultado<ConectorSunat>> {
           return undefined;
         })(),
       }),
+    };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/**
+ * Los dos conectores de «Probar con SUNAT» (29/10), sea cual sea el ambiente.
+ *
+ *  · `real`: producción, con TODO lo de Willy. Solo se le pide autenticar
+ *    —`probarConexion` y `probarGuias`—, que no deja ningún documento.
+ *  · `firma`: beta, con el certificado REAL y el usuario público de pruebas.
+ *    Lo que se emite ahí no tiene valor, y prueba que SUNAT acepta la firma de
+ *    ese certificado: lo único que en producción no se puede probar sin
+ *    emitir de verdad.
+ *
+ * Luis, 29/10: «si tú me dices estoy 100 % seguro que funciona bien la
+ * integración de SUNAT…». Esto es lo que se puede comprobar sin gastar un
+ * número; lo que queda es el primer documento real.
+ */
+export async function conectoresDePrueba(
+  ruc: string,
+): Promise<Resultado<{ real: ConectorSunat; firma: ConectorSunat; hayGuias: boolean }>> {
+  try {
+    const c = await credenciales();
+    if (!c.ok) return c;
+    const { certificadoPfx, certificadoClave, usuarioSol, claveSol, greClientId, greClientSecret } = c.datos;
+    const gre =
+      greClientId && greClientSecret ? { clientId: greClientId, clientSecret: greClientSecret } : undefined;
+    return {
+      ok: true,
+      datos: {
+        real: crearConector({ ambiente: "produccion", certificadoPfx, certificadoClave, usuarioSol, claveSol, gre }),
+        firma: crearConector({
+          ambiente: "beta",
+          certificadoPfx,
+          certificadoClave,
+          usuarioSol: `${ruc}MODDATOS`,
+          claveSol: "moddatos",
+        }),
+        hayGuias: Boolean(gre),
+      },
     };
   } catch (e) {
     return fallo(e);

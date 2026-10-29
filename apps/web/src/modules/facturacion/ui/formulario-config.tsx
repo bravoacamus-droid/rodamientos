@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { Button, Input, SelectNativo } from "@rodatech/ui";
-import { FileUp } from "lucide-react";
+import { CircleCheck, CircleMinus, CircleX, FileUp } from "lucide-react";
 
 import {
   guardarConfigSunat,
@@ -47,14 +47,15 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
       <section className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Probar conexión con SUNAT</h2>
+            <h2 className="text-sm font-semibold">Probar con SUNAT</h2>
             <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-              Comprueba las credenciales sin emitir nada ni gastar un correlativo.
+              Comprueba el usuario SOL, el certificado y las credenciales de guías.
+              No emite nada de verdad ni gasta ningún número.
             </p>
             {config.probado_en ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                 Última prueba: {new Date(config.probado_en).toLocaleString("es-PE")} ·{" "}
-                {config.probado_ok ? "correcta" : "falló"}
+                {config.probado_ok ? "todo correcto" : "algo falló"}
               </p>
             ) : null}
           </div>
@@ -65,20 +66,45 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
 
         {probando ? (
           <p className="anim-latido mt-3 text-sm text-[var(--fg-muted)]">
-            Hablando con SUNAT…
+            Hablando con SUNAT… tarda unos segundos.
           </p>
         ) : null}
 
-        {prueba ? (
-          <div
-            className={`anim-entrada mt-3 rounded-sm border p-2.5 text-sm ${
-              prueba.ok && prueba.funciona
-                ? "border-[var(--ok)] bg-[var(--surface-2)]"
-                : "border-[var(--danger)] bg-[var(--danger-bg)] text-[var(--danger)]"
-            }`}
-          >
-            {prueba.ok ? prueba.mensaje : prueba.error}
+        {prueba && !prueba.ok ? (
+          <div className="anim-entrada mt-3 rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-sm text-[var(--danger)]">
+            {prueba.error}
           </div>
+        ) : null}
+
+        {prueba && prueba.ok ? (
+          <ul className="anim-entrada mt-3 flex flex-col gap-2">
+            {prueba.pasos.map((p) => (
+              <li
+                key={p.que}
+                className={`flex gap-2.5 rounded-sm border p-2.5 text-sm ${
+                  p.bien === true
+                    ? "border-[var(--ok)] bg-[var(--ok-bg)]"
+                    : p.bien === null
+                      ? "border-[var(--warn)] bg-[var(--warn-bg)]"
+                      : "border-[var(--danger)] bg-[var(--danger-bg)]"
+                }`}
+              >
+                {p.bien === true ? (
+                  <CircleCheck className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                ) : p.bien === null ? (
+                  <CircleMinus className="mt-0.5 size-5 shrink-0 text-[var(--warn)]" aria-hidden="true" />
+                ) : (
+                  <CircleX className="mt-0.5 size-5 shrink-0 text-[var(--danger)]" aria-hidden="true" />
+                )}
+                <span>
+                  <strong className="font-semibold">
+                    {p.que}: {p.bien === true ? "funciona" : p.bien === null ? "sin probar" : "no funciona"}.
+                  </strong>{" "}
+                  {p.detalle}
+                </span>
+              </li>
+            ))}
+          </ul>
         ) : null}
       </section>
 

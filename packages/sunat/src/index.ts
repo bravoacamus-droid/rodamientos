@@ -51,7 +51,7 @@ import { parsearCdr } from "./cdr/index";
 import type { ResultadoConsultaCdr } from "./red";
 import { generarGuiaXml } from "./ubl/guia";
 import type { GuiaRemision } from "./dominio/guia";
-import { consultarTicketGre, enviarGre, ErrorGre, type CredencialesGre } from "./transporte/gre";
+import { consultarTicketGre, enviarGre, ErrorGre, tokenGre, type CredencialesGre } from "./transporte/gre";
 
 // `enviarGre` sale también para las pruebas del viaje de la guía (M5): con un
 // SUNAT falso por `fetch`, el envío real sin tener que firmar.
@@ -171,6 +171,13 @@ export interface ConectorSunat {
    * Permite validar la configuración antes de arriesgar un comprobante real.
    */
   probarConexion(ruc: string): Promise<ResultadoPrueba>;
+
+  /**
+   * Pide el permiso (token OAuth2) de la GRE y nada más: no envía ninguna
+   * guía. Si SUNAT lo da, client_id, client_secret y usuario SOL sirven.
+   * Lanza ErrorGre con el motivo si no.
+   */
+  probarGuias(): Promise<void>;
 
   /**
    * Firma y manda una guía de remisión (09) por la API REST de la GRE.
@@ -359,6 +366,10 @@ export function crearConector(config: ConfigSunat): ConectorSunat {
         config.claveSol,
         ruc,
       );
+    },
+
+    async probarGuias() {
+      await tokenGre(credencialesGre(config));
     },
 
     async emitirGuia(guia) {

@@ -8,7 +8,10 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { ErrorCertificado, datosCertificado, type DatosCertificado } from "@rodatech/sunat/certificado";
 import { cifrar, cifrarBinario, descifrar, descifrarBinario, hayLlaveMaestra } from "@/lib/cifrado";
 
-import { conectorSunat } from "../api/configuracion";
+import { conectoresDePrueba } from "../api/configuracion";
+import { facturaDePrueba } from "../dominio/factura-de-prueba";
+import { enMonedaDelDocumento } from "../dominio/moneda-documento";
+import { comprobanteParaSunat, type EmisorSunat } from "../dominio/para-sunat";
 import { revisarDatosCertificado, type RevisionCertificado } from "../dominio/certificado";
 
 /**
@@ -243,8 +246,15 @@ async function revisarCertificado(
   return { ok: true, datos: r };
 }
 
+/** Un paso de la prueba. `bien: null` = no se pudo probar (falta algo). */
+export interface PasoPrueba {
+  que: string;
+  bien: boolean | null;
+  detalle: string;
+}
+
 export type ResultadoPrueba =
-  | { ok: true; funciona: boolean; mensaje: string }
+  | { ok: true; pasos: PasoPrueba[]; todoBien: boolean }
   | { ok: false; error: string };
 
 /**
@@ -268,11 +278,26 @@ const CAUSA: Record<
 };
 
 /**
- * Prueba las credenciales contra SUNAT sin emitir nada.
+ * «Probar con SUNAT»: lo que se puede comprobar sin emitir nada de verdad.
  *
- * Es lo primero que hay que pulsar cuando algo falla, y por eso existe: sin
- * esto, la única forma de saber si las credenciales sirven es emitir un
- * comprobante real y quemar un correlativo.
+ * Hasta el 29/10 solo autenticaba el usuario SOL, y contra el ambiente
+ * configurado: en beta eso no dice casi nada. Luis, 29/10: *«si tú me dices
+ * estoy 100 % seguro que funciona bien la integración de SUNAT para hacer
+ * guías, facturas, notas…»*. No se puede decir sin probar las tres piezas que
+ * son de Willy, y ahora se prueban:
+ *
+ *  1. **Usuario SOL**, contra PRODUCCIÓN: se manda un archivo que no es un
+ *     comprobante y SUNAT lo rechaza antes de procesarlo; lo que se mide es
+ *     si autentica. No deja documento ni gasta correlativo.
+ *  2. **El certificado**, firmando una factura de mentira y mandándola a BETA
+ *     con el usuario público de pruebas. Beta comprueba la firma de verdad.
+ *  3. **Las credenciales de guías**, pidiendo el permiso (token) a
+ *     PRODUCCIÓN. No se envía ninguna guía.
+ *
+ * Lo que sigue sin probarse es el primer documento real en producción.
+ *
+ * Ojo: varias claves SOL equivocadas seguidas bloquean el usuario en SUNAT.
+ * Por eso el paso 1 se corta en cuanto dice «clave incorrecta» y no reintenta.
  */
 export async function probarConexionSunat(): Promise<ResultadoPrueba> {
   try {
@@ -281,46 +306,88 @@ export async function probarConexionSunat(): Promise<ResultadoPrueba> {
     return { ok: false, error: e instanceof Error ? e.message : "Sin permiso." };
   }
 
-  const conector = await conectorSunat();
-  if (!conector.ok) return { ok: false, error: conector.error };
-
   const supabase = await clienteServidor();
-  const { data: empresa } = await supabase
+  const { data: filaEmpresa } = await supabase
     .from("empresa")
-    .select("ruc")
+    .select("ruc, razon_social, nombre_comercial, direccion, ubigeo_codigo, igv_porcentaje")
     .eq("id", 1)
     .maybeSingle();
+  if (!filaEmpresa?.ruc) return { ok: false, error: "Falta el RUC de la empresa." };
 
-  if (!empresa?.ruc) return { ok: false, error: "Falta el RUC de la empresa." };
+  const conectores = await conectoresDePrueba(filaEmpresa.ruc);
+  if (!conectores.ok) return { ok: false, error: conectores.error };
+  const { real, firma, hayGuias } = conectores.datos;
 
+  const pasos: PasoPrueba[] = [];
+
+  // ------------------------------------------------ 1 · usuario SOL
   try {
-    const resultado = await conector.datos.probarConexion(empresa.ruc);
-
-    // `causa` es lo accionable —clave mal, usuario no habilitado, no
-    // existe—; el mensaje de SUNAT se conserva al lado porque a veces dice
-    // algo que la clasificación no recoge.
-    const mensaje = resultado.ok
-      ? "Las credenciales funcionan."
-      : `${CAUSA[resultado.causa]} SUNAT dijo: ${resultado.mensajeSunat}`;
-
-    // Se guarda para poder decir «funcionaba el martes» sin repetir la prueba
-    // cada vez que alguien abre la pantalla.
-    await clienteAdmin()
-      .from("config_sunat")
-      .update({
-        probado_en: new Date().toISOString(),
-        probado_ok: resultado.ok,
-        probado_mensaje: mensaje,
-      })
-      .eq("id", 1);
-
-    revalidatePath("/configuracion/sunat");
-
-    return { ok: true, funciona: resultado.ok, mensaje };
+    const r = await real.probarConexion(filaEmpresa.ruc);
+    pasos.push({
+      que: "Usuario SOL y su clave",
+      bien: r.ok,
+      detalle: r.ok ? "SUNAT lo reconoce y lo deja enviar comprobantes." : `${CAUSA[r.causa]} SUNAT dijo: ${r.mensajeSunat}`,
+    });
   } catch (e) {
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "No se pudo contactar con SUNAT.",
-    };
+    pasos.push({ que: "Usuario SOL y su clave", bien: false, detalle: mensajeDe(e, "No se pudo contactar con SUNAT.") });
   }
+
+  // ------------------------------------------------ 2 · el certificado
+  try {
+    const { data: lugar } = filaEmpresa.ubigeo_codigo
+      ? await supabase
+          .from("ubigeo")
+          .select("departamento, provincia, distrito")
+          .eq("codigo", filaEmpresa.ubigeo_codigo)
+          .maybeSingle()
+      : { data: null };
+    const empresa = { ...filaEmpresa, ...(lugar ?? {}) } as EmisorSunat;
+    const cdr = await firma.emitir(comprobanteParaSunat(enMonedaDelDocumento(facturaDePrueba(new Date())), empresa));
+    pasos.push({
+      que: "Certificado digital (la firma)",
+      bien: cdr.aceptado,
+      detalle: cdr.aceptado
+        ? "SUNAT aceptó una factura de prueba firmada con él (en el ambiente de pruebas, sin valor)."
+        : `SUNAT rechazó la firma: ${cdr.codigo} · ${cdr.descripcion}`,
+    });
+  } catch (e) {
+    pasos.push({ que: "Certificado digital (la firma)", bien: false, detalle: mensajeDe(e, "No se pudo firmar ni enviar.") });
+  }
+
+  // ------------------------------------------------ 3 · guías
+  if (!hayGuias) {
+    pasos.push({
+      que: "Credenciales de guías (API)",
+      bien: null,
+      detalle: "No están cargadas: sin ellas no se pueden mandar guías.",
+    });
+  } else {
+    try {
+      await real.probarGuias();
+      pasos.push({
+        que: "Credenciales de guías (API)",
+        bien: true,
+        detalle: "SUNAT dio el permiso para enviar guías. No se envió ninguna.",
+      });
+    } catch (e) {
+      pasos.push({ que: "Credenciales de guías (API)", bien: false, detalle: mensajeDe(e, "SUNAT no dio el permiso.") });
+    }
+  }
+
+  const todoBien = pasos.every((p) => p.bien === true);
+  const resumen = pasos.map((p) => `${p.bien ? "✓" : p.bien === null ? "–" : "✗"} ${p.que}`).join(" · ");
+
+  // Se guarda para poder decir «funcionaba el martes» sin repetir la prueba
+  // cada vez que alguien abre la pantalla.
+  await clienteAdmin()
+    .from("config_sunat")
+    .update({ probado_en: new Date().toISOString(), probado_ok: todoBien, probado_mensaje: resumen })
+    .eq("id", 1);
+  revalidatePath("/configuracion/sunat");
+
+  return { ok: true, pasos, todoBien };
+}
+
+function mensajeDe(e: unknown, porDefecto: string): string {
+  return e instanceof Error && e.message ? e.message : porDefecto;
 }

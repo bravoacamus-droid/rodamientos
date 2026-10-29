@@ -8545,3 +8545,29 @@ cuentas**: la 137 cerró las tablas a `anon` y el membrete se leía de
 lo vio porque quien prueba el enlace tiene la sesión abierta. Ahora sale de
 `membrete_por_token`, `security definer`, solo con un token vivo. Verificado
 sin sesión a 390 y 768. **Si se reaplica la 137, reaplicar la 173 después.**
+
+## §CO · 29/10 — «Probar con SUNAT» prueba las tres piezas de Willy
+
+Luis, 29/10, con el certificado y el usuario SOL ya cargados: *«si tú me dices
+estoy 100 % seguro que funciona bien la integración de SUNAT para hacer guías,
+facturas, notas de crédito, débito…»*. La respuesta honesta fue que no: lo
+probado en beta (7/7) iba con un certificado autofirmado y el usuario público
+`MODDATOS`, y las guías solo contra un SUNAT falso.
+
+El botón «Probar conexión» existía, pero solo autenticaba el usuario SOL y
+contra el ambiente configurado (beta), que no dice casi nada. Ahora hace tres
+pasos, sin emitir nada real ni gastar correlativos:
+
+1. **Usuario SOL** contra PRODUCCIÓN (`probarConexion`: un archivo que no es un
+   comprobante; SUNAT lo rechaza antes de procesarlo).
+2. **El certificado real**: firma una factura de mentira (`facturaDePrueba`,
+   cliente SUNAT, número alto del reloj) y la manda a BETA con `MODDATOS`.
+3. **Guías**: pide el token OAuth2 a PRODUCCIÓN (`probarGuias`, nuevo en el
+   conector). No envía ninguna guía.
+
+Los secretos se descifran en un solo sitio (`credenciales()` en
+`facturacion/api/configuracion.ts`, sin exportar); `conectorSunat` y
+`conectoresDePrueba` lo usan.
+
+**Lo que sigue sin probarse**: el primer documento real en producción. Ojo:
+varias claves SOL equivocadas seguidas bloquean el usuario en SUNAT.
