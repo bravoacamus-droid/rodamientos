@@ -65,7 +65,7 @@ export function DocumentoOrdenCompra({ c, emisor }: { c: CompraDetalle; emisor: 
         { etiqueta: "Total", valor: dinero(c.total), destacado: true },
       ]}
       pie={
-        <p className="text-xs text-[#444]">
+        <p>
           Precios sin IGV. Favor de indicar el número de esta orden en su guía y su factura.
         </p>
       }

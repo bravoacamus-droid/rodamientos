@@ -75,7 +75,35 @@ export function CuentasParaPagar({
         dos renglones. Ahora va a la letra del resto del papel, una línea por
         cuenta, del ancho de su contenido y con el banco por su sigla.
       */}
-      <table className="border-collapse border border-[#999] text-xs">
+      {/*
+        En el teléfono, una cuenta por bloque (29/10).
+
+        Las cuatro columnas en una línea sin cortar miden ~500 px: en el
+        enlace que abre el cliente (/ver) la tabla empujaba la PÁGINA entera
+        de lado, y el CCI quedaba fuera de la pantalla. Aquí cada cifra va en
+        su renglón y con su nombre delante, que es lo que pidió Willy de la
+        tabla: que el número y el CCI no se puedan confundir.
+
+        Depende del `@container` de `HojaDocumento`, que es donde se pinta
+        siempre; en el papel sale la tabla (`print:`), como antes.
+      */}
+      <ul className="flex flex-col gap-2 text-sm @2xl:hidden print:hidden">
+        {ordenadas.map((c) => (
+          <li key={c.numero} className="rounded border border-[#999] px-3 py-1.5">
+            <p className="font-semibold">
+              {siglaBanco(c.banco)} · {MONEDA[c.moneda.toUpperCase()] ?? c.moneda}
+            </p>
+            <p className="break-words">
+              N.° de cuenta: <span className="tabular">{c.numero}</span>
+            </p>
+            <p className="break-words">
+              CCI: <span className="tabular">{c.cci ?? "—"}</span>
+            </p>
+          </li>
+        ))}
+      </ul>
+
+      <table className="hidden border-collapse border border-[#999] text-xs @2xl:table print:table">
         <thead>
           {/* En mayúsculas como en el cuadro que mandó Willy (16/09). */}
           <tr className="uppercase">

@@ -442,7 +442,7 @@ export default async function PaginaDetalleComprobante({
 
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Datos</h2>
-            <dl className="flex flex-col gap-2 text-sm">
+            <dl className="@container flex flex-col gap-2 text-sm">
               {/* Fechas como en el papel (20/07/2026), y el vencimiento en su
                   propia línea: a 390 px «vence 2026-07-20» se partía en
                   «2026-07-» y «20» (revisión por módulos del 02/10). */}
@@ -714,10 +714,25 @@ function Tarjeta({
   );
 }
 
+/*
+  Etiqueta a la izquierda solo si cabe; si no, encima del valor.
+
+  Luis, 29/10: «que se vean bien en móvil y tablet». La etiqueta mide 8 rem
+  fijos, y a 1024 px la columna de la derecha deja a la caja unos 190 px:
+  al valor le quedaban 60, y salía «05/10 /2026», «Crédit o a 30 días» y el
+  vencimiento asomando fuera de la tarjeta (scrollWidth 1058 en una ventana
+  de 1024). Se decide por el ancho de la LISTA (`@container` en el `dl`) y
+  no por el de la pantalla, porque la columna es estrecha justo en tableta y
+  ancha en el celular. Desde 18 rem va en fila, como siempre: en escritorio
+  no cambia nada.
+*/
+const FILA_DATO = "flex flex-col gap-0.5 @min-[18rem]:flex-row @min-[18rem]:gap-3";
+const ETIQUETA_DATO = "shrink-0 text-[var(--fg-muted)] @min-[18rem]:w-32";
+
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
-    <div className="flex gap-3">
-      <dt className="w-32 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
+    <div className={FILA_DATO}>
+      <dt className={ETIQUETA_DATO}>{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
   );

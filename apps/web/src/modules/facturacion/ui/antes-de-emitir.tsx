@@ -484,7 +484,19 @@ export function AntesDeEmitir({
         {/* Ancho de hoja: la previa no sirve si el documento sale comprimido
             a la mitad, porque justo lo que se viene a comprobar es si algo
             —las cuentas, sin ir más lejos— ocupa demasiado. */}
-        <DialogContent className="max-w-4xl">
+        {/*
+          En columna y sin deslizarse ella: solo se desliza el papel.
+
+          En el celular (Luis, 29/10: «la vista previa por celular rompe el
+          diseño») el diálogo medía más que la pantalla —cabecera, interruptor,
+          70 % de alto de papel y el pie— y «Sí, emitir» y «Volver a corregir»
+          quedaban DEBAJO del borde: a 390 × 844 el pie empezaba en el píxel
+          890. Para llegar a ellos había que deslizar el papel hasta el final y
+          luego el diálogo, dos desplazamientos anidados que nadie adivina. Así
+          la cabecera y el pie se quedan fijos y el papel toma lo que sobra. En
+          escritorio el tope del 70 % sigue (`sm:`), y se ve igual que antes.
+        */}
+        <DialogContent className="flex max-w-4xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>Así va a salir</DialogTitle>
           </DialogHeader>
@@ -497,30 +509,38 @@ export function AntesDeEmitir({
               sinCuentas={cuentas.length === 0}
             />
           </div>
-          <DialogBody className="max-h-[70vh] overflow-y-auto bg-[var(--surface-2)] p-4">
-            <DocumentoComprobante
-              c={borrador}
-              emisor={emisor}
-              cuentas={opciones.mostrarCuenta ? cuentas : []}
-            />
+          <DialogBody className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-2)] p-4 sm:max-h-[70vh]">
+            {/* La hoja se desliza de lado DENTRO de su caja, como en la
+                «Vista previa» de la ficha: sin esto se deslizaba el cuerpo
+                entero, y la nota de abajo se iba con ella. */}
+            <div className="overflow-x-auto">
+              <DocumentoComprobante
+                c={borrador}
+                emisor={emisor}
+                cuentas={opciones.mostrarCuenta ? cuentas : []}
+              />
+            </div>
             <p className="mt-3 text-center text-sm text-[var(--fg-muted)]">
               El número y el importe en letras se asignan al emitir. Todo lo
               demás es lo que va a salir impreso.
             </p>
           </DialogBody>
           {emitir ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
+            /* En el celular, el aviso en su renglón y los dos botones a lo
+               ancho, mitad y mitad: un botón de 130 px arrinconado a la
+               derecha es el que menos se ve, y es el que gasta el número. */
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
               {emitir.motivo ? (
-                <p className="mr-auto text-base font-medium text-[var(--warn)]">{emitir.motivo}</p>
+                <p className="w-full text-base font-medium text-[var(--warn)] sm:mr-auto sm:w-auto">{emitir.motivo}</p>
               ) : (
-                <p className="mr-auto text-sm text-[var(--fg-muted)]">
+                <p className="w-full text-sm text-[var(--fg-muted)] sm:mr-auto sm:w-auto">
                   Al emitir se gasta el número {serie} y ya no se puede cambiar.
                 </p>
               )}
-              <Button type="button" variant="outline" onClick={() => setViendo(false)}>
+              <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setViendo(false)}>
                 Volver a corregir
               </Button>
-              <Button type="submit" form={emitir.formId} disabled={!emitir.listo}>
+              <Button type="submit" form={emitir.formId} disabled={!emitir.listo} className="flex-1 sm:flex-none">
                 {emitir.emitiendo ? "Emitiendo…" : `Sí, emitir ${serie}`}
               </Button>
             </div>

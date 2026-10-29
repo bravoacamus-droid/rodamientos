@@ -73,15 +73,18 @@ export function Documento({
                 bien. Un escalón se lee; dos, no. Es más pequeño que la
                 descripción a propósito —es información secundaria— pero no
                 tanto como para que haya que acercar la hoja.
+
+                En la tarjeta del teléfono (menos de 672 px de hoja), 14 px:
+                ahí todo va a 14 y un escalón por debajo ya no se lee (29/10).
               */}
               {l.contiene.length > 0 ? (
-                <span className="mt-0.5 block text-[11.5px] leading-snug text-[#444]">
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-[#444] @max-2xl:text-sm print:text-[11.5px]">
                   Contiene: {l.contiene.map((c) => `${c.cantidad} × ${c.texto}`).join(" · ")}
                 </span>
               ) : null}
               {/* La nota de la línea (112): el mismo escalón que «Contiene». */}
               {l.nota ? (
-                <span className="mt-0.5 block text-[11.5px] italic leading-snug text-[#444]">Nota: {l.nota}</span>
+                <span className="mt-0.5 block text-[11.5px] italic leading-snug text-[#444] @max-2xl:text-sm print:text-[11.5px]">Nota: {l.nota}</span>
               ) : null}
             </>
           ) : (
@@ -140,7 +143,7 @@ export function Documento({
           )}
           <CuentasParaPagar cuentas={cuentas} />
 
-          <div className="mt-3 flex items-end justify-between">
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 print:flex-nowrap">
             <span>{c.vendedor ? `Atendido por ${c.vendedor}` : ""}</span>
             {c.emisor.email ? <span>{c.emisor.email}</span> : null}
           </div>

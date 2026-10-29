@@ -250,7 +250,9 @@ export default async function PaginaDetalleGuia({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
-        <section className="card p-4">
+        {/* `min-w-0`, como en la ficha de la factura: un hijo de rejilla no
+            baja de lo que mide su tabla, y empujaba la página de lado. */}
+        <section className="card min-w-0 p-4">
           <h2 className="mb-3 text-sm font-semibold">Qué se traslada</h2>
           {/*
             La tabla, solo de `md` para arriba.
@@ -333,15 +335,15 @@ export default async function PaginaDetalleGuia({
         <div className="flex flex-col gap-4">
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Traslado</h2>
-            <dl className="flex flex-col gap-2 text-sm">
+            <dl className="@container flex flex-col gap-2 text-sm">
               <Dato etiqueta="Parte de" valor={g.direccion_partida ?? "—"} />
               <Dato etiqueta="Llega a" valor={g.direccion_llegada ?? "—"} />
               <Dato etiqueta="Código del distrito" valor={g.ubigeo_llegada ?? "—"} />
               <Dato etiqueta="Emisión" valor={formatearFecha(g.fecha_emision)} />
               {/* Enlazada, como el pedido (TR-05): era texto suelto. */}
               {g.cotizacion_id && g.cotizacion_numero ? (
-                <div className="flex gap-3">
-                  <dt className="w-32 shrink-0 text-[var(--fg-muted)]">Cotización</dt>
+                <div className={FILA_DATO}>
+                  <dt className={ETIQUETA_DATO}>Cotización</dt>
                   <dd className="min-w-0 flex-1">
                     <Link
                       href={`/cotizaciones/${g.cotizacion_id}`}
@@ -357,8 +359,8 @@ export default async function PaginaDetalleGuia({
               {/* Al pedido del que sale (revisión del 15/10): desde la guía no
                   se llegaba, y el pedido es donde se hace lo que sigue. */}
               {g.pedido ? (
-                <div className="flex gap-3">
-                  <dt className="w-32 shrink-0 text-[var(--fg-muted)]">Pedido</dt>
+                <div className={FILA_DATO}>
+                  <dt className={ETIQUETA_DATO}>Pedido</dt>
                   <dd className="min-w-0 flex-1">
                     {/* Subrayado, como la cotización de arriba: un enlace
                         que solo se subraya al pasar el ratón no se ve. */}
@@ -374,7 +376,7 @@ export default async function PaginaDetalleGuia({
 
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Transporte</h2>
-            <dl className="flex flex-col gap-2 text-sm">
+            <dl className="@container flex flex-col gap-2 text-sm">
               <Dato
                 etiqueta="Modalidad"
                 valor={ETIQUETA_MODALIDAD[g.modalidad_traslado] ?? g.modalidad_traslado}
@@ -485,15 +487,33 @@ function Tarjeta({
         {etiqueta}
       </p>
       <p className="mt-1 truncate text-xl font-semibold tabular">{valor}</p>
-      {pie ? <p className="mt-0.5 truncate text-sm text-[var(--fg-muted)]">{pie}</p> : null}
+      {/* Partido y no cortado: el pie es el motivo del traslado, y en el
+          celular «Traslado entre establecimientos de la misma empresa» se
+          quedaba en «Traslado entre…», que es justo lo que no dice nada. */}
+      {pie ? <p className="mt-0.5 break-words text-sm text-[var(--fg-muted)]">{pie}</p> : null}
     </div>
   );
 }
 
+/*
+  Etiqueta a la izquierda solo si cabe; si no, encima del valor.
+
+  Luis, 29/10: «que se vean bien en móvil y tablet». La etiqueta mide 8 rem
+  fijos, y a 1024 px la columna de la derecha deja a la caja unos 190 px:
+  al valor le quedaban 60, y salía «05/10 /2026», «Crédit o a 30 días» y el
+  vencimiento asomando fuera de la tarjeta (scrollWidth 1058 en una ventana
+  de 1024). Se decide por el ancho de la LISTA (`@container` en el `dl`) y
+  no por el de la pantalla, porque la columna es estrecha justo en tableta y
+  ancha en el celular. Desde 18 rem va en fila, como siempre: en escritorio
+  no cambia nada.
+*/
+const FILA_DATO = "flex flex-col gap-0.5 @min-[18rem]:flex-row @min-[18rem]:gap-3";
+const ETIQUETA_DATO = "shrink-0 text-[var(--fg-muted)] @min-[18rem]:w-32";
+
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
-    <div className="flex gap-3">
-      <dt className="w-32 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
+    <div className={FILA_DATO}>
+      <dt className={ETIQUETA_DATO}>{etiqueta}</dt>
       <dd className="min-w-0 flex-1 break-words">{valor}</dd>
     </div>
   );

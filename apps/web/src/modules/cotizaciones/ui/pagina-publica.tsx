@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
-import { cotizacionPorToken } from "../api/publica";
+import { cotizacionPorToken, membretePorToken } from "../api/publica";
 import { DISPONIBILIDADES, type Disponibilidad } from "../dominio/disponibilidad";
 import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresion";
 import { Documento } from "./detalle/documento";
@@ -57,10 +56,8 @@ export default async function PaginaCotizacionPublica({
   // cuál de los tres es diría a quien prueba tokens cuáles existen.
   if (!cot) notFound();
 
-  const [emisor, cuentas] = await Promise.all([
-    emisorParaImprimir(),
-    cuentasParaCobrar(),
-  ]);
+  // 173: por el token, no por la sesión, que el cliente no tiene.
+  const { emisor, cuentas } = await membretePorToken(token);
 
   const enDolares = armarCotizacionImpresa({
     emisor: {

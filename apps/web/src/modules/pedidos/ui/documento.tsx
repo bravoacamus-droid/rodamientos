@@ -13,7 +13,7 @@ export function DocumentoPedido({ numero, papel, emisor }: { numero: string; pap
       columnas={papel.columnas}
       filas={papel.filas}
       totales={papel.totales}
-      pie={<p className="text-xs text-[#444]">{papel.nota}</p>}
+      pie={<p>{papel.nota}</p>}
     />
   );
 }

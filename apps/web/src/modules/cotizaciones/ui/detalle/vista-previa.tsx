@@ -102,12 +102,15 @@ export function VistaPreviaDocumento({
               {junto}
             </div>
           </DialogHeader>
-          <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-4">
+          {/* `p-2` en el teléfono: cada píxel de marco gris es uno menos de
+              hoja, y ahí la hoja mide ~330 px (29/10). */}
+          <DialogBody className="max-h-[75vh] overflow-y-auto bg-[var(--surface-2)] p-2 sm:p-4">
             {encima ? <div className="mb-3">{encima}</div> : null}
-            {/* `overflow-x-auto` y no `hidden`: en el teléfono la hoja es más
-                ancha que el diálogo y se cortaba la razón social y la
-                dirección de la empresa. Se desliza; la hoja no se toca
-                (revisión por módulos del 02/10). */}
+            {/* `overflow-x-auto` y no `hidden`, por si acaso. Desde el 29/10
+                la hoja ya cabe en el teléfono —membrete apilado, líneas en
+                tarjetas, cuentas en bloques— y no debería deslizar nunca;
+                si algo vuelve a no caber, que se pueda ver deslizando antes
+                que cortado (revisión por módulos del 02/10). */}
             <div className="overflow-x-auto rounded-md bg-white elev-2">{children}</div>
           </DialogBody>
         </DialogContent>

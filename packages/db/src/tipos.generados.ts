@@ -6180,6 +6180,7 @@ export type Database = {
         Args: { p_correo: string; p_exito: boolean; p_ip: string }
         Returns: undefined
       }
+      membrete_por_token: { Args: { p_token: string }; Returns: Json }
       mi_rol: {
         Args: never
         Returns: Database["public"]["Enums"]["rol_usuario"]

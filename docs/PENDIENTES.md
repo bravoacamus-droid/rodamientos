@@ -8516,3 +8516,32 @@ Y el login: *«un ojito animado para ver la contraseña»* → `InputContrasena`
 en `@rodatech/ui`, botón «Ver»/«Ocultar» con la palabra (no solo el ojo),
 dentro del campo, sin enviar el formulario. Solo está en el login; el resto
 de campos de contraseña (perfil, primera contraseña, SUNAT) pueden usarlo.
+
+## §CN · 29/10 — Las vistas previas en celular y tablet, y el enlace sin membrete (173)
+
+Luis, 29/10: *«la vista previa por celular rompe el diseño… que se vean bien
+en móvil y tablet»*. Dos agentes, medido a 390, 768, 1024 y 1440, con el
+papel comparado píxel a píxel en modo impresión antes y después (idéntico).
+
+- **`HojaDocumento`** (la causa de fondo): por debajo de 672 px de hoja, letra
+  de 14 px, logo encima de la razón social, recuadro del número a lo ancho y
+  **cada línea en tarjeta** en vez de tabla. Desde 672 px y en el papel, como
+  siempre. Las cuentas para pagar van en bloques por cuenta en el celular
+  (`cuentas-para-pagar.tsx`): la tabla de cuatro columnas era lo que hacía
+  deslizar `/ver` de lado (506 px en 390).
+- **Previa «antes de emitir»**: en el celular los botones «Sí, emitir» y
+  «Volver a corregir» quedaban debajo del borde. Ahora cabecera y pie fijos y
+  solo se desliza el papel.
+- **Ficha de factura y de guía a 1024**: la tarjeta «Datos» se salía (fecha
+  partida «05/10 /2026»). Etiqueta encima del valor cuando la caja es estrecha.
+- **Sin ver con datos**: no hay ninguna guía, pedido ni compra en la base, así
+  que la hoja de guía, de pedido y de orden de compra solo están cubiertas por
+  usar la misma hoja; la ficha de la guía no se vio en pantalla.
+
+**173 — el hallazgo grave.** Desde la **137 (15/10)** el enlace público
+`/ver/<token>` salía al cliente **sin logo, sin razón social, sin RUC y sin
+cuentas**: la 137 cerró las tablas a `anon` y el membrete se leía de
+`empresa` y `cuentas_bancarias` con la sesión, que el cliente no tiene. Nadie
+lo vio porque quien prueba el enlace tiene la sesión abierta. Ahora sale de
+`membrete_por_token`, `security definer`, solo con un token vivo. Verificado
+sin sesión a 390 y 768. **Si se reaplica la 137, reaplicar la 173 después.**

@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
+import type { EmisorHoja } from "@/componentes/hoja-documento";
 import { fallo } from "@/lib/errores";
 
 /**
@@ -107,5 +109,69 @@ export async function cotizacionPorToken(
   } catch (e) {
     fallo(e, "cotizaciones/cotizacionPorToken");
     return null;
+  }
+}
+
+/** La cabecera y las cuentas del enlace público (173). */
+export interface MembretePublico {
+  emisor: EmisorHoja;
+  cuentas: CuentaParaPagar[];
+}
+
+/**
+ * El membrete de Rodatech para `/ver`, por la misma puerta que el documento.
+ *
+ * `emisorParaImprimir()` y `cuentasParaCobrar()` leen las tablas con la
+ * sesión, y un cliente sin usuario no tiene sesión: desde la 137 le salía la
+ * cotización sin logo, sin razón social y sin cuentas. Si esto falla, el
+ * documento se enseña igual con la cabecera vacía, como en `lib/emisor`.
+ */
+export async function membretePorToken(token: string): Promise<MembretePublico> {
+  const vacio: MembretePublico = {
+    emisor: {
+      razonSocial: "",
+      nombreComercial: null,
+      ruc: "",
+      direccion: null,
+      telefono: null,
+      email: null,
+      web: null,
+      logoUrl: null,
+    },
+    cuentas: [],
+  };
+  if (!/^[0-9a-f]{32}$/i.test(token)) return vacio;
+
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase.rpc("membrete_por_token", { p_token: token });
+    if (error) {
+      fallo(error, "cotizaciones/membretePorToken");
+      return vacio;
+    }
+    const m = data as Record<string, unknown> | null;
+    if (!m) return vacio;
+    const texto = (v: unknown) => (typeof v === "string" && v !== "" ? v : null);
+    return {
+      emisor: {
+        razonSocial: String(m.razon_social ?? ""),
+        nombreComercial: texto(m.nombre_comercial),
+        ruc: String(m.ruc ?? ""),
+        direccion: texto(m.direccion),
+        telefono: texto(m.telefono),
+        email: texto(m.email),
+        web: texto(m.web),
+        logoUrl: texto(m.logo_url),
+      },
+      cuentas: (Array.isArray(m.cuentas) ? (m.cuentas as Record<string, unknown>[]) : []).map((c) => ({
+        banco: String(c.banco ?? ""),
+        moneda: String(c.moneda ?? ""),
+        numero: String(c.numero ?? ""),
+        cci: texto(c.cci),
+      })),
+    };
+  } catch (e) {
+    fallo(e, "cotizaciones/membretePorToken");
+    return vacio;
   }
 }
