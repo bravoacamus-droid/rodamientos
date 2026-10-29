@@ -289,7 +289,7 @@ export default async function PaginaDetalleCliente({
       ) : null}
 
       <p className="text-sm text-[var(--fg-subtle)]">
-        Dado de alta el {new Date(c.creado_en).toLocaleDateString("es-PE")}.
+        Dado de alta el {new Date(c.creado_en).toLocaleDateString("es-PE", { timeZone: "America/Lima" })}.
       </p>
     </div>
   );

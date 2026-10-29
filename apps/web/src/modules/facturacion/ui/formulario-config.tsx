@@ -54,7 +54,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
             </p>
             {config.probado_en ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-                Última prueba: {new Date(config.probado_en).toLocaleString("es-PE")} ·{" "}
+                Última prueba: {new Date(config.probado_en).toLocaleString("es-PE", { timeZone: "America/Lima" })} ·{" "}
                 {config.probado_ok ? "todo correcto" : "algo falló"}
               </p>
             ) : null}
