@@ -6,7 +6,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Button, Input, Label } from "@rodatech/ui";
+import { Button, Input, InputContrasena, Label } from "@rodatech/ui";
 
 import { iniciarSesion, type ResultadoLogin } from "./acciones";
 
@@ -55,10 +55,9 @@ export function FormularioLogin({ destino }: { destino: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="clave">Contraseña</Label>
-        <Input
+        <InputContrasena
           id="clave"
           name="clave"
-          type="password"
           autoComplete="current-password"
           required
         />

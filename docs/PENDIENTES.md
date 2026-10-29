@@ -8490,3 +8490,29 @@ como cualquier ajuste y se corrige con otro.
 el «Valor a costo» del inventario sale bajo (USD 2,718). Se arregla con las
 primeras compras o pidiéndole a Willy sus costos. Los scripts del cruce están
 en el scratchpad de la sesión (`stock/cruzar.cjs`, `stock/generar-sql.cjs`).
+
+## §CM · 29/10 — El contador de consultas y el ojo del login (172)
+
+Luis, 29/10: *«en SUNAT configuración también podemos poner un contador para
+que vaya contando las peticiones… si hace una petición pero no guardó, que se
+guarde en caché, así trae sin hacer una petición nueva»*.
+
+- **La caché ya existía desde la 003** y guarda aunque no se registre nada:
+  RUC 30 días, DNI 90, tipo de cambio de una fecha pasada para siempre. Lo
+  que faltaba era verlo. Nuevo recuadro en «SUNAT y numeración»: cuántas van
+  de las 100 del mes, cuándo vuelve a cero, pedidas contra sacadas de
+  memoria por tipo, y los meses anteriores.
+- **El contador y la bitácora no cuadran**: octubre lleva 52 contadas y solo
+  26 con detalle. El contador sube antes de salir a la red y la bitácora se
+  escribe después sin reventar si falla. **No se encontró la causa**; el
+  recuadro enseña la diferencia como «Contadas sin detalle» en vez de
+  esconderla.
+- **172**: lo que trae `consultarTipoCambio` se guarda en
+  `tipos_cambio_sunat` (`guardar_cambio_sunat`), y se busca ahí primero.
+  Probado el 29/10: la primera vez gastó una (52 → 53) y guardó 3.458/3.451;
+  la segunda no salió a la red.
+
+Y el login: *«un ojito animado para ver la contraseña»* → `InputContrasena`
+en `@rodatech/ui`, botón «Ver»/«Ocultar» con la palabra (no solo el ojo),
+dentro del campo, sin enviar el formulario. Solo está en el login; el resto
+de campos de contraseña (perfil, primera contraseña, SUNAT) pueden usarlo.

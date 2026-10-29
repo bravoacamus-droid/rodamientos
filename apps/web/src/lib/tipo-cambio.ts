@@ -39,12 +39,38 @@ async function contexto(): Promise<ContextoConsultas> {
   };
 }
 
+/** La fecha de hoy en Lima, YYYY-MM-DD: el servidor de Vercel vive en UTC. */
+function hoyEnLima(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+}
+
 export async function consultarTipoCambio(fecha?: unknown): Promise<ResultadoTipoCambio> {
   // Los argumentos de una Server Action llegan del navegador.
   const dia =
     typeof fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : undefined;
 
   try {
+    const supabase = await clienteServidor();
+
+    // 172: primero lo guardado. Un día que ya se trajo una vez —por la
+    // factura, la compra o la cotización— no vuelve a salir a Decolecta.
+    // Solo el día exacto: el «último publicado» de domingos y feriados lo
+    // decide SUNAT, y Decolecta ya lo resuelve así.
+    const fechaBuscada = dia ?? hoyEnLima();
+    const { data: guardado } = await supabase
+      .from("tipos_cambio_sunat")
+      .select("fecha, compra, venta")
+      .eq("fecha", fechaBuscada)
+      .maybeSingle();
+    if (guardado && guardado.compra !== null && Number(guardado.venta) > 0) {
+      return {
+        ok: true,
+        venta: Number(guardado.venta),
+        compra: Number(guardado.compra),
+        fecha: String(guardado.fecha),
+      };
+    }
+
     const r = await tipoCambioSunat(dia ? { fecha: dia } : {}, await contexto(), {
       // `normal` y no `critical`: se puede escribir a mano, así que no merece
       // gastar la reserva del final del ciclo.
@@ -75,6 +101,17 @@ export async function consultarTipoCambio(fecha?: unknown): Promise<ResultadoTip
     const compra = Number(fila.compra);
     if (!Number.isFinite(venta) || venta <= 0) {
       return { ok: false, error: "El tipo de cambio que llegó no es un número válido." };
+    }
+
+    // Y lo traído queda guardado. Con la fecha que dice SUNAT, no la pedida:
+    // un domingo devuelve el del sábado, y guardarlo como domingo sería
+    // inventar un dato. Si falla, el número ya está en la mano.
+    if (Number.isFinite(compra) && /^\d{4}-\d{2}-\d{2}$/.test(fila.fecha)) {
+      await supabase.rpc("guardar_cambio_sunat", {
+        p_fecha: fila.fecha,
+        p_compra: compra,
+        p_venta: venta,
+      });
     }
 
     return { ok: true, venta, compra, fecha: fila.fecha };

@@ -1,12 +1,15 @@
 import "server-only";
 
 import { clienteAdmin, exigirAdmin, hayClaveAdmin } from "@rodatech/db/admin";
+import { envOpcional } from "@rodatech/config";
+import { periodoActual } from "@rodatech/consultas";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
 import type { Accion, Modulo } from "@/lib/permisos-comun";
 
+import { contarConsultas, type ConteoConsulta, type FilaBitacoraConsulta } from "../dominio/consultas-externas";
 import type { ModuloDef, Permiso } from "../dominio/permisos";
 import type { Respaldo } from "../dominio/respaldo";
 import { ordenarSeries } from "../dominio/serie";
@@ -20,6 +23,18 @@ import type {
   TipoDocumento,
   Usuario,
 } from "../dominio/tipos";
+
+export interface UsoConsultas {
+  periodo: string;
+  limite: number;
+  usadas: number;
+  /** Decolecta contestó 429: se acabó aunque nuestro contador diga otra cosa. */
+  agotadoPorDecolecta: boolean;
+  reiniciaEl: string | null;
+  porTipo: ConteoConsulta[];
+  guardados: { ruc: number; dni: number; diasDeCambio: number };
+  anteriores: Array<{ periodo: string; usadas: number; limite: number }>;
+}
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -354,5 +369,59 @@ export async function ultimosRespaldos(): Promise<
     return { ok: true, datos: { ultimaBuena: leer(buena.data?.[0]), ultima: leer(cualquiera.data?.[0]) } };
   } catch (e) {
     return fallo(e, "configuracion/ultimosRespaldos");
+  }
+}
+
+/**
+ * Lo gastado de Decolecta en el ciclo en curso, y los dos anteriores.
+ *
+ * `consultas_cuota` es el contador que manda —lo sube la reserva atómica
+ * antes de salir a la red, y es el que se compara con el límite del plan—.
+ * La bitácora dice en qué se gastó y cuánto se ahorró la memoria.
+ */
+export async function usoConsultasExternas(): Promise<Resultado<UsoConsultas>> {
+  try {
+    const supabase = await clienteServidor();
+    const ahora = new Date();
+    const periodo = periodoActual(ahora, Number(envOpcional("DECOLECTA_QUOTA_CYCLE_DAY") ?? 1));
+    const [cuotas, bitacora, memoria] = await Promise.all([
+      supabase
+        .from("consultas_cuota")
+        .select("periodo, limite, consumidas, agotado_forzado, fin_ciclo")
+        .order("periodo", { ascending: false })
+        .limit(3),
+      supabase.from("consultas_log").select("endpoint, desde_cache, status_code").eq("periodo", periodo),
+      supabase.from("consultas_cache").select("espacio").eq("ok", true),
+    ]);
+    const error = cuotas.error ?? bitacora.error ?? memoria.error;
+    if (error) return fallo(error, "configuracion/usoConsultasExternas");
+
+    const filas = (cuotas.data ?? []) as Array<Record<string, unknown>>;
+    const actual = filas.find((f) => f.periodo === periodo);
+    const guardados = { ruc: 0, dni: 0, tipo_cambio: 0 };
+    for (const f of (memoria.data ?? []) as Array<{ espacio: string }>) {
+      if (f.espacio in guardados) guardados[f.espacio as keyof typeof guardados] += 1;
+    }
+    const { count: dias } = await supabase
+      .from("tipos_cambio_sunat")
+      .select("fecha", { count: "exact", head: true });
+
+    return {
+      ok: true,
+      datos: {
+        periodo,
+        limite: actual ? Number(actual.limite) : Number(envOpcional("DECOLECTA_QUOTA_LIMIT") ?? 100),
+        usadas: actual ? Number(actual.consumidas) : 0,
+        agotadoPorDecolecta: actual ? Boolean(actual.agotado_forzado) : false,
+        reiniciaEl: actual ? String(actual.fin_ciclo) : null,
+        porTipo: contarConsultas((bitacora.data ?? []) as FilaBitacoraConsulta[]),
+        guardados: { ruc: guardados.ruc, dni: guardados.dni, diasDeCambio: dias ?? 0 },
+        anteriores: filas
+          .filter((f) => f.periodo !== periodo)
+          .map((f) => ({ periodo: String(f.periodo), usadas: Number(f.consumidas), limite: Number(f.limite) })),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "configuracion/usoConsultasExternas");
   }
 }

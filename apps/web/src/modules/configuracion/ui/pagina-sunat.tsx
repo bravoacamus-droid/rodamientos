@@ -10,6 +10,7 @@ import {
 
 import { series } from "../api/consultas";
 import { CabeceraConfig } from "./cabecera";
+import { ConsultasExternas } from "./consultas-externas";
 import { TablaSeries } from "./series";
 
 /**
@@ -83,6 +84,17 @@ export default async function PaginaConfigSunat() {
         <h2 className="text-sm font-semibold">Series y correlativos</h2>
         <Suspense fallback={<Skeleton className="h-56 w-full" />}>
           <BloqueSeries puedeEditar={puedeEditar} />
+        </Suspense>
+      </section>
+
+      <section className="card p-4">
+        <h2 className="text-sm font-semibold">Consultas de RUC, DNI y tipo de cambio</h2>
+        <p className="mb-3 text-sm text-[var(--fg-muted)]">
+          El botón «Traer datos» y el tipo de cambio las piden a Decolecta, que da
+          un número fijo al mes.
+        </p>
+        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+          <ConsultasExternas />
         </Suspense>
       </section>
 

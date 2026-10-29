@@ -6124,6 +6124,10 @@ export type Database = {
       generar_guia_desde_cotizacion: { Args: { p_datos: Json }; Returns: Json }
       generar_ordenes_de_compra: { Args: { p_datos: Json }; Returns: Json }
       guardar_analisis: { Args: { p_datos: Json }; Returns: Json }
+      guardar_cambio_sunat: {
+        Args: { p_compra: number; p_fecha: string; p_venta: number }
+        Returns: undefined
+      }
       guardar_hoja_precios: { Args: { p_datos: Json }; Returns: Json }
       guardar_proveedores_de_lineas: {
         Args: { p_cotizacion: string; p_items: Json }

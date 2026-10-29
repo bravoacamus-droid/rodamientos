@@ -68,6 +68,7 @@ export {
   FormResumenErrores,
 } from "./form";
 export { campoBase, Input, SelectNativo, Textarea, type InputProps } from "./input";
+export { InputContrasena } from "./input-contrasena";
 export { Campo, Label, type LabelProps } from "./label";
 export { Popover, PopoverAnchor, PopoverClose, PopoverContent, PopoverTrigger } from "./popover";
 export { RadioCampo, RadioGroup, RadioGroupItem } from "./radio-group";
