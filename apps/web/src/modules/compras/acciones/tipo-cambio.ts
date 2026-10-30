@@ -5,8 +5,6 @@ import { sinPermiso } from "@/lib/permisos";
 
 import { consultarTipoCambio, type ResultadoTipoCambio } from "@/lib/tipo-cambio";
 
-export type { ResultadoTipoCambio };
-
 /**
  * El tipo de cambio del día, para registrar una compra en soles.
  *

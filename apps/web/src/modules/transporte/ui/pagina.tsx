@@ -8,6 +8,7 @@ import {
 } from "../api/consultas";
 import { guardarAgencia, guardarConductor, guardarVehiculo } from "../acciones/guardar";
 import { Maestro, type CampoMaestro, type FilaMaestro } from "./maestro";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * El maestro de transporte.
@@ -144,13 +145,15 @@ export default async function PaginaTransporte() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Transporte</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Con quién y con qué se despacha. Nada se borra: lo que se deja de usar
-          se da de baja, para que una guía vieja siga diciendo lo que decía.
-        </p>
-      </div>
+      <PanelModulo ruta="/transporte">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Transporte</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Con quién y con qué se despacha. Nada se borra: lo que se deja de usar
+            se da de baja, para que una guía vieja siga diciendo lo que decía.
+          </p>
+        </div>
+      </PanelModulo>
 
       <Maestro
         tipo="agencia"

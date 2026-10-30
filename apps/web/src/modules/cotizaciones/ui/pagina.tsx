@@ -6,6 +6,7 @@ import { CircleCheck, FileSpreadsheet, FileText, Hourglass, Target } from "lucid
 import { Skeleton, formatearMoneda, leerTamano } from "@rodatech/ui";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
+import { PanelModulo } from "@/componentes/panel-modulo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 
 import { conteoPorEstado, indicadoresCotizaciones } from "../api/consultas";
@@ -110,52 +111,54 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Precios en dólares, sin IGV en la columna de valor unitario.
-          </p>
+      <PanelModulo ruta="/cotizaciones">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Cotizaciones</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Precios en dólares, sin IGV en la columna de valor unitario.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {/*
+              Exportar lo que se está viendo (14/10). Willy, 13/10, filtrando por
+              cliente: *«y ahora ahí no hay la opción para exportarlo a Excel»*.
+              El libro es el de Reportes (cotizaciones línea por línea), con el
+              cliente, el periodo, el estado y la serie de esta lista. Sin
+              periodo, los últimos 12 meses.
+            */}
+            <a
+              href={`/reportes/excel?${new URLSearchParams(
+                Object.entries({
+                  tipo: "cotizaciones",
+                  cliente: filtros.cliente ?? "",
+                  desde: filtros.desde ?? "",
+                  hasta: filtros.hasta ?? "",
+                  estado: filtros.estado ?? "",
+                  serie: filtros.serie ?? "",
+                }).filter(([, v]) => v),
+              ).toString()}`}
+              className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3.5 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+            >
+              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              Exportar a Excel
+            </a>
+            <Link
+              href="/cotizaciones/nueva"
+              className="rounded-sm bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+            >
+              Nueva cotización
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/*
-            Exportar lo que se está viendo (14/10). Willy, 13/10, filtrando por
-            cliente: *«y ahora ahí no hay la opción para exportarlo a Excel»*.
-            El libro es el de Reportes (cotizaciones línea por línea), con el
-            cliente, el periodo, el estado y la serie de esta lista. Sin
-            periodo, los últimos 12 meses.
-          */}
-          <a
-            href={`/reportes/excel?${new URLSearchParams(
-              Object.entries({
-                tipo: "cotizaciones",
-                cliente: filtros.cliente ?? "",
-                desde: filtros.desde ?? "",
-                hasta: filtros.hasta ?? "",
-                estado: filtros.estado ?? "",
-                serie: filtros.serie ?? "",
-              }).filter(([, v]) => v),
-            ).toString()}`}
-            className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3.5 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
-          >
-            <FileSpreadsheet className="size-4" aria-hidden="true" />
-            Exportar a Excel
-          </a>
-          <Link
-            href="/cotizaciones/nueva"
-            className="rounded-sm bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-          >
-            Nueva cotización
-          </Link>
-        </div>
-      </div>
 
-      <Suspense
-        key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
-        fallback={<Skeleton className="h-32 w-full" />}
-      >
-        <Indicadores filtros={filtros} />
-      </Suspense>
+        <Suspense
+          key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
+          fallback={<Skeleton className="h-32 w-full" />}
+        >
+          <Indicadores filtros={filtros} />
+        </Suspense>
+      </PanelModulo>
 
       {/* El periodo arriba y una fila de filtros debajo (12/10), como la
           barra que Luis enseñó de otro sistema. */}

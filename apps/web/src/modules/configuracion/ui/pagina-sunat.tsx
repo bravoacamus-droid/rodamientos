@@ -60,6 +60,7 @@ export default async function PaginaConfigSunat() {
   return (
     <div className="flex flex-col gap-5">
       <CabeceraConfig
+        ruta="/configuracion/sunat"
         icono="sunat"
         titulo="SUNAT y numeración"
         descripcion="Con qué se firma ante SUNAT, y con qué número sale cada documento."

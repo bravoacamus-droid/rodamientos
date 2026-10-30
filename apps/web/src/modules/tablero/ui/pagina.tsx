@@ -70,9 +70,12 @@ export default async function PaginaTablero({ searchParams }: Props) {
     // @container: las tarjetas pasan de una a cuatro por fila según el ancho
     // del contenido, no de la ventana (con el menú abierto o recogido).
     <div className="@container flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Tablero</h1>
-        <p className="text-base text-[var(--fg-muted)]">
+      {/* La portada lleva el azul del logo: es la primera pantalla del día y
+          la que dice «esto es Rodatech». El texto va en blanco (11:1). */}
+      <div className="fondo-marca overflow-hidden rounded-2xl px-5 py-6 shadow-[var(--elev-2)] sm:px-7">
+        <span className="filo-marca absolute inset-x-0 bottom-0 h-1" aria-hidden="true" />
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Tablero</h1>
+        <p className="mt-1 text-base text-white/85">
           Cómo va todo el negocio, de un vistazo. El detalle de cada parte está en Reportes.
         </p>
       </div>

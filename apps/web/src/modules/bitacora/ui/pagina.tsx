@@ -34,6 +34,7 @@ import {
 } from "../dominio/tipos";
 import { Fallos } from "./fallos";
 import { FiltrosBarra } from "./filtros";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /** Solo quien puede verlo todo. La bitácora dice quién hizo qué. */
 
@@ -90,12 +91,14 @@ export default async function PaginaBitacora({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Qué ha pasado</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Quién cambió qué y cuándo. No se puede editar ni borrar.
-        </p>
-      </div>
+      <PanelModulo ruta="/actividad">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Qué ha pasado</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Quién cambió qué y cuándo. No se puede editar ni borrar.
+          </p>
+        </div>
+      </PanelModulo>
 
       {/* Lo roto va ARRIBA de lo que pasó. Si algo está fallando, eso es
           lo que hay que ver primero; el historial se consulta cuando se

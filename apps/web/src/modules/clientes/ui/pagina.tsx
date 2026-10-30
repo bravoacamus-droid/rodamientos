@@ -11,6 +11,7 @@ import { rubrosDeCliente, zonasDeVisita } from "../api/consultas";
 import { FiltrosClientesBarra } from "./filtros";
 import { ResumenCartera } from "./resumen-cartera";
 import { TablaClientes } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -57,37 +58,39 @@ export default async function PaginaClientes({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Cartera comercial: documento, zona de visita y rubro.
-          </p>
+      <PanelModulo ruta="/clientes">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Cartera comercial: documento, zona de visita y rubro.
+            </p>
+          </div>
+
+          {puedeCrear ? (
+            <Link
+              href="/clientes/nuevo"
+              className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto md:h-control-md"
+            >
+              <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
+              Nuevo cliente
+            </Link>
+          ) : (
+            <BotonBloqueado
+              mensaje={avisoSinPermiso("clientes", "crear", permisos.nombreRol)}
+              className="w-full sm:w-auto"
+            >
+              Nuevo cliente
+            </BotonBloqueado>
+          )}
         </div>
 
-        {puedeCrear ? (
-          <Link
-            href="/clientes/nuevo"
-            className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto md:h-control-md"
-          >
-            <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
-            Nuevo cliente
-          </Link>
-        ) : (
-          <BotonBloqueado
-            mensaje={avisoSinPermiso("clientes", "crear", permisos.nombreRol)}
-            className="w-full sm:w-auto"
-          >
-            Nuevo cliente
-          </BotonBloqueado>
-        )}
-      </div>
-
-      {/* Por zona y por rubro (141), encima de la lista: es la pregunta con
-          que se arma la semana de visitas. */}
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <ResumenCartera hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date())} />
-      </Suspense>
+        {/* Por zona y por rubro (141), encima de la lista: es la pregunta con
+            que se arma la semana de visitas. */}
+        <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+          <ResumenCartera hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date())} />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card @container pt-4">
         <FiltrosClientesBarra zonas={zonas} rubros={rubros} />

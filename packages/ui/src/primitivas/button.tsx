@@ -31,13 +31,13 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-brand-600 text-white hover:bg-brand-700 elev-1 hover:elev-2",
-        accent: "bg-accent-400 text-steel-950 hover:bg-accent-300 elev-1 hover:elev-2 font-semibold",
-        outline: "border bg-surface text-fg hover:bg-surface-2 hover:border-brand-300",
+        primary: "bg-brand-600 text-white hover:bg-brand-700 relieve hover:relieve-alto",
+        accent: "bg-accent-400 text-steel-950 hover:bg-accent-300 relieve hover:relieve-alto font-semibold",
+        outline: "border border-border-strong bg-surface text-fg elev-1 hover:bg-brand-50 hover:border-brand-400 dark:hover:bg-surface-2",
         ghost: "text-muted hover:bg-surface-2 hover:text-fg",
         subtle: "bg-surface-2 text-fg border hover:border-brand-300",
-        danger: "bg-danger text-white hover:brightness-95 elev-1",
-        success: "bg-ok text-white hover:brightness-95 elev-1",
+        danger: "bg-danger text-white hover:brightness-95 relieve",
+        success: "bg-ok text-white hover:brightness-95 relieve",
         link: "text-brand-600 underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {

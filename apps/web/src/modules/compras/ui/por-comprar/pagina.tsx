@@ -8,6 +8,7 @@ import { PackageCheck } from "lucide-react";
 
 import { bandejaPorComprar, ofertasDeLosProductos } from "../../api/por-comprar";
 import { TablaPorComprar } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
 
@@ -61,20 +62,22 @@ export default async function PaginaPorComprar() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Por comprar</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Lo que los clientes ya confirmaron y el almacén no cubre.
-          </p>
+      <PanelModulo ruta="/compras/por-comprar">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Por comprar</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Lo que los clientes ya confirmaron y el almacén no cubre.
+            </p>
+          </div>
+          <Link
+            href="/compras/nueva"
+            className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+          >
+            Registrar una compra suelta
+          </Link>
         </div>
-        <Link
-          href="/compras/nueva"
-          className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-        >
-          Registrar una compra suelta
-        </Link>
-      </div>
+      </PanelModulo>
 
       {/* El tope de la consulta, dicho. Ver la nota de `api/por-comprar.ts`:
           un número incompleto que se anuncia se arregla; uno que no, se cree. */}

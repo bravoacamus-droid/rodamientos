@@ -10,6 +10,7 @@ import { marcasDisponibles } from "../api/consultas";
 import type { FiltrosProveedores } from "../dominio/tipos";
 import { FiltrosProveedoresBarra } from "./filtros";
 import { TablaProveedores } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -49,28 +50,30 @@ export default async function PaginaProveedores({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Proveedores</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            De quién viene la mercadería, qué marcas trae y cuánto tarda.
-          </p>
-        </div>
+      <PanelModulo ruta="/proveedores">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Proveedores</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              De quién viene la mercadería, qué marcas trae y cuánto tarda.
+            </p>
+          </div>
 
-        {puedeCrear ? (
-          <Link
-            href="/proveedores/nuevo"
-            className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
-            Nuevo proveedor
-          </Link>
-        ) : (
-          <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "crear", permisos.nombreRol)} className="h-9 md:h-9">
-            Nuevo proveedor
-          </BotonBloqueado>
-        )}
-      </div>
+          {puedeCrear ? (
+            <Link
+              href="/proveedores/nuevo"
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
+              Nuevo proveedor
+            </Link>
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+              Nuevo proveedor
+            </BotonBloqueado>
+          )}
+        </div>
+      </PanelModulo>
 
       <section className="card @container pt-4">
         <FiltrosProveedoresBarra marcas={marcas.ok ? marcas.datos : []} />

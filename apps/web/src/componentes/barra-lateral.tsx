@@ -163,18 +163,21 @@ function Enlace({
         // mínima para acertar con el dedo.
         "relative flex min-h-12 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
         estrecho && "justify-center px-0",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-300",
+        // Encendido: pastilla blanca con la raya dorada del logo a la
+        // izquierda. Sobre el azul del menú es lo que más contrasta, así que
+        // dónde está uno se ve sin buscarlo.
         activo
-          ? "bg-brand-600 font-semibold text-white"
+          ? "bg-white font-bold text-[var(--color-brand-800)] shadow-[0_2px_10px_rgb(0_0_0/0.25)] before:absolute before:inset-y-2.5 before:left-0 before:w-1 before:rounded-r-full before:bg-accent-400"
           : dentroDeGrupo
-            ? "text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-            : "font-semibold text-[var(--fg)] hover:bg-[var(--surface-2)]",
+            ? "text-[var(--lateral-texto)] hover:bg-white/10 hover:text-white"
+            : "font-semibold text-white hover:bg-white/10",
       )}
     >
       <IconoNav
         nombre={item.icono}
         // Recogido, el icono es lo único que hay: más grande, que se distinga.
-        className={cn(estrecho ? "size-[22px]" : "size-[18px]", "shrink-0", activo ? "" : "text-brand-600/75")}
+        className={cn(estrecho ? "size-[22px]" : "size-[18px]", "shrink-0", activo ? "text-[var(--color-brand-600)]" : "text-[var(--lateral-icono)]")}
       />
       {/* Estrecho, el nombre sigue ahí para el lector de pantalla. */}
       <span className={estrecho ? "sr-only" : "truncate"}>{item.etiqueta}</span>
@@ -193,7 +196,7 @@ function Enlace({
             // Estrecho, la pastilla se monta en la esquina del icono: lo que
             // espera tiene que seguir viéndose con el menú recogido.
             estrecho && "absolute -top-0.5 right-0.5 ml-0 min-w-5 px-1.5 py-0",
-            activo ? "bg-white/25 text-white" : "bg-[var(--warn-bg)] text-[var(--warn)]",
+            activo ? "bg-[var(--color-brand-600)] text-white" : "bg-accent-400 text-steel-950",
           )}
           aria-label={`${espera} esperando`}
         >
@@ -244,7 +247,7 @@ function Grupos({
       <>
         {grupos.map((grupo) => (
           <div key={grupo.titulo} className="flex flex-col gap-0.5">
-            <div className="mx-2 my-1.5 h-px bg-[var(--border-soft)]" aria-hidden />
+            <div className="mx-2 my-1.5 h-px bg-white/10" aria-hidden />
             {grupo.items.map((item) => (
               <Enlace
                 key={item.ruta}
@@ -275,17 +278,17 @@ function Grupos({
               type="button"
               onClick={() => alternar(grupo.titulo)}
               aria-expanded={abierto}
-              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+              className="flex min-h-12 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-300"
             >
               <IconoNav
                 nombre={grupo.icono}
-                className="size-[18px] shrink-0 text-brand-600"
+                className="size-[18px] shrink-0 text-accent-300"
               />
               <span className="truncate">{grupo.titulo}</span>
               <ChevronRight
                 strokeWidth={2.5}
                 className={cn(
-                  "ml-auto size-4 shrink-0 text-[var(--fg-subtle)] transition-transform",
+                  "ml-auto size-4 shrink-0 text-[var(--lateral-tenue)] transition-transform",
                   abierto ? "-rotate-90" : "rotate-90",
                 )}
                 aria-hidden="true"
@@ -296,7 +299,7 @@ function Grupos({
               /* La guía vertical ata los ítems a su grupo. Con los cinco
                  abiertos y sin ella, veintidós enlaces seguidos se leen como
                  una lista plana y el agrupamiento deja de significar nada. */
-              <div className="ml-6 flex flex-col gap-0.5 border-l border-[var(--border-soft)] pb-2 pl-2">
+              <div className="ml-6 flex flex-col gap-0.5 border-l border-white/15 pb-2 pl-2">
                 {grupo.items.map((item) => (
                   <Enlace
                     key={item.ruta}
@@ -338,16 +341,20 @@ function Cabecera({
       href="/dashboard"
       onClick={onNavegar}
       className={cn(
-        "flex shrink-0 items-center gap-3 border-b border-[var(--border)] py-4 transition-colors hover:bg-[var(--surface-2)]",
+        "flex shrink-0 items-center gap-3 border-b border-white/10 py-4 transition-colors hover:bg-white/5",
         estrecho ? "justify-center px-2" : "px-4",
       )}
     >
-      <Logo className={cn("w-auto shrink-0", estrecho ? "h-7" : "h-9")} />
+      {/* El logo es un PNG con fondo blanco: va en su placa, como una
+          etiqueta pegada sobre el azul, en vez de recortarlo. */}
+      <span className="shrink-0 rounded-lg bg-white p-1.5 shadow-[0_2px_10px_rgb(0_0_0/0.25)] ring-1 ring-white/40">
+        <Logo className={cn("w-auto", estrecho ? "h-6" : "h-8")} />
+      </span>
       <span className={estrecho ? "sr-only" : "min-w-0"}>
-        <span className="block truncate text-sm font-bold leading-tight">
+        <span className="block truncate text-sm font-bold leading-tight text-white">
           {empresa}
         </span>
-        <span className="block truncate text-sm text-[var(--fg-muted)]">
+        <span className="block truncate text-sm text-[var(--lateral-texto)]">
           {usuario}
         </span>
       </span>
@@ -390,7 +397,7 @@ function Cuerpo({
           estrecho={estrecho}
         />
 
-        {estrecho ? null : <div className="my-1 h-px bg-[var(--border-soft)]" />}
+        {estrecho ? null : <div className="my-1 h-px bg-white/10" />}
 
         <Grupos
           grupos={grupos}
@@ -453,11 +460,11 @@ export function BarraLateral({
       aria-expanded={!estrecho}
       aria-label={estrecho ? "Mostrar el menú completo" : "Ocultar menú"}
       className={cn(
-        "flex min-h-11 w-full items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]",
+        "flex min-h-11 w-full items-center gap-3 rounded-lg border border-white/20 bg-white/10 text-sm font-semibold text-white transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-300",
         estrecho ? "justify-center px-0" : "px-3",
       )}
     >
-      <Icono className="size-5 shrink-0 text-brand-600" aria-hidden />
+      <Icono className="size-5 shrink-0 text-accent-300" aria-hidden />
       {estrecho ? null : <span className="truncate">Ocultar menú</span>}
     </button>
   );
@@ -467,7 +474,7 @@ export function BarraLateral({
       <nav
         aria-label="Módulos"
         className={cn(
-          "hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-[var(--border)] bg-[var(--surface)] md:sticky md:top-0 md:flex print:!hidden",
+          "fondo-lateral hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-black/20 md:sticky md:top-0 md:flex print:!hidden",
           // La animación: solo el ancho. El contenido cambia de forma al
           // instante y la columna lo acompaña en 200 ms.
           "transition-[width] duration-200 ease-out motion-reduce:transition-none",
@@ -483,7 +490,7 @@ export function BarraLateral({
           pendientes={pendientes}
           estrecho={estrecho}
         />
-        <div className={cn("shrink-0 border-t border-[var(--border)] py-3", estrecho ? "px-2" : "px-3")}>
+        <div className={cn("shrink-0 border-t border-white/10 py-3", estrecho ? "px-2" : "px-3")}>
           {estrecho ? (
             <Tooltip>
               <TooltipTrigger asChild>{boton}</TooltipTrigger>
@@ -526,7 +533,12 @@ export function MenuMovil({
         <Menu className="size-5" aria-hidden="true" />
       </SheetTrigger>
 
-      <SheetContent lado="izquierda" className="flex w-72 max-w-[85vw] flex-col p-0">
+      <SheetContent
+        lado="izquierda"
+        // El aspa de cerrar es gris en el Sheet de serie: sobre el azul no se
+        // vería. Se aclara aquí, que es el único cajón con este fondo.
+        className="fondo-lateral flex w-72 max-w-[85vw] flex-col border-white/10 p-0 [&>button]:text-white/85 [&>button:hover]:bg-white/15 [&>button:hover]:text-white"
+      >
         <SheetTitle className="sr-only">Módulos</SheetTitle>
         <Cabecera empresa={empresa} usuario={usuario} onNavegar={cerrar} />
         <SheetBody className="flex min-h-0 flex-1 flex-col p-0">

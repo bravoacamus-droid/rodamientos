@@ -89,13 +89,29 @@
   :root {
     color-scheme: light;
 
-    --bg: #f4f6f8;
+    /* Rediseño visual (30/10): el fondo y los bordes toman un matiz del azul
+       de marca en vez del gris neutro. Ningún texto cambia de color: los
+       contrastes medidos el 21/10 siguen valiendo sobre estas superficies. */
+    --bg: #eef2f7;
     --surface: #ffffff;
-    --surface-2: #fafbfc;
-    --surface-3: #f1f4f7;
-    --border: #e4e7eb;
-    --border-soft: #eef1f4;
-    --border-strong: #cfd6de;
+    --surface-2: #f6f9fc;
+    --surface-3: #eef3f8;
+    --border: #dde4ec;
+    --border-soft: #ebf0f5;
+    --border-strong: #c7d2de;
+
+    /* Títulos de página en el azul del logo: dicen «esto es Rodatech» sin
+       añadir nada que haya que leer. */
+    --titulo: #0b3450;
+
+    /* La columna del menú: azul marino del logo, en degradado. El texto
+       inactivo (#d3e3f1) da 9,6:1 sobre el tono más claro del degradado. */
+    --lateral-1: #10527c;
+    --lateral-2: #0b3d5e;
+    --lateral-3: #072a42;
+    --lateral-texto: #d3e3f1;
+    --lateral-icono: #9cc6e6;
+    --lateral-tenue: #a9c3d9;
     --fg: #14181d;
     --fg-muted: #5c6773;
     /* Era #8894a2: 3,09:1 sobre blanco y 2,80 sobre --surface-3. Medido en
@@ -148,9 +164,11 @@
 
     /* Sombras: se declaran como variables para poder invertirlas en oscuro
        sin tener que duplicar la regla de cada utilidad. */
-    --elev-1: 0 1px 2px rgb(15 23 32 / 0.05), 0 1px 3px rgb(15 23 32 / 0.04);
-    --elev-2: 0 2px 4px rgb(15 23 32 / 0.05), 0 6px 16px rgb(15 23 32 / 0.07);
-    --elev-3: 0 10px 30px rgb(15 23 32 / 0.12), 0 2px 8px rgb(15 23 32 / 0.06);
+    /* Sombras teñidas del azul de marca: una sombra gris sobre un fondo
+       azulado se ve sucia. */
+    --elev-1: 0 1px 2px rgb(11 52 80 / 0.06), 0 2px 6px rgb(11 52 80 / 0.05);
+    --elev-2: 0 2px 4px rgb(11 52 80 / 0.06), 0 8px 22px rgb(11 52 80 / 0.1);
+    --elev-3: 0 14px 36px rgb(11 52 80 / 0.16), 0 3px 10px rgb(11 52 80 / 0.08);
   }
 
   .dark,
@@ -164,6 +182,15 @@
     --border: #22303f;
     --border-soft: #1a2531;
     --border-strong: #33465a;
+
+    --titulo: #e7edf3;
+
+    --lateral-1: #0f2a40;
+    --lateral-2: #0b1e2f;
+    --lateral-3: #07131e;
+    --lateral-texto: #c9d9e8;
+    --lateral-icono: #86b4d8;
+    --lateral-tenue: #93abc2;
     --fg: #e7edf3;
     --fg-muted: #93a3b5;
     /* Era #6b7d90: 3,93:1 sobre --surface-2 y 3,58 sobre --surface-3
@@ -343,12 +370,25 @@
    */
 
   body {
-    background: var(--bg);
+    /* Dos luces muy tenues —el azul y el dorado del logo— en las esquinas,
+       fijas al desplazar. Quitan el «fondo de color sólido» sin tocar nada
+       de lo que se lee: las tarjetas y tablas van encima, en blanco. */
+    background:
+      radial-gradient(1100px 520px at 100% -10%, color-mix(in srgb, var(--color-brand-400) 11%, transparent), transparent 70%),
+      radial-gradient(900px 480px at -10% 110%, color-mix(in srgb, var(--color-accent-400) 8%, transparent), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
     color: var(--fg);
     font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* `:where` deja la especificidad en cero: cualquier `text-*` puesto en
+     la pantalla gana, y el papel (que pinta su título con `style`) también. */
+  :where(main) :where(h1) {
+    color: var(--titulo);
   }
 
   ::selection {
@@ -454,7 +494,165 @@
 @utility card {
   background-color: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
+}
+
+/* --------------------------------------------------------------------------
+   5b. Superficies de marca (rediseño visual, 30/10)
+   -------------------------------------------------------------------------- */
+
+/* La columna del menú. Degradado del azul del logo, una luz dorada arriba y,
+   abajo, el dibujo de un rodamiento —anillo, bolas— que se desvanece. Es
+   decoración pura: va detrás del contenido y no recibe clics. */
+@utility fondo-lateral {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(280px 120px at 0 0, color-mix(in srgb, var(--color-accent-400) 16%, transparent), transparent 75%),
+    linear-gradient(180deg, var(--lateral-1) 0%, var(--lateral-2) 48%, var(--lateral-3) 100%);
+  color: #ffffff;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 16rem;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg fill='none' stroke='%23fdbe16' stroke-opacity='.14'%3E%3Ccircle cx='36' cy='36' r='22'/%3E%3Ccircle cx='36' cy='36' r='12'/%3E%3C/g%3E%3Cg fill='%23fdbe16' fill-opacity='.12'%3E%3Ccircle cx='36' cy='19' r='3'/%3E%3Ccircle cx='53' cy='36' r='3'/%3E%3Ccircle cx='36' cy='53' r='3'/%3E%3Ccircle cx='19' cy='36' r='3'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 72px 72px;
+    mask-image: linear-gradient(to top, #000, transparent);
+  }
+}
+
+/* Panel de cabecera con el mismo azul (login, tablero). */
+@utility fondo-marca {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(520px 200px at 100% 0, color-mix(in srgb, var(--color-accent-400) 22%, transparent), transparent 70%),
+    radial-gradient(420px 220px at 0 100%, color-mix(in srgb, var(--color-brand-400) 30%, transparent), transparent 70%),
+    linear-gradient(135deg, #10527c 0%, #0b3d5e 55%, #072a42 100%);
+  color: #ffffff;
+}
+
+/* La cabecera de cada módulo (30/10): título, botones y cifras clave sobre
+   el azul de la marca, con un tono por área para que se sepa en qué parte del
+   negocio se está sin leer el menú.
+
+   NO re-estiliza nada a mano: REDEFINE LOS TOKENS dentro del panel. Como las
+   tarjetas, los textos y los botones de borde de todas las pantallas se
+   pintan con var(--surface), var(--fg), var(--border)…, todo lo que la página
+   ponga dentro pasa a vidrio sobre azul sin tocar la página. Los colores de
+   estado se aclaran para que sigan pasando 4,5:1 sobre el azul. */
+@utility panel-modulo {
+  --panel-1: #10527c;
+  --panel-2: #0b3d5e;
+  --panel-3: #072a42;
+  --panel-luz: var(--color-accent-400);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(560px 220px at 100% 0, color-mix(in srgb, var(--panel-luz) 20%, transparent), transparent 70%),
+    radial-gradient(460px 240px at 0 100%, rgb(255 255 255 / 0.07), transparent 70%),
+    linear-gradient(135deg, var(--panel-1) 0%, var(--panel-2) 55%, var(--panel-3) 100%);
+  box-shadow: var(--elev-2);
+  color: #ffffff;
+
+  --surface: rgb(255 255 255 / 0.1);
+  --surface-2: rgb(255 255 255 / 0.16);
+  --surface-3: rgb(255 255 255 / 0.2);
+  --border: rgb(255 255 255 / 0.2);
+  --border-soft: rgb(255 255 255 / 0.12);
+  --border-strong: rgb(255 255 255 / 0.4);
+  --fg: #ffffff;
+  --fg-muted: #d6e4f0;
+  --fg-subtle: #c3d5e6;
+  --titulo: #ffffff;
+  --ring: var(--color-accent-300);
+  --ok: #7fe0b5;
+  --ok-bg: rgb(127 224 181 / 0.16);
+  --warn: #ffd76a;
+  --warn-bg: rgb(255 215 106 / 0.16);
+  --danger: #ffb3b3;
+  --danger-bg: rgb(255 179 179 / 0.16);
+  --info: #a9d4f5;
+  --info-bg: rgb(169 212 245 / 0.16);
+  --elev-1: 0 1px 0 rgb(255 255 255 / 0.06) inset;
+  --elev-2: 0 6px 18px rgb(0 0 0 / 0.18);
+
+  /* El rodamiento de la marca, grande y tenue, en la esquina. */
+  &::after {
+    content: "";
+    position: absolute;
+    right: -4.5rem;
+    top: -4.5rem;
+    width: 16rem;
+    height: 16rem;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='white' stroke-opacity='.09'%3E%3Ccircle cx='100' cy='100' r='96' stroke-width='6'/%3E%3Ccircle cx='100' cy='100' r='84' stroke-width='2'/%3E%3Ccircle cx='100' cy='100' r='52' stroke-width='2'/%3E%3Ccircle cx='100' cy='100' r='40' stroke-width='6'/%3E%3Cg fill='white' fill-opacity='.08' stroke='none'%3E%3Ccircle cx='168' cy='100' r='13'/%3E%3Ccircle cx='155' cy='140' r='13'/%3E%3Ccircle cx='121' cy='165' r='13'/%3E%3Ccircle cx='79' cy='165' r='13'/%3E%3Ccircle cx='45' cy='140' r='13'/%3E%3Ccircle cx='32' cy='100' r='13'/%3E%3Ccircle cx='45' cy='60' r='13'/%3E%3Ccircle cx='79' cy='35' r='13'/%3E%3Ccircle cx='121' cy='35' r='13'/%3E%3Ccircle cx='155' cy='60' r='13'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: contain;
+    /* Gira, muy despacio: un rodamiento quieto es un dibujo, uno que gira es
+       la marca. Dos minutos por vuelta, para que no se note mientras se lee. */
+    animation: rt-girar 120s linear infinite;
+  }
+
+  /* Un tono por área, todos de la familia del logo: azul, acero y dorado. */
+  &[data-area="compras"] {
+    --panel-1: #1f4f8c;
+    --panel-2: #173c6d;
+    --panel-3: #0d244a;
+  }
+  &[data-area="catalogo"] {
+    --panel-1: #17607a;
+    --panel-2: #0f4a60;
+    --panel-3: #093245;
+  }
+  &[data-area="almacen"] {
+    --panel-1: #4a5b6d;
+    --panel-2: #36434f;
+    --panel-3: #232c35;
+    --panel-luz: var(--color-accent-300);
+  }
+  &[data-area="gestion"] {
+    --panel-1: #0b3450;
+    --panel-2: #082840;
+    --panel-3: #051a2b;
+    --panel-luz: var(--color-accent-300);
+  }
+}
+
+/* El filo de color de la marca: azul → dorado. Una raya de 3-4 px arriba
+   de la barra superior y de las tarjetas destacadas. */
+@utility filo-marca {
+  background-image: linear-gradient(90deg, var(--color-brand-600) 0%, var(--color-brand-400) 45%, var(--color-accent-400) 100%);
+}
+
+/* Barra superior translúcida: el contenido se adivina al pasar por debajo. */
+@utility vidrio {
+  background-color: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px);
+}
+
+/* Relieve de los botones con relleno: una luz de 1 px arriba y una sombra
+   suave abajo. Va con `box-shadow` y no con degradado para que valga sobre
+   cualquier color —hay pantallas que pintan el botón primario de rojo—. */
+@utility relieve {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.2),
+    0 1px 2px rgb(11 52 80 / 0.18),
+    0 2px 6px rgb(11 52 80 / 0.12);
+}
+@utility relieve-alto {
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.24),
+    0 2px 4px rgb(11 52 80 / 0.2),
+    0 8px 18px rgb(11 52 80 / 0.18);
 }
 
 @utility elev-1 {
@@ -698,6 +896,131 @@
   animation: rt-crecer 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* La raya de progreso al cambiar de pantalla: avanza rápido al principio y
+   se frena cerca del final, sin llegar nunca, hasta que llega la pantalla. */
+@keyframes rt-avanzar {
+  0% {
+    transform: scaleX(0);
+  }
+  30% {
+    transform: scaleX(0.55);
+  }
+  100% {
+    transform: scaleX(0.92);
+  }
+}
+@utility anim-barra-navegacion {
+  transform-origin: left;
+  animation: rt-avanzar 6s cubic-bezier(0.1, 0.7, 0.3, 1) both;
+}
+
+/* --------------------------------------------------------------------------
+   Movimiento de marca (30/10)
+   --------------------------------------------------------------------------
+   Luis, 30/10: *«que no sea muy estático […] algo mínimo pero que haya
+   diferencia»*. Todo es corto, entra una sola vez y no se repite mientras se
+   trabaja —salvo los adornos lentísimos del login y del panel, que no están
+   donde se lee—. `prefers-reduced-motion` lo anula entero (ver arriba).
+
+   OJO: las entradas usan `backwards` y no `both`. Con `both`, el `translate`
+   final se queda puesto, y un `translate` distinto de `none` convierte al
+   elemento en contenedor de los `position: fixed` de dentro: la barra fija
+   de abajo de un formulario se iría con el contenido al desplazarse. */
+@keyframes rt-entrar {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+@keyframes rt-girar {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes rt-flotar {
+  0%,
+  100% {
+    translate: 0 0;
+    scale: 1;
+  }
+  50% {
+    translate: 2rem -1.5rem;
+    scale: 1.08;
+  }
+}
+@keyframes rt-aparecer-escala {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+@keyframes rt-desvanecer {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@utility anim-entrar {
+  animation: rt-entrar 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@utility anim-aparecer-escala {
+  animation: rt-aparecer-escala 600ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+@utility anim-girar-lento {
+  animation: rt-girar 90s linear infinite;
+}
+@utility anim-girar-inverso {
+  animation: rt-girar 120s linear infinite reverse;
+}
+@utility anim-flotar {
+  animation: rt-flotar 14s ease-in-out infinite;
+}
+
+/* Las secciones de cada pantalla entran escalonadas al llegar a un módulo:
+   panel, filtros, tabla… La envoltura la pone el layout del ERP. Solo las
+   ocho primeras: más abajo ya se está leyendo y una que aparece tarde
+   distrae. Como es animación de ENTRADA, filtrar o paginar no la repite. */
+@utility contenido-animado {
+  & > * > :nth-child(-n + 8) {
+    animation: rt-entrar 460ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  & > * > :nth-child(2) {
+    animation-delay: 70ms;
+  }
+  & > * > :nth-child(3) {
+    animation-delay: 140ms;
+  }
+  & > * > :nth-child(4) {
+    animation-delay: 200ms;
+  }
+  & > * > :nth-child(5) {
+    animation-delay: 250ms;
+  }
+  & > * > :nth-child(n + 6) {
+    animation-delay: 290ms;
+  }
+}
+
+/* Tarjetas de una fila que entran una detrás de otra (las cifras de cada
+   módulo y del tablero). El retraso lo da su posición en la fila. */
+@utility anim-escalon {
+  animation: rt-entrar 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: 160ms;
+  &:nth-child(2) {
+    animation-delay: 230ms;
+  }
+  &:nth-child(3) {
+    animation-delay: 300ms;
+  }
+  &:nth-child(4) {
+    animation-delay: 370ms;
+  }
+  &:nth-child(n + 5) {
+    animation-delay: 430ms;
+  }
+}
+
 /* Latido suave para lo que está esperando respuesta de un tercero —el envío a
    SUNAT, sobre todo—. Es distinto de un spinner: no dice "cargando", dice
    "esto sigue vivo y no depende de mí". */
@@ -763,6 +1086,26 @@
 }
 
 /* --------------------------------------------------------------------------
+   6c. El botón principal dentro de la cabecera de un módulo
+   --------------------------------------------------------------------------
+   Es `bg-brand-600`, que es un color fijo: sobre el azul del panel se
+   perdía. Ahí pasa al dorado del logo con letra oscura (11:1), que es además
+   lo que más llama dentro del panel, como corresponde a la acción principal.
+   Sin capa, para ganar a la utilidad. */
+.panel-modulo .bg-brand-600 {
+  background-color: var(--color-accent-400);
+  color: var(--color-steel-950);
+  font-weight: 600;
+}
+.panel-modulo .hover\:bg-brand-700:hover {
+  background-color: var(--color-accent-300);
+}
+.panel-modulo .text-brand-600,
+.panel-modulo .text-brand-700 {
+  color: var(--color-accent-300);
+}
+
+/* --------------------------------------------------------------------------
    7. Impresión — cotizaciones, guías y facturas salen en papel a diario
    -------------------------------------------------------------------------- */
 
@@ -817,6 +1160,25 @@
   .elev-2,
   .elev-3 {
     box-shadow: none !important;
+  }
+
+  /* La cabecera de módulo en papel: sin el azul, y con los tokens de vuelta
+     a tinta negra (dentro del panel el texto es blanco). */
+  .panel-modulo {
+    background: none !important;
+    box-shadow: none !important;
+    color: #000;
+    --surface: #fff;
+    --surface-2: #fff;
+    --border: #ccc;
+    --border-strong: #999;
+    --fg: #000;
+    --fg-muted: #333;
+    --fg-subtle: #444;
+    --titulo: #000;
+  }
+  .panel-modulo::after {
+    display: none;
   }
 
   /* Un enlace impreso es texto: subrayarlo en azul confunde. */

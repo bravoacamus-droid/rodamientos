@@ -57,12 +57,12 @@ export function FilaIndicadores({ items }: { items: Indicador[] }) {
             <Link
               key={i.etiqueta}
               href={i.href}
-              className="card elev-1 block p-3 @md:p-4 transition-[box-shadow,border-color] hover:elev-2 hover:border-brand-300"
+              className="card elev-1 anim-escalon block p-3 @md:p-4 transition-[box-shadow,border-color] hover:elev-2 hover:border-brand-300"
             >
               {cuerpo}
             </Link>
           ) : (
-            <div key={i.etiqueta} className="card elev-1 p-3 @md:p-4">
+            <div key={i.etiqueta} className="card elev-1 anim-escalon p-3 @md:p-4">
               {cuerpo}
             </div>
           );

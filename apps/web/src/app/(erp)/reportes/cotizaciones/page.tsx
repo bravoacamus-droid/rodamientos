@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PaginaCotizacionesEjecutiva } from "@/modules/tablero";
 import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 export const metadata: Metadata = { title: "Cotizado y ganado" };
 
@@ -24,10 +25,12 @@ export default async function Pagina(props: { searchParams: Promise<Record<strin
   }
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Cotizado y ganado</h1>
-        <p className="text-base text-[var(--fg-muted)]">Cuánto se cotiza, cuánto se gana y qué está en juego.</p>
-      </div>
+      <PanelModulo ruta="/reportes/cotizaciones">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Cotizado y ganado</h1>
+          <p className="text-base text-[var(--fg-muted)]">Cuánto se cotiza, cuánto se gana y qué está en juego.</p>
+        </div>
+      </PanelModulo>
       <PaginaCotizacionesEjecutiva {...props} />
     </div>
   );

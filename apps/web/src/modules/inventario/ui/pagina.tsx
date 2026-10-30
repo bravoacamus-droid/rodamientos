@@ -6,6 +6,7 @@ import { perfilActual } from "@rodatech/db/servidor";
 import { ResumenInventario } from "./resumen";
 import { TablaReposicion } from "./reposicion";
 import { TablaValorizacion } from "./valorizacion";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * Inventario.
@@ -30,32 +31,34 @@ export default async function PaginaInventario() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Inventario</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Cuánto vale lo que hay en almacén, y qué conviene mover.
-          </p>
-        </div>
+      <PanelModulo ruta="/inventario">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Inventario</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Cuánto vale lo que hay en almacén, y qué conviene mover.
+            </p>
+          </div>
 
-        {/* Los botones del sistema y no clases copiadas a mano: eran 36 px y
-            esquina de 2 px, al lado de botones de 40 y 6 en el resto del ERP
-            (revisión por módulos del 02/10). */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/inventario/kardex" className={buttonVariants({ variant: "outline" })}>
-            Ver kardex
-          </Link>
-          {puedeCuadrar ? (
-            <Link href="/inventario/ajuste" className={buttonVariants({ variant: "primary" })}>
-              Cuadrar inventario
+          {/* Los botones del sistema y no clases copiadas a mano: eran 36 px y
+              esquina de 2 px, al lado de botones de 40 y 6 en el resto del ERP
+              (revisión por módulos del 02/10). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/inventario/kardex" className={buttonVariants({ variant: "outline" })}>
+              Ver kardex
             </Link>
-          ) : null}
+            {puedeCuadrar ? (
+              <Link href="/inventario/ajuste" className={buttonVariants({ variant: "primary" })}>
+                Cuadrar inventario
+              </Link>
+            ) : null}
+          </div>
         </div>
-      </div>
 
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <ResumenInventario />
-      </Suspense>
+        <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+          <ResumenInventario />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card">
         <header className="px-4 pt-4">

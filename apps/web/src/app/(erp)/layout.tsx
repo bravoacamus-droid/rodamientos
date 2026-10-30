@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
+import { BarraNavegacion } from "@/componentes/barra-navegacion";
+import { Bienvenida } from "@/componentes/bienvenida";
 import { GuardaVer } from "@/componentes/guarda-ver";
 import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
@@ -75,6 +77,8 @@ export default async function LayoutErp({
     // no documento por documento: así vale para la cotización, la factura, la
     // boleta, la guía y lo que venga después.
     <div className="flex min-h-dvh print:block print:min-h-0">
+      <BarraNavegacion />
+      <Bienvenida nombre={perfil?.nombre ?? ""} empresa={empresa} />
       <BarraLateral
         grupos={grupos}
         empresa={empresa}
@@ -84,7 +88,9 @@ export default async function LayoutErp({
       />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-3 sm:px-4 md:px-6 print:hidden">
+        <header className="vidrio sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] px-3 shadow-[0_1px_0_rgb(11_52_80/0.04),0_4px_14px_rgb(11_52_80/0.05)] sm:px-4 md:px-6 print:hidden">
+          {/* El filo de la marca, azul → dorado, sobre la barra. */}
+          <span className="filo-marca pointer-events-none absolute inset-x-0 top-0 h-[3px]" aria-hidden="true" />
           {/* En móvil el logo cede su sitio al botón del menú: sin él no hay
               forma de llegar a ningún módulo desde un teléfono. */}
           <MenuMovil
@@ -107,9 +113,12 @@ export default async function LayoutErp({
             el desbordamiento tiene que quedarse dentro de su contenedor. En
             papel el margen lo pone `@page`, no el padding de la pantalla. */}
         <main className="min-w-0 flex-1 p-3 sm:p-4 md:p-6 print:p-0">
-          <GuardaVer rol={perfil?.rol ?? null} nombreRol={permisos.nombreRol} permisos={permisos.lista}>
-            {children}
-          </GuardaVer>
+          {/* Las secciones de cada pantalla entran escalonadas (30/10). */}
+          <div className="contenido-animado">
+            <GuardaVer rol={perfil?.rol ?? null} nombreRol={permisos.nombreRol} permisos={permisos.lista}>
+              {children}
+            </GuardaVer>
+          </div>
         </main>
       </div>
     </div>

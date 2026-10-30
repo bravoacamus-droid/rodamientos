@@ -48,7 +48,7 @@ export function CardFooter({ className, ...props }: React.ComponentPropsWithRef<
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-b-[var(--radius-lg)] border-t bg-surface-2 px-5 py-3",
+        "flex items-center gap-3 rounded-b-[var(--radius-xl)] border-t bg-surface-2 px-5 py-3",
         className,
       )}
       {...props}

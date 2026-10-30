@@ -33,14 +33,14 @@ export function THead({ className, ...props }: React.ComponentPropsWithRef<"thea
   return (
     <thead
       className={cn(
-        "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-surface-2",
+        "[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-brand-50 dark:[&_th]:bg-surface-3",
         // `text-sm` y no `text-sm`: el título de una columna hay que LEERLO
         // para saber qué es la cifra de debajo, y la regla de Willy es que
         // nada legible baja de 14 px. Luis, 17/09, con la medición delante.
         // Lo que se pierde es ancho —la fila crece un pelo de alto— y lo que
         // se gana es que «VALOR UNIT.» e «IMPORTE» no se confundan.
-        "[&_th]:border-b [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-sm",
-        "[&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-subtle [&_th]:whitespace-nowrap",
+        "[&_th]:border-b [&_th]:border-brand-100 dark:[&_th]:border-[var(--border)] [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-sm",
+        "[&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-brand-800 dark:[&_th]:text-[var(--fg-muted)] [&_th]:whitespace-nowrap",
         className,
       )}
       {...props}
@@ -53,7 +53,7 @@ export function TBody({ className, ...props }: React.ComponentPropsWithRef<"tbod
     <tbody
       className={cn(
         "[&_tr]:border-b [&_tr]:border-[var(--border-soft)] [&_tr:last-child]:border-0",
-        "[&_tr]:transition-colors [&_tr:hover]:bg-surface-2",
+        "[&_tr]:transition-colors [&_tr:hover]:bg-brand-50/60 dark:[&_tr:hover]:bg-surface-2",
         "[&_td]:px-3 [&_td]:py-2.5 [&_td]:align-middle",
         className,
       )}

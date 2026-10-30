@@ -8,6 +8,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button, Input, InputContrasena, Label } from "@rodatech/ui";
 
+import { MARCA_RECIEN_ENTRA } from "@/componentes/bienvenida";
 import { iniciarSesion, type ResultadoLogin } from "./acciones";
 
 const INICIAL: ResultadoLogin = { error: null };
@@ -15,7 +16,7 @@ const INICIAL: ResultadoLogin = { error: null };
 function BotonEntrar() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} className="mt-1 w-full">
+    <Button type="submit" size="lg" disabled={pending} className="mt-1 w-full text-base">
       {pending ? "Entrando…" : "Entrar"}
     </Button>
   );
@@ -27,7 +28,21 @@ export function FormularioLogin({ destino }: { destino: string }) {
   return (
     // `noValidate`: el error lo dice siempre el aviso de abajo, en grande y
     // en español, no el globo del navegador (pequeño y a veces en inglés).
-    <form action={accion} noValidate className="flex flex-col gap-4">
+    <form
+      action={accion}
+      noValidate
+      className="flex flex-col gap-4"
+      // La marca para la bienvenida del ERP (ver Bienvenida). Si la clave
+      // está mal no se llega al ERP y la marca se queda esperando al
+      // siguiente intento, que es justo cuando hace falta.
+      onSubmit={() => {
+        try {
+          window.sessionStorage.setItem(MARCA_RECIEN_ENTRA, "1");
+        } catch {
+          // Sin almacenamiento: se entra igual, solo que sin bienvenida.
+        }
+      }}
+    >
       <input type="hidden" name="destino" value={destino} />
 
       <div className="flex flex-col gap-1.5">

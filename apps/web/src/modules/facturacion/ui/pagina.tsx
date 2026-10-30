@@ -16,6 +16,7 @@ import { indicadoresFacturacion } from "../api/consultas";
 import type { FiltrosComprobantes } from "../dominio/tipos";
 import { FiltrosFacturacionBarra } from "./filtros";
 import { TablaComprobantes } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -73,120 +74,122 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Facturación</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Facturas y notas electrónicas. Cierran el ciclo comercial.
-          </p>
-        </div>
+      <PanelModulo ruta="/facturacion">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Facturación</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Facturas y notas electrónicas. Cierran el ciclo comercial.
+            </p>
+          </div>
 
-        {/*
-          Los dos con icono, como el prototipo de Luis (10/09).
+          {/*
+            Los dos con icono, como el prototipo de Luis (10/09).
 
-          Y no son intercambiables: el engranaje va en el que ajusta y el «+»
-          en el que crea. Es la misma regla que en guías — el icono lo lleva el
-          que crea algo— con una segunda pista aquí, porque en esta pantalla
-          hay dos botones juntos y uno de ellos no se toca casi nunca.
-        */}
-        {/* Con `buttonVariants`, los mismos 40 px y el mismo radio que
-            «Volver» y que los botones de la ficha (revisión por módulos del
-            02/10): había tres alturas y dos radios entre lista y ficha. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Los CR del periodo y cliente que se están viendo, en un ZIP
-              por cliente (Willy, 14/10: «descargar todo… por carpetas»). */}
-          <a
-            href={`/facturacion/cr?${new URLSearchParams(
-              Object.entries({ desde: filtros.desde ?? "", hasta: filtros.hasta ?? "", cliente: filtros.cliente ?? "" }).filter(
-                ([, v]) => v,
-              ),
-            ).toString()}`}
-            className={cn(buttonVariants({ variant: "outline" }), "px-3")}
-          >
-            <FileArchive className="size-4" aria-hidden="true" />
-            Descargar comprobantes de retención
-          </a>
-          {esGerencia ? (
-            <Link
-              href="/configuracion/sunat"
+            Y no son intercambiables: el engranaje va en el que ajusta y el «+»
+            en el que crea. Es la misma regla que en guías — el icono lo lleva el
+            que crea algo— con una segunda pista aquí, porque en esta pantalla
+            hay dos botones juntos y uno de ellos no se toca casi nunca.
+          */}
+          {/* Con `buttonVariants`, los mismos 40 px y el mismo radio que
+              «Volver» y que los botones de la ficha (revisión por módulos del
+              02/10): había tres alturas y dos radios entre lista y ficha. */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Los CR del periodo y cliente que se están viendo, en un ZIP
+                por cliente (Willy, 14/10: «descargar todo… por carpetas»). */}
+            <a
+              href={`/facturacion/cr?${new URLSearchParams(
+                Object.entries({ desde: filtros.desde ?? "", hasta: filtros.hasta ?? "", cliente: filtros.cliente ?? "" }).filter(
+                  ([, v]) => v,
+                ),
+              ).toString()}`}
               className={cn(buttonVariants({ variant: "outline" }), "px-3")}
             >
-              <Settings className="size-4" aria-hidden="true" />
-              Configuración
-            </Link>
-          ) : null}
-          {puedeFacturar ? (
-            <Link
-              href="/facturacion/nueva"
-              className={cn(buttonVariants({ variant: "primary" }), "px-3")}
-            >
-              <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
-              Emitir comprobante
-            </Link>
-          ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("facturacion", "crear", perfil.nombreRol)}>
-              Emitir comprobante
-            </BotonBloqueado>
-          )}
-        </div>
-      </div>
-
-      {/* --------------------------------------------- Aviso de estado */}
-      {/*
-        El aviso, con su icono, como en el prototipo de Luis (10/09).
-
-        Un bloque ámbar a ancho completo se confunde con una sección más de la
-        página; el icono lo marca como aviso antes de leer la frase. Y la lista
-        sube de 12,8 px a 14: es lo que hay que ir tachando para poder facturar
-        de verdad, no una nota al pie.
-      */}
-      {!config.listo ? (
-        <div className="anim-entrada flex gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
-          <Info
-            className="mt-0.5 size-5 shrink-0 text-[var(--warn)]"
-            aria-hidden="true"
-          />
-
-          <div className="min-w-0">
-            <p className="font-medium">
-              Se puede emitir y cobrar, pero nada llega a SUNAT todavía.
-            </p>
-            <ul className="mt-1.5 flex flex-col gap-0.5">
-              {config.faltan.map((f) => (
-                <li key={f}>· {f}</li>
-              ))}
-            </ul>
+              <FileArchive className="size-4" aria-hidden="true" />
+              Descargar comprobantes de retención
+            </a>
             {esGerencia ? (
               <Link
                 href="/configuracion/sunat"
-                className={cn(buttonVariants({ variant: "outline" }), "mt-2 px-3")}
+                className={cn(buttonVariants({ variant: "outline" }), "px-3")}
               >
                 <Settings className="size-4" aria-hidden="true" />
-                Ir a configurarlo
+                Configuración
               </Link>
             ) : null}
+            {puedeFacturar ? (
+              <Link
+                href="/facturacion/nueva"
+                className={cn(buttonVariants({ variant: "primary" }), "px-3")}
+              >
+                <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
+                Emitir comprobante
+              </Link>
+            ) : (
+              <BotonBloqueado mensaje={avisoSinPermiso("facturacion", "crear", perfil.nombreRol)}>
+                Emitir comprobante
+              </BotonBloqueado>
+            )}
           </div>
         </div>
-      ) : config.ambiente === "beta" ? (
-        <p className="anim-entrada rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
-          <strong>Homologación (beta).</strong> Lo que se emita se envía a SUNAT,
-          pero <strong>no tiene valor fiscal</strong>. Es lo correcto hasta terminar
-          las pruebas.
-        </p>
-      ) : null}
 
-      {config.avisoCaducidad ? (
-        <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
-          {config.avisoCaducidad}
-        </p>
-      ) : null}
+        {/* --------------------------------------------- Aviso de estado */}
+        {/*
+          El aviso, con su icono, como en el prototipo de Luis (10/09).
 
-      <Suspense
-        key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
-        fallback={<Skeleton className="h-32 w-full" />}
-      >
-        <Indicadores filtros={filtros} />
-      </Suspense>
+          Un bloque ámbar a ancho completo se confunde con una sección más de la
+          página; el icono lo marca como aviso antes de leer la frase. Y la lista
+          sube de 12,8 px a 14: es lo que hay que ir tachando para poder facturar
+          de verdad, no una nota al pie.
+        */}
+        {!config.listo ? (
+          <div className="anim-entrada flex gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
+            <Info
+              className="mt-0.5 size-5 shrink-0 text-[var(--warn)]"
+              aria-hidden="true"
+            />
+
+            <div className="min-w-0">
+              <p className="font-medium">
+                Se puede emitir y cobrar, pero nada llega a SUNAT todavía.
+              </p>
+              <ul className="mt-1.5 flex flex-col gap-0.5">
+                {config.faltan.map((f) => (
+                  <li key={f}>· {f}</li>
+                ))}
+              </ul>
+              {esGerencia ? (
+                <Link
+                  href="/configuracion/sunat"
+                  className={cn(buttonVariants({ variant: "outline" }), "mt-2 px-3")}
+                >
+                  <Settings className="size-4" aria-hidden="true" />
+                  Ir a configurarlo
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : config.ambiente === "beta" ? (
+          <p className="anim-entrada rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+            <strong>Homologación (beta).</strong> Lo que se emita se envía a SUNAT,
+            pero <strong>no tiene valor fiscal</strong>. Es lo correcto hasta terminar
+            las pruebas.
+          </p>
+        ) : null}
+
+        {config.avisoCaducidad ? (
+          <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+            {config.avisoCaducidad}
+          </p>
+        ) : null}
+
+        <Suspense
+          key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
+          fallback={<Skeleton className="h-32 w-full" />}
+        >
+          <Indicadores filtros={filtros} />
+        </Suspense>
+      </PanelModulo>
 
       {/* `@container`: la tabla y los filtros se deciden por el ancho de esta
           caja, no de la pantalla (revisión por módulos del 02/10). */}

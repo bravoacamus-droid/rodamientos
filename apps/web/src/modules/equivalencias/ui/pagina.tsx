@@ -24,6 +24,7 @@ import {
 } from "../dominio/tipos";
 import { BotonDeclarar, BotonQuitar, DeclararOtro } from "./acciones";
 import { SelectorProducto } from "./selector";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -62,13 +63,15 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Equivalencias</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Se busca un código y salen sus equivalentes, con el motivo por el que
-          aparece cada uno.
-        </p>
-      </div>
+      <PanelModulo ruta="/equivalencias">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Equivalencias</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Se busca un código y salen sus equivalentes, con el motivo por el que
+            aparece cada uno.
+          </p>
+        </div>
+      </PanelModulo>
 
       <section className="card p-4">
         <div className="max-w-xl">

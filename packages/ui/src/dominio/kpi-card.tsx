@@ -125,19 +125,21 @@ export function KpiCard({
 
   const contenido = (
     <>
+      {/* El filo azul → dorado del logo: une las cifras del tablero con la marca. */}
+      <span className="filo-marca anim-crecer absolute inset-x-0 top-0 h-1" aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
         {icono && (
           // En su propia caja con fondo: un icono suelto en gris al lado de un
           // título se lee como decoración. Con superficie propia se lee como
           // la marca de qué mide esta tarjeta, que es lo que es.
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-2)] text-[var(--fg-muted)] [&_svg]:size-[18px]">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-surface-3 dark:ring-[var(--border)] [&_svg]:size-5">
             {icono}
           </span>
         )}
       </div>
 
-      <p className="tabular mt-1.5 text-2xl font-semibold leading-none text-fg">{valor}</p>
+      <p className="tabular mt-1.5 text-2xl font-bold leading-none tracking-tight text-[var(--titulo)]">{valor}</p>
       {detalle && <p className="mt-1.5 text-sm text-muted">{detalle}</p>}
 
       {variacion !== null && (
@@ -178,7 +180,7 @@ export function KpiCard({
   );
 
   const clases = cn(
-    "card elev-1 block p-4",
+    "card elev-1 anim-escalon relative block overflow-hidden p-4 pt-5",
     href && "transition-[box-shadow,border-color] hover:elev-2 hover:border-brand-200",
     className,
   );

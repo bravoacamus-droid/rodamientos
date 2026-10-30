@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { PaginaClientesEjecutiva } from "@/modules/tablero";
 import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 export const metadata: Metadata = { title: "Ventas por cliente" };
 
@@ -24,10 +25,12 @@ export default async function Pagina(props: { searchParams: Promise<Record<strin
   }
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Ventas por cliente</h1>
-        <p className="text-base text-[var(--fg-muted)]">Quién compra, cuánto y cómo va cada uno contra el periodo anterior.</p>
-      </div>
+      <PanelModulo ruta="/reportes/clientes">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Ventas por cliente</h1>
+          <p className="text-base text-[var(--fg-muted)]">Quién compra, cuánto y cómo va cada uno contra el periodo anterior.</p>
+        </div>
+      </PanelModulo>
       <PaginaClientesEjecutiva {...props} />
     </div>
   );

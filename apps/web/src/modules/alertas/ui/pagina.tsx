@@ -25,6 +25,7 @@ import {
 } from "../dominio/tipos";
 import { AccionesAlerta, BotonMarcarTodas, BotonRefrescar } from "./acciones";
 import { FiltrosBandejaBarra } from "./filtros";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -64,33 +65,35 @@ export default async function PaginaAlertas({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Lo que hay que mirar hoy: pedidos, guías y cotizaciones que se
-            quedan atrás, quiebres, cartera vencida y documentos rechazados.
-          </p>
-        </div>
-        <div className="flex items-center gap-1">
-          <Suspense fallback={null}>
-            <BotonesDeBandeja />
-          </Suspense>
-          <BotonRefrescar />
-        </div>
-      </div>
-
-      <Suspense
-        fallback={
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+      <PanelModulo ruta="/alertas">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Lo que hay que mirar hoy: pedidos, guías y cotizaciones que se
+              quedan atrás, quiebres, cartera vencida y documentos rechazados.
+            </p>
           </div>
-        }
-      >
-        <Indicadores />
-      </Suspense>
+          <div className="flex items-center gap-1">
+            <Suspense fallback={null}>
+              <BotonesDeBandeja />
+            </Suspense>
+            <BotonRefrescar />
+          </div>
+        </div>
+
+        <Suspense
+          fallback={
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+            </div>
+          }
+        >
+          <Indicadores />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosBandejaBarra />

@@ -14,6 +14,7 @@ import { cifras, filtrar, leerOrden, ordenar, paginar, type FiltrosPedidos } fro
 import { FiltrosPedidosBarra } from "./filtros";
 import { PestanasPedidos } from "./pestanas";
 import { TablaPedidos } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 function uno(v: string | string[] | undefined): string | undefined {
   const valor = Array.isArray(v) ? v[0] : v;
@@ -57,13 +58,15 @@ export default async function PaginaPedidos({
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Cada vez que un cliente confirma, nace un pedido: se compra lo que falta, se despacha con su guía, se
-          factura y se cobra.
-        </p>
-      </div>
+      <PanelModulo ruta="/pedidos">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Cada vez que un cliente confirma, nace un pedido: se compra lo que falta, se despacha con su guía, se
+            factura y se cobra.
+          </p>
+        </div>
+      </PanelModulo>
 
       <PestanasPedidos activa="todos" />
 

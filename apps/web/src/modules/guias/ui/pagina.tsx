@@ -16,6 +16,7 @@ import { indicadoresGuias } from "../api/consultas";
 import type { FiltrosGuias } from "../dominio/tipos";
 import { FiltrosGuiasBarra } from "./filtros";
 import { TablaGuias } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -61,43 +62,45 @@ export default async function PaginaGuias({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Guías de remisión</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Acompañan la mercadería cuando sale. Emitir una guía es lo que descarga el
-            stock.
-          </p>
+      <PanelModulo ruta="/guias">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Guías de remisión</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Acompañan la mercadería cuando sale. Emitir una guía es lo que descarga el
+              stock.
+            </p>
+          </div>
+
+          {/*
+            El «+» delante, como en el prototipo de Luis (10/09).
+
+            No es adorno: es el único botón de la pantalla que CREA algo. El
+            resto —Ver, Imprimir— trabaja sobre lo que ya está, y un icono que
+            solo lleva el que crea es una pista que se lee antes que el texto.
+          */}
+          {puedeDespachar ? (
+            <Link
+              href="/guias/nueva"
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
+              Preparar guía
+            </Link>
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("guias", "crear", perfil.nombreRol)} className="md:h-9">
+              Preparar guía
+            </BotonBloqueado>
+          )}
         </div>
 
-        {/*
-          El «+» delante, como en el prototipo de Luis (10/09).
-
-          No es adorno: es el único botón de la pantalla que CREA algo. El
-          resto —Ver, Imprimir— trabaja sobre lo que ya está, y un icono que
-          solo lleva el que crea es una pista que se lee antes que el texto.
-        */}
-        {puedeDespachar ? (
-          <Link
-            href="/guias/nueva"
-            className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
-            Preparar guía
-          </Link>
-        ) : (
-          <BotonBloqueado mensaje={avisoSinPermiso("guias", "crear", perfil.nombreRol)} className="md:h-9">
-            Preparar guía
-          </BotonBloqueado>
-        )}
-      </div>
-
-      <Suspense
-        key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
-        fallback={<Skeleton className="h-32 w-full" />}
-      >
-        <Indicadores filtros={filtros} />
-      </Suspense>
+        <Suspense
+          key={`${filtros.desde}|${filtros.hasta}|${filtros.cliente}`}
+          fallback={<Skeleton className="h-32 w-full" />}
+        >
+          <Indicadores filtros={filtros} />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card pt-4">
         {/* El periodo arriba y una fila de filtros debajo (12/10). */}

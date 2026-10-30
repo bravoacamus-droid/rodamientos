@@ -34,6 +34,7 @@ export default async function PaginaConfigUsuarios() {
   return (
     <div className="flex flex-col gap-5">
       <CabeceraConfig
+        ruta="/configuracion/usuarios"
         icono="usuarios"
         titulo="Usuarios"
         descripcion="Quién entra al sistema y qué puede hacer dentro."

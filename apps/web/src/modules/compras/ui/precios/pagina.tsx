@@ -7,6 +7,7 @@ import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 import { MessageCircleQuestion, Plus } from "lucide-react";
 
 import { rondas } from "../../api/comparador";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /** La misma lista que `permisos_rol` tiene para `compras`. */
 
@@ -49,33 +50,35 @@ export default async function PaginaPrecios() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pedir precios</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Varios productos y varios proveedores en una sola lista: apuntas lo
-            que te dijo cada uno y salen las compras ya repartidas.
-          </p>
+      <PanelModulo ruta="/compras/precios">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Pedir precios</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Varios productos y varios proveedores en una sola lista: apuntas lo
+              que te dijo cada uno y salen las compras ya repartidas.
+            </p>
+          </div>
+          {/*
+            Abre una ronda EN BLANCO, y esa es la novedad del 21/09.
+
+            Mandaba a «Por comprar», que es de donde salía la única ronda
+            posible: la de lo que falta de un pedido aprobado. Pero Willy
+            pregunta precios todos los días sin tener un pedido detrás, y eso era
+            justo lo que no se podía hacer aquí.
+
+            El camino de la bandeja no se pierde: sigue teniendo su propio botón
+            «Pedir precio» en cada fila.
+          */}
+          <Link
+            href="/compras/pedir-precio"
+            className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+          >
+            <Plus className="size-[18px]" />
+            Pedir precios
+          </Link>
         </div>
-        {/*
-          Abre una ronda EN BLANCO, y esa es la novedad del 21/09.
-
-          Mandaba a «Por comprar», que es de donde salía la única ronda
-          posible: la de lo que falta de un pedido aprobado. Pero Willy
-          pregunta precios todos los días sin tener un pedido detrás, y eso era
-          justo lo que no se podía hacer aquí.
-
-          El camino de la bandeja no se pierde: sigue teniendo su propio botón
-          «Pedir precio» en cada fila.
-        */}
-        <Link
-          href="/compras/pedir-precio"
-          className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-        >
-          <Plus className="size-[18px]" />
-          Pedir precios
-        </Link>
-      </div>
+      </PanelModulo>
 
       {filas.length === 0 ? (
         <EstadoVacio

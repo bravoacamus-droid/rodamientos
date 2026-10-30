@@ -12,6 +12,7 @@ import { ETIQUETA_TIPO } from "@/modules/facturacion/dominio/tipos";
 import { bandejaSunat } from "../api/consultas";
 import { bajasPorFecha, plazoDeEnvio, type DocumentoBandeja } from "../dominio/bandeja";
 import { BotonBaja, BotonEnviar, BotonEnviarGuias } from "./botones";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * SUNAT: todo lo que espera algo de SUNAT, en un solo sitio (15/10).
@@ -50,74 +51,76 @@ export default async function PaginaSunat() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">SUNAT</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Lo que falta mandar, lo que SUNAT rechazó y las anulaciones que todavía no sabe.
-        </p>
-      </div>
-
-      {!config.guias.listo ? (
-        <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
-          <p className="font-semibold">
-            {config.listo ? "Las facturas ya se pueden enviar; las guías todavía no." : "Todavía no está conectado con SUNAT."}
-          </p>
-          <ul className="mt-1 list-inside list-disc">
-            {config.guias.faltan.map((f) => (
-              <li key={f}>{f}</li>
-            ))}
-          </ul>
-          <p className="mt-2">
-            Se puede facturar igual: lo emitido se junta aquí y se manda cuando esté listo.{" "}
-            {esGerencia ? (
-              <Link href="/configuracion/sunat" className="font-medium underline">
-                Ir a «SUNAT y numeración»
-              </Link>
-            ) : null}
+      <PanelModulo ruta="/sunat">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">SUNAT</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Lo que falta mandar, lo que SUNAT rechazó y las anulaciones que todavía no sabe.
           </p>
         </div>
-      ) : config.ambiente === "beta" ? (
-        <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
-          <strong>Modo de pruebas de SUNAT.</strong> Lo que se mande ahora no cuenta como declarado.
-        </p>
-      ) : null}
 
-      <FilaIndicadores
-        items={[
-          {
-            etiqueta: "Por enviar",
-            valor: String(b.porEnviar.length),
-            detalle: b.porEnviar.length > 0 ? "emitidos que SUNAT no tiene" : "nada pendiente",
-            tono: b.porEnviar.length > 0 ? "aviso" : "ok",
-            icono: <SendHorizontal aria-hidden="true" />,
-            href: "#por-enviar",
-          },
-          {
-            etiqueta: "Rechazados",
-            valor: String(b.rechazados.length),
-            detalle: b.rechazados.length > 0 ? "hay que corregirlos" : "ninguno",
-            tono: b.rechazados.length > 0 ? "urgente" : "ok",
-            icono: <ShieldAlert aria-hidden="true" />,
-            href: "#rechazados",
-          },
-          {
-            etiqueta: "Bajas por comunicar",
-            valor: String(b.porDarDeBaja.length),
-            detalle: b.porDarDeBaja.length > 0 ? "anulados que SUNAT cree vivos" : "ninguna",
-            tono: b.porDarDeBaja.length > 0 ? "aviso" : "ok",
-            icono: <FileX2 aria-hidden="true" />,
-            href: "#bajas",
-          },
-          {
-            etiqueta: "Guías sin aceptar",
-            valor: String(b.guias.length),
-            detalle: b.guias.length > 0 ? "no deberían salir así" : `ninguna · ${b.aceptadosMes} comprobantes aceptados este mes`,
-            tono: b.guias.length > 0 ? "urgente" : "ok",
-            icono: <Truck aria-hidden="true" />,
-            href: "#guias",
-          },
-        ]}
-      />
+        {!config.guias.listo ? (
+          <div className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-sm">
+            <p className="font-semibold">
+              {config.listo ? "Las facturas ya se pueden enviar; las guías todavía no." : "Todavía no está conectado con SUNAT."}
+            </p>
+            <ul className="mt-1 list-inside list-disc">
+              {config.guias.faltan.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+            <p className="mt-2">
+              Se puede facturar igual: lo emitido se junta aquí y se manda cuando esté listo.{" "}
+              {esGerencia ? (
+                <Link href="/configuracion/sunat" className="font-medium underline">
+                  Ir a «SUNAT y numeración»
+                </Link>
+              ) : null}
+            </p>
+          </div>
+        ) : config.ambiente === "beta" ? (
+          <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
+            <strong>Modo de pruebas de SUNAT.</strong> Lo que se mande ahora no cuenta como declarado.
+          </p>
+        ) : null}
+
+        <FilaIndicadores
+          items={[
+            {
+              etiqueta: "Por enviar",
+              valor: String(b.porEnviar.length),
+              detalle: b.porEnviar.length > 0 ? "emitidos que SUNAT no tiene" : "nada pendiente",
+              tono: b.porEnviar.length > 0 ? "aviso" : "ok",
+              icono: <SendHorizontal aria-hidden="true" />,
+              href: "#por-enviar",
+            },
+            {
+              etiqueta: "Rechazados",
+              valor: String(b.rechazados.length),
+              detalle: b.rechazados.length > 0 ? "hay que corregirlos" : "ninguno",
+              tono: b.rechazados.length > 0 ? "urgente" : "ok",
+              icono: <ShieldAlert aria-hidden="true" />,
+              href: "#rechazados",
+            },
+            {
+              etiqueta: "Bajas por comunicar",
+              valor: String(b.porDarDeBaja.length),
+              detalle: b.porDarDeBaja.length > 0 ? "anulados que SUNAT cree vivos" : "ninguna",
+              tono: b.porDarDeBaja.length > 0 ? "aviso" : "ok",
+              icono: <FileX2 aria-hidden="true" />,
+              href: "#bajas",
+            },
+            {
+              etiqueta: "Guías sin aceptar",
+              valor: String(b.guias.length),
+              detalle: b.guias.length > 0 ? "no deberían salir así" : `ninguna · ${b.aceptadosMes} comprobantes aceptados este mes`,
+              tono: b.guias.length > 0 ? "urgente" : "ok",
+              icono: <Truck aria-hidden="true" />,
+              href: "#guias",
+            },
+          ]}
+        />
+      </PanelModulo>
 
       {todoAlDia ? (
         <div className="flex items-center gap-3 rounded-md border border-[var(--ok)] bg-[var(--surface)] p-4">

@@ -7,6 +7,7 @@ import { productoDelKardex } from "../api/consultas";
 import type { FiltrosKardex } from "../dominio/tipos";
 import { FiltrosKardexBarra } from "./filtros-kardex";
 import { TablaKardex } from "./tabla-kardex";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -53,23 +54,25 @@ export default async function PaginaKardex({ searchParams }: Props) {
       {/* «Volver» arriba y con el de todas las fichas (revisión por módulos del
           02/10): era un enlace con borde hecho a mano, a la derecha del título
           en escritorio y debajo en el teléfono. */}
-      <div className="flex flex-col gap-1">
-        <Volver href="/inventario">Volver a inventario</Volver>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kardex</h1>
-          {p ? (
-            <p className="text-sm text-[var(--fg-muted)]">
-              <span className="font-mono font-medium">{p.codigo}</span> ·{" "}
-              {p.descripcion} · saldo actual{" "}
-              <span className="tabular font-medium text-[var(--fg)]">{p.stock}</span>
-            </p>
-          ) : (
-            <p className="text-sm text-[var(--fg-muted)]">
-              Cada entrada y salida del almacén, con el saldo que dejó.
-            </p>
-          )}
+      <PanelModulo ruta="/inventario/kardex">
+        <div className="flex flex-col gap-1">
+          <Volver href="/inventario">Volver a inventario</Volver>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Kardex</h1>
+            {p ? (
+              <p className="text-sm text-[var(--fg-muted)]">
+                <span className="font-mono font-medium">{p.codigo}</span> ·{" "}
+                {p.descripcion} · saldo actual{" "}
+                <span className="tabular font-medium text-[var(--fg)]">{p.stock}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-[var(--fg-muted)]">
+                Cada entrada y salida del almacén, con el saldo que dejó.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosKardexBarra productoActivo={p?.codigo ?? null} />

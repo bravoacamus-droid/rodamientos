@@ -20,6 +20,7 @@ import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { listarKits, type KitDetalle } from "../../api/kits";
 import { AccionesKit } from "./acciones";
 import { FiltrosKits } from "./filtros";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 const dolar = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
@@ -102,46 +103,48 @@ export async function PaginaKits({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Kits</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Varios productos que se cotizan y se facturan como uno solo, con un
-            precio total.
-          </p>
+      <PanelModulo ruta="/productos/kits">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Kits</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Varios productos que se cotizan y se facturan como uno solo, con un
+              precio total.
+            </p>
+          </div>
+          {permisos.tiene("productos", "crear") ? (
+            <Link
+              href="/productos/kits/nuevo"
+              className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+            >
+              <Plus className="size-[18px]" />
+              Nuevo kit
+            </Link>
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)}>Nuevo kit</BotonBloqueado>
+          )}
         </div>
-        {permisos.tiene("productos", "crear") ? (
-          <Link
-            href="/productos/kits/nuevo"
-            className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
-          >
-            <Plus className="size-[18px]" />
-            Nuevo kit
-          </Link>
-        ) : (
-          <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)}>Nuevo kit</BotonBloqueado>
-        )}
-      </div>
 
-      {/* Tres y no cuatro: un indicador que no decide nada es ruido. Estos son
-          los que se miran antes de prometer una entrega. */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <KpiCard
-          etiqueta="Kits activos"
-          valor={activos.length.toLocaleString("es-PE")}
-          detalle="sin contar los dados de baja"
-        />
-        <KpiCard
-          etiqueta="Sin material"
-          valor={sinMaterial.toLocaleString("es-PE")}
-          detalle="falta alguna pieza para armarlos"
-        />
-        <KpiCard
-          etiqueta="Listos para vender"
-          valor={dolar(valorizado)}
-          detalle="a precio de kit, con el stock de hoy"
-        />
-      </div>
+        {/* Tres y no cuatro: un indicador que no decide nada es ruido. Estos son
+            los que se miran antes de prometer una entrega. */}
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <KpiCard
+            etiqueta="Kits activos"
+            valor={activos.length.toLocaleString("es-PE")}
+            detalle="sin contar los dados de baja"
+          />
+          <KpiCard
+            etiqueta="Sin material"
+            valor={sinMaterial.toLocaleString("es-PE")}
+            detalle="falta alguna pieza para armarlos"
+          />
+          <KpiCard
+            etiqueta="Listos para vender"
+            valor={dolar(valorizado)}
+            detalle="a precio de kit, con el stock de hoy"
+          />
+        </div>
+      </PanelModulo>
 
       <FiltrosKits />
 

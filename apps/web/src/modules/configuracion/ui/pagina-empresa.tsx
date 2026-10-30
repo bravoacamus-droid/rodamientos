@@ -37,6 +37,7 @@ export default async function PaginaConfigEmpresa() {
   return (
     <div className="flex flex-col gap-5">
       <CabeceraConfig
+        ruta="/configuracion/empresa"
         icono="empresa"
         titulo="Datos de la empresa"
         descripcion="Lo que viaja dentro de cada comprobante: quién emite, desde dónde y con qué impuestos."

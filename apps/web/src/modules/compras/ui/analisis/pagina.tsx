@@ -7,6 +7,7 @@ import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { listarAnalisis, type AnalisisLista } from "../../api/analisis";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 
 const dolar = (n: number) =>
@@ -109,22 +110,24 @@ export default async function PaginaAnalisis({
 
   return (
     <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Análisis de importación</h1>
-          <p className="max-w-2xl text-sm text-[var(--fg-muted)]">
-            Antes de comprar: con la proforma del proveedor de fuera, cuánto te cuesta cada
-            producto puesto en Lima y cuánto ganas contra el precio de mercado.
-          </p>
-        </div>
-        <Link
-          href="/compras/analisis/nuevo"
-          className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          <Plus className="size-4" aria-hidden />
-          Nuevo análisis
-        </Link>
-      </header>
+      <PanelModulo ruta="/compras/analisis">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Análisis de importación</h1>
+            <p className="max-w-2xl text-sm text-[var(--fg-muted)]">
+              Antes de comprar: con la proforma del proveedor de fuera, cuánto te cuesta cada
+              producto puesto en Lima y cuánto ganas contra el precio de mercado.
+            </p>
+          </div>
+          <Link
+            href="/compras/analisis/nuevo"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            <Plus className="size-4" aria-hidden />
+            Nuevo análisis
+          </Link>
+        </header>
+      </PanelModulo>
 
       {total === 0 ? (
         <div className="card p-8 text-center">

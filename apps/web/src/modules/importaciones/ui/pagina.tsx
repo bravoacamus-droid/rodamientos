@@ -25,6 +25,7 @@ import {
 } from "../dominio/tipos";
 import { FiltrosImportacionesBarra } from "./filtros";
 import { PanelGastos } from "./gastos";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -80,25 +81,27 @@ export default async function PaginaImportaciones({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Importaciones</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Lo que viene de fuera: dónde está, cuándo llega y cuánto suman los
-          gastos que lo encarecen.
-        </p>
-      </div>
+      <PanelModulo ruta="/importaciones">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Importaciones</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Lo que viene de fuera: dónde está, cuándo llega y cuánto suman los
+            gastos que lo encarecen.
+          </p>
+        </div>
 
-      <Suspense
-        fallback={
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-        }
-      >
-        <Indicadores filtros={{ abiertas: "1" }} hoy={hoy} />
-      </Suspense>
+        <Suspense
+          fallback={
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+            </div>
+          }
+        >
+          <Indicadores filtros={{ abiertas: "1" }} hoy={hoy} />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosImportacionesBarra />

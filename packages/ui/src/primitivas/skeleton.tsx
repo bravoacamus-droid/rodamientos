@@ -28,7 +28,7 @@ export function SkeletonTexto({ lineas = 3, className }: { lineas?: number; clas
 export function SkeletonTabla({ filas = 8, columnas = 6 }: { filas?: number; columnas?: number }) {
   return (
     <div className="card elev-1 overflow-hidden" role="status" aria-label="Cargando datos">
-      <div className="flex gap-3 border-b bg-surface-2 px-3 py-2.5">
+      <div className="flex gap-3 border-b border-brand-100 bg-brand-50 px-3 py-3 dark:border-[var(--border)] dark:bg-surface-3">
         {Array.from({ length: columnas }, (_, i) => (
           <Skeleton key={i} className="h-3 flex-1" />
         ))}

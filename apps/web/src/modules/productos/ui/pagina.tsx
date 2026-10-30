@@ -12,6 +12,7 @@ import { FiltrosProductosBarra } from "./filtros";
 import { ResumenProductos } from "./resumen";
 import { PreciosPorMarca } from "./precios-por-marca";
 import { TablaProductos } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -58,65 +59,67 @@ export default async function PaginaProductos({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            {/* Sin «maestro» ni «jerarquía de tres niveles», que eran palabras
-                nuestras (revisión por módulos del 02/10). */}
-            Todos los productos que vendes, con su stock y su precio.
-          </p>
-        </div>
+      <PanelModulo ruta="/productos">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              {/* Sin «maestro» ni «jerarquía de tres niveles», que eran palabras
+                  nuestras (revisión por módulos del 02/10). */}
+              Todos los productos que vendes, con su stock y su precio.
+            </p>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/*
-            Bajar el catálogo (Luis, 21/10: «descargar en Excel todos los
-            productos… por familia, sub, activos o no»). Lleva los filtros de
-            la lista: lo que se ve es lo que se baja. Basta con «Ver».
-          */}
-          <a
-            href={`/productos/excel?${new URLSearchParams(
-              Object.entries({
-                q: filtros.q ?? "",
-                marca: filtros.marca ?? "",
-                familia: filtros.familia ?? "",
-                subfamilia: filtros.subfamilia ?? "",
-                archivados: filtros.archivados ? "1" : "",
-              }).filter(([, v]) => v),
-            ).toString()}`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-          >
-            <FileSpreadsheet className="size-4" aria-hidden="true" />
-            Descargar en Excel
-          </a>
-          {/* Subir o bajar la lista de una marca de una vez (155). */}
-          {puedeEditar ? <PreciosPorMarca marcas={catalogos.marcas} /> : null}
-          {puedeCrear ? (
-            <>
-              <Link
-                href="/productos/cargar"
-                className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-              >
-                Cargar desde Excel
-              </Link>
-              <Link
-                href="/productos/nuevo"
-                className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-              >
+          <div className="flex flex-wrap items-center gap-2">
+            {/*
+              Bajar el catálogo (Luis, 21/10: «descargar en Excel todos los
+              productos… por familia, sub, activos o no»). Lleva los filtros de
+              la lista: lo que se ve es lo que se baja. Basta con «Ver».
+            */}
+            <a
+              href={`/productos/excel?${new URLSearchParams(
+                Object.entries({
+                  q: filtros.q ?? "",
+                  marca: filtros.marca ?? "",
+                  familia: filtros.familia ?? "",
+                  subfamilia: filtros.subfamilia ?? "",
+                  archivados: filtros.archivados ? "1" : "",
+                }).filter(([, v]) => v),
+              ).toString()}`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              Descargar en Excel
+            </a>
+            {/* Subir o bajar la lista de una marca de una vez (155). */}
+            {puedeEditar ? <PreciosPorMarca marcas={catalogos.marcas} /> : null}
+            {puedeCrear ? (
+              <>
+                <Link
+                  href="/productos/cargar"
+                  className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                >
+                  Cargar desde Excel
+                </Link>
+                <Link
+                  href="/productos/nuevo"
+                  className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+                >
+                  Nuevo producto
+                </Link>
+              </>
+            ) : (
+              <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
                 Nuevo producto
-              </Link>
-            </>
-          ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
-              Nuevo producto
-            </BotonBloqueado>
-          )}
+              </BotonBloqueado>
+            )}
+          </div>
         </div>
-      </div>
 
-      <Suspense fallback={<Skeleton className="h-24 w-full" />}>
-        <ResumenProductos />
-      </Suspense>
+        <Suspense fallback={<Skeleton className="h-24 w-full" />}>
+          <ResumenProductos />
+        </Suspense>
+      </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosProductosBarra

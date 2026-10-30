@@ -1,5 +1,6 @@
 import { IconoNav } from "@/componentes/iconos-nav";
 import type { NombreIcono } from "@/lib/navegacion";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * La cabecera de una pantalla de configuración.
@@ -12,28 +13,37 @@ import type { NombreIcono } from "@/lib/navegacion";
  * El icono repite el del menú, en su pastilla del color de la marca. No es
  * adorno: es lo que confirma, al llegar, que estás donde pulsaste — el mismo
  * dibujo en el menú y en el título.
+ *
+ * Con `ruta` (30/10) va dentro de la cabecera de marca, como el resto de
+ * módulos. El icono lo pinta entonces el panel, con el nombre del grupo, y
+ * aquí se omite para no repetirlo.
  */
 export function CabeceraConfig({
   icono,
   titulo,
   descripcion,
   accion,
+  ruta,
 }: {
   icono: NombreIcono;
   titulo: string;
   descripcion: string;
   /** Lo que va a la derecha del todo. Un botón, o nada. */
   accion?: React.ReactNode;
+  /** La ruta tal como está en el menú; con ella, sale en la cabecera de marca. */
+  ruta?: string;
 }) {
-  return (
+  const cabecera = (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600/10 text-brand-600"
-        >
-          <IconoNav nombre={icono} className="size-6" />
-        </span>
+        {ruta ? null : (
+          <span
+            aria-hidden="true"
+            className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-600/10 text-brand-600"
+          >
+            <IconoNav nombre={icono} className="size-6" />
+          </span>
+        )}
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
           <p className="text-sm text-[var(--fg-muted)]">{descripcion}</p>
@@ -42,4 +52,6 @@ export function CabeceraConfig({
       {accion ?? null}
     </div>
   );
+
+  return ruta ? <PanelModulo ruta={ruta}>{cabecera}</PanelModulo> : cabecera;
 }

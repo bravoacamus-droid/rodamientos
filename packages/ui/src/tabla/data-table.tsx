@@ -221,8 +221,8 @@ export function DataTable<TDato>({
                             // títulos de columna y tienen que medir lo mismo,
                             // o la misma tabla se vería de dos tamaños según
                             // con cuál esté hecha.
-                            "sticky top-0 z-10 border-b bg-surface-2 text-sm font-semibold uppercase",
-                            "tracking-wide text-subtle whitespace-nowrap",
+                            "sticky top-0 z-10 border-b border-brand-100 bg-brand-50 text-sm font-semibold uppercase dark:border-[var(--border)] dark:bg-surface-3",
+                            "tracking-wide text-brand-800 whitespace-nowrap dark:text-[var(--fg-muted)]",
                             paddingCelda,
                             meta?.alineacion === "derecha" && "text-right",
                             meta?.alineacion === "centro" && "text-center",
@@ -291,7 +291,7 @@ export function DataTable<TDato>({
                         // (`bg-inherit`) tengan de dónde heredar y no dejen
                         // ver las filas pasando por debajo al hacer scroll.
                         "border-b border-[var(--border-soft)] bg-surface transition-colors last:border-0",
-                        "hover:bg-surface-2",
+                        "hover:bg-[#f3f8fc] dark:hover:bg-surface-2",
                         clicable && "cursor-pointer",
                         row.getIsSelected() && "bg-brand-50 hover:bg-brand-50 dark:bg-brand-950",
                         destacada && "bg-accent-50 dark:bg-accent-900/20",

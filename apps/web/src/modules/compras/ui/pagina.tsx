@@ -9,6 +9,7 @@ import { proveedoresActivos } from "../api/consultas";
 import type { FiltrosCompras } from "../dominio/tipos";
 import { FiltrosComprasBarra } from "./filtros";
 import { TablaCompras } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -59,27 +60,29 @@ export default async function PaginaCompras({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Compras</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Lo que se le pide al proveedor. El stock se mueve al recibirlo, no aquí.
-          </p>
-        </div>
+      <PanelModulo ruta="/compras">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Compras</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Lo que se le pide al proveedor. El stock se mueve al recibirlo, no aquí.
+            </p>
+          </div>
 
-        {puedeComprar && !sinProveedores ? (
-          <Link
-            href="/compras/nueva"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            Registrar compra
-          </Link>
-        ) : !puedeComprar ? (
-          <BotonBloqueado mensaje={avisoSinPermiso("compras", "crear", permisos.nombreRol)} className="h-9 md:h-9">
-            Registrar compra
-          </BotonBloqueado>
-        ) : null}
-      </div>
+          {puedeComprar && !sinProveedores ? (
+            <Link
+              href="/compras/nueva"
+              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Registrar compra
+            </Link>
+          ) : !puedeComprar ? (
+            <BotonBloqueado mensaje={avisoSinPermiso("compras", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+              Registrar compra
+            </BotonBloqueado>
+          ) : null}
+        </div>
+      </PanelModulo>
 
       {/* Sin proveedores no se puede comprar, y el botón llevaría a un
           formulario con el desplegable vacío. Mejor decir por qué y dónde se

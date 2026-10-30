@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { PaginaComprasEjecutiva } from "@/modules/tablero";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 export const metadata: Metadata = { title: "Lo comprado" };
 
@@ -14,12 +15,14 @@ export const metadata: Metadata = { title: "Lo comprado" };
 export default function Pagina(props: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Lo comprado</h1>
-        <p className="text-base text-[var(--fg-muted)]">
-          Cuánto se compra, a quién, qué, quién lo deja más barato y qué falta que llegue.
-        </p>
-      </div>
+      <PanelModulo ruta="/reportes/compras">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Lo comprado</h1>
+          <p className="text-base text-[var(--fg-muted)]">
+            Cuánto se compra, a quién, qué, quién lo deja más barato y qué falta que llegue.
+          </p>
+        </div>
+      </PanelModulo>
       <PaginaComprasEjecutiva {...props} />
     </div>
   );

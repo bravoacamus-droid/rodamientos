@@ -26,6 +26,7 @@ export default async function PaginaConfigPermisos() {
   return (
     <div className="flex flex-col gap-5">
       <CabeceraConfig
+        ruta="/configuracion/permisos"
         icono="usuarios"
         titulo="Roles y permisos"
         descripcion="Qué puede ver, crear, editar y eliminar cada rol en cada módulo."

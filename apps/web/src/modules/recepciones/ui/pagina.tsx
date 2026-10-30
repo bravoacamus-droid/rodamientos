@@ -9,6 +9,7 @@ import { proveedoresActivos } from "../api/consultas";
 import type { FiltrosRecepciones } from "../dominio/tipos";
 import { FiltrosRecepcionesBarra } from "./filtros";
 import { TablaRecepciones } from "./tabla";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -51,27 +52,29 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Recepciones</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Lo que entra al almacén. Es lo único que mueve el stock.
-          </p>
-        </div>
+      <PanelModulo ruta="/recepciones">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Recepciones</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Lo que entra al almacén. Es lo único que mueve el stock.
+            </p>
+          </div>
 
-        {puedeRecibir ? (
-          <Link
-            href="/recepciones/nueva"
-            className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            Recibir mercadería
-          </Link>
-        ) : (
-          <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)} className="h-9 md:h-9">
-            Recibir mercadería
-          </BotonBloqueado>
-        )}
-      </div>
+          {puedeRecibir ? (
+            <Link
+              href="/recepciones/nueva"
+              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Recibir mercadería
+            </Link>
+          ) : (
+            <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+              Recibir mercadería
+            </BotonBloqueado>
+          )}
+        </div>
+      </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosRecepcionesBarra

@@ -25,6 +25,7 @@ import {
 import { TIPOS_AJUSTE, type ProductoContable } from "../../dominio/tipos";
 import { FilaConteo, TarjetaConteo } from "./linea";
 import { useBorrador } from "@/componentes/borrador";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * Hoja de conteo del cuadre de inventario.
@@ -186,31 +187,33 @@ export function HojaDeConteo({
     >
       <input type="hidden" name="ajuste" value={JSON.stringify(aPayload(estado))} />
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Cuadrar inventario</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Cuenta lo que hay de verdad. Al confirmar se registra un ajuste con
-            tu nombre y el kardex recalcula el saldo.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              // Cancelar es decidir no seguir: no se ofrece otra vez.
-              olvidarBorrador();
-              router.push("/inventario");
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Registrando…" : "Confirmar cuadre"}
-          </Button>
-        </div>
-      </header>
+      <PanelModulo ruta="/inventario/ajuste">
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold">Cuadrar inventario</h1>
+            <p className="text-sm text-[var(--fg-muted)]">
+              Cuenta lo que hay de verdad. Al confirmar se registra un ajuste con
+              tu nombre y el kardex recalcula el saldo.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                // Cancelar es decidir no seguir: no se ofrece otra vez.
+                olvidarBorrador();
+                router.push("/inventario");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
+              {guardando ? "Registrando…" : "Confirmar cuadre"}
+            </Button>
+          </div>
+        </header>
+      </PanelModulo>
 
       {avisoBorrador}
 
