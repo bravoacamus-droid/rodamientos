@@ -162,6 +162,22 @@ export async function guardarConfigSunat(
         .update(secretos)
         .eq("id", 1);
       if (errorSecretos) return { ok: false, error: errorSecretos.message };
+
+      // 174: cuándo se guardó cada una, para que la pantalla lo diga. Después
+      // de guardar las claves y no antes: una fecha de algo que no se guardó
+      // sería peor que no tenerla.
+      const ahora = new Date().toISOString();
+      const fechas: {
+        clave_sol_guardada_en?: string;
+        certificado_clave_guardada_en?: string;
+        gre_secreto_guardado_en?: string;
+      } = {};
+      if (datos.clave_sol) fechas.clave_sol_guardada_en = ahora;
+      if (datos.certificado_clave) fechas.certificado_clave_guardada_en = ahora;
+      if (datos.gre_client_secret) fechas.gre_secreto_guardado_en = ahora;
+      if (Object.keys(fechas).length > 0) {
+        await admin.from("config_sunat").update(fechas).eq("id", 1);
+      }
     }
 
     revalidatePath("/configuracion/sunat");

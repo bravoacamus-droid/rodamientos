@@ -212,6 +212,16 @@ export interface ConfigFiscal {
   actualizado_en: string | null;
   /** ID de la aplicación en «Credenciales de API SUNAT», para guías (126). */
   gre_client_id: string | null;
+  /**
+   * Qué claves hay guardadas y cuándo (174). Solo sí/no y la fecha: el valor
+   * no sale nunca del servidor. Fecha null con `hay` true = guardada antes de
+   * la 174, cuando no se anotaba.
+   */
+  claves: {
+    sol: { hay: boolean; en: string | null };
+    certificado: { hay: boolean; en: string | null };
+    gre: { hay: boolean; en: string | null };
+  };
 }
 
 /** Qué falta para poder emitir de verdad. */

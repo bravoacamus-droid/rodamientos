@@ -40,7 +40,8 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
       .select(
         `ambiente, usuario_sol, certificado_nombre, certificado_sujeto,
          certificado_caduca_en,
-         probado_en, probado_ok, probado_mensaje, actualizado_en, gre_client_id`,
+         probado_en, probado_ok, probado_mensaje, actualizado_en, gre_client_id,
+         clave_sol_guardada_en, certificado_clave_guardada_en, gre_secreto_guardado_en`,
       )
       .eq("id", 1)
       .maybeSingle();
@@ -56,6 +57,14 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
       };
     }
 
+    // Si hay cada clave, sí o no. La tabla de secretos solo la alcanza el
+    // servidor; de ahí sale un booleano por columna y nada más.
+    const { data: hay } = await clienteAdmin()
+      .from("config_sunat_secretos")
+      .select("clave_sol_cifrada, certificado_clave_cifrada, gre_client_secret_cifrado")
+      .eq("id", 1)
+      .maybeSingle();
+
     return {
       ok: true,
       datos: {
@@ -69,6 +78,11 @@ export async function configFiscal(): Promise<Resultado<ConfigFiscal>> {
         gre_client_id: data.gre_client_id ?? null,
         probado_mensaje: data.probado_mensaje ?? null,
         actualizado_en: data.actualizado_en ?? null,
+        claves: {
+          sol: { hay: Boolean(hay?.clave_sol_cifrada), en: data.clave_sol_guardada_en ?? null },
+          certificado: { hay: Boolean(hay?.certificado_clave_cifrada), en: data.certificado_clave_guardada_en ?? null },
+          gre: { hay: Boolean(hay?.gre_client_secret_cifrado), en: data.gre_secreto_guardado_en ?? null },
+        },
       },
     };
   } catch (e) {

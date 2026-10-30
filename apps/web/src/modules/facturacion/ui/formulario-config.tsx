@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { Button, Input, SelectNativo } from "@rodatech/ui";
+import { Button, Input, InputContrasena, SelectNativo } from "@rodatech/ui";
 import { CircleCheck, CircleMinus, CircleX, FileUp } from "lucide-react";
 
 import {
@@ -155,22 +155,22 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Clave SOL</span>
-            <Input
+            <InputContrasena
               name="clave_sol"
-              type="password"
-              placeholder="•••••••• (en blanco = no cambiar)"
+              placeholder="Dejar en blanco"
               autoComplete="new-password"
             />
+            <EstadoClave clave={config.claves.sol} />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Clave del certificado</span>
-            <Input
+            <InputContrasena
               name="certificado_clave"
-              type="password"
-              placeholder="•••••••• (en blanco = no cambiar)"
+              placeholder="Dejar en blanco"
               autoComplete="new-password"
             />
+            <EstadoClave clave={config.claves.certificado} />
             <span className="text-sm text-[var(--fg-subtle)]">
               Al guardar se abre el certificado con esta clave y se comprueba que sea de la empresa y
               que esté vigente. Si algo no cuadra, no se guarda nada.
@@ -239,12 +239,12 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">CLAVE (client_secret)</span>
-            <Input
+            <InputContrasena
               name="gre_client_secret"
-              type="password"
-              placeholder="•••••••• (en blanco = no cambiar)"
+              placeholder="Dejar en blanco"
               autoComplete="new-password"
             />
+            <EstadoClave clave={config.claves.gre} />
           </label>
         </fieldset>
 
@@ -297,6 +297,42 @@ function CampoCertificado() {
       <span className="min-w-0 text-sm text-[var(--fg-muted)] [overflow-wrap:anywhere]">
         {nombre ?? "Ningún archivo elegido"}
       </span>
+    </span>
+  );
+}
+
+/**
+ * Si la clave está guardada y desde cuándo (174), debajo de su campo.
+ *
+ * Luis, 30/10: «no se sabe si está guardado o no correctamente». El campo
+ * sale vacío a propósito —la clave no vuelve nunca a la pantalla—, así que sin
+ * esta línea un campo vacío y una clave guardada se ven igual. La hora va fija
+ * en Lima: el servidor de Vercel está en UTC y un `toLocaleString` a secas
+ * sale distinto en el servidor y en el navegador (error #418).
+ */
+function EstadoClave({ clave }: { clave: { hay: boolean; en: string | null } }) {
+  if (!clave.hay) {
+    return (
+      <span className="flex items-center gap-1.5 text-sm text-[var(--warn)]">
+        <CircleMinus className="size-4 shrink-0" aria-hidden="true" />
+        Todavía no hay ninguna guardada.
+      </span>
+    );
+  }
+  const cuando = clave.en
+    ? new Date(clave.en).toLocaleString("es-PE", {
+        timeZone: "America/Lima",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+  return (
+    <span className="flex items-center gap-1.5 text-sm text-[var(--ok)]">
+      <CircleCheck className="size-4 shrink-0" aria-hidden="true" />
+      {cuando ? `Guardada el ${cuando}` : "Guardada."}
     </span>
   );
 }

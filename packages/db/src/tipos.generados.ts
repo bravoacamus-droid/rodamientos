@@ -1694,9 +1694,12 @@ export type Database = {
           actualizado_por: string | null
           ambiente: string
           certificado_caduca_en: string | null
+          certificado_clave_guardada_en: string | null
           certificado_nombre: string | null
           certificado_sujeto: string | null
+          clave_sol_guardada_en: string | null
           gre_client_id: string | null
+          gre_secreto_guardado_en: string | null
           id: number
           probado_en: string | null
           probado_mensaje: string | null
@@ -1710,9 +1713,12 @@ export type Database = {
           actualizado_por?: string | null
           ambiente?: string
           certificado_caduca_en?: string | null
+          certificado_clave_guardada_en?: string | null
           certificado_nombre?: string | null
           certificado_sujeto?: string | null
+          clave_sol_guardada_en?: string | null
           gre_client_id?: string | null
+          gre_secreto_guardado_en?: string | null
           id?: number
           probado_en?: string | null
           probado_mensaje?: string | null
@@ -1726,9 +1732,12 @@ export type Database = {
           actualizado_por?: string | null
           ambiente?: string
           certificado_caduca_en?: string | null
+          certificado_clave_guardada_en?: string | null
           certificado_nombre?: string | null
           certificado_sujeto?: string | null
+          clave_sol_guardada_en?: string | null
           gre_client_id?: string | null
+          gre_secreto_guardado_en?: string | null
           id?: number
           probado_en?: string | null
           probado_mensaje?: string | null
