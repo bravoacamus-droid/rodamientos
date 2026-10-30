@@ -8571,3 +8571,27 @@ Los secretos se descifran en un solo sitio (`credenciales()` en
 
 **Lo que sigue sin probarse**: el primer documento real en producción. Ojo:
 varias claves SOL equivocadas seguidas bloquean el usuario en SUNAT.
+
+## §CP · 30/10 — La cobranza, cuadrada con el registro de pagos de Willy
+
+Willy mandó `registro de pagos facturas RODATECH.xlsx` (en
+`documentosrodamiento/`, fuera de git): las facturas VENCIDAS y PENDIENTES;
+*«las anteriores ya todas están saldadas»*. Sobre el arqueo: *«creo que en
+adelante lo llevaría en el sistema, con la opción que me brinde reportes y
+estados de deuda»*.
+
+Cruzado factura por factura (cliente y total iguales en todas). Aplicado por
+SQL directo, con respaldo antes y ensayo que se deshace:
+
+- **21 facturas cobradas** (F002-516…541, salteadas) → `estado = 'pagado'`,
+  `pagado = total`, como el histórico: **sin crear cobros** con una fecha
+  inventada, para no ensuciar «lo cobrado» ni el arqueo. Cada una lleva la nota
+  en `observaciones`.
+- **F002-502 EXANDAL** estaba pagada en el sistema y Willy la tiene vencida →
+  pendiente, vence 18/09/2026.
+- Resultado: **21 facturas, USD 10,620.54**, igual al Excel al centavo.
+
+**Falta**: 11 pendientes que no están en el sistema (F002-562 a 574, sin la
+567 ni la 571), USD 8,303.95. Son del sistema viejo, posteriores a la carga
+del 07/10; el Excel no trae fecha ni productos. Hay que pedírselas a Willy.
+Y no hay pantalla de **arqueo de caja**: si la quiere, es trabajo nuevo.
