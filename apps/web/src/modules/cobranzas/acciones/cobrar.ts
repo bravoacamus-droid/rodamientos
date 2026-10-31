@@ -6,6 +6,8 @@ import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
+import { guardarCr, prepararCr, revisarCr, type CrPreparado } from "@/modules/facturacion/acciones/archivo-cr";
+
 import { BUCKET_VOUCHERS, revisarVoucher, subirVoucher } from "./archivo-voucher";
 
 /**
@@ -56,7 +58,8 @@ const esquema = z.object({
 });
 
 export type ResultadoCobro =
-  | { ok: true; registrados: number; total: number }
+  /** `aviso`: el cobro quedó, pero algo de al lado no (el CR). */
+  | { ok: true; registrados: number; total: number; aviso?: string }
   | { ok: false; error: string };
 
 export async function registrarCobro(
@@ -86,6 +89,16 @@ export async function registrarCobro(
   // El voucher es opcional (109); si viene y no vale, se dice antes de nada.
   const archivo = revisarVoucher(formData.get("voucher"));
   if (typeof archivo === "string") return { ok: false, error: archivo };
+
+  // El CR, si llegó con el depósito (31/10). Solo con una retención en esta
+  // tanda, y de UNA factura: es el comprobante de esa retención.
+  const archivoCr = revisarCr(formData.get("cr"));
+  if (typeof archivoCr === "string") return { ok: false, error: archivoCr };
+  const numeroCr = String(formData.get("numero_cr") ?? "").trim().slice(0, 40) || null;
+  const retenidas = [...new Set(datos.pagos.filter((p) => p.medio === "retencion").map((p) => p.comprobante_id))];
+  if (archivoCr && retenidas.length !== 1) {
+    return { ok: false, error: "El comprobante de retención va con la retención de una factura: marca «El cliente retuvo el 3 %»." };
+  }
 
   try {
     const supabase = await clienteServidor();
@@ -127,6 +140,15 @@ export async function registrarCobro(
           error: `${doc.numero}: se están aplicando ${aplicado.toFixed(2)} sobre un saldo de ${saldo.toFixed(2)}.`,
         };
       }
+    }
+
+    // El CR repetido en otra factura se dice ANTES de cobrar: después ya no
+    // se puede deshacer el cobro para corregirlo.
+    let crPreparado: CrPreparado | "mismo" | null = null;
+    if (archivoCr) {
+      const r = await prepararCr(supabase, archivoCr, retenidas[0] as string);
+      if (typeof r === "string" && r !== "mismo") return { ok: false, error: r };
+      crPreparado = r as CrPreparado | "mismo";
     }
 
     // Se sube ANTES de registrar: si el archivo falla, no queda un pago a
@@ -173,6 +195,24 @@ export async function registrarCobro(
         .eq("agente_retencion", false);
     }
 
+    // El CR, ya con la retención registrada. Si falla, el cobro se queda: se
+    // dice, y se sube después desde «Comprobantes de retención».
+    let aviso: string | undefined;
+    if (archivoCr && crPreparado && crPreparado !== "mismo") {
+      const facturaId = retenidas[0] as string;
+      const guardado = await guardarCr(supabase, {
+        facturaId,
+        facturaNumero: String(porId.get(facturaId)?.numero ?? ""),
+        archivo: archivoCr,
+        preparado: crPreparado,
+        numeroCr,
+        perfilId: perfil.id,
+      });
+      if (guardado !== true) {
+        aviso = `El cobro quedó registrado, pero el comprobante de retención no se pudo guardar (${guardado}). Súbelo desde «Comprobantes de retención».`;
+      }
+    }
+
     revalidatePath("/cobranzas");
     revalidatePath("/facturacion");
     for (const id of ids) revalidatePath(`/facturacion/${id}`);
@@ -184,6 +224,7 @@ export async function registrarCobro(
       ok: true,
       registrados: Number(r.pagos ?? 0),
       total: Math.round(datos.pagos.reduce((a, p) => a + p.monto, 0) * 100) / 100,
+      aviso,
     };
   } catch (e) {
     return {

@@ -41,7 +41,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Save } from "lucide-react";
 import {
   Button,
   campoBase,
@@ -173,6 +173,11 @@ export function AntesDeEmitir({
     emitiendo: boolean;
     /** Por qué no se puede todavía (la guía, sobre todo). */
     motivo: string | null;
+    /**
+     * Guardarla como borrador desde la previa (176). Willy, 31/10: llenar,
+     * ver la vista previa y guardar, para emitirla después.
+     */
+    guardar?: { onGuardar: () => void; guardando: boolean };
   };
 }) {
   const [viendoPropio, setViendoPropio] = React.useState(false);
@@ -540,6 +545,18 @@ export function AntesDeEmitir({
               <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={() => setViendo(false)}>
                 Volver a corregir
               </Button>
+              {emitir.guardar ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 sm:flex-none"
+                  onClick={emitir.guardar.onGuardar}
+                  disabled={emitir.guardar.guardando || emitir.emitiendo}
+                >
+                  <Save className="size-[18px] shrink-0" aria-hidden="true" />
+                  {emitir.guardar.guardando ? "Guardando…" : "Guardar borrador"}
+                </Button>
+              ) : null}
               <Button type="submit" form={emitir.formId} disabled={!emitir.listo} className="flex-1 sm:flex-none">
                 {emitir.emitiendo ? "Emitiendo…" : `Sí, emitir ${serie}`}
               </Button>

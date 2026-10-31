@@ -1096,6 +1096,13 @@ export type Database = {
             foreignKeyName: "comprobante_cuotas_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_cuotas_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -1131,6 +1138,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "comprobante_guias_comprobante_id_fkey"
@@ -1226,6 +1240,13 @@ export type Database = {
             foreignKeyName: "comprobante_items_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_items_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -1304,6 +1325,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: true
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
@@ -1603,6 +1631,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_referencia_id_fkey"
+            columns: ["referencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "comprobantes_referencia_id_fkey"
@@ -2639,6 +2674,85 @@ export type Database = {
           },
         ]
       }
+      facturas_borrador: {
+        Row: {
+          actualizado_en: string
+          cliente_id: string
+          cotizacion_id: string
+          creado_en: string
+          creado_por: string | null
+          datos: Json
+          id: string
+          moneda: string
+          total: number
+        }
+        Insert: {
+          actualizado_en?: string
+          cliente_id: string
+          cotizacion_id: string
+          creado_en?: string
+          creado_por?: string | null
+          datos: Json
+          id?: string
+          moneda?: string
+          total?: number
+        }
+        Update: {
+          actualizado_en?: string
+          cliente_id?: string
+          cotizacion_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          datos?: Json
+          id?: string
+          moneda?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fallos: {
         Row: {
           codigo: string | null
@@ -2835,6 +2949,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gestiones_cobranza_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "gestiones_cobranza_comprobante_id_fkey"
@@ -3566,6 +3687,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "pagos_comprobante_id_fkey"
@@ -5598,6 +5726,54 @@ export type Database = {
           productos: number | null
         }
         Relationships: []
+      }
+      v_retenciones: {
+        Row: {
+          cliente: string | null
+          cliente_agente: boolean | null
+          cliente_id: string | null
+          comprobante_id: string | null
+          cr_nombre: string | null
+          cr_subido_en: string | null
+          documento: string | null
+          estado: Database["public"]["Enums"]["estado_comprobante"] | null
+          estado_retencion: string | null
+          fecha_emision: string | null
+          llega_umbral: boolean | null
+          numero: string | null
+          numero_cr: string | null
+          retencion_aplica: boolean | null
+          retencion_cobrada: number | null
+          retencion_decidida: boolean | null
+          retencion_monto: number | null
+          retenida_el: string | null
+          saldo: number | null
+          tipo_cambio_emision: number | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
       }
       v_top_productos: {
         Row: {

@@ -15,6 +15,7 @@ import { estadoConfiguracion } from "../api/configuracion";
 import { indicadoresFacturacion } from "../api/consultas";
 import type { FiltrosComprobantes } from "../dominio/tipos";
 import { FiltrosFacturacionBarra } from "./filtros";
+import { BorradoresFactura } from "./borradores";
 import { TablaComprobantes } from "./tabla";
 
 interface Props {
@@ -186,6 +187,11 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
         fallback={<Skeleton className="h-32 w-full" />}
       >
         <Indicadores filtros={filtros} />
+      </Suspense>
+
+      {/* Las facturas en borrador (176): esperan a que alguien las revise. */}
+      <Suspense fallback={null}>
+        <BorradoresFactura puedeEditar={puedeFacturar} />
       </Suspense>
 
       {/* `@container`: la tabla y los filtros se deciden por el ancho de esta

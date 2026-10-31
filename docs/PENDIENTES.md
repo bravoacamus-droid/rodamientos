@@ -8628,3 +8628,70 @@ así que «Registrar CR» las rechazaba. Una factura emitida no se modifica
 
 Sin probar en pantalla con un cobro de verdad: registrar escribe en la base
 del cliente. Tests del dominio en `cobro.test.ts`.
+
+
+**Probado en vivo el mismo 31/10**: Willy cobró la F002-502 con la casilla
+—$ 637.20 por transferencia con voucher + $ 19.71 de retención— y EXANDAL
+quedó marcado como agente solo.
+
+## §CR · 31/10 — El estado de la retención en un sitio, y la factura en borrador
+
+Segunda tanda de Willy, el mismo día: *«debo saber qué comprobantes de
+retención se han entregado y qué comprobantes de retención quedan pendientes
+para buscarlo en sunat o de lo contrario pedir al cliente»*; que el CR *«le
+pasan después de 3, 4 días»*; filtrar en Cobranzas lo pagado (con CR, sin
+CR, sin retención); poder descargar el CR; avisar si el cobro contradice a la
+factura; y **factura en borrador** *«para que lo mire antes»*, como la guía.
+
+**175 · `v_retenciones`.** Cada pantalla calculaba la retención a su manera:
+Facturación miraba solo `retencion_aplica` (las del Excel no salían nunca) y
+Cobranzas lo hacía en el navegador. Ahora una vista, `security_invoker`, con
+`estado_retencion` (cr_recibido · falta_cr · por_cobrar · sin_retencion ·
+no_agente), `llega_umbral` (S/ 700 al cambio del día de emisión, de
+`tipos_cambio_sunat`), `retenida_el` y `retencion_decidida` (= tiene
+cotización: las del ERP pasaron por el interruptor; las del Excel no).
+
+- **Cobranzas**: «Mostrar» ofrece lo vencido, *Retención cobrada · falta el
+  CR*, *Con su CR*, *Pagadas sin retención* y *Pagadas: todas* (las 200 más
+  recientes). Lo pagado sale «Pagada» con «Ver factura». La falta del CR
+  dice los días: a los 5 (`DIAS_ESPERA_CR`), en rojo, «búscalo en SUNAT o
+  pídeselo al cliente». Arriba, el aviso «Faltan N comprobantes de retención».
+- **«Cobrar»**: el monto de la retención es texto con «Corregir el monto»
+  (Luis: el monto «está de más»); «Subir el CR» opcional en el mismo cobro
+  (`archivo-cr.ts`, compartido con «Registrar CR»; el repetido se rechaza
+  ANTES de cobrar); y el aviso si la factura del ERP se emitió con/sin
+  retención y el cobro dice lo contrario.
+- **CR**: «Descargar», además de «Ver» (enlace firmado con `download`).
+- **Facturación**: «Pago parcial · debe X», «Cobrado» + «falta el
+  comprobante de retención», y el filtro con los tres estados (`?cr=falta`;
+  `sin`, el de antes, sigue valiendo).
+
+**176 · La factura en borrador.** Tabla `facturas_borrador` con lo llenado en
+la pantalla de emitir (`DatosEmision`, el mismo objeto del «seguir donde me
+quedé»). **No toca `emitir_comprobante`**: al emitir, el payload lleva
+`borrador_id` y `emitirComprobante` lo borra después de emitir bien. Sin
+número, sin SUNAT, sin Cobranzas, sin reportes: por eso tabla aparte y no un
+estado de `comprobantes`, que tendrían que excluir a mano todas las vistas.
+
+- «Guardar borrador» en la cabecera y en la vista previa; abierto, «Guardar
+  cambios».
+- Facturación: sección «N facturas en borrador» con «Revisar y emitir»
+  (`/facturacion/nueva?borrador=…`) y «Borrar» (diálogo, no `confirm`).
+- La fecha no se guarda, como en el borrador del navegador: es fiscal, y la
+  factura sale con la del día en que se emite.
+
+**Probado en pantalla el 31/10**: el aviso, «falta el CR» y «Pagadas:
+todas» de Cobranzas; Facturación con `?cr=falta` (solo la F002-502, «Cobrado
+· falta el comprobante de retención»); «Cobrar» en la F002-558 (la casilla
+viene marcada sola —EXANDAL agente, pasa de S/ 700—, $ 24.30 en texto,
+«Corregir el monto», «Subir el CR»; sin registrar); y el borrador: guardar
+con COT1-000001 y 30 días, verlo en la lista, abrirlo, la previa con
+«Guardar borrador», y borrarlo. F001 siguió en 0 y `comprobantes` en 565.
+
+Al probar salió un fallo: el borrador abría con 0 días en vez de 30. El
+modo estricto de React carga la cotización dos veces, y la primera consumía
+el borrador. Ahora se aplica cada vez que se carga SU cotización.
+
+**Sin probar**: emitir desde un borrador (gasta un número), subir un CR de
+verdad en el cobro, y el aviso de «se emitió sin/con retención» (ninguna
+factura del ERP tiene cobro pendiente todavía).

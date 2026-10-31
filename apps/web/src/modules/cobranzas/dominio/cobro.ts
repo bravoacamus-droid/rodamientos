@@ -5,6 +5,7 @@ import {
   MEDIOS_SIN_CAJA,
   type CuotaComprobante,
   type DocumentoPorCobrar,
+  type EstadoRetencion,
   type MedioPago,
   type TramoAging,
 } from "./tipos";
@@ -193,50 +194,79 @@ export function retencionPendiente(d: ConRetencion): number {
  * ¿La casilla «El cliente retuvo el 3 %» viene marcada?
  *
  * Si la factura nació con retención, sí. Si no, cuando el cliente es agente y
- * la factura llega a S/ 700 (`llegaAlUmbral`, al cambio del día en que se
- * emitió); sin cambio (`null`) no se adivina. Y nunca dos veces: si la
- * retención ya se registró, el resto se cobra sin ella.
+ * la factura llega a S/ 700 (`llega_umbral`, al cambio del día en que se
+ * emitió, que calcula `v_retenciones`); sin cambio (`null`) no se adivina. Y
+ * nunca dos veces: si la retención ya se registró, el resto se cobra sin ella.
  */
 export function retieneDePorDefecto(
-  d: ConRetencion & Pick<DocumentoPorCobrar, "cliente_agente">,
-  llegaAlUmbral: boolean | null,
+  d: ConRetencion & Pick<DocumentoPorCobrar, "cliente_agente" | "llega_umbral">,
 ): boolean {
   if (retencionPendiente(d) <= 0) return false;
   if (d.retencion_aplica) return true;
-  return d.cliente_agente && llegaAlUmbral === true;
+  return d.cliente_agente && d.llega_umbral === true;
 }
 
 /**
- * En qué está la retención de una factura: las tres frases de Willy (31/10)
- * —«SE REGISTRO CR / VER CR EN SUNAT / NO ES AG»— y la de antes de cobrar.
- *
- * *«algunos agentes retenedores envían los comprobantes de retención al
- * correo, pero otros no y hay que buscarlo en sunat»*: con la retención
- * registrada y sin CR subido, lo que toca es buscarlo.
+ * Cuando el cobro contradice a la factura (31/10). Si la factura se emitió
+ * desde el ERP, la retención se ELIGIÓ al facturar —el interruptor «con / sin
+ * retención»— y eso es lo que tiene SUNAT. Marcar lo contrario al cobrar no
+ * se impide (el cliente manda), pero se avisa. En las del Excel no se sabe
+ * qué se eligió, y no se dice nada.
  */
-export type EstadoRetencion = "cr_registrado" | "buscar_cr" | "retiene_al_pagar" | "no_agente";
-
-export function estadoRetencion(
-  d: Pick<DocumentoPorCobrar, "retencion_aplica" | "retencion_cobrada" | "cliente_agente" | "cr">,
-): EstadoRetencion {
-  if (d.cr) return "cr_registrado";
-  if (d.retencion_cobrada > 0) return "buscar_cr";
-  if (d.retencion_aplica || d.cliente_agente) return "retiene_al_pagar";
-  return "no_agente";
+export function avisoRetencionDistinta(
+  d: Pick<DocumentoPorCobrar, "retencion_decidida" | "retencion_aplica">,
+  retiene: boolean,
+): string | null {
+  if (!d.retencion_decidida || retiene === d.retencion_aplica) return null;
+  return retiene
+    ? "Esta factura se emitió SIN retención, y aquí se está registrando una. Si el cliente de verdad retuvo, la factura que tiene SUNAT no lo dice: revísalo antes de registrar."
+    : "Esta factura se emitió CON retención: el cliente debería depositar solo el 97 %. Si pagó el 100 %, está bien así; si no, marca «El cliente retuvo el 3 %».";
 }
 
+/**
+ * Las frases de cada estado (175). Las de Willy, 31/10: «SE REGISTRO CR / VER
+ * CR EN SUNAT / NO ES AG». *«algunos agentes retenedores envían los
+ * comprobantes de retención al correo, pero otros no y hay que buscarlo en
+ * sunat»*: cobrada la retención y sin CR, lo que toca es buscarlo.
+ */
 export const ETIQUETA_RETENCION: Record<EstadoRetencion, string> = {
-  cr_registrado: "Se registró el CR",
-  buscar_cr: "Ver el CR en SUNAT",
-  retiene_al_pagar: "Retiene el 3 % al pagar",
+  cr_recibido: "Se registró el CR",
+  falta_cr: "Cobrada · falta el CR",
+  por_cobrar: "Retiene el 3 % al pagar",
+  sin_retencion: "Sin retención",
   no_agente: "No es agente",
 };
 
 export function tonoRetencion(e: EstadoRetencion): "neutral" | "success" | "warning" | "info" {
-  if (e === "cr_registrado") return "success";
-  if (e === "buscar_cr") return "warning";
-  if (e === "retiene_al_pagar") return "info";
+  if (e === "cr_recibido") return "success";
+  if (e === "falta_cr") return "warning";
+  if (e === "por_cobrar") return "info";
   return "neutral";
+}
+
+/**
+ * Cuántos días se espera el CR antes de ir a buscarlo. Willy, 31/10: *«hacen
+ * el pago pero el documento de la retención le pasan después de 3, 4 días»*.
+ * Pasado eso, ya no va a llegar solo: SUNAT o pedírselo al cliente.
+ */
+export const DIAS_ESPERA_CR = 5;
+
+/** Días desde que se registró la retención. Sin fecha, 0. */
+export function diasSinCr(retenidaEl: string | null, hoy: string): number {
+  if (!retenidaEl) return 0;
+  const ms = Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${retenidaEl}T00:00:00Z`);
+  return Math.max(0, Math.round(ms / 86_400_000));
+}
+
+/** Lo que se dice al lado de un CR que falta, según lo que lleva esperando. */
+export function consejoCr(dias: number): { texto: string; urgente: boolean } {
+  if (dias < DIAS_ESPERA_CR) {
+    return {
+      texto: dias === 0 ? "Retenida hoy: suele llegar por correo en unos días." : `Retenida hace ${dias} ${dias === 1 ? "día" : "días"}: suele llegar por correo.`,
+      urgente: false,
+    };
+  }
+  return { texto: `Retenida hace ${dias} días: búscalo en SUNAT o pídeselo al cliente.`, urgente: true };
 }
 
 /**

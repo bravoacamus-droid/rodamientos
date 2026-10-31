@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileCheck2, FileUp } from "lucide-react";
+import { Download, Eye, FileCheck2, FileUp } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -51,11 +51,12 @@ export function RegistrarCr({
   const [enviando, iniciar] = React.useTransition();
   const [abriendo, iniciarAbrir] = React.useTransition();
 
-  const ver = () =>
+  const ver = (descargar = false) =>
     iniciarAbrir(async () => {
-      const r = await enlaceCr(comprobanteId);
-      if (r.ok) window.open(r.url, "_blank", "noopener");
-      else setError(r.error);
+      const r = await enlaceCr(comprobanteId, descargar);
+      if (!r.ok) return setError(r.error);
+      if (descargar) window.location.assign(r.url);
+      else window.open(r.url, "_blank", "noopener");
     });
 
   return (
@@ -87,9 +88,16 @@ export function RegistrarCr({
 
       <div className={`flex flex-wrap gap-2 ${compacto ? "" : "mt-2"}`}>
         {cr ? (
-          <Button type="button" variant="outline" size="sm" onClick={ver} disabled={abriendo}>
-            {abriendo ? "Abriendo…" : "Ver CR"}
-          </Button>
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => ver()} disabled={abriendo}>
+              <Eye className="size-4" aria-hidden="true" />
+              {abriendo ? "Abriendo…" : "Ver CR"}
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => ver(true)} disabled={abriendo}>
+              <Download className="size-4" aria-hidden="true" />
+              Descargar
+            </Button>
+          </>
         ) : null}
         {puede ? (
           <Dialog

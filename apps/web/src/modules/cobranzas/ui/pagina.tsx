@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { AlarmClock, CalendarClock, FileText, HandCoins, Wallet } from "lucide-react";
+import { AlarmClock, CalendarClock, Eye, FileText, HandCoins, Wallet } from "lucide-react";
 import {
   Badge,
   EstadoError,
@@ -20,6 +20,8 @@ import { RegistrarCr } from "@/modules/facturacion/ui/registrar-cr";
 import {
   cartera,
   carteraPorCliente,
+  comprobantesDeRetencion,
+  documentosPagados,
   compromisosVencidos,
   gestiones,
   indicadoresCobranzas,
@@ -27,7 +29,8 @@ import {
 } from "../api/consultas";
 import {
   ETIQUETA_RETENCION,
-  estadoRetencion,
+  consejoCr,
+  diasSinCr,
   etiquetaAtraso,
   tonoRetencion,
   tonoTramo,
@@ -35,6 +38,7 @@ import {
 import {
   ETIQUETA_CANAL,
   ETIQUETA_MEDIO,
+  MOSTRAR,
   type DocumentoPorCobrar,
   type FiltrosCartera,
   saldoEnMoneda,
@@ -43,6 +47,8 @@ import { Cobrador } from "./cobrador";
 import { FiltrosCarteraBarra } from "./filtros";
 import { Gestor } from "./gestor";
 import { VoucherDelPago } from "./voucher-del-pago";
+
+const MOSTRAR_VALIDOS = Object.keys(MOSTRAR) as (keyof typeof MOSTRAR)[];
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -71,6 +77,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
     cliente: uno(sp.cliente),
     tramo: uno(sp.tramo),
     vencido: uno(sp.vencido),
+    mostrar: uno(sp.mostrar),
   };
   // El periodo solo cuenta lo COBRADO (07/10): lo que se debe es de hoy.
   const periodo = { desde: uno(sp.desde), hasta: uno(sp.hasta) };
@@ -133,6 +140,15 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
       >
         <Indicadores periodo={periodo} />
       </Suspense>
+
+      {/* Los CR que faltan (31/10): pagada la factura sale de lo que se
+          debe, y el CR llega días después. Si falta alguno, se dice aquí
+          arriba y se llega a ellos con un botón. */}
+      {filtros.mostrar === "falta_cr" ? null : (
+        <Suspense fallback={null}>
+          <AvisoRetenciones />
+        </Suspense>
+      )}
 
       {/* `@container`: tarjetas o tabla según el ancho de esta caja, no de la
           pantalla (revisión por módulos del 02/10). */}
@@ -238,7 +254,7 @@ async function Indicadores({ periodo }: { periodo: { desde?: string; hasta?: str
               : "nada fuera de plazo",
           tono: d.vencido > 0 ? "urgente" : "ok",
           icono: <AlarmClock aria-hidden="true" />,
-          href: d.vencido > 0 ? "/cobranzas?vencido=1" : undefined,
+          href: d.vencido > 0 ? "/cobranzas?mostrar=vencido" : undefined,
         },
         {
           etiqueta: "Vence esta semana",
@@ -272,13 +288,40 @@ async function TablaCartera({
   puedeGestionar: boolean;
   puedeCr: boolean;
 }) {
-  const r = await cartera(filtros);
+  // «Mostrar» (31/10): lo que se debe —todo o lo vencido— sale de la
+  // cartera; lo ya pagado y las retenciones, de los comprobantes.
+  const mostrar = MOSTRAR_VALIDOS.find((m) => m === filtros.mostrar) ?? (filtros.vencido === "1" ? "vencido" : null);
+  const r =
+    mostrar && mostrar !== "vencido"
+      ? await documentosPagados(filtros, mostrar)
+      : await cartera({ ...filtros, vencido: mostrar === "vencido" ? "1" : undefined });
   if (!r.ok) {
     return (
       <EstadoError
         titulo="No se pudo cargar la cartera"
         descripcion="La consulta no llegó a completarse."
         detalle={r.error}
+      />
+    );
+  }
+
+  if (r.datos.length === 0 && mostrar && mostrar !== "vencido") {
+    return (
+      <EstadoVacio
+        titulo={
+          mostrar === "falta_cr"
+            ? "No falta ningún comprobante de retención"
+            : mostrar === "con_cr"
+              ? "Todavía no se ha subido ningún comprobante de retención"
+              : "Nada coincide con el filtro"
+        }
+        descripcion={
+          mostrar === "falta_cr"
+            ? "Todas las retenciones cobradas tienen su CR."
+            : filtros.q || filtros.cliente
+              ? "Prueba con menos filtros."
+              : "Cuando se registre, aparecerá aquí."
+        }
       />
     );
   }
@@ -373,7 +416,11 @@ export function CarteraVista({
                   y para quien está llamando a cobrar no es lo mismo. */}
               <div className="text-right">
                 <span className="block text-sm text-[var(--fg-muted)]">Saldo</span>
-                <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
+                {d.saldo <= 0 ? (
+                  <span className="text-lg font-semibold text-[var(--ok)]">Pagada</span>
+                ) : (
+                  <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
+                )}
               </div>
             </div>
 
@@ -388,23 +435,25 @@ export function CarteraVista({
               <span className="tabular text-sm text-[var(--fg-muted)]">
                 Vence {formatearFecha(d.fecha_vencimiento)}
               </span>
-              <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
-                {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
-              </Badge>
+              <Atraso d={d} />
             </div>
 
             <div className="mt-2">
-              <RetencionDelDocumento d={d} puedeCr={puedeCr} />
+              <RetencionDelDocumento d={d} puedeCr={puedeCr} hoy={hoy} />
             </div>
 
-            {d.pagado > 0 ? (
+            {d.pagado > 0 && d.saldo > 0 ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                 De <Moneda moneda={d.moneda} valor={d.pen_total ?? d.total} tamano="sm" className="text-inherit" />, ya
                 pagó <Moneda moneda={d.moneda} valor={Math.round(((d.pen_total ?? d.total) - saldoEnMoneda(d)) * 100) / 100} tamano="sm" className="text-inherit" />
               </p>
             ) : null}
 
-            {puedeGestionar || puedeCobrar ? (
+            {d.saldo <= 0 ? (
+              <div className="mt-3">
+                <VerFactura id={d.id} />
+              </div>
+            ) : puedeGestionar || puedeCobrar ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
                 {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
@@ -466,21 +515,23 @@ export function CarteraVista({
 
               <td className="whitespace-nowrap px-3 py-2.5">
                 <span className="tabular block">{formatearFecha(d.fecha_vencimiento)}</span>
-                <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
-                  {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
-                </Badge>
+                <Atraso d={d} />
               </td>
 
               <td className="px-3 py-2.5">
-                <RetencionDelDocumento d={d} puedeCr={puedeCr} />
+                <RetencionDelDocumento d={d} puedeCr={puedeCr} hoy={hoy} />
               </td>
 
               <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-base font-semibold" />
+                {d.saldo <= 0 ? (
+                  <span className="block text-base font-semibold text-[var(--ok)]">Pagada</span>
+                ) : (
+                  <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-base font-semibold" />
+                )}
                 <span className="block text-sm text-[var(--fg-subtle)]">
                   de <Moneda moneda={d.moneda} valor={d.pen_total ?? d.total} tamano="sm" className="text-inherit" />
                 </span>
-                {d.pagado > 0 ? (
+                {d.pagado > 0 && d.saldo > 0 ? (
                   <span className="block text-sm text-[var(--fg-subtle)]">
                     ya pagó <Moneda moneda={d.moneda} valor={Math.round(((d.pen_total ?? d.total) - saldoEnMoneda(d)) * 100) / 100} tamano="sm" className="text-inherit" />
                   </span>
@@ -489,8 +540,14 @@ export function CarteraVista({
 
               <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
                 <div className="flex flex-col items-stretch gap-1.5 [&>*]:justify-center">
-                  {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
-                  {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
+                  {d.saldo <= 0 ? (
+                    <VerFactura id={d.id} />
+                  ) : (
+                    <>
+                      {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
+                      {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
+                    </>
+                  )}
                 </div>
               </td>
             </tr>
@@ -557,7 +614,7 @@ async function ListaPagos({
             {p.medio === "retencion" ? (
               <span className="flex flex-wrap items-center justify-end gap-2">
                 <Badge tone={p.cr ? "success" : "warning"} size="xs">
-                  {p.cr ? ETIQUETA_RETENCION.cr_registrado : ETIQUETA_RETENCION.buscar_cr}
+                  {p.cr ? ETIQUETA_RETENCION.cr_recibido : ETIQUETA_RETENCION.falta_cr}
                 </Badge>
                 <RegistrarCr
                   comprobanteId={p.comprobante_id}
@@ -633,16 +690,83 @@ async function ListaGestiones() {
  * «SE REGISTRO CR / VER CR EN SUNAT / NO ES AG». Con la retención ya
  * registrada, al lado el botón para subir o ver el CR.
  */
-function RetencionDelDocumento({ d, puedeCr }: { d: DocumentoPorCobrar; puedeCr: boolean }) {
-  const estado = estadoRetencion(d);
+function RetencionDelDocumento({ d, puedeCr, hoy }: { d: DocumentoPorCobrar; puedeCr: boolean; hoy: string }) {
+  const estado = d.estado_retencion;
+  // Willy: el CR llega «después de 3, 4 días»; pasados, a buscarlo.
+  const consejo = estado === "falta_cr" ? consejoCr(diasSinCr(d.retenida_el, hoy)) : null;
   return (
-    <span className="flex flex-col items-start gap-1.5">
+    <span className="flex max-w-60 flex-col items-start gap-1.5">
       <Badge tone={tonoRetencion(estado)} size="xs">
         {ETIQUETA_RETENCION[estado]}
       </Badge>
-      {estado === "buscar_cr" || estado === "cr_registrado" ? (
+      {consejo ? (
+        <span className={`text-sm ${consejo.urgente ? "font-medium text-[var(--danger)]" : "text-[var(--fg-muted)]"}`}>
+          {consejo.texto}
+        </span>
+      ) : null}
+      {estado === "falta_cr" || estado === "cr_recibido" ? (
         <RegistrarCr comprobanteId={d.id} numero={d.numero} cr={d.cr} puede={puedeCr} compacto />
       ) : null}
     </span>
+  );
+}
+
+/**
+ * Los comprobantes de retención que faltan, encima de la tabla (31/10).
+ * Willy: *«debo saber qué comprobantes de retención se han entregado y qué
+ * comprobantes de retención quedan pendientes para buscarlo en sunat o de lo
+ * contrario pedir al cliente»*. Un botón lleva a la lista.
+ */
+async function AvisoRetenciones() {
+  const r = await comprobantesDeRetencion("faltan");
+  if (!r.ok || r.datos.length === 0) return null;
+  const n = r.datos.length;
+  const retenido = r.datos.reduce((a, x) => a + x.retencion, 0);
+  return (
+    <section className="anim-entrada flex flex-wrap items-center justify-between gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+      <p className="text-sm">
+        <strong>
+          {n === 1 ? "Falta 1 comprobante de retención" : `Faltan ${n} comprobantes de retención`}
+        </strong>{" "}
+        · <Moneda valor={retenido} tamano="sm" className="text-inherit" /> retenidos. Sin el CR, lo retenido no se
+        recupera.
+      </p>
+      <Link
+        href="/cobranzas?mostrar=falta_cr"
+        className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 text-sm font-semibold hover:bg-[var(--surface-2)]"
+      >
+        <FileText className="size-4" aria-hidden="true" />
+        Ver cuáles faltan
+      </Link>
+    </section>
+  );
+}
+
+/** El atraso de lo que se debe; lo pagado dice «Pagada». */
+function Atraso({ d }: { d: DocumentoPorCobrar }) {
+  if (d.saldo <= 0) {
+    return (
+      <Badge tone="success" size="xs">
+        Pagada
+      </Badge>
+    );
+  }
+  return (
+    <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
+      {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
+    </Badge>
+  );
+}
+
+/** Una factura pagada no se cobra ni se gestiona: se abre. */
+function VerFactura({ id }: { id: string }) {
+  return (
+    <Link
+      href={`/facturacion/${id}`}
+      className="inline-flex h-10 whitespace-nowrap items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 text-sm font-semibold hover:bg-[var(--surface-2)]"
+    >
+      <Eye className="size-4" aria-hidden="true" />
+      Ver factura
+    </Link>
   );
 }

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  avisoRetencionDistinta,
   avisosPago,
   bloqueosPago,
-  estadoRetencion,
+  consejoCr,
+  diasSinCr,
   etiquetaAtraso,
   prioridad,
   quedaSaldado,
@@ -44,6 +46,10 @@ const DOC: DocumentoPorCobrar = {
   cliente_agente: false,
   retencion_cobrada: 0,
   cr: null,
+  estado_retencion: "no_agente",
+  llega_umbral: null,
+  retencion_decidida: false,
+  retenida_el: null,
 };
 
 describe("bloqueosPago", () => {
@@ -287,7 +293,7 @@ describe("la retención al cobrar (31/10)", () => {
   it("no se registra dos veces", () => {
     const yaRetenida = { ...F502, saldo: 300, retencion_cobrada: 19.71 };
     expect(retencionPendiente(yaRetenida)).toBe(0);
-    expect(retieneDePorDefecto({ ...yaRetenida, cliente_agente: true }, true)).toBe(false);
+    expect(retieneDePorDefecto({ ...yaRetenida, cliente_agente: true, llega_umbral: true })).toBe(false);
   });
 
   it("nunca más que el saldo", () => {
@@ -295,19 +301,45 @@ describe("la retención al cobrar (31/10)", () => {
   });
 
   it("la casilla viene marcada si el cliente es agente y llega a S/ 700", () => {
-    expect(retieneDePorDefecto(F502, true)).toBe(false);
-    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, true)).toBe(true);
-    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, false)).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, llega_umbral: true })).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true, llega_umbral: true })).toBe(true);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true, llega_umbral: false })).toBe(false);
     // Sin tipo de cambio no se adivina.
-    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, null)).toBe(false);
-    expect(retieneDePorDefecto({ ...F502, retencion_aplica: true, retencion_monto: 19.71 }, null)).toBe(true);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true })).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, retencion_aplica: true, retencion_monto: 19.71 })).toBe(true);
+  });
+});
+
+describe("la espera del CR (31/10)", () => {
+  it("cuenta los días desde que se registró la retención", () => {
+    expect(diasSinCr("2026-10-31", "2026-10-31")).toBe(0);
+    expect(diasSinCr("2026-10-27", "2026-10-31")).toBe(4);
+    expect(diasSinCr(null, "2026-10-31")).toBe(0);
   });
 
-  it("las tres frases de Willy, y la de antes de cobrar", () => {
-    const cr = { nombre: "CR.pdf", numero_cr: "E001-12", subido_en: "2026-10-31" };
-    expect(estadoRetencion(DOC)).toBe("no_agente");
-    expect(estadoRetencion({ ...DOC, cliente_agente: true })).toBe("retiene_al_pagar");
-    expect(estadoRetencion({ ...DOC, retencion_cobrada: 19.71 })).toBe("buscar_cr");
-    expect(estadoRetencion({ ...DOC, retencion_cobrada: 19.71, cr })).toBe("cr_registrado");
+  it("los primeros días se espera el correo; después, SUNAT o el cliente", () => {
+    expect(consejoCr(0).urgente).toBe(false);
+    expect(consejoCr(4).urgente).toBe(false);
+    expect(consejoCr(5).urgente).toBe(true);
+    expect(consejoCr(5).texto).toContain("SUNAT");
+  });
+});
+
+describe("el cobro que contradice a la factura (31/10)", () => {
+  it("emitida desde el ERP SIN retención y se marca retención: avisa", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: false }, true)).toContain("SIN retención");
+  });
+
+  it("emitida CON retención y se cobra sin ella: avisa", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: true }, false)).toContain("CON retención");
+  });
+
+  it("si coinciden, nada", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: true }, true)).toBeNull();
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: false }, false)).toBeNull();
+  });
+
+  it("las del Excel no se sabe qué se eligió: nada", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: false, retencion_aplica: false }, true)).toBeNull();
   });
 });

@@ -160,6 +160,11 @@ const esquema = z.object({
    * el documento existe. Se dice lo que pasó y se reintenta desde la ficha.
    */
   enviar_sunat: z.boolean(),
+  /**
+   * Si se emite desde un borrador (176), cuál: emitido, se borra. Solo eso;
+   * lo que se emite es lo que viene arriba, como siempre.
+   */
+  borrador_id: z.string().uuid().nullable().optional(),
 });
 
 export type ResultadoEmision =
@@ -429,6 +434,11 @@ export async function emitirComprobante(
       podía facturar dos veces.
     */
     if (datos.guias.length > 0) revalidatePath("/guias");
+
+    // Emitido: el borrador ya no tiene nada que revisar. Si no se pudiera
+    // borrar, la factura ya existe igual; queda un borrador de más, que se
+    // borra a mano y no gasta nada.
+    if (datos.borrador_id) await supabase.from("facturas_borrador").delete().eq("id", datos.borrador_id);
 
     revalidatePath("/facturacion");
     revalidatePath("/cotizaciones");

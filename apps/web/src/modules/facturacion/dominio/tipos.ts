@@ -7,6 +7,8 @@
  * envío lo resuelve `@rodatech/sunat`. Este módulo es el pegamento.
  */
 
+import type { EstadoRetencion } from "@/modules/cobranzas/dominio/tipos";
+
 /** Los cuatro tipos fiscales que maneja el sistema. */
 export type TipoComprobante = "factura" | "boleta" | "nota_credito" | "nota_debito";
 
@@ -68,9 +70,11 @@ export interface ComprobanteLista {
   pagado: number;
   saldo: number;
   moneda: "USD" | "PEN";
-  /** Con retención (y si ya tiene su CR, 120). */
-  retencion: boolean;
-  conCr: boolean;
+  /**
+   * En qué está su retención, de `v_retenciones` (175): lo mismo que dice
+   * Cobranzas. `null` en notas y anuladas, que no llevan.
+   */
+  estado_retencion: EstadoRetencion | null;
   estado: EstadoComprobante;
   estado_sunat: EstadoSunat;
   vendedor: string | null;
@@ -176,7 +180,10 @@ export interface FiltrosComprobantes {
   tipo?: string;
   estado?: string;
   sunat?: string;
-  /** «sin»: con retención y sin su CR registrado (120). */
+  /**
+   * La retención (175): «falta» (cobrada, sin CR), «por_cobrar» o «recibido».
+   * «sin», el de antes (120), vale como «falta».
+   */
   cr?: string;
   desde?: string;
   hasta?: string;

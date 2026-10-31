@@ -1,20 +1,25 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import type { Database } from "@rodatech/db/tipos";
 
 import { fallo } from "@/lib/errores";
 
 import { prioridad } from "../dominio/cobro";
-import type {
-  ClienteEnCartera,
-  CrDelDocumento,
-  CuotaComprobante,
-  DocumentoPorCobrar,
-  FiltrosCartera,
-  Gestion,
-  MedioPago,
-  PagoRegistrado,
-  TramoAging,
+import {
+  ESTADOS_RETENCION,
+  type ClienteEnCartera,
+  type CrDelDocumento,
+  type CuotaComprobante,
+  type DocumentoPorCobrar,
+  type EstadoRetencion,
+  type FiltrosCartera,
+  type Gestion,
+  type Mostrar,
+  type MedioPago,
+  type PagoRegistrado,
+  type RetencionDeFactura,
+  type TramoAging,
 } from "../dominio/tipos";
 
 export type Resultado<T> =
@@ -75,96 +80,291 @@ export async function cartera(
     const { data, error } = await consulta;
     if (error) return fallo(error, "cobranzas/cartera");
 
-    // La moneda de cada documento (116), aparte: `v_cartera` no la trae y
-    // tocar la vista arrastra a los reportes. Solo interesan las en soles.
-    const enSoles = new Map<string, { tipo_cambio: number; pen_total: number }>();
-    const ids = (data ?? []).map((d) => String(d.id));
-    if (ids.length > 0) {
-      const { data: pen } = await supabase
-        .from("comprobantes")
-        .select("id, tipo_cambio, pen_total")
-        .in("id", ids)
-        .eq("moneda", "PEN");
-      for (const p of pen ?? []) {
-        if (p.pen_total != null && Number(p.tipo_cambio) > 0) {
-          enSoles.set(String(p.id), { tipo_cambio: Number(p.tipo_cambio), pen_total: Number(p.pen_total) });
-        }
-      }
-    }
-
-    // La retención de cada documento (31/10): si el cliente es agente, lo ya
-    // cobrado como «Retención» y su CR. Aparte, por lo mismo que la moneda.
-    const clienteIds = [...new Set((data ?? []).map((d) => String(d.cliente_id)))];
-    const [agentes, retenciones, crs] = await Promise.all([
-      clienteIds.length > 0
-        ? supabase.from("clientes").select("id").in("id", clienteIds).eq("agente_retencion", true)
-        : Promise.resolve({ data: [] as { id: string }[] }),
-      ids.length > 0
-        ? supabase.from("pagos").select("comprobante_id, monto").in("comprobante_id", ids).eq("medio", "retencion")
-        : Promise.resolve({ data: [] as { comprobante_id: string; monto: number }[] }),
-      crDe(ids),
-    ]);
-    const esAgente = new Set((agentes.data ?? []).map((c) => String(c.id)));
-    const retenido = new Map<string, number>();
-    for (const p of retenciones.data ?? []) {
-      const id = String(p.comprobante_id);
-      retenido.set(id, dos((retenido.get(id) ?? 0) + Number(p.monto ?? 0)));
-    }
-
-    return {
-      ok: true,
-      datos: (data ?? []).map((d) => ({
-        id: String(d.id),
-        numero: String(d.numero),
-        tipo: String(d.tipo),
-        cliente_id: String(d.cliente_id),
-        cliente: String(d.cliente ?? "—"),
-        documento: d.documento ?? null,
-        fecha_emision: String(d.fecha_emision),
-        fecha_vencimiento: d.fecha_vencimiento ?? null,
-        condicion_pago: String(d.condicion_pago ?? "contado"),
-        total: Number(d.total ?? 0),
-        pagado: Number(d.pagado ?? 0),
-        saldo: Number(d.saldo ?? 0),
-        estado: String(d.estado),
-        orden_compra_cliente: d.orden_compra_cliente ?? null,
-        dias_vencido: Number(d.dias_vencido ?? 0),
-        tramo_aging: (d.tramo_aging as TramoAging) ?? "sin_vencimiento",
-        vendedor: d.vendedor ?? null,
-        detraccion_aplica: Boolean(d.detraccion_aplica),
-        detraccion_monto: Number(d.detraccion_monto ?? 0),
-        retencion_aplica: Boolean(d.retencion_aplica),
-        retencion_monto: Number(d.retencion_monto ?? 0),
-        moneda: enSoles.has(String(d.id)) ? ("PEN" as const) : ("USD" as const),
-        tipo_cambio: enSoles.get(String(d.id))?.tipo_cambio ?? null,
-        pen_total: enSoles.get(String(d.id))?.pen_total ?? null,
-        cliente_agente: esAgente.has(String(d.cliente_id)),
-        retencion_cobrada: retenido.get(String(d.id)) ?? 0,
-        cr: crs.get(String(d.id)) ?? null,
-      })),
-    };
+    return { ok: true, datos: await completar((data ?? []) as FilaBase[]) };
   } catch (e) {
     return fallo(e, "cobranzas/cartera");
   }
 }
 
-/** Los CR subidos de unas facturas, por factura (120). Sin CR, no está. */
-async function crDe(ids: string[]): Promise<Map<string, CrDelDocumento>> {
-  const porId = new Map<string, CrDelDocumento>();
+/** Lo que trae `v_cartera`, o lo mismo armado desde `comprobantes`. */
+interface FilaBase {
+  id: string;
+  numero: string;
+  tipo: string;
+  cliente_id: string;
+  cliente: string | null;
+  documento: string | null;
+  fecha_emision: string;
+  fecha_vencimiento: string | null;
+  condicion_pago: string | null;
+  total: number | null;
+  pagado: number | null;
+  saldo: number | null;
+  estado: string;
+  orden_compra_cliente: string | null;
+  dias_vencido: number | null;
+  tramo_aging: string | null;
+  vendedor: string | null;
+  detraccion_aplica: boolean | null;
+  detraccion_monto: number | null;
+  retencion_aplica: boolean | null;
+  retencion_monto: number | null;
+}
+
+/**
+ * Le pone a cada fila su moneda (116) y su retención (175), aparte: `v_cartera`
+ * no las trae y tocar la vista arrastra a los reportes.
+ */
+async function completar(filas: FilaBase[]): Promise<DocumentoPorCobrar[]> {
+  const supabase = await clienteServidor();
+  const ids = filas.map((d) => String(d.id));
+  const enSoles = new Map<string, { tipo_cambio: number; pen_total: number }>();
+  if (ids.length > 0) {
+    const { data: pen } = await supabase
+      .from("comprobantes")
+      .select("id, tipo_cambio, pen_total")
+      .in("id", ids)
+      .eq("moneda", "PEN");
+    for (const p of pen ?? []) {
+      if (p.pen_total != null && Number(p.tipo_cambio) > 0) {
+        enSoles.set(String(p.id), { tipo_cambio: Number(p.tipo_cambio), pen_total: Number(p.pen_total) });
+      }
+    }
+  }
+  const ret = await retencionesPorId(ids);
+
+  return filas.map((d) => {
+    const r = ret.get(String(d.id));
+    return {
+      id: String(d.id),
+      numero: String(d.numero),
+      tipo: String(d.tipo),
+      cliente_id: String(d.cliente_id),
+      cliente: String(d.cliente ?? "—"),
+      documento: d.documento ?? null,
+      fecha_emision: String(d.fecha_emision),
+      fecha_vencimiento: d.fecha_vencimiento ?? null,
+      condicion_pago: String(d.condicion_pago ?? "contado"),
+      total: Number(d.total ?? 0),
+      pagado: Number(d.pagado ?? 0),
+      saldo: Number(d.saldo ?? 0),
+      estado: String(d.estado),
+      orden_compra_cliente: d.orden_compra_cliente ?? null,
+      dias_vencido: Number(d.dias_vencido ?? 0),
+      tramo_aging: (d.tramo_aging as TramoAging) ?? "sin_vencimiento",
+      vendedor: d.vendedor ?? null,
+      detraccion_aplica: Boolean(d.detraccion_aplica),
+      detraccion_monto: Number(d.detraccion_monto ?? 0),
+      retencion_aplica: Boolean(d.retencion_aplica),
+      retencion_monto: Number(d.retencion_monto ?? 0),
+      moneda: enSoles.has(String(d.id)) ? ("PEN" as const) : ("USD" as const),
+      tipo_cambio: enSoles.get(String(d.id))?.tipo_cambio ?? null,
+      pen_total: enSoles.get(String(d.id))?.pen_total ?? null,
+      cliente_agente: r?.cliente_agente ?? false,
+      retencion_cobrada: r?.retencion_cobrada ?? 0,
+      cr: r?.cr ?? null,
+      estado_retencion: r?.estado_retencion ?? "no_agente",
+      llega_umbral: r?.llega_umbral ?? null,
+      retencion_decidida: r?.retencion_decidida ?? false,
+      retenida_el: r?.retenida_el ?? null,
+    };
+  });
+}
+
+const SIN_FILAS = ["00000000-0000-0000-0000-000000000000"];
+
+/**
+ * Lo ya pagado y las retenciones, para el desplegable «Mostrar» (31/10).
+ *
+ * Willy quiere ver los que ya están pagados, los pagados con su documento de
+ * retención y los que solo pagaron, y filtrar los que deben el documento de
+ * retención. `v_cartera` solo trae lo que se debe; esto sale de
+ * `comprobantes` y de `v_retenciones`. Lo más reciente arriba, hasta 200: el
+ * histórico tiene más de 500 facturas pagadas.
+ */
+export async function documentosPagados(
+  filtros: FiltrosCartera,
+  mostrar: Exclude<Mostrar, "vencido">,
+): Promise<Resultado<DocumentoPorCobrar[]>> {
+  try {
+    const supabase = await clienteServidor();
+    let consulta = supabase
+      .from("comprobantes")
+      .select(
+        `id, numero, tipo, cliente_id, fecha_emision, fecha_vencimiento, condicion_pago,
+         total, pagado, saldo, estado, orden_compra_cliente,
+         detraccion_aplica, detraccion_monto, retencion_aplica, retencion_monto,
+         clientes(razon_social, numero_documento),
+         perfiles!comprobantes_vendedor_id_fkey(nombre)`,
+      )
+      .eq("tipo", "factura")
+      .neq("estado", "anulado")
+      .order("fecha_emision", { ascending: false })
+      .order("numero", { ascending: false })
+      .limit(200);
+
+    // Las retenciones son pocas: se buscan en la vista y se filtra por id.
+    const idsCon = async (estados: EstadoRetencion[]) => {
+      const { data } = await supabase.from("v_retenciones").select("comprobante_id").in("estado_retencion", estados);
+      return (data ?? []).map((r) => String(r.comprobante_id));
+    };
+    if (mostrar === "falta_cr" || mostrar === "con_cr") {
+      const ids = await idsCon([mostrar === "falta_cr" ? "falta_cr" : "cr_recibido"]);
+      consulta = consulta.in("id", ids.length > 0 ? ids : SIN_FILAS);
+    } else {
+      consulta = consulta.eq("estado", "pagado");
+      if (mostrar === "pagadas_sin_retencion") {
+        const conRetencion = await idsCon(["falta_cr", "cr_recibido"]);
+        if (conRetencion.length > 0) consulta = consulta.not("id", "in", `(${conRetencion.join(",")})`);
+      }
+    }
+
+    if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
+    if (filtros.q) {
+      // Por número, O/C o nombre del cliente, como Facturación: PostgREST no
+      // deja un `or` sobre la tabla embebida, así que los clientes van antes.
+      const q = filtros.q.replace(/[,()]/g, " ").trim();
+      const { data: clientes } = await supabase.from("clientes").select("id").ilike("razon_social", `%${q}%`).limit(50);
+      const deClientes = (clientes ?? []).map((c) => String(c.id));
+      consulta = consulta.or(
+        [
+          `numero.ilike.%${q}%`,
+          `orden_compra_cliente.ilike.%${q}%`,
+          deClientes.length > 0 ? `cliente_id.in.(${deClientes.join(",")})` : null,
+        ]
+          .filter(Boolean)
+          .join(","),
+      );
+    }
+
+    const { data, error } = await consulta;
+    if (error) return fallo(error, "cobranzas/documentosPagados");
+
+    const crudos = (data ?? []) as unknown as Array<
+      Omit<FilaBase, "cliente" | "documento" | "vendedor" | "dias_vencido" | "tramo_aging"> & {
+        clientes: { razon_social: string; numero_documento: string | null } | null;
+        perfiles: { nombre: string } | null;
+      }
+    >;
+    return {
+      ok: true,
+      datos: await completar(
+        crudos.map((c) => ({
+          ...c,
+          cliente: c.clientes?.razon_social ?? null,
+          documento: c.clientes?.numero_documento ?? null,
+          vendedor: c.perfiles?.nombre ?? null,
+          dias_vencido: 0,
+          tramo_aging: "sin_vencimiento",
+        })),
+      ),
+    };
+  } catch (e) {
+    return fallo(e, "cobranzas/documentosPagados");
+  }
+}
+
+type FilaRetenciones = Database["public"]["Views"]["v_retenciones"]["Row"];
+
+const aEstado = (e: string | null): EstadoRetencion =>
+  ESTADOS_RETENCION.find((x) => x === e) ?? "no_agente";
+
+const aCr = (r: FilaRetenciones): CrDelDocumento | null =>
+  r.cr_subido_en
+    ? { nombre: String(r.cr_nombre ?? "CR"), numero_cr: r.numero_cr ?? null, subido_en: String(r.cr_subido_en) }
+    : null;
+
+/** La retención de unas facturas, por factura (175). */
+async function retencionesPorId(ids: string[]): Promise<
+  Map<
+    string,
+    {
+      cliente_agente: boolean;
+      retencion_cobrada: number;
+      cr: CrDelDocumento | null;
+      estado_retencion: EstadoRetencion;
+      llega_umbral: boolean | null;
+      retencion_decidida: boolean;
+      retenida_el: string | null;
+    }
+  >
+> {
+  const porId = new Map();
   if (ids.length === 0) return porId;
   const supabase = await clienteServidor();
   const { data } = await supabase
-    .from("comprobante_retenciones")
-    .select("comprobante_id, nombre, numero_cr, subido_en")
+    .from("v_retenciones")
+    .select(
+      "comprobante_id, cliente_agente, retencion_cobrada, cr_nombre, numero_cr, cr_subido_en, estado_retencion, llega_umbral, retencion_decidida, retenida_el",
+    )
     .in("comprobante_id", ids);
-  for (const c of data ?? []) {
-    porId.set(String(c.comprobante_id), {
-      nombre: String(c.nombre),
-      numero_cr: c.numero_cr ?? null,
-      subido_en: String(c.subido_en),
+  for (const r of (data ?? []) as FilaRetenciones[]) {
+    porId.set(String(r.comprobante_id), {
+      cliente_agente: Boolean(r.cliente_agente),
+      retencion_cobrada: Number(r.retencion_cobrada ?? 0),
+      cr: aCr(r),
+      estado_retencion: aEstado(r.estado_retencion),
+      llega_umbral: r.llega_umbral ?? null,
+      retencion_decidida: Boolean(r.retencion_decidida),
+      retenida_el: r.retenida_el ?? null,
     });
   }
   return porId;
+}
+
+/** Los CR subidos de unas facturas, por factura (120). Sin CR, no está. */
+async function crDe(ids: string[]): Promise<Map<string, CrDelDocumento>> {
+  const porId = new Map<string, CrDelDocumento>();
+  for (const [id, r] of await retencionesPorId(ids)) if (r.cr) porId.set(id, r.cr);
+  return porId;
+}
+
+/**
+ * Los comprobantes de retención (175): las facturas con la retención ya
+ * cobrada, falte o no su CR. Willy, 31/10: *«debo saber qué comprobantes de
+ * retención se han entregado y qué comprobantes de retención quedan
+ * pendientes»*. Van aunque la factura ya no deba nada: es justo cuando el CR
+ * llega tarde.
+ *
+ * Los que faltan, del que más lleva esperando al que menos; los recibidos,
+ * del último subido hacia atrás.
+ */
+export async function comprobantesDeRetencion(
+  cuales: "faltan" | "recibidos",
+): Promise<Resultado<RetencionDeFactura[]>> {
+  try {
+    const supabase = await clienteServidor();
+    let consulta = supabase
+      .from("v_retenciones")
+      .select(
+        "comprobante_id, numero, cliente_id, cliente, documento, fecha_emision, total, retencion_cobrada, retenida_el, cr_nombre, numero_cr, cr_subido_en, estado_retencion",
+      )
+      .limit(200);
+    consulta =
+      cuales === "faltan"
+        ? consulta.eq("estado_retencion", "falta_cr").order("retenida_el", { ascending: true })
+        : consulta.eq("estado_retencion", "cr_recibido").order("cr_subido_en", { ascending: false }).limit(50);
+    const { data, error } = await consulta;
+    if (error) return fallo(error, "cobranzas/comprobantesDeRetencion");
+    return {
+      ok: true,
+      datos: ((data ?? []) as FilaRetenciones[]).map((r) => ({
+        comprobante_id: String(r.comprobante_id),
+        numero: String(r.numero),
+        cliente_id: String(r.cliente_id),
+        cliente: String(r.cliente ?? "—"),
+        documento: r.documento ?? null,
+        fecha_emision: String(r.fecha_emision),
+        total: Number(r.total ?? 0),
+        retencion: Number(r.retencion_cobrada ?? 0),
+        retenida_el: r.retenida_el ?? null,
+        cr: aCr(r),
+        estado_retencion: aEstado(r.estado_retencion),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "cobranzas/comprobantesDeRetencion");
+  }
 }
 
 /**
