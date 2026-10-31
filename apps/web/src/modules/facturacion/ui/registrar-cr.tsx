@@ -28,17 +28,22 @@ export interface CrRegistrado {
 /**
  * «Registrar CR» (Willy, 14/10): el comprobante de retención, colgado de su
  * factura. Solo sale en las facturas con retención.
+ *
+ * `compacto`: solo los botones, para la fila de Cobranzas (31/10), donde el
+ * estado ya lo dice la insignia de al lado.
  */
 export function RegistrarCr({
   comprobanteId,
   numero,
   cr,
   puede,
+  compacto = false,
 }: {
   comprobanteId: string;
   numero: string;
   cr: CrRegistrado | null;
   puede: boolean;
+  compacto?: boolean;
 }) {
   const router = useRouter();
   const [abierto, setAbierto] = React.useState(false);
@@ -55,9 +60,13 @@ export function RegistrarCr({
 
   return (
     <div
-      className={`rounded-sm border p-2.5 text-sm ${cr ? "border-[var(--ok)] bg-[var(--surface-2)]" : "border-[var(--warn)] bg-[var(--warn-bg)]"}`}
+      className={
+        compacto
+          ? "text-sm"
+          : `rounded-sm border p-2.5 text-sm ${cr ? "border-[var(--ok)] bg-[var(--surface-2)]" : "border-[var(--warn)] bg-[var(--warn-bg)]"}`
+      }
     >
-      {cr ? (
+      {compacto ? null : cr ? (
         <>
           <p className="flex items-center gap-1.5 font-medium">
             <FileCheck2 className="size-4 text-[var(--ok)]" aria-hidden="true" />
@@ -76,7 +85,7 @@ export function RegistrarCr({
         </>
       )}
 
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className={`flex flex-wrap gap-2 ${compacto ? "" : "mt-2"}`}>
         {cr ? (
           <Button type="button" variant="outline" size="sm" onClick={ver} disabled={abriendo}>
             {abriendo ? "Abriendo…" : "Ver CR"}

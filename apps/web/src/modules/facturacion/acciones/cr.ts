@@ -53,7 +53,22 @@ export async function registrarCr(formData: FormData): Promise<ResultadoCr> {
       .maybeSingle();
     if (errorFactura) return { ok: false, error: errorFactura.message };
     if (!factura) return { ok: false, error: "Esa factura ya no existe." };
-    if (!factura.retencion_aplica) return { ok: false, error: `${factura.numero} no tiene retención: no lleva CR.` };
+    // Las facturas cargadas del Excel nacieron sin retención aunque el
+    // cliente retenga, y una factura emitida no se modifica (31/10). Si al
+    // cobrarla se registró una retención, la tuvo, y lleva su CR.
+    if (!factura.retencion_aplica) {
+      const { count } = await supabase
+        .from("pagos")
+        .select("id", { count: "exact", head: true })
+        .eq("comprobante_id", factura.id)
+        .eq("medio", "retencion");
+      if (!count) {
+        return {
+          ok: false,
+          error: `${factura.numero} no tiene retención: no lleva CR. Si el cliente retuvo, registra primero la retención al cobrarla.`,
+        };
+      }
+    }
 
     const bytes = Buffer.from(await archivo.arrayBuffer());
     const sha256 = createHash("sha256").update(bytes).digest("hex");

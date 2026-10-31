@@ -8595,3 +8595,36 @@ SQL directo, con respaldo antes y ensayo que se deshace:
 567 ni la 571), USD 8,303.95. Son del sistema viejo, posteriores a la carga
 del 07/10; el Excel no trae fecha ni productos. Hay que pedírselas a Willy.
 Y no hay pantalla de **arqueo de caja**: si la quiere, es trabajo nuevo.
+
+## §CQ · 31/10 — Cobrar con retención, y el CR en Cobranzas
+
+Willy, cobrando la F002-502 de EXANDAL: *«el monto que sale 656.91 es el
+total pero ellos son agentes de retencion por lo que depositaron el 97% osea
+$637.19, como lo registro??»*; *«si elijo retencion deberia descontarse la
+retencion (3%)»*; y que el cuadro de cobranzas diga del CR *«SE REGISTRO CR /
+VER CR EN SUNAT / NO ES AG»*.
+
+Por qué no podía: un cobro con retención son **dos** cobros (lo depositado y
+lo retenido) y la ventana registraba uno; elegir «Retención» se llevaba el
+total entero. Además las 21 por cobrar son del Excel, con
+`retencion_aplica = false`, y **ningún cliente estaba marcado como agente**,
+así que «Registrar CR» las rechazaba. Una factura emitida no se modifica
+(`tg_comprobante_columnas_de_las_rpc`), así que no se les cambia la columna.
+
+- **«Cobrar»**: casilla «El cliente retuvo el 3 %». La retención sale sola
+  (3 % del TOTAL, menos lo ya retenido; editable), el importe pasa a ser «Lo
+  que depositó» y se registran los dos cobros de una vez. 637.19 + 19.71 deja
+  un céntimo, dentro de la tolerancia: queda saldada. Viene marcada si la
+  factura nació con retención, o si el cliente es agente y llega a S/ 700 al
+  cambio del día de emisión. «Retención» ya no sale en «Forma de pago».
+- Quien retiene queda marcado como **agente de retención** al registrar el
+  cobro (si el rol puede editar clientes).
+- Una factura **lleva CR** si nació con retención **o** si se le cobró una.
+  `registrarCr` y la ficha lo aceptan así. Sin migración.
+- **Cobranzas**: columna «Retención» con *Se registró el CR / Ver el CR en
+  SUNAT / Retiene el 3 % al pagar / No es agente*, y el botón del CR al lado.
+  Pagada la factura sale de la cartera, así que en «Lo cobrado» cada cobro
+  «Retención» dice lo mismo y lleva su botón.
+
+Sin probar en pantalla con un cobro de verdad: registrar escribe en la base
+del cliente. Tests del dominio en `cobro.test.ts`.

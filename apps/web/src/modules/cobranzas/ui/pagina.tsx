@@ -15,6 +15,7 @@ import { misPermisos } from "@/lib/permisos";
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { FilaIndicadores, IndicadoresError, textoPeriodo } from "@/componentes/indicadores";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
+import { RegistrarCr } from "@/modules/facturacion/ui/registrar-cr";
 
 import {
   cartera,
@@ -24,7 +25,13 @@ import {
   indicadoresCobranzas,
   ultimosPagos,
 } from "../api/consultas";
-import { etiquetaAtraso, tonoTramo } from "../dominio/cobro";
+import {
+  ETIQUETA_RETENCION,
+  estadoRetencion,
+  etiquetaAtraso,
+  tonoRetencion,
+  tonoTramo,
+} from "../dominio/cobro";
 import {
   ETIQUETA_CANAL,
   ETIQUETA_MEDIO,
@@ -83,6 +90,8 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
   const puedeCobrar = perfil.tiene("cobranzas", "crear");
   const puedeGestionar = perfil.tiene("cobranzas", "editar");
   const puedeSubir = perfil.tiene("cobranzas", "editar");
+  // El CR lo sube quien cobra o quien factura, como en la ficha (143).
+  const puedeCr = puedeCobrar || perfil.tiene("facturacion", "editar");
 
   return (
     <div className="flex flex-col gap-5">
@@ -138,6 +147,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             hoy={hoy}
             puedeCobrar={puedeCobrar}
             puedeGestionar={puedeGestionar}
+            puedeCr={puedeCr}
           />
         </Suspense>
       </section>
@@ -155,7 +165,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             key={`${periodo.desde}|${periodo.hasta}`}
             fallback={<Skeleton className="h-40 w-full" />}
           >
-            <ListaPagos periodo={periodo} puedeSubir={puedeSubir} />
+            <ListaPagos periodo={periodo} puedeSubir={puedeSubir} puedeCr={puedeCr} />
           </Suspense>
         </section>
 
@@ -254,11 +264,13 @@ async function TablaCartera({
   hoy,
   puedeCobrar,
   puedeGestionar,
+  puedeCr,
 }: {
   filtros: FiltrosCartera;
   hoy: string;
   puedeCobrar: boolean;
   puedeGestionar: boolean;
+  puedeCr: boolean;
 }) {
   const r = await cartera(filtros);
   if (!r.ok) {
@@ -306,6 +318,7 @@ async function TablaCartera({
       hoy={hoy}
       puedeCobrar={puedeCobrar}
       puedeGestionar={puedeGestionar}
+      puedeCr={puedeCr}
     />
   );
 }
@@ -323,11 +336,13 @@ export function CarteraVista({
   hoy,
   puedeCobrar,
   puedeGestionar,
+  puedeCr = false,
 }: {
   datos: DocumentoPorCobrar[];
   hoy: string;
   puedeCobrar: boolean;
   puedeGestionar: boolean;
+  puedeCr?: boolean;
 }) {
   return (
     <>
@@ -378,6 +393,10 @@ export function CarteraVista({
               </Badge>
             </div>
 
+            <div className="mt-2">
+              <RetencionDelDocumento d={d} puedeCr={puedeCr} />
+            </div>
+
             {d.pagado > 0 ? (
               <p className="mt-1 text-sm text-[var(--fg-subtle)]">
                 De <Moneda moneda={d.moneda} valor={d.pen_total ?? d.total} tamano="sm" className="text-inherit" />, ya
@@ -410,6 +429,7 @@ export function CarteraVista({
             <th className="px-3 py-2.5 font-medium">Documento</th>
             <th className="px-3 py-2.5 font-medium">Cliente</th>
             <th className="px-3 py-2.5 font-medium">Vencimiento</th>
+            <th className="px-3 py-2.5 font-medium">Retención</th>
             <th className="px-3 py-2.5 text-right font-medium">Saldo</th>
             <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
               Acciones
@@ -451,6 +471,10 @@ export function CarteraVista({
                 </Badge>
               </td>
 
+              <td className="px-3 py-2.5">
+                <RetencionDelDocumento d={d} puedeCr={puedeCr} />
+              </td>
+
               <td className="whitespace-nowrap px-3 py-2.5 text-right">
                 <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-base font-semibold" />
                 <span className="block text-sm text-[var(--fg-subtle)]">
@@ -481,9 +505,11 @@ export function CarteraVista({
 async function ListaPagos({
   periodo,
   puedeSubir,
+  puedeCr,
 }: {
   periodo: { desde?: string; hasta?: string };
   puedeSubir: boolean;
+  puedeCr: boolean;
 }) {
   const r = await ultimosPagos(15, periodo);
   if (!r.ok) return <EstadoError titulo="No se pudieron cargar los pagos" detalle={r.error} />;
@@ -525,7 +551,25 @@ async function ListaPagos({
                 {formatearFecha(p.fecha)}
               </span>
             </span>
-            <VoucherDelPago pagoId={p.id} tiene={p.tiene_voucher} puedeSubir={puedeSubir} />
+            {/* La retención no pasa por el banco: no lleva voucher, lleva su
+                CR (31/10). Pagada la factura, este es el sitio donde se ve
+                si ya llegó o hay que buscarlo en SUNAT. */}
+            {p.medio === "retencion" ? (
+              <span className="flex flex-wrap items-center justify-end gap-2">
+                <Badge tone={p.cr ? "success" : "warning"} size="xs">
+                  {p.cr ? ETIQUETA_RETENCION.cr_registrado : ETIQUETA_RETENCION.buscar_cr}
+                </Badge>
+                <RegistrarCr
+                  comprobanteId={p.comprobante_id}
+                  numero={p.comprobante_numero}
+                  cr={p.cr}
+                  puede={puedeCr}
+                  compacto
+                />
+              </span>
+            ) : (
+              <VoucherDelPago pagoId={p.id} tiene={p.tiene_voucher} puedeSubir={puedeSubir} />
+            )}
           </div>
         </li>
       ))}
@@ -581,5 +625,24 @@ async function ListaGestiones() {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * La retención de una factura por cobrar (31/10), con las frases de Willy:
+ * «SE REGISTRO CR / VER CR EN SUNAT / NO ES AG». Con la retención ya
+ * registrada, al lado el botón para subir o ver el CR.
+ */
+function RetencionDelDocumento({ d, puedeCr }: { d: DocumentoPorCobrar; puedeCr: boolean }) {
+  const estado = estadoRetencion(d);
+  return (
+    <span className="flex flex-col items-start gap-1.5">
+      <Badge tone={tonoRetencion(estado)} size="xs">
+        {ETIQUETA_RETENCION[estado]}
+      </Badge>
+      {estado === "buscar_cr" || estado === "cr_registrado" ? (
+        <RegistrarCr comprobanteId={d.id} numero={d.numero} cr={d.cr} puede={puedeCr} compacto />
+      ) : null}
+    </span>
   );
 }

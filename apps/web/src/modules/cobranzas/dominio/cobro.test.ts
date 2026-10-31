@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   avisosPago,
   bloqueosPago,
+  estadoRetencion,
   etiquetaAtraso,
   prioridad,
   quedaSaldado,
   repartoEnCuotas,
+  retencionPendiente,
+  retieneDePorDefecto,
   tonoTramo,
 } from "./cobro";
 import { saldoEnMoneda, type CuotaComprobante, type DocumentoPorCobrar } from "./tipos";
@@ -38,6 +41,9 @@ const DOC: DocumentoPorCobrar = {
   moneda: "USD",
   tipo_cambio: null,
   pen_total: null,
+  cliente_agente: false,
+  retencion_cobrada: 0,
+  cr: null,
 };
 
 describe("bloqueosPago", () => {
@@ -256,5 +262,52 @@ describe("lo que se debe en soles (116)", () => {
     expect(saldoEnMoneda({ ...pen, saldo: 804.2 })).toBe(2707.77);
     expect(saldoEnMoneda({ ...pen, saldo: 0 })).toBe(0);
     expect(saldoEnMoneda({ moneda: "USD", tipo_cambio: null, pen_total: null, total: 20, saldo: 12.5 })).toBe(12.5);
+  });
+});
+
+describe("la retención al cobrar (31/10)", () => {
+  // La F002-502 de EXANDAL: 656.91, y depositaron 637.19.
+  const F502 = { ...DOC, total: 656.91, saldo: 656.91 };
+
+  it("se retiene el 3 % del total, no del saldo", () => {
+    expect(retencionPendiente(F502)).toBe(19.71);
+    // Pagada la mitad sin retener, la retención sigue siendo sobre el total.
+    expect(retencionPendiente({ ...F502, saldo: 300 })).toBe(19.71);
+  });
+
+  it("depósito + retención deja la factura saldada, con el céntimo de tolerancia", () => {
+    expect(quedaSaldado(656.91, 637.19 + retencionPendiente(F502))).toBe(true);
+    expect(bloqueosPago(F502, 637.19 + 19.71, HOY)).toEqual([]);
+  });
+
+  it("si la factura nació con retención, manda su monto", () => {
+    expect(retencionPendiente({ ...F502, retencion_aplica: true, retencion_monto: 19.7 })).toBe(19.7);
+  });
+
+  it("no se registra dos veces", () => {
+    const yaRetenida = { ...F502, saldo: 300, retencion_cobrada: 19.71 };
+    expect(retencionPendiente(yaRetenida)).toBe(0);
+    expect(retieneDePorDefecto({ ...yaRetenida, cliente_agente: true }, true)).toBe(false);
+  });
+
+  it("nunca más que el saldo", () => {
+    expect(retencionPendiente({ ...F502, saldo: 5 })).toBe(5);
+  });
+
+  it("la casilla viene marcada si el cliente es agente y llega a S/ 700", () => {
+    expect(retieneDePorDefecto(F502, true)).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, true)).toBe(true);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, false)).toBe(false);
+    // Sin tipo de cambio no se adivina.
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true }, null)).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, retencion_aplica: true, retencion_monto: 19.71 }, null)).toBe(true);
+  });
+
+  it("las tres frases de Willy, y la de antes de cobrar", () => {
+    const cr = { nombre: "CR.pdf", numero_cr: "E001-12", subido_en: "2026-10-31" };
+    expect(estadoRetencion(DOC)).toBe("no_agente");
+    expect(estadoRetencion({ ...DOC, cliente_agente: true })).toBe("retiene_al_pagar");
+    expect(estadoRetencion({ ...DOC, retencion_cobrada: 19.71 })).toBe("buscar_cr");
+    expect(estadoRetencion({ ...DOC, retencion_cobrada: 19.71, cr })).toBe("cr_registrado");
   });
 });

@@ -96,7 +96,7 @@ export async function registrarCobro(
     const ids = [...new Set(datos.pagos.map((p) => p.comprobante_id))];
     const { data: docs, error: errorDocs } = await supabase
       .from("comprobantes")
-      .select("id, numero, saldo, estado")
+      .select("id, numero, saldo, estado, cliente_id")
       .in("id", ids);
 
     if (errorDocs) return { ok: false, error: errorDocs.message };
@@ -138,7 +138,10 @@ export async function registrarCobro(
         return { ok: false, error: `No se pudo subir el voucher: ${voucher}` };
       }
     }
-    const pagos = voucher ? datos.pagos.map((p) => ({ ...p, ...voucher })) : datos.pagos;
+    // El voucher es el del dinero que entró: la retención no pasa por el banco.
+    const pagos = voucher
+      ? datos.pagos.map((p) => (p.medio === "retencion" ? p : { ...p, ...voucher }))
+      : datos.pagos;
 
     const { data, error } = await supabase.rpc("registrar_pagos", {
       p_pagos: pagos as unknown as Json,
@@ -149,6 +152,26 @@ export async function registrarCobro(
     }
 
     const r = data as unknown as { pagos: number };
+
+    // Quien retiene es agente de retención (31/10): ninguno de los 97 estaba
+    // marcado y la casilla del cliente no la había tocado nadie. Así, la
+    // próxima factura suya ya trae «El cliente retuvo el 3 %» marcado. Sin
+    // permiso para editar clientes no pasa nada: el cobro ya está hecho.
+    const agentes = [
+      ...new Set(
+        datos.pagos
+          .filter((p) => p.medio === "retencion")
+          .map((p) => porId.get(p.comprobante_id)?.cliente_id)
+          .filter((c): c is string => Boolean(c)),
+      ),
+    ];
+    if (agentes.length > 0) {
+      await supabase
+        .from("clientes")
+        .update({ agente_retencion: true })
+        .in("id", agentes)
+        .eq("agente_retencion", false);
+    }
 
     revalidatePath("/cobranzas");
     revalidatePath("/facturacion");

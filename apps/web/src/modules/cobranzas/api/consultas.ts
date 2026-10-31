@@ -7,6 +7,7 @@ import { fallo } from "@/lib/errores";
 import { prioridad } from "../dominio/cobro";
 import type {
   ClienteEnCartera,
+  CrDelDocumento,
   CuotaComprobante,
   DocumentoPorCobrar,
   FiltrosCartera,
@@ -91,6 +92,25 @@ export async function cartera(
       }
     }
 
+    // La retención de cada documento (31/10): si el cliente es agente, lo ya
+    // cobrado como «Retención» y su CR. Aparte, por lo mismo que la moneda.
+    const clienteIds = [...new Set((data ?? []).map((d) => String(d.cliente_id)))];
+    const [agentes, retenciones, crs] = await Promise.all([
+      clienteIds.length > 0
+        ? supabase.from("clientes").select("id").in("id", clienteIds).eq("agente_retencion", true)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+      ids.length > 0
+        ? supabase.from("pagos").select("comprobante_id, monto").in("comprobante_id", ids).eq("medio", "retencion")
+        : Promise.resolve({ data: [] as { comprobante_id: string; monto: number }[] }),
+      crDe(ids),
+    ]);
+    const esAgente = new Set((agentes.data ?? []).map((c) => String(c.id)));
+    const retenido = new Map<string, number>();
+    for (const p of retenciones.data ?? []) {
+      const id = String(p.comprobante_id);
+      retenido.set(id, dos((retenido.get(id) ?? 0) + Number(p.monto ?? 0)));
+    }
+
     return {
       ok: true,
       datos: (data ?? []).map((d) => ({
@@ -118,11 +138,33 @@ export async function cartera(
         moneda: enSoles.has(String(d.id)) ? ("PEN" as const) : ("USD" as const),
         tipo_cambio: enSoles.get(String(d.id))?.tipo_cambio ?? null,
         pen_total: enSoles.get(String(d.id))?.pen_total ?? null,
+        cliente_agente: esAgente.has(String(d.cliente_id)),
+        retencion_cobrada: retenido.get(String(d.id)) ?? 0,
+        cr: crs.get(String(d.id)) ?? null,
       })),
     };
   } catch (e) {
     return fallo(e, "cobranzas/cartera");
   }
+}
+
+/** Los CR subidos de unas facturas, por factura (120). Sin CR, no está. */
+async function crDe(ids: string[]): Promise<Map<string, CrDelDocumento>> {
+  const porId = new Map<string, CrDelDocumento>();
+  if (ids.length === 0) return porId;
+  const supabase = await clienteServidor();
+  const { data } = await supabase
+    .from("comprobante_retenciones")
+    .select("comprobante_id, nombre, numero_cr, subido_en")
+    .in("comprobante_id", ids);
+  for (const c of data ?? []) {
+    porId.set(String(c.comprobante_id), {
+      nombre: String(c.nombre),
+      numero_cr: c.numero_cr ?? null,
+      subido_en: String(c.subido_en),
+    });
+  }
+  return porId;
 }
 
 /**
@@ -236,6 +278,12 @@ export async function ultimosPagos(
       }
     >;
 
+    // Un cobro «Retención» dice si su factura ya tiene el CR (31/10): pagada
+    // la factura, sale de la cartera, y este es el sitio donde se sigue viendo.
+    const crs = await crDe([
+      ...new Set(crudos.filter((p) => p.medio === "retencion").map((p) => String(p.comprobante_id))),
+    ]);
+
     return {
       ok: true,
       datos: crudos.map((p) => ({
@@ -250,6 +298,7 @@ export async function ultimosPagos(
         observaciones: (p.observaciones as string | null) ?? null,
         registrado_por: p.perfiles?.nombre ?? null,
         tiene_voucher: Boolean(p.voucher_ruta),
+        cr: p.medio === "retencion" ? (crs.get(String(p.comprobante_id)) ?? null) : null,
       })),
     };
   } catch (e) {
@@ -305,6 +354,8 @@ export async function pagosDe(comprobanteId: string): Promise<Resultado<PagoRegi
         observaciones: (p.observaciones as string | null) ?? null,
         registrado_por: p.perfiles?.nombre ?? null,
         tiene_voucher: Boolean(p.voucher_ruta),
+        // La ficha de la factura enseña su CR en su propio bloque.
+        cr: null,
       })),
     };
   } catch (e) {

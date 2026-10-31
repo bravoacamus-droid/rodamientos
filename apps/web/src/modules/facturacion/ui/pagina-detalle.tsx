@@ -118,6 +118,9 @@ export default async function PaginaDetalleComprobante({
   const factorPagos =
     original.moneda === "PEN" && original.pen && original.total > 0 ? original.pen.total / original.total : 1;
   const puedeSubirVoucher = perfil.tiene("cobranzas", "editar");
+  // Con retención si nació así o si al cobrarla se registró una (31/10): las
+  // facturas del Excel nacieron sin ella aunque el cliente retenga.
+  const retenidaAlCobrar = pagos.ok && pagos.datos.some((p) => p.medio === "retencion");
 
   return (
     <>
@@ -553,7 +556,7 @@ export default async function PaginaDetalleComprobante({
               </div>
             ) : null}
             {/* «Registrar CR» (Willy, 14/10): el comprobante de retención. */}
-            {!esNota && c.retencion_aplica && !anulado ? (
+            {!esNota && (c.retencion_aplica || retenidaAlCobrar) && !anulado ? (
               <div className="mt-3">
                 <RegistrarCr comprobanteId={c.id} numero={c.numero} cr={cr} puede={puedeCr} />
               </div>

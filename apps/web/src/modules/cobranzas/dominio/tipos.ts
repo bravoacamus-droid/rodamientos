@@ -88,6 +88,23 @@ export interface DocumentoPorCobrar {
   moneda: "USD" | "PEN";
   tipo_cambio: number | null;
   pen_total: number | null;
+  /** Si el cliente está marcado como agente de retención (118). */
+  cliente_agente: boolean;
+  /**
+   * Lo ya cobrado con el medio «Retención». Las facturas cargadas del Excel
+   * nacieron con `retencion_aplica = false` aunque el cliente retenga, y una
+   * factura emitida no se modifica: que se le registrara una retención al
+   * cobrarla es lo que dice que la tuvo (31/10).
+   */
+  retencion_cobrada: number;
+  /** El comprobante de retención del cliente, si ya se subió (120). */
+  cr: CrDelDocumento | null;
+}
+
+export interface CrDelDocumento {
+  nombre: string;
+  numero_cr: string | null;
+  subido_en: string;
 }
 
 /** Lo que se debe en la moneda del documento: en soles, al cambio de la factura. */
@@ -115,6 +132,8 @@ export interface PagoRegistrado {
   registrado_por: string | null;
   /** Si se subió la foto o el PDF de la transferencia (109). */
   tiene_voucher: boolean;
+  /** Solo en los cobros «Retención»: el CR de su factura, si ya se subió. */
+  cr: CrDelDocumento | null;
 }
 
 /** Una cuota del cronograma, con lo que lleva pagado. */

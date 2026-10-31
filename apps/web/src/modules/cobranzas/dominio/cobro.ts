@@ -1,4 +1,5 @@
 import { redondear2 } from "@rodatech/config";
+import { montoRetencion } from "@/modules/facturacion/dominio/retencion";
 
 import {
   MEDIOS_SIN_CAJA,
@@ -162,6 +163,80 @@ export function repartoEnCuotas(
         quedaSaldo: redondear2(cuota.saldo - aplica),
       };
     });
+}
+
+// ---------------------------------------------------------------------------
+// La retención al cobrar (31/10)
+//
+// Willy, 31/10, cobrando la F002-502 de EXANDAL: *«el monto que sale 656.91
+// es el total pero ellos son agentes de retención por lo que depositaron el
+// 97 % osea $637.19, como lo registro??»*. Son DOS cobros —lo que llega al
+// banco y lo que el cliente se queda para SUNAT— y la ventana solo dejaba
+// uno: elegir «Retención» se llevaba el total entero como retenido.
+
+type ConRetencion = Pick<
+  DocumentoPorCobrar,
+  "total" | "saldo" | "retencion_aplica" | "retencion_monto" | "retencion_cobrada"
+>;
+
+/**
+ * Lo que falta registrar como retención: el 3 % del TOTAL —no del saldo: se
+ * retiene sobre la factura entera, aunque se pague en cuotas— menos lo que ya
+ * se registró. Si la factura nació con retención, manda su monto.
+ */
+export function retencionPendiente(d: ConRetencion): number {
+  const total = d.retencion_aplica && d.retencion_monto > 0 ? d.retencion_monto : montoRetencion(d.total);
+  return redondear2(Math.max(0, Math.min(d.saldo, total - d.retencion_cobrada)));
+}
+
+/**
+ * ¿La casilla «El cliente retuvo el 3 %» viene marcada?
+ *
+ * Si la factura nació con retención, sí. Si no, cuando el cliente es agente y
+ * la factura llega a S/ 700 (`llegaAlUmbral`, al cambio del día en que se
+ * emitió); sin cambio (`null`) no se adivina. Y nunca dos veces: si la
+ * retención ya se registró, el resto se cobra sin ella.
+ */
+export function retieneDePorDefecto(
+  d: ConRetencion & Pick<DocumentoPorCobrar, "cliente_agente">,
+  llegaAlUmbral: boolean | null,
+): boolean {
+  if (retencionPendiente(d) <= 0) return false;
+  if (d.retencion_aplica) return true;
+  return d.cliente_agente && llegaAlUmbral === true;
+}
+
+/**
+ * En qué está la retención de una factura: las tres frases de Willy (31/10)
+ * —«SE REGISTRO CR / VER CR EN SUNAT / NO ES AG»— y la de antes de cobrar.
+ *
+ * *«algunos agentes retenedores envían los comprobantes de retención al
+ * correo, pero otros no y hay que buscarlo en sunat»*: con la retención
+ * registrada y sin CR subido, lo que toca es buscarlo.
+ */
+export type EstadoRetencion = "cr_registrado" | "buscar_cr" | "retiene_al_pagar" | "no_agente";
+
+export function estadoRetencion(
+  d: Pick<DocumentoPorCobrar, "retencion_aplica" | "retencion_cobrada" | "cliente_agente" | "cr">,
+): EstadoRetencion {
+  if (d.cr) return "cr_registrado";
+  if (d.retencion_cobrada > 0) return "buscar_cr";
+  if (d.retencion_aplica || d.cliente_agente) return "retiene_al_pagar";
+  return "no_agente";
+}
+
+export const ETIQUETA_RETENCION: Record<EstadoRetencion, string> = {
+  cr_registrado: "Se registró el CR",
+  buscar_cr: "Ver el CR en SUNAT",
+  retiene_al_pagar: "Retiene el 3 % al pagar",
+  no_agente: "No es agente",
+};
+
+export function tonoRetencion(e: EstadoRetencion): "neutral" | "success" | "warning" | "info" {
+  if (e === "cr_registrado") return "success";
+  if (e === "buscar_cr") return "warning";
+  if (e === "retiene_al_pagar") return "info";
+  return "neutral";
 }
 
 /**
