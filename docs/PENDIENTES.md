@@ -8929,3 +8929,15 @@ condición de pago… y dirección de entrega»*.
 
 **Sin probar en pantalla**: la sesión del navegador había caducado. Las tres
 órdenes editables (OC02-00002..4) son reales de Willy: probar sin guardar.
+
+### §CT.1 · La orden no le dice al proveedor para qué cliente es (181)
+
+Al mirar el PDF de la OC02-00003, el pie decía «Observaciones: Para
+CT02-001311 · FABRICA DE CUBIERTOS SAC». Lo escribía sola
+`generar_ordenes_de_compra` desde la 111. Moisés, 02/11: *«no debería
+mostrarle al proveedor»*. La 181 deja de escribirlo (el enlace sigue en
+`cotizacion_id`, y la ficha lo enseña). Las tres órdenes de hoy (OC02-00002..4)
+se limpiaron por SQL directo.
+
+Aclarado de paso: la **O/C del cliente** es otra cosa. Se escribe en la guía y
+la factura la toma de ahí (`ocDeLasGuias`).
