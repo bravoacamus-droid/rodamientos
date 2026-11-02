@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -70,9 +70,11 @@ export default async function PaginaClientes({ searchParams }: Props) {
           {puedeCrear ? (
             <Link
               href="/clientes/nuevo"
-              className="inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700 sm:w-auto md:h-control-md"
+              // El de `buttonVariants`, con el relieve del 30/10, como el de
+              // cotizaciones y productos (revisión de entrega, 02/11).
+              className={cn(buttonVariants({ variant: "primary" }), "h-11 w-full sm:w-auto md:h-control-md")}
             >
-              <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
+              <Plus strokeWidth={2.5} aria-hidden="true" />
               Nuevo cliente
             </Link>
           ) : (

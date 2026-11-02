@@ -164,7 +164,7 @@ export async function SeccionVentas({
         {/* El título dice lo que se dibuja: sin costo no hay línea de
             margen, y «Venta y margen» sobre una sola curva confundía. La
             moneda va aquí una vez, y no en cada marca del eje. */}
-        <h2 className="mb-3 text-sm font-semibold">
+        <h2 className="mb-3 text-lg font-semibold">
           {conMargen ? "Venta y margen" : "Lo vendido"}, en dólares sin IGV ·{" "}
           {describirRango(rango, hoy)}
         </h2>

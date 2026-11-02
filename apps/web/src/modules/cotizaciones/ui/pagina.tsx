@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { seriesDe } from "@/lib/series";
 import { nombreDelCliente } from "@/modules/clientes/acciones/buscar";
-import { CircleCheck, FileSpreadsheet, FileText, Hourglass, Target } from "lucide-react";
-import { Skeleton, formatearMoneda, leerTamano } from "@rodatech/ui";
+import { CircleCheck, FileSpreadsheet, FileText, Hourglass, Plus, Target } from "lucide-react";
+import { Skeleton, buttonVariants, cn, formatearMoneda, leerTamano } from "@rodatech/ui";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
 import { PanelModulo } from "@/componentes/panel-modulo";
@@ -31,6 +31,24 @@ function estadoDeUrl(v: string | string[] | undefined): EstadoCotizacion | undef
   const valor = uno(v);
   return esEstadoCotizacion(valor) ? valor : undefined;
 }
+
+/*
+  Los botones de la cabecera salen del sistema de diseño y no copiados a mano
+  (revisión de entrega, 02/11). Cada lista llevaba los suyos —`h-9
+  rounded-sm` en productos, `h-11` en clientes, `py-2` aquí— y ninguno tenía
+  el relieve del rediseño del 30/10: de una pantalla a otra, el botón
+  principal cambiaba de alto y de forma. 44 px en el teléfono, como
+  `BotonBloqueado`, que es el que sale en su sitio sin permiso.
+
+  El secundario va sobre el azul del panel, y el `hover:bg-brand-50` de
+  `outline` es casi blanco: con la letra blanca del panel, el texto
+  desaparecía al pasar el ratón. Ahí se aclara el vidrio en su lugar.
+*/
+const BOTON_PRINCIPAL = cn(buttonVariants({ variant: "primary" }), "h-11 md:h-control-md");
+const BOTON_SECUNDARIO = cn(
+  buttonVariants({ variant: "outline" }),
+  "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+);
 
 /** Las cuatro cifras de arriba (108). */
 async function Indicadores({ filtros }: { filtros: FiltrosCotizaciones }) {
@@ -138,15 +156,13 @@ export default async function PaginaCotizaciones({ searchParams }: Props) {
                   serie: filtros.serie ?? "",
                 }).filter(([, v]) => v),
               ).toString()}`}
-              className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3.5 py-2 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              className={BOTON_SECUNDARIO}
             >
-              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              <FileSpreadsheet aria-hidden="true" />
               Exportar a Excel
             </a>
-            <Link
-              href="/cotizaciones/nueva"
-              className="rounded-sm bg-brand-600 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
-            >
+            <Link href="/cotizaciones/nueva" className={BOTON_PRINCIPAL}>
+              <Plus strokeWidth={2.5} aria-hidden="true" />
               Nueva cotización
             </Link>
           </div>

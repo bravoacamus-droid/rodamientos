@@ -30,6 +30,11 @@ export type CatalogoProducto = "marca" | "familia" | "subfamilia";
 const CATALOGO_POR_ETIQUETA: Record<string, CatalogoProducto> = {
   Marca: "marca",
   Familia: "familia",
+  // Las dos grafías (02/11): el filtro de productos ya decía «Subfamilia» y
+  // los formularios «Sub-familia», y se unificaron en la primera. Compras
+  // —alta en bloque— sigue con el guion, y sin esta línea el selector de las
+  // pantallas ya cambiadas perdería «Editar» y «Dar de baja» en silencio.
+  Subfamilia: "subfamilia",
   "Sub-familia": "subfamilia",
 };
 

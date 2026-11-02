@@ -297,7 +297,7 @@ export function ConstructorAnalisis({
               <a
                 href={`/compras/analisis/${inicial.id}/excel`}
                 download
-                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
               >
                 <Download className="size-4" aria-hidden />
                 Descargar en Excel
@@ -324,7 +324,7 @@ export function ConstructorAnalisis({
               href={`/compras/analisis/${inicial.id}`}
               // Salir sin guardar es decidir no seguir: no se ofrece otra vez.
               onClick={olvidarBorrador}
-              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
             >
               {sinGuardar ? "Salir sin guardar" : "Ver la ficha"}
             </Link>

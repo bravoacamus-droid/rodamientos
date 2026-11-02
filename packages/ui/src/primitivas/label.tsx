@@ -26,7 +26,10 @@ export function Label({ className, requerido, children, ...props }: LabelProps) 
         // `text-sm`: el nombre de un campo es lo que dice QUÉ se está
         // tecleando. En mayúsculas y en gris ya cuesta, y a 12,75 px se
         // convertía en decoración encima de la casilla.
-        "mb-1.5 block text-sm font-semibold uppercase tracking-wide text-subtle",
+        // En el azul del logo y no en gris (02/11): el nombre del campo es lo
+        // que se busca con la vista, y el gris lo confundía con la ayuda de
+        // debajo. brand-700 da 11:1 sobre blanco; en oscuro pasa a brand-300.
+        "mb-1.5 block text-sm font-semibold uppercase tracking-wide text-brand-700",
         "peer-disabled:opacity-60",
         className,
       )}

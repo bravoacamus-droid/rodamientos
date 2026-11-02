@@ -38,7 +38,11 @@ export async function PanelCartera() {
   return (
     <section className="card flex flex-col">
       <header className="flex items-center justify-between gap-2 border-b border-[var(--border-soft)] px-4 py-3">
-        <h2 className="text-sm font-semibold">Cartera</h2>
+        {/* `text-lg`, como el título de `Bloque` (02/11). Al lado, en la
+            misma fila del tablero, «En qué quedó lo cotizado» iba en 18 px y
+            «Cartera» en 14: el mismo nivel de pantalla, dos jerarquías. Lo
+            mismo en alertas, pendientes y el gráfico de ventas. */}
+        <h2 className="text-lg font-semibold">Cartera</h2>
         {/* Botón con borde y no un enlace azul suelto: *«una persona que no
             sabe que tiene que darle click ahí»* (revisión del 02/10). */}
         <Link href="/cobranzas" className={buttonVariants({ variant: "outline", size: "sm" })}>

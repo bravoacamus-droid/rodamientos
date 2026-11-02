@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Button, EstadoError, EstadoVacio, formatearFecha } from "@rodatech/ui";
+import { Button, EstadoError, EstadoVacio, buttonVariants, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
@@ -72,7 +72,7 @@ export default async function PaginaPrecios() {
           */}
           <Link
             href="/compras/pedir-precio"
-            className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+            className={buttonVariants()}
           >
             <Plus className="size-[18px]" />
             Pedir precios
@@ -94,7 +94,7 @@ export default async function PaginaPrecios() {
           accion={
             <Link
               href="/compras/pedir-precio"
-              className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              className={buttonVariants()}
             >
               <Plus className="size-[18px]" />
               Pedir precios

@@ -224,7 +224,7 @@ function Bloque({
   return (
     <section className="anim-entrada card @container p-4">
       <div className="mb-3">
-        <h2 className="text-sm font-semibold">{titulo}</h2>
+        <h2 className="text-base font-semibold">{titulo}</h2>
         {/* La nota explica CÓMO leer el gráfico. Un gráfico sin instrucciones
             se mira una vez y no se vuelve a abrir. */}
         {nota ? (

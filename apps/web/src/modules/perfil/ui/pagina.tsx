@@ -60,7 +60,7 @@ export default async function PaginaMiPerfil() {
       </div>
 
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Tus datos</h2>
+        <h2 className="mb-3 text-base font-semibold">Tus datos</h2>
         <FormMisDatos perfil={perfil} />
       </section>
 
@@ -69,7 +69,7 @@ export default async function PaginaMiPerfil() {
         ver» (25:21). Aquí es donde se enciende que le llegue.
       */}
       <section id="avisos" className="card scroll-mt-20 p-4">
-        <h2 className="mb-3 text-sm font-semibold">Avisos en el celular</h2>
+        <h2 className="mb-3 text-base font-semibold">Avisos en el celular</h2>
         {avisos.ok ? (
           <PanelAvisos aparatos={avisos.datos.aparatos} clavePublica={avisos.datos.clavePublica} />
         ) : (
@@ -80,7 +80,7 @@ export default async function PaginaMiPerfil() {
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold">Tu contraseña</h2>
+        <h2 className="text-base font-semibold">Tu contraseña</h2>
         <p className="mb-3 text-sm text-[var(--fg-muted)]">
           Si sigues entrando con la que te dieron al principio, cámbiala: es la
           misma para todos.
@@ -93,7 +93,7 @@ export default async function PaginaMiPerfil() {
         apagados sin explicación.
       */}
       <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
-        <h2 className="text-sm font-semibold">Lo que no puedes cambiar tú</h2>
+        <h2 className="text-base font-semibold">Lo que no puedes cambiar tú</h2>
         <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <Dato etiqueta="Correo con el que entras">
             {perfil.email ?? "—"}

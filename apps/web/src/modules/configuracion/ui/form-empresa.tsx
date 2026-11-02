@@ -162,8 +162,8 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         migrar, y borrarlas es trabajo de limpieza que no toca hacer hoy.
       */}
 
-      <div className="rounded-md border border-[var(--border-soft)] p-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+      <div className="seccion-form">
+        <h3 className="text-base font-semibold tracking-tight text-[var(--titulo)]">
           Impuestos y retenciones
         </h3>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
@@ -219,8 +219,8 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
       {/* La meta del mes (Luis, 20/10). En dólares y sin IGV, que es como
           suman los informes. Solo por mes: por día no hace falta (Luis,
           20/10). */}
-      <div className="rounded-md border border-[var(--border-soft)] p-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+      <div className="seccion-form">
+        <h3 className="text-base font-semibold tracking-tight text-[var(--titulo)]">
           Meta de ventas
         </h3>
         <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">

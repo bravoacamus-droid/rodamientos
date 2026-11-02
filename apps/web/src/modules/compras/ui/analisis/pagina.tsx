@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Badge, EstadoError } from "@rodatech/ui";
+import { Badge, EstadoError, EstadoVacio, buttonVariants } from "@rodatech/ui";
 import { ChevronLeft, ChevronRight, Download, Eye, Plus } from "lucide-react";
 import { perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
@@ -48,12 +48,16 @@ function Estado({ a }: { a: AnalisisLista }) {
 }
 
 /** Ver y Excel: dos botones que parecen botones, con su palabra. */
-function Acciones({ a }: { a: AnalisisLista }) {
+function Acciones({ a, aLoAncho = false }: { a: AnalisisLista; aLoAncho?: boolean }) {
+  // En la tarjeta los dos botones se reparten el ancho, como en el resto de
+  // tarjetas de compras: dos botones pequeños a la izquierda dejaban media
+  // tarjeta vacía y el pulgar lejos.
+  const ancho = aLoAncho ? "flex-1 justify-center" : "";
   return (
     <div className="flex flex-wrap gap-2">
       <Link
         href={`/compras/analisis/${a.id}`}
-        className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+        className={`inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 ${ancho}`}
       >
         <Eye className="size-4" aria-hidden />
         Ver
@@ -62,7 +66,7 @@ function Acciones({ a }: { a: AnalisisLista }) {
       <a
         href={`/compras/analisis/${a.id}/excel`}
         download
-        className="inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+        className={`inline-flex h-10 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)] ${ancho}`}
       >
         <Download className="size-4" aria-hidden />
         Excel
@@ -111,9 +115,12 @@ export default async function PaginaAnalisis({
   return (
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/compras/analisis">
-        <header className="flex flex-wrap items-start justify-between gap-3">
+        {/* El mismo título y la misma alineación que las otras listas de
+            compras: era la única en 20 px y arriba, y al pasar a ella desde
+            «Pedir precios» la cabecera encogía (revisión de entrega, 02/11). */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Análisis de importación</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Análisis de importación</h1>
             <p className="max-w-2xl text-sm text-[var(--fg-muted)]">
               Antes de comprar: con la proforma del proveedor de fuera, cuánto te cuesta cada
               producto puesto en Lima y cuánto ganas contra el precio de mercado.
@@ -121,27 +128,44 @@ export default async function PaginaAnalisis({
           </div>
           <Link
             href="/compras/analisis/nuevo"
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+            className={buttonVariants()}
           >
             <Plus className="size-4" aria-hidden />
             Nuevo análisis
           </Link>
-        </header>
+        </div>
       </PanelModulo>
 
       {total === 0 ? (
-        <div className="card p-8 text-center">
-          <p className="text-base font-medium">Todavía no hay ningún análisis.</p>
-          <p className="mt-1 text-sm text-[var(--fg-muted)]">
-            Cuando te llegue una proforma de importación, empieza uno con «Nuevo análisis».
-          </p>
+        // El vacío de las demás listas, con el botón dentro: decir «empieza
+        // uno con Nuevo análisis» y mandar a buscarlo arriba era describir el
+        // camino en vez de ponerlo.
+        <div className="card">
+          <EstadoVacio
+            titulo="Todavía no hay ningún análisis"
+            descripcion="Cuando te llegue una proforma de importación, empieza aquí el primero."
+            accion={
+              <Link
+                href="/compras/analisis/nuevo"
+                className={buttonVariants()}
+              >
+                <Plus className="size-4" aria-hidden />
+                Nuevo análisis
+              </Link>
+            }
+          />
         </div>
       ) : (
         <section className="card @container overflow-hidden">
-          {/* Tarjetas mientras la caja es estrecha; tabla cuando cabe. */}
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @4xl:hidden">
+          {/* Tarjetas mientras la caja es estrecha; tabla cuando cabe.
+              Sueltas y con su borde, como compras y recepciones, y no pegadas
+              por una raya. Luis, 11/09: *«todo junto, apegado»*. */}
+          <ul className="flex flex-col gap-2.5 p-3 @4xl:hidden">
             {filas.map((a) => (
-              <li key={a.id} className="flex flex-col gap-2 p-4">
+              <li
+                key={a.id}
+                className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-sm font-semibold">{a.numero}</span>
                   <Estado a={a} />
@@ -163,7 +187,7 @@ export default async function PaginaAnalisis({
                   </div>
                 </dl>
                 <InsigniaK k={a.k} />
-                <Acciones a={a} />
+                <Acciones a={a} aLoAncho />
               </li>
             ))}
           </ul>

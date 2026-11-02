@@ -459,7 +459,7 @@ export function EditarArticulo({
 
                   <SelectorCatalogo
                     id="ed-subfamilia"
-                    label="Sub-familia"
+                    label="Subfamilia"
                     requerido
                     opciones={subfamilias}
                     valor={datos.subfamilia_id}

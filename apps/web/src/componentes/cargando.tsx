@@ -58,6 +58,34 @@ export function CargandoLista() {
   );
 }
 
+/**
+ * Un reporte: la cabecera de marca, la fila de fechas, las cifras y el
+ * gráfico. Con la de lista salía una tabla que luego no estaba, y al llegar
+ * el reporte la pantalla entera cambiaba de forma (02/11).
+ */
+export function CargandoReporte() {
+  return (
+    <div className="flex flex-col gap-5" role="status" aria-label="Cargando">
+      <section className="panel-modulo flex flex-col gap-4 p-4 sm:p-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-11 rounded-xl" />
+          <Skeleton className="h-7 w-24 rounded-full" />
+        </div>
+        <CabeceraCargando botones={0} />
+      </section>
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-control-md w-40 rounded-md" />
+        <Skeleton className="h-control-md w-40 rounded-md" />
+        <Skeleton className="h-control-md w-40 rounded-md" />
+        <Skeleton className="h-control-md w-56 rounded-md" />
+      </div>
+      <SkeletonTarjetas cantidad={4} alto={120} />
+      <Skeleton className="h-[22rem] w-full rounded-xl" />
+      <span className="sr-only">Cargando…</span>
+    </div>
+  );
+}
+
 /** La ficha de un documento: cabecera, datos en tarjetas y las líneas. */
 export function CargandoFicha() {
   return (

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { PhoneCall, PieChart, UserMinus, UserPlus, Users } from "lucide-react";
 import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
@@ -19,7 +20,9 @@ import { FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
 import {
   Bloque,
+  EsqueletoReporte,
   Ranking,
+  claveFiltros,
   dinero,
   entero,
   hoyEnLima,
@@ -80,31 +83,37 @@ export default async function PaginaClientesEjecutiva({
   searchParams: Promise<ParamsBusqueda>;
 }) {
   const sp = await searchParams;
+  const f = leerFiltros(sp, hoyEnLima());
+
+  // Los filtros, fuera del Suspense: se pintan sin esperar a la base y no se
+  // desmontan mientras cargan las cifras.
+  return (
+    <div className="@container flex flex-col gap-5">
+      <FiltroRango
+        desde={f.rango.desde}
+        hasta={f.rango.hasta}
+        grano={f.rango.grano}
+        atajo={f.atajo}
+        extra={<FiltroComparar valor={f.comparar} />}
+      />
+      <Suspense key={claveFiltros(sp)} fallback={<EsqueletoReporte />}>
+        <CifrasClientes sp={sp} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function CifrasClientes({ sp }: { sp: ParamsBusqueda }) {
   const hoy = hoyEnLima();
   const f = leerFiltros(sp, hoy);
   const frase = FRASE_COMPARACION[f.comparar];
   const grupo = ORDEN_SEGMENTOS.find((s) => s === uno(sp.grupo)) ?? null;
 
-  const filtro = (
-    <FiltroRango
-      desde={f.rango.desde}
-      hasta={f.rango.hasta}
-      grano={f.rango.grano}
-      atajo={f.atajo}
-      extra={<FiltroComparar valor={f.comparar} />}
-    />
-  );
-
   // Lo facturado (lo declarado) y lo vendido (los pedidos, 132), juntos.
   const [res, ventas] = await Promise.all([datosClientes(f.rango, f.previo), datosVentas(f.rango)]);
   const vendidoDe = new Map((ventas.ok ? ventas.datos.porCliente : []).map((c) => [c.id, c]));
   if (!res.ok) {
-    return (
-      <>
-        {filtro}
-        <EstadoError titulo="No se pudieron cargar los clientes" detalle={res.error} />
-      </>
-    );
+    return <EstadoError titulo="No se pudieron cargar los clientes" detalle={res.error} />;
   }
 
   const d = res.datos;
@@ -143,8 +152,7 @@ export default async function PaginaClientesEjecutiva({
   });
 
   return (
-    <div className="@container flex flex-col gap-5">
-      {filtro}
+    <div className="flex flex-col gap-5">
 
       <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
         <KpiCard

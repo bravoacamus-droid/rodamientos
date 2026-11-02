@@ -308,9 +308,15 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
   Ancho de rejilla fijo en la celda y `w-full` aquí: si cada botón midiera lo
   que mide su texto, «Ver» quedaría en una equis distinta en cada fila y la
   columna saldría en escalera. Es el mismo arreglo que en cotizaciones.
+
+  Borde fuerte y sombra, como el `outline` de `Button` (revisión de entrega,
+  02/11): con `--border` (#dde4ec sobre blanco) el botón tenía el mismo filo
+  que la tarjeta que lo contiene, y en el teléfono «Ver» e «Imprimir» se
+  leían como dos recuadros más, no como dos botones. Igual en recepciones y
+  en pedidos.
 */
 const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
 
 function IconoVer() {
   return <Eye aria-hidden="true" className="size-4 shrink-0" />;

@@ -163,7 +163,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
         </section>
 
         <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Últimas gestiones</h2>
+          <h2 className="mb-3 text-base font-semibold">Últimas gestiones</h2>
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             <ListaGestiones />
           </Suspense>
@@ -181,7 +181,7 @@ async function Compromisos({ hoy }: { hoy: string }) {
 
   return (
     <section className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
-      <h2 className="text-sm font-semibold">
+      <h2 className="text-base font-semibold">
         {r.datos.length === 1
           ? "Hay un compromiso de pago que ya llegó"
           : `Hay ${r.datos.length} compromisos de pago que ya llegaron`}

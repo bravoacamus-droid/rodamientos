@@ -194,10 +194,12 @@ function VistaKit({
     <div className={`flex flex-col gap-4 ${refrescando ? "opacity-60" : ""}`}>
       {/* En el teléfono, una pieza por renglón con la cuenta a la vista: en la
           tabla, el precio y el subtotal quedaban fuera del modal, a la
-          derecha, y eran justo lo que se abre esto para mirar. */}
-      <ul className="flex flex-col divide-y divide-[var(--border-soft)] md:hidden">
+          derecha, y eran justo lo que se abre esto para mirar. Cada pieza en
+          su tarjeta con borde (02/11): pegadas por una raya, Luis, 11/09,
+          *«todo junto, apegado»*. */}
+      <ul className="flex flex-col gap-2 md:hidden">
         {kit.componentes.map((c) => (
-          <li key={c.producto_id} className="py-2 text-sm">
+          <li key={c.producto_id} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
             <p className="font-mono font-semibold">{c.codigo}</p>
             <p>{c.descripcion}</p>
             {c.marca ? <p className="text-[var(--fg-subtle)]">{c.marca}</p> : null}

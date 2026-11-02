@@ -74,7 +74,7 @@ export default async function PaginaDetalleProveedor({
             // Con fondo e icono, como «Editar» en la ficha de cliente: sin
             // fondo era gris sobre el gris de la página (revisión por módulos
             // del 02/10).
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
           >
             <PackageCheck className="size-4" aria-hidden="true" />
             Ver recepciones

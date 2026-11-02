@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Badge, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
+import { Badge, EstadoError, EstadoVacio, Skeleton, formatearFecha } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 
 import {
@@ -258,7 +258,9 @@ async function Cross({
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[var(--fg-subtle)]">
-                    {d.creado_por ?? "—"} · {d.creado_en.slice(0, 10)}
+                    {/* dd/mm/aaaa y en hora de Lima, como las demás fechas del
+                        ERP, y no el «2026-10-02» crudo de la base (02/11). */}
+                    {d.creado_por ?? "—"} · {formatearFecha(d.creado_en)}
                   </span>
                   {puedeQuitar ? (
                     <BotonQuitar productoId={productoId} equivalenteId={d.otro_id} />

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -62,13 +62,13 @@ export default async function PaginaProveedores({ searchParams }: Props) {
           {puedeCrear ? (
             <Link
               href="/proveedores/nuevo"
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonVariants()}
             >
               <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
               Nuevo proveedor
             </Link>
           ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "crear", permisos.nombreRol)}>
               Nuevo proveedor
             </BotonBloqueado>
           )}

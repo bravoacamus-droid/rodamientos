@@ -27,7 +27,7 @@ export async function PanelPendientes() {
     <section className="card">
       <header className="flex items-center gap-2 border-b border-[var(--border-soft)] px-4 py-3">
         <ClipboardList className="size-5 text-[var(--fg-muted)]" aria-hidden="true" />
-        <h2 className="text-base font-semibold">Lo que se está quedando atrás</h2>
+        <h2 className="text-lg font-semibold">Lo que se está quedando atrás</h2>
       </header>
 
       {filas.length === 0 ? (

@@ -5,6 +5,7 @@ import { Badge, EstadoError, EstadoVacio, Moneda, formatearFecha, formatearMoned
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { FilaIndicadores } from "@/componentes/indicadores";
+import { PanelModulo } from "@/componentes/panel-modulo";
 import { PestanasPedidos } from "@/modules/pedidos/ui/pestanas";
 
 import { listosParaEntregar, type PedidoDelCliente } from "../api/por-comprar";
@@ -88,13 +89,19 @@ export default async function PaginaListos({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Pedidos que salieron de una cotización aprobada y todavía no se han
-          entregado del todo. Los que están «Por cubrir» aún no tienen stock.
-        </p>
-      </header>
+      {/* La misma cabecera de marca que la pestaña «Todos» (/pedidos): son dos
+          pestañas de una misma pantalla, y sin ella al cambiar de una a otra
+          el azul de arriba aparecía y desaparecía (revisión de entrega, 02/11).
+          El `loading.tsx` que hereda esta ruta ya pinta el panel azul. */}
+      <PanelModulo ruta="/pedidos">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Pedidos</h1>
+          <p className="text-sm text-[var(--fg-muted)]">
+            Pedidos que salieron de una cotización aprobada y todavía no se han
+            entregado del todo. Los que están «Por cubrir» aún no tienen stock.
+          </p>
+        </div>
+      </PanelModulo>
 
       <PestanasPedidos activa="listos" />
 
@@ -440,7 +447,7 @@ function Siguiente({ pedido }: { pedido: PedidoDelCliente }) {
 }
 
 const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
 
 const PRINCIPAL =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";

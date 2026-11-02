@@ -46,7 +46,7 @@ export async function PanelAlertas() {
     <section className="card flex flex-col">
       <header className="border-b border-[var(--border-soft)] px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">Alertas</h2>
+          <h2 className="text-lg font-semibold">Alertas</h2>
           {/* Botón y no enlace suelto, como el de la cartera (revisión del 02/10). */}
           <Link href="/alertas" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Ver todas

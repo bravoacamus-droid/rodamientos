@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
@@ -215,7 +216,7 @@ export async function datosClientes(
 }
 
 /** Los clientes que han comprado alguna vez, para el filtro de facturación. */
-export async function clientesConCompras(): Promise<Resultado<{ id: string; nombre: string }[]>> {
+async function leerClientesConCompras(): Promise<Resultado<{ id: string; nombre: string }[]>> {
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase.rpc("tablero_clientes", {
@@ -385,7 +386,7 @@ export async function datosCotizaciones(
  * No solo los que han comprado, como en facturación: se cotiza a quien
  * todavía no compra, y es justo a quien hay que poder buscar.
  */
-export async function clientesActivos(): Promise<Resultado<{ id: string; nombre: string }[]>> {
+async function leerClientesActivos(): Promise<Resultado<{ id: string; nombre: string }[]>> {
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
@@ -645,7 +646,7 @@ export async function datosCompras(
 }
 
 /** Los proveedores a los que se les ha comprado, para el filtro del reporte. */
-export async function proveedoresConCompras(): Promise<Resultado<{ id: string; nombre: string }[]>> {
+async function leerProveedoresConCompras(): Promise<Resultado<{ id: string; nombre: string }[]>> {
   try {
     const supabase = await clienteServidor();
     const { data, error } = await supabase
@@ -666,6 +667,15 @@ export async function proveedoresConCompras(): Promise<Resultado<{ id: string; n
     return fallo(e);
   }
 }
+
+/*
+  Las listas de los buscadores, una vez por petición. En cada reporte las
+  piden a la vez el filtro de arriba y las cifras (para el nombre del
+  cliente elegido); sin `cache` serían dos viajes a la base por lo mismo.
+*/
+export const clientesConCompras = cache(leerClientesConCompras);
+export const clientesActivos = cache(leerClientesActivos);
+export const proveedoresConCompras = cache(leerProveedoresConCompras);
 
 // ---------------------------------------------------------------------------
 // Historial del producto (134) y compras de un proveedor

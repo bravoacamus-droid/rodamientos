@@ -53,13 +53,14 @@ export function AQuienPreguntar({ precios }: { precios: PrecioDeProveedor[] }) {
           {/* En el teléfono, una línea por proveedor y no una tabla: las
               cuatro columnas no cabían y el precio —que es lo que se viene a
               mirar— quedaba fuera, a la derecha (revisión por módulos del
-              02/10). */}
+              02/10). Cada proveedor en su tarjeta con borde, no pegados por
+              una raya: Luis, 11/09, *«todo junto, apegado»* (02/11). */}
           <div className="@container">
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @md:hidden">
+          <ul className="flex flex-col gap-2 @md:hidden">
             {precios.map((p, i) => (
               <li
                 key={`${p.proveedor}-${p.origen}`}
-                className={`flex flex-col gap-1 py-2 ${p.activo ? "" : "opacity-60"}`}
+                className={`flex flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${p.activo ? "" : "opacity-60"}`}
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="min-w-0 font-medium">{p.proveedor}</span>

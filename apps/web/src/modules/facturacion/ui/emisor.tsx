@@ -788,7 +788,7 @@ export function EmisorComprobante({
           {cot ? (
             <section className="anim-entrada card @container p-4">
               <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-sm font-semibold">
+                <h2 className="text-base font-semibold">
                   Qué se factura
                   <span className="ml-2 font-normal text-[var(--fg-muted)]">
                     de {cot.numero}
@@ -949,7 +949,7 @@ export function EmisorComprobante({
         {/* -------------------------------------------------- Resumen */}
         <aside className="w-full shrink-0 lg:w-80">
           <div className="card sticky top-4 flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Resumen</h2>
+            <h2 className="text-base font-semibold">Resumen</h2>
 
             <dl className="flex flex-col gap-1.5 text-sm">
               <Fila etiqueta="Gravada" valor={`${sim}\u00a0${totalesDoc.gravada.toFixed(2)}`} />

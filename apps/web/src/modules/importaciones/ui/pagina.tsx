@@ -222,7 +222,7 @@ async function Listado({
           !filtrando && filtros.abiertas === "1" ? (
             <Link
               href="/importaciones?abiertas=0"
-              className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-4 text-sm font-medium hover:bg-[var(--surface-2)]"
             >
               Ver todas, también las que ya llegaron
             </Link>

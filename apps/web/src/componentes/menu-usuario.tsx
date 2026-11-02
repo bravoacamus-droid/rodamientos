@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@rodatech/ui";
+import { LogOut, UserRound } from "lucide-react";
 import { cerrarSesion } from "@/app/login/acciones";
 
 export function MenuUsuario({
@@ -28,16 +29,23 @@ export function MenuUsuario({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="subtle" className="gap-2">
-          <span className="max-w-40 truncate">{nombre}</span>
+          <span className="max-w-28 truncate sm:max-w-40">{nombre}</span>
+          {/* En el teléfono el rol no cabe al lado del botón «Menú» y del
+              logo (02/11, a 390 px). Sigue dentro del desplegable. */}
           {rol ? (
-            <span className="text-sm text-[var(--fg-subtle)]">
+            <span className="hidden text-sm text-[var(--fg-subtle)] sm:inline">
               {rol}
             </span>
           ) : null}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>{nombre}</DropdownMenuLabel>
+        <DropdownMenuLabel className="normal-case tracking-normal">
+          <span className="block truncate text-[var(--fg)]">{nombre}</span>
+          {rol ? (
+            <span className="block truncate font-normal text-[var(--fg-muted)]">{rol}</span>
+          ) : null}
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
         {/*
@@ -55,6 +63,7 @@ export function MenuUsuario({
         */}
         <DropdownMenuItem asChild>
           <Link href="/perfil" className="w-full">
+            <UserRound className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
             Mi perfil
           </Link>
         </DropdownMenuItem>
@@ -65,6 +74,7 @@ export function MenuUsuario({
         <form action={cerrarSesion}>
           <DropdownMenuItem asChild>
             <button type="submit" className="w-full text-left">
+              <LogOut className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
               Cerrar sesión
             </button>
           </DropdownMenuItem>

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { FileSpreadsheet } from "lucide-react";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { FileSpreadsheet, Plus, Upload } from "lucide-react";
+import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -23,6 +23,20 @@ function uno(v: string | string[] | undefined): string | undefined {
   const valor = Array.isArray(v) ? v[0] : v;
   return valor && valor.length > 0 ? valor : undefined;
 }
+
+/*
+  Los botones de la cabecera, los del sistema de diseño (revisión de entrega,
+  02/11): eran de 36 px y `rounded-sm`, sin el relieve del 30/10, y en la
+  lista de al lado medían otra cosa. 44 px en el teléfono, como
+  `BotonBloqueado`. El secundario aclara el vidrio del panel al pasar el
+  ratón: el `hover:bg-brand-50` de `outline` es casi blanco y la letra del
+  panel es blanca.
+*/
+const BOTON_PRINCIPAL = cn(buttonVariants({ variant: "primary" }), "h-11 md:h-control-md");
+const BOTON_SECUNDARIO = cn(
+  buttonVariants({ variant: "outline" }),
+  "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+);
 
 /**
  * Maestro de productos.
@@ -86,30 +100,26 @@ export default async function PaginaProductos({ searchParams }: Props) {
                   archivados: filtros.archivados ? "1" : "",
                 }).filter(([, v]) => v),
               ).toString()}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className={BOTON_SECUNDARIO}
             >
-              <FileSpreadsheet className="size-4" aria-hidden="true" />
+              <FileSpreadsheet aria-hidden="true" />
               Descargar en Excel
             </a>
             {/* Subir o bajar la lista de una marca de una vez (155). */}
             {puedeEditar ? <PreciosPorMarca marcas={catalogos.marcas} /> : null}
             {puedeCrear ? (
               <>
-                <Link
-                  href="/productos/cargar"
-                  className="inline-flex h-9 items-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-                >
+                <Link href="/productos/cargar" className={BOTON_SECUNDARIO}>
+                  <Upload aria-hidden="true" />
                   Cargar desde Excel
                 </Link>
-                <Link
-                  href="/productos/nuevo"
-                  className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-                >
+                <Link href="/productos/nuevo" className={BOTON_PRINCIPAL}>
+                  <Plus strokeWidth={2.5} aria-hidden="true" />
                   Nuevo producto
                 </Link>
               </>
             ) : (
-              <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+              <BotonBloqueado mensaje={avisoSinPermiso("productos", "crear", permisos.nombreRol)}>
                 Nuevo producto
               </BotonBloqueado>
             )}

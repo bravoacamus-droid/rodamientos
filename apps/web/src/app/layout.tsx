@@ -42,7 +42,14 @@ export const metadata: Metadata = {
   // 162: en iPhone los avisos solo llegan si el ERP está «en pantalla de
   // inicio», y estos dos datos son el nombre y el icono que pone ahí.
   appleWebApp: { capable: true, title: "Rodatech", statusBarStyle: "default" },
-  icons: { apple: "/iconos/apple-touch-icon.png" },
+  // El `icon` va escrito aunque exista app/icon.svg: en cuanto `icons` lleva
+  // una clave, Next deja de poner la del archivo, y desde la 162 la pestaña
+  // volvía a pedir /favicon.ico y a llevarse el 404 de la consola que ya se
+  // había quitado el 11/09 (visto el 02/11 en /login).
+  icons: {
+    icon: { url: "/icon.svg", type: "image/svg+xml" },
+    apple: "/iconos/apple-touch-icon.png",
+  },
 };
 
 export const viewport: Viewport = {

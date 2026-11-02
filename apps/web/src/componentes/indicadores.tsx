@@ -47,7 +47,10 @@ export function FilaIndicadores({ items }: { items: Indicador[] }) {
                   </span>
                 ) : null}
               </div>
-              <p className={`tabular mt-1 text-xl font-semibold leading-tight @md:text-2xl ${i.tono ? COLOR[i.tono] : ""}`}>
+              {/* Un punto menos en el teléfono más estrecho: a 360 px y en
+                  `text-xl`, «$ 12,340.00» se partía en dos líneas, con el
+                  símbolo arriba y la cifra abajo (02/11). */}
+              <p className={`tabular mt-1 text-lg font-semibold leading-tight @sm:text-xl @md:text-2xl ${i.tono ? COLOR[i.tono] : ""}`}>
                 {i.valor}
               </p>
               {i.detalle ? <p className="mt-1 text-sm text-[var(--fg-muted)]">{i.detalle}</p> : null}

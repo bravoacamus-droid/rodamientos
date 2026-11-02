@@ -317,7 +317,9 @@ export function Constructor({
         arriba a buscarlo.
       */}
       <header>
-        <h1 className="text-xl font-semibold">
+        {/* El mismo título que productos y kits al crear (02/11): aquí iba en
+            20 px, y es el formulario que más se abre. */}
+        <h1 className="text-2xl font-semibold tracking-tight">
           {editando ? `Editar ${editando.numero}` : "Nueva cotización"}
         </h1>
       </header>

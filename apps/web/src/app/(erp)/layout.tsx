@@ -99,8 +99,11 @@ export default async function LayoutErp({
             usuario={perfil?.nombre ?? "Sesión"}
             pendientes={pendientes}
           />
-          <Logo className="h-7 w-auto md:hidden" priority={false} />
-          <div className="ml-auto flex items-center gap-1">
+          {/* Por debajo de 380 px el logo no cabe junto a «Menú» y al
+              usuario, y empujaba su botón fuera de la pantalla (02/11, a
+              360 px). El logo sigue arriba del cajón del menú. */}
+          <Logo className="hidden h-7 w-auto min-[380px]:block md:hidden" priority={false} />
+          <div className="ml-auto flex min-w-0 items-center gap-1">
             <SelectorTema />
             <MenuUsuario
               nombre={perfil?.nombre ?? "Sesión"}

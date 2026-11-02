@@ -85,7 +85,7 @@ function Tabla({
         </tbody>
       </table>
       <p className="border-t border-[var(--border-soft)] px-4 py-2 text-sm text-[var(--fg-subtle)]">
-        Facturado sin IGV. Pulsa una {param === "zona" ? "zona" : "fila"} para ver sus clientes.
+        Facturado sin IGV. Pulsa {param === "zona" ? "una zona" : "un rubro"} para ver sus clientes.
       </p>
     </div>
   );

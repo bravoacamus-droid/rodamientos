@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, FileSpreadsheet } from "lucide-react";
-import { Button, formatearMoneda } from "@rodatech/ui";
+import { Button, Skeleton, SkeletonTarjetas, formatearMoneda } from "@rodatech/ui";
 
 import {
   etiquetaPeriodo,
@@ -98,6 +98,37 @@ export const entero = (n: number) => n.toLocaleString("es-PE", { maximumFraction
 
 export const pct = (n: number | null, decimales = 0) =>
   n === null ? "—" : `${n.toLocaleString("es-PE", { maximumFractionDigits: decimales })} %`;
+
+/**
+ * La clave del `Suspense` de las cifras: cambia con cualquier filtro.
+ *
+ * Sin ella, al cambiar las fechas o el cliente React se queda con las cifras
+ * viejas en pantalla hasta que llegan las nuevas —uno o dos segundos sin
+ * ninguna señal—, y parece que el filtro no hizo nada (02/11, Luis: «tarda
+ * mucho al cambiar de sección»). Con la clave, salta al esqueleto al momento.
+ */
+export function claveFiltros(sp: ParamsBusqueda): string {
+  return Object.keys(sp)
+    .sort()
+    .map((k) => `${k}=${uno(sp[k]) ?? ""}`)
+    .join("&");
+}
+
+/**
+ * Lo que se ve mientras llegan las cifras de un reporte: tarjetas, gráfico y
+ * ranking, con su forma, para que al llegar no salte nada de sitio. El título
+ * y los filtros ya están puestos encima: no esperan a la base.
+ */
+export function EsqueletoReporte() {
+  return (
+    <div className="flex flex-col gap-5" role="status" aria-label="Cargando">
+      <SkeletonTarjetas cantidad={4} alto={120} />
+      <Skeleton className="h-[22rem] w-full rounded-xl" />
+      <Skeleton className="h-64 w-full rounded-xl" />
+      <span className="sr-only">Cargando…</span>
+    </div>
+  );
+}
 
 /** Un bloque del tablero: título, una frase de qué se mira, y su contenido. */
 export function Bloque({

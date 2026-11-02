@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { FilePen, FileWarning, Plus, ShieldCheck, Truck } from "lucide-react";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, leerTamano } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -82,13 +82,13 @@ export default async function PaginaGuias({ searchParams }: Props) {
           {puedeDespachar ? (
             <Link
               href="/guias/nueva"
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonVariants()}
             >
               <Plus strokeWidth={2.5} className="size-4" aria-hidden="true" />
               Preparar guía
             </Link>
           ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("guias", "crear", perfil.nombreRol)} className="md:h-9">
+            <BotonBloqueado mensaje={avisoSinPermiso("guias", "crear", perfil.nombreRol)}>
               Preparar guía
             </BotonBloqueado>
           )}

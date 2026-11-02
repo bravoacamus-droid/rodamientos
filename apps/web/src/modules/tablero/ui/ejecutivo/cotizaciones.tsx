@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { CalendarClock, CircleCheck, FileText, Hourglass, Target } from "lucide-react";
 import { EstadoError, KpiCard, formatearFecha } from "@rodatech/ui";
@@ -12,8 +13,10 @@ import {
   BotonExcel,
   Bloque,
   Dato,
+  EsqueletoReporte,
   Partes,
   Ranking,
+  claveFiltros,
   dinero,
   entero,
   hoyEnLima,
@@ -58,15 +61,25 @@ export default async function PaginaCotizacionesEjecutiva({
   searchParams: Promise<ParamsBusqueda>;
 }) {
   const sp = await searchParams;
-  const hoy = hoyEnLima();
-  const f = leerFiltros(sp, hoy);
-  const frase = FRASE_COMPARACION[f.comparar];
-  const cliente = uno(sp.cliente) ?? null;
-  const lista = await clientesActivos();
-  const clientes = lista.ok ? lista.datos : [];
-  const nombreCliente = cliente ? (clientes.find((c) => c.id === cliente)?.nombre ?? null) : null;
 
-  const filtro = (
+  // Los filtros y las cifras son hermanos y se piden A LA VEZ. Antes la lista
+  // de clientes del buscador iba primero y las cifras esperaban a que
+  // llegara: un viaje a la base de más en cada cambio.
+  return (
+    <div className="@container flex flex-col gap-5">
+      <Suspense fallback={<Filtros sp={sp} clientes={[]} />}>
+        <FiltrosConClientes sp={sp} />
+      </Suspense>
+      <Suspense key={claveFiltros(sp)} fallback={<EsqueletoReporte />}>
+        <CifrasCotizaciones sp={sp} />
+      </Suspense>
+    </div>
+  );
+}
+
+function Filtros({ sp, clientes }: { sp: ParamsBusqueda; clientes: { id: string; nombre: string }[] }) {
+  const f = leerFiltros(sp, hoyEnLima());
+  return (
     <FiltroRango
       desde={f.rango.desde}
       hasta={f.rango.hasta}
@@ -75,27 +88,37 @@ export default async function PaginaCotizacionesEjecutiva({
       extra={
         <>
           <FiltroComparar valor={f.comparar} />
-          <FiltroCliente valor={cliente} clientes={clientes} />
+          <FiltroCliente valor={uno(sp.cliente) ?? null} clientes={clientes} />
         </>
       }
     />
   );
+}
 
-  const [actual, previo, ventas] = await Promise.all([
+async function FiltrosConClientes({ sp }: { sp: ParamsBusqueda }) {
+  const lista = await clientesActivos();
+  return <Filtros sp={sp} clientes={lista.ok ? lista.datos : []} />;
+}
+
+async function CifrasCotizaciones({ sp }: { sp: ParamsBusqueda }) {
+  const hoy = hoyEnLima();
+  const f = leerFiltros(sp, hoy);
+  const frase = FRASE_COMPARACION[f.comparar];
+  const cliente = uno(sp.cliente) ?? null;
+
+  const [actual, previo, ventas, lista] = await Promise.all([
     datosCotizaciones(f.rango, cliente),
     f.hayComparacion
       ? datosCotizaciones({ ...f.previo, grano: f.rango.grano }, cliente)
       : Promise.resolve(null),
     datosVentas(f.rango, cliente),
+    // La misma llamada que el buscador de arriba: `cache` la hace una sola.
+    cliente ? clientesActivos() : Promise.resolve(null),
   ]);
+  const nombreCliente = cliente && lista?.ok ? (lista.datos.find((c) => c.id === cliente)?.nombre ?? null) : null;
 
   if (!actual.ok) {
-    return (
-      <>
-        {filtro}
-        <EstadoError titulo="No se pudieron cargar las cotizaciones" detalle={actual.error} />
-      </>
-    );
+    return <EstadoError titulo="No se pudieron cargar las cotizaciones" detalle={actual.error} />;
   }
 
   const a = actual.datos;
@@ -122,8 +145,7 @@ export default async function PaginaCotizacionesEjecutiva({
   const montoDe = (k: string) => a.porEstado.find((e) => e.estado === k)?.monto ?? 0;
 
   return (
-    <div className="@container flex flex-col gap-5">
-      {filtro}
+    <div className="flex flex-col gap-5">
 
       <BotonExcel
         tipo="cotizaciones"

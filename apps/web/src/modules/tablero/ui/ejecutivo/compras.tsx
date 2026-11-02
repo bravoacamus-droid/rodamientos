@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Clock, Package, PiggyBank, ShoppingCart, TrendingUp, Truck } from "lucide-react";
@@ -16,8 +17,10 @@ import {
   BotonExcel,
   Bloque,
   Dato,
+  EsqueletoReporte,
   Partes,
   Ranking,
+  claveFiltros,
   dinero,
   entero,
   hoyEnLima,
@@ -50,9 +53,10 @@ const VIAS: { clave: string; texto: string; color: string }[] = [
 
 
 export default async function PaginaComprasEjecutiva({ searchParams }: { searchParams: Promise<ParamsBusqueda> }) {
-  const perfil = await perfilActual();
+  // Las dos preguntas a la vez: una detrás de otra eran tres viajes a la base
+  // antes de empezar siquiera a pedir las cifras.
+  const [perfil, prohibido] = await Promise.all([perfilActual(), sinPermiso("compras", "ver")]);
   if (!perfil || !perfil.activo) redirect("/login");
-  const prohibido = await sinPermiso("compras", "ver");
   if (prohibido) {
     return (
       <div className="flex flex-col gap-4">
@@ -63,15 +67,24 @@ export default async function PaginaComprasEjecutiva({ searchParams }: { searchP
   }
 
   const sp = await searchParams;
-  const hoy = hoyEnLima();
-  const f = leerFiltros(sp, hoy);
-  const frase = FRASE_COMPARACION[f.comparar];
-  const proveedor = uno(sp.proveedor) ?? null;
-  const lista = await proveedoresConCompras();
-  const proveedores = lista.ok ? lista.datos : [];
-  const nombreProveedor = proveedor ? (proveedores.find((p) => p.id === proveedor)?.nombre ?? null) : null;
 
-  const filtro = (
+  // Los filtros se pintan al momento; la lista de proveedores del buscador y
+  // las cifras se piden a la vez (antes la lista iba primero).
+  return (
+    <div className="@container flex flex-col gap-5">
+      <Suspense fallback={<Filtros sp={sp} proveedores={[]} />}>
+        <FiltrosConProveedores sp={sp} />
+      </Suspense>
+      <Suspense key={claveFiltros(sp)} fallback={<EsqueletoReporte />}>
+        <CifrasCompras sp={sp} />
+      </Suspense>
+    </div>
+  );
+}
+
+function Filtros({ sp, proveedores }: { sp: ParamsBusqueda; proveedores: { id: string; nombre: string }[] }) {
+  const f = leerFiltros(sp, hoyEnLima());
+  return (
     <FiltroRango
       desde={f.rango.desde}
       hasta={f.rango.hasta}
@@ -80,24 +93,34 @@ export default async function PaginaComprasEjecutiva({ searchParams }: { searchP
       extra={
         <>
           <FiltroComparar valor={f.comparar} />
-          <FiltroProveedor valor={proveedor} proveedores={proveedores} />
+          <FiltroProveedor valor={uno(sp.proveedor) ?? null} proveedores={proveedores} />
         </>
       }
     />
   );
+}
 
-  const [actual, previo] = await Promise.all([
+async function FiltrosConProveedores({ sp }: { sp: ParamsBusqueda }) {
+  const lista = await proveedoresConCompras();
+  return <Filtros sp={sp} proveedores={lista.ok ? lista.datos : []} />;
+}
+
+async function CifrasCompras({ sp }: { sp: ParamsBusqueda }) {
+  const hoy = hoyEnLima();
+  const f = leerFiltros(sp, hoy);
+  const frase = FRASE_COMPARACION[f.comparar];
+  const proveedor = uno(sp.proveedor) ?? null;
+
+  const [actual, previo, lista] = await Promise.all([
     datosCompras(f.rango, proveedor),
     f.hayComparacion ? datosCompras({ ...f.previo, grano: f.rango.grano }, proveedor) : Promise.resolve(null),
+    // La misma llamada que el buscador de arriba: `cache` la hace una sola.
+    proveedor ? proveedoresConCompras() : Promise.resolve(null),
   ]);
+  const nombreProveedor = proveedor && lista?.ok ? (lista.datos.find((p) => p.id === proveedor)?.nombre ?? null) : null;
 
   if (!actual.ok) {
-    return (
-      <>
-        {filtro}
-        <EstadoError titulo="No se pudieron cargar las compras" detalle={actual.error} />
-      </>
-    );
+    return <EstadoError titulo="No se pudieron cargar las compras" detalle={actual.error} />;
   }
 
   const a = actual.datos;
@@ -120,8 +143,7 @@ export default async function PaginaComprasEjecutiva({ searchParams }: { searchP
   const gastosVia = (k: string) => a.porVia.find((v) => v.via === k)?.gastos ?? 0;
 
   return (
-    <div className="@container flex flex-col gap-5">
-      {filtro}
+    <div className="flex flex-col gap-5">
 
       <BotonExcel
         tipo="compras"

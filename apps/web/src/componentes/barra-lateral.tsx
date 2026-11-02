@@ -526,11 +526,18 @@ export function MenuMovil({
 
   return (
     <Sheet open={abierto} onOpenChange={setAbierto}>
+      {/*
+        En el teléfono es la ÚNICA puerta a los módulos, y era un icono gris
+        suelto de tres rayas: justo lo que CLAUDE.md §1 dice que no vale
+        («una persona que no sabe que tiene que darle click ahí», Luis). Ahora
+        es un botón con borde y la palabra «Menú» (revisión del 02/11).
+      */}
       <SheetTrigger
-        className="-ml-1 flex size-10 items-center justify-center rounded-sm text-[var(--fg-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:hidden"
+        className="flex h-10 shrink-0 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold text-[var(--fg)] elev-1 hover:border-brand-400 hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] md:hidden"
         aria-label="Abrir menú de módulos"
       >
-        <Menu className="size-5" aria-hidden="true" />
+        <Menu className="size-5 text-[var(--color-brand-600)] dark:text-brand-300" aria-hidden="true" />
+        Menú
       </SheetTrigger>
 
       <SheetContent

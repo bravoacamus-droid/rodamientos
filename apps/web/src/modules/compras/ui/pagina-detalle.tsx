@@ -440,7 +440,7 @@ export default async function PaginaDetalleCompra({
                     valor={c.courier ?? "—"}
                   />
                   <Dato
-                    etiqueta={c.via_importacion === "maritima" ? "BL o contenedor" : "Tracking"}
+                    etiqueta={c.via_importacion === "maritima" ? "N.° de BL o contenedor" : "Tracking o guía aérea"}
                     valor={c.tracking ?? "—"}
                   />
                 </>

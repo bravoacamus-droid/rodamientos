@@ -71,7 +71,7 @@ export default async function PaginaConfigSunat() {
       </Suspense>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold">Certificado y credenciales</h2>
+        <h2 className="text-base font-semibold">Certificado y credenciales</h2>
         <p className="mb-3 text-sm text-[var(--fg-muted)]">
           El <code>.pfx</code>, su clave y el usuario SOL. Se guardan cifrados.
           Sin esto se puede emitir y cobrar, pero nada llega a SUNAT.
@@ -82,14 +82,14 @@ export default async function PaginaConfigSunat() {
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold">Series y correlativos</h2>
+        <h2 className="text-base font-semibold">Series y correlativos</h2>
         <Suspense fallback={<Skeleton className="h-56 w-full" />}>
           <BloqueSeries puedeEditar={puedeEditar} />
         </Suspense>
       </section>
 
       <section className="card p-4">
-        <h2 className="text-sm font-semibold">Consultas de RUC, DNI y tipo de cambio</h2>
+        <h2 className="text-base font-semibold">Consultas de RUC, DNI y tipo de cambio</h2>
         <p className="mb-3 text-sm text-[var(--fg-muted)]">
           El botón «Traer datos» y el tipo de cambio las piden a Decolecta, que da
           un número fijo al mes.
@@ -104,7 +104,7 @@ export default async function PaginaConfigSunat() {
       <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
         {/* Lo lee el propio Willy: «qué hay que pedirle a Willy» le hablaba
             de él en tercera persona (revisión por módulos del 02/10). */}
-        <h2 className="text-sm font-semibold">Lo que falta para declarar a SUNAT</h2>
+        <h2 className="text-base font-semibold">Lo que falta para declarar a SUNAT</h2>
         <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm text-[var(--fg-muted)]">
           <li>
             El <strong>certificado digital .pfx</strong> y su contraseña.
@@ -143,7 +143,7 @@ async function BloqueEstado() {
           : "border-[var(--warn)] bg-[var(--warn-bg)]"
       }`}
     >
-      <h2 className="text-sm font-semibold">
+      <h2 className="text-base font-semibold">
         {estado.listo
           ? "Todo listo para emitir ante SUNAT"
           : "Se puede emitir y cobrar, pero nada llega a SUNAT todavía"}

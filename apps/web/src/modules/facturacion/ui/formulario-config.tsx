@@ -47,7 +47,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
       <section className="card p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold">Probar con SUNAT</h2>
+            <h2 className="text-base font-semibold">Probar con SUNAT</h2>
             <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
               Comprueba el usuario SOL, el certificado y las credenciales de guías.
               No emite nada de verdad ni gasta ningún número.
@@ -111,7 +111,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
       {/* ------------------------------------------------ Formulario */}
       <form action={guardar} className="card flex flex-col gap-4 p-4">
         <div>
-          <h2 className="text-sm font-semibold">Credenciales</h2>
+          <h2 className="text-base font-semibold">Credenciales</h2>
           <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
             Se guardan cifradas. Deja un campo de clave en blanco para no cambiarlo.
           </p>

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -72,12 +72,12 @@ export default async function PaginaCompras({ searchParams }: Props) {
           {puedeComprar && !sinProveedores ? (
             <Link
               href="/compras/nueva"
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonVariants()}
             >
               Registrar compra
             </Link>
           ) : !puedeComprar ? (
-            <BotonBloqueado mensaje={avisoSinPermiso("compras", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            <BotonBloqueado mensaje={avisoSinPermiso("compras", "crear", permisos.nombreRol)}>
               Registrar compra
             </BotonBloqueado>
           ) : null}

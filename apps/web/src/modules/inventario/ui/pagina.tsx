@@ -1,12 +1,24 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton, buttonVariants } from "@rodatech/ui";
+import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { ResumenInventario } from "./resumen";
 import { TablaReposicion } from "./reposicion";
 import { TablaValorizacion } from "./valorizacion";
 import { PanelModulo } from "@/componentes/panel-modulo";
+
+/*
+  44 px en el teléfono, como en las demás listas (revisión de entrega, 02/11).
+  El secundario aclara el vidrio del panel al pasar el ratón: el
+  `hover:bg-brand-50` de `outline` es casi blanco, y sobre el azul la letra
+  es blanca — «Ver kardex» desaparecía justo al señalarlo.
+*/
+const BOTON_PRINCIPAL = cn(buttonVariants({ variant: "primary" }), "h-11 md:h-control-md");
+const BOTON_SECUNDARIO = cn(
+  buttonVariants({ variant: "outline" }),
+  "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+);
 
 /**
  * Inventario.
@@ -44,11 +56,11 @@ export default async function PaginaInventario() {
               esquina de 2 px, al lado de botones de 40 y 6 en el resto del ERP
               (revisión por módulos del 02/10). */}
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/inventario/kardex" className={buttonVariants({ variant: "outline" })}>
+            <Link href="/inventario/kardex" className={BOTON_SECUNDARIO}>
               Ver kardex
             </Link>
             {puedeCuadrar ? (
-              <Link href="/inventario/ajuste" className={buttonVariants({ variant: "primary" })}>
+              <Link href="/inventario/ajuste" className={BOTON_PRINCIPAL}>
                 Cuadrar inventario
               </Link>
             ) : null}
@@ -62,7 +74,7 @@ export default async function PaginaInventario() {
 
       <section className="card">
         <header className="px-4 pt-4">
-          <h2 className="text-sm font-semibold">Valorización</h2>
+          <h2 className="text-lg font-semibold">Valorización</h2>
           <p className="text-sm text-[var(--fg-muted)]">
             A costo promedio, por familia y subfamilia. Sin contar archivados.
           </p>
@@ -74,7 +86,7 @@ export default async function PaginaInventario() {
 
       <section className="card">
         <header className="px-4 pt-4">
-          <h2 className="text-sm font-semibold">Reposición y sobrestock</h2>
+          <h2 className="text-lg font-semibold">Reposición y sobrestock</h2>
           <p className="text-sm text-[var(--fg-muted)]">
             Lo que está bajo el mínimo y lo que sobra. La cobertura sale del
             consumo real de los últimos 90 días.

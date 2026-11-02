@@ -64,7 +64,7 @@ export default async function PaginaConfigEmpresa() {
         cotización»*. El caso veintisiete del patrón de esta casa.
       */}
       <section className="card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Cuentas para cobrar</h2>
+        <h2 className="mb-3 text-base font-semibold">Cuentas para cobrar</h2>
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
           <BloqueCuentas puedeEditar={puedeEditar} />
         </Suspense>
@@ -171,7 +171,7 @@ async function BloqueCatalogos() {
         familia y subfamilia (§AM.7b). Se dice dónde, que es lo que se busca al
         leer esto (revisión por módulos del 02/10).
       */}
-      <h2 className="text-sm font-semibold">Marcas, familias y unidades</h2>
+      <h2 className="text-base font-semibold">Marcas, familias y unidades</h2>
       <p className="mt-1 text-sm text-[var(--fg-muted)]">
         {r.ok ? (
           <>

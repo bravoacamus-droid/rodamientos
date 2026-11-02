@@ -282,7 +282,7 @@ export default async function PaginaDetalleComprobante({
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
         <section className="card @container min-w-0 p-4">
-          <h2 className="mb-3 text-sm font-semibold">
+          <h2 className="mb-3 text-base font-semibold">
             Detalle
             <span className="ml-1.5 font-normal text-[var(--fg-muted)]">
               · {c.lineas.length} {c.lineas.length === 1 ? "línea" : "líneas"}
@@ -388,7 +388,7 @@ export default async function PaginaDetalleComprobante({
         <div className="flex flex-col gap-4">
           {/* Lo primero de la columna es lo accionable: el estado del envío. */}
           <section className="card p-4 no-print">
-            <h2 className="mb-3 text-sm font-semibold">SUNAT</h2>
+            <h2 className="mb-3 text-base font-semibold">SUNAT</h2>
 
             {/*
               Una anulada o dada de baja no se envía. Aquí caía en el aviso
@@ -441,7 +441,7 @@ export default async function PaginaDetalleComprobante({
           </section>
 
           <section className="card p-4">
-            <h2 className="mb-3 text-sm font-semibold">Datos</h2>
+            <h2 className="mb-3 text-base font-semibold">Datos</h2>
             <dl className="@container flex flex-col gap-2 text-sm">
               {/* Fechas como en el papel (20/07/2026), y el vencimiento en su
                   propia línea: a 390 px «vence 2026-07-20» se partía en
@@ -623,7 +623,7 @@ export default async function PaginaDetalleComprobante({
           */}
           {!esNota ? (
             <section className="card p-4">
-              <h2 className="mb-3 text-sm font-semibold">Cobros</h2>
+              <h2 className="mb-3 text-base font-semibold">Cobros</h2>
               {!pagos.ok ? (
                 <p role="alert" className="text-sm text-[var(--danger)]">
                   No se pudieron leer los cobros: {pagos.error}

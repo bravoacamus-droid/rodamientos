@@ -475,7 +475,7 @@ export function FormularioProducto({
 
           <Campo
             id="subfamilia_id"
-            label="Sub-familia"
+            label="Subfamilia"
             requerido
             error={errorDe("subfamilia_id")}
           >

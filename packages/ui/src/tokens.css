@@ -100,6 +100,17 @@
     --border-soft: #ebf0f5;
     --border-strong: #c7d2de;
 
+    /* Campos y secciones de formulario (02/11, Luis: «parece unísono, dale
+       algo de color»). Blanco sobre blanco con un borde de #dde4ec no dejaba
+       ver dónde acaba una casilla y empieza la siguiente. La casilla lleva
+       un velo del azul de marca y un borde más firme; el texto no cambia
+       (#14181d da 17:1 sobre #f0f6fb). */
+    --campo-bg: #f0f6fb;
+    --campo-borde: #a9c3da;
+    --seccion-bg: #f2f8fc;
+    --seccion-borde: #cfe2f0;
+    --seccion-filo: #22689e;
+
     /* Títulos de página en el azul del logo: dicen «esto es Rodatech» sin
        añadir nada que haya que leer. */
     --titulo: #0b3450;
@@ -182,6 +193,12 @@
     --border: #22303f;
     --border-soft: #1a2531;
     --border-strong: #33465a;
+
+    --campo-bg: #0e151d;
+    --campo-borde: #36506a;
+    --seccion-bg: #13202d;
+    --seccion-borde: #22384d;
+    --seccion-filo: #468cbe;
 
     --titulo: #e7edf3;
 
@@ -497,6 +514,17 @@
   border-radius: var(--radius-xl);
 }
 
+/* Un grupo de campos dentro de un formulario («Impuestos y retenciones»).
+   El filo azul de la izquierda dice dónde empieza y acaba el grupo sin
+   tener que seguir un borde gris de 1 px con la vista. */
+@utility seccion-form {
+  background-color: var(--seccion-bg);
+  border: 1px solid var(--seccion-borde);
+  border-left: 4px solid var(--seccion-filo);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+}
+
 /* --------------------------------------------------------------------------
    5b. Superficies de marca (rediseño visual, 30/10)
    -------------------------------------------------------------------------- */
@@ -568,6 +596,11 @@
   --border: rgb(255 255 255 / 0.2);
   --border-soft: rgb(255 255 255 / 0.12);
   --border-strong: rgb(255 255 255 / 0.4);
+  --campo-bg: rgb(255 255 255 / 0.1);
+  --campo-borde: rgb(255 255 255 / 0.4);
+  --seccion-bg: rgb(255 255 255 / 0.08);
+  --seccion-borde: rgb(255 255 255 / 0.2);
+  --seccion-filo: var(--color-accent-300);
   --fg: #ffffff;
   --fg-muted: #d6e4f0;
   --fg-subtle: #c3d5e6;
@@ -1100,6 +1133,15 @@
 .panel-modulo .hover\:bg-brand-700:hover {
   background-color: var(--color-accent-300);
 }
+/* El botón de borde (`outline`) se aclara al pasar el ratón con
+   `hover:bg-brand-50`, otro color fijo: casi blanco, y dentro del panel su
+   letra es blanca, así que justo al señalarlo dejaba de leerse (revisión de
+   entrega, 02/11). Ahí pasa a la superficie de vidrio más clara del panel.
+   Quien ya ponga su propio `hover:bg-…` con `cn` no lleva esta clase
+   —tailwind-merge la quita— y se queda con el suyo. */
+.panel-modulo .hover\:bg-brand-50:hover {
+  background-color: var(--surface-3);
+}
 .panel-modulo .text-brand-600,
 .panel-modulo .text-brand-700 {
   color: var(--color-accent-300);
@@ -1185,5 +1227,41 @@
   a {
     color: inherit;
     text-decoration: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Título de tarjeta con el filo de la marca (02/11).
+
+   Luis, al ver «Datos de la empresa»: «parece unísono, dale algo de color».
+   Las tarjetas se escriben a mano en cada módulo (`section.card` + `h2`),
+   así que la regla va aquí y no en cien archivos: el primer `h2` de una
+   tarjeta sale en el azul del logo con una raya azul → dorado delante.
+   En `@layer components` para que cualquier utilidad del propio `h2`
+   (`hidden`, `sr-only`, un color a propósito) siga mandando.
+   -------------------------------------------------------------------------- */
+@layer components {
+  .card > h2:first-child,
+  .card > header:first-child h2:first-of-type {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: var(--titulo);
+  }
+  .card > h2:first-child::before,
+  .card > header:first-child h2:first-of-type::before {
+    content: "";
+    flex: none;
+    width: 4px;
+    height: 1.15em;
+    border-radius: 2px;
+    background-image: linear-gradient(180deg, var(--color-brand-500), var(--color-accent-400));
+  }
+}
+
+@media print {
+  .card > h2:first-child::before,
+  .card > header:first-child h2:first-of-type::before {
+    display: none;
   }
 }

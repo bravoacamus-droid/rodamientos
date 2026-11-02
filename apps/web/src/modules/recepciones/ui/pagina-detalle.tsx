@@ -115,7 +115,7 @@ export default async function PaginaDetalleRecepcion({
             <dd className="mt-1">
               <Link
                 href={`/compras/${r.compra_id}`}
-                className="inline-flex h-10 items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 font-mono text-sm font-medium text-brand-600 hover:bg-[var(--surface-2)]"
+                className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-3 font-mono text-sm font-medium text-brand-600 hover:bg-[var(--surface-2)]"
               >
                 Ver {r.compra_numero}
               </Link>

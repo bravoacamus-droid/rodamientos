@@ -137,8 +137,16 @@ export function PreciosPorMarca({ marcas }: { marcas: { id: string; nombre: stri
         if (!v) reiniciar();
       }}
     >
-      <DialogTrigger className={cn(buttonVariants({ variant: "outline" }), "h-9 gap-1.5 px-3 text-sm")}>
-        <Percent className="size-4" aria-hidden="true" />
+      {/* Vive en la cabecera azul de productos: mismo alto que sus vecinos, y
+          el vidrio se aclara al pasar el ratón en vez del `brand-50` casi
+          blanco de `outline`, que dejaba la letra blanca sin fondo (02/11). */}
+      <DialogTrigger
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+        )}
+      >
+        <Percent aria-hidden="true" />
         Cambiar precios por marca
       </DialogTrigger>
 

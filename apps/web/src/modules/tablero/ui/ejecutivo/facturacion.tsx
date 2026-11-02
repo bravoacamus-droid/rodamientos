@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Ban, FileMinus, Receipt, ShoppingBag, Users, Wallet, X } from "lucide-react";
 import { EstadoError, KpiCard } from "@rodatech/ui";
@@ -12,8 +13,10 @@ import {
   BotonExcel,
   Bloque,
   Dato,
+  EsqueletoReporte,
   Partes,
   Ranking,
+  claveFiltros,
   dinero,
   entero,
   hoyEnLima,
@@ -63,6 +66,45 @@ export default async function PaginaFacturacionEjecutiva({
   searchParams: Promise<ParamsBusqueda>;
 }) {
   const sp = await searchParams;
+
+  // Los filtros se pintan al momento y no se desmontan mientras cargan las
+  // cifras; el buscador espera solo a su lista, en paralelo con ellas.
+  return (
+    <div className="@container flex flex-col gap-5">
+      <Suspense fallback={<Filtros sp={sp} clientes={[]} />}>
+        <FiltrosConClientes sp={sp} />
+      </Suspense>
+      <Suspense key={claveFiltros(sp)} fallback={<EsqueletoReporte />}>
+        <CifrasFacturacion sp={sp} />
+      </Suspense>
+    </div>
+  );
+}
+
+function Filtros({ sp, clientes }: { sp: ParamsBusqueda; clientes: { id: string; nombre: string }[] }) {
+  const f = leerFiltros(sp, hoyEnLima());
+  return (
+    <FiltroRango
+      desde={f.rango.desde}
+      hasta={f.rango.hasta}
+      grano={f.rango.grano}
+      atajo={f.atajo}
+      extra={
+        <>
+          <FiltroComparar valor={f.comparar} />
+          <FiltroCliente valor={uno(sp.cliente) ?? null} clientes={clientes} />
+        </>
+      }
+    />
+  );
+}
+
+async function FiltrosConClientes({ sp }: { sp: ParamsBusqueda }) {
+  const lista = await clientesConCompras();
+  return <Filtros sp={sp} clientes={lista.ok ? lista.datos : []} />;
+}
+
+async function CifrasFacturacion({ sp }: { sp: ParamsBusqueda }) {
   const hoy = hoyEnLima();
   const f = leerFiltros(sp, hoy);
   const cliente = uno(sp.cliente) ?? null;
@@ -84,28 +126,8 @@ export default async function PaginaFacturacionEjecutiva({
   const clientes = lista.ok ? lista.datos : [];
   const nombreCliente = cliente ? clientes.find((c) => c.id === cliente)?.nombre : null;
 
-  const filtro = (
-    <FiltroRango
-      desde={f.rango.desde}
-      hasta={f.rango.hasta}
-      grano={f.rango.grano}
-      atajo={f.atajo}
-      extra={
-        <>
-          <FiltroComparar valor={f.comparar} />
-          <FiltroCliente valor={cliente} clientes={clientes} />
-        </>
-      }
-    />
-  );
-
   if (!actual.ok) {
-    return (
-      <>
-        {filtro}
-        <EstadoError titulo="No se pudo cargar la facturación" detalle={actual.error} />
-      </>
-    );
+    return <EstadoError titulo="No se pudo cargar la facturación" detalle={actual.error} />;
   }
 
   const a = actual.datos;
@@ -118,8 +140,7 @@ export default async function PaginaFacturacionEjecutiva({
   const comparar = f.hayComparacion && rp !== undefined;
 
   return (
-    <div className="@container flex flex-col gap-5">
-      {filtro}
+    <div className="flex flex-col gap-5">
 
       {nombreCliente ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800 dark:bg-brand-950">

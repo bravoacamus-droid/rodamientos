@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -64,12 +64,12 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
           {puedeRecibir ? (
             <Link
               href="/recepciones/nueva"
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonVariants()}
             >
               Recibir mercadería
             </Link>
           ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)} className="h-9 md:h-9">
+            <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)}>
               Recibir mercadería
             </BotonBloqueado>
           )}

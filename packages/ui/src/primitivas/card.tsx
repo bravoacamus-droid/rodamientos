@@ -33,7 +33,7 @@ export function CardHeader({ className, ...props }: React.ComponentPropsWithRef<
 }
 
 export function CardTitle({ className, ...props }: React.ComponentPropsWithRef<"h3">) {
-  return <h3 className={cn("text-sm font-semibold tracking-tight text-fg", className)} {...props} />;
+  return <h3 className={cn("text-base font-semibold tracking-tight text-[var(--titulo)]", className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {

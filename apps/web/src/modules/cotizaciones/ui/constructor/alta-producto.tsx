@@ -299,7 +299,7 @@ export function AltaProducto({
 
               <SelectorCatalogo
                 id="alta-subfamilia"
-                label="Sub-familia"
+                label="Subfamilia"
                 requerido
                 opciones={subfamilias}
                 valor={datos.subfamilia_id}

@@ -209,7 +209,7 @@ export default async function PaginaDetalleProducto({
           <h2 className="mb-3 text-base font-semibold">Clasificación</h2>
           <dl className="flex flex-col gap-2 text-sm">
             <Dato etiqueta="Familia" valor={p.familia} />
-            <Dato etiqueta="Sub-familia" valor={p.subfamilia} />
+            <Dato etiqueta="Subfamilia" valor={p.subfamilia} />
             {/* Sin tipo no se enseña la fila: un «—» bajo «Descripción
                 (tipo)» parecía un dato que faltaba por llenar, y la
                 descripción ya está en la cabecera. */}

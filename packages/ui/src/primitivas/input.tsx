@@ -10,10 +10,15 @@ import * as React from "react";
 import { cn } from "../lib/utils";
 
 /** Estilo compartido por todos los campos de texto. Un solo sitio que tocar. */
+// Velo azul y borde firme (--campo-*): blanco sobre blanco no dejaba ver la
+// casilla (Luis, 02/11). Al escribir pasa a blanco con el anillo de marca, que
+// es lo que dice «estás aquí».
 export const campoBase = [
-  "w-full rounded-md border bg-surface text-fg placeholder:text-subtle",
-  "transition-colors duration-150",
-  "focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15",
+  "w-full rounded-md border border-[var(--campo-borde)] bg-[var(--campo-bg)] text-fg placeholder:text-subtle",
+  "shadow-[inset_0_1px_2px_rgb(11_52_80/0.06)]",
+  "transition-[color,background-color,border-color,box-shadow] duration-150",
+  "hover:border-brand-400",
+  "focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-[3px] focus:ring-brand-500/25",
   "disabled:opacity-60 disabled:bg-surface-2 disabled:cursor-not-allowed",
   "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15",
   "read-only:bg-surface-2",

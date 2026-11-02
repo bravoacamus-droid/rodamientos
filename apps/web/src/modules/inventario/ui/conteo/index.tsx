@@ -190,7 +190,7 @@ export function HojaDeConteo({
       <PanelModulo ruta="/inventario/ajuste">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold">Cuadrar inventario</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Cuadrar inventario</h1>
             <p className="text-sm text-[var(--fg-muted)]">
               Cuenta lo que hay de verdad. Al confirmar se registra un ajuste con
               tu nombre y el kardex recalcula el saldo.
@@ -200,6 +200,9 @@ export function HojaDeConteo({
             <Button
               type="button"
               variant="outline"
+              // Sobre el azul del panel, el `hover:bg-brand-50` de `outline` es
+              // casi blanco y la letra es blanca: se aclara el vidrio (02/11).
+              className="hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]"
               onClick={() => {
                 // Cancelar es decidir no seguir: no se ofrece otra vez.
                 olvidarBorrador();

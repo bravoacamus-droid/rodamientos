@@ -82,14 +82,16 @@ export function ComprasAnteriores({
           {/* Siete columnas no caben en un teléfono ni en media pantalla: el
               costo y «Volver a comprar» quedaban fuera, a la derecha. Por
               debajo de @3xl, una tarjeta por compra (revisión por módulos del
-              02/10). */}
+              02/10). Sueltas y con su borde, como las de las listas, y no
+              pegadas por una raya: Luis, 11/09, *«todo junto, apegado»*
+              (02/11). */}
           <div className="@container">
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)] @3xl:hidden">
+          <ul className="flex flex-col gap-2 @3xl:hidden">
             {compras.map((c) => {
               const v = variacion(c.costoUsd, c.costoAnteriorUsd);
               const href = puedeComprar ? enlaceVolverAComprar(c, productoId) : null;
               return (
-                <li key={c.recepcionId + c.documento} className="flex flex-col gap-1.5 py-3">
+                <li key={c.recepcionId + c.documento} className="flex flex-col gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0 font-medium">{c.proveedor ?? "—"}</span>
                     <span className="shrink-0 whitespace-nowrap">

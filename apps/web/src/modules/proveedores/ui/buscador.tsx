@@ -223,7 +223,7 @@ export function BuscadorProveedores({
                 href={`/proveedores/${elegido.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-control-sm items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)]"
+                className="inline-flex h-control-sm items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)]"
               >
                 <ExternalLink className="size-4" aria-hidden="true" />
                 Abrir ficha del proveedor

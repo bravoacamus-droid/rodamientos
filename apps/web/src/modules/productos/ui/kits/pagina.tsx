@@ -10,6 +10,8 @@ import {
   TableContenedor,
   TBody,
   THead,
+  buttonVariants,
+  cn,
   leerTamano,
 } from "@rodatech/ui";
 
@@ -115,9 +117,11 @@ export async function PaginaKits({
           {permisos.tiene("productos", "crear") ? (
             <Link
               href="/productos/kits/nuevo"
-              className="inline-flex h-control-md items-center gap-2 rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+              // El de `buttonVariants`, como en productos y clientes: mismo alto,
+              // mismo relieve (revisión de entrega, 02/11).
+              className={cn(buttonVariants({ variant: "primary" }), "h-11 md:h-control-md")}
             >
-              <Plus className="size-[18px]" />
+              <Plus strokeWidth={2.5} aria-hidden="true" />
               Nuevo kit
             </Link>
           ) : (
@@ -127,7 +131,10 @@ export async function PaginaKits({
 
         {/* Tres y no cuatro: un indicador que no decide nada es ruido. Estos son
             los que se miran antes de prometer una entrega. */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        {/* Una por fila en el teléfono (02/11): a dos columnas, a 390 px cada
+            tarjeta tiene unos 170 px para un importe en dólares, y la tercera
+            quedaba sola debajo con medio hueco al lado. */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <KpiCard
             etiqueta="Kits activos"
             valor={activos.length.toLocaleString("es-PE")}
