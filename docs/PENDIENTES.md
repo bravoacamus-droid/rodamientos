@@ -8741,3 +8741,29 @@ poner los días en la ficha de cada cliente (botones 15/30/45/60): entonces
 la cotización imprime «CRÉDITO 30 DÍAS» y la factura los trae. Darle a la
 cotización su propia condición tocaría `crear_cotizacion` y
 `actualizar_cotizacion`; no la noche antes del primer día real.
+
+**Y el historial completo (02/11).** Moisés: *«solo quiere mantener la
+información para que cuando le pregunten si la guía tal ya se hizo tenga el
+historial de SIMPLE y no vaya a SIMPLE de nuevo»*. Cargado como historial,
+sin mover stock (el stock lo mueven las funciones de emitir y recibir):
+
+- **575 guías T002** (1412 ítems), emitidas y aceptadas, y **563 enlaces
+  factura-guía** desde la columna «Guía Remisión» de las ventas: la ficha de
+  la factura dice qué guía la ampara. La T002-575 (OVOSUR) queda sin factura:
+  se factura el 02/11 en SIMPLE.
+- **781 compras** como `SIMPLE-0001…` en orden de fecha (el número del
+  proveedor en `documento_proveedor`; la serie CMP no se toca), con 15
+  proveedores nuevos. «Qué vende cada proveedor» (`proveedor_productos`, 908)
+  se llenó de una vez con la última compra de cada par; el disparador que lo
+  hace fila a fila pide un rol que la API no tiene, y se desactivó solo
+  durante la carga, igual que el que parte kits (cambiaría el papel).
+- **37 productos** que solo salen en el historial, creados **archivados** en
+  OTROS / POR CLASIFICAR: el documento queda entero y el buscador no los
+  ofrece (`guia_items` y `compra_items` exigen producto).
+
+**177 · El historial no avisa.** 47 guías antiguas no tienen factura vigente
+y `generar_alertas` (cada hora desde las 7:05, con aviso al celular) las
+habría perseguido como «Guía sin facturar». Ahora solo las del ERP
+(`creado_por is not null`; el historial entró sin autor). La migración toma
+la función viva y cambia ese renglón comprobando que es único; el centinela
+la ejecuta.
