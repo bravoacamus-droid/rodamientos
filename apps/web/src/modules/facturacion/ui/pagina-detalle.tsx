@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { Building2, HandCoins, Printer } from "lucide-react";
+import { Building2, FileArchive, FileCode, HandCoins, Printer } from "lucide-react";
 import {
   Badge,
+  Button,
   EstadoBadge,
   EstadoError,
   Moneda,
@@ -421,6 +422,23 @@ export default async function PaginaDetalleComprobante({
                     {c.sunat_hash_cdr}
                   </p>
                 ) : null}
+                {/* El XML y la constancia (CDR), para el contador y el cliente
+                    (02/11). Moisés: «al facturar falta poder descargar XML,
+                    CDR». Se guardaban y no había por dónde bajarlos. */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <a href={`/facturacion/${c.id}/sunat?que=xml`} download>
+                      <FileCode className="size-4" aria-hidden />
+                      Descargar XML
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <a href={`/facturacion/${c.id}/sunat?que=cdr`} download>
+                      <FileArchive className="size-4" aria-hidden />
+                      Descargar CDR
+                    </a>
+                  </Button>
+                </div>
               </div>
             ) : puedeEnviar ? (
               <EnviarASunat
