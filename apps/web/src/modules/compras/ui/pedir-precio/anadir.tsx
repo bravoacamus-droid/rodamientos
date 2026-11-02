@@ -65,36 +65,6 @@ export function BuscadorProveedor({
 
       {error ? <p className="mt-2 text-sm text-[var(--danger)]">{error}</p> : null}
 
-      {/*
-        Sin coincidencias, el alta ahí mismo (14/10), con lo tecleado ya puesto
-        —RUC o nombre—. Es el mismo diálogo del buscador de la compra: el
-        proveedor nuevo es justo al que más se le pide precio.
-      */}
-      {termino.trim().length >= 2 && !buscando && visibles.length === 0 && !error ? (
-        <div className="mt-2 flex flex-col items-start gap-2">
-          <p className="text-sm text-[var(--fg-muted)]">
-            Nadie con eso. Se busca por razón social, RUC o marca. Si es nuevo, dalo de alta:
-          </p>
-          <ProveedorRapido
-            documentoInicial={pareceDocumento(termino.trim()) ? digitosDe(termino.trim()) : ""}
-            nombreInicial={pareceDocumento(termino.trim()) ? "" : termino.trim()}
-            onCreado={(p) => {
-              onElegir({
-                id: p.id,
-                razon_social: p.razon_social,
-                telefono: p.telefono,
-                whatsapp: p.whatsapp,
-                email: p.email,
-                coincidencias: 0,
-                ultimoCostoUsd: null,
-              });
-              setTermino("");
-              limpiar();
-            }}
-          />
-        </div>
-      ) : null}
-
       {visibles.length > 0 ? (
         <ul className="mt-2 flex flex-col divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">
           {visibles.map((p) => (
@@ -127,6 +97,46 @@ export function BuscadorProveedor({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {/*
+        El alta, SIEMPRE (02/11). Salía solo sin coincidencias (14/10), y con
+        «IMPORTADORA RODRIGUEZ» el buscador encontraba «IMPORTADORA DE
+        RODAMIENTOS» —se parece— y el botón desaparecía. Moisés, en vivo con
+        Willy: *«si o si un botón para añadir un proveedor»*. Lo tecleado
+        pasa al formulario: RUC si lo parece, razón social si no.
+      */}
+      {!buscando && !error ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-[var(--fg-muted)]">
+            {termino.trim().length >= 2 && visibles.length === 0
+              ? "Nadie con eso. Se busca por razón social, RUC o marca. Si es nuevo, dalo de alta:"
+              : visibles.length > 0
+                ? "¿No es ninguno de estos?"
+                : "¿Es un proveedor nuevo?"}
+          </p>
+          <ProveedorRapido
+            // Ahora está siempre montado y su formulario arranca con lo que
+            // recibe al montarse (`useState`): se vuelve a montar con lo
+            // tecleado, o el alta saldría vacía.
+            key={termino.trim()}
+            documentoInicial={pareceDocumento(termino.trim()) ? digitosDe(termino.trim()) : ""}
+            nombreInicial={pareceDocumento(termino.trim()) ? "" : termino.trim()}
+            onCreado={(p) => {
+              onElegir({
+                id: p.id,
+                razon_social: p.razon_social,
+                telefono: p.telefono,
+                whatsapp: p.whatsapp,
+                email: p.email,
+                coincidencias: 0,
+                ultimoCostoUsd: null,
+              });
+              setTermino("");
+              limpiar();
+            }}
+          />
+        </div>
       ) : null}
     </div>
   );
