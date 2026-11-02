@@ -13,7 +13,6 @@ import {
   Repeat,
   Trash2,
   Truck,
-  type LucideIcon,
 } from "lucide-react";
 import {
   Button,
@@ -26,11 +25,12 @@ import {
   DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   toast,
 } from "@rodatech/ui";
+
+import { OpcionMenu, TONO_OPCION } from "@/componentes/opcion-menu";
 
 import { eliminarPedido } from "../acciones/gestionar";
 
@@ -51,48 +51,6 @@ export interface PedidoParaAcciones {
    * (revisión del 15/10). Solo lo sabe la ficha; en la lista no se calcula.
    */
   otraGuia?: boolean;
-}
-
-/** Cada opción con su color: el icono en una pastilla, como un emoticono. */
-const TONO = {
-  azul: "bg-sky-600 text-white",
-  gris: "bg-slate-500 text-white",
-  marca: "bg-brand-600 text-white",
-  verde: "bg-emerald-600 text-white",
-  ambar: "bg-amber-500 text-white",
-  violeta: "bg-violet-600 text-white",
-  rojo: "bg-red-600 text-white",
-} as const;
-
-function Opcion({
-  icono: Icono,
-  tono,
-  titulo,
-  detalle,
-  onSelect,
-  peligro = false,
-  apagada = false,
-}: {
-  icono: LucideIcon;
-  tono: keyof typeof TONO;
-  titulo: string;
-  detalle?: string;
-  onSelect: () => void;
-  peligro?: boolean;
-  /** Se ve, pero al pulsarla avisa de qué falta en vez de llevar a nada. */
-  apagada?: boolean;
-}) {
-  return (
-    <DropdownMenuItem onSelect={onSelect} className={`items-start gap-2.5 py-1.5 ${apagada ? "opacity-70" : ""}`}>
-      <span className={`grid size-6 shrink-0 place-items-center rounded-md ${TONO[tono]}`}>
-        <Icono className="size-3.5" aria-hidden="true" />
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className={`text-sm font-medium leading-6 ${peligro ? "text-[var(--danger)]" : ""}`}>{titulo}</span>
-        {detalle ? <span className="text-sm text-[var(--fg-muted)]">{detalle}</span> : null}
-      </span>
-    </DropdownMenuItem>
-  );
 }
 
 const AVISO = { richColors: true, position: "top-center" as const, duration: 6000 };
@@ -180,17 +138,17 @@ export function AccionesPedido({
           Acciones
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent align="end" className="w-72 p-1.5">
           {enFicha ? null : (
-            <Opcion icono={ClipboardList} tono="marca" titulo="Ver pedido" onSelect={() => router.push(`/pedidos/${p.id}`)} />
+            <OpcionMenu icono={ClipboardList} tono="marca" titulo="Ver pedido" onSelect={() => router.push(`/pedidos/${p.id}`)} />
           )}
-          <Opcion
+          <OpcionMenu
             icono={FileSearch}
             tono="azul"
             titulo="Hoja de pedido"
             onSelect={() => router.push(`/pedidos/${p.id}?hoja=1`)}
           />
-          <Opcion
+          <OpcionMenu
             icono={FileText}
             tono="gris"
             titulo={`Ver cotización ${p.cotizacion}`}
@@ -201,7 +159,7 @@ export function AccionesPedido({
             <>
               <DropdownMenuSeparator />
               {guiaEmitida && p.otraGuia ? (
-                <Opcion
+                <OpcionMenu
                   icono={Truck}
                   tono="marca"
                   titulo="Hacer otra guía"
@@ -210,7 +168,7 @@ export function AccionesPedido({
                 />
               ) : null}
               {guiaEmitida ? null : (
-                <Opcion
+                <OpcionMenu
                   icono={Truck}
                   tono="marca"
                   titulo={p.guia ? "Seguir con la guía" : "Hacer la guía"}
@@ -218,12 +176,13 @@ export function AccionesPedido({
                   onSelect={() => router.push(urlGuia)}
                 />
               )}
-              <Opcion
+              <OpcionMenu
                 icono={Receipt}
                 tono={guiaEmitida ? "verde" : "ambar"}
                 titulo="Facturar"
                 detalle={guiaEmitida ? undefined : "Primero hay que emitir la guía"}
                 apagada={!guiaEmitida}
+                destacada={guiaEmitida}
                 onSelect={facturar}
               />
             </>
@@ -232,7 +191,7 @@ export function AccionesPedido({
           {p.vigente ? (
             <>
               <DropdownMenuSeparator />
-              <Opcion
+              <OpcionMenu
                 icono={Repeat}
                 tono="violeta"
                 titulo="Repetir pedido"
@@ -244,7 +203,7 @@ export function AccionesPedido({
           ) : null}
 
           <DropdownMenuSeparator />
-          <Opcion icono={Trash2} tono="rojo" titulo="Eliminar pedido" peligro onSelect={eliminar} />
+          <OpcionMenu icono={Trash2} tono="rojo" titulo="Eliminar pedido" peligro onSelect={eliminar} />
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -293,7 +252,7 @@ function DialogoEliminar({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className={`grid size-9 place-items-center rounded-lg ${TONO.rojo}`}>
+            <span className={`grid size-9 place-items-center rounded-lg ${TONO_OPCION.rojo} text-white`}>
               <Trash2 className="size-5" aria-hidden="true" />
             </span>
             Eliminar {p.numero}

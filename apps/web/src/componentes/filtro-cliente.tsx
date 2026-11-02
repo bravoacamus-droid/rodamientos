@@ -57,7 +57,8 @@ export function FiltroCliente({
   valor: string | null;
   /** Su razón social, para pintarla sin volver a buscar. */
   nombre: string | null;
-  onCambiar: (id: string | null) => void;
+  /** Con el cliente entero de segundo, para quien no tiene su nombre en la URL. */
+  onCambiar: (id: string | null, cliente?: ClienteParaFiltrar) => void;
   /**
    * En la fila de filtros (12/10): sin etiqueta encima —la dice dentro,
    * «Todos los clientes»— y repartiendo el ancho con los demás.
@@ -92,7 +93,7 @@ export function FiltroCliente({
   };
 
   const elegir = (c: ClienteParaFiltrar) => {
-    onCambiar(c.id);
+    onCambiar(c.id, c);
     cerrar();
   };
 

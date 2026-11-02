@@ -8767,3 +8767,24 @@ habría perseguido como «Guía sin facturar». Ahora solo las del ERP
 (`creado_por is not null`; el historial entró sin autor). La migración toma
 la función viva y cambia ese renglón comprobando que es único; el centinela
 la ejecuta.
+
+**Limpieza, menús y CR desde Cobranzas (02/11, de madrugada).**
+
+- **Borrada la prueba COT1-000001** (MATRITECH, 30/10): su pedido, la guía
+  T001-00000001 (emitida, nunca enviada a SUNAT) y sus 6 movimientos. El
+  stock volvió al saldo del ajuste real AJU-26-00001 (6209-2Z/C3 26,
+  6209 2Z.C3-FAG 4, 6310/C3 10) o a cero donde la guía era su único
+  movimiento. Respaldo antes; transacción que comprueba cada conteo, ensayada.
+- **Menús de «Acciones»** (pedidos y cotizaciones) con `componentes/opcion-menu`.
+  Moisés: *«se ven sin gracia, no tiene buenos colores, no resaltan»*. Las
+  pastillas eran de color pero `DropdownMenuItem` pinta todos sus iconos de
+  gris (`[&_svg]:text-subtle`): icono oscuro sobre oscuro. Ahora blanco a la
+  fuerza, pastilla de 32 px, y la acción que toca (aprobar, facturar) en verde.
+- **Descargar comprobantes de retención desde Cobranzas** (*«ahí es donde
+  suben los documentos… de qué fecha a qué fecha, por carpeta, por
+  clientes»*): ventana con atajos de periodo, cliente y el orden de carpetas
+  (cliente · mes · cliente y mes); el ZIP lleva `Resumen.csv` para Excel. Si
+  no hay ninguno, lo dice en la ventana. Usa `/facturacion/cr`.
+
+Sin probar en pantalla: los menús y la descarga (había dos Chrome conectados
+y la herramienta pide elegir uno). Tipos, lint, 1768 tests y el build, bien.

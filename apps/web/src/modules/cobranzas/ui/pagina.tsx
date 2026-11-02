@@ -44,6 +44,7 @@ import {
   saldoEnMoneda,
 } from "../dominio/tipos";
 import { Cobrador } from "./cobrador";
+import { DescargarCr } from "./descargar-cr";
 import { FiltrosCarteraBarra } from "./filtros";
 import { Gestor } from "./gestor";
 import { VoucherDelPago } from "./voucher-del-pago";
@@ -115,6 +116,9 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
           enviar el reporte de su estado de cuenta para que hagan el pago»).
           Con un cliente filtrado, va directo al suyo.
         */}
+        <div className="flex flex-wrap items-center gap-2">
+        {/* Los CR, desde aquí que es donde se suben (02/11). */}
+        <DescargarCr hoy={hoy} />
         <Link
           href={
             filtros.cliente
@@ -128,6 +132,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             ? `Estado de cuenta de ${cliente.nombre}`
             : "Estado de cuenta de un cliente"}
         </Link>
+        </div>
       </div>
 
       <Suspense fallback={<Skeleton className="h-24 w-full" />}>
