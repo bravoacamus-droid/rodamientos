@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   Check,
   ClipboardList,
+  Copy,
   EllipsisVertical,
   Eye,
   Lock,
@@ -22,6 +23,7 @@ import {
 } from "@rodatech/ui";
 
 import type { CotizacionLista } from "../dominio/tipos";
+import { DialogoClonar } from "./dialogo-clonar";
 import { DialogoEliminarCotizacion } from "./dialogo-eliminar";
 import { OpcionMenu } from "@/componentes/opcion-menu";
 
@@ -49,6 +51,7 @@ export function AccionesFilaCotizacion({
 }) {
   const router = useRouter();
   const [eliminando, setEliminando] = React.useState(false);
+  const [clonando, setClonando] = React.useState(false);
   const viva = c.estado === "borrador" || c.estado === "enviada";
 
   return (
@@ -87,6 +90,16 @@ export function AccionesFilaCotizacion({
             />
           ) : null}
 
+          {/* Clonar eligiendo las líneas (02/11): el cliente confirmó parte y
+            la original no se pierde. Vale en cualquier estado. */}
+          <OpcionMenu
+            icono={Copy}
+            tono="violeta"
+            titulo="Clonar cotización"
+            detalle="Eliges qué líneas se lleva"
+            onSelect={() => setClonando(true)}
+          />
+
           {/* Un pedido: directo a él. Varios: una sola opción que abre Pedidos
             filtrado por ESTA cotización, no una lista dentro del menú (Luis,
             15/10: «no va a ser un select de varios… solo quiero filtrar los
@@ -124,6 +137,7 @@ export function AccionesFilaCotizacion({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      <DialogoClonar id={c.id} numero={c.numero} abierto={clonando} onCerrar={() => setClonando(false)} />
       {eliminando ? (
         <DialogoEliminarCotizacion
           id={c.id}

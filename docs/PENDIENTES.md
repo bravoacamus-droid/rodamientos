@@ -8788,3 +8788,15 @@ la ejecuta.
 
 Sin probar en pantalla: los menús y la descarga (había dos Chrome conectados
 y la herramienta pide elegir uno). Tipos, lint, 1768 tests y el build, bien.
+
+**Clonar eligiendo las líneas (02/11).** Moisés: *«hace una cotización de 10
+ítems y le confirman solo 6 o 7, pero no quiere perder esa cotización: la
+clona y la clonada le quita los ítems y deja nomás lo que lleva el
+cliente»*. `clonar` ya existía en la ficha, con dos problemas: copiaba todo,
+y ponía el precio del catálogo —que en casi todo el catálogo es 0—, o sea que
+clonar una cotización real la dejaba a $ 0. Ahora «Clonar cotización» está
+también en el menú de la lista y abre `dialogo-clonar`: las líneas marcadas,
+la cantidad editable, y los precios cotizados por defecto (o los del
+catálogo, sin pisar nunca con un cero). La original no se toca. Probado en
+pantalla con la CT02-1293: 6 líneas y $ 716.70 como su PDF; con la 2, 3, 5 y
+6, $ 424.00. Se canceló sin clonar.
