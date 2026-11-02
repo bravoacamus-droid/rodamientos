@@ -8800,3 +8800,13 @@ la cantidad editable, y los precios cotizados por defecto (o los del
 catálogo, sin pisar nunca con un cero). La original no se toca. Probado en
 pantalla con la CT02-1293: 6 líneas y $ 716.70 como su PDF; con la 2, 3, 5 y
 6, $ 424.00. Se canceló sin clonar.
+
+**Series con nombre y solo las importantes (02/11).** Moisés, con la pantalla
+de series de SIMPLE: *«documentos tiene que estar bien definido, porque tengo
+2 notas de crédito, débito, y no sé cuál es cuál… solo déjame los
+importantes»*. La nota sobre factura y sobre boleta son el mismo tipo; las
+separa la letra de la serie (FC/BC). Ahora cada serie se llama como en SIMPLE
+(`nombreDeSerie`: «Nota de crédito a factura», «Guía de remisión
+remitente»…), se ordena como allí (factura, sus notas, guía, cotización,
+compras; lo de boleta al final) y las desactivadas y las de boleta quedan
+detrás de «Ver también…». «Nueva serie» dice cómo se llamará lo que se teclea.

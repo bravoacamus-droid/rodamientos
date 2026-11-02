@@ -30,7 +30,7 @@ import {
   guardarSerie,
   type ResultadoConfig,
 } from "../acciones/guardar";
-import { avisosDelInicial, proximoNumero, serieValida } from "../dominio/serie";
+import { avisosDelInicial, esSerieImportante, nombreDeSerie, proximoNumero, serieValida } from "../dominio/serie";
 import {
   ETIQUETA_TIPO_DOCUMENTO,
   TIPOS_FISCALES,
@@ -95,6 +95,14 @@ export function TablaSeries({
     vale es lo guardado.
   */
   const [borradores, setBorradores] = React.useState<Record<string, string>>({});
+  /*
+    Solo lo importante (02/11). Moisés: *«solo déjame los importantes»*. Las
+    desactivadas y las de boleta —Willy no emite boletas— quedan detrás de un
+    botón; siguen ahí para reactivarlas.
+  */
+  const [verTodas, setVerTodas] = React.useState(false);
+  const ocultas = series.filter((s) => !esSerieImportante(s));
+  const visibles = verTodas ? series : series.filter((s) => esSerieImportante(s));
   const inicialDe = (s: SerieDocumento) =>
     borradores[s.id] ?? String(s.correlativo_inicial);
 
@@ -138,7 +146,7 @@ export function TablaSeries({
         caja (`@container`), no el de la pantalla.
       */}
       <ul className="flex flex-col gap-2.5 @3xl:hidden">
-        {series.map((s) => (
+        {visibles.map((s) => (
           <TarjetaSerie
             key={s.id}
             serie={s}
@@ -162,7 +170,7 @@ export function TablaSeries({
             </tr>
           </thead>
           <tbody>
-            {series.map((s) => (
+            {visibles.map((s) => (
               <FilaSerie
                 key={s.id}
                 serie={s}
@@ -174,6 +182,14 @@ export function TablaSeries({
           </tbody>
         </table>
       </div>
+
+      {ocultas.length > 0 ? (
+        <Button type="button" variant="outline" className="self-start" onClick={() => setVerTodas((v) => !v)}>
+          {verTodas
+            ? "Ver solo las importantes"
+            : `Ver también las desactivadas y las de boleta (${ocultas.length})`}
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -238,7 +254,7 @@ function FilaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
     <>
       <tr className="border-b border-[var(--border-soft)]">
         <td className="px-3 py-2">
-          {ETIQUETA_TIPO_DOCUMENTO[serie.tipo]}
+          {nombreDeSerie(serie)}
           {fiscal ? (
             <Badge tone="info" size="xs" className="ml-2">
               SUNAT
@@ -308,7 +324,7 @@ function TarjetaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
     <li className="flex flex-col gap-2.5 rounded-lg border border-[var(--border)] p-3">
       <div>
         <p className="text-sm font-medium">
-          {ETIQUETA_TIPO_DOCUMENTO[serie.tipo]}
+          {nombreDeSerie(serie)}
           {fiscal ? (
             <Badge tone="info" size="xs" className="ml-2">
               SUNAT
@@ -546,7 +562,11 @@ function DialogNuevaSerie() {
             <Campo
               id="nueva-serie"
               label="Serie"
-              ayuda="De 2 a 6 caracteres, mayúsculas o dígitos. F001, B001, T001…"
+              ayuda={
+                serie && formatoOk
+                  ? `Será: ${nombreDeSerie({ tipo, serie })}.`
+                  : "Como en SIMPLE: F002 factura, FC02 nota de crédito a factura, FD02 nota de débito a factura, T002 guía, CT02 cotización."
+              }
               error={
                 serie && !formatoOk
                   ? "Ese formato no lo acepta la base."

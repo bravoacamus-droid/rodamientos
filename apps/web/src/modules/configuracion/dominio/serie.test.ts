@@ -4,6 +4,8 @@ import {
   avisosDelInicial,
   formatearNumero,
   huecosQueDeja,
+  esSerieImportante,
+  nombreDeSerie,
   ordenarSeries,
   proximoCorrelativo,
   proximoNumero,
@@ -150,14 +152,27 @@ describe("serieValida", () => {
 });
 
 describe("ordenarSeries", () => {
-  it("pone primero lo que ve SUNAT, en el orden en que se emite", () => {
+  it("el orden de SIMPLE, y lo de boleta al final: Willy no emite boletas (02/11)", () => {
     const orden = ordenarSeries([
       serie({ tipo: "compra", serie: "CMP" }),
       serie({ tipo: "boleta", serie: "B001" }),
-      serie({ tipo: "factura", serie: "F001" }),
+      serie({ tipo: "guia_remision", serie: "T002" }),
+      serie({ tipo: "nota_credito", serie: "BC01" }),
+      serie({ tipo: "nota_debito", serie: "FD02" }),
+      serie({ tipo: "nota_credito", serie: "FC02" }),
+      serie({ tipo: "factura", serie: "F002" }),
+      serie({ tipo: "cotizacion", serie: "CT02" }),
     ]);
 
-    expect(orden.map((s) => s.tipo)).toEqual(["factura", "boleta", "compra"]);
+    expect(orden.map((s) => s.serie)).toEqual(["F002", "FC02", "FD02", "T002", "CT02", "CMP", "B001", "BC01"]);
+  });
+
+  it("dentro del mismo documento, la de pruebas después de la real", () => {
+    const orden = ordenarSeries([
+      serie({ tipo: "nota_credito", serie: "FC01", predeterminada: false, es_prueba: true }),
+      serie({ tipo: "nota_credito", serie: "FC02", predeterminada: false }),
+    ]);
+    expect(orden[0]?.serie).toBe("FC02");
   });
 
   it("dentro del mismo tipo, la predeterminada arriba", () => {
@@ -167,5 +182,22 @@ describe("ordenarSeries", () => {
     ]);
 
     expect(orden[0]?.serie).toBe("F001");
+  });
+});
+
+describe("cómo se llama cada serie (02/11)", () => {
+  it("las notas dicen si son de factura o de boleta, por la letra de la serie", () => {
+    expect(nombreDeSerie({ tipo: "nota_credito", serie: "FC02" })).toBe("Nota de crédito a factura");
+    expect(nombreDeSerie({ tipo: "nota_credito", serie: "BC02" })).toBe("Nota de crédito a boleta");
+    expect(nombreDeSerie({ tipo: "nota_debito", serie: "FD02" })).toBe("Nota de débito a factura");
+    expect(nombreDeSerie({ tipo: "guia_remision", serie: "T002" })).toBe("Guía de remisión remitente");
+    expect(nombreDeSerie({ tipo: "factura", serie: "F002" })).toBe("Factura de venta");
+  });
+
+  it("importantes: las activas que no son de boleta", () => {
+    expect(esSerieImportante({ tipo: "factura", serie: "F002", activo: true })).toBe(true);
+    expect(esSerieImportante({ tipo: "factura", serie: "F001", activo: false })).toBe(false);
+    expect(esSerieImportante({ tipo: "boleta", serie: "B001", activo: true })).toBe(false);
+    expect(esSerieImportante({ tipo: "nota_credito", serie: "BC01", activo: true })).toBe(false);
   });
 });
