@@ -985,6 +985,8 @@ export function lineasSinAnalizar(estado: EstadoConstructor): LineaConstructor[]
       l.productoId !== null &&
       !l.esKit &&
       l.confirmada !== 0 &&
+      // Lo que sale entero del almacén no se compra (02/11).
+      l.stock < (l.confirmada ?? l.cantidad) &&
       !l.proveedores.some((p) => p.cantidad > 0 && p.precio !== null),
   );
 }

@@ -142,6 +142,7 @@ export function HojaDocumento({
   filas,
   totales,
   enLetras,
+  antesDeLineas,
   pie,
 }: {
   emisor: EmisorHoja;
@@ -166,6 +167,8 @@ export function HojaDocumento({
   filas: Record<string, ReactNode>[];
   totales?: TotalHoja[];
   enLetras?: string | null;
+  /** Entre los datos y las líneas: el transporte de la guía (02/11). */
+  antesDeLineas?: ReactNode;
   pie?: ReactNode;
 }) {
   return (
@@ -294,6 +297,8 @@ export function HojaDocumento({
         `print:hidden` aquí y `print:block` en la tabla, porque en el papel
         manda el formato que vio Willy y no el ancho del contenedor.
       */}
+      {antesDeLineas ? <div className={`mt-4 ${LETRA}`}>{antesDeLineas}</div> : null}
+
       <TarjetasDeLineas columnas={columnas} filas={filas} />
 
       <div

@@ -27,15 +27,27 @@ import type { ConfigFiscal } from "../dominio/tipos";
  * correlativo.
  */
 export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
+  const [ambiente, setAmbiente] = React.useState(config.ambiente);
+  /*
+    React 19 reinicia el formulario al terminar la acción, y el desplegable
+    volvía a su primera opción —«beta»— aunque se hubiera guardado producción
+    (Moisés, 02/11: «cambié a producción pero el select sigue saliendo beta»;
+    la base sí decía producción, y el aviso rojo de debajo también). Tras
+    cada guardado se vuelve a pintar (`key`) con lo que se guardó.
+  */
+  const [guardados, setGuardados] = React.useState(0);
   const [resultado, guardar, guardando] = useActionState<ResultadoConfig | null, FormData>(
-    guardarConfigSunat,
+    async (previo, formData) => {
+      const r = await guardarConfigSunat(previo, formData);
+      if (r.ok) setAmbiente(formData.get("ambiente") === "produccion" ? "produccion" : "beta");
+      setGuardados((n) => n + 1);
+      return r;
+    },
     null,
   );
 
   const [prueba, setPrueba] = React.useState<ResultadoPrueba | null>(null);
   const [probando, probar] = React.useTransition();
-  const [ambiente, setAmbiente] = React.useState(config.ambiente);
-
   const lanzarPrueba = () => {
     setPrueba(null);
     probar(async () => setPrueba(await probarConexionSunat()));
@@ -121,6 +133,7 @@ export function FormularioConfigSunat({ config }: { config: ConfigFiscal }) {
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium">Ambiente</span>
             <SelectNativo
+              key={guardados}
               name="ambiente"
               value={ambiente}
               onChange={(e) => setAmbiente(e.target.value as "beta" | "produccion")}

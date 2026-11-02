@@ -20,16 +20,19 @@ import {
   buttonVariants,
   formatearFecha,
 } from "@rodatech/ui";
-import { FileUp, HandCoins, X } from "lucide-react";
+import { FileCheck2, FileUp, HandCoins, X } from "lucide-react";
 
 import { registrarCobro, type ResultadoCobro } from "../acciones/cobrar";
 import { tipoCambioDelPago } from "../acciones/tipo-cambio";
 import { cuotasDelComprobante } from "../acciones/gestionar";
 import {
+  avisoRetencionDistinta,
   avisosPago,
   bloqueosPago,
   quedaSaldado,
   repartoEnCuotas,
+  retencionPendiente,
+  retieneDePorDefecto,
 } from "../dominio/cobro";
 import {
   ETIQUETA_MEDIO,
@@ -39,6 +42,8 @@ import {
   saldoEnMoneda,
 } from "../dominio/tipos";
 import { TIPOS_VOUCHER } from "./voucher-del-pago";
+
+const dos = (n: number) => Math.round(n * 100) / 100;
 
 /**
  * Registrar el cobro de un documento.
@@ -68,6 +73,29 @@ export function Cobrador({
   const [fecha, setFecha] = React.useState(hoy);
   const [referencia, setReferencia] = React.useState("");
   const [observaciones, setObservaciones] = React.useState("");
+
+  /*
+    La retención (31/10). Willy: *«son agentes de retención por lo que
+    depositaron el 97 % osea $637.19, como lo registro??»*. Con la casilla, el
+    importe de arriba es lo DEPOSITADO y la retención va aparte: se registran
+    los dos cobros de una vez —lo que entró al banco y lo que el cliente paga
+    a SUNAT— y la factura queda saldada.
+  */
+  const pendienteRet = retencionPendiente(documento);
+  const [retiene, setRetiene] = React.useState(false);
+  const [retencion, setRetencion] = React.useState(pendienteRet);
+  // El monto sale solo (3 %): se enseña como texto, y solo se abre el campo
+  // si hay que corregirlo —el agente redondeó distinto—. Luis, 31/10: el
+  // monto «está de más», lo que importa es el documento.
+  const [corrigiendo, setCorrigiendo] = React.useState(false);
+  // El CR, si llegó con el depósito (31/10). Si llega días después, se sube
+  // desde «Comprobantes de retención».
+  const entradaCr = React.useRef<HTMLInputElement>(null);
+  const [archivoCr, setArchivoCr] = React.useState<string | null>(null);
+  const [numeroCr, setNumeroCr] = React.useState("");
+  // El cobro quedó pero el CR no: se dice aquí, sin cerrar.
+  const [avisoFinal, setAvisoFinal] = React.useState<string | null>(null);
+
   /*
     Pagó en soles (14/10). Willy, 13/10: *«generalmente [en dólares]… uno que
     otro en soles; 99 % son dólares»*. Se registra en dólares —la deuda es en
@@ -90,8 +118,11 @@ export function Cobrador({
   const [avisoTc, setAvisoTc] = React.useState<string | null>(null);
   const solesNum = Number(soles.replace(",", "."));
   const tcNum = Number(tc.replace(",", "."));
+  // Lo que queda por depositar, sin la retención: pagarlo entero salda entero.
+  const retUsd = retiene ? retencion : 0;
+  const retPen = esPen && retiene ? dos(retencion * (documento.tipo_cambio ?? 0)) : 0;
   const aDolares = (s: number, t: number) =>
-    esPen && s >= saldoPen - 0.005 ? documento.saldo : Math.round((s / t) * 100) / 100;
+    esPen && s >= saldoPen - retPen - 0.005 ? dos(documento.saldo - retUsd) : dos(s / t);
   const conversion = enSoles && solesNum > 0 && tcNum > 0 ? aDolares(solesNum, tcNum) : null;
   const pedirTc = () => {
     setAvisoTc(null);
@@ -103,6 +134,18 @@ export function Cobrador({
       } else setAvisoTc(`${t.error} Escríbelo a mano.`);
     });
   };
+
+  /** Marca o desmarca la retención y rehace el depósito para que cuadre. */
+  const ponerRetencion = (si: boolean, ret = pendienteRet) => {
+    setRetiene(si);
+    setRetencion(ret);
+    setMonto(dos(documento.saldo - (si ? ret : 0)));
+    if (esPen) {
+      const rp = si ? dos(ret * (documento.tipo_cambio ?? 0)) : 0;
+      setSoles(dos(saldoPen - rp).toFixed(2));
+    }
+  };
+
   const [cuotas, setCuotas] = React.useState<CuotaComprobante[]>([]);
   const entradaVoucher = React.useRef<HTMLInputElement>(null);
   const [voucher, setVoucher] = React.useState<string | null>(null);
@@ -116,9 +159,11 @@ export function Cobrador({
     // archivo con él: el nombre tiene que irse también, o diría que hay un
     // voucher que ya no se va a mandar.
     setVoucher(null);
+    setArchivoCr(null);
     if (r.ok) {
-      setAbierto(false);
       router.refresh();
+      if (r.aviso) setAvisoFinal(r.aviso);
+      else setAbierto(false);
     }
     return r;
   }, null);
@@ -136,29 +181,58 @@ export function Cobrador({
     };
   }, [abierto, documento.id]);
 
-  const bloqueos = bloqueosPago(documento, monto, fecha);
-  const avisos = avisosPago(documento, monto, medio, fecha, hoy);
-  const salda = quedaSaldado(documento.saldo, monto);
-  const reparto = cuotas.length > 1 ? repartoEnCuotas(cuotas, monto) : [];
+  // Lo que baja del saldo: el depósito más lo retenido.
+  const aplicado = dos(monto + retUsd);
+  const bloqueos = bloqueosPago(documento, aplicado, fecha);
+  if (retiene && !(retencion > 0)) {
+    bloqueos.push({ campo: "monto", mensaje: "La retención tiene que ser mayor que cero." });
+  }
+  if (retiene && monto < 0) {
+    bloqueos.push({ campo: "monto", mensaje: "Lo depositado no puede ser negativo." });
+  }
+  const avisos = avisosPago(documento, aplicado, medio, fecha, hoy);
+  const distinta = avisoRetencionDistinta(documento, retiene);
+  if (distinta) avisos.push({ clave: "retencion-distinta", mensaje: distinta });
+  if (retiene && documento.llega_umbral === false) {
+    avisos.push({
+      clave: "bajo-umbral",
+      mensaje: "Esta factura no llega a S/ 700: por ley no se le retiene. Compruébalo con el cliente.",
+    });
+  }
+  const salda = quedaSaldado(documento.saldo, aplicado);
+  const reparto = cuotas.length > 1 ? repartoEnCuotas(cuotas, aplicado) : [];
 
+  const notaSoles =
+    conversion !== null
+      ? `Pagó S/ ${solesNum.toFixed(2)} al tipo de cambio ${tcNum.toFixed(3)} (= $ ${conversion.toFixed(2)}).`
+      : null;
   const payload = JSON.stringify({
     pagos: [
-      {
-        comprobante_id: documento.id,
-        fecha,
-        monto,
-        medio,
-        referencia: referencia.trim() || null,
-        observaciones:
-          [
-            conversion !== null
-              ? `Pagó S/ ${solesNum.toFixed(2)} al tipo de cambio ${tcNum.toFixed(3)} (= $ ${conversion.toFixed(2)}).`
-              : null,
-            observaciones.trim() || null,
+      // Sin depósito, solo la retención: el cliente ya pagó lo demás antes.
+      ...(monto > 0
+        ? [
+            {
+              comprobante_id: documento.id,
+              fecha,
+              monto,
+              medio,
+              referencia: referencia.trim() || null,
+              observaciones: [notaSoles, observaciones.trim() || null].filter(Boolean).join(" ") || null,
+            },
           ]
-            .filter(Boolean)
-            .join(" ") || null,
-      },
+        : []),
+      ...(retiene && retencion > 0
+        ? [
+            {
+              comprobante_id: documento.id,
+              fecha,
+              monto: retencion,
+              medio: "retencion" as const,
+              referencia: null,
+              observaciones: "Retención del IGV (3 %) que el cliente paga a SUNAT.",
+            },
+          ]
+        : []),
     ],
   });
 
@@ -170,14 +244,21 @@ export function Cobrador({
         if (v) {
           // Al reabrir se vuelve al saldo vigente: si ya se cobró algo, el
           // importe de antes ya no vale.
-          setMonto(documento.saldo);
+          const marcar = retieneDePorDefecto(documento);
+          setRetiene(marcar);
+          setRetencion(pendienteRet);
+          setMonto(dos(documento.saldo - (marcar ? pendienteRet : 0)));
           if (esPen) {
             setEnSoles(true);
-            setSoles(saldoPen.toFixed(2));
+            setSoles(dos(saldoPen - (marcar ? dos(pendienteRet * (documento.tipo_cambio ?? 0)) : 0)).toFixed(2));
             setTc(String(documento.tipo_cambio));
           }
           setFecha(hoy);
           setVoucher(null);
+          setArchivoCr(null);
+          setNumeroCr("");
+          setAvisoFinal(null);
+          setCorrigiendo(false);
         }
       }}
     >
@@ -215,13 +296,131 @@ export function Cobrador({
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="cobro" value={payload} />
 
+            {/* La retención, lo primero: decide qué significa el importe. */}
+            {pendienteRet > 0 ? (
+              <div
+                className={`flex flex-col gap-2 rounded-sm border p-2.5 ${retiene ? "border-[var(--info)] bg-[var(--info-bg)]" : "border-[var(--border)]"}`}
+              >
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={retiene}
+                    onChange={(e) => ponerRetencion(e.target.checked)}
+                  />
+                  El cliente retuvo el 3 % (agente de retención)
+                </label>
+                {retiene ? (
+                  corrigiendo ? (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm">Retención ($)</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={retencion}
+                          onChange={(e) => ponerRetencion(true, Number(e.target.value))}
+                          className="w-32 tabular"
+                          autoFocus
+                        />
+                      </label>
+                      <span className="pb-2 text-sm text-[var(--fg-muted)]">
+                        Lo que diga el CR del cliente. Lo depositado se ajusta solo.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                      <span className="text-sm">
+                        Retención: <strong className="tabular">$ {retencion.toFixed(2)}</strong>
+                        <span className="text-[var(--fg-muted)]">
+                          {" "}· 3 % de <Moneda valor={documento.total} tamano="sm" className="text-inherit" />
+                          {esPen ? ` · S/ ${retPen.toFixed(2)}` : ""}. No entra al banco: el cliente la paga a SUNAT.
+                        </span>
+                      </span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setCorrigiendo(true)}>
+                        Corregir el monto
+                      </Button>
+                    </div>
+                  )
+                ) : null}
+                {/* El CR, si ya lo tiene. Si llega después —Willy: «le pasan
+                    después de 3, 4 días»—, la factura queda en «falta el CR». */}
+                {retiene ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium">Comprobante de retención (CR)</span>
+                    <input
+                      ref={entradaCr}
+                      type="file"
+                      name="cr"
+                      accept="application/pdf,image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      onChange={(e) => setArchivoCr(e.target.files?.[0]?.name ?? null)}
+                    />
+                    {archivoCr ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex min-w-0 flex-1 items-center gap-2 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5">
+                          <FileCheck2 className="size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                          <span className="min-w-0 truncate text-sm" title={archivoCr}>
+                            {archivoCr}
+                          </span>
+                        </span>
+                        <Input
+                          name="numero_cr"
+                          value={numeroCr}
+                          onChange={(e) => setNumeroCr(e.target.value)}
+                          maxLength={40}
+                          placeholder="N.º del CR (E001-123)"
+                          className="w-48"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (entradaCr.current) entradaCr.current.value = "";
+                            setArchivoCr(null);
+                          }}
+                          className="gap-1"
+                        >
+                          <X className="size-4" aria-hidden="true" />
+                          Quitar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => entradaCr.current?.click()}
+                        className="gap-1.5 self-start"
+                      >
+                        <FileUp className="size-4" aria-hidden="true" />
+                        Subir el CR
+                      </Button>
+                    )}
+                    <span className="text-sm text-[var(--fg-muted)]">
+                      Opcional. Si todavía no llegó, se sube después desde «Comprobantes de retención».
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ) : documento.retencion_cobrada > 0 ? (
+              <p className="text-sm text-[var(--fg-muted)]">
+                La retención de esta factura ya se registró (
+                <Moneda valor={documento.retencion_cobrada} tamano="sm" className="text-inherit" />
+                ).
+              </p>
+            ) : null}
+
             {/* De dos en dos solo si caben: a 390 px la fecha se quedaba en
                 un tercio del diálogo y se cortaba (revisión por módulos del
                 02/10). */}
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:gap-2">
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">
-                  Importe <span className="text-[var(--danger)]">*</span>
+                  {retiene ? "Lo que depositó" : "Importe"} <span className="text-[var(--danger)]">*</span>
                 </span>
                 <Input
                   type="number"
@@ -241,8 +440,8 @@ export function Cobrador({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setMonto(documento.saldo);
-                      if (enSoles && esPen) setSoles(saldoPen.toFixed(2));
+                      setMonto(dos(documento.saldo - retUsd));
+                      if (enSoles && esPen) setSoles(dos(saldoPen - retPen).toFixed(2));
                     }}
                     className="self-start"
                   >
@@ -326,10 +525,12 @@ export function Cobrador({
                 >
                   {/* Sin «Detracción» (14/10): Willy vende productos y a él
                       solo le retienen. Sin «Nota de crédito» (157): la nota
-                      baja el saldo sola al emitirse. Las dos se siguen
-                      leyendo en el historial. */}
+                      baja el saldo sola al emitirse. Sin «Retención» (31/10):
+                      elegida aquí se llevaba el total entero como retenido;
+                      va con la casilla de arriba. Las tres se siguen leyendo
+                      en el historial. */}
                   {Object.entries(ETIQUETA_MEDIO)
-                    .filter(([v]) => v !== "detraccion" && v !== "nota_credito")
+                    .filter(([v]) => v !== "detraccion" && v !== "nota_credito" && v !== "retencion")
                     .map(([v, t]) => (
                     <option key={v} value={v}>
                       {t}
@@ -432,13 +633,13 @@ export function Cobrador({
                         {formatearFecha(r.cuota.fecha_vencimiento)}
                       </span>
                       <span className="tabular">
-                        {r.aplica > 0 ? `+$\u00a0${r.aplica.toFixed(2)}` : "—"}
+                        {r.aplica > 0 ? `+$ ${r.aplica.toFixed(2)}` : "—"}
                         <span
                           className={`ml-2 ${r.quedaSaldo === 0 ? "text-[var(--ok)]" : "text-[var(--fg-muted)]"}`}
                         >
                           {r.quedaSaldo === 0
                             ? "saldada"
-                            : `quedan $\u00a0${r.quedaSaldo.toFixed(2)}`}
+                            : `quedan $ ${r.quedaSaldo.toFixed(2)}`}
                         </span>
                       </span>
                     </li>
@@ -460,11 +661,17 @@ export function Cobrador({
             {bloqueos.length > 0 ? (
               <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
                 <ul className="flex flex-col gap-1 text-sm text-[var(--danger)]">
-                  {bloqueos.map((b) => (
-                    <li key={b.campo}>· {b.mensaje}</li>
+                  {bloqueos.map((b, i) => (
+                    <li key={`${b.campo}-${i}`}>· {b.mensaje}</li>
                   ))}
                 </ul>
               </div>
+            ) : null}
+
+            {avisoFinal ? (
+              <p role="alert" className="anim-entrada rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm">
+                {avisoFinal}
+              </p>
             ) : null}
 
             {resultado && !resultado.ok ? (
@@ -482,12 +689,14 @@ export function Cobrador({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={bloqueos.length > 0 || cobrando}>
+            <Button type="submit" disabled={bloqueos.length > 0 || cobrando || avisoFinal !== null}>
               {cobrando
                 ? "Registrando…"
-                : enSoles && esPen && solesNum > 0
-                  ? `Registrar S/\u00a0${solesNum.toFixed(2)}`
-                  : `Registrar $\u00a0${monto.toFixed(2)}`}
+                : retiene
+                  ? `Registrar $ ${monto.toFixed(2)} + retención $ ${retencion.toFixed(2)}`
+                  : enSoles && esPen && solesNum > 0
+                    ? `Registrar S/ ${solesNum.toFixed(2)}`
+                    : `Registrar $ ${monto.toFixed(2)}`}
             </Button>
           </DialogFooter>
         </form>

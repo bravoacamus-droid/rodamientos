@@ -18,7 +18,14 @@ import {
 } from "@rodatech/ui";
 import { Check, RotateCcw, Trash2 } from "lucide-react";
 
-import { aprobar, corregirConfirmado, ponerOrdenCliente } from "../../acciones/gestionar";
+import {
+  aprobar,
+  corregirConfirmado,
+  lineasParaAnalisisAlAprobar,
+  ponerOrdenCliente,
+  type LineaParaAnalisis,
+} from "../../acciones/gestionar";
+import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis } from "../../dominio/analisis-al-aprobar";
 import { importeLinea } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
 
@@ -91,6 +98,14 @@ export function DialogoConfirmar({
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  /** Los productos sin análisis de compra que no dejaron aprobar (02/11). */
+  const [faltaAnalisis, setFaltaAnalisis] = React.useState<string[] | null>(null);
+  /**
+   * Lo que hace falta para avisar del análisis ANTES de pulsar (02/11): se
+   * pide al abrir y se recalcula con las cantidades. Solo al aprobar; al
+   * corregir un pedido ya aprobado no se pide.
+   */
+  const [paraAnalisis, setParaAnalisis] = React.useState<LineaParaAnalisis[] | null>(null);
   /** La O/C del cliente, si ya la mandó (09/10: se pone al aprobar). */
   const [ordenCliente, setOrdenCliente] = React.useState("");
   /** Si SUNAT no contestó, el tipo de cambio escrito a mano. */
@@ -118,7 +133,19 @@ export function DialogoConfirmar({
       ),
     );
     setError(null);
+    setFaltaAnalisis(null);
   }, [abierto, lineas, corrigiendo]);
+
+  React.useEffect(() => {
+    if (!abierto || corrigiendo) return;
+    let vigente = true;
+    void lineasParaAnalisisAlAprobar(cotizacionId).then((r) => {
+      if (vigente && r.ok) setParaAnalisis(r.datos);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [abierto, corrigiendo, cotizacionId]);
 
   const poner = (id: string, valor: number, tope: number) => {
     const n = Number.isFinite(valor) ? Math.max(0, Math.min(tope, valor)) : 0;
@@ -145,6 +172,11 @@ export function DialogoConfirmar({
       }),
     0,
   );
+
+  // Con lo que se está marcando: lo que hay que comprar y no se analizó.
+  const sinAnalisis = paraAnalisis
+    ? faltaAnalizarAlAprobar(paraAnalisis.map((l) => ({ ...l, confirmada: cantidades[l.itemId] ?? 0 })))
+    : [];
 
   /** ¿Se tocó algo, o el cliente confirmó tal cual se cotizó? */
   const completa = lineas.every((l) => (cantidades[l.id] ?? 0) === l.cantidad);
@@ -182,6 +214,7 @@ export function DialogoConfirmar({
           );
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
+        setFaltaAnalisis("faltaAnalisis" in r && r.faltaAnalisis ? r.faltaAnalisis : null);
         if ("pideTipoCambio" in r && r.pideTipoCambio) setPideTc(true);
         return;
       }
@@ -223,6 +256,21 @@ export function DialogoConfirmar({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
+          {sinAnalisis.length > 0 ? (
+            <div role="alert" className="anim-entrada flex flex-col gap-2 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
+              <p className="font-medium">{mensajeFaltaAnalisis(sinAnalisis)}</p>
+              <p className="text-[var(--fg-muted)]">
+                Si el cliente no lleva alguno, ponlo en cero y el aviso se va. Lo que sale del almacén no lo pide.
+              </p>
+              <Button
+                type="button"
+                className="self-start"
+                onClick={() => router.push(`/cotizaciones/${cotizacionId}/editar`)}
+              >
+                Llenar el análisis de compra
+              </Button>
+            </div>
+          ) : null}
           <div className="-mx-1 max-h-[50vh] overflow-y-auto px-1">
             <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
               {lineas.map((l) => {
@@ -353,6 +401,17 @@ export function DialogoConfirmar({
               className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]"
             >
               {error}
+              {/* El análisis se llena donde se cotiza: «Analizar precio de
+                  compra» en cada línea. Se vuelve aquí a aprobar. */}
+              {faltaAnalisis ? (
+                <Button
+                  type="button"
+                  className="mt-2 flex"
+                  onClick={() => router.push(`/cotizaciones/${cotizacionId}/editar`)}
+                >
+                  Llenar el análisis de compra
+                </Button>
+              ) : null}
             </p>
           ) : null}
 
@@ -389,7 +448,7 @@ export function DialogoConfirmar({
             type="button"
             className="h-11 md:h-control-md"
             onClick={enviar}
-            disabled={pendiente}
+            disabled={pendiente || sinAnalisis.length > 0}
             loading={pendiente}
           >
             {/*

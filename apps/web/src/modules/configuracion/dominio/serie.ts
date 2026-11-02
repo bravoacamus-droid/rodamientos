@@ -70,7 +70,7 @@ export function avisosDelInicial(
   const avisos: Aviso[] = [];
 
   if (!Number.isInteger(nuevoInicial) || nuevoInicial < 1) {
-    return [{ tono: "danger", texto: "El correlativo inicial tiene que ser 1 o más." }];
+    return [{ tono: "danger", texto: "El próximo número tiene que ser 1 o más." }];
   }
 
   const digitos = String(nuevoInicial).length;
@@ -86,7 +86,7 @@ export function avisosDelInicial(
     // que la serie sigue como estaba. Pero quien lo teclea espera otra cosa.
     avisos.push({
       tono: "warning",
-      texto: `Esta serie ya va por el ${serie.correlativo_actual}, así que no cambiará nada: el próximo seguirá siendo el ${serie.correlativo_actual + 1}. Los correlativos nunca retroceden.`,
+      texto: `No se puede bajar: ya se emitió el ${serie.correlativo_actual}, así que el próximo seguirá siendo el ${serie.correlativo_actual + 1}. Los correlativos nunca retroceden.`,
     });
     return avisos;
   }
@@ -127,21 +127,82 @@ export function serieValida(serie: string): boolean {
   return /^[A-Z0-9]{2,6}$/.test(serie);
 }
 
+/*
+  Los nombres y el orden, los de SIMPLE (02/11). Moisés, con su pantalla de
+  series: *«documentos tiene que estar bien definido, porque tengo 2 notas de
+  crédito, débito, y no sé cuál es cuál»*. La nota sobre factura y la nota
+  sobre boleta son el mismo TIPO; lo que las separa es la primera letra de la
+  serie (FC02 / BC02), que es como SUNAT las distingue.
+*/
+
+/** Una nota de boleta, o la boleta misma: Willy no emite boletas (14/10). */
+function deBoleta(s: Pick<SerieDocumento, "tipo" | "serie">): boolean {
+  if (s.tipo === "boleta") return true;
+  return (s.tipo === "nota_credito" || s.tipo === "nota_debito") && s.serie.toUpperCase().startsWith("B");
+}
+
+/** Cómo se llama el documento que numera esta serie, como en SIMPLE. */
+export function nombreDeSerie(s: Pick<SerieDocumento, "tipo" | "serie">): string {
+  const a = deBoleta(s) ? "boleta" : "factura";
+  switch (s.tipo) {
+    case "factura":
+      return "Factura de venta";
+    case "boleta":
+      return "Boleta de venta";
+    case "nota_credito":
+      return `Nota de crédito a ${a}`;
+    case "nota_debito":
+      return `Nota de débito a ${a}`;
+    case "guia_remision":
+      return "Guía de remisión remitente";
+    case "cotizacion":
+      return "Cotización";
+    case "compra":
+      return "Orden de compra";
+    case "recepcion":
+      return "Recepción de mercadería";
+    case "ajuste_inventario":
+      return "Ajuste de inventario";
+  }
+}
+
 /**
- * Ordena las series como se leen: primero las que SUNAT numera, y dentro de
- * cada tipo la predeterminada arriba.
+ * ¿Se enseña sin pedirlo? Las reales activas que no son de boleta. Lo demás
+ * —las de pruebas, las de boleta y las desactivadas— queda detrás de «Ver
+ * también…»: *«solo déjame los importantes»*. Las de pruebas siguen activas
+ * porque las usa sola la beta (179).
+ */
+export function esSerieImportante(s: Pick<SerieDocumento, "tipo" | "serie" | "activo" | "es_prueba">): boolean {
+  return s.activo && !s.es_prueba && !deBoleta(s);
+}
+
+/** El orden de SIMPLE: factura, sus notas, guía, cotización, compras… */
+function pesoSerie(s: Pick<SerieDocumento, "tipo" | "serie">): number {
+  if (deBoleta(s)) return 20 + (s.tipo === "boleta" ? 0 : s.tipo === "nota_credito" ? 1 : 2);
+  const orden: TipoDocumento[] = [
+    "factura",
+    "nota_credito",
+    "nota_debito",
+    "guia_remision",
+    "cotizacion",
+    "compra",
+    "recepcion",
+    "ajuste_inventario",
+  ];
+  const i = orden.indexOf(s.tipo);
+  return i === -1 ? orden.length : i;
+}
+
+/**
+ * Ordena las series como se leen: el orden de SIMPLE, y dentro de cada
+ * documento la predeterminada arriba y las de pruebas al final.
  */
 export function ordenarSeries(series: readonly SerieDocumento[]): SerieDocumento[] {
-  const peso = (t: TipoDocumento) => {
-    const i = TIPOS_FISCALES.indexOf(t);
-    return i === -1 ? TIPOS_FISCALES.length : i;
-  };
-
   return [...series].sort((a, b) => {
-    const porTipo = peso(a.tipo) - peso(b.tipo);
+    const porTipo = pesoSerie(a) - pesoSerie(b);
     if (porTipo !== 0) return porTipo;
-    if (a.tipo !== b.tipo) return a.tipo.localeCompare(b.tipo);
     if (a.predeterminada !== b.predeterminada) return a.predeterminada ? -1 : 1;
+    if (a.es_prueba !== b.es_prueba) return a.es_prueba ? 1 : -1;
     return a.serie.localeCompare(b.serie);
   });
 }

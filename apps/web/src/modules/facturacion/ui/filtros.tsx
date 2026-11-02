@@ -82,7 +82,12 @@ export function FiltrosFacturacionBarra({
         etiqueta="Retención"
         todos="Retención: todas"
         valor={valor("cr")}
-        opciones={[{ valor: "sin", etiqueta: "Falta el comprobante de retención" }]}
+        // Los mismos estados que Cobranzas (175).
+        opciones={[
+          { valor: "falta", etiqueta: "Cobrada, falta el comprobante de retención" },
+          { valor: "por_cobrar", etiqueta: "Retiene el 3 % al cobrar" },
+          { valor: "recibido", etiqueta: "Con su comprobante de retención" },
+        ]}
         onCambiar={(v) => aplicar("cr", v)}
       />
       <FiltroDesplegable

@@ -3,11 +3,11 @@
 // Cliente: el menú se abre y navega con el router.
 
 import * as React from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Check,
   ClipboardList,
+  Copy,
   EllipsisVertical,
   Eye,
   Lock,
@@ -17,14 +17,15 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   toast,
 } from "@rodatech/ui";
 
 import type { CotizacionLista } from "../dominio/tipos";
+import { DialogoClonar } from "./dialogo-clonar";
 import { DialogoEliminarCotizacion } from "./dialogo-eliminar";
+import { OpcionMenu } from "@/componentes/opcion-menu";
 
 /**
  * Las acciones de una cotización en la lista: TODO dentro de un solo menú.
@@ -50,6 +51,7 @@ export function AccionesFilaCotizacion({
 }) {
   const router = useRouter();
   const [eliminando, setEliminando] = React.useState(false);
+  const [clonando, setClonando] = React.useState(false);
   const viva = c.estado === "borrador" || c.estado === "enviada";
 
   return (
@@ -64,33 +66,39 @@ export function AccionesFilaCotizacion({
           Acciones
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuContent align="end" className="w-72 p-1.5">
           {/* Aprobar, PRIMERO y en verde (Luis, 15/10): es lo que se viene a
             hacer aquí. Aprobar es pasar a pedidos: abre la ficha con «¿Qué te
-            confirmó el cliente?» y, al aprobar, lleva al pedido. */}
+            confirmó el cliente?» y, al aprobar, lleva al pedido. Las opciones
+            con su pastilla de color, como en pedidos (02/11). */}
           {viva ? (
-            <DropdownMenuItem
+            <OpcionMenu
+              icono={Check}
+              tono="verde"
+              titulo="Aprobar cotización"
+              destacada
               onSelect={() => router.push(`/cotizaciones/${c.id}?aprobar=1`)}
-              className="mb-1 bg-[var(--ok-bg)] font-semibold text-[var(--ok)] focus:bg-[var(--ok-bg)] focus:text-[var(--ok)]"
-            >
-              <Check className="size-4" aria-hidden="true" />
-              Aprobar cotización
-            </DropdownMenuItem>
+            />
           ) : null}
-          <DropdownMenuItem asChild>
-            <Link href={`/cotizaciones/${c.id}`}>
-              <Eye className="size-4" aria-hidden="true" />
-              Ver cotización
-            </Link>
-          </DropdownMenuItem>
+          <OpcionMenu icono={Eye} tono="marca" titulo="Ver cotización" onSelect={() => router.push(`/cotizaciones/${c.id}`)} />
           {viva ? (
-            <DropdownMenuItem
+            <OpcionMenu
+              icono={Pencil}
+              tono="azul"
+              titulo="Editar cotización"
               onSelect={() => router.push(`/cotizaciones/${c.id}/editar`)}
-            >
-              <Pencil className="size-4" aria-hidden="true" />
-              Editar cotización
-            </DropdownMenuItem>
+            />
           ) : null}
+
+          {/* Clonar eligiendo las líneas (02/11): el cliente confirmó parte y
+            la original no se pierde. Vale en cualquier estado. */}
+          <OpcionMenu
+            icono={Copy}
+            tono="violeta"
+            titulo="Clonar cotización"
+            detalle="Eliges qué líneas se lleva"
+            onSelect={() => setClonando(true)}
+          />
 
           {/* Un pedido: directo a él. Varios: una sola opción que abre Pedidos
             filtrado por ESTA cotización, no una lista dentro del menú (Luis,
@@ -99,51 +107,37 @@ export function AccionesFilaCotizacion({
           {c.pedidos.length > 0 ? (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              <OpcionMenu
+                icono={ClipboardList}
+                tono="violeta"
+                titulo={c.pedidos.length === 1 ? `Ver pedido ${c.pedidos[0]!.numero}` : `Ver sus ${c.pedidos.length} pedidos`}
                 onSelect={() =>
                   router.push(
-                    c.pedidos.length === 1
-                      ? `/pedidos/${c.pedidos[0]!.id}`
-                      : `/pedidos?cotizacion=${c.id}`,
+                    c.pedidos.length === 1 ? `/pedidos/${c.pedidos[0]!.id}` : `/pedidos?cotizacion=${c.id}`,
                   )
                 }
-                className="font-medium text-brand-700"
-              >
-                <ClipboardList className="size-4" aria-hidden="true" />
-                {c.pedidos.length === 1 ? (
-                  <>
-                    Ver pedido{" "}
-                    <span className="font-mono">{c.pedidos[0]!.numero}</span>
-                  </>
-                ) : (
-                  `Ver sus ${c.pedidos.length} pedidos`
-                )}
-              </DropdownMenuItem>
+              />
             </>
           ) : null}
 
           {/* Eliminar (164), al final y en rojo, como en la ficha. Si no se
-            puede —tiene pedido, guía o compras—, el diálogo dice por qué. */}
+            puede —tiene pedido, guía o compras—, se ve apagado y dice por qué. */}
           <DropdownMenuSeparator />
           {eliminar.puede ? (
-            <DropdownMenuItem
-              onSelect={() => setEliminando(true)}
-              className="font-medium text-[var(--danger)]"
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-              Eliminar cotización
-            </DropdownMenuItem>
+            <OpcionMenu icono={Trash2} tono="rojo" titulo="Eliminar cotización" peligro onSelect={() => setEliminando(true)} />
           ) : (
-            <DropdownMenuItem
+            <OpcionMenu
+              icono={Lock}
+              tono="gris"
+              titulo="Eliminar cotización"
+              detalle="No se puede: pulsa para ver por qué"
+              apagada
               onSelect={() => toast.info(eliminar.aviso, { duration: 8000 })}
-              className="text-[var(--fg-muted)]"
-            >
-              <Lock className="size-4" aria-hidden="true" />
-              Eliminar cotización
-            </DropdownMenuItem>
+            />
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      <DialogoClonar id={c.id} numero={c.numero} abierto={clonando} onCerrar={() => setClonando(false)} />
       {eliminando ? (
         <DialogoEliminarCotizacion
           id={c.id}

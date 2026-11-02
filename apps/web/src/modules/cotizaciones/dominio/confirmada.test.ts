@@ -48,3 +48,13 @@ describe("editar un pedido aprobado (114)", () => {
     expect(cantidadQueLleva(libre.lineas[0]!)).toBe(1);
   });
 });
+
+describe("lo que sale del almacén no pide análisis (02/11)", () => {
+  it("con stock que alcanza no cuenta; si no alcanza, sí", () => {
+    const e = pedido();
+    const conStock = { ...e, lineas: e.lineas.map((l, i) => (i === 0 ? { ...l, stock: 5 } : l)) };
+    expect(lineasSinAnalizar(conStock)).toEqual([]);
+    const poco = { ...e, lineas: e.lineas.map((l, i) => (i === 0 ? { ...l, confirmada: 6, stock: 5 } : l)) };
+    expect(lineasSinAnalizar(poco).map((l) => l.codigo)).toEqual(["XPA2000"]);
+  });
+});

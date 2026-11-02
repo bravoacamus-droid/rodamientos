@@ -10,7 +10,8 @@ import { Volver } from "@/componentes/volver";
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
 import { estadoConfiguracion } from "../api/configuracion";
-import { cotizacionesFacturables, serieFacturaPredeterminada } from "../api/consultas";
+import type { DatosBorradorFactura } from "../acciones/borrador";
+import { borradorFactura, cotizacionesFacturables, serieFacturaPredeterminada } from "../api/consultas";
 import { EmisorComprobante } from "./emisor";
 
 /** La misma lista que `permisos_rol` tiene para `comprobantes`. */
@@ -33,6 +34,8 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
   const crudo = Array.isArray(sp.cotizacion) ? sp.cotizacion[0] : sp.cotizacion;
   // Desde el botón «Facturar» de una guía: esa guía y no todas (15/10).
   const guia = Array.isArray(sp.guia) ? sp.guia[0] : sp.guia;
+  // Abrir una factura en borrador para revisarla y emitirla (176).
+  const idBorrador = Array.isArray(sp.borrador) ? sp.borrador[0] : sp.borrador;
 
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
@@ -48,13 +51,28 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
 
   // El emisor y las cuentas van para la VISTA PREVIA: se pinta con el mismo
   // componente que imprime, así que necesita los mismos datos que el papel.
-  const [cotizaciones, serie, estado, emisor, cuentas] = await Promise.all([
+  const [cotizaciones, serie, estado, emisor, cuentas, borrador] = await Promise.all([
     cotizacionesFacturables(),
     serieFacturaPredeterminada(),
     estadoConfiguracion(),
     emisorParaImprimir(),
     cuentasParaCobrar(),
+    idBorrador ? borradorFactura(idBorrador) : Promise.resolve(null),
   ]);
+
+  if (idBorrador && !borrador) {
+    return (
+      <EstadoVacio
+        titulo="Ese borrador ya no está"
+        descripcion="Se emitió o se borró. Las facturas emitidas están en la lista de Facturación."
+        accion={
+          <Link href="/facturacion" className={cn(buttonVariants({ variant: "primary" }), "px-3")}>
+            Volver a facturación
+          </Link>
+        }
+      />
+    );
+  }
 
   if (!cotizaciones.ok) {
     return (
@@ -144,7 +162,7 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         // «Serie factura» de las credenciales, y marcar F002 por defecto no
         // la movía.
         serieFactura={serie.serie}
-        cotizacionInicial={crudo && crudo.length > 0 ? crudo : null}
+        cotizacionInicial={borrador ? borrador.cotizacion_id : crudo && crudo.length > 0 ? crudo : null}
         guiaInicial={guia && guia.length > 0 ? guia : null}
         emisor={emisor}
         cuentas={cuentas}
@@ -152,6 +170,8 @@ export default async function PaginaNuevoComprobante({ searchParams }: Props) {
         // sigue pudiendo emitir: el documento queda pendiente, que es el caso
         // normal hoy y está avisado arriba.
         puedeEnviar={estado.listo}
+        // Lo escribió `guardarBorradorFactura`, que lo valida al guardar.
+        borrador={borrador ? { id: borrador.id, datos: borrador.datos as DatosBorradorFactura } : null}
       />
     </div>
   );

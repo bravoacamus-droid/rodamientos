@@ -231,6 +231,21 @@ export function FilaLinea({
               : `${linea.proveedores.filter((p) => p.cantidad > 0).length} proveedores`}
             {compra.falta > 0 ? ` · faltan ${compra.falta}` : ""}
           </Button>
+        ) : linea.stock >= linea.cantidad && linea.cantidad > 0 ? (
+          /*
+            El almacén alcanza (02/11). Moisés, con Willy en vivo: *«si está
+            usando el stock ya no debería salirle el analizar costo»*. No es
+            algo pendiente: sale del almacén, con su costo. Si aun así quiere
+            comprar, «Comprar igual» abre el análisis.
+          */
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="rounded-sm bg-[var(--ok-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--ok)]">
+              Del almacén
+            </span>
+            <Button type="button" variant="link" onClick={() => setAnalizando(true)} className="text-sm">
+              Comprar igual
+            </Button>
+          </span>
         ) : (
           <Button type="button" variant="accent" size="sm" onClick={() => setAnalizando(true)} className="gap-1 whitespace-nowrap">
             <Scale className="size-4" aria-hidden="true" />

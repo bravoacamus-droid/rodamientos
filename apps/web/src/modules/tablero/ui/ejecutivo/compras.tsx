@@ -55,7 +55,7 @@ const VIAS: { clave: string; texto: string; color: string }[] = [
 export default async function PaginaComprasEjecutiva({ searchParams }: { searchParams: Promise<ParamsBusqueda> }) {
   // Las dos preguntas a la vez: una detrás de otra eran tres viajes a la base
   // antes de empezar siquiera a pedir las cifras.
-  const [perfil, prohibido] = await Promise.all([perfilActual(), sinPermiso("compras", "ver")]);
+  const [perfil, prohibido] = await Promise.all([perfilActual(), sinPermiso("reportes", "ver")]);
   if (!perfil || !perfil.activo) redirect("/login");
   if (prohibido) {
     return (

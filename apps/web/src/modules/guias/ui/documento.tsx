@@ -1,7 +1,7 @@
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 
 import type { GuiaDetalle } from "../dominio/tipos";
-import { bloquesDeGuia } from "./papel";
+import { bloquesDeGuia, transporteDeGuia } from "./papel";
 
 /**
  * La guía de remisión, en papel.
@@ -24,7 +24,6 @@ export function DocumentoGuia({
   g: GuiaDetalle;
   emisor: EmisorHoja;
 }) {
-  const publico = g.modalidad_traslado === "01";
 
   return (
     <HojaDocumento
@@ -58,58 +57,31 @@ export function DocumentoGuia({
         cantidad: <span className="tabular">{l.cantidad}</span>,
         unidad: l.unidad,
       }))}
+      antesDeLineas={
+        <>
+        {/*
+          El transporte, impreso, en su recuadro «DATOS DEL TRANSPORTE»
+          (02/11), como el formato de SIMPLE que usaba Willy. En el público
+          manda el transportista; en el privado, la placa y el conductor; si
+          es peatonal, quién la lleva (062). Es lo que se pide en un control
+          de carretera. Va ARRIBA de los productos (Willy, 02/11). La lista sale de `transporteDeGuia`, la misma del PDF.
+        */}
+        <div className="break-inside-avoid border border-[#999]">
+          <p className="border-b border-[#999] bg-[#eceff3] px-2 py-0.5 font-semibold uppercase">
+            Datos del transporte
+          </p>
+          <div className="grid grid-cols-1 gap-x-8 gap-y-0.5 px-2 py-1.5 sm:grid-cols-2 print:grid-cols-2">
+            {transporteDeGuia(g).map((c) => (
+              <p key={c.etiqueta}>
+                <strong>{c.etiqueta}:</strong> {c.valor}
+              </p>
+            ))}
+          </div>
+        </div>
+        </>
+      }
       pie={
         <>
-          {/* El transporte, impreso. En el público manda el transportista; en
-              el privado, la placa y el conductor del vehículo propio. Es lo
-              que se pide en un control de carretera. */}
-          <div className="mb-2 grid grid-cols-1 gap-x-8 gap-y-0.5 sm:grid-cols-2 print:grid-cols-2">
-            {publico ? (
-              <>
-                <p>
-                  <strong>Transportista:</strong>{" "}
-                  {g.transportista_razon_social ?? "—"}
-                </p>
-                <p>
-                  <strong>RUC:</strong> {g.transportista_documento ?? "—"}
-                </p>
-              </>
-            ) : null}
-            {/*
-              A pie no se imprime placa ni licencia (062). Poner «Placa: —» en
-              un traslado peatonal no informa de nada y deja al que lee el
-              papel buscando un vehículo que no existe; decir que va a pie sí
-              explica por qué no lo hay.
-            */}
-            {g.a_pie ? (
-              <p>
-                <strong>Traslado:</strong> a pie, sin vehículo
-              </p>
-            ) : (
-              <p>
-                <strong>Placa:</strong> {g.transportista_placa ?? "—"}
-              </p>
-            )}
-            <p>
-              <strong>{g.a_pie ? "Lo lleva" : "Conductor"}:</strong>{" "}
-              {g.conductor_nombre ?? "—"}
-            </p>
-            <p>
-              <strong>DNI:</strong> {g.conductor_documento ?? "—"}
-            </p>
-            {g.a_pie ? (
-              g.conductor_telefono ? (
-                <p>
-                  <strong>Celular:</strong> {g.conductor_telefono}
-                </p>
-              ) : null
-            ) : (
-              <p>
-                <strong>Licencia:</strong> {g.conductor_licencia ?? "—"}
-              </p>
-            )}
-          </div>
-
           {g.observaciones ? (
             <p className="mb-1 whitespace-pre-line">{g.observaciones}</p>
           ) : null}

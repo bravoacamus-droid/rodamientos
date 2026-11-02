@@ -3,8 +3,13 @@ import "server-only";
 import { redondear2 } from "@rodatech/config";
 import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 import { clienteServidor } from "@rodatech/db/servidor";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@rodatech/db/tipos";
+
+type ClienteBase = SupabaseClient<Database>;
 
 import { fallo } from "@/lib/errores";
+import { ESTADOS_RETENCION } from "@/modules/cobranzas/dominio/tipos";
 
 import { despachadoPorLinea, totalesDe, type FilaDespacho } from "../dominio/emision";
 
@@ -101,8 +106,7 @@ export async function listarComprobantes(
       .from("comprobantes")
       .select(
         `id, creado_en, tipo, numero, fecha_emision, fecha_vencimiento, total, pagado, saldo,
-         estado, estado_sunat, moneda, tipo_cambio, pen_total, retencion_aplica,
-         comprobante_retenciones(comprobante_id),
+         estado, estado_sunat, moneda, tipo_cambio, pen_total,
          clientes(razon_social, numero_documento),
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
@@ -128,9 +132,20 @@ export async function listarComprobantes(
     if (estado) consulta = consulta.eq("estado", estado);
     const sunat = SUNAT.find((s) => s === filtros.sunat);
     if (sunat) consulta = consulta.eq("estado_sunat", sunat);
-    // Con retención y sin su CR (120): lo que queda por pedirle al cliente.
-    if (filtros.cr === "sin") {
-      consulta = consulta.eq("retencion_aplica", true).neq("estado", "anulado").is("comprobante_retenciones", null);
+    // Por el estado de su retención (175), el mismo que ve Cobranzas: las
+    // facturas del Excel cuentan si se les cobró una retención. Son pocas,
+    // así que se buscan antes en la vista y se filtra por id.
+    const estadoCr = ({ sin: "falta_cr", falta: "falta_cr", por_cobrar: "por_cobrar", recibido: "cr_recibido" } as const)[
+      filtros.cr as "sin" | "falta" | "por_cobrar" | "recibido"
+    ];
+    if (estadoCr) {
+      const { data: conEse } = await supabase
+        .from("v_retenciones")
+        .select("comprobante_id")
+        .eq("estado_retencion", estadoCr);
+      const ids = (conEse ?? []).map((r) => String(r.comprobante_id));
+      // Sin ninguna, un id que no existe: `in ()` vacío no lo acepta PostgREST.
+      consulta = consulta.in("id", ids.length > 0 ? ids : ["00000000-0000-0000-0000-000000000000"]);
     }
 
     if (filtros.q) {
@@ -185,8 +200,7 @@ export async function listarComprobantes(
       pagado: Math.round((totalDoc - saldoDoc) * 100) / 100,
       saldo: saldoDoc,
       moneda: tc > 0 ? "PEN" : "USD",
-      retencion: Boolean(c.retencion_aplica),
-      conCr: Boolean(c.comprobante_retenciones),
+      estado_retencion: null,
       estado: c.estado as EstadoComprobante,
       estado_sunat: c.estado_sunat as EstadoSunat,
       vendedor: c.perfiles?.nombre ?? null,
@@ -209,7 +223,18 @@ export async function listarComprobantes(
       viene invertido. Se recorta primero y se da la vuelta después: al revés
       se descartaría la fila equivocada.
     */
-    const filas = atras ? [...recortadas].reverse() : recortadas;
+    const sinRetencion = atras ? [...recortadas].reverse() : recortadas;
+
+    // La retención de las facturas de la página (175): una consulta, por id.
+    const { data: rets } = await supabase
+      .from("v_retenciones")
+      .select("comprobante_id, estado_retencion")
+      .in("comprobante_id", sinRetencion.length > 0 ? sinRetencion.map((f) => f.id) : ["00000000-0000-0000-0000-000000000000"]);
+    const estadoDe = new Map((rets ?? []).map((r) => [String(r.comprobante_id), r.estado_retencion]));
+    const filas = sinRetencion.map((f) => ({
+      ...f,
+      estado_retencion: ESTADOS_RETENCION.find((e) => e === estadoDe.get(f.id)) ?? null,
+    }));
 
     const claves = new Map(
       crudas.map((c) => [String(c.id), { fecha: String(c.fecha_emision), creado: String(c.creado_en), numero: String(c.numero) }]),
@@ -238,9 +263,11 @@ export async function listarComprobantes(
 /** La ficha de un comprobante, con sus líneas. */
 export async function detalleComprobante(
   id: string,
+  /** Sin sesión (el reenvío automático a SUNAT, 183) se lee con el de servicio. */
+  cliente?: ClienteBase,
 ): Promise<Resultado<ComprobanteDetalle | null>> {
   try {
-    const supabase = await clienteServidor();
+    const supabase = cliente ?? (await clienteServidor());
 
     /*
       `guias_remision` se pide con el nombre de la clave delante, y no puede
@@ -1111,4 +1138,77 @@ function ocDeLasGuias(guias: unknown): string | null {
     .filter((g) => g.estado !== "anulada" && g.orden_compra_cliente?.trim())
     .sort((a, b) => String(b.fecha_emision ?? "").localeCompare(String(a.fecha_emision ?? "")));
   return con[0]?.orden_compra_cliente?.trim() ?? null;
+}
+
+/** Una factura en borrador, en la lista (176). */
+export interface BorradorFacturaLista {
+  id: string;
+  cotizacion_id: string;
+  cotizacion_numero: string | null;
+  cliente: string | null;
+  total: number;
+  moneda: "USD" | "PEN";
+  creado_por: string | null;
+  actualizado_en: string;
+}
+
+/**
+ * Las facturas en borrador (176), la última tocada arriba. Son pocas —las que
+ * esperan que alguien las revise—, así que van todas.
+ */
+export async function borradoresFactura(): Promise<Resultado<BorradorFacturaLista[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("facturas_borrador")
+      .select(
+        "id, cotizacion_id, total, moneda, actualizado_en, cotizaciones(numero), clientes(razon_social), perfiles(nombre)",
+      )
+      .order("actualizado_en", { ascending: false })
+      .limit(100);
+    if (error) return fallo(error, "facturacion/borradoresFactura");
+    const filas = (data ?? []) as unknown as Array<{
+      id: string;
+      cotizacion_id: string;
+      total: number;
+      moneda: string;
+      actualizado_en: string;
+      cotizaciones: { numero: string } | null;
+      clientes: { razon_social: string } | null;
+      perfiles: { nombre: string } | null;
+    }>;
+    return {
+      ok: true,
+      datos: filas.map((b) => ({
+        id: String(b.id),
+        cotizacion_id: String(b.cotizacion_id),
+        cotizacion_numero: b.cotizaciones?.numero ?? null,
+        cliente: b.clientes?.razon_social ?? null,
+        total: Number(b.total ?? 0),
+        moneda: b.moneda === "PEN" ? "PEN" : "USD",
+        creado_por: b.perfiles?.nombre ?? null,
+        actualizado_en: String(b.actualizado_en),
+      })),
+    };
+  } catch (e) {
+    return fallo(e, "facturacion/borradoresFactura");
+  }
+}
+
+/** Un borrador para abrirlo en la pantalla de emitir (176). */
+export async function borradorFactura(
+  id: string,
+): Promise<{ id: string; cotizacion_id: string; datos: unknown } | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("facturas_borrador")
+      .select("id, cotizacion_id, datos")
+      .eq("id", id)
+      .maybeSingle();
+    return data ? { id: String(data.id), cotizacion_id: String(data.cotizacion_id), datos: data.datos } : null;
+  } catch {
+    return null;
+  }
 }

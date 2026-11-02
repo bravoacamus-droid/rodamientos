@@ -88,6 +88,64 @@ export interface DocumentoPorCobrar {
   moneda: "USD" | "PEN";
   tipo_cambio: number | null;
   pen_total: number | null;
+  /** Si el cliente está marcado como agente de retención (118). */
+  cliente_agente: boolean;
+  /**
+   * Lo ya cobrado con el medio «Retención». Las facturas cargadas del Excel
+   * nacieron con `retencion_aplica = false` aunque el cliente retenga, y una
+   * factura emitida no se modifica: que se le registrara una retención al
+   * cobrarla es lo que dice que la tuvo (31/10).
+   */
+  retencion_cobrada: number;
+  /** El comprobante de retención del cliente, si ya se subió (120). */
+  cr: CrDelDocumento | null;
+  /** En qué está la retención, de `v_retenciones` (175). */
+  estado_retencion: EstadoRetencion;
+  /** ¿Pasa de S/ 700 al cambio del día de emisión? `null` sin cambio. */
+  llega_umbral: boolean | null;
+  /**
+   * Si la retención se ELIGIÓ al facturar (emitida desde el ERP). En las del
+   * Excel no se sabe, y el cobro no puede contradecirlas.
+   */
+  retencion_decidida: boolean;
+  /** El día que se registró la retención, si se registró. */
+  retenida_el: string | null;
+}
+
+export interface CrDelDocumento {
+  nombre: string;
+  numero_cr: string | null;
+  subido_en: string;
+}
+
+/**
+ * En qué está la retención de una factura (175). Lo decide la base
+ * (`v_retenciones`), y es lo mismo en Cobranzas, en Facturación y en la ficha.
+ */
+export type EstadoRetencion = "cr_recibido" | "falta_cr" | "por_cobrar" | "sin_retencion" | "no_agente";
+
+export const ESTADOS_RETENCION: readonly EstadoRetencion[] = [
+  "cr_recibido",
+  "falta_cr",
+  "por_cobrar",
+  "sin_retencion",
+  "no_agente",
+];
+
+/** Una factura con retención cobrada: lo que sale en «Comprobantes de retención». */
+export interface RetencionDeFactura {
+  comprobante_id: string;
+  numero: string;
+  cliente_id: string;
+  cliente: string;
+  documento: string | null;
+  fecha_emision: string;
+  total: number;
+  retencion: number;
+  /** El día que se registró la retención: desde ahí se cuenta la espera del CR. */
+  retenida_el: string | null;
+  cr: CrDelDocumento | null;
+  estado_retencion: EstadoRetencion;
 }
 
 /** Lo que se debe en la moneda del documento: en soles, al cambio de la factura. */
@@ -115,6 +173,8 @@ export interface PagoRegistrado {
   registrado_por: string | null;
   /** Si se subió la foto o el PDF de la transferencia (109). */
   tiene_voucher: boolean;
+  /** Solo en los cobros «Retención»: el CR de su factura, si ya se subió. */
+  cr: CrDelDocumento | null;
 }
 
 /** Una cuota del cronograma, con lo que lleva pagado. */
@@ -177,4 +237,20 @@ export interface FiltrosCartera {
   vendedor?: string;
   /** `1` para ver solo lo ya vencido. */
   vencido?: string;
+  /**
+   * Qué se lista (31/10). Vacío: lo que se debe. Willy quiere ver también lo
+   * ya pagado: con su CR, sin él, o sin retención.
+   */
+  mostrar?: string;
 }
+
+/** Lo que el desplegable «Mostrar» deja elegir, además de lo que se debe. */
+export const MOSTRAR = {
+  vencido: "Solo lo vencido",
+  falta_cr: "Retención cobrada · falta el CR",
+  con_cr: "Con su CR",
+  pagadas_sin_retencion: "Pagadas sin retención",
+  pagadas: "Pagadas: todas",
+} as const;
+
+export type Mostrar = keyof typeof MOSTRAR;

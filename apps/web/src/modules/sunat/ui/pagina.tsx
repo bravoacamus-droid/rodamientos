@@ -38,7 +38,7 @@ export default async function PaginaSunat() {
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
   const [config, bandeja] = await Promise.all([estadoConfiguracion(), bandejaSunat(hoy)]);
   // El enlace a la configuración y las bajas, cada uno con su permiso (143).
-  const esGerencia = permisos.tiene("configuracion", "ver");
+  const esGerencia = permisos.tiene("numeracion", "ver");
   const puedeDarDeBaja = permisos.tiene("facturacion", "eliminar");
 
   if (!bandeja.ok) {

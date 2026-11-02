@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { EstadoError, Skeleton } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { misPermisos } from "@/lib/permisos";
 
 import {
   FormularioConfigSunat,
@@ -36,9 +36,11 @@ import { TablaSeries } from "./series";
  * inventario, recepción— y se numeran para nosotros.
  */
 export default async function PaginaConfigSunat() {
-  const perfil = await perfilActual();
-  const rol = perfil?.activo ? perfil.rol : null;
-  const puedeEditar = rol === "gerencia" || rol === "admin";
+  // Por la matriz desde la 184 («SUNAT y numeración»), no por el nombre del
+  // rol: lo que se marca en Roles y permisos es lo que vale aquí.
+  const permisos = await misPermisos();
+  const puedeVer = permisos.tiene("numeracion", "ver");
+  const puedeEditar = permisos.tiene("numeracion", "editar");
 
   /*
     El candado, y no solo el del menú.
@@ -48,11 +50,11 @@ export default async function PaginaConfigSunat() {
     mantiene aquí — una pantalla se alcanza escribiendo su dirección, y el menú
     solo decide qué se enseña.
   */
-  if (!puedeEditar) {
+  if (!puedeVer) {
     return (
       <EstadoError
-        titulo="Solo Gerencia y Administración"
-        descripcion="Las credenciales fiscales identifican a la empresa ante SUNAT. No están a la vista del resto de roles."
+        titulo="No puedes abrir SUNAT y numeración"
+        descripcion="Las credenciales fiscales identifican a la empresa ante SUNAT. Si lo necesitas, pídeselo a Gerencia: se cambia en Configuración › Roles y permisos."
       />
     );
   }

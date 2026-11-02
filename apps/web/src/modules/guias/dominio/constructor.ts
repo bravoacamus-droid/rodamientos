@@ -409,7 +409,7 @@ export function bloqueosEmision(estado: EstadoGuiaEnCurso): Bloqueo[] {
     if (!estado.conductorDocumento.trim()) {
       lista.push({
         campo: "transporte",
-        mensaje: "Si va a pie, hace falta el DNI de quien la lleva.",
+        mensaje: "Si es peatonal, hace falta el DNI de quien la lleva.",
       });
     }
   } else if (!estado.transportistaPlaca.trim()) {

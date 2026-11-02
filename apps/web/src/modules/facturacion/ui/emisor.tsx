@@ -15,7 +15,7 @@ import {
   Textarea,
   formatearFecha,
 } from "@rodatech/ui";
-import { Eye } from "lucide-react";
+import { Eye, Save } from "lucide-react";
 import { tipoCambioParaFacturar } from "../acciones/tipo-cambio";
 import {
   alcanzaUmbral,
@@ -33,6 +33,7 @@ import type { EmisorHoja } from "@/componentes/hoja-documento";
 
 import { AntesDeEmitir, type OpcionesEmision } from "./antes-de-emitir";
 import { cargarCotizacion } from "../acciones/cargar";
+import { guardarBorradorFactura, type DatosBorradorFactura } from "../acciones/borrador";
 import { emitirComprobante, type ResultadoEmision } from "../acciones/emitir";
 import {
   bloqueosEmision,
@@ -96,6 +97,7 @@ export function EmisorComprobante({
   emisor,
   cuentas,
   puedeEnviar,
+  borrador = null,
 }: {
   cotizaciones: { id: string; numero: string; fecha: string; cliente: string; total: number }[];
   /** La fecha la fija el servidor: el dominio no lee reloj. */
@@ -114,8 +116,18 @@ export function EmisorComprobante({
   cuentas: readonly CuentaParaPagar[];
   /** Hay certificado y credenciales SOL, así que se puede mandar a SUNAT. */
   puedeEnviar: boolean;
+  /** El borrador que se abre para revisar y emitir (176). */
+  borrador?: { id: string; datos: DatosBorradorFactura } | null;
 }) {
   const router = useRouter();
+  /*
+    La factura en borrador (176). Willy, 31/10: guardarla *«para que lo mire
+    antes»*, como la guía. Guardar no gasta número ni va a SUNAT ni a
+    Cobranzas; al emitir, el borrador se borra.
+  */
+  const [borradorId, setBorradorId] = useState<string | null>(borrador?.id ?? null);
+  const [guardandoBorrador, guardarEnBorrador] = useTransition();
+  const [errorBorrador, setErrorBorrador] = useState<string | null>(null);
 
   const [cotizacionId, setCotizacionId] = useState(cotizacionInicial ?? "");
   const [cot, setCot] = useState<CotizacionFacturable | null>(null);
@@ -247,7 +259,11 @@ export function EmisorComprobante({
     se pierda, y no se guarda.
   */
   const base = useRef<BaseEmision | null>(null);
+  // Un borrador de la base entra por el mismo sitio que «seguir donde me
+  // quedé»: se aplica encima de lo que propone la carga de la cotización.
   const recuperadoPendiente = useRef<DatosEmision | null>(null);
+  // El borrador de la base no cambia mientras la pantalla está abierta.
+  const borradorAbierto = useRef(borrador);
   const datosBorrador: DatosEmision = {
     cotizacionId,
     tipo,
@@ -261,7 +277,9 @@ export function EmisorComprobante({
   };
   const { aviso: avisoBorrador, olvidar: olvidarBorrador } = useBorrador({
     formulario: "comprobante",
-    id: cotizacionInicial ?? null,
+    // Con un borrador abierto, el guardado del navegador va aparte: si no,
+    // ofrecería «seguir donde me quedé» encima del borrador.
+    id: borrador ? `borrador-${borrador.id}` : (cotizacionInicial ?? null),
     datos: datosBorrador,
     valeLaPena: (d) => {
       const b = base.current;
@@ -338,7 +356,16 @@ export function EmisorComprobante({
       // Solo facturas (14/10). Willy: *«boletas no emito… sáquelo»*.
       setTipo("factura");
       setCondicion(r.datos.condicion_pago === "credito" ? "credito" : "contado");
-      setDias(r.datos.dias_credito ?? 0);
+      /*
+        A crédito y sin días, 30 (01/11). Los 113 clientes están «a crédito con
+        0 días» —el plazo no vino en su histórico— y la factura salía vencida
+        el día que se emite, o había que acordarse de teclearlo. 30 es lo
+        habitual (§AE.4); se cambia aquí, o en la ficha del cliente para
+        siempre.
+      */
+      const diasPropuestos =
+        r.datos.condicion_pago === "credito" && !(r.datos.dias_credito > 0) ? 30 : (r.datos.dias_credito ?? 0);
+      setDias(diasPropuestos);
       setOrdenCompra(r.datos.orden_compra_cliente ?? "");
       /*
         Todas las guías de la cotización, marcadas.
@@ -360,14 +387,19 @@ export function EmisorComprobante({
         cotizacionId,
         tipo: "factura",
         condicion: r.datos.condicion_pago === "credito" ? "credito" : "contado",
-        dias: r.datos.dias_credito ?? 0,
+        dias: diasPropuestos,
         ordenCompra: r.datos.orden_compra_cliente ?? "",
         cantidades: r.datos.lineas.map((l) => l.cantidad),
         guias: ids,
       };
 
       // «Seguir donde me quedé» llegó antes que la cotización: va encima.
-      const pendiente = recuperadoPendiente.current;
+      // El borrador de la base, cada vez que se carga SU cotización: con un
+      // ref que se consume, la segunda carga del modo estricto lo pisaba con
+      // lo que propone la cotización (probado el 31/10: 30 días → 0).
+      const pendiente =
+        recuperadoPendiente.current ??
+        (borradorAbierto.current?.datos.cotizacionId === cotizacionId ? borradorAbierto.current.datos : null);
       if (pendiente && pendiente.cotizacionId === cotizacionId) {
         recuperadoPendiente.current = null;
         aplicarRecuperado(pendiente, r.datos.lineas.length);
@@ -495,7 +527,29 @@ export function EmisorComprobante({
     // ni se marca, y aquí se vuelve a cortar por si el estado se quedó
     // marcado de antes de que la configuración cambiara.
     enviar_sunat: opciones.enviarSunat && puedeEnviar,
+    borrador_id: borradorId,
   });
+
+  /** Guarda lo llenado como borrador y vuelve a la lista (176). */
+  const guardarBorrador = () => {
+    setErrorBorrador(null);
+    guardarEnBorrador(async () => {
+      const r = await guardarBorradorFactura({
+        id: borradorId,
+        datos: datosBorrador,
+        total: totalesDoc.total,
+        moneda: tcDoc ? "PEN" : "USD",
+      });
+      if (!r.ok) {
+        setErrorBorrador(r.error);
+        setPreviaAbierta(false);
+        return;
+      }
+      setBorradorId(r.id);
+      olvidarBorrador();
+      router.push("/facturacion#borradores");
+    });
+  };
 
   const listo =
     Boolean(cot) &&
@@ -508,9 +562,13 @@ export function EmisorComprobante({
 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Emitir comprobante</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {borradorId ? "Borrador de factura" : "Emitir comprobante"}
+          </h1>
           <p className="text-sm text-[var(--fg-muted)]">
-            Nace de una cotización aprobada. El stock sale con la guía, no aquí.
+            {borradorId
+              ? "Todavía no tiene número ni está en Cobranzas. Revísala y emítela cuando esté bien."
+              : "Nace de una cotización aprobada. El stock sale con la guía, no aquí."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -539,6 +597,13 @@ export function EmisorComprobante({
               Vista previa
             </Button>
           ) : null}
+          {/* Guardar sin emitir (176): sin número, sin SUNAT, sin Cobranzas. */}
+          {cot ? (
+            <Button type="button" variant="outline" onClick={guardarBorrador} disabled={guardandoBorrador || emitiendo}>
+              <Save className="size-[18px] shrink-0" aria-hidden="true" />
+              {guardandoBorrador ? "Guardando…" : borradorId ? "Guardar cambios" : "Guardar borrador"}
+            </Button>
+          ) : null}
           {/* No emite: abre la previa, y se emite desde ahí (20/10, Luis:
               «antes de emitir… así vea la vista previa»). */}
           <Button type="button" disabled={!listo} onClick={() => setPreviaAbierta(true)}>
@@ -548,6 +613,12 @@ export function EmisorComprobante({
       </header>
 
       {avisoBorrador}
+
+      {errorBorrador ? (
+        <p role="alert" className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+          No se pudo guardar el borrador: {errorBorrador}
+        </p>
+      ) : null}
 
       {/*
         Emitido, pero SUNAT no lo aceptó.
@@ -1140,6 +1211,7 @@ export function EmisorComprobante({
                     : bloqueos.length > 0
                       ? "Hay algo que corregir antes de emitir."
                       : null,
+                  guardar: { onGuardar: guardarBorrador, guardando: guardandoBorrador },
                 }}
               />
             </div>

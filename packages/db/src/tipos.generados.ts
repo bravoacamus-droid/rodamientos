@@ -899,11 +899,15 @@ export type Database = {
         Row: {
           actualizado_en: string
           comprador_id: string | null
+          condicion_pago: string | null
           consulta_precio_id: string | null
           cotizacion_id: string | null
           courier: string | null
           creado_en: string
+          dias_credito: number | null
+          direccion_entrega: string | null
           documento_proveedor: string | null
+          entrega: string | null
           estado: Database["public"]["Enums"]["estado_compra"]
           falta_factura: boolean
           fecha: string
@@ -928,11 +932,15 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           comprador_id?: string | null
+          condicion_pago?: string | null
           consulta_precio_id?: string | null
           cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
+          dias_credito?: number | null
+          direccion_entrega?: string | null
           documento_proveedor?: string | null
+          entrega?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
           falta_factura?: boolean
           fecha?: string
@@ -957,11 +965,15 @@ export type Database = {
         Update: {
           actualizado_en?: string
           comprador_id?: string | null
+          condicion_pago?: string | null
           consulta_precio_id?: string | null
           cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
+          dias_credito?: number | null
+          direccion_entrega?: string | null
           documento_proveedor?: string | null
+          entrega?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
           falta_factura?: boolean
           fecha?: string
@@ -1096,6 +1108,13 @@ export type Database = {
             foreignKeyName: "comprobante_cuotas_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_cuotas_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -1131,6 +1150,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobante_guias_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "comprobante_guias_comprobante_id_fkey"
@@ -1226,6 +1252,13 @@ export type Database = {
             foreignKeyName: "comprobante_items_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_items_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -1309,6 +1342,13 @@ export type Database = {
             foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: true
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "comprobante_retenciones_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: true
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -1374,6 +1414,7 @@ export type Database = {
           sunat_enviado_en: string | null
           sunat_hash_cdr: string | null
           sunat_mensaje: string | null
+          sunat_reintentos_auto: number
           sunat_respuesta: Json | null
           sunat_ticket: string | null
           sunat_xml_firmado: string | null
@@ -1435,6 +1476,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
@@ -1496,6 +1538,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
@@ -1603,6 +1646,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_referencia_id_fkey"
+            columns: ["referencia_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "comprobantes_referencia_id_fkey"
@@ -2639,6 +2689,85 @@ export type Database = {
           },
         ]
       }
+      facturas_borrador: {
+        Row: {
+          actualizado_en: string
+          cliente_id: string
+          cotizacion_id: string
+          creado_en: string
+          creado_por: string | null
+          datos: Json
+          id: string
+          moneda: string
+          total: number
+        }
+        Insert: {
+          actualizado_en?: string
+          cliente_id: string
+          cotizacion_id: string
+          creado_en?: string
+          creado_por?: string | null
+          datos: Json
+          id?: string
+          moneda?: string
+          total?: number
+        }
+        Update: {
+          actualizado_en?: string
+          cliente_id?: string
+          cotizacion_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          datos?: Json
+          id?: string
+          moneda?: string
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
+          },
+          {
+            foreignKeyName: "facturas_borrador_creado_por_fkey"
+            columns: ["creado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fallos: {
         Row: {
           codigo: string | null
@@ -2840,6 +2969,13 @@ export type Database = {
             foreignKeyName: "gestiones_cobranza_comprobante_id_fkey"
             columns: ["comprobante_id"]
             isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
+          },
+          {
+            foreignKeyName: "gestiones_cobranza_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["comprobante_id"]
           },
@@ -2997,6 +3133,7 @@ export type Database = {
           sunat_enviado_en: string | null
           sunat_hash_cdr: string | null
           sunat_mensaje: string | null
+          sunat_reintentos_auto: number
           sunat_respuesta: Json | null
           sunat_ticket: string | null
           sunat_xml_url: string | null
@@ -3049,6 +3186,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
@@ -3101,6 +3239,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
@@ -3566,6 +3705,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cartera"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagos_comprobante_id_fkey"
+            columns: ["comprobante_id"]
+            isOneToOne: false
+            referencedRelation: "v_retenciones"
+            referencedColumns: ["comprobante_id"]
           },
           {
             foreignKeyName: "pagos_comprobante_id_fkey"
@@ -5599,6 +5745,54 @@ export type Database = {
         }
         Relationships: []
       }
+      v_retenciones: {
+        Row: {
+          cliente: string | null
+          cliente_agente: boolean | null
+          cliente_id: string | null
+          comprobante_id: string | null
+          cr_nombre: string | null
+          cr_subido_en: string | null
+          documento: string | null
+          estado: Database["public"]["Enums"]["estado_comprobante"] | null
+          estado_retencion: string | null
+          fecha_emision: string | null
+          llega_umbral: boolean | null
+          numero: string | null
+          numero_cr: string | null
+          retencion_aplica: boolean | null
+          retencion_cobrada: number | null
+          retencion_decidida: boolean | null
+          retencion_monto: number | null
+          retenida_el: string | null
+          saldo: number | null
+          tipo_cambio_emision: number | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comprobantes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       v_top_productos: {
         Row: {
           clientes: number | null
@@ -5784,6 +5978,10 @@ export type Database = {
         Returns: number
       }
       actualizar_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      actualizar_orden_compra: {
+        Args: { p_datos: Json; p_id: string }
+        Returns: Json
+      }
       anotar_productos_de_proveedor: {
         Args: {
           p_comprado?: boolean
@@ -6181,6 +6379,7 @@ export type Database = {
         Args: { p_desde?: string; p_hasta?: string }
         Returns: Json
       }
+      llamar_reintentos_sunat: { Args: never; Returns: string }
       login_espera: {
         Args: { p_correo: string; p_ip: string }
         Returns: number
@@ -6419,6 +6618,7 @@ export type Database = {
           venta_con_costo: number
         }[]
       }
+      series_segun_ambiente: { Args: never; Returns: undefined }
       siguiente_correlativo: {
         Args: {
           p_serie?: string
@@ -6435,6 +6635,7 @@ export type Database = {
         Returns: undefined
       }
       stock_armable: { Args: { p_kit: string }; Returns: number }
+      sunat_por_reintentar: { Args: never; Returns: Json }
       sustitutos_de: {
         Args: { p_limit?: number; p_producto: string }
         Returns: {

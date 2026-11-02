@@ -3,6 +3,7 @@
  * Los nombres de módulo son las claves de la tabla `modulos`.
  */
 export type Modulo =
+  | "tablero"
   | "cotizaciones"
   | "guias"
   | "facturacion"
@@ -17,6 +18,9 @@ export type Modulo =
   | "reportes"
   | "informe"
   | "configuracion"
+  | "numeracion"
+  | "usuarios"
+  | "roles"
   | "bitacora";
 
 export type Accion = "ver" | "crear" | "editar" | "eliminar";
@@ -32,6 +36,7 @@ export const ETIQUETA_ACCION: Record<Accion, string> = {
 
 /** Cómo se nombra cada módulo dentro de una frase: «no puede crear en …». */
 const NOMBRE_MODULO: Record<Modulo, string> = {
+  tablero: "Tablero",
   cotizaciones: "Cotizaciones y pedidos",
   guias: "Guías de remisión",
   facturacion: "Facturación",
@@ -46,6 +51,9 @@ const NOMBRE_MODULO: Record<Modulo, string> = {
   reportes: "Reportes",
   informe: "Informe general",
   configuracion: "Datos de la empresa",
+  numeracion: "SUNAT y numeración",
+  usuarios: "Usuarios",
+  roles: "Roles y permisos",
   bitacora: "Qué ha pasado",
 };
 

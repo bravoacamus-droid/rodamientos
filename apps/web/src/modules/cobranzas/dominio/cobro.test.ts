@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  avisoRetencionDistinta,
   avisosPago,
   bloqueosPago,
+  consejoCr,
+  diasSinCr,
   etiquetaAtraso,
   prioridad,
   quedaSaldado,
   repartoEnCuotas,
+  retencionPendiente,
+  retieneDePorDefecto,
   tonoTramo,
 } from "./cobro";
 import { saldoEnMoneda, type CuotaComprobante, type DocumentoPorCobrar } from "./tipos";
@@ -38,6 +43,13 @@ const DOC: DocumentoPorCobrar = {
   moneda: "USD",
   tipo_cambio: null,
   pen_total: null,
+  cliente_agente: false,
+  retencion_cobrada: 0,
+  cr: null,
+  estado_retencion: "no_agente",
+  llega_umbral: null,
+  retencion_decidida: false,
+  retenida_el: null,
 };
 
 describe("bloqueosPago", () => {
@@ -256,5 +268,78 @@ describe("lo que se debe en soles (116)", () => {
     expect(saldoEnMoneda({ ...pen, saldo: 804.2 })).toBe(2707.77);
     expect(saldoEnMoneda({ ...pen, saldo: 0 })).toBe(0);
     expect(saldoEnMoneda({ moneda: "USD", tipo_cambio: null, pen_total: null, total: 20, saldo: 12.5 })).toBe(12.5);
+  });
+});
+
+describe("la retención al cobrar (31/10)", () => {
+  // La F002-502 de EXANDAL: 656.91, y depositaron 637.19.
+  const F502 = { ...DOC, total: 656.91, saldo: 656.91 };
+
+  it("se retiene el 3 % del total, no del saldo", () => {
+    expect(retencionPendiente(F502)).toBe(19.71);
+    // Pagada la mitad sin retener, la retención sigue siendo sobre el total.
+    expect(retencionPendiente({ ...F502, saldo: 300 })).toBe(19.71);
+  });
+
+  it("depósito + retención deja la factura saldada, con el céntimo de tolerancia", () => {
+    expect(quedaSaldado(656.91, 637.19 + retencionPendiente(F502))).toBe(true);
+    expect(bloqueosPago(F502, 637.19 + 19.71, HOY)).toEqual([]);
+  });
+
+  it("si la factura nació con retención, manda su monto", () => {
+    expect(retencionPendiente({ ...F502, retencion_aplica: true, retencion_monto: 19.7 })).toBe(19.7);
+  });
+
+  it("no se registra dos veces", () => {
+    const yaRetenida = { ...F502, saldo: 300, retencion_cobrada: 19.71 };
+    expect(retencionPendiente(yaRetenida)).toBe(0);
+    expect(retieneDePorDefecto({ ...yaRetenida, cliente_agente: true, llega_umbral: true })).toBe(false);
+  });
+
+  it("nunca más que el saldo", () => {
+    expect(retencionPendiente({ ...F502, saldo: 5 })).toBe(5);
+  });
+
+  it("la casilla viene marcada si el cliente es agente y llega a S/ 700", () => {
+    expect(retieneDePorDefecto({ ...F502, llega_umbral: true })).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true, llega_umbral: true })).toBe(true);
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true, llega_umbral: false })).toBe(false);
+    // Sin tipo de cambio no se adivina.
+    expect(retieneDePorDefecto({ ...F502, cliente_agente: true })).toBe(false);
+    expect(retieneDePorDefecto({ ...F502, retencion_aplica: true, retencion_monto: 19.71 })).toBe(true);
+  });
+});
+
+describe("la espera del CR (31/10)", () => {
+  it("cuenta los días desde que se registró la retención", () => {
+    expect(diasSinCr("2026-10-31", "2026-10-31")).toBe(0);
+    expect(diasSinCr("2026-10-27", "2026-10-31")).toBe(4);
+    expect(diasSinCr(null, "2026-10-31")).toBe(0);
+  });
+
+  it("los primeros días se espera el correo; después, SUNAT o el cliente", () => {
+    expect(consejoCr(0).urgente).toBe(false);
+    expect(consejoCr(4).urgente).toBe(false);
+    expect(consejoCr(5).urgente).toBe(true);
+    expect(consejoCr(5).texto).toContain("SUNAT");
+  });
+});
+
+describe("el cobro que contradice a la factura (31/10)", () => {
+  it("emitida desde el ERP SIN retención y se marca retención: avisa", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: false }, true)).toContain("SIN retención");
+  });
+
+  it("emitida CON retención y se cobra sin ella: avisa", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: true }, false)).toContain("CON retención");
+  });
+
+  it("si coinciden, nada", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: true }, true)).toBeNull();
+    expect(avisoRetencionDistinta({ retencion_decidida: true, retencion_aplica: false }, false)).toBeNull();
+  });
+
+  it("las del Excel no se sabe qué se eligió: nada", () => {
+    expect(avisoRetencionDistinta({ retencion_decidida: false, retencion_aplica: false }, true)).toBeNull();
   });
 });

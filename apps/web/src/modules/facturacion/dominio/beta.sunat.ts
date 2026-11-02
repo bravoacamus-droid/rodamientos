@@ -29,6 +29,7 @@ import { crearConector, type ResultadoCdr } from "@rodatech/sunat";
 
 import { enMonedaDelDocumento } from "./moneda-documento";
 import { comprobanteParaSunat, notaParaSunat, type EmisorSunat } from "./para-sunat";
+import { esMotivoPorItem, lineasDeNota, lineasPorItem, type LineaNota } from "./nota";
 import type { ComprobanteDetalle, LineaComprobante } from "./tipos";
 
 const RUC = "20562681206";
@@ -288,5 +289,143 @@ describe("SUNAT beta", () => {
       informe("Baja", final);
       expect(final.aceptado).toBe(true);
     }
+  });
+});
+
+/*
+  TODOS los motivos que ofrece la pantalla (02/11). Luis: «solo que confirmes
+  que todo el formato para una nota de crédito, débito o lo que más se pueda
+  hacer funcione ya, cuando le toque hacerlo». Arriba salían el 07 y el 02;
+  aquí van los diez de crédito y los tres de débito activos en `motivos_nota`,
+  con las líneas armadas por `lineasDeNota` / `lineasPorItem`, las mismas
+  funciones de la acción `emitirNota`. Sobre una factura a crédito con cuotas,
+  que es como factura Willy, y una nota en soles sobre una factura en soles.
+*/
+describe("SUNAT beta · cada motivo de nota", () => {
+  const N = BASE + 10;
+  const factura = detalle({
+    correlativo: N,
+    lineas: [linea("6205-2RSH", 10, 3.5), linea("UCP207D1", 4, 18.9, 5)],
+    condicion_pago: "credito",
+    dias_credito: 30,
+  });
+
+  /** Una `LineaNota` como la guarda `emitir_comprobante`: con su importe. */
+  const comoLinea = (l: LineaNota, i: number): LineaComprobante => ({
+    id: `n${i}`,
+    producto_id: l.producto_id,
+    codigo: l.codigo,
+    marca: l.codigo === "NOTA" ? null : "SKF",
+    descripcion: l.descripcion,
+    unidad: l.unidad,
+    cantidad: l.cantidad,
+    valor_unitario: l.valor_unitario,
+    descuento_pct: l.descuento_pct,
+    importe: Math.round(l.cantidad * l.valor_unitario * (1 - l.descuento_pct / 100) * 100) / 100,
+  });
+
+  async function nota(
+    tipo: "nota_credito" | "nota_debito",
+    correlativo: number,
+    motivo: string,
+    descripcionMotivo: string,
+    lineas: LineaNota[],
+    sobre: ComprobanteDetalle = factura,
+    extra: Partial<ComprobanteDetalle> = {},
+  ) {
+    const serie = tipo === "nota_credito" ? "FC01" : "FD01";
+    const d = detalle({
+      correlativo,
+      tipo,
+      serie,
+      numero: `${serie}-${correlativo}`,
+      motivo_nota_codigo: motivo,
+      lineas: lineas.map(comoLinea),
+      ...extra,
+    });
+    const r = await conector.emitirNota(
+      notaParaSunat(enMonedaDelDocumento(d), EMPRESA, {
+        afectado: { tipoDocumento: "01", serie: sobre.serie, correlativo: sobre.correlativo },
+        descripcionMotivo,
+      }),
+    );
+    informe(`${tipo === "nota_credito" ? "NC" : "ND"} ${motivo} · ${descripcionMotivo}`, r);
+    return r;
+  }
+
+  it("la factura a crédito sobre la que van las notas", async () => {
+    const r = await conector.emitir(comprobanteParaSunat(enMonedaDelDocumento(factura), EMPRESA));
+    informe("Factura base a crédito", r);
+    expect(r.aceptado).toBe(true);
+  });
+
+  const credito: [string, string][] = [
+    ["01", "Anulación de la operación"],
+    ["02", "Anulación por error en el RUC"],
+    ["03", "Corrección por error en la descripción"],
+    ["04", "Descuento global"],
+    ["05", "Descuento por ítem"],
+    ["06", "Devolución total"],
+    ["07", "Devolución por ítem"],
+    ["08", "Bonificación"],
+    ["09", "Disminución en el valor"],
+    ["10", "Otros conceptos"],
+  ];
+  credito.forEach(([motivo, texto], i) => {
+    it(`nota de crédito ${motivo} · ${texto}`, async () => {
+      const lineas = esMotivoPorItem(motivo)
+        ? lineasPorItem(factura, motivo, [
+            { indice: 0, cantidad: 2, monto: 5.9 },
+            { indice: 1, cantidad: 1, monto: 11.8 },
+          ])
+        : lineasDeNota(factura, motivo, 23.6, `${texto} sobre ${factura.numero}`);
+      const r = await nota("nota_credito", N + 1 + i, motivo, texto, lineas);
+      expect(r.aceptado).toBe(true);
+    });
+  });
+
+  const debito: [string, string][] = [
+    ["01", "Intereses por mora"],
+    ["02", "Aumento en el valor"],
+    ["03", "Penalidades / otros conceptos"],
+  ];
+  debito.forEach(([motivo, texto], i) => {
+    it(`nota de débito ${motivo} · ${texto}`, async () => {
+      const lineas = lineasDeNota(factura, motivo, 11.8, `${texto} sobre ${factura.numero}`);
+      const r = await nota("nota_debito", N + 1 + i, motivo, texto, lineas);
+      expect(r.aceptado).toBe(true);
+    });
+  });
+
+  it("nota de crédito en soles sobre una factura en soles", async () => {
+    const tc = 3.38;
+    const base = detalle({ correlativo: N + 20, lineas: [linea("6205-2Z", 10, 4)] });
+    const enSoles = (d: ComprobanteDetalle): ComprobanteDetalle => {
+      const gravada = Math.round(d.lineas.reduce((s, l) => s + Math.round(l.valor_unitario * tc * 100) / 100 * l.cantidad, 0) * 100) / 100;
+      const igv = Math.round(gravada * 0.18 * 100) / 100;
+      return { ...d, moneda: "PEN", tipo_cambio: tc, pen: { gravada, descuento: 0, igv, total: Math.round((gravada + igv) * 100) / 100, retencion: 0 } };
+    };
+    const f = await conector.emitir(comprobanteParaSunat(enMonedaDelDocumento(enSoles(base)), EMPRESA));
+    informe("Factura PEN para la nota", f);
+    expect(f.aceptado).toBe(true);
+
+    const d = enSoles(
+      detalle({
+        correlativo: N + 20,
+        tipo: "nota_credito",
+        serie: "FC01",
+        numero: `FC01-${N + 20}`,
+        motivo_nota_codigo: "07",
+        lineas: lineasPorItem(base, "07", [{ indice: 0, cantidad: 3, monto: 0 }]).map(comoLinea),
+      }),
+    );
+    const r = await conector.emitirNota(
+      notaParaSunat(enMonedaDelDocumento(d), EMPRESA, {
+        afectado: { tipoDocumento: "01", serie: "F001", correlativo: N + 20 },
+        descripcionMotivo: "Devolución por ítem",
+      }),
+    );
+    informe("NC 07 en soles", r);
+    expect(r.aceptado).toBe(true);
   });
 });

@@ -8595,3 +8595,438 @@ SQL directo, con respaldo antes y ensayo que se deshace:
 567 ni la 571), USD 8,303.95. Son del sistema viejo, posteriores a la carga
 del 07/10; el Excel no trae fecha ni productos. Hay que pedírselas a Willy.
 Y no hay pantalla de **arqueo de caja**: si la quiere, es trabajo nuevo.
+
+## §CQ · 31/10 — Cobrar con retención, y el CR en Cobranzas
+
+Willy, cobrando la F002-502 de EXANDAL: *«el monto que sale 656.91 es el
+total pero ellos son agentes de retencion por lo que depositaron el 97% osea
+$637.19, como lo registro??»*; *«si elijo retencion deberia descontarse la
+retencion (3%)»*; y que el cuadro de cobranzas diga del CR *«SE REGISTRO CR /
+VER CR EN SUNAT / NO ES AG»*.
+
+Por qué no podía: un cobro con retención son **dos** cobros (lo depositado y
+lo retenido) y la ventana registraba uno; elegir «Retención» se llevaba el
+total entero. Además las 21 por cobrar son del Excel, con
+`retencion_aplica = false`, y **ningún cliente estaba marcado como agente**,
+así que «Registrar CR» las rechazaba. Una factura emitida no se modifica
+(`tg_comprobante_columnas_de_las_rpc`), así que no se les cambia la columna.
+
+- **«Cobrar»**: casilla «El cliente retuvo el 3 %». La retención sale sola
+  (3 % del TOTAL, menos lo ya retenido; editable), el importe pasa a ser «Lo
+  que depositó» y se registran los dos cobros de una vez. 637.19 + 19.71 deja
+  un céntimo, dentro de la tolerancia: queda saldada. Viene marcada si la
+  factura nació con retención, o si el cliente es agente y llega a S/ 700 al
+  cambio del día de emisión. «Retención» ya no sale en «Forma de pago».
+- Quien retiene queda marcado como **agente de retención** al registrar el
+  cobro (si el rol puede editar clientes).
+- Una factura **lleva CR** si nació con retención **o** si se le cobró una.
+  `registrarCr` y la ficha lo aceptan así. Sin migración.
+- **Cobranzas**: columna «Retención» con *Se registró el CR / Ver el CR en
+  SUNAT / Retiene el 3 % al pagar / No es agente*, y el botón del CR al lado.
+  Pagada la factura sale de la cartera, así que en «Lo cobrado» cada cobro
+  «Retención» dice lo mismo y lleva su botón.
+
+Sin probar en pantalla con un cobro de verdad: registrar escribe en la base
+del cliente. Tests del dominio en `cobro.test.ts`.
+
+
+**Probado en vivo el mismo 31/10**: Willy cobró la F002-502 con la casilla
+—$ 637.20 por transferencia con voucher + $ 19.71 de retención— y EXANDAL
+quedó marcado como agente solo.
+
+## §CR · 31/10 — El estado de la retención en un sitio, y la factura en borrador
+
+Segunda tanda de Willy, el mismo día: *«debo saber qué comprobantes de
+retención se han entregado y qué comprobantes de retención quedan pendientes
+para buscarlo en sunat o de lo contrario pedir al cliente»*; que el CR *«le
+pasan después de 3, 4 días»*; filtrar en Cobranzas lo pagado (con CR, sin
+CR, sin retención); poder descargar el CR; avisar si el cobro contradice a la
+factura; y **factura en borrador** *«para que lo mire antes»*, como la guía.
+
+**175 · `v_retenciones`.** Cada pantalla calculaba la retención a su manera:
+Facturación miraba solo `retencion_aplica` (las del Excel no salían nunca) y
+Cobranzas lo hacía en el navegador. Ahora una vista, `security_invoker`, con
+`estado_retencion` (cr_recibido · falta_cr · por_cobrar · sin_retencion ·
+no_agente), `llega_umbral` (S/ 700 al cambio del día de emisión, de
+`tipos_cambio_sunat`), `retenida_el` y `retencion_decidida` (= tiene
+cotización: las del ERP pasaron por el interruptor; las del Excel no).
+
+- **Cobranzas**: «Mostrar» ofrece lo vencido, *Retención cobrada · falta el
+  CR*, *Con su CR*, *Pagadas sin retención* y *Pagadas: todas* (las 200 más
+  recientes). Lo pagado sale «Pagada» con «Ver factura». La falta del CR
+  dice los días: a los 5 (`DIAS_ESPERA_CR`), en rojo, «búscalo en SUNAT o
+  pídeselo al cliente». Arriba, el aviso «Faltan N comprobantes de retención».
+- **«Cobrar»**: el monto de la retención es texto con «Corregir el monto»
+  (Luis: el monto «está de más»); «Subir el CR» opcional en el mismo cobro
+  (`archivo-cr.ts`, compartido con «Registrar CR»; el repetido se rechaza
+  ANTES de cobrar); y el aviso si la factura del ERP se emitió con/sin
+  retención y el cobro dice lo contrario.
+- **CR**: «Descargar», además de «Ver» (enlace firmado con `download`).
+- **Facturación**: «Pago parcial · debe X», «Cobrado» + «falta el
+  comprobante de retención», y el filtro con los tres estados (`?cr=falta`;
+  `sin`, el de antes, sigue valiendo).
+
+**176 · La factura en borrador.** Tabla `facturas_borrador` con lo llenado en
+la pantalla de emitir (`DatosEmision`, el mismo objeto del «seguir donde me
+quedé»). **No toca `emitir_comprobante`**: al emitir, el payload lleva
+`borrador_id` y `emitirComprobante` lo borra después de emitir bien. Sin
+número, sin SUNAT, sin Cobranzas, sin reportes: por eso tabla aparte y no un
+estado de `comprobantes`, que tendrían que excluir a mano todas las vistas.
+
+- «Guardar borrador» en la cabecera y en la vista previa; abierto, «Guardar
+  cambios».
+- Facturación: sección «N facturas en borrador» con «Revisar y emitir»
+  (`/facturacion/nueva?borrador=…`) y «Borrar» (diálogo, no `confirm`).
+- La fecha no se guarda, como en el borrador del navegador: es fiscal, y la
+  factura sale con la del día en que se emite.
+
+**Probado en pantalla el 31/10**: el aviso, «falta el CR» y «Pagadas:
+todas» de Cobranzas; Facturación con `?cr=falta` (solo la F002-502, «Cobrado
+· falta el comprobante de retención»); «Cobrar» en la F002-558 (la casilla
+viene marcada sola —EXANDAL agente, pasa de S/ 700—, $ 24.30 en texto,
+«Corregir el monto», «Subir el CR»; sin registrar); y el borrador: guardar
+con COT1-000001 y 30 días, verlo en la lista, abrirlo, la previa con
+«Guardar borrador», y borrarlo. F001 siguió en 0 y `comprobantes` en 565.
+
+Al probar salió un fallo: el borrador abría con 0 días en vez de 30. El
+modo estricto de React carga la cotización dos veces, y la primera consumía
+el borrador. Ahora se aplica cada vez que se carga SU cotización.
+
+**Sin probar**: emitir desde un borrador (gasta un número), subir un CR de
+verdad en el cobro, y el aviso de «se emitió sin/con retención» (ninguna
+factura del ERP tiene cobro pendiente todavía).
+
+## §CS · 01/11 — La carga del 01/11 y lo que hace falta para el 02/11 (primer día real)
+
+Willy mandó el export de SIMPLE al 30/10 (ventas general y detallada,
+cotizaciones general y detalle, compras, guías y la CT02-1288 en PDF), en
+`Downloads/rodamientos` de Moisés. Respaldo antes de tocar nada
+(`pnpm db:respaldar`: 29 918 filas, 76 tablas, comprobado).
+
+**Cargado por SQL directo, en una transacción ensayada antes:**
+
+- **F002-562 a 578** (17, con 45 ítems). Por cobrar salvo la 567 y la 571,
+  pagadas según su registro del 30/10 (§CP); las pendientes 562-574 suman
+  $ 8,303.96, su Excel decía 8,303.95. La **retención** sale de las
+  observaciones de SIMPLE («OPERACION SUJETA A SPOT: RETENCION (3%)»): 9 de
+  las 17 la llevan, y se marcó también en las del histórico que siguen por
+  cobrar. **24 clientes** marcados agentes, por lo mismo.
+- **CT02-1262 a 1309** (48, 168 ítems). «Atendida» si tiene venta en SIMPLE,
+  y la CT02-1288 (guía T002-575, se factura el 02/11 en SIMPLE); el resto
+  «enviada». Las dos en soles, a dólares al cambio del día (como el 07/10).
+- Ítems de productos que no existen: con código y descripción, sin enlazar
+  (como el 07/10). Producto **LM122130** creado (marca **NB**, nueva), que
+  hace falta el 02/11.
+- Series: **F002 sigue en 580** —la 579 la emite SIMPLE el 02/11 para
+  OVOSUR; si el ERP la emitiera, dos facturas con el mismo número—, **CT02
+  en 1310**, y **T002 creada, sigue en 576** (última de SIMPLE: T002-575).
+
+**No cargado, pendiente de decidir:** las 575 guías T002 del histórico (el
+02/11 no las necesita) y las 781 **compras**: mezclan mercadería con gastos
+(15 proveedores que no existen son restaurantes y personas), y `compras` del
+ERP son órdenes de compra con recepción.
+
+**Para el 02/11 (CT02-1293 parcial → cotización nueva, guía y factura en el
+ERP)**, falta: predeterminar F002, T002 y CT02 (hoy F001, T001 y COT1); pasar
+`config_sunat.ambiente` a producción (probado OK el 30/10, guías incluidas);
+y que el 02/11 no se emitan en SIMPLE más que la factura de OVOSUR.
+
+**La factura a crédito propone 30 días (01/11).** Moisés: *«si en cotización
+ya se pone a crédito y los días, ¿por qué cuando se hace la factura no trae
+esos datos?»*. Porque la cotización NO los guarda: los imprime de la ficha
+del cliente (`formaDePago(cliente.condicion_pago, cliente.dias_credito)`), y
+la factura los lee de ahí también. Y los 113 clientes están a crédito con 0
+días. Ahora, a crédito y sin días, la factura propone 30. Lo de fondo es
+poner los días en la ficha de cada cliente (botones 15/30/45/60): entonces
+la cotización imprime «CRÉDITO 30 DÍAS» y la factura los trae. Darle a la
+cotización su propia condición tocaría `crear_cotizacion` y
+`actualizar_cotizacion`; no la noche antes del primer día real.
+
+**Y el historial completo (02/11).** Moisés: *«solo quiere mantener la
+información para que cuando le pregunten si la guía tal ya se hizo tenga el
+historial de SIMPLE y no vaya a SIMPLE de nuevo»*. Cargado como historial,
+sin mover stock (el stock lo mueven las funciones de emitir y recibir):
+
+- **575 guías T002** (1412 ítems), emitidas y aceptadas, y **563 enlaces
+  factura-guía** desde la columna «Guía Remisión» de las ventas: la ficha de
+  la factura dice qué guía la ampara. La T002-575 (OVOSUR) queda sin factura:
+  se factura el 02/11 en SIMPLE.
+- **781 compras** como `SIMPLE-0001…` en orden de fecha (el número del
+  proveedor en `documento_proveedor`; la serie CMP no se toca), con 15
+  proveedores nuevos. «Qué vende cada proveedor» (`proveedor_productos`, 908)
+  se llenó de una vez con la última compra de cada par; el disparador que lo
+  hace fila a fila pide un rol que la API no tiene, y se desactivó solo
+  durante la carga, igual que el que parte kits (cambiaría el papel).
+- **37 productos** que solo salen en el historial, creados **archivados** en
+  OTROS / POR CLASIFICAR: el documento queda entero y el buscador no los
+  ofrece (`guia_items` y `compra_items` exigen producto).
+
+**177 · El historial no avisa.** 47 guías antiguas no tienen factura vigente
+y `generar_alertas` (cada hora desde las 7:05, con aviso al celular) las
+habría perseguido como «Guía sin facturar». Ahora solo las del ERP
+(`creado_por is not null`; el historial entró sin autor). La migración toma
+la función viva y cambia ese renglón comprobando que es único; el centinela
+la ejecuta.
+
+**Limpieza, menús y CR desde Cobranzas (02/11, de madrugada).**
+
+- **Borrada la prueba COT1-000001** (MATRITECH, 30/10): su pedido, la guía
+  T001-00000001 (emitida, nunca enviada a SUNAT) y sus 6 movimientos. El
+  stock volvió al saldo del ajuste real AJU-26-00001 (6209-2Z/C3 26,
+  6209 2Z.C3-FAG 4, 6310/C3 10) o a cero donde la guía era su único
+  movimiento. Respaldo antes; transacción que comprueba cada conteo, ensayada.
+- **Menús de «Acciones»** (pedidos y cotizaciones) con `componentes/opcion-menu`.
+  Moisés: *«se ven sin gracia, no tiene buenos colores, no resaltan»*. Las
+  pastillas eran de color pero `DropdownMenuItem` pinta todos sus iconos de
+  gris (`[&_svg]:text-subtle`): icono oscuro sobre oscuro. Ahora blanco a la
+  fuerza, pastilla de 32 px, y la acción que toca (aprobar, facturar) en verde.
+- **Descargar comprobantes de retención desde Cobranzas** (*«ahí es donde
+  suben los documentos… de qué fecha a qué fecha, por carpeta, por
+  clientes»*): ventana con atajos de periodo, cliente y el orden de carpetas
+  (cliente · mes · cliente y mes); el ZIP lleva `Resumen.csv` para Excel. Si
+  no hay ninguno, lo dice en la ventana. Usa `/facturacion/cr`.
+
+Sin probar en pantalla: los menús y la descarga (había dos Chrome conectados
+y la herramienta pide elegir uno). Tipos, lint, 1768 tests y el build, bien.
+
+**Clonar eligiendo las líneas (02/11).** Moisés: *«hace una cotización de 10
+ítems y le confirman solo 6 o 7, pero no quiere perder esa cotización: la
+clona y la clonada le quita los ítems y deja nomás lo que lleva el
+cliente»*. `clonar` ya existía en la ficha, con dos problemas: copiaba todo,
+y ponía el precio del catálogo —que en casi todo el catálogo es 0—, o sea que
+clonar una cotización real la dejaba a $ 0. Ahora «Clonar cotización» está
+también en el menú de la lista y abre `dialogo-clonar`: las líneas marcadas,
+la cantidad editable, y los precios cotizados por defecto (o los del
+catálogo, sin pisar nunca con un cero). La original no se toca. Probado en
+pantalla con la CT02-1293: 6 líneas y $ 716.70 como su PDF; con la 2, 3, 5 y
+6, $ 424.00. Se canceló sin clonar.
+
+**Series con nombre y solo las importantes (02/11).** Moisés, con la pantalla
+de series de SIMPLE: *«documentos tiene que estar bien definido, porque tengo
+2 notas de crédito, débito, y no sé cuál es cuál… solo déjame los
+importantes»*. La nota sobre factura y sobre boleta son el mismo tipo; las
+separa la letra de la serie (FC/BC). Ahora cada serie se llama como en SIMPLE
+(`nombreDeSerie`: «Nota de crédito a factura», «Guía de remisión
+remitente»…), se ordena como allí (factura, sus notas, guía, cotización,
+compras; lo de boleta al final) y las desactivadas y las de boleta quedan
+detrás de «Ver también…». «Nueva serie» dice cómo se llamará lo que se teclea.
+
+**178 · La orden de compra con su serie: OC02 (02/11).** Moisés: *«sí, como
+está en SIMPLE»*. Al ir a hacerlo salió que la pantalla de series no habría
+servido: `siguiente_numero_interno` llevaba 'CMP' escrito a mano y no miraba
+la predeterminada. Ahora la orden de compra sale de su serie por defecto si
+no es la CMP de siempre (`OC02-00001`); el centinela la ejecuta por los dos
+caminos. Creada la serie OC02 (desde 1: en SIMPLE no hay órdenes formales),
+por defecto, y la CMP desactivada.
+
+**«Cambiar serie» (02/11).** Moisés: *«la idea es que también puedan
+modificar los números de serie, si no, ¿cómo lo puedes cambiar?»*. La base
+ya lo dejaba (`tg_series_lo_fiscal`: renombrar solo sin documentos emitidos)
+y no había botón. `cambiarNombreSerie`: con documentos, no (y dice cómo);
+real sin usar, se renombra; de pruebas —la marca no se quita a mano y en
+producción no emitiría (093)—, se crea la real con ese nombre, hereda el
+«por defecto», y la de pruebas se desactiva (FD01 → FD02). Probado en
+pantalla con F002 (lo impide y lo explica) y FD01 (lo explica), sin guardar.
+
+**Las series, como en SIMPLE (02/11).** Moisés: *«la cosa es que quede lo que
+utiliza»*. Por SQL, en una transacción con comprobación: creada FD02 (nota de
+débito a factura, desde 1); por defecto F002 (580), FC02 (5), FD02 (1), T002
+(576), CT02 (1310), OC02 (1); desactivadas F001, FC01, FD01, T001, COT1,
+B001, BC01 y BD01 (pruebas y boletas; siguen en «Ver también…»). Queda la
+COT1-000002 de Willy (borrador del 02/11 8:07): se pasa a CT02 con «Clonar».
+Sigue en beta: el paso a producción lo hace Moisés desde la pantalla.
+
+**«Próximo número», como el «Correlativo» de SIMPLE (02/11).** Moisés: *«el
+primer número como lo tenemos nosotros… se va modificando al tiempo que se
+están utilizando»*. Se editaba `correlativo_inicial`, que no se mueve, y el
+que avanzaba era «Va por»: dos columnas para una idea. Ahora una, «Próximo
+número» (= mayor de los dos), que avanza sola, se puede subir y no bajar; el
+último emitido va debajo de «Saldrá como». Comparado con la captura de SIMPLE:
+todo igual salvo OC02, que allí va en 2 (ya usó la OC02-1) → puesta en 2. Y
+F002 en 580 en SIMPLE dice que la F002-579 (OVOSUR) ya está emitida: falta
+cargarla.
+
+**179 · Las series siguen al ambiente.** Moisés: *«si mi ambiente está en
+beta, que se pongan por defecto los correlativos de beta, y si está en
+producción, los que estamos haciendo»*. Disparador en `config_sunat`: al
+cambiar `ambiente`, `series_segun_ambiente()` pone por defecto la de pruebas
+(beta) o la real que más lleva emitido (producción) en factura, notas a
+factura y guía. Cotización y orden de compra no se tocan. Centinela: lo
+ejecuta en los dos sentidos. F001, FC01, FD01 y T001 reactivadas (las usa la
+beta) y ocultas en «Ver también…».
+
+**El análisis de compra, obligatorio al aprobar y no al cotizar (02/11).**
+Willy, por Moisés: *«en cotización puedes poner precios de cada producto,
+pero no es necesario el análisis de costo; puede mandar la cotización al
+cliente, pero antes de aprobarla tiene que decirle que tiene que llenar su
+análisis de costo para las compras»*. Al guardar ya no se pregunta («Falta
+analizar… guardar igual»); al aprobar, `aprobar` se niega si una línea
+confirmada hay que comprarla (almacén − reservado < confirmado) y no tiene
+proveedor con cantidad y precio (`faltaAnalizarAlAprobar`, con tests); la
+ventana de aprobar ofrece «Llenar el análisis de compra». Kits, líneas libres
+y lo que está en el anaquel no se piden.
+
+Sin probar en pantalla el rechazo: la única cotización para probarlo es la
+CT02-001310 real de Willy (5 de 6 líneas sin análisis; la 6205LLBC3/5K tiene
+15 en almacén y no se pide), y el clasificador no dejó pulsar «Aprobar».
+
+**¿Del almacén o comprado? (02/11).** Moisés: *«cuando apriete en análisis
+de costo en un producto que tiene stock, pregúntale: ¿va a utilizar el stock
+o vas a hacer el análisis de costo?»*. «Analizar precio de compra» pregunta
+primero si hay stock y la línea aún no se analizó: si alcanza, «Usar el
+stock» (no se compra; se queda el costo del almacén); si no, «Usar las N del
+almacén y comprar el resto» (el análisis es solo por lo que falta); o
+«Comprar todo/igual». No se guarda: al aprobar se mira el stock real.
+Limitación: con stock parcial el costo de la línea es el de lo comprado,
+porque `guardar_proveedores_de_lineas` lo recalcula así al guardar; mezclarlo
+con el costo del almacén pide cambiar esa función.
+
+Sin ver la pregunta en pantalla: al abrir el análisis de la 6310-ZZC3/5K en la
+CT02-001310 la pestaña saltó al tablero (el Chrome lo estaba usando alguien
+más) y no se siguió con la cotización real.
+
+**Probado en pantalla** con la 6310-ZZC3/5K de la CT02-001310 (4 en almacén,
+piden 10): «Usar las 4 del almacén y comprar 6» → «Del almacén: 4 · a
+comprar: 6». Sin guardar. Al probarlo salió un fallo viejo: **al EDITAR una
+cotización todas las líneas decían «sin stock»** (`pagina-editar` ponía
+`stock: 0` a mano), así que la pregunta no salía nunca al editar. Ahora lee
+`stock` (cantidad − reservado) de cada producto.
+
+**El aviso del análisis, al ABRIR la ventana de aprobar (02/11, probando en
+vivo con Willy).** Moisés: *«le di aprobar cotización, me saltó el modal…
+ahí debería salir falta análisis de costo»*. Salía recién al pulsar
+«Aprobar» (y nada se aprobó: la base lo confirmó). Ahora la ventana pide al
+abrir las líneas con su stock y su análisis (`lineasParaAnalisisAlAprobar`),
+avisa arriba con «Llenar el análisis de compra», recalcula al poner una línea
+en cero y deja «Aprobar» apagado mientras falte. `aprobar` lo vuelve a
+comprobar. Probado con la CT02-001310: 5 productos; con HK1015 en cero, 4;
+botón apagado. Sin aprobar.
+
+**«Del almacén» en vez de «Analizar» (02/11, en vivo).** Moisés, con la
+captura de Willy: *«si está usando el stock ya no debería salirle el
+analizar costo»*. Si el stock alcanza y la línea no se analizó, la celda del
+costo dice «Del almacén» con «Comprar igual» (abre el análisis), en vez del
+botón amarillo; y `lineasSinAnalizar` no la cuenta. Con stock que no
+alcanza, sigue «Analizar». Sin probar en pantalla: Willy estaba editando la
+cotización y abrirla le habría quitado el candado.
+
+## §CT · 02/11 — La orden de compra se edita, con pago, entrega y PDF
+
+Willy, 02/11 (por Moisés, en vivo): *«cada orden de compra es como una
+cotización: que se pueda editar también los precios de costo… y poner
+condición de pago… y dirección de entrega»*.
+
+- **Migración 180**: `compras.condicion_pago` (contado/crédito),
+  `dias_credito`, `entrega` (almacén/recojo), `direccion_entrega`, y la RPC
+  `actualizar_orden_compra`, que solo deja editar una orden **registrada, sin
+  factura del proveedor y sin recepción**. Su centinela la ejecuta y la deshace.
+- **`/compras/[id]/editar`**: costos, cantidades, quitar líneas, pago (contado
+  o crédito a 30/60/otro), entrega (por defecto la dirección de la empresa, o
+  recojo en el local del proveedor), fecha de entrega y observaciones.
+- La ficha tiene **«Descargar PDF»** directo (`compras/ui/papel.ts`, compartido
+  con la hoja impresa) y muestra Pago y Entrega.
+- Registrar la factura del proveedor sigue siendo un paso aparte (128).
+
+**Sin probar en pantalla**: la sesión del navegador había caducado. Las tres
+órdenes editables (OC02-00002..4) son reales de Willy: probar sin guardar.
+
+### §CT.1 · La orden no le dice al proveedor para qué cliente es (181)
+
+Al mirar el PDF de la OC02-00003, el pie decía «Observaciones: Para
+CT02-001311 · FABRICA DE CUBIERTOS SAC». Lo escribía sola
+`generar_ordenes_de_compra` desde la 111. Moisés, 02/11: *«no debería
+mostrarle al proveedor»*. La 181 deja de escribirlo (el enlace sigue en
+`cotizacion_id`, y la ficha lo enseña). Las tres órdenes de hoy (OC02-00002..4)
+se limpiaron por SQL directo.
+
+Aclarado de paso: la **O/C del cliente** es otra cosa. Se escribe en la guía y
+la factura la toma de ahí (`ocDeLasGuias`).
+
+### §CT.2 · Sin la factura del proveedor no se recibe (182)
+
+Moisés, 02/11, con Willy: *«puede registrar la orden de compra sin tener el
+PDF de la factura, pero antes de recepcionar tiene que subir las facturas que
+le envió el proveedor»*.
+
+El flujo de la orden al proveedor queda así:
+1. Se genera la orden desde el pedido, se edita (pago, entrega) y se manda en PDF.
+2. «Registrar compra» con el número de factura, sin el PDF si aún no llegó.
+3. **Recibir exige la factura subida** (`compra_adjuntos.tipo = 'factura'`):
+   lo comprueba un disparador en `recepciones` (vale para cualquier camino), y
+   la ficha enseña «Recibir mercadería» con candado y un aviso «Falta subir la
+   factura del proveedor». En «Documentos» el tipo propuesto es «Factura»
+   mientras falte.
+
+Las recepciones sueltas, sin compra, no cambian. Al aplicarla solo había tres
+compras sin recibir (las OC02 de hoy).
+
+## §CU · 02/11 — Lo que no llega a SUNAT se reintenta solo (183)
+
+Primer día en producción: F002-580 y T002-576 aceptadas. Luis: *«hay que
+darle la mejor solución y la mejor automatización, sin gastar mucho…
+recuerda también de Vercel»*.
+
+**Lo que estaba mal.** El rescate de cada 15 minutos (`rescatar_envios_sunat`)
+borraba `sunat_enviado_en` al devolver a «pendiente» un envío colgado. Esa
+fecha es lo que hace que un 1033 se le pregunte a SUNAT en vez de darse por
+rechazado (A4, 21/10): sin ella, una factura que SUNAT sí aceptó salía
+«rechazada, emite otra». Y nada se reenviaba solo; el aviso salía al día
+siguiente, y las guías no avisaban.
+
+**Lo que hay ahora:**
+
+- `sunat_por_reintentar()` decide qué falta: no enviado (10 min de gracia),
+  pendiente por red, colgado a mitad, y guías con ticket esperando respuesta.
+  Solo en producción, series reales, últimos 10 días. **Un rechazo nunca se
+  reintenta** (un 0102 repetido bloquea el usuario SOL). Espera 10 · 20 · 40
+  · 80 · 160 · 320 min, tope 15 intentos (`sunat_reintentos_auto`).
+- Cron de Supabase `rodatech-sunat-reintentos` cada 10 min: **solo llama al
+  ERP si la lista tiene algo**. Un día normal, cero llamadas a Vercel.
+- `/api/sunat/reintentar` (con `CRON_SECRET`) manda con el mismo código del
+  botón: `enviarComprobante` (facturacion/api/envio.ts) y
+  `mandarGuiaASunat`/`preguntarGuiaASunat` (guias/api/envio-sunat.ts),
+  sacados de las Server Actions para poder llamarlos sin sesión. Si SUNAT no
+  contesta a uno, no insiste con el resto en esa vuelta.
+- Red de seguridad: `/api/avisos/enviar` (cron de Vercel, dos veces al día)
+  también reintenta. No se añadió ningún cron de Vercel.
+- El rescate ya no borra la fecha, avisa a las **2 horas** (crítico el último
+  día del plazo de 3) y avisa también de las **guías**.
+
+**Falta para que corra cada 10 minutos:** el Vault (`avisos_url` y
+`avisos_cron_secret`) está VACÍO: Luis tiene que correr
+`node scripts/configurar-avisos.mjs https://app.rodatechperu.com`, con el
+mismo `CRON_SECRET` que Vercel. Activa también los avisos de cada hora al
+celular, que hasta hoy tampoco salían.
+
+Probado: el centinela ejecuta rescate, lista, tope, rechazo, beta y cron sin
+Vault, y deshace; la ruta da 401 sin secreto y el middleware la deja llegar.
+**Sin probar con el secreto** (el clasificador no deja leer `.env.local`) ni
+con un envío real fallido.
+
+## §CV · 02/11 — El tablero y «SUNAT y numeración» en Roles y permisos (184)
+
+Luis, por Willy: *«admin puede ver todos los demás menos reporte y la tabla
+[el tablero], y también la configuración de la empresa; lo demás sí puede
+verlo»*. No se podía decir: el tablero se abría siempre, y los datos de la
+empresa y las series eran el mismo módulo (quitar uno quitaba el otro).
+
+- **184**: módulos nuevos `tablero` (ver) y `numeracion` (series y motivos);
+  `configuracion` queda en «Datos de la empresa» (empresa y cuentas). Nadie
+  perdió nada al aplicarla: lo de `configuracion` se copió a `numeracion` y
+  todos los roles recibieron «Tablero · Ver». Centinela con un admin real.
+- «Lo comprado» pasa a ser un reporte (`reportes`, antes `compras`): «Reportes»
+  es ahora TODOS los reportes. «Informe general» sigue con su fila.
+- Quien no ve el tablero entra a la primera pantalla de su menú
+  (`inicioPara`); los enlaces de «inicio» siguen apuntando a `/dashboard`.
+- **Administración, por SQL directo**: sin tablero, sin reportes ni informe,
+  sin datos de la empresa; conserva todo lo demás, también SUNAT y numeración.
+
+Visto en pantalla como Gerencia (matriz, tablero, SUNAT y numeración, Lo
+comprado). **Sin ver como Administración**: no hay su contraseña.
+
+**185 · Usuarios y Roles y permisos, en la matriz (02/11).** Iban fijas para
+Gerencia y Administración. Ahora son dos filas con solo «Ver»: crear usuarios,
+cambiar contraseñas y cambiar permisos sigue siendo SOLO de Gerencia, fijo en
+las acciones y en la base (un rol que cambie permisos se lo daría todo).
+Luis: *«correcto, así lo quiere»*. Administración recibió «Ver» en las dos.
+Visto en la matriz como Gerencia.

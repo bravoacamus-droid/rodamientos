@@ -10,6 +10,8 @@ import {
   formatearFecha,
 } from "@rodatech/ui";
 
+import type { EstadoRetencion } from "@/modules/cobranzas/dominio/tipos";
+
 import { listarComprobantes } from "../api/consultas";
 import {
   ETIQUETA_SUNAT,
@@ -343,21 +345,42 @@ function Insignias({ c }: { c: ComprobanteLista }) {
           hecho a mano, y en la ficha un `Badge` plano. Dos versiones del
           mismo estado que solo el color separaba de «vigente». */}
       {c.estado === "anulado" ? <EstadoBadge estado="anulada" etiqueta="Anulado" size="xs" /> : null}
-      {/* Con retención: si ya tiene su CR o falta (120). */}
-      {c.retencion && c.estado !== "anulado" ? (
+      {/* La retención, de `v_retenciones` (175): lo mismo que Cobranzas.
+          Cobrada y sin CR lo dice ya `Saldo`, al lado de «Cobrado». */}
+      {c.estado_retencion && TEXTO_RETENCION[c.estado_retencion] && !(c.estado_retencion === "falta_cr" && c.saldo <= 0) ? (
         <span
-          className={`rounded-sm px-1.5 py-0.5 text-sm font-medium ${c.conCr ? "bg-[var(--surface-2)] text-[var(--ok)]" : "bg-[var(--warn-bg)] text-[var(--warn)]"}`}
+          className={`rounded-sm px-1.5 py-0.5 text-sm font-medium ${COLOR_RETENCION[c.estado_retencion]}`}
         >
           {/* Sin «CR» ni «ok» (UI1-05): es jerga de contador. */}
-          {c.conCr ? "Retención · con su comprobante" : "Retención · falta el comprobante del cliente"}
+          {TEXTO_RETENCION[c.estado_retencion]}
         </span>
       ) : null}
     </span>
   );
 }
 
+/** Solo las que tienen algo que decir: «No es agente» no se pinta en cada fila. */
+const TEXTO_RETENCION: Partial<Record<EstadoRetencion, string>> = {
+  cr_recibido: "Retención · con su comprobante",
+  falta_cr: "Retención · falta el comprobante del cliente",
+  por_cobrar: "Retiene el 3 % al cobrar",
+};
+
+const COLOR_RETENCION: Record<EstadoRetencion, string> = {
+  cr_recibido: "bg-[var(--surface-2)] text-[var(--ok)]",
+  falta_cr: "bg-[var(--warn-bg)] text-[var(--warn)]",
+  por_cobrar: "bg-[var(--info-bg)] text-[var(--info)]",
+  sin_retencion: "",
+  no_agente: "",
+};
+
 /**
  * Lo que queda por cobrar, debajo del total.
+ *
+ * Con los estados que pidió Willy el 31/10: «Pago parcial» cuando ya pagó
+ * algo, y «Cobrado · falta el comprobante de retención» cuando pagaron y el
+ * CR no ha llegado —*«le pasan después de 3, 4 días»*—, que no es lo mismo
+ * que cobrado del todo.
  *
  * «Cobrado» es un VALOR, no una etiqueta: va al lado de importes y en 12 px
  * se leía como un pie de nota. El rojo va en el propio importe —`Moneda`
@@ -368,13 +391,21 @@ function Saldo({ c, hoy }: { c: ComprobanteLista; hoy: string }) {
     return <span className="block whitespace-nowrap text-sm text-[var(--fg-muted)]">No se cobra</span>;
   }
   if (c.saldo <= 0) {
-    return <span className="block text-sm font-medium text-[var(--ok)]">Cobrado</span>;
+    return (
+      <span className="block text-sm font-medium text-[var(--ok)]">
+        Cobrado
+        {c.estado_retencion === "falta_cr" ? (
+          <span className="block font-normal text-[var(--warn)]">falta el comprobante de retención</span>
+        ) : null}
+      </span>
+    );
   }
   const vencida = esVencida(c, hoy);
   const color = vencida ? "font-medium text-danger" : "text-warn";
   return (
     <span className={`block whitespace-nowrap text-sm ${color}`}>
-      Debe <Moneda moneda={c.moneda} valor={c.saldo} tamano="sm" className={color} />
+      {c.pagado > 0 ? "Pago parcial · debe " : "Debe "}
+      <Moneda moneda={c.moneda} valor={c.saldo} tamano="sm" className={color} />
       {c.fecha_vencimiento ? (
         <span className="block">
           {vencida ? "venció" : "vence"} {formatearFecha(c.fecha_vencimiento)}

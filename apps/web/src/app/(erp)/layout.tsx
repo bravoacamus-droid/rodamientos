@@ -54,6 +54,7 @@ export default async function LayoutErp({
   // Configuración › Roles y permisos es lo que aparece aquí.
   const permisos = await misPermisos();
   const grupos = menuPara(perfil?.rol ?? null, permisos.lista);
+  const verTablero = permisos.tiene("tablero", "ver");
 
   // Cuántas cosas esperan, para la pastilla del menú. Nunca lanza: si falla,
   // vuelve a ceros y el menú se pinta sin números.
@@ -85,6 +86,7 @@ export default async function LayoutErp({
         usuario={perfil?.nombre ?? "Sesión"}
         pendientes={pendientes}
         estrechoInicial={menuEstrecho}
+        verTablero={verTablero}
       />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
@@ -98,6 +100,7 @@ export default async function LayoutErp({
             empresa={empresa}
             usuario={perfil?.nombre ?? "Sesión"}
             pendientes={pendientes}
+            verTablero={verTablero}
           />
           {/* Por debajo de 380 px el logo no cabe junto a «Menú» y al
               usuario, y empujaba su botón fuera de la pantalla (02/11, a

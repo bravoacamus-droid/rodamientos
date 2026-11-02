@@ -2,11 +2,7 @@ import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 
 import type { CompraDetalle } from "../dominio/tipos";
-
-const fecha = (f: string) => {
-  const [a, m, d] = f.slice(0, 10).split("-");
-  return d && m && a ? `${d}/${m}/${a}` : f;
-};
+import { datosDeOrden, pieDeOrden } from "./papel";
 
 /**
  * La orden de compra en papel, para mandársela al proveedor (12/10).
@@ -31,14 +27,7 @@ export function DocumentoOrdenCompra({ c, emisor }: { c: CompraDetalle; emisor: 
       emisor={emisor}
       titulo="Orden de compra"
       numero={c.numero}
-      datos={[
-        { etiqueta: "Señores", valor: c.proveedor ?? "—", ancho: true },
-        ...(c.proveedor_direccion ? [{ etiqueta: "Dirección", valor: c.proveedor_direccion, ancho: true }] : []),
-        { etiqueta: "RUC", valor: c.proveedor_documento ?? "—" },
-        { etiqueta: "Fecha", valor: fecha(c.fecha) },
-        { etiqueta: "Moneda", valor: c.moneda === "PEN" ? "Soles" : "Dólares" },
-        c.fecha_estimada ? { etiqueta: "Entrega", valor: fecha(c.fecha_estimada) } : null,
-      ]}
+      datos={datosDeOrden(c, emisor)}
       columnas={[
         { clave: "n", titulo: "#", alinear: "centro" },
         { clave: "codigo", titulo: "Código" },
@@ -65,9 +54,11 @@ export function DocumentoOrdenCompra({ c, emisor }: { c: CompraDetalle; emisor: 
         { etiqueta: "Total", valor: dinero(c.total), destacado: true },
       ]}
       pie={
-        <p>
-          Precios sin IGV. Favor de indicar el número de esta orden en su guía y su factura.
-        </p>
+        <>
+          {pieDeOrden(c).map((t) => (
+            <p key={t}>{t}</p>
+          ))}
+        </>
       }
     />
   );

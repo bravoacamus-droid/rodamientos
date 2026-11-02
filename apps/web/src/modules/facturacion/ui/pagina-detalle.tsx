@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { Building2, HandCoins, Printer } from "lucide-react";
+import { Building2, FileArchive, FileCode, HandCoins, Printer } from "lucide-react";
 import {
   Badge,
+  Button,
   EstadoBadge,
   EstadoError,
   Moneda,
@@ -118,6 +119,9 @@ export default async function PaginaDetalleComprobante({
   const factorPagos =
     original.moneda === "PEN" && original.pen && original.total > 0 ? original.pen.total / original.total : 1;
   const puedeSubirVoucher = perfil.tiene("cobranzas", "editar");
+  // Con retención si nació así o si al cobrarla se registró una (31/10): las
+  // facturas del Excel nacieron sin ella aunque el cliente retenga.
+  const retenidaAlCobrar = pagos.ok && pagos.datos.some((p) => p.medio === "retencion");
 
   return (
     <>
@@ -418,6 +422,23 @@ export default async function PaginaDetalleComprobante({
                     {c.sunat_hash_cdr}
                   </p>
                 ) : null}
+                {/* El XML y la constancia (CDR), para el contador y el cliente
+                    (02/11). Moisés: «al facturar falta poder descargar XML,
+                    CDR». Se guardaban y no había por dónde bajarlos. */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <a href={`/facturacion/${c.id}/sunat?que=xml`} download>
+                      <FileCode className="size-4" aria-hidden />
+                      Descargar XML
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <a href={`/facturacion/${c.id}/sunat?que=cdr`} download>
+                      <FileArchive className="size-4" aria-hidden />
+                      Descargar CDR
+                    </a>
+                  </Button>
+                </div>
               </div>
             ) : puedeEnviar ? (
               <EnviarASunat
@@ -553,7 +574,7 @@ export default async function PaginaDetalleComprobante({
               </div>
             ) : null}
             {/* «Registrar CR» (Willy, 14/10): el comprobante de retención. */}
-            {!esNota && c.retencion_aplica && !anulado ? (
+            {!esNota && (c.retencion_aplica || retenidaAlCobrar) && !anulado ? (
               <div className="mt-3">
                 <RegistrarCr comprobanteId={c.id} numero={c.numero} cr={cr} puede={puedeCr} />
               </div>

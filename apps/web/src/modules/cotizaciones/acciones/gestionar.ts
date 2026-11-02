@@ -8,6 +8,7 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 
+import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis, type LineaAlAprobar } from "../dominio/analisis-al-aprobar";
 import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
 
 /**
@@ -20,7 +21,8 @@ const uuid = z.string().uuid();
 export type ResultadoGestion =
   | { ok: true; id?: string; numero?: string; pedidoId?: string }
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
-  | { ok: false; error: string; pideTipoCambio?: boolean };
+  /** `faltaAnalisis`: los productos que hay que comprar sin análisis (02/11). */
+  | { ok: false; error: string; pideTipoCambio?: boolean; faltaAnalisis?: string[] };
 
 async function exigirPermiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
@@ -110,6 +112,17 @@ export async function aprobar(
       }
     }
 
+    /*
+      El análisis de compra, obligatorio al aprobar (02/11). Willy: se cotiza
+      y se manda sin él, pero *«antes de aprobar tiene que decirle que tiene
+      que llenar su análisis de costo para las compras»*. Aquí y no solo en la
+      pantalla: una Server Action es un endpoint público.
+    */
+    const faltan = await faltaAnalisisDe(supabase, id, detalle);
+    if (faltan.length > 0) {
+      return { ok: false, error: mensajeFaltaAnalisis(faltan), faltaAnalisis: faltan };
+    }
+
     const { error } = await supabase.rpc("aprobar_cotizacion", {
       p_id: id,
       p_lineas: detalle,
@@ -177,21 +190,163 @@ export async function cambiarEstado(
   }
 }
 
+/** Una línea con lo que hace falta para decidir si pide análisis al aprobar. */
+export interface LineaParaAnalisis extends Omit<LineaAlAprobar, "confirmada"> {
+  itemId: string;
+  cantidad: number;
+}
+
 /**
- * Clonar.
- *
- * Se copian las LÍNEAS pero no los precios negociados: se vuelve al valor
- * vigente del maestro. Una cotización de hace tres meses arrastraba el precio
- * de hace tres meses, y clonar era la forma más silenciosa de vender al costo
- * de entonces. El descuento sí se conserva, porque es una decisión comercial
- * sobre ese cliente y no un dato que caduque.
- *
- * La nueva nace en borrador, así que todavía se puede revisar antes de mandarla.
+ * Lo que la ventana de aprobar necesita para avisar ANTES de pulsar (02/11).
+ * Moisés, probando en vivo: al abrirla no decía nada y el aviso salía recién
+ * al pulsar «Aprobar». Con esto la ventana lo calcula sola mientras se
+ * marcan las cantidades; `aprobar` lo vuelve a comprobar igual.
  */
-export async function clonar(id: string): Promise<ResultadoGestion> {
+export async function lineasParaAnalisisAlAprobar(
+  id: string,
+): Promise<{ ok: true; datos: LineaParaAnalisis[] } | { ok: false; error: string }> {
+  const problema = await exigirPermiso("editar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  const supabase = await clienteServidor();
+  return { ok: true, datos: await leerLineasParaAnalisis(supabase, id) };
+}
+
+async function leerLineasParaAnalisis(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  id: string,
+): Promise<LineaParaAnalisis[]> {
+  const { data: items } = await supabase
+    .from("cotizacion_items")
+    .select("id, codigo, producto_id, cantidad, productos(es_kit)")
+    .eq("cotizacion_id", id)
+    .order("orden");
+  const filas = (items ?? []) as unknown as Array<{
+    id: string;
+    codigo: string | null;
+    producto_id: string | null;
+    cantidad: number;
+    productos: { es_kit: boolean } | null;
+  }>;
+  if (filas.length === 0) return [];
+
+  const ids = filas.map((f) => f.id);
+  const productos = [...new Set(filas.map((f) => f.producto_id).filter((x): x is string => !!x))];
+  const [{ data: analisis }, { data: stock }] = await Promise.all([
+    supabase.from("cotizacion_item_proveedores").select("cotizacion_item_id, cantidad, costo_unitario").in("cotizacion_item_id", ids),
+    productos.length > 0
+      ? supabase.from("stock").select("producto_id, cantidad, reservado").in("producto_id", productos)
+      : Promise.resolve({ data: [] as { producto_id: string; cantidad: number; reservado: number }[] }),
+  ]);
+  const analizadas = new Set(
+    (analisis ?? [])
+      .filter((a) => Number(a.cantidad) > 0 && a.costo_unitario !== null)
+      .map((a) => String(a.cotizacion_item_id)),
+  );
+  const disponible = new Map(
+    (stock ?? []).map((s) => [String(s.producto_id), Number(s.cantidad ?? 0) - Number(s.reservado ?? 0)]),
+  );
+  return filas.map((f) => ({
+    itemId: f.id,
+    cantidad: Number(f.cantidad),
+    codigo: f.codigo ?? "—",
+    productoId: f.producto_id,
+    esKit: Boolean(f.productos?.es_kit),
+    disponible: f.producto_id ? (disponible.get(f.producto_id) ?? 0) : 0,
+    analizada: analizadas.has(f.id),
+  }));
+}
+
+/** Los productos confirmados que hay que comprar y no tienen análisis (02/11). */
+async function faltaAnalisisDe(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  id: string,
+  detalle: { item_id: string; cantidad: number }[] | null,
+): Promise<string[]> {
+  const lineas = await leerLineasParaAnalisis(supabase, id);
+  const confirmada = detalle ? new Map(detalle.map((d) => [d.item_id, d.cantidad])) : null;
+  return faltaAnalizarAlAprobar(
+    lineas.map((l) => ({ ...l, confirmada: confirmada ? (confirmada.get(l.itemId) ?? 0) : l.cantidad })),
+  );
+}
+
+/** Una línea, para elegir qué se lleva la copia (02/11). */
+export interface LineaParaClonar {
+  id: string;
+  orden: number;
+  codigo: string | null;
+  descripcion: string;
+  cantidad: number;
+  valor_unitario: number;
+  descuento_pct: number;
+}
+
+/** Las líneas de una cotización, en su orden, para la ventana de clonar. */
+export async function lineasParaClonar(
+  id: string,
+): Promise<{ ok: true; datos: LineaParaClonar[] } | { ok: false; error: string }> {
   const problema = await exigirPermiso("crear");
   if (problema) return { ok: false, error: problema };
   if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase
+    .from("cotizacion_items")
+    .select("id, orden, codigo, descripcion, cantidad, valor_unitario, descuento_pct")
+    .eq("cotizacion_id", id)
+    .order("orden");
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    datos: (data ?? []).map((l) => ({
+      id: String(l.id),
+      orden: Number(l.orden),
+      codigo: l.codigo ?? null,
+      descripcion: String(l.descripcion ?? ""),
+      cantidad: Number(l.cantidad ?? 0),
+      valor_unitario: Number(l.valor_unitario ?? 0),
+      descuento_pct: Number(l.descuento_pct ?? 0),
+    })),
+  };
+}
+
+const opcionesClonar = z.object({
+  /** Solo estas líneas, con estas cantidades. Ausente: todas, como estaban. */
+  lineas: z
+    .array(z.object({ id: z.string().uuid(), cantidad: z.number().positive().max(1_000_000) }))
+    .min(1, "Elige al menos una línea.")
+    .max(300)
+    .optional(),
+  /** `cotizados`: los de la cotización; `catalogo`: el precio de venta de hoy. */
+  precios: z.enum(["cotizados", "catalogo"]).default("catalogo"),
+});
+
+/**
+ * Clonar.
+ *
+ * Sin opciones (como hasta el 02/11): todas las líneas, y el precio vuelve al
+ * valor vigente del maestro. Una cotización de hace tres meses arrastraba el
+ * precio de hace tres meses, y clonar era la forma más silenciosa de vender al
+ * costo de entonces. El descuento sí se conserva, porque es una decisión
+ * comercial sobre ese cliente y no un dato que caduque.
+ *
+ * Con opciones (02/11): Moisés, *«hace una cotización de 10 ítems y le
+ * confirman solo 6 o 7, pero no quiere perder esa cotización: la clona y la
+ * clonada le quita los ítems y deja nomás lo que lleva el cliente»*. Se elige
+ * qué líneas y cuántas, y se pueden MANTENER los precios cotizados —el
+ * cliente acaba de confirmar a esos precios—. Y nunca un precio de catálogo
+ * en cero: casi todo el catálogo entró sin precio, y clonar «a precios de
+ * hoy» dejaba la cotización entera a $ 0.
+ *
+ * La nueva nace en borrador, así que todavía se puede revisar antes de mandarla.
+ */
+export async function clonar(id: string, opcionesCrudas?: unknown): Promise<ResultadoGestion> {
+  const problema = await exigirPermiso("crear");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  const opciones = opcionesClonar.safeParse(opcionesCrudas ?? {});
+  if (!opciones.success) return { ok: false, error: opciones.error.issues[0]?.message ?? "Opciones no válidas." };
+  const elegidas = opciones.data.lineas ? new Map(opciones.data.lineas.map((l) => [l.id, l.cantidad])) : null;
+  const mantenerPrecios = opciones.data.precios === "cotizados";
 
   try {
     const supabase = await clienteServidor();
@@ -211,7 +366,11 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
     if (error) return { ok: false, error: error.message };
     if (!data) return { ok: false, error: "La cotización no existe." };
 
-    const items = (data.cotizacion_items ?? []) as Record<string, unknown>[];
+    // Solo las elegidas, si se eligieron; una que no es de esta cotización
+    // no está en `cotizacion_items` y se cae sola.
+    const items = ((data.cotizacion_items ?? []) as Record<string, unknown>[]).filter(
+      (i) => !elegidas || elegidas.has(i.id as string),
+    );
     if (items.length === 0) {
       return { ok: false, error: "La cotización no tiene líneas que copiar." };
     }
@@ -253,18 +412,20 @@ export async function clonar(id: string): Promise<ResultadoGestion> {
       estado: "borrador",
       items: ordenadas.map((i, n) => {
           const pid = i.producto_id as string | null;
-          const vigente = pid ? vigentes.get(pid) : undefined;
+          const vigente = pid && !mantenerPrecios ? vigentes.get(pid) : undefined;
           return {
             producto_id: pid,
             orden: n + 1,
             codigo: i.codigo,
             marca: i.marca,
             descripcion: i.descripcion,
-            cantidad: i.cantidad,
+            cantidad: elegidas?.get(i.id as string) ?? i.cantidad,
             unidad_codigo: i.unidad_codigo,
-            valor_unitario: vigente?.precio_venta ?? i.valor_unitario,
+            // Un precio o un costo de catálogo en cero no es un precio: se
+            // queda el de la cotización.
+            valor_unitario: vigente && Number(vigente.precio_venta) > 0 ? vigente.precio_venta : i.valor_unitario,
             descuento_pct: i.descuento_pct,
-            costo_unitario: vigente?.costo_promedio ?? i.costo_unitario,
+            costo_unitario: vigente && Number(vigente.costo_promedio) > 0 ? vigente.costo_promedio : i.costo_unitario,
             alternativa_de_orden: i.alternativa_de
               ? (posicion.get(i.alternativa_de as string) ?? null)
               : null,

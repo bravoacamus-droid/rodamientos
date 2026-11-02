@@ -87,7 +87,7 @@ export function transporteDeGuia(g: GuiaDetalle): { etiqueta: string; valor: str
         ]
       : []),
     g.a_pie
-      ? { etiqueta: "Traslado", valor: "a pie, sin vehículo" }
+      ? { etiqueta: "Traslado", valor: "Peatonal" }
       : { etiqueta: "Placa", valor: g.transportista_placa ?? "—" },
     { etiqueta: g.a_pie ? "Lo lleva" : "Conductor", valor: g.conductor_nombre ?? "—" },
     { etiqueta: "DNI", valor: g.conductor_documento ?? "—" },
@@ -100,7 +100,8 @@ export function transporteDeGuia(g: GuiaDetalle): { etiqueta: string; valor: str
 }
 
 export function hojaDeGuia(g: GuiaDetalle, emisor: EmisorHoja): HojaPdf {
-  const pie: BloquePiePdf[] = [{ tipo: "campos", campos: transporteDeGuia(g) }];
+  // El transporte va ARRIBA de los productos (Willy, 02/11), en `antesDeLineas`.
+  const pie: BloquePiePdf[] = [];
   if (g.observaciones) pie.push({ tipo: "parrafo", trozos: [{ texto: g.observaciones }] });
   pie.push({ tipo: "sello", texto: "Sello y firma de recepción" });
   return {
@@ -110,6 +111,7 @@ export function hojaDeGuia(g: GuiaDetalle, emisor: EmisorHoja): HojaPdf {
     numero: g.numero,
     datos: [],
     bloques: bloquesDeGuia(g),
+    antesDeLineas: [{ titulo: "Datos del transporte", campos: transporteDeGuia(g) }],
     columnas: [
       { clave: "n", titulo: "#", alinear: "centro" },
       { clave: "codigo", titulo: "Código" },

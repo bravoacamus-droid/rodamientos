@@ -37,13 +37,13 @@ async function rolExiste(clave: string): Promise<boolean> {
   return Boolean(data);
 }
 
-async function exigirGerencia(): Promise<
+async function exigirGerencia(modulo: "configuracion" | "numeracion" = "configuracion"): Promise<
   { ok: true; id: string; rol: string } | { ok: false; error: string }
 > {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  // Datos de la empresa y series: «Configuración · editar» en la matriz (143).
-  const no = await sinPermiso("configuracion", "editar");
+  // Datos de la empresa: «configuracion»; las series, «numeracion» (184).
+  const no = await sinPermiso(modulo, "editar");
   if (no) return { ok: false, error: no };
   return { ok: true, id: perfil.id, rol: perfil.rol };
 }
@@ -177,7 +177,7 @@ export async function guardarSerie(
     descripcion?: string | null;
   },
 ): Promise<ResultadoConfig> {
-  const quien = await exigirGerencia();
+  const quien = await exigirGerencia("numeracion");
   if (!quien.ok) return quien;
 
   if (!z.string().uuid().safeParse(id).success) {
@@ -258,7 +258,7 @@ export async function crearSerie(entrada: {
   longitud: number;
   descripcion: string | null;
 }): Promise<ResultadoConfig> {
-  const quien = await exigirGerencia();
+  const quien = await exigirGerencia("numeracion");
   if (!quien.ok) return quien;
 
   const esquema = z.object({
@@ -307,6 +307,103 @@ export async function crearSerie(entrada: {
 
     revalidatePath("/configuracion/empresa");
     return { ok: true, mensaje: `Serie ${datos.data.serie} creada.` };
+  } catch (e) {
+    return { ok: false, error: mensajeDeError(e) };
+  }
+}
+
+/**
+ * Cambiar el nombre de una serie (02/11).
+ *
+ * Moisés: *«la idea es que también puedan modificar los números de serie, si
+ * no, ¿cómo lo puedes cambiar?»*. La base ya lo dejaba (`tg_series_lo_fiscal`)
+ * mientras la serie no haya emitido nada, y lo impide después: una factura
+ * F002-561 que pasara a llamarse de otra forma ya no sería la que tiene SUNAT.
+ * Faltaba el botón.
+ *
+ * Tres casos:
+ *   · ya emitió documentos → no; se crea una nueva y se pone por defecto.
+ *   · es real y está sin usar → se renombra.
+ *   · es de PRUEBAS (FD01) → renombrarla la dejaría de pruebas con otro
+ *     nombre, y en producción no emitiría (093); la marca no se quita a mano.
+ *     Se crea la real con el nombre pedido, hereda el «por defecto», y la de
+ *     pruebas se desactiva. Para quien lo pide es lo mismo: FD01 → FD02.
+ */
+export async function cambiarNombreSerie(id: string, nuevaCruda: string): Promise<ResultadoConfig> {
+  const quien = await exigirGerencia("numeracion");
+  if (!quien.ok) return quien;
+  if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "La serie no es válida." };
+  const nueva = String(nuevaCruda ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9]{2,6}$/.test(nueva)) {
+    return { ok: false, error: "La serie son de 2 a 6 letras mayúsculas o dígitos (FD02, T002…)." };
+  }
+
+  try {
+    const supabase = await clienteServidor();
+    const { data: vieja, error: e1 } = await supabase
+      .from("series_documento")
+      .select("id, tipo, serie, es_prueba, predeterminada, correlativo_actual, correlativo_inicial, longitud")
+      .eq("id", id)
+      .maybeSingle();
+    if (e1) return { ok: false, error: mensajeDeError(e1) };
+    if (!vieja) return { ok: false, error: "Esa serie ya no existe." };
+    if (vieja.serie === nueva) return { ok: false, error: "Es el mismo nombre." };
+
+    const { data: otra } = await supabase
+      .from("series_documento")
+      .select("id, activo")
+      .eq("tipo", vieja.tipo)
+      .eq("serie", nueva)
+      .maybeSingle();
+    if (otra) {
+      return {
+        ok: false,
+        error: `${nueva} ya existe${otra.activo ? "" : " (desactivada)"}: ${otra.activo ? "pulsa «Usar por defecto» en ella" : "actívala y ponla por defecto"}.`,
+      };
+    }
+
+    if (Number(vieja.correlativo_actual) > 0) {
+      return {
+        ok: false,
+        error: `${vieja.serie} ya emitió ${vieja.correlativo_actual} documentos: su nombre no se cambia, porque así los tiene SUNAT. Crea ${nueva} con «Nueva serie» y ponla por defecto.`,
+      };
+    }
+
+    if (!vieja.es_prueba) {
+      const { error } = await supabase.from("series_documento").update({ serie: nueva }).eq("id", id);
+      if (error) return { ok: false, error: mensajeDeError(error) };
+      revalidatePath("/configuracion/sunat");
+      return { ok: true, mensaje: `${vieja.serie} ahora se llama ${nueva}.` };
+    }
+
+    // De pruebas: la real con el nombre nuevo, y la de pruebas fuera.
+    const { data: creada, error: e2 } = await supabase
+      .from("series_documento")
+      .insert({
+        tipo: vieja.tipo,
+        serie: nueva,
+        correlativo_inicial: 1,
+        correlativo_actual: 0,
+        longitud: vieja.longitud,
+        predeterminada: false,
+        activo: true,
+        descripcion: `Reemplaza a ${vieja.serie}, que era de pruebas (02/11/2026).`,
+      })
+      .select("id")
+      .single();
+    if (e2) return { ok: false, error: mensajeDeError(e2) };
+    if (vieja.predeterminada) {
+      await supabase.from("series_documento").update({ predeterminada: false }).eq("id", vieja.id);
+      await supabase.from("series_documento").update({ predeterminada: true }).eq("id", creada.id);
+    }
+    const { error: e3 } = await supabase.from("series_documento").update({ activo: false }).eq("id", vieja.id);
+    if (e3) return { ok: false, error: mensajeDeError(e3) };
+
+    revalidatePath("/configuracion/sunat");
+    return {
+      ok: true,
+      mensaje: `Se creó ${nueva}${vieja.predeterminada ? " y quedó por defecto" : ""}. ${vieja.serie}, que era de pruebas, quedó desactivada.`,
+    };
   } catch (e) {
     return { ok: false, error: mensajeDeError(e) };
   }

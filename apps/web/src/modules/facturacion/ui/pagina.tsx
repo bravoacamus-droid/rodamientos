@@ -15,6 +15,7 @@ import { estadoConfiguracion } from "../api/configuracion";
 import { indicadoresFacturacion } from "../api/consultas";
 import type { FiltrosComprobantes } from "../dominio/tipos";
 import { FiltrosFacturacionBarra } from "./filtros";
+import { BorradoresFactura } from "./borradores";
 import { TablaComprobantes } from "./tabla";
 import { PanelModulo } from "@/componentes/panel-modulo";
 
@@ -70,7 +71,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
 
   const puedeFacturar = perfil.tiene("facturacion", "crear");
   // El enlace a «SUNAT y numeración», a quien puede abrirla (143).
-  const esGerencia = perfil.tiene("configuracion", "ver");
+  const esGerencia = perfil.tiene("numeracion", "ver");
 
   return (
     <div className="flex flex-col gap-5">
@@ -190,6 +191,11 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
           <Indicadores filtros={filtros} />
         </Suspense>
       </PanelModulo>
+
+      {/* Las facturas en borrador (176): esperan a que alguien las revise. */}
+      <Suspense fallback={null}>
+        <BorradoresFactura puedeEditar={puedeFacturar} />
+      </Suspense>
 
       {/* `@container`: la tabla y los filtros se deciden por el ancho de esta
           caja, no de la pantalla (revisión por módulos del 02/10). */}

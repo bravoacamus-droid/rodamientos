@@ -18,7 +18,8 @@ import {
   toast,
 } from "@rodatech/ui";
 
-import { cambiarEstado, clonar } from "../../acciones/gestionar";
+import { cambiarEstado } from "../../acciones/gestionar";
+import { DialogoClonar } from "../dialogo-clonar";
 import type { EstadoCotizacion } from "../../dominio/tipos";
 import type { DatosMensaje } from "../../dominio/whatsapp";
 import { DialogoEnviar } from "./dialogo-enviar";
@@ -129,6 +130,7 @@ export function AccionesCotizacion({
   const enCurso = estado === "borrador" || estado === "enviada";
   const [confirmando, setConfirmando] = useState(abrirAprobar && enCurso);
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
+  const [clonando, setClonando] = useState(false);
   // Anular no se deshace: se pregunta en la pantalla y no con window.confirm,
   // que sale en letra pequeña y sin estilo (21/10).
   const [anulando, setAnulando] = useState(false);
@@ -148,6 +150,7 @@ export function AccionesCotizacion({
 
   return (
     <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end print:hidden">
+      <DialogoClonar id={id} numero={numero} abierto={clonando} onCerrar={() => setClonando(false)} />
       <DialogoEnviar
         abierto={pidiendoContacto}
         clienteId={cliente.id}
@@ -356,14 +359,10 @@ export function AccionesCotizacion({
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem
-              disabled={pendiente}
-              onSelect={() => correr(() => clonar(id))}
-            >
+            {/* Abre la ventana: qué líneas, cuántas y qué precios (02/11). */}
+            <DropdownMenuItem disabled={pendiente} onSelect={() => setClonando(true)}>
               Clonar
-              <span className="ml-auto text-sm text-[var(--fg-subtle)]">
-                precios de hoy
-              </span>
+              <span className="ml-auto text-sm text-[var(--fg-subtle)]">eliges las líneas</span>
             </DropdownMenuItem>
 
             {estado === "borrador" ? (
