@@ -8854,3 +8854,18 @@ cambiar `ambiente`, `series_segun_ambiente()` pone por defecto la de pruebas
 factura y guía. Cotización y orden de compra no se tocan. Centinela: lo
 ejecuta en los dos sentidos. F001, FC01, FD01 y T001 reactivadas (las usa la
 beta) y ocultas en «Ver también…».
+
+**El análisis de compra, obligatorio al aprobar y no al cotizar (02/11).**
+Willy, por Moisés: *«en cotización puedes poner precios de cada producto,
+pero no es necesario el análisis de costo; puede mandar la cotización al
+cliente, pero antes de aprobarla tiene que decirle que tiene que llenar su
+análisis de costo para las compras»*. Al guardar ya no se pregunta («Falta
+analizar… guardar igual»); al aprobar, `aprobar` se niega si una línea
+confirmada hay que comprarla (almacén − reservado < confirmado) y no tiene
+proveedor con cantidad y precio (`faltaAnalizarAlAprobar`, con tests); la
+ventana de aprobar ofrece «Llenar el análisis de compra». Kits, líneas libres
+y lo que está en el anaquel no se piden.
+
+Sin probar en pantalla el rechazo: la única cotización para probarlo es la
+CT02-001310 real de Willy (5 de 6 líneas sin análisis; la 6205LLBC3/5K tiene
+15 en almacén y no se pide), y el clasificador no dejó pulsar «Aprobar».

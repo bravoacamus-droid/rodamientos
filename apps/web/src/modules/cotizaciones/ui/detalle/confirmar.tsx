@@ -91,6 +91,8 @@ export function DialogoConfirmar({
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  /** Los productos sin análisis de compra que no dejaron aprobar (02/11). */
+  const [faltaAnalisis, setFaltaAnalisis] = React.useState<string[] | null>(null);
   /** La O/C del cliente, si ya la mandó (09/10: se pone al aprobar). */
   const [ordenCliente, setOrdenCliente] = React.useState("");
   /** Si SUNAT no contestó, el tipo de cambio escrito a mano. */
@@ -118,6 +120,7 @@ export function DialogoConfirmar({
       ),
     );
     setError(null);
+    setFaltaAnalisis(null);
   }, [abierto, lineas, corrigiendo]);
 
   const poner = (id: string, valor: number, tope: number) => {
@@ -182,6 +185,7 @@ export function DialogoConfirmar({
           );
       if (!r.ok) {
         setError(r.error ?? "No se pudo confirmar.");
+        setFaltaAnalisis("faltaAnalisis" in r && r.faltaAnalisis ? r.faltaAnalisis : null);
         if ("pideTipoCambio" in r && r.pideTipoCambio) setPideTc(true);
         return;
       }
@@ -353,6 +357,17 @@ export function DialogoConfirmar({
               className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]"
             >
               {error}
+              {/* El análisis se llena donde se cotiza: «Analizar precio de
+                  compra» en cada línea. Se vuelve aquí a aprobar. */}
+              {faltaAnalisis ? (
+                <Button
+                  type="button"
+                  className="mt-2 flex"
+                  onClick={() => router.push(`/cotizaciones/${cotizacionId}/editar`)}
+                >
+                  Llenar el análisis de compra
+                </Button>
+              ) : null}
             </p>
           ) : null}
 

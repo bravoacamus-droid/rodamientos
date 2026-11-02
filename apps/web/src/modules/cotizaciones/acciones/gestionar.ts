@@ -8,6 +8,7 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 
+import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis } from "../dominio/analisis-al-aprobar";
 import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
 
 /**
@@ -20,7 +21,8 @@ const uuid = z.string().uuid();
 export type ResultadoGestion =
   | { ok: true; id?: string; numero?: string; pedidoId?: string }
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
-  | { ok: false; error: string; pideTipoCambio?: boolean };
+  /** `faltaAnalisis`: los productos que hay que comprar sin análisis (02/11). */
+  | { ok: false; error: string; pideTipoCambio?: boolean; faltaAnalisis?: string[] };
 
 async function exigirPermiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
@@ -110,6 +112,17 @@ export async function aprobar(
       }
     }
 
+    /*
+      El análisis de compra, obligatorio al aprobar (02/11). Willy: se cotiza
+      y se manda sin él, pero *«antes de aprobar tiene que decirle que tiene
+      que llenar su análisis de costo para las compras»*. Aquí y no solo en la
+      pantalla: una Server Action es un endpoint público.
+    */
+    const faltan = await faltaAnalisisDe(supabase, id, detalle);
+    if (faltan.length > 0) {
+      return { ok: false, error: mensajeFaltaAnalisis(faltan), faltaAnalisis: faltan };
+    }
+
     const { error } = await supabase.rpc("aprobar_cotizacion", {
       p_id: id,
       p_lineas: detalle,
@@ -175,6 +188,56 @@ export async function cambiarEstado(
   } catch {
     return { ok: false, error: "No se pudo cambiar la cotización. Vuelve a intentarlo en un momento." };
   }
+}
+
+/** Los productos confirmados que hay que comprar y no tienen análisis (02/11). */
+async function faltaAnalisisDe(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  id: string,
+  detalle: { item_id: string; cantidad: number }[] | null,
+): Promise<string[]> {
+  const { data: items } = await supabase
+    .from("cotizacion_items")
+    .select("id, codigo, producto_id, cantidad, productos(es_kit)")
+    .eq("cotizacion_id", id)
+    .order("orden");
+  const filas = (items ?? []) as unknown as Array<{
+    id: string;
+    codigo: string | null;
+    producto_id: string | null;
+    cantidad: number;
+    productos: { es_kit: boolean } | null;
+  }>;
+  if (filas.length === 0) return [];
+
+  const ids = filas.map((f) => f.id);
+  const productos = [...new Set(filas.map((f) => f.producto_id).filter((x): x is string => !!x))];
+  const [{ data: analisis }, { data: stock }] = await Promise.all([
+    supabase.from("cotizacion_item_proveedores").select("cotizacion_item_id, cantidad, costo_unitario").in("cotizacion_item_id", ids),
+    productos.length > 0
+      ? supabase.from("stock").select("producto_id, cantidad, reservado").in("producto_id", productos)
+      : Promise.resolve({ data: [] as { producto_id: string; cantidad: number; reservado: number }[] }),
+  ]);
+  const analizadas = new Set(
+    (analisis ?? [])
+      .filter((a) => Number(a.cantidad) > 0 && a.costo_unitario !== null)
+      .map((a) => String(a.cotizacion_item_id)),
+  );
+  const disponible = new Map(
+    (stock ?? []).map((s) => [String(s.producto_id), Number(s.cantidad ?? 0) - Number(s.reservado ?? 0)]),
+  );
+  const confirmada = detalle ? new Map(detalle.map((d) => [d.item_id, d.cantidad])) : null;
+
+  return faltaAnalizarAlAprobar(
+    filas.map((f) => ({
+      codigo: f.codigo ?? "—",
+      productoId: f.producto_id,
+      esKit: Boolean(f.productos?.es_kit),
+      confirmada: confirmada ? (confirmada.get(f.id) ?? 0) : Number(f.cantidad),
+      disponible: f.producto_id ? (disponible.get(f.producto_id) ?? 0) : 0,
+      analizada: analizadas.has(f.id),
+    })),
+  );
 }
 
 /** Una línea, para elegir qué se lleva la copia (02/11). */

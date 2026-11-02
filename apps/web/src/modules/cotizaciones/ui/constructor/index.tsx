@@ -4,13 +4,6 @@ import { useActionState, useEffect, useMemo, useReducer, useRef, useState } from
 import { useRouter } from "next/navigation";
 import {
   Button,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Input,
   Table,
   TableContenedor,
@@ -261,21 +254,17 @@ export function Constructor({
       vivo = false;
     };
   }, [idsProductos]);
-  const [preguntando, setPreguntando] = useState(false);
-  // Un ref y no un estado: el clic de «Guardar igual» envía en el mismo turno.
-  const guardarIgual = useRef(false);
 
   return (
     <form
       id="form-cotizacion"
       action={guardar}
-      onSubmit={(e) => {
-        if (sinAnalizar.length > 0 && !guardarIgual.current) {
-          e.preventDefault();
-          setPreguntando(true);
-        }
-        guardarIgual.current = false;
-      }}
+      /*
+        Sin preguntar por el análisis al guardar (02/11). Willy: al cotizar
+        *«no es necesario el análisis de costo»*; se pide al APROBAR
+        (`faltaAnalisisDe` en `aprobar`). El resumen sigue diciendo cuántas
+        líneas faltan.
+      */
       className="flex flex-col gap-5 sm:p-6"
       /*
         Enter en un campo no guarda la cotización: se guarda con el botón.
@@ -824,48 +813,6 @@ export function Constructor({
         Se monta solo cuando hace falta: así las listas de marcas y familias se
         piden la vez que se usa y no en cada cotización.
       */}
-
-      <Dialog open={preguntando} onOpenChange={setPreguntando}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Falta analizar el precio de compra</DialogTitle>
-            <DialogDescription>
-              {sinAnalizar.length === 1
-                ? "Este producto lleva el costo de la ficha, que puede ser viejo:"
-                : `Estos ${sinAnalizar.length} productos llevan el costo de la ficha, que puede ser viejo:`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogBody>
-            <ul className="flex flex-col gap-1">
-              {sinAnalizar.map((l) => (
-                <li key={l.key} className="flex items-baseline gap-2">
-                  <strong>{l.codigo}</strong>
-                  <span className="truncate text-sm text-[var(--fg-muted)]">{l.descripcion}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-sm text-[var(--fg-muted)]">
-              Si los tienes en el almacén o ya sabes su costo, puedes guardar igual.
-            </p>
-          </DialogBody>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPreguntando(false)}>
-              Volver y analizar
-            </Button>
-            <Button
-              type="button"
-              onClick={(e) => {
-                setPreguntando(false);
-                guardarIgual.current = true;
-                const formulario = e.currentTarget.ownerDocument.getElementById("form-cotizacion");
-                if (formulario instanceof HTMLFormElement) formulario.requestSubmit();
-              }}
-            >
-              Guardar igual
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {creando !== null ? (
         <AltaProducto
