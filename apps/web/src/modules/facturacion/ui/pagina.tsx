@@ -70,7 +70,7 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
 
   const puedeFacturar = perfil.tiene("facturacion", "crear");
   // El enlace a «SUNAT y numeración», a quien puede abrirla (143).
-  const esGerencia = perfil.tiene("configuracion", "ver");
+  const esGerencia = perfil.tiene("numeracion", "ver");
 
   return (
     <div className="flex flex-col gap-5">

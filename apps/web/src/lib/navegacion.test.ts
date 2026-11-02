@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CONFIGURACION, NAVEGACION, TABLERO, menuPara, puedeAbrir, rutaActiva } from "./navegacion";
+import { CONFIGURACION, NAVEGACION, TABLERO, inicioPara, menuPara, puedeAbrir, rutaActiva } from "./navegacion";
 
 /** Todos los permisos de todos los módulos: lo que devuelve mis_permisos() a gerencia. */
 const TODO = NAVEGACION.concat(CONFIGURACION).flatMap((g) =>
@@ -85,12 +85,13 @@ describe("el tablero y la configuración", () => {
     // añadir pantallas: es lo que obliga a decidir los roles de la nueva en
     // vez de dejarla entrar sin lista. Cuatro desde el 24/09, con «Permisos».
     expect(CONFIGURACION.items.length).toBe(4);
-    // Desde la 143, «Datos de la empresa» va por la matriz (configuración);
-    // SUNAT, usuarios y permisos siguen siendo de quien manda, fuera de ella.
+    // Desde la 143, «Datos de la empresa» va por la matriz (configuración), y
+    // desde la 184 «SUNAT y numeración» también (numeracion); usuarios y
+    // permisos siguen siendo de quien manda, fuera de ella.
     for (const item of CONFIGURACION.items) {
       expect(item.roles ?? item.permiso).toBeTruthy();
       if (!item.permiso) expect(item.roles).toEqual(["gerencia", "admin"]);
-      else expect(item.permiso).toBe("configuracion");
+      else expect(["configuracion", "numeracion"]).toContain(item.permiso);
     }
   });
 
@@ -186,5 +187,20 @@ describe("puedeAbrir: la puerta de la pantalla (143)", () => {
   it("usuarios y permisos siguen siendo de quien manda", () => {
     expect(puedeAbrir("/configuracion/usuarios", "ventas", VENTAS)).toBe(false);
     expect(puedeAbrir("/configuracion/permisos", "admin", [])).toBe(true);
+  });
+});
+
+describe("el tablero en la matriz (184)", () => {
+  it("lleva al tablero a quien lo ve, y a la primera pantalla de su menú a quien no", () => {
+    expect(TABLERO.permiso).toBe("tablero");
+    expect(inicioPara("ventas", ["tablero:ver", ...VENTAS])).toBe("/dashboard");
+    const admin = inicioPara("admin", ["cotizaciones:ver", "guias:ver"]);
+    expect(admin).not.toBe("/dashboard");
+    expect(admin.startsWith("/")).toBe(true);
+  });
+
+  it("«Lo comprado» es un reporte: sin «Reportes · Ver» no sale", () => {
+    const items = menuPara("admin", ["compras:ver"]).flatMap((g) => g.items.map((i) => i.ruta));
+    expect(items).not.toContain("/reportes/compras");
   });
 });

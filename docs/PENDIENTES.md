@@ -9002,3 +9002,24 @@ Probado: el centinela ejecuta rescate, lista, tope, rechazo, beta y cron sin
 Vault, y deshace; la ruta da 401 sin secreto y el middleware la deja llegar.
 **Sin probar con el secreto** (el clasificador no deja leer `.env.local`) ni
 con un envío real fallido.
+
+## §CV · 02/11 — El tablero y «SUNAT y numeración» en Roles y permisos (184)
+
+Luis, por Willy: *«admin puede ver todos los demás menos reporte y la tabla
+[el tablero], y también la configuración de la empresa; lo demás sí puede
+verlo»*. No se podía decir: el tablero se abría siempre, y los datos de la
+empresa y las series eran el mismo módulo (quitar uno quitaba el otro).
+
+- **184**: módulos nuevos `tablero` (ver) y `numeracion` (series y motivos);
+  `configuracion` queda en «Datos de la empresa» (empresa y cuentas). Nadie
+  perdió nada al aplicarla: lo de `configuracion` se copió a `numeracion` y
+  todos los roles recibieron «Tablero · Ver». Centinela con un admin real.
+- «Lo comprado» pasa a ser un reporte (`reportes`, antes `compras`): «Reportes»
+  es ahora TODOS los reportes. «Informe general» sigue con su fila.
+- Quien no ve el tablero entra a la primera pantalla de su menú
+  (`inicioPara`); los enlaces de «inicio» siguen apuntando a `/dashboard`.
+- **Administración, por SQL directo**: sin tablero, sin reportes ni informe,
+  sin datos de la empresa; conserva todo lo demás, también SUNAT y numeración.
+
+Visto en pantalla como Gerencia (matriz, tablero, SUNAT y numeración, Lo
+comprado). **Sin ver como Administración**: no hay su contraseña.

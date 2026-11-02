@@ -11,7 +11,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function GET(req: Request) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return new Response("Hay que iniciar sesión.", { status: 401 });
-  const prohibido = await sinPermiso("compras", "ver");
+  const prohibido = await sinPermiso("reportes", "ver");
   if (prohibido) return new Response(prohibido, { status: 403 });
 
   const url = new URL(req.url);

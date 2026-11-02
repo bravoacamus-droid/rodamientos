@@ -71,6 +71,9 @@ export const TABLERO: ItemNav = {
   etiqueta: "Tablero",
   ruta: "/dashboard",
   icono: "tablero",
+  // Desde la 184 es un módulo de la matriz. Willy, 02/11: Administración
+  // ve todo menos los reportes, el tablero y los datos de la empresa.
+  permiso: "tablero",
 };
 
 /**
@@ -115,9 +118,9 @@ export const CONFIGURACION: GrupoNav = {
       etiqueta: "SUNAT y numeración",
       ruta: "/configuracion/sunat",
       icono: "sunat",
-      // El certificado y el usuario SOL: `es_gerencia()` en la base, fuera de
-      // la matriz (143). Lo ve quien lo puede guardar.
-      roles: ["gerencia", "admin"],
+      // Las series, por la matriz desde la 184 (antes iba con los datos de la
+      // empresa). El certificado y la clave SOL siguen siendo `es_gerencia()`.
+      permiso: "numeracion",
     },
     {
       etiqueta: "Usuarios",
@@ -171,7 +174,7 @@ export const NAVEGACION: readonly GrupoNav[] = [
         con el mismo nombre a pantallas distintas hacen dudar a Willy—, y va
         en paralelo con «Lo facturado».
       */
-      { etiqueta: "Lo comprado", ruta: "/reportes/compras", icono: "panelCompras", permiso: "compras" },
+      { etiqueta: "Lo comprado", ruta: "/reportes/compras", icono: "panelCompras", permiso: "reportes" },
       // El informe de antes (almacén, compras, cartera por antigüedad). Sigue
       // solo para quien manda, como cuando vivía en «Gestión».
       { etiqueta: "Informe general", ruta: "/reportes", icono: "reporte", permiso: "informe" },
@@ -392,4 +395,14 @@ export function puedeAbrir(
   if (!item) return true;
   if (item.roles && (rol === null || !(item.roles as readonly string[]).includes(rol))) return false;
   return !item.permiso || tieneEn(permisos, item.permiso, item.accion ?? "ver");
+}
+
+/**
+ * Adónde se entra (184). El tablero, si el rol lo ve; si no, la primera
+ * pantalla de su menú. Todos los enlaces de «inicio» apuntan a `/dashboard`,
+ * y es la página del tablero la que redirige aquí a quien no lo ve.
+ */
+export function inicioPara(rol: string | null, permisos: readonly string[]): string {
+  if (tieneEn(permisos, "tablero", "ver")) return TABLERO.ruta;
+  return menuPara(rol, permisos)[0]?.items[0]?.ruta ?? "/perfil";
 }

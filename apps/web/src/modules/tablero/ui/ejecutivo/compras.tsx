@@ -52,7 +52,7 @@ const VIAS: { clave: string; texto: string; color: string }[] = [
 export default async function PaginaComprasEjecutiva({ searchParams }: { searchParams: Promise<ParamsBusqueda> }) {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) redirect("/login");
-  const prohibido = await sinPermiso("compras", "ver");
+  const prohibido = await sinPermiso("reportes", "ver");
   if (prohibido) {
     return (
       <div className="flex flex-col gap-4">

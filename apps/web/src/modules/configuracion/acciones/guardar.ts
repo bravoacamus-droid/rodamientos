@@ -37,13 +37,13 @@ async function rolExiste(clave: string): Promise<boolean> {
   return Boolean(data);
 }
 
-async function exigirGerencia(): Promise<
+async function exigirGerencia(modulo: "configuracion" | "numeracion" = "configuracion"): Promise<
   { ok: true; id: string; rol: string } | { ok: false; error: string }
 > {
   const perfil = await perfilActual();
   if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
-  // Datos de la empresa y series: «Configuración · editar» en la matriz (143).
-  const no = await sinPermiso("configuracion", "editar");
+  // Datos de la empresa: «configuracion»; las series, «numeracion» (184).
+  const no = await sinPermiso(modulo, "editar");
   if (no) return { ok: false, error: no };
   return { ok: true, id: perfil.id, rol: perfil.rol };
 }
@@ -177,7 +177,7 @@ export async function guardarSerie(
     descripcion?: string | null;
   },
 ): Promise<ResultadoConfig> {
-  const quien = await exigirGerencia();
+  const quien = await exigirGerencia("numeracion");
   if (!quien.ok) return quien;
 
   if (!z.string().uuid().safeParse(id).success) {
@@ -258,7 +258,7 @@ export async function crearSerie(entrada: {
   longitud: number;
   descripcion: string | null;
 }): Promise<ResultadoConfig> {
-  const quien = await exigirGerencia();
+  const quien = await exigirGerencia("numeracion");
   if (!quien.ok) return quien;
 
   const esquema = z.object({
@@ -330,7 +330,7 @@ export async function crearSerie(entrada: {
  *     pruebas se desactiva. Para quien lo pide es lo mismo: FD01 → FD02.
  */
 export async function cambiarNombreSerie(id: string, nuevaCruda: string): Promise<ResultadoConfig> {
-  const quien = await exigirGerencia();
+  const quien = await exigirGerencia("numeracion");
   if (!quien.ok) return quien;
   if (!z.string().uuid().safeParse(id).success) return { ok: false, error: "La serie no es válida." };
   const nueva = String(nuevaCruda ?? "").trim().toUpperCase();

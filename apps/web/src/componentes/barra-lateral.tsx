@@ -364,6 +364,7 @@ function Cuerpo({
   pendientes,
   onNavegar,
   estrecho = false,
+  verTablero = true,
 }: {
   grupos: GrupoNav[];
   ruta: string;
@@ -372,6 +373,8 @@ function Cuerpo({
   pendientes?: PendientesDelMenu;
   onNavegar?: () => void;
   estrecho?: boolean;
+  /** «Tablero · Ver» en la matriz (184). */
+  verTablero?: boolean;
 }) {
   return (
     <>
@@ -381,16 +384,20 @@ function Cuerpo({
           estrecho ? "px-2" : "px-3",
         )}
       >
-        <Enlace
-          item={TABLERO}
-          activo={activoEn(ruta, TABLERO.ruta)}
-          espera={0}
-          dentroDeGrupo={false}
-          onNavegar={onNavegar}
-          estrecho={estrecho}
-        />
+        {verTablero ? (
+          <>
+            <Enlace
+              item={TABLERO}
+              activo={activoEn(ruta, TABLERO.ruta)}
+              espera={0}
+              dentroDeGrupo={false}
+              onNavegar={onNavegar}
+              estrecho={estrecho}
+            />
 
-        {estrecho ? null : <div className="my-1 h-px bg-[var(--border-soft)]" />}
+            {estrecho ? null : <div className="my-1 h-px bg-[var(--border-soft)]" />}
+          </>
+        ) : null}
 
         <Grupos
           grupos={grupos}
@@ -426,6 +433,7 @@ export function BarraLateral({
   usuario,
   pendientes,
   estrechoInicial = false,
+  verTablero = true,
 }: {
   grupos: GrupoNav[];
   empresa: string;
@@ -433,6 +441,7 @@ export function BarraLateral({
   pendientes?: PendientesDelMenu;
   /** Cómo lo dejó la última vez, leído de la cookie en el servidor. */
   estrechoInicial?: boolean;
+  verTablero?: boolean;
 }) {
   const ruta = usePathname();
   const { plegados, alternar } = usePlegados();
@@ -481,6 +490,7 @@ export function BarraLateral({
           plegados={plegados}
           alternar={alternar}
           pendientes={pendientes}
+          verTablero={verTablero}
           estrecho={estrecho}
         />
         <div className={cn("shrink-0 border-t border-[var(--border)] py-3", estrecho ? "px-2" : "px-3")}>
@@ -506,11 +516,13 @@ export function MenuMovil({
   empresa,
   usuario,
   pendientes,
+  verTablero = true,
 }: {
   grupos: GrupoNav[];
   empresa: string;
   usuario: string;
   pendientes?: PendientesDelMenu;
+  verTablero?: boolean;
 }) {
   const ruta = usePathname();
   const [abierto, setAbierto] = React.useState(false);
@@ -536,6 +548,7 @@ export function MenuMovil({
             plegados={plegados}
             alternar={alternar}
             pendientes={pendientes}
+            verTablero={verTablero}
             onNavegar={cerrar}
           />
         </SheetBody>
