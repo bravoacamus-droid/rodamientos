@@ -8810,3 +8810,11 @@ separa la letra de la serie (FC/BC). Ahora cada serie se llama como en SIMPLE
 remitente»…), se ordena como allí (factura, sus notas, guía, cotización,
 compras; lo de boleta al final) y las desactivadas y las de boleta quedan
 detrás de «Ver también…». «Nueva serie» dice cómo se llamará lo que se teclea.
+
+**178 · La orden de compra con su serie: OC02 (02/11).** Moisés: *«sí, como
+está en SIMPLE»*. Al ir a hacerlo salió que la pantalla de series no habría
+servido: `siguiente_numero_interno` llevaba 'CMP' escrito a mano y no miraba
+la predeterminada. Ahora la orden de compra sale de su serie por defecto si
+no es la CMP de siempre (`OC02-00001`); el centinela la ejecuta por los dos
+caminos. Creada la serie OC02 (desde 1: en SIMPLE no hay órdenes formales),
+por defecto, y la CMP desactivada.
