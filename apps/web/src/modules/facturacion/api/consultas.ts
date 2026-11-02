@@ -3,6 +3,10 @@ import "server-only";
 import { redondear2 } from "@rodatech/config";
 import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 import { clienteServidor } from "@rodatech/db/servidor";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@rodatech/db/tipos";
+
+type ClienteBase = SupabaseClient<Database>;
 
 import { fallo } from "@/lib/errores";
 import { ESTADOS_RETENCION } from "@/modules/cobranzas/dominio/tipos";
@@ -259,9 +263,11 @@ export async function listarComprobantes(
 /** La ficha de un comprobante, con sus líneas. */
 export async function detalleComprobante(
   id: string,
+  /** Sin sesión (el reenvío automático a SUNAT, 183) se lee con el de servicio. */
+  cliente?: ClienteBase,
 ): Promise<Resultado<ComprobanteDetalle | null>> {
   try {
-    const supabase = await clienteServidor();
+    const supabase = cliente ?? (await clienteServidor());
 
     /*
       `guias_remision` se pide con el nombre de la clave delante, y no puede

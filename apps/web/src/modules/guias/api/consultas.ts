@@ -1,6 +1,8 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@rodatech/db/tipos";
 import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
@@ -214,9 +216,13 @@ export interface AnulacionGuia {
 }
 
 /** La ficha de una guía, con sus líneas. */
-export async function detalleGuia(id: string): Promise<Resultado<(GuiaDetalle & AnulacionGuia) | null>> {
+export async function detalleGuia(
+  id: string,
+  /** Sin sesión (el reenvío automático a SUNAT, 183) se lee con el de servicio. */
+  cliente?: SupabaseClient<Database>,
+): Promise<Resultado<(GuiaDetalle & AnulacionGuia) | null>> {
   try {
-    const supabase = await clienteServidor();
+    const supabase = cliente ?? (await clienteServidor());
 
     const { data, error } = await supabase
       .from("guias_remision")

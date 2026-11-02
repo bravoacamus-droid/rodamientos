@@ -1414,6 +1414,7 @@ export type Database = {
           sunat_enviado_en: string | null
           sunat_hash_cdr: string | null
           sunat_mensaje: string | null
+          sunat_reintentos_auto: number
           sunat_respuesta: Json | null
           sunat_ticket: string | null
           sunat_xml_firmado: string | null
@@ -1475,6 +1476,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
@@ -1536,6 +1538,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_firmado?: string | null
@@ -3130,6 +3133,7 @@ export type Database = {
           sunat_enviado_en: string | null
           sunat_hash_cdr: string | null
           sunat_mensaje: string | null
+          sunat_reintentos_auto: number
           sunat_respuesta: Json | null
           sunat_ticket: string | null
           sunat_xml_url: string | null
@@ -3182,6 +3186,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
@@ -3234,6 +3239,7 @@ export type Database = {
           sunat_enviado_en?: string | null
           sunat_hash_cdr?: string | null
           sunat_mensaje?: string | null
+          sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
           sunat_xml_url?: string | null
@@ -6373,6 +6379,7 @@ export type Database = {
         Args: { p_desde?: string; p_hasta?: string }
         Returns: Json
       }
+      llamar_reintentos_sunat: { Args: never; Returns: string }
       login_espera: {
         Args: { p_correo: string; p_ip: string }
         Returns: number
@@ -6628,6 +6635,7 @@ export type Database = {
         Returns: undefined
       }
       stock_armable: { Args: { p_kit: string }; Returns: number }
+      sunat_por_reintentar: { Args: never; Returns: Json }
       sustitutos_de: {
         Args: { p_limit?: number; p_producto: string }
         Returns: {

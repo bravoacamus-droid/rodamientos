@@ -8959,3 +8959,46 @@ El flujo de la orden al proveedor queda así:
 
 Las recepciones sueltas, sin compra, no cambian. Al aplicarla solo había tres
 compras sin recibir (las OC02 de hoy).
+
+## §CU · 02/11 — Lo que no llega a SUNAT se reintenta solo (183)
+
+Primer día en producción: F002-580 y T002-576 aceptadas. Luis: *«hay que
+darle la mejor solución y la mejor automatización, sin gastar mucho…
+recuerda también de Vercel»*.
+
+**Lo que estaba mal.** El rescate de cada 15 minutos (`rescatar_envios_sunat`)
+borraba `sunat_enviado_en` al devolver a «pendiente» un envío colgado. Esa
+fecha es lo que hace que un 1033 se le pregunte a SUNAT en vez de darse por
+rechazado (A4, 21/10): sin ella, una factura que SUNAT sí aceptó salía
+«rechazada, emite otra». Y nada se reenviaba solo; el aviso salía al día
+siguiente, y las guías no avisaban.
+
+**Lo que hay ahora:**
+
+- `sunat_por_reintentar()` decide qué falta: no enviado (10 min de gracia),
+  pendiente por red, colgado a mitad, y guías con ticket esperando respuesta.
+  Solo en producción, series reales, últimos 10 días. **Un rechazo nunca se
+  reintenta** (un 0102 repetido bloquea el usuario SOL). Espera 10 · 20 · 40
+  · 80 · 160 · 320 min, tope 15 intentos (`sunat_reintentos_auto`).
+- Cron de Supabase `rodatech-sunat-reintentos` cada 10 min: **solo llama al
+  ERP si la lista tiene algo**. Un día normal, cero llamadas a Vercel.
+- `/api/sunat/reintentar` (con `CRON_SECRET`) manda con el mismo código del
+  botón: `enviarComprobante` (facturacion/api/envio.ts) y
+  `mandarGuiaASunat`/`preguntarGuiaASunat` (guias/api/envio-sunat.ts),
+  sacados de las Server Actions para poder llamarlos sin sesión. Si SUNAT no
+  contesta a uno, no insiste con el resto en esa vuelta.
+- Red de seguridad: `/api/avisos/enviar` (cron de Vercel, dos veces al día)
+  también reintenta. No se añadió ningún cron de Vercel.
+- El rescate ya no borra la fecha, avisa a las **2 horas** (crítico el último
+  día del plazo de 3) y avisa también de las **guías**.
+
+**Falta para que corra cada 10 minutos:** el Vault (`avisos_url` y
+`avisos_cron_secret`) está VACÍO: Luis tiene que correr
+`node scripts/configurar-avisos.mjs https://app.rodatechperu.com`, con el
+mismo `CRON_SECRET` que Vercel. Activa también los avisos de cada hora al
+celular, que hasta hoy tampoco salían.
+
+Probado: el centinela ejecuta rescate, lista, tope, rechazo, beta y cron sin
+Vault, y deshace; la ruta da 401 sin secreto y el middleware la deja llegar.
+**Sin probar con el secreto** (el clasificador no deja leer `.env.local`) ni
+con un envío real fallido.

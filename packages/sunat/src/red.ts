@@ -20,11 +20,11 @@ import type { ResultadoCdr } from "./dominio/index";
 
 /** Lo que lee quien vende cuando no hubo conexión. Sin «fetch failed». */
 export const MENSAJE_SIN_CONEXION =
-  "No se pudo conectar con SUNAT (sin internet o SUNAT caído). Sigue pendiente: vuelve a intentarlo en unos minutos.";
+  "No se pudo conectar con SUNAT (sin internet o SUNAT caído). Sigue pendiente: el sistema lo vuelve a intentar solo cada pocos minutos, o pulsa «Enviar» más tarde.";
 
 /** SUNAT contestó algo que no es una respuesta: ni CDR ni rechazo. */
 export const MENSAJE_RESPUESTA_INCIERTA =
-  "SUNAT no dio una respuesta clara. Sigue pendiente: vuelve a intentarlo en unos minutos. Si ya lo habías mandado antes, no emitas otro.";
+  "SUNAT no dio una respuesta clara. Sigue pendiente: el sistema lo vuelve a intentar solo. Si ya lo habías mandado antes, no emitas otro.";
 
 /** Un 1033 sobre algo que ya se mandó, y SUNAT no deja confirmar qué tiene. */
 export const MENSAJE_1033_SIN_CONFIRMAR =
