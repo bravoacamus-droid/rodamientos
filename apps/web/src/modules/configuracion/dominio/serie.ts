@@ -70,7 +70,7 @@ export function avisosDelInicial(
   const avisos: Aviso[] = [];
 
   if (!Number.isInteger(nuevoInicial) || nuevoInicial < 1) {
-    return [{ tono: "danger", texto: "El correlativo inicial tiene que ser 1 o más." }];
+    return [{ tono: "danger", texto: "El próximo número tiene que ser 1 o más." }];
   }
 
   const digitos = String(nuevoInicial).length;
@@ -86,7 +86,7 @@ export function avisosDelInicial(
     // que la serie sigue como estaba. Pero quien lo teclea espera otra cosa.
     avisos.push({
       tono: "warning",
-      texto: `Esta serie ya va por el ${serie.correlativo_actual}, así que no cambiará nada: el próximo seguirá siendo el ${serie.correlativo_actual + 1}. Los correlativos nunca retroceden.`,
+      texto: `No se puede bajar: ya se emitió el ${serie.correlativo_actual}, así que el próximo seguirá siendo el ${serie.correlativo_actual + 1}. Los correlativos nunca retroceden.`,
     });
     return avisos;
   }
@@ -167,12 +167,13 @@ export function nombreDeSerie(s: Pick<SerieDocumento, "tipo" | "serie">): string
 }
 
 /**
- * ¿Se enseña sin pedirlo? Las activas que no son de boleta. Lo demás —las de
- * boleta y las desactivadas— queda detrás de «Ver también…»: *«solo déjame
- * los importantes»*.
+ * ¿Se enseña sin pedirlo? Las reales activas que no son de boleta. Lo demás
+ * —las de pruebas, las de boleta y las desactivadas— queda detrás de «Ver
+ * también…»: *«solo déjame los importantes»*. Las de pruebas siguen activas
+ * porque las usa sola la beta (179).
  */
-export function esSerieImportante(s: Pick<SerieDocumento, "tipo" | "serie" | "activo">): boolean {
-  return s.activo && !deBoleta(s);
+export function esSerieImportante(s: Pick<SerieDocumento, "tipo" | "serie" | "activo" | "es_prueba">): boolean {
+  return s.activo && !s.es_prueba && !deBoleta(s);
 }
 
 /** El orden de SIMPLE: factura, sus notas, guía, cotización, compras… */

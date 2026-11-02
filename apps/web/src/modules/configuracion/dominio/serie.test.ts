@@ -101,9 +101,9 @@ describe("avisosDelInicial", () => {
     expect(avisos.some((a) => a.tono === "danger")).toBe(true);
   });
 
-  it("avisa de que no hará nada si el inicial va por detrás", () => {
+  it("no deja bajar el próximo número por detrás de lo emitido (02/11)", () => {
     const avisos = avisosDelInicial(serie({ correlativo_actual: 500 }), 100);
-    expect(avisos.some((a) => a.texto.includes("no cambiará nada"))).toBe(true);
+    expect(avisos.some((a) => a.texto.includes("No se puede bajar"))).toBe(true);
     // Y no promete un próximo número que no va a pasar.
     expect(avisos.some((a) => a.texto.includes("El próximo documento será"))).toBe(false);
   });
@@ -194,10 +194,11 @@ describe("cómo se llama cada serie (02/11)", () => {
     expect(nombreDeSerie({ tipo: "factura", serie: "F002" })).toBe("Factura de venta");
   });
 
-  it("importantes: las activas que no son de boleta", () => {
-    expect(esSerieImportante({ tipo: "factura", serie: "F002", activo: true })).toBe(true);
-    expect(esSerieImportante({ tipo: "factura", serie: "F001", activo: false })).toBe(false);
-    expect(esSerieImportante({ tipo: "boleta", serie: "B001", activo: true })).toBe(false);
-    expect(esSerieImportante({ tipo: "nota_credito", serie: "BC01", activo: true })).toBe(false);
+  it("importantes: las reales activas que no son de boleta", () => {
+    expect(esSerieImportante({ tipo: "factura", serie: "F002", activo: true, es_prueba: false })).toBe(true);
+    expect(esSerieImportante({ tipo: "factura", serie: "F001", activo: true, es_prueba: true })).toBe(false);
+    expect(esSerieImportante({ tipo: "factura", serie: "F003", activo: false, es_prueba: false })).toBe(false);
+    expect(esSerieImportante({ tipo: "boleta", serie: "B001", activo: true, es_prueba: false })).toBe(false);
+    expect(esSerieImportante({ tipo: "nota_credito", serie: "BC01", activo: true, es_prueba: false })).toBe(false);
   });
 });

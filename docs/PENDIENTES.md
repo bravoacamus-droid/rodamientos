@@ -8835,3 +8835,22 @@ débito a factura, desde 1); por defecto F002 (580), FC02 (5), FD02 (1), T002
 B001, BC01 y BD01 (pruebas y boletas; siguen en «Ver también…»). Queda la
 COT1-000002 de Willy (borrador del 02/11 8:07): se pasa a CT02 con «Clonar».
 Sigue en beta: el paso a producción lo hace Moisés desde la pantalla.
+
+**«Próximo número», como el «Correlativo» de SIMPLE (02/11).** Moisés: *«el
+primer número como lo tenemos nosotros… se va modificando al tiempo que se
+están utilizando»*. Se editaba `correlativo_inicial`, que no se mueve, y el
+que avanzaba era «Va por»: dos columnas para una idea. Ahora una, «Próximo
+número» (= mayor de los dos), que avanza sola, se puede subir y no bajar; el
+último emitido va debajo de «Saldrá como». Comparado con la captura de SIMPLE:
+todo igual salvo OC02, que allí va en 2 (ya usó la OC02-1) → puesta en 2. Y
+F002 en 580 en SIMPLE dice que la F002-579 (OVOSUR) ya está emitida: falta
+cargarla.
+
+**179 · Las series siguen al ambiente.** Moisés: *«si mi ambiente está en
+beta, que se pongan por defecto los correlativos de beta, y si está en
+producción, los que estamos haciendo»*. Disparador en `config_sunat`: al
+cambiar `ambiente`, `series_segun_ambiente()` pone por defecto la de pruebas
+(beta) o la real que más lleva emitido (producción) en factura, notas a
+factura y guía. Cotización y orden de compra no se tocan. Centinela: lo
+ejecuta en los dos sentidos. F001, FC01, FD01 y T001 reactivadas (las usa la
+beta) y ocultas en «Ver también…».

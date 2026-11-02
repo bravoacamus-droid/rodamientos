@@ -31,7 +31,14 @@ import {
   guardarSerie,
   type ResultadoConfig,
 } from "../acciones/guardar";
-import { avisosDelInicial, esSerieImportante, nombreDeSerie, proximoNumero, serieValida } from "../dominio/serie";
+import {
+  avisosDelInicial,
+  esSerieImportante,
+  nombreDeSerie,
+  proximoCorrelativo,
+  proximoNumero,
+  serieValida,
+} from "../dominio/serie";
 import {
   ETIQUETA_TIPO_DOCUMENTO,
   TIPOS_FISCALES,
@@ -104,25 +111,32 @@ export function TablaSeries({
   const [verTodas, setVerTodas] = React.useState(false);
   const ocultas = series.filter((s) => !esSerieImportante(s));
   const visibles = verTodas ? series : series.filter((s) => esSerieImportante(s));
+  /*
+    Lo que se ve y se edita es el PRÓXIMO número, como el «Correlativo» de
+    SIMPLE (02/11). Moisés: *«el primer número como lo tenemos nosotros… se va
+    modificando al tiempo que se están utilizando»*. Antes se editaba el
+    «Primer número», que no se mueve, y el que avanzaba era «Va por»: dos
+    columnas para una idea. Guardar sigue escribiendo `correlativo_inicial`
+    —el próximo es el mayor de los dos— y nunca retrocede.
+  */
   const inicialDe = (s: SerieDocumento) =>
-    borradores[s.id] ?? String(s.correlativo_inicial);
+    borradores[s.id] ?? String(proximoCorrelativo(s));
 
   return (
     <div className="@container flex flex-col gap-3">
       {pruebasPorDefecto.length > 0 ? (
         <div className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3">
           <p className="text-sm font-medium">
-            Ahora mismo se emitiría con series de pruebas
+            En beta se emite con las series de pruebas
           </p>
           <p className="mt-1 text-sm">
             {pruebasPorDefecto.map((s) => s.serie).join(", ")} —{" "}
-            <strong>está bien mientras estemos probando</strong>: así los
-            ensayos no gastan números del talonario de verdad.
+            <strong>así las pruebas no gastan números del talonario de verdad</strong>.
           </p>
           <p className="mt-2 text-sm text-[var(--fg-muted)]">
-            Antes de facturar en serio hay que poner por defecto la serie que
-            continúa la numeración. No hace falta acordarse: al pasar a
-            producción el sistema se niega a emitir con estas y dice cuál usar.
+            Al pasar el ambiente a producción, el sistema pone solas por defecto
+            las reales (F002, FC02, FD02, T002), y al volver a beta, otra vez
+            estas. No hay que cambiarlas a mano.
           </p>
         </div>
       ) : null}
@@ -131,11 +145,10 @@ export function TablaSeries({
         {/* `text-sm`: esto explica cómo funciona el correlativo, y es de lo
             que más falta hace leer de toda la pantalla. */}
         <p className="text-sm text-[var(--fg-subtle)]">
-          <strong>«Primer número»</strong> es el primero que emitirá el ERP, no
-          el último que se usó: si tu última factura en el sistema anterior fue
-          la 567, pon 568. «Va por» es el último que se emitió aquí. El próximo
-          documento se lleva el mayor de estos dos: el primer número, o «Va
-          por» más uno. Los correlativos nunca retroceden.
+          <strong>«Próximo número»</strong> es el que llevará el siguiente
+          documento, como el «Correlativo» de SIMPLE: avanza solo con cada uno
+          que se emite. Se puede subir —si el sistema anterior ya usó algunos
+          números— pero nunca bajar: los correlativos no retroceden.
         </p>
         {puedeEditar ? <DialogNuevaSerie /> : null}
       </div>
@@ -164,9 +177,8 @@ export function TablaSeries({
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-3 py-2 font-medium">Documento</th>
               <th className="px-3 py-2 font-medium">Serie</th>
-              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Primer número</th>
-              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Va por</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">El próximo</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Próximo número</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Saldrá como</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
           </thead>
@@ -188,7 +200,7 @@ export function TablaSeries({
         <Button type="button" variant="outline" className="self-start" onClick={() => setVerTodas((v) => !v)}>
           {verTodas
             ? "Ver solo las importantes"
-            : `Ver también las desactivadas y las de boleta (${ocultas.length})`}
+            : `Ver también las de pruebas, las de boleta y las desactivadas (${ocultas.length})`}
         </Button>
       ) : null}
     </div>
@@ -213,7 +225,7 @@ function useEdicionSerie(
 
   const propuesto = Number(inicial);
   const cambiado =
-    propuesto !== serie.correlativo_inicial && inicial.trim() !== "";
+    propuesto !== proximoCorrelativo(serie) && inicial.trim() !== "";
   const avisos = cambiado ? avisosDelInicial(serie, propuesto) : [];
   const bloqueado = avisos.some((a) => a.tono === "danger");
 
@@ -222,14 +234,14 @@ function useEdicionSerie(
     cambiado,
     avisos,
     bloqueado,
-    deshacer: () => setInicial(String(serie.correlativo_inicial)),
+    deshacer: () => setInicial(String(proximoCorrelativo(serie))),
     guardar: async () => {
       const bien = await correr(() =>
         guardarSerie(serie.id, {
           correlativo_inicial: propuesto,
         }),
       );
-      if (!bien) setInicial(String(serie.correlativo_inicial));
+      if (!bien) setInicial(String(proximoCorrelativo(serie)));
     },
     predeterminar: () =>
       correr(() => guardarSerie(serie.id, { predeterminada: true })),
@@ -278,14 +290,13 @@ function FilaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
           />
         </td>
 
-        <td className="px-3 py-2 text-right tabular text-[var(--fg-muted)]">
-          {serie.correlativo_actual}
-        </td>
-
         {/* Sin partir: «F001-» arriba y «00000001» abajo no se lee como un
             número (revisión por módulos del 02/10). */}
-        <td className="whitespace-nowrap px-3 py-2 font-mono text-sm">
-          {proximoNumero(serie)}
+        <td className="whitespace-nowrap px-3 py-2 text-sm">
+          <span className="font-mono">{proximoNumero(serie)}</span>
+          {serie.correlativo_actual > 0 ? (
+            <span className="block text-[var(--fg-subtle)]">último emitido: {serie.correlativo_actual}</span>
+          ) : null}
         </td>
 
         <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -299,7 +310,7 @@ function FilaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
 
       {edicion.avisos.length > 0 ? (
         <tr className="border-b border-[var(--border-soft)]">
-          <td colSpan={6} className="px-3 pb-2">
+          <td colSpan={5} className="px-3 pb-2">
             <AvisosSerie avisos={edicion.avisos} />
           </td>
         </tr>
@@ -340,7 +351,7 @@ function TarjetaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
 
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
         <div className="col-span-2 flex items-center justify-between gap-3">
-          <dt className="text-[var(--fg-subtle)]">Primer número</dt>
+          <dt className="text-[var(--fg-subtle)]">Próximo número</dt>
           <dd>
             <CampoDesde
               serie={serie}
@@ -352,12 +363,12 @@ function TarjetaSerie({ serie, puedeEditar, inicial, setInicial }: PropsSerie) {
           </dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-[var(--fg-subtle)]">Va por</dt>
-          <dd className="tabular">{serie.correlativo_actual}</dd>
+          <dt className="text-[var(--fg-subtle)]">Saldrá como</dt>
+          <dd className="font-mono">{proximoNumero(serie)}</dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-[var(--fg-subtle)]">El próximo</dt>
-          <dd className="font-mono">{proximoNumero(serie)}</dd>
+          <dt className="text-[var(--fg-subtle)]">Último emitido</dt>
+          <dd className="tabular">{serie.correlativo_actual > 0 ? serie.correlativo_actual : "ninguno"}</dd>
         </div>
       </dl>
 
@@ -410,11 +421,11 @@ function CampoDesde({
       value={inicial}
       onChange={(e) => setInicial(e.target.value.replace(/[^0-9]/g, ""))}
       inputMode="numeric"
-      aria-label={`Primer número que emitirá ${serie.serie}`}
+      aria-label={`Próximo número de ${serie.serie}`}
       className={className}
     />
   ) : (
-    <span className="tabular">{serie.correlativo_inicial}</span>
+    <span className="tabular">{proximoCorrelativo(serie)}</span>
   );
 }
 
