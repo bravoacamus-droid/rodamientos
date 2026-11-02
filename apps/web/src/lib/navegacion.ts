@@ -126,17 +126,19 @@ export const CONFIGURACION: GrupoNav = {
       etiqueta: "Usuarios",
       ruta: "/configuracion/usuarios",
       icono: "usuarios",
-      // Solo gerencia CAMBIA roles, pero admin necesita ver quién entra.
-      roles: ["gerencia", "admin"],
+      // Ver, por la matriz desde la 185. CAMBIAR sigue siendo solo de
+      // gerencia, fijo en las acciones: no se abre desde una casilla.
+      permiso: "usuarios",
     },
     {
       etiqueta: "Roles y permisos",
       ruta: "/configuracion/permisos",
       icono: "usuarios",
-      // Misma regla que arriba: admin mira, gerencia cambia. Y va DESPUÉS de
+      // Misma regla que arriba (185): la matriz dice quién mira, y cambiar es
+      // solo de gerencia. Y va DESPUÉS de
       // Usuarios porque se toca mucho menos: una cosa es el alta de alguien
       // que entra hoy y otra es qué puede hacer su rol, que se decide una vez.
-      roles: ["gerencia", "admin"],
+      permiso: "roles",
     },
   ],
 };

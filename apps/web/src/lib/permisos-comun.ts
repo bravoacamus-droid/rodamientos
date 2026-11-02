@@ -19,6 +19,8 @@ export type Modulo =
   | "informe"
   | "configuracion"
   | "numeracion"
+  | "usuarios"
+  | "roles"
   | "bitacora";
 
 export type Accion = "ver" | "crear" | "editar" | "eliminar";
@@ -50,6 +52,8 @@ const NOMBRE_MODULO: Record<Modulo, string> = {
   informe: "Informe general",
   configuracion: "Datos de la empresa",
   numeracion: "SUNAT y numeración",
+  usuarios: "Usuarios",
+  roles: "Roles y permisos",
   bitacora: "Qué ha pasado",
 };
 

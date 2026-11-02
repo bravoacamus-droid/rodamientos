@@ -91,7 +91,7 @@ describe("el tablero y la configuración", () => {
     for (const item of CONFIGURACION.items) {
       expect(item.roles ?? item.permiso).toBeTruthy();
       if (!item.permiso) expect(item.roles).toEqual(["gerencia", "admin"]);
-      else expect(["configuracion", "numeracion"]).toContain(item.permiso);
+      else expect(["configuracion", "numeracion", "usuarios", "roles"]).toContain(item.permiso);
     }
   });
 
@@ -184,9 +184,11 @@ describe("puedeAbrir: la puerta de la pantalla (143)", () => {
     expect(puedeAbrir("/dashboard", "ventas", [])).toBe(true);
     expect(puedeAbrir("/perfil", "ventas", [])).toBe(true);
   });
-  it("usuarios y permisos siguen siendo de quien manda", () => {
+  it("usuarios y permisos se abren con su «Ver» de la matriz (185)", () => {
     expect(puedeAbrir("/configuracion/usuarios", "ventas", VENTAS)).toBe(false);
-    expect(puedeAbrir("/configuracion/permisos", "admin", [])).toBe(true);
+    expect(puedeAbrir("/configuracion/permisos", "admin", [])).toBe(false);
+    expect(puedeAbrir("/configuracion/permisos", "admin", ["roles:ver"])).toBe(true);
+    expect(puedeAbrir("/configuracion/usuarios", "ventas", ["usuarios:ver"])).toBe(true);
   });
 });
 

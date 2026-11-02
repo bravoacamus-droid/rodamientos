@@ -9023,3 +9023,10 @@ empresa y las series eran el mismo módulo (quitar uno quitaba el otro).
 
 Visto en pantalla como Gerencia (matriz, tablero, SUNAT y numeración, Lo
 comprado). **Sin ver como Administración**: no hay su contraseña.
+
+**185 · Usuarios y Roles y permisos, en la matriz (02/11).** Iban fijas para
+Gerencia y Administración. Ahora son dos filas con solo «Ver»: crear usuarios,
+cambiar contraseñas y cambiar permisos sigue siendo SOLO de Gerencia, fijo en
+las acciones y en la base (un rol que cambie permisos se lo daría todo).
+Luis: *«correcto, así lo quiere»*. Administración recibió «Ver» en las dos.
+Visto en la matriz como Gerencia.
