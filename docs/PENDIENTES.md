@@ -8909,3 +8909,23 @@ costo dice «Del almacén» con «Comprar igual» (abre el análisis), en vez de
 botón amarillo; y `lineasSinAnalizar` no la cuenta. Con stock que no
 alcanza, sigue «Analizar». Sin probar en pantalla: Willy estaba editando la
 cotización y abrirla le habría quitado el candado.
+
+## §CT · 02/11 — La orden de compra se edita, con pago, entrega y PDF
+
+Willy, 02/11 (por Moisés, en vivo): *«cada orden de compra es como una
+cotización: que se pueda editar también los precios de costo… y poner
+condición de pago… y dirección de entrega»*.
+
+- **Migración 180**: `compras.condicion_pago` (contado/crédito),
+  `dias_credito`, `entrega` (almacén/recojo), `direccion_entrega`, y la RPC
+  `actualizar_orden_compra`, que solo deja editar una orden **registrada, sin
+  factura del proveedor y sin recepción**. Su centinela la ejecuta y la deshace.
+- **`/compras/[id]/editar`**: costos, cantidades, quitar líneas, pago (contado
+  o crédito a 30/60/otro), entrega (por defecto la dirección de la empresa, o
+  recojo en el local del proveedor), fecha de entrega y observaciones.
+- La ficha tiene **«Descargar PDF»** directo (`compras/ui/papel.ts`, compartido
+  con la hoja impresa) y muestra Pago y Entrega.
+- Registrar la factura del proveedor sigue siendo un paso aparte (128).
+
+**Sin probar en pantalla**: la sesión del navegador había caducado. Las tres
+órdenes editables (OC02-00002..4) son reales de Willy: probar sin guardar.

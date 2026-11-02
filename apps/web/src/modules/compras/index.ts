@@ -8,6 +8,7 @@ export { default as PaginaCompras } from "./ui/pagina";
 export { default as PaginaNuevaCompra } from "./ui/pagina-nueva";
 export { default as PaginaDetalleCompra } from "./ui/pagina-detalle";
 export { default as PaginaFacturaOrden } from "./ui/pagina-factura-orden";
+export { default as PaginaEditarOrden } from "./ui/pagina-editar-orden";
 export { default as PaginaPorComprar } from "./ui/por-comprar/pagina";
 export { default as PaginaListos } from "./ui/pagina-listos";
 export { default as PaginaPedirPrecio } from "./ui/pedir-precio/pagina";

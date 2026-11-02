@@ -3,7 +3,9 @@ import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
-import { RotateCcw, Scale } from "lucide-react";
+import { Pencil, RotateCcw, Scale } from "lucide-react";
+import { BotonDescargarPdf } from "@/componentes/boton-pdf";
+import { nombreArchivo } from "@/lib/pdf-hoja";
 import { misPermisos } from "@/lib/permisos";
 import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -20,14 +22,16 @@ import { Volver } from "@/componentes/volver";
 import { emisorParaImprimir } from "@/lib/emisor";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 import { DocumentoOrdenCompra } from "./documento-orden";
+import { hojaDeOrdenCompra, textoCondicionPago, textoEntrega } from "./papel";
 
 /**
  * Ficha de una compra.
  *
- * Es un documento, no un formulario: no hay botón de editar. Corregir una
- * compra mal registrada es anularla —con su motivo— y volver a registrarla,
- * igual que en recepciones. Un documento que se puede reescribir en silencio
- * no sirve para cuadrar nada.
+ * Es un documento. Mientras la orden no es un compromiso de nadie —sin
+ * factura del proveedor y sin recepción— se edita (180), como la cotización.
+ * Después, corregirla es anularla —con su motivo— y volver a registrarla,
+ * igual que en recepciones: un documento que se reescribe en silencio no
+ * sirve para cuadrar nada.
  */
 export default async function PaginaDetalleCompra({
   params,
@@ -102,6 +106,11 @@ export default async function PaginaDetalleCompra({
   // Los gastos se tocan mientras no haya entrado mercadería: la base los
   // congela en cuanto se recibe (022).
   const editableGastos = c.estado === "registrada";
+  // La orden se edita mientras no es un compromiso de nadie (180): lo mismo
+  // que comprueba `actualizar_orden_compra` en la base.
+  const editableOrden =
+    puedeEditar && c.estado === "registrada" && !c.documento_proveedor && c.recepciones.length === 0;
+  const archivo = nombreArchivo(c.numero, c.proveedor);
 
   return (
     <>
@@ -132,11 +141,30 @@ export default async function PaginaDetalleCompra({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* La orden en papel, para mandársela al proveedor (12/10). */}
+          {/* Editar la orden mientras nadie la usó (180): sin factura del
+              proveedor y sin recepción. Willy, 02/11: «cada orden de compra
+              es como una cotización». */}
+          {editableOrden ? (
+            <Link
+              href={`/compras/${c.id}/editar`}
+              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+            >
+              <Pencil className="size-4" aria-hidden />
+              Editar orden
+            </Link>
+          ) : null}
+          {/* La orden en papel, para mandársela al proveedor (12/10), y en
+              PDF directo (02/11), como la cotización y la factura. */}
           {c.estado !== "anulada" ? (
-            <VistaPreviaDocumento numero={c.numero}>
-              <DocumentoOrdenCompra c={c} emisor={emisor} />
-            </VistaPreviaDocumento>
+            <>
+              <VistaPreviaDocumento
+                numero={c.numero}
+                junto={<BotonDescargarPdf hoja={hojaDeOrdenCompra(c, emisor)} nombre={archivo} />}
+              >
+                <DocumentoOrdenCompra c={c} emisor={emisor} />
+              </VistaPreviaDocumento>
+              <BotonDescargarPdf hoja={hojaDeOrdenCompra(c, emisor)} nombre={archivo} variante="outline" />
+            </>
           ) : null}
           {c.estado !== "anulada" && falta.length > 0 ? (
             <Link
@@ -431,6 +459,8 @@ export default async function PaginaDetalleCompra({
             <dl className="flex flex-col gap-2 text-sm">
               <Dato etiqueta="Fecha" valor={c.fecha} />
               <Dato etiqueta="Llega el" valor={c.fecha_estimada ?? "—"} />
+              <Dato etiqueta="Pago" valor={textoCondicionPago(c) ?? "—"} />
+              <Dato etiqueta="Entrega" valor={textoEntrega(c, emisor) ?? "—"} />
               <Dato etiqueta="Factura" valor={c.documento_proveedor ?? "—"} />
               <Dato etiqueta="Guía" valor={c.guia_proveedor ?? "—"} />
               {c.tipo === "importacion" ? (

@@ -899,11 +899,15 @@ export type Database = {
         Row: {
           actualizado_en: string
           comprador_id: string | null
+          condicion_pago: string | null
           consulta_precio_id: string | null
           cotizacion_id: string | null
           courier: string | null
           creado_en: string
+          dias_credito: number | null
+          direccion_entrega: string | null
           documento_proveedor: string | null
+          entrega: string | null
           estado: Database["public"]["Enums"]["estado_compra"]
           falta_factura: boolean
           fecha: string
@@ -928,11 +932,15 @@ export type Database = {
         Insert: {
           actualizado_en?: string
           comprador_id?: string | null
+          condicion_pago?: string | null
           consulta_precio_id?: string | null
           cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
+          dias_credito?: number | null
+          direccion_entrega?: string | null
           documento_proveedor?: string | null
+          entrega?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
           falta_factura?: boolean
           fecha?: string
@@ -957,11 +965,15 @@ export type Database = {
         Update: {
           actualizado_en?: string
           comprador_id?: string | null
+          condicion_pago?: string | null
           consulta_precio_id?: string | null
           cotizacion_id?: string | null
           courier?: string | null
           creado_en?: string
+          dias_credito?: number | null
+          direccion_entrega?: string | null
           documento_proveedor?: string | null
+          entrega?: string | null
           estado?: Database["public"]["Enums"]["estado_compra"]
           falta_factura?: boolean
           fecha?: string
@@ -5960,6 +5972,10 @@ export type Database = {
         Returns: number
       }
       actualizar_cotizacion: { Args: { p_datos: Json }; Returns: Json }
+      actualizar_orden_compra: {
+        Args: { p_datos: Json; p_id: string }
+        Returns: Json
+      }
       anotar_productos_de_proveedor: {
         Args: {
           p_comprado?: boolean
@@ -6595,6 +6611,7 @@ export type Database = {
           venta_con_costo: number
         }[]
       }
+      series_segun_ambiente: { Args: never; Returns: undefined }
       siguiente_correlativo: {
         Args: {
           p_serie?: string

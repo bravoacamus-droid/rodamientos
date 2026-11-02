@@ -147,6 +147,14 @@ export interface CompraDetalle {
   lineas: LineaCompra[];
   /** Recepciones que han consumido esta compra. */
   recepciones: { id: string; numero: string; fecha: string }[];
+  /**
+   * Cómo se le paga y cómo se entrega (180). Null en las de antes: el papel
+   * no dice nada de lo que no se eligió.
+   */
+  condicion_pago: "contado" | "credito" | null;
+  dias_credito: number | null;
+  entrega: "almacen" | "recojo" | null;
+  direccion_entrega: string | null;
   /** Los documentos subidos: la proforma confirmada, la factura… (099). */
   documentos: { id: string; tipo: "proforma" | "factura" | "otro"; nombre: string; creado_en: string }[];
 }

@@ -221,6 +221,7 @@ export async function detalleCompra(
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
          motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda, falta_factura,
+         condicion_pago, dias_credito, entrega, direccion_entrega,
          gastos_importacion_detalle:gastos_importacion(id, concepto, monto, reparto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
          proveedores(razon_social, numero_documento, direccion),
@@ -280,6 +281,10 @@ export async function detalleCompra(
         proveedor_documento: c.proveedores?.numero_documento ?? null,
         proveedor_direccion: c.proveedores?.direccion ?? null,
         falta_factura: Boolean(c.falta_factura),
+        condicion_pago: (c.condicion_pago as "contado" | "credito" | null) ?? null,
+        dias_credito: c.dias_credito == null ? null : Number(c.dias_credito),
+        entrega: (c.entrega as "almacen" | "recojo" | null) ?? null,
+        direccion_entrega: (c.direccion_entrega as string | null) ?? null,
         para: (() => {
           const q = c.cotizacion as { id: string; numero: string; clientes: { razon_social: string } | null } | null;
           return q ? { cotizacionId: q.id, numero: q.numero, cliente: q.clientes?.razon_social ?? "—" } : null;
