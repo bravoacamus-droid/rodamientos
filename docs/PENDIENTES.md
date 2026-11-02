@@ -8695,3 +8695,49 @@ el borrador. Ahora se aplica cada vez que se carga SU cotización.
 **Sin probar**: emitir desde un borrador (gasta un número), subir un CR de
 verdad en el cobro, y el aviso de «se emitió sin/con retención» (ninguna
 factura del ERP tiene cobro pendiente todavía).
+
+## §CS · 01/11 — La carga del 01/11 y lo que hace falta para el 02/11 (primer día real)
+
+Willy mandó el export de SIMPLE al 30/10 (ventas general y detallada,
+cotizaciones general y detalle, compras, guías y la CT02-1288 en PDF), en
+`Downloads/rodamientos` de Moisés. Respaldo antes de tocar nada
+(`pnpm db:respaldar`: 29 918 filas, 76 tablas, comprobado).
+
+**Cargado por SQL directo, en una transacción ensayada antes:**
+
+- **F002-562 a 578** (17, con 45 ítems). Por cobrar salvo la 567 y la 571,
+  pagadas según su registro del 30/10 (§CP); las pendientes 562-574 suman
+  $ 8,303.96, su Excel decía 8,303.95. La **retención** sale de las
+  observaciones de SIMPLE («OPERACION SUJETA A SPOT: RETENCION (3%)»): 9 de
+  las 17 la llevan, y se marcó también en las del histórico que siguen por
+  cobrar. **24 clientes** marcados agentes, por lo mismo.
+- **CT02-1262 a 1309** (48, 168 ítems). «Atendida» si tiene venta en SIMPLE,
+  y la CT02-1288 (guía T002-575, se factura el 02/11 en SIMPLE); el resto
+  «enviada». Las dos en soles, a dólares al cambio del día (como el 07/10).
+- Ítems de productos que no existen: con código y descripción, sin enlazar
+  (como el 07/10). Producto **LM122130** creado (marca **NB**, nueva), que
+  hace falta el 02/11.
+- Series: **F002 sigue en 580** —la 579 la emite SIMPLE el 02/11 para
+  OVOSUR; si el ERP la emitiera, dos facturas con el mismo número—, **CT02
+  en 1310**, y **T002 creada, sigue en 576** (última de SIMPLE: T002-575).
+
+**No cargado, pendiente de decidir:** las 575 guías T002 del histórico (el
+02/11 no las necesita) y las 781 **compras**: mezclan mercadería con gastos
+(15 proveedores que no existen son restaurantes y personas), y `compras` del
+ERP son órdenes de compra con recepción.
+
+**Para el 02/11 (CT02-1293 parcial → cotización nueva, guía y factura en el
+ERP)**, falta: predeterminar F002, T002 y CT02 (hoy F001, T001 y COT1); pasar
+`config_sunat.ambiente` a producción (probado OK el 30/10, guías incluidas);
+y que el 02/11 no se emitan en SIMPLE más que la factura de OVOSUR.
+
+**La factura a crédito propone 30 días (01/11).** Moisés: *«si en cotización
+ya se pone a crédito y los días, ¿por qué cuando se hace la factura no trae
+esos datos?»*. Porque la cotización NO los guarda: los imprime de la ficha
+del cliente (`formaDePago(cliente.condicion_pago, cliente.dias_credito)`), y
+la factura los lee de ahí también. Y los 113 clientes están a crédito con 0
+días. Ahora, a crédito y sin días, la factura propone 30. Lo de fondo es
+poner los días en la ficha de cada cliente (botones 15/30/45/60): entonces
+la cotización imprime «CRÉDITO 30 DÍAS» y la factura los trae. Darle a la
+cotización su propia condición tocaría `crear_cotizacion` y
+`actualizar_cotizacion`; no la noche antes del primer día real.

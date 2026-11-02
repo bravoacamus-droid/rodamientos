@@ -356,7 +356,16 @@ export function EmisorComprobante({
       // Solo facturas (14/10). Willy: *«boletas no emito… sáquelo»*.
       setTipo("factura");
       setCondicion(r.datos.condicion_pago === "credito" ? "credito" : "contado");
-      setDias(r.datos.dias_credito ?? 0);
+      /*
+        A crédito y sin días, 30 (01/11). Los 113 clientes están «a crédito con
+        0 días» —el plazo no vino en su histórico— y la factura salía vencida
+        el día que se emite, o había que acordarse de teclearlo. 30 es lo
+        habitual (§AE.4); se cambia aquí, o en la ficha del cliente para
+        siempre.
+      */
+      const diasPropuestos =
+        r.datos.condicion_pago === "credito" && !(r.datos.dias_credito > 0) ? 30 : (r.datos.dias_credito ?? 0);
+      setDias(diasPropuestos);
       setOrdenCompra(r.datos.orden_compra_cliente ?? "");
       /*
         Todas las guías de la cotización, marcadas.
@@ -378,7 +387,7 @@ export function EmisorComprobante({
         cotizacionId,
         tipo: "factura",
         condicion: r.datos.condicion_pago === "credito" ? "credito" : "contado",
-        dias: r.datos.dias_credito ?? 0,
+        dias: diasPropuestos,
         ordenCompra: r.datos.orden_compra_cliente ?? "",
         cantidades: r.datos.lineas.map((l) => l.cantidad),
         guias: ids,
