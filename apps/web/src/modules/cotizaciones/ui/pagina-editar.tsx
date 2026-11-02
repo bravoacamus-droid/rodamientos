@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoError } from "@rodatech/ui";
-import { perfilActual } from "@rodatech/db/servidor";
+import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 import { Volver } from "@/componentes/volver";
 import { misPermisos } from "@/lib/permisos";
@@ -87,6 +87,22 @@ export default async function PaginaEditarCotizacion({
   const { cabecera, lineas } = resultado.datos;
 
   /*
+    El stock de cada producto, como al cotizar (02/11). Iba `stock: 0` a mano
+    y al editar todo decía «sin stock», aunque hubiera: el análisis de compra
+    no podía preguntar si se usa el almacén (Moisés: *«¿va a utilizar el
+    stock o vas a hacer el análisis de costo?»*).
+  */
+  const productos = [...new Set(lineas.map((l) => l.producto_id).filter((x): x is string => !!x))];
+  const stockDe = new Map<string, number>();
+  if (productos.length > 0) {
+    const supabase = await clienteServidor();
+    const { data } = await supabase.from("stock").select("producto_id, cantidad, reservado").in("producto_id", productos);
+    for (const s of data ?? []) {
+      stockDe.set(String(s.producto_id), Number(s.cantidad ?? 0) - Number(s.reservado ?? 0));
+    }
+  }
+
+  /*
     Cerrada: se vuelve a la ficha en vez de enseñar un formulario que va a
     rebotar al guardar.
 
@@ -162,7 +178,7 @@ export default async function PaginaEditarCotizacion({
       precioMinimo: 0,
       precioMercado: 0,
       precioLista: l.valor_unitario,
-      stock: 0,
+      stock: l.producto_id ? (stockDe.get(l.producto_id) ?? 0) : 0,
       disponibilidad: l.disponibilidad,
       diasEntrega: l.dias_entrega,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),

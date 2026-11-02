@@ -8884,3 +8884,10 @@ con el costo del almacén pide cambiar esa función.
 Sin ver la pregunta en pantalla: al abrir el análisis de la 6310-ZZC3/5K en la
 CT02-001310 la pestaña saltó al tablero (el Chrome lo estaba usando alguien
 más) y no se siguió con la cotización real.
+
+**Probado en pantalla** con la 6310-ZZC3/5K de la CT02-001310 (4 en almacén,
+piden 10): «Usar las 4 del almacén y comprar 6» → «Del almacén: 4 · a
+comprar: 6». Sin guardar. Al probarlo salió un fallo viejo: **al EDITAR una
+cotización todas las líneas decían «sin stock»** (`pagina-editar` ponía
+`stock: 0` a mano), así que la pregunta no salía nunca al editar. Ahora lee
+`stock` (cantidad − reservado) de cada producto.
