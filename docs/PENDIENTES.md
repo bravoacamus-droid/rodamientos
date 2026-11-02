@@ -8818,3 +8818,12 @@ la predeterminada. Ahora la orden de compra sale de su serie por defecto si
 no es la CMP de siempre (`OC02-00001`); el centinela la ejecuta por los dos
 caminos. Creada la serie OC02 (desde 1: en SIMPLE no hay órdenes formales),
 por defecto, y la CMP desactivada.
+
+**«Cambiar serie» (02/11).** Moisés: *«la idea es que también puedan
+modificar los números de serie, si no, ¿cómo lo puedes cambiar?»*. La base
+ya lo dejaba (`tg_series_lo_fiscal`: renombrar solo sin documentos emitidos)
+y no había botón. `cambiarNombreSerie`: con documentos, no (y dice cómo);
+real sin usar, se renombra; de pruebas —la marca no se quita a mano y en
+producción no emitiría (093)—, se crea la real con ese nombre, hereda el
+«por defecto», y la de pruebas se desactiva (FD01 → FD02). Probado en
+pantalla con F002 (lo impide y lo explica) y FD01 (lo explica), sin guardar.

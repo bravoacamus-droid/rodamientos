@@ -26,6 +26,7 @@ import {
 import { Plus } from "lucide-react";
 
 import {
+  cambiarNombreSerie,
   crearSerie,
   guardarSerie,
   type ResultadoConfig,
@@ -451,6 +452,7 @@ function AccionesSerie({
 
   return (
     <>
+      {serie.activo ? <CambiarNombreSerie serie={serie} variante={variante} /> : null}
       {!serie.predeterminada && serie.activo ? (
         <Button
           variant={variante}
@@ -478,6 +480,86 @@ function AccionesSerie({
         </Button>
       )}
     </>
+  );
+}
+
+/**
+ * «Cambiar serie» (02/11). Moisés: *«la idea es que también puedan modificar
+ * los números de serie»*. La ventana dice ANTES qué va a pasar: con documentos
+ * emitidos no se puede; de pruebas, se crea la real y la de pruebas se va;
+ * real sin usar, se renombra (`cambiarNombreSerie`).
+ */
+function CambiarNombreSerie({ serie, variante }: { serie: SerieDocumento; variante: "ghost" | "outline" }) {
+  const { ocupado, correr } = useAccion();
+  const [abierto, setAbierto] = React.useState(false);
+  const [nueva, setNueva] = React.useState("");
+  const usada = serie.correlativo_actual > 0;
+  const valida = serieValida(nueva) && nueva !== serie.serie;
+
+  return (
+    <Dialog
+      open={abierto}
+      onOpenChange={(v) => {
+        setAbierto(v);
+        if (v) setNueva("");
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant={variante} size="sm">
+          Cambiar serie
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            Cambiar {serie.serie} · {nombreDeSerie(serie)}
+          </DialogTitle>
+          <DialogDescription>
+            {usada
+              ? `${serie.serie} ya emitió ${serie.correlativo_actual} documentos y así los tiene SUNAT: su nombre no se puede cambiar. Crea la serie nueva con «Nueva serie» y pulsa «Usar por defecto» en ella.`
+              : serie.es_prueba
+                ? `${serie.serie} es de pruebas. Se crea la serie nueva, real, empezando en 1${serie.predeterminada ? " y por defecto" : ""}, y ${serie.serie} queda desactivada.`
+                : `${serie.serie} todavía no emitió nada: se le cambia el nombre.`}
+          </DialogDescription>
+        </DialogHeader>
+        {usada ? null : (
+          <DialogBody>
+            <Campo
+              id={`renombrar-${serie.id}`}
+              label="Nueva serie"
+              ayuda={valida ? `Será: ${nombreDeSerie({ tipo: serie.tipo, serie: nueva })}.` : "De 2 a 6 letras mayúsculas o dígitos, como en SIMPLE: FD02, T002, OC02…"}
+            >
+              <Input
+                id={`renombrar-${serie.id}`}
+                value={nueva}
+                onChange={(e) => setNueva(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                maxLength={6}
+                placeholder={serie.serie}
+                className="font-mono"
+                autoFocus
+              />
+            </Campo>
+          </DialogBody>
+        )}
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
+            {usada ? "Entendido" : "Cancelar"}
+          </Button>
+          {usada ? null : (
+            <Button
+              type="button"
+              disabled={!valida || ocupado}
+              onClick={async () => {
+                const bien = await correr(() => cambiarNombreSerie(serie.id, nueva));
+                if (bien) setAbierto(false);
+              }}
+            >
+              {ocupado ? "Guardando…" : serie.es_prueba ? `Crear ${nueva || "la nueva"}` : `Cambiar a ${nueva || "…"}`}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
