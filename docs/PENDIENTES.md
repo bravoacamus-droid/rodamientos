@@ -8827,3 +8827,11 @@ real sin usar, se renombra; de pruebas —la marca no se quita a mano y en
 producción no emitiría (093)—, se crea la real con ese nombre, hereda el
 «por defecto», y la de pruebas se desactiva (FD01 → FD02). Probado en
 pantalla con F002 (lo impide y lo explica) y FD01 (lo explica), sin guardar.
+
+**Las series, como en SIMPLE (02/11).** Moisés: *«la cosa es que quede lo que
+utiliza»*. Por SQL, en una transacción con comprobación: creada FD02 (nota de
+débito a factura, desde 1); por defecto F002 (580), FC02 (5), FD02 (1), T002
+(576), CT02 (1310), OC02 (1); desactivadas F001, FC01, FD01, T001, COT1,
+B001, BC01 y BD01 (pruebas y boletas; siguen en «Ver también…»). Queda la
+COT1-000002 de Willy (borrador del 02/11 8:07): se pasa a CT02 con «Clonar».
+Sigue en beta: el paso a producción lo hace Moisés desde la pantalla.
