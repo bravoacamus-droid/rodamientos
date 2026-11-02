@@ -114,7 +114,7 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
     return { ok: false, error: "En transporte público hace falta el RUC del transportista." };
   }
   if (aPie && !limpio(d.conductor_documento)) {
-    return { ok: false, error: "Si va a pie, hace falta el DNI de quien la lleva." };
+    return { ok: false, error: "Si es peatonal, hace falta el DNI de quien la lleva." };
   }
   if (!esPublico && !aPie && !limpio(d.transportista_placa)) {
     return { ok: false, error: "En transporte privado hace falta la placa del vehículo." };

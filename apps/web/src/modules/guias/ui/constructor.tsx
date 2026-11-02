@@ -865,7 +865,7 @@ export function ConstructorGuia({
                         className="size-4"
                       />
                       <span className="text-sm font-medium">
-                        Va a pie, sin vehículo
+                        Peatonal (va a pie, sin vehículo)
                       </span>
                     </label>
 

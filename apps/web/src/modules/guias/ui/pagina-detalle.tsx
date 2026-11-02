@@ -398,7 +398,7 @@ export default async function PaginaDetalleGuia({
                 </>
               ) : g.a_pie ? (
                 <>
-                  <Dato etiqueta="Traslado" valor="A pie, sin vehículo" />
+                  <Dato etiqueta="Traslado" valor="Peatonal" />
                   <Dato etiqueta="Lo lleva" valor={g.conductor_nombre ?? "—"} />
                   <Dato etiqueta="DNI" valor={g.conductor_documento ?? "—"} />
                   {g.conductor_telefono ? (

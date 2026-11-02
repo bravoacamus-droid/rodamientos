@@ -49,7 +49,7 @@ export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
     guia.modalidad_traslado === "01"
       ? `${ETIQUETA_MODALIDAD["01"]} · ${guia.transportista_razon_social ?? "agencia"}${guia.transportista_documento ? ` (RUC ${guia.transportista_documento})` : ""}`
       : guia.a_pie
-        ? `A pie · lo lleva ${guia.conductor_nombre ?? "—"}${guia.conductor_documento ? ` (DNI ${guia.conductor_documento})` : ""}`
+        ? `Peatonal · lo lleva ${guia.conductor_nombre ?? "—"}${guia.conductor_documento ? ` (DNI ${guia.conductor_documento})` : ""}`
         : `${ETIQUETA_MODALIDAD["02"]} · ${guia.transportista_placa ?? "sin placa"}${guia.conductor_nombre ? ` · ${guia.conductor_nombre}` : ""}`;
 
   const confirmar = () => {

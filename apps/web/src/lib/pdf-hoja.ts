@@ -48,7 +48,12 @@ export type BloquePiePdf =
   | { tipo: "cuentas"; titulo: string; filas: [string, string, string, string][] }
   | { tipo: "firma"; izquierda: string; derecha: string }
   /** «Etiqueta: valor» en dos columnas (el transporte de la guía). */
-  | { tipo: "campos"; campos: { etiqueta: string; valor: string }[] }
+  | {
+      tipo: "campos";
+      campos: { etiqueta: string; valor: string }[];
+      /** Con título, va en un recuadro con su franja («DATOS DEL TRANSPORTE»). */
+      titulo?: string;
+    }
   /** Una tabla chica con título (las cuotas de la factura). */
   | { tipo: "tabla"; titulo: string; cabecera: string[]; filas: string[][]; derecha?: number[] }
   /** La raya para el sello y la firma del que recibe. */
@@ -66,6 +71,8 @@ export interface HojaPdf {
   datos: ({ etiqueta: string; valor: string; ancho?: boolean } | null)[];
   /** Bloques de dos columnas independientes (la guía), después de `datos`. */
   bloques?: { izquierda: { etiqueta: string; valor: string }[]; derecha: { etiqueta: string; valor: string }[] }[];
+  /** Recuadros de campos entre los datos y las líneas (el transporte de la guía). */
+  antesDeLineas?: { titulo?: string; campos: { etiqueta: string; valor: string }[] }[];
   columnas: { clave: string; titulo: string; alinear?: "izquierda" | "centro" | "derecha"; sinCortar?: boolean }[];
   filas: Record<string, string | CeldaPdf>[];
   totales?: { etiqueta: string; valor: string; destacado?: boolean }[];
@@ -291,6 +298,56 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
   });
   y += 3;
 
+  /**
+   * «Etiqueta: valor» en dos columnas; con título, en su recuadro. Lo usan el
+   * pie y lo que va antes de las líneas (el transporte de la guía, 02/11).
+   */
+  const pintarCampos = (b: { campos: { etiqueta: string; valor: string }[]; titulo?: string }) => {
+    // «Placa: AUE169» en dos columnas, como el pie de la guía.
+    const filas = Math.ceil(b.campos.length / 2);
+    // Con título, un recuadro con su franja gris arriba, como el formato
+    // de SIMPLE que usaba Willy (02/11).
+    const conCaja = Boolean(b.titulo);
+    const franja = conCaja ? 5 : 0;
+    const relleno = conCaja ? 2 : 0;
+    y = quedaSitio(y, filas * 4.2 + 2 + franja + relleno * 2);
+    if (conCaja) {
+      const alto = franja + relleno + filas * 4.2 + relleno;
+      doc.setDrawColor(...BORDE);
+      doc.setFillColor(236, 239, 243);
+      doc.rect(MARGEN, y - 3.5, util, franja, "F");
+      doc.rect(MARGEN, y - 3.5, util, alto, "S");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(CHICO);
+      doc.text(textoPdf(b.titulo!.toUpperCase()), MARGEN + 2, y);
+      doc.setFontSize(CHICO + 0.5);
+      y += franja + relleno;
+    }
+    const mitadPie = (util - relleno * 2) / 2;
+    b.campos.forEach((c, i) => {
+      const x = MARGEN + relleno + (i % 2) * mitadPie;
+      const yc = y + Math.floor(i / 2) * 4.2;
+      doc.setFont("helvetica", "bold");
+      const etiqueta = `${textoPdf(c.etiqueta)}: `;
+      // Se mide en negrita, que es como se escribe: medida en normal, el
+      // valor se montaba encima («ConductorWILLY…»).
+      const ancho = doc.getTextWidth(etiqueta);
+      doc.text(etiqueta, x, yc);
+      doc.setFont("helvetica", "normal");
+      doc.text(textoPdf(c.valor), x + ancho, yc, { maxWidth: mitadPie - ancho - 2 });
+    });
+    y += filas * 4.2 + 1 + (conCaja ? relleno + 3 : 0);
+  };
+
+  // Lo que va entre los datos y las líneas: el transporte de la guía.
+  // Willy, 02/11: arriba de los productos, como en su formato de SIMPLE.
+  if (h.antesDeLineas?.length) {
+    doc.setFontSize(CHICO + 0.5);
+    doc.setTextColor(...GRIS);
+    for (const b of h.antesDeLineas) pintarCampos(b);
+    y += 1;
+  }
+
   /* -------------------------------------------------------------- Líneas */
   const alinear = (a?: string) => (a === "derecha" ? "right" : a === "centro" ? "center" : "left") as "right" | "center" | "left";
   const extras = new Map<string, string[]>();
@@ -440,23 +497,7 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
         });
         y = finalY() + 5;
       } else if (b.tipo === "campos") {
-        // «Placa: AUE169» en dos columnas, como el pie de la guía.
-        const filas = Math.ceil(b.campos.length / 2);
-        y = quedaSitio(y, filas * 4.2 + 2);
-        const mitadPie = util / 2;
-        b.campos.forEach((c, i) => {
-          const x = MARGEN + (i % 2) * mitadPie;
-          const yc = y + Math.floor(i / 2) * 4.2;
-          doc.setFont("helvetica", "bold");
-          const etiqueta = `${textoPdf(c.etiqueta)}: `;
-          // Se mide en negrita, que es como se escribe: medida en normal, el
-          // valor se montaba encima («ConductorWILLY…»).
-          const ancho = doc.getTextWidth(etiqueta);
-          doc.text(etiqueta, x, yc);
-          doc.setFont("helvetica", "normal");
-          doc.text(textoPdf(c.valor), x + ancho, yc, { maxWidth: mitadPie - ancho - 2 });
-        });
-        y += filas * 4.2 + 1;
+        pintarCampos(b);
       } else if (b.tipo === "tabla") {
         y = quedaSitio(y, 8 + b.filas.length * 5);
         doc.setFont("helvetica", "bold");
