@@ -8941,3 +8941,21 @@ se limpiaron por SQL directo.
 
 Aclarado de paso: la **O/C del cliente** es otra cosa. Se escribe en la guía y
 la factura la toma de ahí (`ocDeLasGuias`).
+
+### §CT.2 · Sin la factura del proveedor no se recibe (182)
+
+Moisés, 02/11, con Willy: *«puede registrar la orden de compra sin tener el
+PDF de la factura, pero antes de recepcionar tiene que subir las facturas que
+le envió el proveedor»*.
+
+El flujo de la orden al proveedor queda así:
+1. Se genera la orden desde el pedido, se edita (pago, entrega) y se manda en PDF.
+2. «Registrar compra» con el número de factura, sin el PDF si aún no llegó.
+3. **Recibir exige la factura subida** (`compra_adjuntos.tipo = 'factura'`):
+   lo comprueba un disparador en `recepciones` (vale para cualquier camino), y
+   la ficha enseña «Recibir mercadería» con candado y un aviso «Falta subir la
+   factura del proveedor». En «Documentos» el tipo propuesto es «Factura»
+   mientras falte.
+
+Las recepciones sueltas, sin compra, no cambian. Al aplicarla solo había tres
+compras sin recibir (las OC02 de hoy).

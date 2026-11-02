@@ -41,7 +41,11 @@ export function DocumentosCompra({
   puedeTocar: boolean;
 }) {
   const router = useRouter();
-  const [tipo, setTipo] = React.useState<DocumentoCompra["tipo"]>("proforma");
+  // Si falta la factura, se propone «Factura»: es lo que hace falta para
+  // recibir (182), y subida como «Proforma» no desbloquearía nada.
+  const [tipo, setTipo] = React.useState<DocumentoCompra["tipo"]>(
+    documentos.some((d) => d.tipo === "factura") ? "proforma" : "factura",
+  );
   const [ocupado, empezar] = React.useTransition();
   const input = React.useRef<HTMLInputElement>(null);
 
