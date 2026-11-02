@@ -8901,3 +8901,11 @@ avisa arriba con «Llenar el análisis de compra», recalcula al poner una líne
 en cero y deja «Aprobar» apagado mientras falte. `aprobar` lo vuelve a
 comprobar. Probado con la CT02-001310: 5 productos; con HK1015 en cero, 4;
 botón apagado. Sin aprobar.
+
+**«Del almacén» en vez de «Analizar» (02/11, en vivo).** Moisés, con la
+captura de Willy: *«si está usando el stock ya no debería salirle el
+analizar costo»*. Si el stock alcanza y la línea no se analizó, la celda del
+costo dice «Del almacén» con «Comprar igual» (abre el análisis), en vez del
+botón amarillo; y `lineasSinAnalizar` no la cuenta. Con stock que no
+alcanza, sigue «Analizar». Sin probar en pantalla: Willy estaba editando la
+cotización y abrirla le habría quitado el candado.
