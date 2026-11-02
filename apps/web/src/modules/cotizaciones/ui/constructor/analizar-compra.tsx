@@ -14,6 +14,7 @@ import {
   Input,
   SelectNativo,
   formatearFecha,
+  toast,
 } from "@rodatech/ui";
 
 import { BuscadorProveedor } from "@/modules/compras/ui/pedir-precio/anadir";
@@ -31,6 +32,7 @@ import {
   type ProveedorLinea,
 } from "../../dominio/compra-linea";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
+import { redondear2 } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
 
 const usd = (n: number) => n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
@@ -120,7 +122,22 @@ export function AnalizarCompra({
     };
   }, [linea.productoId]);
 
-  const resumen = resumirCompra(linea.cantidad, filas);
+  /*
+    ¿Del almacén o comprado? (02/11). Moisés: *«cuando apriete en análisis de
+    costo en un producto que tiene stock, pregúntale: ¿va a utilizar el stock
+    o vas a hacer el análisis de costo? Dependiendo de lo que utilice, lo
+    hace»*. Se pregunta solo si hay stock y todavía no se analizó. No se
+    guarda: al aprobar se mira el stock real (`faltaAnalisisDe`), y lo que se
+    lleva del almacén no pide análisis.
+  */
+  const [eleccion, setEleccion] = React.useState<"parcial" | "comprar" | null>(
+    linea.stock > 0 && linea.proveedores.length === 0 ? null : "comprar",
+  );
+  const alcanza = linea.stock >= linea.cantidad;
+  const delAlmacen = eleccion === "parcial" ? Math.min(Math.max(linea.stock, 0), linea.cantidad) : 0;
+  /** Lo que hay que comprar: lo cotizado menos lo que sale del almacén. */
+  const aComprar = Math.max(0, linea.cantidad - delAlmacen);
+  const resumen = resumirCompra(aComprar, filas);
   const venta = numero(precioVenta) ?? 0;
   const margen = margenSobreCosto(venta, resumen.costo);
   const ganancia = resumen.costo === null ? null : venta - resumen.costo;
@@ -136,7 +153,7 @@ export function AnalizarCompra({
               proveedorId: p.id,
               nombre: p.nombre,
               // Lo que falta: con 8 de 10 puestos, el segundo nace con 2.
-              cantidad: cantidadParaElSiguiente(linea.cantidad, fs),
+              cantidad: cantidadParaElSiguiente(aComprar, fs),
               precio: p.precio ?? null,
               moneda: "USD",
               incluyeIgv: false,
@@ -256,6 +273,45 @@ export function AnalizarCompra({
             ) : null}
           </ul>
 
+          {eleccion === null ? (
+            <section className="anim-entrada flex flex-col gap-3 rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-4">
+              <p className="text-base font-semibold">
+                En el almacén hay {linea.stock} {unidadLegible(linea.unidad)} y te piden {linea.cantidad}.
+              </p>
+              <p className="text-sm text-[var(--fg-muted)]">¿Usas el stock o haces el análisis para comprarlo?</p>
+              <div className="flex flex-wrap gap-2">
+                {alcanza ? (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      toast.success(`${linea.codigo}: sale del almacén`, {
+                        description: "No hace falta comprarlo ni analizar su compra. Queda con el costo del almacén.",
+                      });
+                      onCerrar();
+                    }}
+                  >
+                    Usar el stock ({linea.cantidad})
+                  </Button>
+                ) : (
+                  <Button type="button" onClick={() => setEleccion("parcial")}>
+                    Usar las {linea.stock} del almacén y comprar {redondear2(linea.cantidad - linea.stock)}
+                  </Button>
+                )}
+                <Button type="button" variant="outline" onClick={() => setEleccion("comprar")}>
+                  Comprar {alcanza ? "igual" : "todo"} (hacer el análisis)
+                </Button>
+              </div>
+            </section>
+          ) : null}
+
+          {eleccion === "parcial" ? (
+            <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
+              Del almacén: <strong className="tabular">{delAlmacen}</strong> · a comprar:{" "}
+              <strong className="tabular">{aComprar}</strong>. El análisis es solo por lo que se compra.
+            </p>
+          ) : null}
+
+          <div className={eleccion === null ? "hidden" : "contents"}>
           {/* ------------------------------------------------ 1. A quién */}
           <section className="@container flex flex-col gap-3">
             <h3 className="text-base font-semibold">1. ¿A quién se lo compras y a cuánto?</h3>
@@ -417,7 +473,7 @@ export function AnalizarCompra({
               ) : resumen.sobra > 0 ? (
                 <p className="flex items-center gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm font-medium">
                   <CircleCheck className="size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
-                  Compras {resumen.compradas}: las {linea.cantidad} del cliente y {resumen.sobra} de más para stock.
+                  Compras {resumen.compradas}: las {aComprar} que faltan y {resumen.sobra} de más para stock.
                 </p>
               ) : (
                 <p className="flex items-center gap-2 rounded-md bg-[var(--surface-2)] px-3 py-2 text-sm font-medium">
@@ -648,6 +704,7 @@ export function AnalizarCompra({
           </section>
 
           {error ? <p className="text-sm font-medium text-[var(--danger)]">{error}</p> : null}
+          </div>
         </DialogBody>
 
         <DialogFooter>
@@ -657,7 +714,7 @@ export function AnalizarCompra({
           <Button type="button" variant="outline" onClick={onCerrar}>
             Cancelar
           </Button>
-          <Button type="button" onClick={aplicar} disabled={falta !== null}>
+          <Button type="button" onClick={aplicar} disabled={falta !== null || eleccion === null}>
             Usar este costo y precio
           </Button>
         </DialogFooter>

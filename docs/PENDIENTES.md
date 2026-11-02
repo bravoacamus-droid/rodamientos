@@ -8869,3 +8869,18 @@ y lo que está en el anaquel no se piden.
 Sin probar en pantalla el rechazo: la única cotización para probarlo es la
 CT02-001310 real de Willy (5 de 6 líneas sin análisis; la 6205LLBC3/5K tiene
 15 en almacén y no se pide), y el clasificador no dejó pulsar «Aprobar».
+
+**¿Del almacén o comprado? (02/11).** Moisés: *«cuando apriete en análisis
+de costo en un producto que tiene stock, pregúntale: ¿va a utilizar el stock
+o vas a hacer el análisis de costo?»*. «Analizar precio de compra» pregunta
+primero si hay stock y la línea aún no se analizó: si alcanza, «Usar el
+stock» (no se compra; se queda el costo del almacén); si no, «Usar las N del
+almacén y comprar el resto» (el análisis es solo por lo que falta); o
+«Comprar todo/igual». No se guarda: al aprobar se mira el stock real.
+Limitación: con stock parcial el costo de la línea es el de lo comprado,
+porque `guardar_proveedores_de_lineas` lo recalcula así al guardar; mezclarlo
+con el costo del almacén pide cambiar esa función.
+
+Sin ver la pregunta en pantalla: al abrir el análisis de la 6310-ZZC3/5K en la
+CT02-001310 la pestaña saltó al tablero (el Chrome lo estaba usando alguien
+más) y no se siguió con la cotización real.
