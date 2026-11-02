@@ -8,7 +8,7 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 
-import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis } from "../dominio/analisis-al-aprobar";
+import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis, type LineaAlAprobar } from "../dominio/analisis-al-aprobar";
 import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
 
 /**
@@ -190,12 +190,32 @@ export async function cambiarEstado(
   }
 }
 
-/** Los productos confirmados que hay que comprar y no tienen análisis (02/11). */
-async function faltaAnalisisDe(
+/** Una línea con lo que hace falta para decidir si pide análisis al aprobar. */
+export interface LineaParaAnalisis extends Omit<LineaAlAprobar, "confirmada"> {
+  itemId: string;
+  cantidad: number;
+}
+
+/**
+ * Lo que la ventana de aprobar necesita para avisar ANTES de pulsar (02/11).
+ * Moisés, probando en vivo: al abrirla no decía nada y el aviso salía recién
+ * al pulsar «Aprobar». Con esto la ventana lo calcula sola mientras se
+ * marcan las cantidades; `aprobar` lo vuelve a comprobar igual.
+ */
+export async function lineasParaAnalisisAlAprobar(
+  id: string,
+): Promise<{ ok: true; datos: LineaParaAnalisis[] } | { ok: false; error: string }> {
+  const problema = await exigirPermiso("editar");
+  if (problema) return { ok: false, error: problema };
+  if (!uuid.safeParse(id).success) return { ok: false, error: "Cotización no válida." };
+  const supabase = await clienteServidor();
+  return { ok: true, datos: await leerLineasParaAnalisis(supabase, id) };
+}
+
+async function leerLineasParaAnalisis(
   supabase: Awaited<ReturnType<typeof clienteServidor>>,
   id: string,
-  detalle: { item_id: string; cantidad: number }[] | null,
-): Promise<string[]> {
+): Promise<LineaParaAnalisis[]> {
   const { data: items } = await supabase
     .from("cotizacion_items")
     .select("id, codigo, producto_id, cantidad, productos(es_kit)")
@@ -226,17 +246,27 @@ async function faltaAnalisisDe(
   const disponible = new Map(
     (stock ?? []).map((s) => [String(s.producto_id), Number(s.cantidad ?? 0) - Number(s.reservado ?? 0)]),
   );
-  const confirmada = detalle ? new Map(detalle.map((d) => [d.item_id, d.cantidad])) : null;
+  return filas.map((f) => ({
+    itemId: f.id,
+    cantidad: Number(f.cantidad),
+    codigo: f.codigo ?? "—",
+    productoId: f.producto_id,
+    esKit: Boolean(f.productos?.es_kit),
+    disponible: f.producto_id ? (disponible.get(f.producto_id) ?? 0) : 0,
+    analizada: analizadas.has(f.id),
+  }));
+}
 
+/** Los productos confirmados que hay que comprar y no tienen análisis (02/11). */
+async function faltaAnalisisDe(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  id: string,
+  detalle: { item_id: string; cantidad: number }[] | null,
+): Promise<string[]> {
+  const lineas = await leerLineasParaAnalisis(supabase, id);
+  const confirmada = detalle ? new Map(detalle.map((d) => [d.item_id, d.cantidad])) : null;
   return faltaAnalizarAlAprobar(
-    filas.map((f) => ({
-      codigo: f.codigo ?? "—",
-      productoId: f.producto_id,
-      esKit: Boolean(f.productos?.es_kit),
-      confirmada: confirmada ? (confirmada.get(f.id) ?? 0) : Number(f.cantidad),
-      disponible: f.producto_id ? (disponible.get(f.producto_id) ?? 0) : 0,
-      analizada: analizadas.has(f.id),
-    })),
+    lineas.map((l) => ({ ...l, confirmada: confirmada ? (confirmada.get(l.itemId) ?? 0) : l.cantidad })),
   );
 }
 

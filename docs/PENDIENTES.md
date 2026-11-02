@@ -8891,3 +8891,13 @@ comprar: 6». Sin guardar. Al probarlo salió un fallo viejo: **al EDITAR una
 cotización todas las líneas decían «sin stock»** (`pagina-editar` ponía
 `stock: 0` a mano), así que la pregunta no salía nunca al editar. Ahora lee
 `stock` (cantidad − reservado) de cada producto.
+
+**El aviso del análisis, al ABRIR la ventana de aprobar (02/11, probando en
+vivo con Willy).** Moisés: *«le di aprobar cotización, me saltó el modal…
+ahí debería salir falta análisis de costo»*. Salía recién al pulsar
+«Aprobar» (y nada se aprobó: la base lo confirmó). Ahora la ventana pide al
+abrir las líneas con su stock y su análisis (`lineasParaAnalisisAlAprobar`),
+avisa arriba con «Llenar el análisis de compra», recalcula al poner una línea
+en cero y deja «Aprobar» apagado mientras falte. `aprobar` lo vuelve a
+comprobar. Probado con la CT02-001310: 5 productos; con HK1015 en cero, 4;
+botón apagado. Sin aprobar.
