@@ -9091,3 +9091,28 @@ próximos a vencer»*.
 Probado en pantalla: REACTIVOS (568 con 19 días de atraso, 556 con 3, 561
 mañana, 562 en 5 días… y las pagadas debajo), dos clientes con resumen, y
 «Todos» con los 12 que deben.
+
+### §CW.2 · El estado de cuenta, en Excel (03/11)
+
+Luis: *«¿por qué los estados de cuenta me traes en PDF? todo feo,
+desordenado; debe ser Excel para ver lo que deben, fechas, todo eso»*.
+
+- Al elegir, la pantalla ya no enseña el papel: enseña **«Descargar en
+  Excel»** arriba y grande, cuatro cifras (pendiente, vencido, por vencer,
+  pagado) y una tabla en pantalla —las facturas del cliente, o quién debe
+  cuánto si son varios, con «Ver su detalle»—. El papel queda en «Para
+  imprimir o mandar en PDF» (`?vista=papel`), para cuando hay que mandárselo
+  al cliente.
+- **El Excel** (`/cobranzas/estado-de-cuenta/excel`, `api/excel-estado-cuenta.ts`),
+  con lo mismo elegido en pantalla (`leerEleccionCuenta` + `estadosDeCuenta`,
+  compartidos): con varios, «Resumen» (quién debe cuánto, días de la más
+  atrasada) y «Todas las facturas» (filtros y TOTAL con SUBTOTAL); y una hoja
+  por cliente con sus datos, cuatro cifras grandes, la tabla (lo vencido en
+  rojo sobre rosa, lo pagado en gris con «Pagada» en verde) y los pagos
+  recibidos al pie. Apaisada y a lo ancho de la hoja al imprimir.
+- Al probarlo salió que el formato de fecha de la columna se comía la cifra
+  «VENCIDO» de arriba (salía 1911): ahora el formato va celda por celda.
+
+Probado el 03/11: el Excel de REACTIVOS (568 con 19 días de atraso arriba,
+luego 556, 561 mañana…) y el de los 12 que deben (Resumen, Todas las
+facturas y 12 hojas), con las mismas cifras que Cobranzas.

@@ -4,7 +4,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
-import { desdeDePeriodo, type PeriodoCuenta } from "../dominio/estado-cuenta";
+import { desdeDePeriodo, leerPeriodoCuenta, type PeriodoCuenta } from "../dominio/estado-cuenta";
 import { diasDeAtraso, diasDesdeVencimiento, ordenarParaCuenta } from "../dominio/situacion";
 import type { MedioPago } from "../dominio/tipos";
 
@@ -235,4 +235,67 @@ export async function clientesConFacturas(
   } catch (e) {
     return fallo(e, "cobranzas/clientes-con-facturas");
   }
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type ModoCuenta = "uno" | "varios" | "todos";
+
+export interface EleccionCuenta {
+  modo: ModoCuenta;
+  periodo: PeriodoCuenta;
+  clienteId: string | null;
+  marcados: string[];
+}
+
+/**
+ * Lo elegido en la dirección (`modo`, `cliente`, `c=…&c=…`, `periodo`), igual
+ * para la pantalla y para el Excel (03/11): los dos tienen que sacar lo mismo.
+ * `?cliente=` solo, sin modo, es como se llega desde Cobranzas y la ficha.
+ */
+export function leerEleccionCuenta(sp: URLSearchParams): EleccionCuenta {
+  const cliente = sp.get("cliente");
+  const modoParam = sp.get("modo");
+  const modo: ModoCuenta = modoParam === "varios" || modoParam === "todos" ? modoParam : "uno";
+  const periodoParam = sp.get("periodo");
+  return {
+    modo,
+    // Un cliente: con lo pagado (12 meses). Varios o todos: lo que se debe.
+    periodo: periodoParam ? leerPeriodoCuenta(periodoParam) : modo === "uno" ? "12m" : "pendiente",
+    clienteId: cliente && UUID.test(cliente) ? cliente : null,
+    marcados: sp.getAll("c").filter((v) => UUID.test(v)).slice(0, 200),
+  };
+}
+
+/** Con muchos clientes, de seis en seis: no se le piden 111 consultas de golpe a la base. */
+async function enTandas<T, R>(items: readonly T[], n: number, f: (t: T) => Promise<R>): Promise<R[]> {
+  const fuera: R[] = [];
+  for (let i = 0; i < items.length; i += n) fuera.push(...(await Promise.all(items.slice(i, i + n).map(f))));
+  return fuera;
+}
+
+/**
+ * Los estados de cuenta de lo elegido. Con varios, el que no tiene nada que
+ * enseñar no sale: una hoja vacía no se le manda a nadie.
+ */
+export async function estadosDeCuenta(
+  e: EleccionCuenta,
+  clientes: readonly ClienteConFacturas[],
+  hoy: string,
+): Promise<{ ok: true; ids: string[]; hojas: EstadoDeCuenta[] } | { ok: false; error: string }> {
+  const ids =
+    e.modo === "uno"
+      ? e.clienteId
+        ? [e.clienteId]
+        : []
+      : e.modo === "varios"
+        ? e.marcados
+        : clientes.filter((c) => e.periodo !== "pendiente" || c.saldo > 0).map((c) => c.cliente_id);
+  const estados = await enTandas(ids, 6, (id) => estadoDeCuenta(id, hoy, e.periodo));
+  const fallo = estados.find((x) => !x.ok);
+  if (fallo && !fallo.ok) return { ok: false, error: fallo.error };
+  const hojas = estados
+    .flatMap((x) => (x.ok && x.datos ? [x.datos] : []))
+    .filter((d) => e.modo === "uno" || d.documentos.length > 0);
+  return { ok: true, ids, hojas };
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AlarmClock, CalendarClock, FileSpreadsheet, HandCoins, Printer, Wallet } from "lucide-react";
 import { EstadoError, formatearFecha, formatearMoneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -9,16 +10,23 @@ import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 import { Volver } from "@/componentes/volver";
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
-import { DIAS_DE_PAGOS, clientesConFacturas, estadoDeCuenta, type EstadoDeCuenta } from "../api/estado-cuenta";
+import { FilaIndicadores } from "@/componentes/indicadores";
+
+import {
+  DIAS_DE_PAGOS,
+  clientesConFacturas,
+  estadosDeCuenta,
+  leerEleccionCuenta,
+  type EstadoDeCuenta,
+} from "../api/estado-cuenta";
 import {
   PERIODOS_CUENTA,
-  leerPeriodoCuenta,
   plazoEnPapel,
   resumirCuenta,
   type PeriodoCuenta,
 } from "../dominio/estado-cuenta";
 import { ETIQUETA_MEDIO } from "../dominio/tipos";
-import { SelectorEstadoCuenta, type ModoCuenta } from "./selector-estado-cuenta";
+import { SelectorEstadoCuenta } from "./selector-estado-cuenta";
 
 /**
  * El estado de cuenta, en papel: de un cliente, de varios o de todos.
@@ -39,15 +47,6 @@ import { SelectorEstadoCuenta, type ModoCuenta } from "./selector-estado-cuenta"
  * demás documentos.
  */
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Con muchos clientes, de seis en seis: no se le piden 111 consultas de golpe a la base. */
-async function enTandas<T, R>(items: readonly T[], n: number, f: (t: T) => Promise<R>): Promise<R[]> {
-  const fuera: R[] = [];
-  for (let i = 0; i < items.length; i += n) fuera.push(...(await Promise.all(items.slice(i, i + n).map(f))));
-  return fuera;
-}
-
 export default async function PaginaEstadoDeCuenta({
   searchParams,
 }: {
@@ -57,19 +56,17 @@ export default async function PaginaEstadoDeCuenta({
   if (!perfil || !perfil.activo) redirect("/login");
 
   const sp = await searchParams;
-  const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-  const auto = uno(sp.auto) === "1";
+  // La dirección tal cual, para el Excel y para la vista de papel.
+  const query = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (k === "vista" || k === "auto") continue;
+    for (const x of Array.isArray(v) ? v : v ? [v] : []) query.append(k, x);
+  }
+  const papel = sp.vista === "papel";
+  const auto = sp.auto === "1";
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
-
-  const clienteParam = uno(sp.cliente);
-  const clienteId = clienteParam && UUID.test(clienteParam) ? clienteParam : null;
-  const marcados = (Array.isArray(sp.c) ? sp.c : sp.c ? [sp.c] : []).filter((v) => UUID.test(v)).slice(0, 200);
-  const modoParam = uno(sp.modo);
-  // `?cliente=` solo, sin modo, es como se llega desde Cobranzas y la ficha.
-  const modo: ModoCuenta = modoParam === "varios" || modoParam === "todos" ? modoParam : "uno";
-  const periodoParam = uno(sp.periodo);
-  // Un cliente: con lo pagado (12 meses). Varios o todos: lo que se debe.
-  const periodo = periodoParam ? leerPeriodoCuenta(periodoParam) : modo === "uno" ? "12m" : "pendiente";
+  const eleccion = leerEleccionCuenta(query);
+  const { modo, periodo } = eleccion;
 
   const [conFacturas, emisor, cuentas] = await Promise.all([
     clientesConFacturas(hoy),
@@ -79,30 +76,14 @@ export default async function PaginaEstadoDeCuenta({
   // Todos los clientes con facturas, no solo los que deben (03/11): el que
   // está al día también pide su estado de cuenta.
   const clientes = conFacturas.ok ? conFacturas.datos : [];
-
-  const ids =
-    modo === "uno"
-      ? clienteId
-        ? [clienteId]
-        : []
-      : modo === "varios"
-        ? marcados
-        : clientes.filter((c) => periodo !== "pendiente" || c.saldo > 0).map((c) => c.cliente_id);
-
-  const estados = await enTandas(ids, 6, (id) => estadoDeCuenta(id, hoy, periodo));
-  const fallo = estados.find((e) => !e.ok);
-  // Con varios, el que no tiene nada que enseñar no sale: una hoja vacía no
-  // se le manda a nadie.
-  const hojas = estados
-    .flatMap((e) => (e.ok && e.datos ? [e.datos] : []))
-    .filter((d) => modo === "uno" || d.documentos.length > 0);
+  const r = await estadosDeCuenta(eleccion, clientes, hoy);
 
   const selector = (
     <SelectorEstadoCuenta
       clientes={clientes}
       modoInicial={modo}
-      clienteInicial={clienteId}
-      marcadosIniciales={marcados}
+      clienteInicial={eleccion.clienteId}
+      marcadosIniciales={eleccion.marcados}
       periodoInicial={periodo}
     />
   );
@@ -110,17 +91,30 @@ export default async function PaginaEstadoDeCuenta({
   const cabecera = (
     <div className="flex flex-wrap items-start justify-between gap-3 no-print">
       <div>
-        <Volver href="/cobranzas">Volver a cobranzas</Volver>
+        <Volver href={papel ? `/cobranzas/estado-de-cuenta?${query.toString()}` : "/cobranzas"}>
+          {papel ? "Volver al estado de cuenta" : "Volver a cobranzas"}
+        </Volver>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Estado de cuenta</h1>
         <p className="text-base text-[var(--fg-muted)]">
-          Lo que pagó y lo que debe cada cliente, factura por factura, listo para imprimir o mandar en PDF.
+          Lo que pagó y lo que debe cada cliente, factura por factura. Se descarga en Excel; si hay que
+          mandárselo al cliente, también sale para imprimir o en PDF.
         </p>
       </div>
-      {hojas.length > 0 ? <BotonesDocumento auto={auto} /> : null}
+      {papel && r.ok && r.hojas.length > 0 ? <BotonesDocumento auto={auto} /> : null}
     </div>
   );
 
-  if (ids.length === 0) {
+  if (!r.ok) {
+    return (
+      <div className="flex flex-col gap-4">
+        {cabecera}
+        {selector}
+        <EstadoError titulo="No se pudo cargar el estado de cuenta" detalle={r.error} />
+      </div>
+    );
+  }
+
+  if (r.ids.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {cabecera}
@@ -129,17 +123,7 @@ export default async function PaginaEstadoDeCuenta({
     );
   }
 
-  if (fallo && !fallo.ok) {
-    return (
-      <div className="flex flex-col gap-4">
-        {cabecera}
-        {selector}
-        <EstadoError titulo="No se pudo cargar el estado de cuenta" detalle={fallo.error} />
-      </div>
-    );
-  }
-
-  if (hojas.length === 0) {
+  if (r.hojas.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {cabecera}
@@ -151,12 +135,101 @@ export default async function PaginaEstadoDeCuenta({
     );
   }
 
+  const { hojas } = r;
   const unaSola = modo === "uno" ? hojas[0] : undefined;
+
+  // La hoja para imprimir o guardar en PDF: lo de antes, a un clic.
+  if (papel) {
+    return (
+      <div className="flex flex-col gap-4">
+        {cabecera}
+        {unaSola ? null : (
+          <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
+            <HojaResumenClientes emisor={emisor} hoy={hoy} hojas={hojas} periodo={periodo} />
+          </div>
+        )}
+        {hojas.map((datos, i) => (
+          <div
+            key={datos.cliente.id}
+            className={`overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none ${unaSola && i === 0 ? "" : "print:break-before-page"}`}
+          >
+            <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={datos} periodo={periodo} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const sumas = hojas.map((h) => ({ h, s: resumirCuenta(h.documentos) }));
+  const total = (f: (s: ReturnType<typeof resumirCuenta>) => number) =>
+    Math.round(sumas.reduce((a, x) => a + f(x.s), 0) * 100) / 100;
 
   return (
     <div className="flex flex-col gap-4">
       {cabecera}
       {selector}
+
+      {/* Lo que se vino a buscar, arriba y grande (03/11): el Excel. */}
+      <section className="card flex flex-col gap-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold">
+              {unaSola ? unaSola.cliente.razonSocial : `${hojas.length} clientes`}
+            </h2>
+            <p className="text-base text-[var(--fg-muted)]">
+              Al {formatearFecha(hoy)} · {PERIODOS_CUENTA[periodo]}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={`/cobranzas/estado-de-cuenta/excel?${query.toString()}`}
+              download
+              className="inline-flex h-12 items-center gap-2 rounded-md bg-brand-600 px-5 text-base font-semibold text-white hover:bg-brand-700"
+            >
+              <FileSpreadsheet className="size-5" aria-hidden="true" />
+              Descargar en Excel
+            </a>
+            <Link
+              href={`/cobranzas/estado-de-cuenta?${query.toString()}&vista=papel`}
+              className="inline-flex h-12 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-base font-semibold hover:bg-[var(--surface-2)]"
+            >
+              <Printer className="size-5" aria-hidden="true" />
+              Para imprimir o mandar en PDF
+            </Link>
+          </div>
+        </div>
+
+        <FilaIndicadores
+          items={[
+            { etiqueta: "Total pendiente", valor: formatearMoneda(total((s) => s.total)), icono: <Wallet aria-hidden="true" /> },
+            {
+              etiqueta: "Vencido",
+              valor: formatearMoneda(total((s) => s.vencido)),
+              detalle: `${total((s) => s.documentosVencidos)} facturas`,
+              tono: total((s) => s.vencido) > 0 ? "urgente" : "ok",
+              icono: <AlarmClock aria-hidden="true" />,
+            },
+            {
+              etiqueta: "Por vencer",
+              valor: formatearMoneda(total((s) => s.porVencer)),
+              icono: <CalendarClock aria-hidden="true" />,
+            },
+            {
+              etiqueta: "Pagado",
+              valor: formatearMoneda(total((s) => s.pagado)),
+              detalle: periodo === "pendiente" ? "no se piden las pagadas" : `${total((s) => s.pagadas)} facturas pagadas`,
+              tono: "ok",
+              icono: <HandCoins aria-hidden="true" />,
+            },
+          ]}
+        />
+
+        {unaSola ? (
+          <TablaFacturasPantalla documentos={unaSola.documentos} />
+        ) : (
+          <TablaClientesPantalla filas={sumas} query={query} />
+        )}
+      </section>
 
       {unaSola ? (
         <div className="flex flex-wrap gap-2 no-print">
@@ -173,21 +246,114 @@ export default async function PaginaEstadoDeCuenta({
             Ficha del cliente
           </Link>
         </div>
-      ) : (
-        <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
-          <HojaResumenClientes emisor={emisor} hoy={hoy} hojas={hojas} periodo={periodo} />
-        </div>
-      )}
+      ) : null}
+    </div>
+  );
+}
 
-      {hojas.map((datos, i) => (
-        <div
-          key={datos.cliente.id}
-          id={`cliente-${datos.cliente.id}`}
-          className={`overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none ${unaSola && i === 0 ? "" : "print:break-before-page"}`}
-        >
-          <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={datos} periodo={periodo} />
-        </div>
-      ))}
+/** Las facturas de un cliente en pantalla: lo que se debe arriba, en rojo lo vencido. */
+function TablaFacturasPantalla({ documentos }: { documentos: readonly EstadoDeCuenta["documentos"][number][] }) {
+  if (documentos.length === 0) return <p className="text-base text-[var(--fg-muted)]">No tiene facturas en lo elegido.</p>;
+  return (
+    <div className="scroll-x">
+      <table className="w-full text-base">
+        <thead>
+          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <th className="px-3 py-2 font-medium">Factura</th>
+            <th className="px-3 py-2 font-medium">Emisión</th>
+            <th className="px-3 py-2 font-medium">Vence</th>
+            <th className="px-3 py-2 font-medium">Situación</th>
+            <th className="px-3 py-2 text-right font-medium">Total</th>
+            <th className="px-3 py-2 text-right font-medium">Saldo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {documentos.map((d) => {
+            const pagada = !(d.saldo > 0);
+            const vencida = !pagada && d.fecha_vencimiento !== null && d.dias_vencido > 0;
+            const tono = vencida ? "font-bold text-[var(--danger)]" : pagada ? "text-[var(--fg-muted)]" : "";
+            return (
+              <tr key={d.id} className={`border-b border-[var(--border-soft)] ${vencida ? "bg-[var(--danger-bg)]" : ""}`}>
+                <td className={`px-3 py-2 font-mono ${tono}`}>
+                  <Link href={`/facturacion/${d.id}`} className="hover:underline">
+                    {d.numero}
+                  </Link>
+                </td>
+                <td className={`tabular px-3 py-2 ${tono}`}>{formatearFecha(d.fecha_emision)}</td>
+                <td className={`tabular px-3 py-2 ${tono}`}>{d.fecha_vencimiento ? formatearFecha(d.fecha_vencimiento) : "—"}</td>
+                <td className={`px-3 py-2 ${tono}`}>
+                  {pagada ? (
+                    <span className="font-semibold text-[var(--ok)]">Pagada</span>
+                  ) : (
+                    plazoEnPapel(d.dias_vencido, d.fecha_vencimiento)
+                  )}
+                </td>
+                <td className={`tabular px-3 py-2 text-right ${tono}`}>{formatearMoneda(d.total_doc, d.moneda)}</td>
+                <td className={`tabular px-3 py-2 text-right font-semibold ${tono}`}>
+                  {pagada ? "—" : formatearMoneda(d.saldo_doc, d.moneda)}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Varios clientes en pantalla: quién debe cuánto. Quien más debe, arriba. */
+function TablaClientesPantalla({
+  filas,
+  query,
+}: {
+  filas: { h: EstadoDeCuenta; s: ReturnType<typeof resumirCuenta> }[];
+  query: URLSearchParams;
+}) {
+  const orden = [...filas].sort((a, b) => b.s.total - a.s.total || a.h.cliente.razonSocial.localeCompare(b.h.cliente.razonSocial));
+  const periodo = query.get("periodo");
+  return (
+    <div className="scroll-x">
+      <table className="w-full text-base">
+        <thead>
+          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <th className="px-3 py-2 font-medium">Cliente</th>
+            <th className="px-3 py-2 text-center font-medium">Pendientes</th>
+            <th className="px-3 py-2 text-right font-medium">Vencido</th>
+            <th className="px-3 py-2 text-right font-medium">Por vencer</th>
+            <th className="px-3 py-2 text-right font-medium">Total pendiente</th>
+            <th className="px-3 py-2 text-right font-medium"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {orden.map(({ h, s }) => (
+            <tr key={h.cliente.id} className="border-b border-[var(--border-soft)]">
+              <td className="px-3 py-2">
+                <span className="block">{h.cliente.razonSocial}</span>
+                <span className="block font-mono text-sm text-[var(--fg-subtle)]">{h.cliente.documento ?? ""}</span>
+              </td>
+              <td className="tabular px-3 py-2 text-center">{s.documentos}</td>
+              <td className={`tabular px-3 py-2 text-right ${s.vencido > 0 ? "font-bold text-[var(--danger)]" : "text-[var(--fg-muted)]"}`}>
+                {s.vencido > 0 ? formatearMoneda(s.vencido) : "—"}
+                {s.mayorAtraso > 0 ? (
+                  <span className="block whitespace-nowrap text-sm">
+                    atraso: {s.mayorAtraso} {s.mayorAtraso === 1 ? "día" : "días"}
+                  </span>
+                ) : null}
+              </td>
+              <td className="tabular px-3 py-2 text-right">{s.porVencer > 0 ? formatearMoneda(s.porVencer) : "—"}</td>
+              <td className="tabular px-3 py-2 text-right font-semibold">{formatearMoneda(s.total)}</td>
+              <td className="px-3 py-2 text-right">
+                <Link
+                  href={`/cobranzas/estado-de-cuenta?cliente=${h.cliente.id}${periodo ? `&periodo=${periodo}` : ""}`}
+                  className="inline-flex h-10 items-center whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
+                >
+                  Ver su detalle
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
