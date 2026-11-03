@@ -41,6 +41,17 @@ export function diasDeAtraso(vencimiento: string | null, hoy: string): number {
   return Math.max(0, diasEntre(vencimiento.slice(0, 10), hoy));
 }
 
+/**
+ * Días desde el vencimiento, CON signo: positivo si ya venció, negativo si
+ * falta (−5 = vence en 5 días). Es lo que necesita el papel para decir
+ * «Vence en 5 días»; `v_cartera` da 0 a todo lo que no venció, y por eso el
+ * estado de cuenta decía «Vence hoy» de una factura del mes que viene
+ * (encontrado el 03/11).
+ */
+export function diasDesdeVencimiento(vencimiento: string | null, hoy: string): number {
+  return vencimiento ? diasEntre(vencimiento.slice(0, 10), hoy) : 0;
+}
+
 /** El tramo de antigüedad, con los mismos cortes que `v_cartera`. */
 export function tramoDe(vencimiento: string | null, hoy: string): TramoAging {
   if (!vencimiento) return "sin_vencimiento";
@@ -95,13 +106,14 @@ export function resumirSituacion(
 
 /**
  * Cómo se ordena la lista. Por número es lo que pidió Willy y va por
- * defecto; «lo más atrasado primero» se queda, que es el orden en que se
- * llama a cobrar.
+ * defecto. «Por vencimiento» (Luis, 03/11: «deberían salir primero los
+ * próximos a vencer») pone arriba lo que vence antes: lo más vencido, luego
+ * lo que vence hoy, mañana… y al final lo que no tiene vencimiento.
  */
 export const ORDENES = {
   antiguo: "Por número de factura",
   reciente: "Por número, las últimas primero",
-  atraso: "Las más atrasadas primero",
+  vencimiento: "Por vencimiento: las que vencen primero",
 } as const;
 
 export type Orden = keyof typeof ORDENES;
@@ -116,7 +128,7 @@ export function ordenPorDefecto(incluyePagadas: boolean): Orden {
   return incluyePagadas ? "reciente" : "antiguo";
 }
 
-export function ordenarFacturas<T extends { numero: string; dias_vencido: number; saldo: number }>(
+export function ordenarFacturas<T extends { numero: string; fecha_vencimiento: string | null; saldo: number }>(
   docs: readonly T[],
   orden: Orden,
 ): T[] {
@@ -124,11 +136,37 @@ export function ordenarFacturas<T extends { numero: string; dias_vencido: number
   // dentro de la serie; la serie primero separa F002 de otras.
   const porNumero = (a: T, b: T) => a.numero.localeCompare(b.numero);
   const copia = [...docs];
-  if (orden === "atraso") return copia.sort((a, b) => b.dias_vencido - a.dias_vencido || b.saldo - a.saldo || porNumero(a, b));
+  if (orden === "vencimiento") return copia.sort((a, b) => porVencimiento(a, b) || porNumero(a, b));
   if (orden === "reciente") return copia.sort((a, b) => porNumero(b, a));
   return copia.sort(porNumero);
 }
 
+/** La fecha de vencimiento, la más próxima primero; sin vencimiento, al final. */
+function porVencimiento(a: { fecha_vencimiento: string | null }, b: { fecha_vencimiento: string | null }): number {
+  if (a.fecha_vencimiento === b.fecha_vencimiento) return 0;
+  if (!a.fecha_vencimiento) return 1;
+  if (!b.fecha_vencimiento) return -1;
+  return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento);
+}
+
 export function leerOrden(valor: string | undefined): Orden | null {
+  // «atraso» era el nombre hasta el 03/11: los enlaces guardados siguen valiendo.
+  if (valor === "atraso") return "vencimiento";
   return valor && valor in ORDENES ? (valor as Orden) : null;
+}
+
+/**
+ * El orden del estado de cuenta (03/11): primero lo que se debe, de lo que
+ * vence antes a lo que vence después —es el orden en que se paga, y lo que
+ * el cliente tiene que ver arriba—; debajo, lo pagado, por número.
+ */
+export function ordenarParaCuenta<T extends { numero: string; fecha_vencimiento: string | null; saldo: number }>(
+  docs: readonly T[],
+): T[] {
+  const debe = (d: T) => d.saldo > 0;
+  return [...docs].sort((a, b) => {
+    if (debe(a) !== debe(b)) return debe(a) ? -1 : 1;
+    if (debe(a)) return porVencimiento(a, b) || a.numero.localeCompare(b.numero);
+    return a.numero.localeCompare(b.numero);
+  });
 }

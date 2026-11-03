@@ -5,7 +5,7 @@ import { clienteServidor } from "@rodatech/db/servidor";
 import { fallo } from "@/lib/errores";
 
 import { desdeDePeriodo, type PeriodoCuenta } from "../dominio/estado-cuenta";
-import { diasDeAtraso } from "../dominio/situacion";
+import { diasDeAtraso, diasDesdeVencimiento, ordenarParaCuenta } from "../dominio/situacion";
 import type { MedioPago } from "../dominio/tipos";
 
 /**
@@ -135,7 +135,9 @@ export async function estadoDeCuenta(
           email: c.email ?? null,
           telefono: c.telefono ?? null,
         },
-        documentos: (docs.data ?? []).map((d) => ({
+        // Lo que se debe arriba, de lo que vence antes a lo que vence después;
+        // lo pagado debajo, por número (03/11).
+        documentos: ordenarParaCuenta((docs.data ?? []).map((d) => ({
           id: String(d.id),
           numero: String(d.numero),
           tipo: String(d.tipo),
@@ -145,7 +147,8 @@ export async function estadoDeCuenta(
           total: Number(d.total ?? 0),
           pagado: Number(d.pagado ?? 0),
           saldo: Number(d.saldo ?? 0),
-          dias_vencido: Number(d.saldo ?? 0) > 0 ? diasDeAtraso(d.fecha_vencimiento, hoy) : 0,
+          // Con signo: «Vence en 5 días» en el papel. Lo vencido sigue siendo > 0.
+          dias_vencido: Number(d.saldo ?? 0) > 0 ? diasDesdeVencimiento(d.fecha_vencimiento, hoy) : 0,
           ...(() => {
             const pen = enSoles.get(String(d.id));
             const saldo = Number(d.saldo ?? 0);
@@ -162,7 +165,7 @@ export async function estadoDeCuenta(
               saldo_doc: saldoDoc,
             };
           })(),
-        })),
+        }))),
         pagos: (pagos.data ?? []).map((p) => {
           const comp = (Array.isArray(p.comprobantes) ? p.comprobantes[0] : p.comprobantes) as
             | { numero: string }

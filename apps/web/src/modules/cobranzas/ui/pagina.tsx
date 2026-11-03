@@ -146,7 +146,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
               <FileText className="size-5 shrink-0" aria-hidden="true" />
               {filtros.cliente && cliente?.ok
                 ? `Estado de cuenta de ${cliente.nombre}`
-                : "Estado de cuenta de un cliente"}
+                : "Estado de cuenta"}
             </Link>
           </div>
         </div>

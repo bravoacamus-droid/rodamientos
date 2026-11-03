@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   diasDeAtraso,
+  diasDesdeVencimiento,
   leerOrden,
   ordenPorDefecto,
   ordenarFacturas,
+  ordenarParaCuenta,
   resumirSituacion,
   situacionDe,
   tramoDe,
@@ -55,9 +57,10 @@ describe("el resumen: pagadas, vencidas y por vencer", () => {
 
 describe("el orden: por correlativo, como pidió Willy", () => {
   const docs = [
-    { numero: "F002-00000568", dias_vencido: 18, saldo: 3069.42 },
-    { numero: "F002-00000533", dias_vencido: 19, saldo: 114.98 },
-    { numero: "F002-00000580", dias_vencido: 0, saldo: 10 },
+    { numero: "F002-00000568", fecha_vencimiento: "2026-10-15", saldo: 3069.42 },
+    { numero: "F002-00000533", fecha_vencimiento: "2026-10-14", saldo: 114.98 },
+    { numero: "F002-00000580", fecha_vencimiento: "2026-12-02", saldo: 10 },
+    { numero: "F002-00000579", fecha_vencimiento: null, saldo: 5 },
   ];
 
   it("del más antiguo al último por defecto en lo que se debe", () => {
@@ -65,6 +68,7 @@ describe("el orden: por correlativo, como pidió Willy", () => {
     expect(ordenarFacturas(docs, "antiguo").map((d) => d.numero)).toEqual([
       "F002-00000533",
       "F002-00000568",
+      "F002-00000579",
       "F002-00000580",
     ]);
   });
@@ -74,12 +78,39 @@ describe("el orden: por correlativo, como pidió Willy", () => {
     expect(ordenarFacturas(docs, "reciente")[0]?.numero).toBe("F002-00000580");
   });
 
-  it("lo más atrasado primero sigue disponible", () => {
-    expect(ordenarFacturas(docs, "atraso")[0]?.numero).toBe("F002-00000533");
+  it("por vencimiento: lo que vence antes arriba, sin vencimiento al final", () => {
+    expect(ordenarFacturas(docs, "vencimiento").map((d) => d.numero)).toEqual([
+      "F002-00000533",
+      "F002-00000568",
+      "F002-00000580",
+      "F002-00000579",
+    ]);
   });
 
   it("un orden que no existe no se acepta", () => {
     expect(leerOrden("raro")).toBeNull();
-    expect(leerOrden("atraso")).toBe("atraso");
+    // El nombre viejo de los enlaces guardados.
+    expect(leerOrden("atraso")).toBe("vencimiento");
+  });
+});
+
+describe("el orden del estado de cuenta (03/11)", () => {
+  it("primero lo que se debe por vencimiento, luego lo pagado por número", () => {
+    const r = ordenarParaCuenta([
+      { numero: "F002-00000300", fecha_vencimiento: "2026-01-10", saldo: 0 },
+      { numero: "F002-00000570", fecha_vencimiento: "2026-12-01", saldo: 50 },
+      { numero: "F002-00000200", fecha_vencimiento: "2025-11-10", saldo: 0 },
+      { numero: "F002-00000568", fecha_vencimiento: "2026-10-15", saldo: 30 },
+    ]);
+    expect(r.map((d) => d.numero)).toEqual(["F002-00000568", "F002-00000570", "F002-00000200", "F002-00000300"]);
+  });
+});
+
+describe("los días con signo para el papel (03/11)", () => {
+  it("negativo lo que falta, positivo lo vencido", () => {
+    expect(diasDesdeVencimiento("2026-11-08", HOY)).toBe(-5);
+    expect(diasDesdeVencimiento("2026-11-03", HOY)).toBe(0);
+    expect(diasDesdeVencimiento("2026-10-15", HOY)).toBe(19);
+    expect(diasDesdeVencimiento(null, HOY)).toBe(0);
   });
 });

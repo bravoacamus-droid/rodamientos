@@ -9065,3 +9065,29 @@ vencidas $ 12,193.50 · 18 por vencer $ 14,072.15, igual que las cifras de
 arriba), «Todas» 541 (505 pagadas), el Excel (541 filas, mismas
 situaciones), y el estado de cuenta de REACTIVOS con 38 pagadas y 7
 pendientes; con «Solo lo pendiente», ninguna pagada.
+
+### §CW.1 · El estado de cuenta, de uno, de varios o de todos (03/11)
+
+Luis: *«que sea solo "Estado de cuenta"; cuando entre, que decida si quiere
+de todos los clientes o clientes específicos»*, y *«deberían salir primero los
+próximos a vencer»*.
+
+- Botón «Estado de cuenta» (era «… de un cliente»). Al entrar, tres botones:
+  **Un cliente**, **Varios clientes** (casillas con buscador y «Marcar los que
+  deben») y **Todos los clientes**. Con varios o todos sale un resumen
+  («ESTADO DE CUENTA DE CLIENTES»: quién debe, vencido, por vencer) y la hoja
+  de cada uno detrás, cada una en su página al imprimir. Con varios o todos,
+  «Solo lo pendiente» por defecto; con uno, 12 meses de pagadas.
+- **Orden de la hoja**: lo que se debe arriba, de lo que vence antes a lo que
+  vence después; lo pagado debajo, por número (`ordenarParaCuenta`).
+- **Cobranzas**: «Las más atrasadas primero» pasa a ser **«Por vencimiento:
+  las que vencen primero»** (lo vencido, luego lo que vence hoy, mañana…). El
+  orden por defecto sigue siendo por número, que es lo que escribió Willy;
+  `?orden=atraso` sigue valiendo.
+- **Fallo viejo arreglado**: el estado de cuenta decía «Vence hoy» de toda
+  factura que aún no vencía, porque `v_cartera` da 0 días a todo lo no
+  vencido. Ahora cuenta con signo: «Vence mañana», «Vence en 5 días».
+
+Probado en pantalla: REACTIVOS (568 con 19 días de atraso, 556 con 3, 561
+mañana, 562 en 5 días… y las pagadas debajo), dos clientes con resumen, y
+«Todos» con los 12 que deben.

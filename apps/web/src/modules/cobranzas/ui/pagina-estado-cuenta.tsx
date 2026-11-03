@@ -1,11 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
-import { EstadoError, campoBase, cn, formatearFecha, formatearMoneda } from "@rodatech/ui";
+import { EstadoError, formatearFecha, formatearMoneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { BotonesDocumento } from "@/componentes/botones-documento";
-import { ComboboxEnFormulario } from "@/componentes/combobox-en-formulario";
 import { CuentasParaPagar, type CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 import { Volver } from "@/componentes/volver";
@@ -20,25 +18,35 @@ import {
   type PeriodoCuenta,
 } from "../dominio/estado-cuenta";
 import { ETIQUETA_MEDIO } from "../dominio/tipos";
+import { SelectorEstadoCuenta, type ModoCuenta } from "./selector-estado-cuenta";
 
 /**
- * El estado de cuenta de un cliente, en papel.
+ * El estado de cuenta, en papel: de un cliente, de varios o de todos.
  *
  * Willy, 06/10 (10:20): *«hay clientes que a veces juntan 6, 7 facturas, y
  * hay que enviar el reporte de su estado de cuenta para que lo tengan
  * presente, para que hagan el pago»*. Y (10:58): *«todos los lunes envío
  * reporte de los morosos»*. Hasta hoy lo armaba en Excel.
  *
+ * Desde el 03/11 (Luis: *«cuando entre, que decida si quiere de todos los
+ * clientes o clientes específicos»*) se elige a quién: con varios, sale un
+ * resumen al principio y la hoja de cada uno detrás, cada una en su página
+ * al imprimir, que es como se manda a cada cliente la suya.
+ *
  * Es la misma hoja que la cotización y la factura (`HojaDocumento`), con sus
  * cuentas de banco al pie: quien la recibe tiene en el mismo papel cuánto
  * debe, desde cuándo y dónde pagar. El PDF sale de «Descargar», como en los
  * demás documentos.
- *
- * El cliente va en `?cliente=` y no en la ruta, para que el selector de
- * arriba sea un formulario normal: se elige y se pulsa, sin JavaScript.
  */
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Con muchos clientes, de seis en seis: no se le piden 111 consultas de golpe a la base. */
+async function enTandas<T, R>(items: readonly T[], n: number, f: (t: T) => Promise<R>): Promise<R[]> {
+  const fuera: R[] = [];
+  for (let i = 0; i < items.length; i += n) fuera.push(...(await Promise.all(items.slice(i, i + n).map(f))));
+  return fuera;
+}
 
 export default async function PaginaEstadoDeCuenta({
   searchParams,
@@ -49,74 +57,54 @@ export default async function PaginaEstadoDeCuenta({
   if (!perfil || !perfil.activo) redirect("/login");
 
   const sp = await searchParams;
-  const valor = Array.isArray(sp.cliente) ? sp.cliente[0] : sp.cliente;
-  const clienteId = valor && UUID.test(valor) ? valor : null;
-  const auto = (Array.isArray(sp.auto) ? sp.auto[0] : sp.auto) === "1";
-  const periodo = leerPeriodoCuenta(Array.isArray(sp.periodo) ? sp.periodo[0] : sp.periodo);
+  const uno = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+  const auto = uno(sp.auto) === "1";
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 
-  const [conFacturas, estado, emisor, cuentas] = await Promise.all([
+  const clienteParam = uno(sp.cliente);
+  const clienteId = clienteParam && UUID.test(clienteParam) ? clienteParam : null;
+  const marcados = (Array.isArray(sp.c) ? sp.c : sp.c ? [sp.c] : []).filter((v) => UUID.test(v)).slice(0, 200);
+  const modoParam = uno(sp.modo);
+  // `?cliente=` solo, sin modo, es como se llega desde Cobranzas y la ficha.
+  const modo: ModoCuenta = modoParam === "varios" || modoParam === "todos" ? modoParam : "uno";
+  const periodoParam = uno(sp.periodo);
+  // Un cliente: con lo pagado (12 meses). Varios o todos: lo que se debe.
+  const periodo = periodoParam ? leerPeriodoCuenta(periodoParam) : modo === "uno" ? "12m" : "pendiente";
+
+  const [conFacturas, emisor, cuentas] = await Promise.all([
     clientesConFacturas(hoy),
-    clienteId ? estadoDeCuenta(clienteId, hoy, periodo) : Promise.resolve(null),
     emisorParaImprimir(),
     cuentasParaCobrar(),
   ]);
-
   // Todos los clientes con facturas, no solo los que deben (03/11): el que
   // está al día también pide su estado de cuenta.
   const clientes = conFacturas.ok ? conFacturas.datos : [];
 
+  const ids =
+    modo === "uno"
+      ? clienteId
+        ? [clienteId]
+        : []
+      : modo === "varios"
+        ? marcados
+        : clientes.filter((c) => periodo !== "pendiente" || c.saldo > 0).map((c) => c.cliente_id);
+
+  const estados = await enTandas(ids, 6, (id) => estadoDeCuenta(id, hoy, periodo));
+  const fallo = estados.find((e) => !e.ok);
+  // Con varios, el que no tiene nada que enseñar no sale: una hoja vacía no
+  // se le manda a nadie.
+  const hojas = estados
+    .flatMap((e) => (e.ok && e.datos ? [e.datos] : []))
+    .filter((d) => modo === "uno" || d.documentos.length > 0);
+
   const selector = (
-    <form
-      method="get"
-      action="/cobranzas/estado-de-cuenta"
-      className="card flex flex-col gap-3 p-4 no-print sm:flex-row sm:items-end"
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <label htmlFor="ec-cliente" className="text-sm font-medium text-[var(--fg-muted)]">
-          Cliente
-        </label>
-        {/* Con buscador (07/10): se escribe el nombre o el RUC. Lo que debe
-            va debajo del nombre, para elegir sin abrir la cuenta. */}
-        <ComboboxEnFormulario
-          id="ec-cliente"
-          name="cliente"
-          valorInicial={clienteId ?? null}
-          opciones={clientes.map((c) => ({
-            valor: c.cliente_id,
-            etiqueta: c.cliente,
-            detalle:
-              c.saldo > 0
-                ? `debe ${formatearMoneda(c.saldo)}${c.vencido > 0 ? ` · vencido ${formatearMoneda(c.vencido)}` : ""}`
-                : `al día · ${c.facturas} ${c.facturas === 1 ? "factura" : "facturas"}`,
-          }))}
-          placeholder="Elige un cliente"
-          placeholderBusqueda="Escribe parte del nombre…"
-          textoVacio="Ningún cliente con facturas coincide."
-        />
-      </div>
-      {/* Qué parte de la historia sale (03/11): lo pendiente siempre; lo
-          pagado, del periodo. */}
-      <div className="flex min-w-0 flex-col gap-1 sm:w-96">
-        <label htmlFor="ec-periodo" className="text-sm font-medium text-[var(--fg-muted)]">
-          Qué facturas salen
-        </label>
-        <select id="ec-periodo" name="periodo" defaultValue={periodo} className={cn(campoBase, "h-11 text-base")}>
-          {(Object.entries(PERIODOS_CUENTA) as [PeriodoCuenta, string][]).map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button
-        type="submit"
-        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-brand-600 px-4 text-base font-semibold text-white hover:bg-brand-700"
-      >
-        Ver estado de cuenta
-        <ArrowRight className="size-5" aria-hidden="true" />
-      </button>
-    </form>
+    <SelectorEstadoCuenta
+      clientes={clientes}
+      modoInicial={modo}
+      clienteInicial={clienteId}
+      marcadosIniciales={marcados}
+      periodoInicial={periodo}
+    />
   );
 
   const cabecera = (
@@ -125,14 +113,14 @@ export default async function PaginaEstadoDeCuenta({
         <Volver href="/cobranzas">Volver a cobranzas</Volver>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Estado de cuenta</h1>
         <p className="text-base text-[var(--fg-muted)]">
-          Lo que pagó y lo que debe un cliente, factura por factura, listo para imprimir o mandar en PDF.
+          Lo que pagó y lo que debe cada cliente, factura por factura, listo para imprimir o mandar en PDF.
         </p>
       </div>
-      {estado?.ok && estado.datos ? <BotonesDocumento auto={auto} /> : null}
+      {hojas.length > 0 ? <BotonesDocumento auto={auto} /> : null}
     </div>
   );
 
-  if (!clienteId) {
+  if (ids.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {cabecera}
@@ -141,55 +129,120 @@ export default async function PaginaEstadoDeCuenta({
     );
   }
 
-  if (!estado || !estado.ok) {
+  if (fallo && !fallo.ok) {
     return (
       <div className="flex flex-col gap-4">
         {cabecera}
         {selector}
-        <EstadoError
-          titulo="No se pudo cargar el estado de cuenta"
-          detalle={estado && !estado.ok ? estado.error : undefined}
-        />
+        <EstadoError titulo="No se pudo cargar el estado de cuenta" detalle={fallo.error} />
       </div>
     );
   }
 
-  if (!estado.datos) {
+  if (hojas.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         {cabecera}
         {selector}
-        <p className="card p-4 text-base">Ese cliente no existe.</p>
+        <p className="card p-4 text-base">
+          {modo === "uno" ? "Ese cliente no existe." : "Ninguno de esos clientes tiene facturas en lo que elegiste."}
+        </p>
       </div>
     );
   }
 
-  const { cliente } = estado.datos;
+  const unaSola = modo === "uno" ? hojas[0] : undefined;
 
   return (
     <div className="flex flex-col gap-4">
       {cabecera}
       {selector}
 
-      <div className="flex flex-wrap gap-2 no-print">
-        <Link
-          href={`/cobranzas?cliente=${cliente.id}`}
-          className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
-        >
-          Ver sus documentos en cobranzas
-        </Link>
-        <Link
-          href={`/clientes/${cliente.id}`}
-          className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
-        >
-          Ficha del cliente
-        </Link>
-      </div>
+      {unaSola ? (
+        <div className="flex flex-wrap gap-2 no-print">
+          <Link
+            href={`/cobranzas?cliente=${unaSola.cliente.id}`}
+            className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
+          >
+            Ver sus documentos en cobranzas
+          </Link>
+          <Link
+            href={`/clientes/${unaSola.cliente.id}`}
+            className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-semibold hover:bg-[var(--surface-2)]"
+          >
+            Ficha del cliente
+          </Link>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
+          <HojaResumenClientes emisor={emisor} hoy={hoy} hojas={hojas} periodo={periodo} />
+        </div>
+      )}
 
-      <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
-        <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={estado.datos} periodo={periodo} />
-      </div>
+      {hojas.map((datos, i) => (
+        <div
+          key={datos.cliente.id}
+          id={`cliente-${datos.cliente.id}`}
+          className={`overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none ${unaSola && i === 0 ? "" : "print:break-before-page"}`}
+        >
+          <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={datos} periodo={periodo} />
+        </div>
+      ))}
     </div>
+  );
+}
+
+/**
+ * El resumen de varios clientes, primera página (03/11): quién debe cuánto,
+ * cuánto vencido y cuánto por vencer. Es el reporte de morosos de los lunes.
+ */
+function HojaResumenClientes({
+  emisor,
+  hoy,
+  hojas,
+  periodo,
+}: {
+  emisor: EmisorHoja;
+  hoy: string;
+  hojas: readonly EstadoDeCuenta[];
+  periodo: PeriodoCuenta;
+}) {
+  const filas = hojas.map((h) => ({ h, r: resumirCuenta(h.documentos) }));
+  const suma = (f: (r: ReturnType<typeof resumirCuenta>) => number) =>
+    Math.round(filas.reduce((a, x) => a + f(x.r), 0) * 100) / 100;
+  return (
+    <HojaDocumento
+      emisor={emisor}
+      titulo="ESTADO DE CUENTA DE CLIENTES"
+      numero={`al ${formatearFecha(hoy)}`}
+      datos={[
+        { etiqueta: "Clientes", valor: String(hojas.length) },
+        { etiqueta: "Fecha de corte", valor: formatearFecha(hoy) },
+        { etiqueta: "Qué facturas salen", valor: PERIODOS_CUENTA[periodo], ancho: true },
+      ]}
+      columnas={[
+        { clave: "cliente", titulo: "Cliente" },
+        { clave: "ruc", titulo: "RUC / DNI", sinCortar: true },
+        { clave: "pendientes", titulo: "Pendientes", alinear: "centro", sinCortar: true },
+        { clave: "vencido", titulo: "Vencido", alinear: "derecha", sinCortar: true },
+        { clave: "porVencer", titulo: "Por vencer", alinear: "derecha", sinCortar: true },
+        { clave: "total", titulo: "Total pendiente", alinear: "derecha", sinCortar: true },
+      ]}
+      filas={filas.map(({ h, r }) => ({
+        cliente: h.cliente.razonSocial,
+        ruc: h.cliente.documento ?? "—",
+        pendientes: String(r.documentos),
+        vencido:
+          r.vencido > 0 ? <span className="font-bold text-[#b42318]">{formatearMoneda(r.vencido)}</span> : "—",
+        porVencer: r.porVencer > 0 ? formatearMoneda(r.porVencer) : "—",
+        total: <span className="font-semibold">{formatearMoneda(r.total)}</span>,
+      }))}
+      totales={[
+        { etiqueta: "Por vencer", valor: formatearMoneda(suma((r) => r.porVencer)) },
+        { etiqueta: "Vencido", valor: formatearMoneda(suma((r) => r.vencido)) },
+        { etiqueta: "TOTAL PENDIENTE", valor: formatearMoneda(suma((r) => r.total)), destacado: true },
+      ]}
+    />
   );
 }
 
