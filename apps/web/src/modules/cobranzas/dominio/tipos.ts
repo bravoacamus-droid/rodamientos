@@ -242,11 +242,17 @@ export interface FiltrosCartera {
    * ya pagado: con su CR, sin él, o sin retención.
    */
   mostrar?: string;
+  /** Cómo se ordena (03/11): por número por defecto; ver `situacion.ts`. */
+  orden?: string;
 }
 
 /** Lo que el desplegable «Mostrar» deja elegir, además de lo que se debe. */
 export const MOSTRAR = {
   vencido: "Solo lo vencido",
+  por_vencer: "Solo lo por vencer",
+  // Willy, 03/11: «siempre debe haber la opción de ver el total de facturas
+  // entre pagadas, vencidas y por vencer».
+  todas: "Todas las facturas: pagadas, vencidas y por vencer",
   falta_cr: "Retención cobrada · falta el CR",
   con_cr: "Con su CR",
   pagadas_sin_retencion: "Pagadas sin retención",
@@ -254,3 +260,8 @@ export const MOSTRAR = {
 } as const;
 
 export type Mostrar = keyof typeof MOSTRAR;
+
+/** Lo que sale de la cartera (lo que se debe); lo demás, de los comprobantes. */
+export function esDeLaCartera(m: Mostrar | null): m is "vencido" | "por_vencer" | null {
+  return m === null || m === "vencido" || m === "por_vencer";
+}

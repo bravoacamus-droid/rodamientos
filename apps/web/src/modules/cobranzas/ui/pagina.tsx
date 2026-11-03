@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { AlarmClock, CalendarClock, Eye, FileText, HandCoins, Wallet } from "lucide-react";
+import { AlarmClock, CalendarClock, Eye, FileSpreadsheet, FileText, HandCoins, Wallet } from "lucide-react";
 import {
   Badge,
   EstadoError,
@@ -39,13 +39,15 @@ import {
   ETIQUETA_CANAL,
   ETIQUETA_MEDIO,
   MOSTRAR,
+  esDeLaCartera,
   type DocumentoPorCobrar,
   type FiltrosCartera,
   saldoEnMoneda,
 } from "../dominio/tipos";
+import { leerOrden, ordenPorDefecto, ordenarFacturas, resumirSituacion } from "../dominio/situacion";
 import { Cobrador } from "./cobrador";
 import { DescargarCr } from "./descargar-cr";
-import { FiltrosCarteraBarra } from "./filtros";
+import { FiltrosCarteraBarra, OrdenCartera } from "./filtros";
 import { Gestor } from "./gestor";
 import { VoucherDelPago } from "./voucher-del-pago";
 import { PanelModulo } from "@/componentes/panel-modulo";
@@ -80,6 +82,7 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
     tramo: uno(sp.tramo),
     vencido: uno(sp.vencido),
     mostrar: uno(sp.mostrar),
+    orden: uno(sp.orden),
   };
   // El periodo solo cuenta lo COBRADO (07/10): lo que se debe es de hoy.
   const periodo = { desde: uno(sp.desde), hasta: uno(sp.hasta) };
@@ -109,8 +112,8 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Cobranzas</h1>
             <p className="text-sm text-[var(--fg-muted)]">
-              Lo que está por cobrar, de lo más atrasado a lo menos. Registrar un pago
-              actualiza el saldo y las cuotas solo.
+              Lo que está por cobrar, por número de factura; lo vencido, en rojo.
+              Registrar un pago actualiza el saldo y las cuotas solo.
             </p>
           </div>
           {/*
@@ -119,6 +122,17 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
             Con un cliente filtrado, va directo al suyo.
           */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* El estado de TODAS las facturas en Excel (Willy, 03/11: «luego
+                del Excel filtro lo que requiera»). Con un cliente filtrado,
+                solo las suyas. Un enlace y no un botón: es un archivo. */}
+            <a
+              href={filtros.cliente ? `/cobranzas/excel?cliente=${filtros.cliente}` : "/cobranzas/excel"}
+              download
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-base font-semibold shadow-sm hover:bg-[var(--surface-2)]"
+            >
+              <FileSpreadsheet className="size-5 shrink-0" aria-hidden="true" />
+              {filtros.cliente && cliente?.ok ? "Excel de sus facturas" : "Excel de todas las facturas"}
+            </a>
             {/* Los CR, desde aquí que es donde se suben (02/11). */}
             <DescargarCr hoy={hoy} />
             <Link
@@ -299,10 +313,9 @@ async function TablaCartera({
   // «Mostrar» (31/10): lo que se debe —todo o lo vencido— sale de la
   // cartera; lo ya pagado y las retenciones, de los comprobantes.
   const mostrar = MOSTRAR_VALIDOS.find((m) => m === filtros.mostrar) ?? (filtros.vencido === "1" ? "vencido" : null);
-  const r =
-    mostrar && mostrar !== "vencido"
-      ? await documentosPagados(filtros, mostrar)
-      : await cartera({ ...filtros, vencido: mostrar === "vencido" ? "1" : undefined });
+  const r = esDeLaCartera(mostrar)
+    ? await cartera({ ...filtros, vencido: mostrar === "vencido" ? "1" : undefined })
+    : await documentosPagados(filtros, mostrar);
   if (!r.ok) {
     return (
       <EstadoError
@@ -313,7 +326,7 @@ async function TablaCartera({
     );
   }
 
-  if (r.datos.length === 0 && mostrar && mostrar !== "vencido") {
+  if (r.datos.length === 0 && !esDeLaCartera(mostrar)) {
     return (
       <EstadoVacio
         titulo={
@@ -363,14 +376,56 @@ async function TablaCartera({
     );
   }
 
+  // Por número (Willy, 03/11), salvo que se elija otro orden.
+  const orden = leerOrden(filtros.orden) ?? ordenPorDefecto(!esDeLaCartera(mostrar));
+  const datos = ordenarFacturas(r.datos, orden);
+
   return (
+    <>
+    <ResumenSituacionBarra datos={datos} hoy={hoy} conPagadas={!esDeLaCartera(mostrar)} />
     <CarteraVista
-      datos={r.datos}
+      datos={datos}
       hoy={hoy}
       puedeCobrar={puedeCobrar}
       puedeGestionar={puedeGestionar}
       puedeCr={puedeCr}
     />
+    </>
+  );
+}
+
+/**
+ * Cuántas facturas y cuánto hay en cada situación, encima de la lista
+ * (03/11). Willy quiere ver «el total de facturas entre pagadas, vencidas y
+ * por vencer»: con lo pagado salen las tres; con lo que se debe, las dos que
+ * aplican. Las cifras van en dólares, que es en lo que suma la base.
+ */
+function ResumenSituacionBarra({
+  datos,
+  hoy,
+  conPagadas,
+}: {
+  datos: DocumentoPorCobrar[];
+  hoy: string;
+  conPagadas: boolean;
+}) {
+  const r = resumirSituacion(datos, hoy);
+  const piezas: { clave: string; texto: string; tono: string }[] = [];
+  if (conPagadas) piezas.push({ clave: "p", texto: `${r.pagada.facturas} pagadas · ${formatearMoneda(r.pagada.monto)}`, tono: "text-[var(--ok)]" });
+  piezas.push({ clave: "v", texto: `${r.vencida.facturas} vencidas · debe ${formatearMoneda(r.vencida.monto)}`, tono: r.vencida.facturas > 0 ? "font-semibold text-[var(--danger)]" : "text-[var(--fg-muted)]" });
+  piezas.push({ clave: "x", texto: `${r.por_vencer.facturas + r.sin_vencimiento.facturas} por vencer · debe ${formatearMoneda(r.por_vencer.monto + r.sin_vencimiento.monto)}`, tono: "text-[var(--fg)]" });
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-soft)] px-4 pb-3">
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-base">
+        <span className="font-semibold">{r.todas.facturas} {r.todas.facturas === 1 ? "factura" : "facturas"}</span>
+        {piezas.map((p) => (
+          <span key={p.clave} className={p.tono}>
+            {p.texto}
+          </span>
+        ))}
+      </p>
+      <OrdenCartera />
+    </div>
   );
 }
 
@@ -413,7 +468,7 @@ export function CarteraVista({
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link
                 href={`/facturacion/${d.id}`}
-                className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                className={`font-mono text-sm hover:underline ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-medium text-brand-600"}`}
               >
                 {d.numero}
               </Link>
@@ -503,7 +558,7 @@ export function CarteraVista({
               <td className="px-3 py-2.5">
                 <Link
                   href={`/facturacion/${d.id}`}
-                  className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
+                  className={`whitespace-nowrap font-mono text-sm hover:underline ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-medium text-brand-600"}`}
                 >
                   {d.numero}
                 </Link>
@@ -522,7 +577,7 @@ export function CarteraVista({
               </td>
 
               <td className="whitespace-nowrap px-3 py-2.5">
-                <span className="tabular block">{formatearFecha(d.fecha_vencimiento)}</span>
+                <span className={`tabular block ${vencida(d) ? "font-bold text-[var(--danger)]" : ""}`}>{formatearFecha(d.fecha_vencimiento)}</span>
                 <Atraso d={d} />
               </td>
 
@@ -751,7 +806,23 @@ async function AvisoRetenciones() {
 }
 
 /** El atraso de lo que se debe; lo pagado dice «Pagada». */
+/**
+ * ¿Vencida? Debe algo y ya pasó su vencimiento. Willy, 03/11: «resaltando
+ * con letras rojas las que ya vencieron». Rojas desde el primer día, no
+ * desde los 61 como el tramo: para él vencida es vencida.
+ */
+function vencida(d: DocumentoPorCobrar): boolean {
+  return d.saldo > 0 && d.fecha_vencimiento !== null && d.dias_vencido > 0;
+}
+
 function Atraso({ d }: { d: DocumentoPorCobrar }) {
+  if (vencida(d)) {
+    return (
+      <span className="block text-sm font-bold text-[var(--danger)]">
+        {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
+      </span>
+    );
+  }
   if (d.saldo <= 0) {
     return (
       <Badge tone="success" size="xs">

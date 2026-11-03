@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { EstadoError, formatearFecha, formatearMoneda } from "@rodatech/ui";
+import { EstadoError, campoBase, cn, formatearFecha, formatearMoneda } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
 import { BotonesDocumento } from "@/componentes/botones-documento";
@@ -11,9 +11,14 @@ import { HojaDocumento, type EmisorHoja } from "@/componentes/hoja-documento";
 import { Volver } from "@/componentes/volver";
 import { cuentasParaCobrar, emisorParaImprimir } from "@/lib/emisor";
 
-import { carteraPorCliente } from "../api/consultas";
-import { DIAS_DE_PAGOS, estadoDeCuenta, type EstadoDeCuenta } from "../api/estado-cuenta";
-import { plazoEnPapel, resumirCuenta } from "../dominio/estado-cuenta";
+import { DIAS_DE_PAGOS, clientesConFacturas, estadoDeCuenta, type EstadoDeCuenta } from "../api/estado-cuenta";
+import {
+  PERIODOS_CUENTA,
+  leerPeriodoCuenta,
+  plazoEnPapel,
+  resumirCuenta,
+  type PeriodoCuenta,
+} from "../dominio/estado-cuenta";
 import { ETIQUETA_MEDIO } from "../dominio/tipos";
 
 /**
@@ -47,16 +52,19 @@ export default async function PaginaEstadoDeCuenta({
   const valor = Array.isArray(sp.cliente) ? sp.cliente[0] : sp.cliente;
   const clienteId = valor && UUID.test(valor) ? valor : null;
   const auto = (Array.isArray(sp.auto) ? sp.auto[0] : sp.auto) === "1";
+  const periodo = leerPeriodoCuenta(Array.isArray(sp.periodo) ? sp.periodo[0] : sp.periodo);
   const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
 
-  const [conDeuda, estado, emisor, cuentas] = await Promise.all([
-    carteraPorCliente(),
-    clienteId ? estadoDeCuenta(clienteId, hoy) : Promise.resolve(null),
+  const [conFacturas, estado, emisor, cuentas] = await Promise.all([
+    clientesConFacturas(hoy),
+    clienteId ? estadoDeCuenta(clienteId, hoy, periodo) : Promise.resolve(null),
     emisorParaImprimir(),
     cuentasParaCobrar(),
   ]);
 
-  const deudores = conDeuda.ok ? conDeuda.datos : [];
+  // Todos los clientes con facturas, no solo los que deben (03/11): el que
+  // está al día también pide su estado de cuenta.
+  const clientes = conFacturas.ok ? conFacturas.datos : [];
 
   const selector = (
     <form
@@ -74,15 +82,32 @@ export default async function PaginaEstadoDeCuenta({
           id="ec-cliente"
           name="cliente"
           valorInicial={clienteId ?? null}
-          opciones={deudores.map((c) => ({
+          opciones={clientes.map((c) => ({
             valor: c.cliente_id,
             etiqueta: c.cliente,
-            detalle: `debe ${formatearMoneda(c.saldo)}${c.vencido > 0 ? ` · vencido ${formatearMoneda(c.vencido)}` : ""}`,
+            detalle:
+              c.saldo > 0
+                ? `debe ${formatearMoneda(c.saldo)}${c.vencido > 0 ? ` · vencido ${formatearMoneda(c.vencido)}` : ""}`
+                : `al día · ${c.facturas} ${c.facturas === 1 ? "factura" : "facturas"}`,
           }))}
-          placeholder={deudores.length > 0 ? "Elige un cliente con saldo pendiente" : "Ningún cliente debe nada ahora mismo"}
+          placeholder="Elige un cliente"
           placeholderBusqueda="Escribe parte del nombre…"
-          textoVacio="Ningún cliente con deuda coincide."
+          textoVacio="Ningún cliente con facturas coincide."
         />
+      </div>
+      {/* Qué parte de la historia sale (03/11): lo pendiente siempre; lo
+          pagado, del periodo. */}
+      <div className="flex min-w-0 flex-col gap-1 sm:w-96">
+        <label htmlFor="ec-periodo" className="text-sm font-medium text-[var(--fg-muted)]">
+          Qué facturas salen
+        </label>
+        <select id="ec-periodo" name="periodo" defaultValue={periodo} className={cn(campoBase, "h-11 text-base")}>
+          {(Object.entries(PERIODOS_CUENTA) as [PeriodoCuenta, string][]).map(([v, t]) => (
+            <option key={v} value={v}>
+              {t}
+            </option>
+          ))}
+        </select>
       </div>
       <button
         type="submit"
@@ -100,7 +125,7 @@ export default async function PaginaEstadoDeCuenta({
         <Volver href="/cobranzas">Volver a cobranzas</Volver>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Estado de cuenta</h1>
         <p className="text-base text-[var(--fg-muted)]">
-          Lo que debe un cliente, factura por factura, listo para imprimir o mandar en PDF.
+          Lo que pagó y lo que debe un cliente, factura por factura, listo para imprimir o mandar en PDF.
         </p>
       </div>
       {estado?.ok && estado.datos ? <BotonesDocumento auto={auto} /> : null}
@@ -140,14 +165,11 @@ export default async function PaginaEstadoDeCuenta({
   }
 
   const { cliente } = estado.datos;
-  const enDeuda = deudores.some((d) => d.cliente_id === cliente.id);
 
   return (
     <div className="flex flex-col gap-4">
       {cabecera}
-      {/* Si el cliente no está en la lista (no debe nada), el selector lo
-          perdería de vista: se queda la hoja, que es lo que se pidió. */}
-      {enDeuda || deudores.length > 0 ? selector : null}
+      {selector}
 
       <div className="flex flex-wrap gap-2 no-print">
         <Link
@@ -165,7 +187,7 @@ export default async function PaginaEstadoDeCuenta({
       </div>
 
       <div className="overflow-x-auto rounded-md bg-white elev-2 print:overflow-visible print:rounded-none print:shadow-none">
-        <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={estado.datos} />
+        <HojaEstadoCuenta emisor={emisor} cuentas={cuentas} hoy={hoy} datos={estado.datos} periodo={periodo} />
       </div>
     </div>
   );
@@ -181,11 +203,13 @@ export function HojaEstadoCuenta({
   cuentas,
   hoy,
   datos,
+  periodo = "pendiente",
 }: {
   emisor: EmisorHoja;
   cuentas: CuentaParaPagar[];
   hoy: string;
   datos: EstadoDeCuenta;
+  periodo?: PeriodoCuenta;
 }) {
   const { cliente, documentos, pagos } = datos;
   const r = resumirCuenta(documentos);
@@ -200,6 +224,9 @@ export function HojaEstadoCuenta({
         { etiqueta: "RUC / DNI", valor: cliente.documento ?? "—" },
         { etiqueta: "Fecha de corte", valor: formatearFecha(hoy) },
         { etiqueta: "Pendientes", valor: `${r.documentos} ${r.documentos === 1 ? "documento" : "documentos"}` },
+        ...(periodo === "pendiente"
+          ? []
+          : [{ etiqueta: "Pagadas", valor: `${r.pagadas} ${r.pagadas === 1 ? "factura" : "facturas"} · ${PERIODO_EN_PAPEL[periodo]}` }]),
         {
           etiqueta: "Vencidos",
           valor:
@@ -220,9 +247,10 @@ export function HojaEstadoCuenta({
       ]}
       filas={
         documentos.length === 0
-          ? [{ numero: "No tiene documentos pendientes de pago." }]
+          ? [{ numero: periodo === "pendiente" ? "No tiene documentos pendientes de pago." : "No tiene facturas en este periodo." }]
           : documentos.map((d) => {
-              const vencido = d.fecha_vencimiento !== null && d.dias_vencido > 0;
+              const pagada = !(d.saldo > 0);
+              const vencido = !pagada && d.fecha_vencimiento !== null && d.dias_vencido > 0;
               return {
                 numero: <span className="font-mono">{d.numero}</span>,
                 oc: d.orden_compra_cliente ?? "",
@@ -230,7 +258,9 @@ export function HojaEstadoCuenta({
                 vence: d.fecha_vencimiento ? formatearFecha(d.fecha_vencimiento) : "—",
                 // En rojo y en negrita lo vencido: en el papel es lo que
                 // el cliente tiene que ver primero.
-                plazo: (
+                plazo: pagada ? (
+                  <span className="font-semibold text-[#067647]">Pagada</span>
+                ) : (
                   <span className={vencido ? "font-bold text-[#b42318]" : ""}>
                     {plazoEnPapel(d.dias_vencido, d.fecha_vencimiento)}
                   </span>
@@ -238,11 +268,12 @@ export function HojaEstadoCuenta({
                 // En la moneda de cada factura (116).
                 total: formatearMoneda(d.total_doc, d.moneda),
                 pagado: d.pagado_doc > 0 ? formatearMoneda(d.pagado_doc, d.moneda) : "—",
-                saldo: <span className="font-semibold">{formatearMoneda(d.saldo_doc, d.moneda)}</span>,
+                saldo: pagada ? "—" : <span className="font-semibold">{formatearMoneda(d.saldo_doc, d.moneda)}</span>,
               };
             })
       }
       totales={[
+        ...(periodo === "pendiente" ? [] : [{ etiqueta: "Pagado", valor: formatearMoneda(r.pagado) }]),
         { etiqueta: "Por vencer", valor: formatearMoneda(r.porVencer) },
         { etiqueta: "Vencido", valor: formatearMoneda(r.vencido) },
         { etiqueta: "TOTAL PENDIENTE", valor: formatearMoneda(r.total), destacado: true },
@@ -266,7 +297,9 @@ export function HojaEstadoCuenta({
           {pagos.length > 0 ? (
             <div>
               <p className="mb-1 font-semibold text-[#0E4C73]">
-                Pagos recibidos en los últimos {DIAS_DE_PAGOS} días
+                {periodo === "pendiente"
+                  ? `Pagos recibidos en los últimos ${DIAS_DE_PAGOS} días`
+                  : `Pagos recibidos · ${PERIODO_EN_PAPEL[periodo]}`}
               </p>
               <table className="w-full border-collapse text-xs">
                 <thead>
@@ -299,3 +332,11 @@ export function HojaEstadoCuenta({
     />
   );
 }
+
+/** Cómo se dice el periodo en el papel que recibe el cliente. */
+const PERIODO_EN_PAPEL: Record<PeriodoCuenta, string> = {
+  pendiente: "solo lo pendiente",
+  "3m": "últimos 3 meses",
+  "12m": "últimos 12 meses",
+  todo: "todo el historial",
+};

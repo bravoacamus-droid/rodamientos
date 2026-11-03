@@ -9030,3 +9030,38 @@ cambiar contraseñas y cambiar permisos sigue siendo SOLO de Gerencia, fijo en
 las acciones y en la base (un rol que cambie permisos se lo daría todo).
 Luis: *«correcto, así lo quiere»*. Administración recibió «Ver» en las dos.
 Visto en la matriz como Gerencia.
+
+## §CW · 03/11 — Cobranzas como la pidió Willy: por número, en rojo, todas y en Excel
+
+Willy, revisando Cobranzas: *«veo que salen ordenadas por días de
+vencimiento mientras que el número de factura sale disperso, es preferible
+que las facturas salgan ordenadas por correlativo para llevar un mejor
+control resaltando con letras rojas las que ya vencieron»*; *«faltan los
+reportes en Excel del estado total de facturas… luego del Excel filtro lo que
+requiera»*; en «Mostrar» *«siempre debe haber la opción de ver el total de
+facturas entre pagadas, vencidas y por vencer»*. Y Luis: el estado de cuenta
+*«quiere todos, los que pagaron y los que falta pagar»*.
+
+- **Orden por número** por defecto (`dominio/situacion.ts`): de la más
+  antigua a la última en lo que se debe; de la última hacia atrás cuando
+  entra lo pagado. «Las más atrasadas primero» se queda como opción, al lado
+  del resumen (en la fila de filtros cortaba los textos).
+- **Vencida = en rojo** desde el primer día: número, fecha y «vencido hace N
+  días». Antes era un ámbar que solo se volvía rojo a los 61.
+- **Mostrar**: «Solo lo por vencer» y «Todas las facturas: pagadas, vencidas
+  y por vencer» (las 541). Encima de la lista, el resumen: N facturas · X
+  pagadas · Y vencidas · Z por vencer, con sus montos.
+- **«Excel de todas las facturas»** (`/cobranzas/excel`): hoja «Facturas»
+  con filtros en la cabecera, lo vencido en rojo y TOTAL con SUBTOTAL (suma
+  solo lo filtrado); hoja «Por cliente». Con un cliente filtrado, solo el suyo.
+- **Estado de cuenta**: se elige CUALQUIER cliente con facturas (37; 25 al
+  día), y «Qué facturas salen»: lo pendiente siempre, y las pagadas de 3 o 12
+  meses (12 por defecto) o de todo el historial. Pagadas en verde con su
+  total, «Pagado» en los totales. Sale de `comprobantes` y no de `v_cartera`,
+  con la misma regla de atraso.
+
+Probado en pantalla el 03/11 (sin cobrar ni guardar): 36 por cobrar (18
+vencidas $ 12,193.50 · 18 por vencer $ 14,072.15, igual que las cifras de
+arriba), «Todas» 541 (505 pagadas), el Excel (541 filas, mismas
+situaciones), y el estado de cuenta de REACTIVOS con 38 pagadas y 7
+pendientes; con «Solo lo pendiente», ninguna pagada.

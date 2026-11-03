@@ -6,6 +6,7 @@ import type { Database } from "@rodatech/db/tipos";
 import { fallo } from "@/lib/errores";
 
 import { prioridad } from "../dominio/cobro";
+import { diasDeAtraso, tramoDe } from "../dominio/situacion";
 import {
   ESTADOS_RETENCION,
   type ClienteEnCartera,
@@ -67,6 +68,8 @@ export async function cartera(
 
     if (filtros.cliente) consulta = consulta.eq("cliente_id", filtros.cliente);
     if (filtros.vencido === "1") consulta = consulta.gt("dias_vencido", 0);
+    // 03/11: lo que se debe y todavía no venció (o no tiene vencimiento).
+    if (filtros.mostrar === "por_vencer") consulta = consulta.eq("dias_vencido", 0);
 
     const tramo = TRAMOS.find((t) => t === filtros.tramo);
     if (tramo) consulta = consulta.eq("tramo_aging", tramo);
@@ -184,7 +187,7 @@ const SIN_FILAS = ["00000000-0000-0000-0000-000000000000"];
  */
 export async function documentosPagados(
   filtros: FiltrosCartera,
-  mostrar: Exclude<Mostrar, "vencido">,
+  mostrar: Exclude<Mostrar, "vencido" | "por_vencer">,
 ): Promise<Resultado<DocumentoPorCobrar[]>> {
   try {
     const supabase = await clienteServidor();
@@ -201,7 +204,8 @@ export async function documentosPagados(
       .neq("estado", "anulado")
       .order("fecha_emision", { ascending: false })
       .order("numero", { ascending: false })
-      .limit(200);
+      // «Todas» (03/11) son todas: hoy ~540 facturas. Lo demás, las 200 últimas.
+      .limit(mostrar === "todas" ? 2000 : 200);
 
     // Las retenciones son pocas: se buscan en la vista y se filtra por id.
     const idsCon = async (estados: EstadoRetencion[]) => {
@@ -211,7 +215,7 @@ export async function documentosPagados(
     if (mostrar === "falta_cr" || mostrar === "con_cr") {
       const ids = await idsCon([mostrar === "falta_cr" ? "falta_cr" : "cr_recibido"]);
       consulta = consulta.in("id", ids.length > 0 ? ids : SIN_FILAS);
-    } else {
+    } else if (mostrar !== "todas") {
       consulta = consulta.eq("estado", "pagado");
       if (mostrar === "pagadas_sin_retencion") {
         const conRetencion = await idsCon(["falta_cr", "cr_recibido"]);
@@ -246,17 +250,23 @@ export async function documentosPagados(
         perfiles: { nombre: string } | null;
       }
     >;
+    // Lo que aún se debe lleva su atraso, con la regla de `v_cartera`: en
+    // «Todas» hay vencidas y por vencer mezcladas con lo pagado (03/11).
+    const hoy = new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(new Date());
     return {
       ok: true,
       datos: await completar(
-        crudos.map((c) => ({
-          ...c,
-          cliente: c.clientes?.razon_social ?? null,
-          documento: c.clientes?.numero_documento ?? null,
-          vendedor: c.perfiles?.nombre ?? null,
-          dias_vencido: 0,
-          tramo_aging: "sin_vencimiento",
-        })),
+        crudos.map((c) => {
+          const debe = Number(c.saldo ?? 0) > 0;
+          return {
+            ...c,
+            cliente: c.clientes?.razon_social ?? null,
+            documento: c.clientes?.numero_documento ?? null,
+            vendedor: c.perfiles?.nombre ?? null,
+            dias_vencido: debe ? diasDeAtraso(c.fecha_vencimiento, hoy) : 0,
+            tramo_aging: debe ? tramoDe(c.fecha_vencimiento, hoy) : "sin_vencimiento",
+          };
+        }),
       ),
     };
   } catch (e) {

@@ -4,15 +4,20 @@ import { clienteServidor } from "@rodatech/db/servidor";
 
 import { fallo } from "@/lib/errores";
 
+import { desdeDePeriodo, type PeriodoCuenta } from "../dominio/estado-cuenta";
+import { diasDeAtraso } from "../dominio/situacion";
 import type { MedioPago } from "../dominio/tipos";
 
 /**
  * Lo que sale en el estado de cuenta de un cliente: sus datos, lo que debe
- * y lo que pagó en los últimos tres meses.
+ * y, desde el 03/11, también lo que ya pagó.
  *
- * Lo pendiente sale de `v_cartera`, la misma vista que la pantalla de
- * cobranzas: el papel que se manda y la pantalla de quien llama no pueden
- * decir saldos distintos.
+ * Luis, por Willy: el estado de cuenta tiene que traer «todos, los que
+ * pagaron y los que falta pagar». Hasta hoy salía de `v_cartera` y solo
+ * traía lo pendiente. Ahora sale de `comprobantes`: lo que se debe SIEMPRE
+ * (sea de cuando sea), y lo pagado del periodo elegido. El atraso se calcula
+ * con la regla de `v_cartera` (`diasDeAtraso`), así que el papel y la
+ * pantalla de quien llama siguen diciendo lo mismo.
  */
 
 export interface DocumentoCuenta {
@@ -63,11 +68,37 @@ export const DIAS_DE_PAGOS = 90;
 export async function estadoDeCuenta(
   clienteId: string,
   hoy: string,
+  periodo: PeriodoCuenta = "12m",
 ): Promise<{ ok: true; datos: EstadoDeCuenta | null } | { ok: false; error: string }> {
   try {
     const supabase = await clienteServidor();
+    const desdePagadas = desdeDePeriodo(periodo, hoy);
+    // Los pagos recibidos: los del periodo; con «solo lo pendiente», los de
+    // los últimos 90 días, como antes.
     const desde = new Date(`${hoy}T12:00:00Z`);
     desde.setUTCDate(desde.getUTCDate() - DIAS_DE_PAGOS);
+    const desdePagos = periodo === "pendiente" ? desde.toISOString().slice(0, 10) : desdePagadas;
+
+    let docsConsulta = supabase
+      .from("comprobantes")
+      .select("id, numero, tipo, fecha_emision, fecha_vencimiento, orden_compra_cliente, total, pagado, saldo, moneda, tipo_cambio, pen_total")
+      .eq("cliente_id", clienteId)
+      .in("tipo", ["factura", "boleta"])
+      .neq("estado", "anulado")
+      // Por número, de la más antigua a la última (Willy, 03/11).
+      .order("numero")
+      .limit(1000);
+    docsConsulta = desdePagadas
+      ? docsConsulta.or(`saldo.gt.0,fecha_emision.gte.${desdePagadas}`)
+      : docsConsulta;
+
+    let pagosConsulta = supabase
+      .from("pagos")
+      .select("fecha, monto, medio, referencia, comprobantes!inner(numero, cliente_id)")
+      .eq("comprobantes.cliente_id", clienteId)
+      .order("fecha", { ascending: false })
+      .limit(300);
+    if (desdePagos) pagosConsulta = pagosConsulta.gte("fecha", desdePagos);
 
     const [cli, docs, pagos] = await Promise.all([
       supabase
@@ -75,22 +106,8 @@ export async function estadoDeCuenta(
         .select("id, razon_social, numero_documento, direccion, email, telefono")
         .eq("id", clienteId)
         .maybeSingle(),
-      supabase
-        .from("v_cartera")
-        .select(
-          "id, numero, tipo, fecha_emision, fecha_vencimiento, orden_compra_cliente, total, pagado, saldo, dias_vencido",
-        )
-        .eq("cliente_id", clienteId)
-        // Del que vence antes al que vence después: es el orden en que se paga.
-        .order("fecha_vencimiento", { ascending: true, nullsFirst: true })
-        .order("fecha_emision"),
-      supabase
-        .from("pagos")
-        .select("fecha, monto, medio, referencia, comprobantes!inner(numero, cliente_id)")
-        .eq("comprobantes.cliente_id", clienteId)
-        .gte("fecha", desde.toISOString().slice(0, 10))
-        .order("fecha", { ascending: false })
-        .limit(100),
+      docsConsulta,
+      pagosConsulta,
     ]);
 
     if (cli.error) return fallo(cli.error, "cobranzas/estado-de-cuenta");
@@ -98,19 +115,11 @@ export async function estadoDeCuenta(
     if (docs.error) return fallo(docs.error, "cobranzas/estado-de-cuenta");
     if (pagos.error) return fallo(pagos.error, "cobranzas/estado-de-cuenta");
 
-    // Las en soles (116), aparte: `v_cartera` no trae la moneda.
+    // Las en soles (116): la factura trae su moneda y su total en soles.
     const enSoles = new Map<string, { tc: number; total: number }>();
-    const ids = (docs.data ?? []).map((d) => String(d.id));
-    if (ids.length > 0) {
-      const { data: pen } = await supabase
-        .from("comprobantes")
-        .select("id, tipo_cambio, pen_total")
-        .in("id", ids)
-        .eq("moneda", "PEN");
-      for (const p of pen ?? []) {
-        if (p.pen_total != null && Number(p.tipo_cambio) > 0) {
-          enSoles.set(String(p.id), { tc: Number(p.tipo_cambio), total: Number(p.pen_total) });
-        }
+    for (const p of docs.data ?? []) {
+      if (p.moneda === "PEN" && p.pen_total != null && Number(p.tipo_cambio) > 0) {
+        enSoles.set(String(p.id), { tc: Number(p.tipo_cambio), total: Number(p.pen_total) });
       }
     }
 
@@ -136,7 +145,7 @@ export async function estadoDeCuenta(
           total: Number(d.total ?? 0),
           pagado: Number(d.pagado ?? 0),
           saldo: Number(d.saldo ?? 0),
-          dias_vencido: Number(d.dias_vencido ?? 0),
+          dias_vencido: Number(d.saldo ?? 0) > 0 ? diasDeAtraso(d.fecha_vencimiento, hoy) : 0,
           ...(() => {
             const pen = enSoles.get(String(d.id));
             const saldo = Number(d.saldo ?? 0);
@@ -170,5 +179,57 @@ export async function estadoDeCuenta(
     };
   } catch (e) {
     return fallo(e, "cobranzas/estado-de-cuenta");
+  }
+}
+
+export interface ClienteConFacturas {
+  cliente_id: string;
+  cliente: string;
+  facturas: number;
+  saldo: number;
+  vencido: number;
+}
+
+/**
+ * Los clientes que se pueden elegir en el estado de cuenta (03/11): TODOS
+ * los que tienen alguna factura, y no solo los que deben. El que está al día
+ * también pide su estado de cuenta. Los que deben, arriba, de más a menos;
+ * los demás, por nombre.
+ */
+export async function clientesConFacturas(
+  hoy: string,
+): Promise<{ ok: true; datos: ClienteConFacturas[] } | { ok: false; error: string }> {
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("comprobantes")
+      .select("cliente_id, saldo, fecha_vencimiento, clientes(razon_social)")
+      .in("tipo", ["factura", "boleta"])
+      .neq("estado", "anulado")
+      .limit(5000);
+    if (error) return fallo(error, "cobranzas/clientes-con-facturas");
+
+    const porCliente = new Map<string, ClienteConFacturas>();
+    for (const f of data ?? []) {
+      const cli = (Array.isArray(f.clientes) ? f.clientes[0] : f.clientes) as { razon_social: string } | null;
+      const id = String(f.cliente_id);
+      const c = porCliente.get(id) ?? { cliente_id: id, cliente: cli?.razon_social ?? "—", facturas: 0, saldo: 0, vencido: 0 };
+      const saldo = Number(f.saldo ?? 0);
+      c.facturas += 1;
+      if (saldo > 0) {
+        c.saldo += saldo;
+        if (diasDeAtraso(f.fecha_vencimiento, hoy) > 0) c.vencido += saldo;
+      }
+      porCliente.set(id, c);
+    }
+    const lista = [...porCliente.values()].map((c) => ({
+      ...c,
+      saldo: Math.round(c.saldo * 100) / 100,
+      vencido: Math.round(c.vencido * 100) / 100,
+    }));
+    lista.sort((a, b) => b.saldo - a.saldo || a.cliente.localeCompare(b.cliente));
+    return { ok: true, datos: lista };
+  } catch (e) {
+    return fallo(e, "cobranzas/clientes-con-facturas");
   }
 }
