@@ -9412,3 +9412,40 @@ Visto en pantalla (solo lectura): el PED-26-00003 con la OC02-00008 y la
 OC02-00009, a 1280 y a 390 px, el menú y la lista. Las condiciones solas no
 se vieron en pantalla: crear una orden gasta correlativo. Las prueba el
 centinela.
+
+## §DD · 04/11 — La F002-579 cargada, y vencidas/por vencer en botones
+
+**F002-579 (OVOSUR), cargada por SQL directo** desde el PDF de SIMPLE
+(`20562681206-01-F002-579-OVOSUR.pdf`). Era el hueco del correlativo que
+dejamos el 02/11 (§CQ–§CT): la F002 sigue en 580.
+- Datos: emitida el 02/11, crédito 30 días (vence el 02/12), 12 ×
+  RI-30X47X10 a 55.86; gravada 670.32, IGV 120.66, total **USD 790.98**,
+  O/C 3280, cambio 3.467, retención del 3 % (USD 23.73).
+- **Enlazada como las del ERP**, no como el histórico del 01/11, que dejaba
+  la guía solo en observaciones:
+  - `cotizacion_id` = CT02-1288;
+  - `guia_id` y `comprobante_guias` = T002-575. La guía ya existía,
+    cargada el 02/11; ahora dice «Facturada con F002-00000579» y no ofrece
+    «Facturar».
+- **Una cuota de 790.98**, como la F002-580: la retención se cobra con el
+  medio «retención». SIMPLE la dejaba en 767.25; está en observaciones, con
+  el hash.
+- No se tocó `series_documento`: la siguiente factura es la 582.
+
+La guía **T002-575** no hacía falta cargarla: estaba desde el 02/11 con el
+mismo producto, la cantidad, el peso y los bultos que su PDF. Le falta la
+O/C 3280 y la cotización, que en el histórico de guías no se cargaron.
+
+**Cobranzas.** Willy: *«las facturas deben aparecer todas en correlativo, en
+rojo las vencidas y con opciones a filtrar las vencidas y las que están por
+vencer»*. Las dos primeras ya estaban (03/11, da47adc). El filtro también,
+pero dentro del desplegable «Mostrar», entre siete opciones. Ahora hay
+cuatro botones a la vista encima de la lista: **Todo lo que se debe ·
+Vencidas (rojo) · Por vencer · Todas, también las pagadas**. El activo va
+relleno. El desplegable se queda para el CR y las pagadas.
+
+Visto en pantalla (solo lectura):
+- los cuatro botones con su lista: por número de menor a mayor en lo que se
+  debe, y de mayor a menor en «Todas», con la 579 entre la 578 y la 580;
+- a 390 px, sin desbordes;
+- la ficha de la F002-579 y la T002-575 marcada como facturada.

@@ -3,7 +3,9 @@
 // Cliente: escribe los filtros en la URL conforme se usan. La lectura sigue
 // pasando en el servidor — la URL es el estado.
 
-import { ArrowDownUp, CalendarClock, CircleAlert } from "lucide-react";
+import { ArrowDownUp, CalendarClock, CircleAlert, Clock, List, ListChecks } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { buttonVariants, cn } from "@rodatech/ui";
 import { useSearchParams } from "next/navigation";
 
 import { FiltroCliente } from "@/componentes/filtro-cliente";
@@ -41,7 +43,8 @@ export function FiltrosCarteraBarra({ nombreCliente }: { nombreCliente: string |
   const dePagadas = mostrar !== "" && mostrar !== "vencido" && mostrar !== "por_vencer";
 
   return (
-    <div className="px-4 pb-4">
+    <div className="flex flex-col gap-3 px-4 pb-4">
+      <BotonesSituacion actual={mostrar} onElegir={(v) => aplicarVarios({ mostrar: v, vencido: "", tramo: "" })} />
       <FilaFiltros>
         <CajaBuscar
           valor={texto}
@@ -75,6 +78,51 @@ export function FiltrosCarteraBarra({ nombreCliente }: { nombreCliente: string |
         />
         <LimpiarFiltros visible={hay} onLimpiar={limpiar} />
       </FilaFiltros>
+    </div>
+  );
+}
+
+/**
+ * Vencidas, por vencer, todo lo que se debe o todas, en botones a la vista.
+ *
+ * Willy, 04/11: *«en cobranzas las facturas deben aparecer todas en
+ * correlativo, en rojo las vencidas y con opciones a filtrar las vencidas y
+ * las que están por vencer»*. El filtro existía desde el 31/10, pero dentro
+ * del desplegable «Mostrar», entre siete opciones: no lo encontraba. Un
+ * botón tiene que parecer un botón (CLAUDE.md §1). El desplegable se queda
+ * para lo demás: el CR y las pagadas.
+ */
+const SITUACIONES: { valor: string; etiqueta: string; icono: LucideIcon; rojo?: boolean }[] = [
+  { valor: "", etiqueta: "Todo lo que se debe", icono: List },
+  { valor: "vencido", etiqueta: "Vencidas", icono: CircleAlert, rojo: true },
+  { valor: "por_vencer", etiqueta: "Por vencer", icono: Clock },
+  { valor: "todas", etiqueta: "Todas, también las pagadas", icono: ListChecks },
+];
+
+function BotonesSituacion({ actual, onElegir }: { actual: string; onElegir: (v: string) => void }) {
+  return (
+    <div role="group" aria-label="Qué facturas ver" className="flex flex-wrap gap-2">
+      {SITUACIONES.map((s) => {
+        const activo = actual === s.valor;
+        const Icono = s.icono;
+        return (
+          <button
+            key={s.valor || "debe"}
+            type="button"
+            aria-pressed={activo}
+            onClick={() => onElegir(s.valor)}
+            className={cn(
+              buttonVariants({ variant: activo ? "primary" : "outline" }),
+              "h-11 gap-1.5 px-4 text-base",
+              s.rojo && !activo ? "border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger-bg)]" : "",
+              s.rojo && activo ? "bg-[var(--danger)] hover:bg-[var(--danger)]" : "",
+            )}
+          >
+            <Icono className="size-5" aria-hidden="true" />
+            {s.etiqueta}
+          </button>
+        );
+      })}
     </div>
   );
 }
