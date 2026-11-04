@@ -760,6 +760,39 @@ export function Constructor({
                 currency: "USD",
               })}
             </span>
+            {/*
+              La utilidad y el margen, junto al total (Luis, 04/11: «en cada
+              cotización tenemos que tener cuál es el margen total de ganancia
+              y la utilidad también»). Estaban solo en la tarjeta «Totales»,
+              al final y en pequeño. Sin IGV y sobre el costo (023). Uso
+              interno: no sale en el papel.
+            */}
+            {totales.costoTotal > 0 ? (
+              <span className="flex items-baseline gap-2 border-l border-[var(--border)] pl-3">
+                <span className="text-sm text-[var(--fg-muted)]">
+                  {totales.subtotal >= totales.costoTotal ? "utilidad" : "pierdes"}
+                </span>
+                <span
+                  className={`tabular text-lg font-semibold ${
+                    totales.margenPct < 12
+                      ? "text-[var(--danger)]"
+                      : totales.margenPct < 20
+                        ? "text-[var(--warn)]"
+                        : "text-[var(--ok)]"
+                  }`}
+                >
+                  {Math.abs(totales.subtotal - totales.costoTotal).toLocaleString("es-PE", {
+                    style: "currency",
+                    currency: "USD",
+                  })}
+                </span>
+                <span className="tabular text-base font-medium">· margen {totales.margenPct.toFixed(2)} %</span>
+              </span>
+            ) : (
+              <span className="border-l border-[var(--border)] pl-3 text-sm text-[var(--fg-muted)]">
+                utilidad: falta el costo
+              </span>
+            )}
           </div>
 
           {/* En el teléfono, el aviso en su propio renglón y los dos botones a

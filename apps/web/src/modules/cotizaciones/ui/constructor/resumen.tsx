@@ -106,15 +106,17 @@ export function ResumenConstructor({
                 costo del catálogo. Analiza su precio de compra para ver el margen real.
               </p>
             ) : null}
+            {/* La utilidad en grande (Luis, 04/11), y el costo debajo:
+                venta − costo, sin IGV. */}
+            <div className="mt-1.5 flex items-baseline justify-between">
+              <span className="text-base font-medium">Utilidad</span>
+              <span className="tabular text-base font-semibold">
+                {dolar(totales.subtotal - totales.costoTotal)}
+              </span>
+            </div>
             <div className="mt-0.5 flex items-baseline justify-between">
-              {/* Con su nombre: la cifra iba sola y no decía que era la
-                  ganancia (revisión por módulos del 02/10). */}
-              <span className="text-sm text-[var(--fg-muted)]">
-                ganancia {dolar(totales.subtotal - totales.costoTotal)}
-              </span>
-              <span className="text-sm text-[var(--fg-muted)]">
-                costo {dolar(totales.costoTotal)}
-              </span>
+              <span className="text-sm text-[var(--fg-muted)]">Costo total</span>
+              <span className="tabular text-sm text-[var(--fg-muted)]">{dolar(totales.costoTotal)}</span>
             </div>
           </div>
         ) : null}

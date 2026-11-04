@@ -9254,3 +9254,17 @@ anulado y «Anular pedido» en el menú del PED-26-00001, sin anularlo.
 
 Desde hoy los commits de este repo salen como `bravoacamus-droid` (Luis,
 04/11), configurado solo en esta carpeta.
+
+### §CY.1 · La utilidad y el margen, en la barra del editor (04/11)
+
+Luis, con una captura del editor: *«en cada cotización tenemos que tener cuál
+es el margen total de ganancia y la utilidad también»*. Ya estaban, pero solo en
+la tarjeta «Totales», al final y en letra pequeña: «ganancia» en gris. Ahora
+la barra pegada abajo dice, junto al total, «utilidad USD 1.85 · margen
+36.06 %», con el color del margen, o «utilidad: falta el costo» si no hay
+costo. En «Totales» la utilidad va en grande, con el costo total debajo. Es
+venta sin IGV menos costo, y el margen es sobre el costo (023). No sale en el
+papel. La ficha ya lo tenía (la tarjeta «Margen al costo»).
+
+Visto en pantalla con una cotización nueva sin guardar: la B-54 a 6.98 con
+costo 5.13 da utilidad USD 1.85 y margen 36.06 %.
