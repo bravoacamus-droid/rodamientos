@@ -22,6 +22,7 @@
 import type { jsPDF } from "jspdf";
 
 import type { EmisorHoja } from "@/componentes/hoja-documento";
+import { direccionEnDos } from "@/lib/direccion-en-dos";
 
 const AZUL: [number, number, number] = [14, 76, 115];
 const GRIS: [number, number, number] = [68, 68, 68];
@@ -183,63 +184,80 @@ export async function armarHojaPdf(h: HojaPdf): Promise<jsPDF> {
   };
 
   /* ------------------------------------------------------------ Cabecera */
+  /*
+   * Willy, 04/11 (reunión, 1:04–1:07): impreso «sale chiquito». El logo, la
+   * razón social y el recuadro del número, más grandes; el emisor, solo RUC,
+   * dirección en dos renglones y web/correo; y más aire bajo la línea azul.
+   * Lo mismo que `HojaDocumento`, que es la vista previa que se imprime.
+   */
   const logo = h.emisor.logoUrl ? await imagenComoDato(h.emisor.logoUrl) : null;
   let x = MARGEN;
   const yCab = MARGEN;
+  let altoLogo = 0;
   if (logo) {
-    const alto = 16;
-    const ancho = Math.min(36, (alto * logo.ancho) / logo.alto);
-    doc.addImage(logo.dato, x, yCab, ancho, (ancho * logo.alto) / logo.ancho);
-    x += ancho + 5;
+    const alto = 20;
+    const ancho = Math.min(42, (alto * logo.ancho) / logo.alto);
+    altoLogo = (ancho * logo.alto) / logo.ancho;
+    doc.addImage(logo.dato, x, yCab, ancho, altoLogo);
+    x += ancho + 4;
   }
 
   // El recuadro del número, a la derecha.
-  const anchoCaja = 46;
+  const anchoCaja = 54;
   const xCaja = anchoPagina - MARGEN - anchoCaja;
   doc.setDrawColor(...AZUL);
-  doc.setLineWidth(0.6);
+  doc.setLineWidth(0.7);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(CHICO);
+  doc.setFontSize(10);
   const lineasTitulo = doc.splitTextToSize(textoPdf(h.titulo.toUpperCase()), anchoCaja - 4) as string[];
-  const altoCaja = 10 + lineasTitulo.length * 3 + 6;
+  const altoTitulo = lineasTitulo.length * 4;
+  const altoCaja = 8 + altoTitulo + 9;
   doc.roundedRect(xCaja, yCab, anchoCaja, altoCaja, 1, 1, "S");
   // El RUC dentro del recuadro, como todo comprobante SUNAT (Luis, 15/10).
   doc.setTextColor(...NEGRO);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(CUERPO + 1);
-  doc.text(textoPdf(`R.U.C. N.° ${h.emisor.ruc}`), xCaja + anchoCaja / 2, yCab + 5.5, { align: "center" });
+  doc.setFontSize(11.5);
+  doc.text(textoPdf(`R.U.C. N.° ${h.emisor.ruc}`), xCaja + anchoCaja / 2, yCab + 6.5, { align: "center" });
   doc.setTextColor(...AZUL);
-  doc.setFontSize(CHICO);
-  doc.text(lineasTitulo, xCaja + anchoCaja / 2, yCab + 10, { align: "center" });
+  doc.setFontSize(10);
+  doc.text(lineasTitulo, xCaja + anchoCaja / 2, yCab + 11.5, { align: "center" });
   doc.setTextColor(...NEGRO);
-  doc.setFontSize(12);
-  doc.text(textoPdf(h.numero), xCaja + anchoCaja / 2, yCab + 10 + lineasTitulo.length * 3 + 3.5, { align: "center" });
+  doc.setFontSize(15);
+  doc.text(textoPdf(h.numero), xCaja + anchoCaja / 2, yCab + 8 + altoTitulo + 5.5, { align: "center" });
 
   // La razón social y debajo lo demás del emisor.
-  const anchoEmisor = xCaja - 5 - x;
+  const anchoEmisor = xCaja - 4 - x;
   doc.setTextColor(...AZUL);
-  doc.setFontSize(11);
-  doc.text(doc.splitTextToSize(textoPdf(h.emisor.razonSocial), anchoEmisor), x, yCab + 4);
+  // La más grande que quepa en un renglón, de 13 a 11 puntos: partida en dos,
+  // el bloque volvía a ser «largo» y no «ancho» (Willy, 04/11).
+  let tamRazon = 13;
+  doc.setFontSize(tamRazon);
+  while (tamRazon > 11 && doc.getTextWidth(textoPdf(h.emisor.razonSocial)) > anchoEmisor) {
+    tamRazon -= 0.5;
+    doc.setFontSize(tamRazon);
+  }
+  const lineasRazon = doc.splitTextToSize(textoPdf(h.emisor.razonSocial), anchoEmisor) as string[];
+  doc.text(lineasRazon, x, yCab + 5);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(CHICO);
+  doc.setFontSize(CUERPO);
   doc.setTextColor(...GRIS);
-  let yEm = yCab + 9;
+  let yEm = yCab + 5 + lineasRazon.length * 5.2 + 0.5;
   const lineasEmisor = [
     `RUC ${h.emisor.ruc}`,
-    h.emisor.direccion,
-    [h.emisor.telefono, h.emisor.email, h.emisor.web].filter(Boolean).join(" · "),
+    ...direccionEnDos(h.emisor.direccion),
+    [h.emisor.web, h.emisor.email].filter(Boolean).join(" · "),
   ].filter((l): l is string => Boolean(l));
   for (const l of lineasEmisor) {
     const partes = doc.splitTextToSize(textoPdf(l), anchoEmisor) as string[];
     doc.text(partes, x, yEm);
-    yEm += partes.length * 3.2;
+    yEm += partes.length * 3.6;
   }
 
-  let y = Math.max(yEm, yCab + altoCaja + 2) + 1;
+  let y = Math.max(yEm - 1, yCab + altoLogo, yCab + altoCaja) + 3;
   doc.setDrawColor(...AZUL);
   doc.setLineWidth(0.6);
   doc.line(MARGEN, y, anchoPagina - MARGEN, y);
-  y += 5;
+  y += 8;
 
   /* --------------------------------------------------------------- Datos */
   doc.setFontSize(CUERPO - 0.5);

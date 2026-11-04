@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { direccionEnDos } from "@/lib/direccion-en-dos";
+
 /**
  * La hoja en la que salen TODOS los documentos que se imprimen.
  *
@@ -102,6 +104,16 @@ export interface BloqueDatos {
 const LETRA = "text-sm @2xl:text-xs print:text-xs";
 
 /**
+ * La letra de los datos del emisor (RUC, dirección, web y correo).
+ *
+ * Willy, 04/11 (reunión, 1:04–1:06): el bloque «más ancho y menos largo»,
+ * con la dirección en dos renglones. Con el logo y el recuadro del número más
+ * grandes, a 12 px la dirección volvía a partirse en tres; a 11 px caben los
+ * dos renglones, como en el PDF que se descarga (8 pt en `pdf-hoja.ts`).
+ */
+const LETRA_EMISOR = "text-sm @2xl:text-[11px] print:text-[11px]";
+
+/**
  * La sombra que avisa de que la tabla sigue a la derecha.
  *
  * Desde 672 px de contenido la tabla cabe casi siempre, pero una con muchas
@@ -180,16 +192,18 @@ export function HojaDocumento({
     <article className="@container mx-auto w-full max-w-[210mm] bg-white p-4 text-[#111] sm:p-8 print:max-w-none print:p-0 print:text-xs">
       {/* ------------------------------------------------------ Cabecera */}
       <header
-        className="flex flex-col items-start justify-between gap-4 border-b-2 pb-4 @2xl:flex-row @2xl:gap-6 print:flex-row"
+        className="flex flex-col items-start justify-between gap-4 border-b-2 pb-4 @2xl:flex-row @2xl:gap-4 print:flex-row print:gap-4"
         style={{ borderColor: AZUL }}
       >
         {/* En el teléfono el logo va ENCIMA de la razón social: al lado le
             dejaba ~200 px, y el correo, que no se parte, se salía de la hoja
             (29/10). Con 448 px de hoja ya caben juntos; en papel, siempre. */}
-        <div className="flex min-w-0 flex-col items-start gap-3 @md:flex-row @md:gap-4 print:flex-row print:gap-4">
+        <div className="flex min-w-0 flex-col items-start gap-3 @md:flex-row @md:gap-3 print:flex-row print:gap-3">
           {emisor.logoUrl ? (
+            // Más grande (Willy, 04/11: «el logo hasta donde se pueda agrandar»):
+            // unos 18 mm en el papel, para dejar sitio a la dirección en dos renglones.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={emisor.logoUrl} alt="" className="h-16 w-auto object-contain" />
+            <img src={emisor.logoUrl} alt="" className="h-20 w-auto object-contain @2xl:h-[66px] print:h-[66px]" />
           ) : null}
           {/*
             La razón social, y nada encima.
@@ -205,16 +219,26 @@ export function HojaDocumento({
             tiene que leer quien recibe el papel— en letra de pie de página.
           */}
           <div className="min-w-0 break-words">
-            <h1 className="text-base font-bold" style={{ color: AZUL }}>
+            {/*
+              Willy, 04/11 (1:04–1:06): la razón social más grande, y debajo
+              «solamente… el RUC, la dirección y la página web o un correo de
+              ventas», en un bloque «más ancho y menos largo», con la
+              dirección en dos renglones. El teléfono sale del membrete; el
+              correo es el de «Datos de la empresa», donde se cambia por el de
+              ventas.
+            */}
+            <h1 className="text-lg font-bold leading-tight" style={{ color: AZUL }}>
               {emisor.razonSocial}
             </h1>
-            <p className={`${LETRA} text-[#444]`}>RUC {emisor.ruc}</p>
-            {emisor.direccion ? (
-              <p className={`${LETRA} text-[#444]`}>{emisor.direccion}</p>
-            ) : null}
-            <p className={`${LETRA} text-[#444]`}>
-              {[emisor.telefono, emisor.email, emisor.web].filter(Boolean).join(" · ")}
-            </p>
+            <div className={`mt-1 ${LETRA_EMISOR} leading-snug text-[#333]`}>
+              <p>RUC {emisor.ruc}</p>
+              {direccionEnDos(emisor.direccion).map((renglon) => (
+                <p key={renglon}>{renglon}</p>
+              ))}
+              {emisor.web || emisor.email ? (
+                <p>{[emisor.web, emisor.email].filter(Boolean).join(" · ")}</p>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -223,19 +247,22 @@ export function HojaDocumento({
             teléfono, a todo el ancho: suelto a la izquierda parecía un botón
             olvidado. */}
         <div
-          className="shrink-0 self-stretch rounded border-2 px-5 py-3 text-center @2xl:self-auto print:self-auto"
+          className="shrink-0 self-stretch rounded border-2 px-3 py-2.5 text-center @2xl:w-[12.5rem] @2xl:self-auto print:w-[12.5rem] print:self-auto"
           style={{ borderColor: AZUL }}
         >
           {/* El RUC dentro del recuadro, como todo comprobante SUNAT: dice de
               quién es ese número (Luis, 15/10). */}
-          <p className="text-sm font-bold tabular">R.U.C. N.° {emisor.ruc}</p>
+          {/* Más grande (Willy, 04/11, 1:06): «ese recuadro también tiene
+              que agrandarse, porque a la hora que lo imprimo sale chiquito,
+              y eso es lo que tiene que resaltar». */}
+          <p className="text-base font-bold tabular @2xl:text-[15px] print:text-[15px]">R.U.C. N.° {emisor.ruc}</p>
           <p
-            className={`mt-0.5 ${LETRA} font-semibold uppercase tracking-wide`}
+            className="mt-1 text-sm font-bold uppercase leading-snug @2xl:text-[13px] print:text-[13px]"
             style={{ color: AZUL }}
           >
             {titulo}
           </p>
-          <p className="text-base font-bold tabular">{numero}</p>
+          <p className="mt-0.5 text-xl font-bold tabular">{numero}</p>
         </div>
       </header>
 
@@ -244,7 +271,9 @@ export function HojaDocumento({
         <section
           key={`bloque-${i}`}
           className={`grid grid-cols-1 gap-x-8 gap-y-1 ${LETRA} @2xl:grid-cols-2 print:grid-cols-2 ${
-            i === 0 ? "mt-4" : "mt-2 border-t border-[#ddd] pt-2"
+            // Más aire bajo la línea azul (Willy, 04/11, 1:07: «está muy
+            // pegado a esa línea azul, dale un poco más espacio abajo»).
+            i === 0 ? "mt-6" : "mt-2 border-t border-[#ddd] pt-2"
           }`}
         >
           {[b.izquierda, b.derecha].map((columna, j) => (
@@ -262,7 +291,7 @@ export function HojaDocumento({
         </section>
       ))}
       {datos.length > 0 ? (
-      <section className={`mt-4 grid grid-cols-1 gap-x-8 gap-y-1 ${LETRA} @2xl:grid-cols-2 print:grid-cols-2`}>
+      <section className={`${bloques?.length ? "mt-4" : "mt-6"} grid grid-cols-1 gap-x-8 gap-y-1 ${LETRA} @2xl:grid-cols-2 print:grid-cols-2`}>
         {datos.map((d, i) =>
           d ? (
             <p

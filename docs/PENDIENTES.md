@@ -9268,3 +9268,34 @@ papel. La ficha ya lo tenía (la tarjeta «Margen al costo»).
 
 Visto en pantalla con una cotización nueva sin guardar: la B-54 a 6.98 con
 costo 5.13 da utilidad USD 1.85 y margen 36.06 %.
+
+## §CZ · 04/11 — El membrete, más grande para el papel
+
+Willy, reunión del 04/11 (1:04–1:07): impreso «sale chiquito». Pidió el
+recuadro del RUC y del número más grande, el logo y «INVERSIONES RODATECH
+E.I.R.L.» más grandes, un emisor «más ancho y menos largo» con solo el RUC, la
+dirección en dos líneas y la web o un correo de ventas, y más espacio entre la
+línea azul y los datos del cliente.
+
+Se hizo en los dos sitios donde se dibuja, `HojaDocumento` (vista previa e
+Imprimir) y `pdf-hoja.ts` («Descargar PDF», que es lo que él imprime), así
+que sale en cotización, pedido, orden de compra, guía, factura y estado de
+cuenta.
+
+En el PDF:
+- el logo pasa de 16 a 20 mm de alto;
+- la razón social, de 11 a 13 pt, la más grande que quepa en un renglón;
+- en el recuadro, el RUC pasa de 9 a 11.5 pt, el tipo de documento de 7 a
+  10 pt y el número de 12 a 15 pt;
+- los datos del emisor, de 7 a 8 pt;
+- hay 8 mm bajo la línea azul, antes 5.
+
+`direccionEnDos` corta la dirección en la coma más cercana a la mitad. El
+**teléfono sale del membrete**. El correo es el de «Datos de la empresa»: está
+`wfernandez@`, y cuando Willy pase el de ventas se cambia allí, sin tocar
+código.
+
+Visto en papel (`page.pdf` y el PDF descargado, pintados con pdf.js) en la
+guía T002-00000577 y la factura F002-581, y en pantalla a 1280 y a 390 px. De
+paso, los botones Descargar/Imprimir desbordaban 19 px a 390 px: ahora bajan
+de renglón.

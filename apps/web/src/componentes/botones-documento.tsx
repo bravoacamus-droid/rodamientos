@@ -52,8 +52,8 @@ export function BotonesDocumento({
   }, [auto]);
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col items-end gap-1">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {descargar ?? (
           <Button type="button" onClick={() => window.print()}>
             <IconoDescargar />
