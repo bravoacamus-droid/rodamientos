@@ -3107,6 +3107,9 @@ export type Database = {
           agencia_id: string | null
           anulada_en: string | null
           anulada_por: string | null
+          baja_sunat_en: string | null
+          baja_sunat_nota: string | null
+          baja_sunat_por: string | null
           cliente_id: string
           conductor_documento: string | null
           conductor_id: string | null
@@ -3160,6 +3163,9 @@ export type Database = {
           agencia_id?: string | null
           anulada_en?: string | null
           anulada_por?: string | null
+          baja_sunat_en?: string | null
+          baja_sunat_nota?: string | null
+          baja_sunat_por?: string | null
           cliente_id: string
           conductor_documento?: string | null
           conductor_id?: string | null
@@ -3213,6 +3219,9 @@ export type Database = {
           agencia_id?: string | null
           anulada_en?: string | null
           anulada_por?: string | null
+          baja_sunat_en?: string | null
+          baja_sunat_nota?: string | null
+          baja_sunat_por?: string | null
           cliente_id?: string
           conductor_documento?: string | null
           conductor_id?: string | null
@@ -3271,6 +3280,13 @@ export type Database = {
           {
             foreignKeyName: "guias_remision_anulada_por_fkey"
             columns: ["anulada_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guias_remision_baja_sunat_por_fkey"
+            columns: ["baja_sunat_por"]
             isOneToOne: false
             referencedRelation: "perfiles"
             referencedColumns: ["id"]
@@ -6419,6 +6435,10 @@ export type Database = {
       login_registrar: {
         Args: { p_correo: string; p_exito: boolean; p_ip: string }
         Returns: undefined
+      }
+      marcar_baja_guia_sunat: {
+        Args: { p_id: string; p_nota?: string }
+        Returns: Json
       }
       membrete_por_token: { Args: { p_token: string }; Returns: Json }
       mi_rol: {

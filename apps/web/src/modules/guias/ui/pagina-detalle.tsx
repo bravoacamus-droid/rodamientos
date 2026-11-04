@@ -25,6 +25,7 @@ import { estadoConfiguracion } from "@/modules/facturacion/api/configuracion";
 import { faltaParaSunat } from "../dominio/sunat";
 import { formatoPeso } from "../dominio/constructor";
 import { SunatGuia } from "./sunat-guia";
+import { BajaSunatGuia } from "./baja-sunat-guia";
 
 /**
  * Ficha de una guía de remisión.
@@ -205,6 +206,7 @@ export default async function PaginaDetalleGuia({
               numero={g.numero}
               estado={g.estado}
               comprobante={g.comprobante}
+              vivaEnSunat={g.estado_sunat === "aceptado" || g.estado_sunat === "observado"}
             />
           ) : g.estado !== "anulada" ? (
             <BotonBloqueado
@@ -234,6 +236,19 @@ export default async function PaginaDetalleGuia({
           </strong>
           {g.motivo_anulacion ? <> Motivo: {g.motivo_anulacion}</> : null}
         </p>
+      ) : null}
+
+      {/* El segundo paso: la baja en SUNAT (190, Willy 04/11). */}
+      {g.estado === "anulada" ? (
+        <div className="no-print">
+          <BajaSunatGuia
+            id={g.id}
+            numero={g.numero}
+            estadoSunat={g.estado_sunat}
+            baja={g.baja_sunat}
+            puede={puedeAnular}
+          />
+        </div>
       ) : null}
 
       {/* --------------------------------------------------------- Cifras */}

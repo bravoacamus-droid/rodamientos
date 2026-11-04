@@ -213,6 +213,8 @@ async function nombresDeUbigeo(
 export interface AnulacionGuia {
   anulada_en: string | null;
   anulada_por: string | null;
+  /** La baja en SUNAT, apuntada a mano (190). */
+  baja_sunat: { en: string | null; por: string | null; nota: string | null };
 }
 
 /** La ficha de una guía, con sus líneas. */
@@ -240,6 +242,8 @@ export async function detalleGuia(
          clientes(razon_social, numero_documento, telefono, direccion),
          cotizaciones(numero), pedidos(id, numero),
          anulador:perfiles!guias_remision_anulada_por_fkey(nombre),
+         baja_sunat_en, baja_sunat_nota,
+         bajador:perfiles!guias_remision_baja_sunat_por_fkey(nombre),
          guia_items(id, producto_id, orden, codigo, descripcion, cantidad, unidad_codigo, peso_kg,
                     productos(es_kit, stock(cantidad)))`,
       )
@@ -339,6 +343,11 @@ export async function detalleGuia(
         motivo_anulacion: (g.motivo_anulacion as string | null) ?? null,
         anulada_en: (g.anulada_en as string | null) ?? null,
         anulada_por: (g.anulador as { nombre: string | null } | null)?.nombre ?? null,
+        baja_sunat: {
+          en: (g.baja_sunat_en as string | null) ?? null,
+          por: (g.bajador as { nombre: string | null } | null)?.nombre ?? null,
+          nota: (g.baja_sunat_nota as string | null) ?? null,
+        },
         creado_en: String(g.creado_en),
         lineas,
         comprobante: comp ? { id: String(comp.id), numero: String(comp.numero) } : null,

@@ -9338,3 +9338,43 @@ Visto en pantalla (solo lectura):
 
 Guardar la empresa no se probó en pantalla, para no escribir en la base de
 Willy. Lo cubre el centinela de la 189.
+
+## §DB · 04/11 — Anular la guía: en el sistema y después en SUNAT (190)
+
+Willy, reunión del 04/11 (53:58), sobre su sistema anterior: al anular le
+salía *«se anula la guía número tal en el sistema, pero para anular toda la
+guía definitivamente tiene que darle de baja en SUNAT»*, y se lo pasaba a su
+contador. Luis: *«algo más bonito y armado»*.
+
+Para la guía electrónica **no hay baja por servicio**, como la hay para las
+facturas (125): se hace a mano en SUNAT Operaciones en Línea. Desde la 146,
+`anular_guia` dejaba la guía aceptada en `baja_solicitada`, pero nada la
+sacaba de ahí, así que no se sabía cuáles se habían dado de baja.
+
+- **Antes de anular**, si SUNAT la aceptó, el diálogo avisa: «Son dos pasos…».
+- **Al anular**, el diálogo no se cierra. Pasa a «1. Anulada en el sistema ✓
+  · 2. Falta darla de baja en SUNAT», con los pasos, el botón «Abrir SUNAT»
+  (SOL) y «Entendido».
+- **En la ficha**, hay un recuadro ámbar «Falta darla de baja en SUNAT» con
+  los mismos pasos y el botón **«Ya la di de baja en SUNAT»**, que admite una
+  nota opcional («la dio de baja el contador»). Al marcarla, el recuadro
+  pasa a verde con la fecha y quién lo marcó.
+- **En la lista**, la guía lleva «Falta la baja en SUNAT» hasta que se marca.
+- **En la base** (190):
+  - columnas `baja_sunat_en`, `baja_sunat_por` y `baja_sunat_nota`;
+  - `marcar_baja_guia_sunat(id, nota)` pasa la guía a `baja_aceptada`,
+    con el mismo permiso que anular;
+  - `anular_guia` pasa también la «observada» a `baja_solicitada`.
+- Si la guía nunca llegó a SUNAT, no se pide la baja.
+
+El centinela **ejecuta** las dos funciones como gerencia sobre una guía
+aceptada real y lo deshace todo, porque anular devuelve stock. Tras
+aplicarla siguen 577 guías emitidas y aceptadas.
+
+En pantalla, solo lectura:
+- se abrió «Anular» en la T002-00000575 y se cerró sin anular;
+- el recuadro de la ficha, pendiente y hecho, se vio en una página de
+  prueba que ya se borró, a 1280 y a 390 px.
+
+**Sin ver con los ojos:** el paso 2 del diálogo, porque solo sale anulando
+de verdad. Lleva los mismos pasos que la ficha.

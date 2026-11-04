@@ -49,8 +49,11 @@ export function SunatGuia({
   if (estado === "anulada") {
     return (
       <p className="text-sm text-[var(--fg-muted)]">
-        Anulada. Si SUNAT ya la había aceptado, la baja se hace en SUNAT Operaciones en Línea: para guías no hay
-        envío de baja automático.
+        {estadoSunat === "baja_aceptada"
+          ? "Anulada y dada de baja en SUNAT."
+          : estadoSunat === "baja_solicitada"
+            ? "Anulada en el sistema. Falta darla de baja en SUNAT: los pasos están arriba."
+            : "Anulada. Nunca llegó a SUNAT, así que no hay que darla de baja."}
       </p>
     );
   }

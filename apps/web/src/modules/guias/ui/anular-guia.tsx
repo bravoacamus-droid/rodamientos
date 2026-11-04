@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { X } from "lucide-react";
+import { CircleCheck, X } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -17,6 +17,7 @@ import {
 } from "@rodatech/ui";
 
 import { anularGuia } from "../acciones/anular";
+import { BotonAbrirSunat, PasosBajaSunat } from "./baja-sunat-guia";
 
 /**
  * Anular una guía emitida: **devuelve al almacén lo que sacó**.
@@ -33,7 +34,13 @@ export function AnularGuia({
   numero,
   estado,
   comprobante,
+  vivaEnSunat = false,
 }: {
+  /**
+   * SUNAT la aceptó (190): anularla aquí no basta, hay que darla de baja en
+   * SUNAT Operaciones en Línea. El diálogo lo dice antes y lo guía después.
+   */
+  vivaEnSunat?: boolean;
   id: string;
   numero: string;
   estado: string;
@@ -45,8 +52,10 @@ export function AnularGuia({
   const [motivo, setMotivo] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [enviando, enviar] = React.useTransition();
+  /** Anulada y a la espera de la baja en SUNAT: el diálogo pasa al paso 2. */
+  const [faltaBaja, setFaltaBaja] = React.useState(false);
 
-  if (estado === "anulada") return null;
+  if (estado === "anulada" && !faltaBaja) return null;
 
   const confirmar = () => {
     setError(null);
@@ -60,8 +69,14 @@ export function AnularGuia({
         setError(r.error);
         return;
       }
-      setAbierto(false);
       setMotivo("");
+      // Willy, 04/11: su sistema anterior avisaba al anular que faltaba la
+      // baja en SUNAT. Aquí, además, se dice cómo, sin cerrar el diálogo.
+      if (r.pideBaja) {
+        setFaltaBaja(true);
+        return;
+      }
+      setAbierto(false);
       router.refresh();
     });
   };
@@ -74,6 +89,10 @@ export function AnularGuia({
         if (!v) {
           setMotivo("");
           setError(null);
+          if (faltaBaja) {
+            setFaltaBaja(false);
+            router.refresh();
+          }
         }
       }}
     >
@@ -94,6 +113,45 @@ export function AnularGuia({
         Anular
       </DialogTrigger>
 
+      {faltaBaja ? (
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Guía {numero} anulada en el sistema</DialogTitle>
+            <DialogDescription>Falta un paso: darla de baja en SUNAT.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <ol className="mt-3 flex flex-col gap-3 text-sm">
+              <li className="flex items-start gap-2 rounded-md border border-[var(--ok)] bg-[var(--surface-2)] p-3">
+                <CircleCheck className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                <span>
+                  <strong>1. Anulada en el sistema.</strong> La mercadería volvió al almacén y queda el motivo.
+                </span>
+              </li>
+              <li className="rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+                <strong>2. Falta darla de baja en SUNAT.</strong> SUNAT la aceptó y para SUNAT sigue viva. Se
+                hace en su página (o se lo pasas a tu contador):
+                <PasosBajaSunat numero={numero} />
+              </li>
+            </ol>
+            <p className="mt-3 text-sm text-[var(--fg-muted)]">
+              Hasta que lo marques, la guía dirá «Falta darla de baja en SUNAT» en su ficha y en la lista.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <BotonAbrirSunat />
+            <Button
+              type="button"
+              onClick={() => {
+                setAbierto(false);
+                setFaltaBaja(false);
+                router.refresh();
+              }}
+            >
+              Entendido
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      ) : (
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Anular la guía {numero}</DialogTitle>
@@ -113,6 +171,12 @@ export function AnularGuia({
             </p>
           ) : (
             <div className="mt-4 flex flex-col gap-3">
+              {estado === "emitida" && vivaEnSunat ? (
+                <p className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] p-2.5 text-sm">
+                  <strong>Son dos pasos.</strong> Aquí se anula en el sistema. Como SUNAT ya la aceptó,
+                  después hay que <strong>darla de baja en SUNAT</strong>: al anular te digo cómo.
+                </p>
+              ) : null}
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">
                   Motivo <span className="text-[var(--danger)]">*</span>
@@ -153,6 +217,7 @@ export function AnularGuia({
           ) : null}
         </DialogFooter>
       </DialogContent>
+      )}
     </Dialog>
   );
 }

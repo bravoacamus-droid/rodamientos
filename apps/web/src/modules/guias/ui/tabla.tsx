@@ -146,7 +146,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                     estado, que es el segundo canal para quien no distingue
                     verde de rojo— y el tachado de las anuladas.
                   */}
-                  <EstadoBadge estado={g.estado} size="xs" />
+                  <EstadoBadge estado={g.estado} size="xs" />{g.estado === "anulada" && g.estado_sunat === "baja_solicitada" ? <FaltaBaja /> : null}
                 </td>
 
                 {/*
@@ -234,7 +234,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 ) : null}
               </div>
               <span className="shrink-0">
-                <EstadoBadge estado={g.estado} size="xs" />
+                <EstadoBadge estado={g.estado} size="xs" />{g.estado === "anulada" && g.estado_sunat === "baja_solicitada" ? <FaltaBaja /> : null}
               </span>
             </div>
 
@@ -346,5 +346,17 @@ function Dato({
       <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * La anulada que SUNAT todavía cree viva (190): falta darla de baja en SUNAT
+ * Operaciones en Línea. En la lista para que no se olvide ninguna.
+ */
+function FaltaBaja() {
+  return (
+    <span className="mt-1 block w-fit rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-1.5 py-0.5 text-sm font-medium">
+      Falta la baja en SUNAT
+    </span>
   );
 }

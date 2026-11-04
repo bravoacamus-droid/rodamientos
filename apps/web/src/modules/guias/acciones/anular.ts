@@ -28,7 +28,8 @@ const esquema = z.object({
 });
 
 export type ResultadoAnulacionGuia =
-  | { ok: true; numero: string }
+  /** `pideBaja`: SUNAT la había aceptado y falta darla de baja allí (190). */
+  | { ok: true; numero: string; pideBaja: boolean }
   | { ok: false; error: string };
 
 export async function anularGuia(
@@ -59,6 +60,12 @@ export async function anularGuia(
     if (error) return { ok: false, error: error.message };
 
     const r = data as unknown as { numero: string };
+    // ¿Quedó esperando la baja en SUNAT? Lo decide `anular_guia` (190).
+    const { data: tras } = await supabase
+      .from("guias_remision")
+      .select("estado_sunat")
+      .eq("id", datos.id)
+      .maybeSingle();
 
     revalidatePath("/guias");
     revalidatePath(`/guias/${datos.id}`);
@@ -67,11 +74,52 @@ export async function anularGuia(
     revalidatePath("/inventario");
     revalidatePath("/reportes");
 
-    return { ok: true, numero: String(r.numero ?? "") };
+    return {
+      ok: true,
+      numero: String(r.numero ?? ""),
+      pideBaja: tras?.estado_sunat === "baja_solicitada",
+    };
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : "No se pudo anular la guía.",
     };
+  }
+}
+
+const esquemaBaja = z.object({
+  id: z.string().uuid(),
+  nota: z.string().trim().max(200).optional().default(""),
+});
+
+/**
+ * Apunta que la guía anulada ya se dio de baja en SUNAT Operaciones en Línea
+ * (190). Lo hace una persona: para la guía electrónica no hay baja por
+ * servicio. El mismo permiso que anularla, y la base lo vuelve a mirar.
+ */
+export async function marcarBajaSunat(
+  entrada: z.input<typeof esquemaBaja>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const perfil = await perfilActual();
+  if (!perfil || !perfil.activo) return { ok: false, error: "Hay que iniciar sesión." };
+  const negado = await sinPermiso("guias", "eliminar");
+  if (negado) return { ok: false, error: negado };
+
+  const datos = esquemaBaja.safeParse(entrada);
+  if (!datos.success) return { ok: false, error: datos.error.issues[0]?.message ?? "Los datos no son válidos." };
+
+  try {
+    const supabase = await clienteServidor();
+    const { error } = await supabase.rpc("marcar_baja_guia_sunat", {
+      p_id: datos.data.id,
+      p_nota: datos.data.nota || undefined,
+    });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/guias");
+    revalidatePath(`/guias/${datos.data.id}`);
+    revalidatePath("/sunat");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar." };
   }
 }
