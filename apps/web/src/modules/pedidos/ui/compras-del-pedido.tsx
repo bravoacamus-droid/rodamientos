@@ -56,7 +56,7 @@ export function ComprasDelPedido({
     <section className="card flex flex-col gap-3 p-4">
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">Compras</h2>
+          <h2 className="text-lg font-semibold">Órdenes de compra</h2>
           <p className="text-sm text-[var(--fg-muted)]">
             Una orden por proveedor: lo que se va a pedir, al precio analizado. Cuando la compres, regístrala con su
             factura.
@@ -183,11 +183,25 @@ export function ComprasDelPedido({
                       ))
                     : null}
                 </div>
-                {porRegistrar && puede ? (
-                  <Link href={`/compras/${o.id}/factura`} className={cn(buttonVariants(), "h-11 px-5 text-base")}>
-                    <Receipt className="size-5" aria-hidden="true" />
-                    Registrar compra
-                  </Link>
+                {porRegistrar ? (
+                  /*
+                    Ver la orden —para mandarla al proveedor en PDF o en
+                    captura— desde el pedido. En la reunión del 04/11
+                    (46:45) Willy estaba aquí, quería mandar las órdenes, y
+                    hubo que llevarlo a «Compras» a buscarlas una por una.
+                  */
+                  <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                    <Link href={`/compras/${o.id}`} className={cn(buttonVariants({ variant: "outline" }), "h-11 px-4 text-base")}>
+                      <FileText className="size-5" aria-hidden="true" />
+                      Ver y mandar la orden
+                    </Link>
+                    {puede ? (
+                      <Link href={`/compras/${o.id}/factura`} className={cn(buttonVariants(), "h-11 px-5 text-base")}>
+                        <Receipt className="size-5" aria-hidden="true" />
+                        Registrar compra
+                      </Link>
+                    ) : null}
+                  </div>
                 ) : (
                   <Link href={`/compras/${o.id}`} className={cn(buttonVariants({ variant: "outline" }), "px-4")}>
                     <FileText className="size-4" aria-hidden="true" />

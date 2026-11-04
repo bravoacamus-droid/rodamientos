@@ -122,7 +122,7 @@ export default async function PaginaDetalleCompra({
     <div className="flex flex-col gap-5 print:hidden">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Volver href="/compras">Volver a compras</Volver>
+          <Volver href="/compras">Volver a órdenes de compra</Volver>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
               {c.numero}

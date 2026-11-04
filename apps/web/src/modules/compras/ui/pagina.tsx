@@ -63,9 +63,10 @@ export default async function PaginaCompras({ searchParams }: Props) {
       <PanelModulo ruta="/compras">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Compras</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Órdenes de compra</h1>
             <p className="text-sm text-[var(--fg-muted)]">
-              Lo que se le pide al proveedor. El stock se mueve al recibirlo, no aquí.
+              Lo que se le pide al proveedor: las órdenes por mandar y las compras ya registradas. El stock se mueve
+              al recibirlo, no aquí.
             </p>
           </div>
 

@@ -280,7 +280,13 @@ export const NAVEGACION: readonly GrupoNav[] = [
         decidir qué comprar antes de registrar la compra.
       */
       { etiqueta: "Análisis de importación", ruta: "/compras/analisis", icono: "importacion", permiso: "compras" },
-      { etiqueta: "Compras", ruta: "/compras", icono: "compra", permiso: "compras" },
+      /*
+        «Órdenes de compra», y no «Compras» (reunión del 04/11, 11:23): el
+        grupo ya se llama «Compras», y Willy buscaba sus órdenes dentro de
+        «Compras → Compras» sin saber cuál de los dos era. Todas llevan su
+        número OC02, las que se mandan al proveedor y las ya compradas.
+      */
+      { etiqueta: "Órdenes de compra", ruta: "/compras", icono: "compra", permiso: "compras" },
       /*
         Proveedores vive aquí desde el 11/09, y no en Catálogo.
 

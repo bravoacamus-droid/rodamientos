@@ -9378,3 +9378,37 @@ En pantalla, solo lectura:
 
 **Sin ver con los ojos:** el paso 2 del diálogo, porque solo sale anulando
 de verdad. Lleva los mismos pasos que la ficha.
+
+## §DC · 04/11 — La orden trae las condiciones del proveedor (191), y «Órdenes de compra»
+
+**Las condiciones, solas (191).** En la reunión del 04/11 (38:55–49:17)
+Willy editó a mano sus dos órdenes para poner lo mismo: contado, recojo en el
+local del proveedor y disponible hoy. Y propuso que la forma de pago del
+proveedor «ya saliera en esta orden».
+
+Un trigger `before insert` en `compras` actúa solo en las órdenes que se
+mandan (`falta_factura`) y solo cuando llegan sin condición:
+- copia la condición de pago, los días de crédito, la entrega y la dirección
+  de la **última orden a ese proveedor** que las tenga;
+- si a ese proveedor nunca se le pusieron, pone lo que Willy dijo que es lo
+  habitual: **contado y recojo**;
+- con recojo y sin fecha, la fecha es **hoy**.
+
+Lo que manda quien crea la orden se respeta, y todo se cambia en «Editar
+orden» (180). El centinela inserta órdenes de prueba con número propio, sin
+gastar el correlativo OC02, para un proveedor con historia y otro sin ella,
+y lo deshace.
+
+**«Órdenes de compra».** Willy, a los 45:01: *«me confunde compras y
+pedidos»*; y a los 11:23 se propuso llamarlo «órdenes de compra».
+- En el menú, «Compras → Compras» pasa a «Compras → **Órdenes de compra**».
+  El título de la lista y el «Volver a…» de la ficha cambian igual.
+- En el pedido, la sección se llama «Órdenes de compra», y cada orden por
+  comprar lleva **«Ver y mandar la orden»** junto a «Registrar compra». En la
+  reunión, para mandarlas hubo que salir del pedido e ir a buscarlas a
+  Compras una por una.
+
+Visto en pantalla (solo lectura): el PED-26-00003 con la OC02-00008 y la
+OC02-00009, a 1280 y a 390 px, el menú y la lista. Las condiciones solas no
+se vieron en pantalla: crear una orden gasta correlativo. Las prueba el
+centinela.
