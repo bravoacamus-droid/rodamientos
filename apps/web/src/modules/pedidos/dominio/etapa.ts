@@ -31,7 +31,7 @@ export const ETIQUETA_ETAPA: Record<Etapa, string> = {
   // Lo que falta, con su nombre (UI2-02): la orden ya está pedida, falta la
   // factura del proveedor. Con «registrar la compra» la insignia del pedido
   // y la fila de su orden parecían dos pendientes distintos.
-  por_registrar_compra: "Falta la factura del proveedor",
+  por_registrar_compra: "Falta registrar la compra",
   esperando_mercaderia: "Esperando la mercadería",
   por_entregar: "Por entregar",
   // 161: con UNA guía el pedido pasaba a «por facturar» aunque solo hubiera

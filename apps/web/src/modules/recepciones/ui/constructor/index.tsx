@@ -344,7 +344,9 @@ export function ConstructorRecepcion({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Factura del proveedor</span>
+            <span className="text-sm font-medium">
+              Factura del proveedor <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
+            </span>
             <Input
               value={estado.facturaProveedor}
               onChange={(e) =>
@@ -454,12 +456,25 @@ export function ConstructorRecepcion({
           pide unos 1100 px y a 1280 con el menú abierto dejaba «Stock» cortado
           y «Quitar» fuera de la vista. */}
       <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
-        <div className="mb-3">
-          <BuscadorRecepcion
-            onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
-            yaEnDocumento={estado.lineas.map((l) => l.productoId)}
-          />
-        </div>
+        {/*
+          De una compra se recibe lo que se compró, tal cual (Luis, 04/11: «al
+          recepcionar no debería dejar cambiar la cantidad ni el costo
+          unitario, ni quitar ni agregar otro producto»). La base lo exige
+          igual (187). Lo demás va en una recepción sin compra.
+        */}
+        {estado.compraId !== null ? (
+          <p className="mb-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-base">
+            Se recibe lo que dice la compra{compraElegida ? ` ${compraElegida.numero}` : ""}: las cantidades y los
+            costos no se cambian aquí. Si llegó algo distinto, corrige la compra antes de recibir.
+          </p>
+        ) : (
+          <div className="mb-3">
+            <BuscadorRecepcion
+              onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
+              yaEnDocumento={estado.lineas.map((l) => l.productoId)}
+            />
+          </div>
+        )}
 
         {estado.lineas.length === 0 ? (
           <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
@@ -476,6 +491,7 @@ export function ConstructorRecepcion({
                 costeada={costeo.lineas[i]}
                 conGastos={conGastos}
                 despachar={despachar}
+                bloqueada={estado.compraId !== null}
               />
             ))}
           </ul>
@@ -510,6 +526,7 @@ export function ConstructorRecepcion({
                     costeada={costeo.lineas[i]}
                     conGastos={conGastos}
                     despachar={despachar}
+                    bloqueada={estado.compraId !== null}
                   />
                 ))}
               </TBody>

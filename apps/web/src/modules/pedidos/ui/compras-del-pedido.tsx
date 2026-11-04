@@ -155,7 +155,7 @@ export function ComprasDelPedido({
                   {porRegistrar ? (
                     // Lo que falta dicho con su nombre (UI2-02): «falta registrar la
                     // compra» al lado de una orden «Registrada» se contradecía.
-                    <p className="mt-1 text-sm font-medium">Pedida · falta la factura del proveedor</p>
+                    <p className="mt-1 text-sm font-medium">Pedida · falta registrar la compra</p>
                   ) : (
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
                       <CircleCheck className="size-4 text-[var(--ok)]" aria-hidden="true" />

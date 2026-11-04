@@ -22,12 +22,18 @@ export function FilaRecepcion({
   costeada,
   conGastos,
   despachar,
+  bloqueada = false,
 }: {
   linea: LineaRecibida;
   costeada: LineaCosteada | undefined;
   /** Si la recepción arrastra gastos, se enseña la columna del costo final. */
   conGastos: boolean;
   despachar: (a: Accion) => void;
+  /**
+   * Viene de una compra (Luis, 04/11): se recibe tal cual se compró. Ni la
+   * cantidad, ni el costo, ni quitar. Si llegó distinto, se corrige la compra.
+   */
+  bloqueada?: boolean;
 }) {
   const stockResultante = linea.stockAnterior + linea.cantidad;
 
@@ -50,33 +56,41 @@ export function FilaRecepcion({
       </td>
 
       <td className="px-2 py-2">
-        <Input
-          type="number"
-          min={0}
-          step="0.01"
-          value={linea.cantidad}
-          onChange={(e) =>
-            despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
-          }
-          className="w-24 text-right tabular"
-          aria-label={`Cantidad recibida de ${linea.codigo}`}
-        />
+        {bloqueada ? (
+          <span className="block w-24 text-right tabular text-base font-medium">{linea.cantidad}</span>
+        ) : (
+          <Input
+            type="number"
+            min={0}
+            step="0.01"
+            value={linea.cantidad}
+            onChange={(e) =>
+              despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
+            }
+            className="w-24 text-right tabular"
+            aria-label={`Cantidad recibida de ${linea.codigo}`}
+          />
+        )}
       </td>
 
       <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</td>
 
       <td className="px-2 py-2">
-        <Input
-          type="number"
-          min={0}
-          step="0.0001"
-          value={linea.costoUnitario}
-          onChange={(e) =>
-            despachar({ tipo: "costo", key: linea.key, valor: Number(e.target.value) })
-          }
-          className="w-28 text-right tabular"
-          aria-label={`Costo unitario de ${linea.codigo}`}
-        />
+        {bloqueada ? (
+          <span className="block w-28 text-right tabular text-base">{linea.costoUnitario}</span>
+        ) : (
+          <Input
+            type="number"
+            min={0}
+            step="0.0001"
+            value={linea.costoUnitario}
+            onChange={(e) =>
+              despachar({ tipo: "costo", key: linea.key, valor: Number(e.target.value) })
+            }
+            className="w-28 text-right tabular"
+            aria-label={`Costo unitario de ${linea.codigo}`}
+          />
+        )}
         {linea.costoAnterior > 0 ? (
           <span className="mt-0.5 block text-right text-sm text-[var(--fg-subtle)]">
             antes {linea.costoAnterior}
@@ -109,6 +123,7 @@ export function FilaRecepcion({
       <td className="px-2 py-2 text-right">
         {/* Un botón que parece botón: era un «Quitar» gris de 12 px, sin
             borde — el mismo que se cambió en compras el 25/09. */}
+        {bloqueada ? null : (
         <Button
           type="button"
           variant="outline"
@@ -122,6 +137,7 @@ export function FilaRecepcion({
           <Trash2 className="size-4" aria-hidden />
           Quitar
         </Button>
+        )}
       </td>
     </tr>
   );
@@ -141,11 +157,14 @@ export function TarjetaRecepcion({
   costeada,
   conGastos,
   despachar,
+  bloqueada = false,
 }: {
   linea: LineaRecibida;
   costeada: LineaCosteada | undefined;
   conGastos: boolean;
   despachar: (a: Accion) => void;
+  /** Viene de una compra: tal cual (04/11). */
+  bloqueada?: boolean;
 }) {
   const stockResultante = linea.stockAnterior + linea.cantidad;
   const unidad = unidadLegible(linea.unidad);
@@ -165,22 +184,27 @@ export function TarjetaRecepcion({
             </p>
           ) : null}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => despachar({ tipo: "quitar", key: linea.key })}
-          aria-label={`Quitar ${linea.codigo} de la recepción`}
-          className="shrink-0 gap-1 text-sm"
-        >
-          <Trash2 className="size-4" aria-hidden />
-          Quitar
-        </Button>
+        {bloqueada ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => despachar({ tipo: "quitar", key: linea.key })}
+            aria-label={`Quitar ${linea.codigo} de la recepción`}
+            className="shrink-0 gap-1 text-sm"
+          >
+            <Trash2 className="size-4" aria-hidden />
+            Quitar
+          </Button>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Cantidad ({unidad})</span>
+          {bloqueada ? (
+            <span className="text-right tabular text-base font-medium">{linea.cantidad}</span>
+          ) : (
           <Input
             type="number"
             min={0}
@@ -191,9 +215,13 @@ export function TarjetaRecepcion({
             }
             className="text-right tabular"
           />
+          )}
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Costo unitario</span>
+          {bloqueada ? (
+            <span className="text-right tabular text-base">{linea.costoUnitario}</span>
+          ) : (
           <Input
             type="number"
             min={0}
@@ -204,6 +232,7 @@ export function TarjetaRecepcion({
             }
             className="text-right tabular"
           />
+          )}
           {linea.costoAnterior > 0 ? (
             <span className="text-right text-sm text-[var(--fg-subtle)] tabular">
               antes {linea.costoAnterior}

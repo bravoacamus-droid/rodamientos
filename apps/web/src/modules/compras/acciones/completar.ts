@@ -24,7 +24,8 @@ const esquema = z.object({
   via_importacion: z.enum(["aerea", "maritima"]).nullable().default(null),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha no es válida."),
   fecha_estimada: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().default(null),
-  documento_proveedor: z.string().trim().min(1, "Falta el número de la factura del proveedor.").max(60),
+  // Opcional (187). Luis, 04/11: «algunos no le dan».
+  documento_proveedor: z.string().trim().max(60).nullable().default(null),
   guia_proveedor: z.string().max(60).nullable().default(null),
   afecto_igv: z.boolean(),
   moneda: z.enum(["USD", "PEN"]),

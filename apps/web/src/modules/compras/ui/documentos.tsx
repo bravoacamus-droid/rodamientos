@@ -94,7 +94,8 @@ export function DocumentosCompra({
     <section className="card p-4">
       <h2 className="mb-1 text-sm font-semibold">Documentos</h2>
       <p className="mb-3 text-sm text-[var(--fg-muted)]">
-        La proforma confirmada, la factura, la guía aérea… en PDF o foto.
+        La proforma confirmada, la factura, la guía aérea… en PDF o foto. <strong>Es opcional</strong>: se sube
+        cuando lo tengas.
       </p>
 
       {documentos.length === 0 ? (

@@ -111,11 +111,10 @@ export default async function PaginaDetalleCompra({
   const editableOrden =
     puedeEditar && c.estado === "registrada" && !c.documento_proveedor && c.recepciones.length === 0;
   const archivo = nombreArchivo(c.numero, c.proveedor);
-  // Sin el NÚMERO de la factura del proveedor no se recibe (186; la 182
-  // pedía el archivo). Willy, 04/11: «con los datos de la factura bien
-  // puestos —la serie, el número…— ya debería ser suficiente». El PDF y la
-  // guía se suben cuando lleguen. La base lo exige igual.
-  const tieneFactura = Boolean(c.documento_proveedor?.trim());
+  // Una orden del pedido se registra antes de recibirla; los números y el
+  // PDF son opcionales (187; la 182 pedía el archivo y la 186 el número).
+  // Luis, 04/11: «si no quiere, que deje pasar nomás». La base lo exige igual.
+  const tieneFactura = !c.falta_factura;
   const porRecibir = c.estado !== "anulada" && falta.length > 0;
 
   return (
@@ -181,7 +180,7 @@ export default async function PaginaDetalleCompra({
             </Link>
           ) : porRecibir ? (
             <BotonBloqueado
-              mensaje="Antes de recibir la mercadería, registra la compra con el número de la factura del proveedor."
+              mensaje="Antes de recibir la mercadería, regístrala con «Registrar compra». El número de factura es opcional."
               className="h-9 md:h-9"
             >
               Recibir mercadería
@@ -225,10 +224,10 @@ export default async function PaginaDetalleCompra({
       {c.falta_factura && c.estado === "registrada" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
           <div>
-            <p className="text-base font-semibold">Orden pedida: falta la factura del proveedor</p>
+            <p className="text-base font-semibold">Orden pedida: falta registrar la compra</p>
             <p className="text-sm">
-              Cuando la compres, regístrala con su factura: cómo llegó, el número y lo que cobró. Con el número
-              ya se puede recibir; el PDF y la guía son opcionales.
+              Cuando la compres, regístrala: cómo llegó y lo que cobró. El número de factura, la guía y el PDF son
+              opcionales; registrada, ya se puede recibir.
             </p>
           </div>
           <Button asChild>

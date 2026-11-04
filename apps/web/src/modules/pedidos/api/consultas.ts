@@ -412,7 +412,8 @@ export async function comprasSinRecibir(productoIds: string[], pedidoId: string)
          compra_items!inner(producto_id, cantidad, cantidad_recibida, productos(codigo))`,
       )
       .in("estado", ["registrada", "recibida_parcial"])
-      .not("documento_proveedor", "is", null)
+      // Comprada = registrada, con o sin número de factura (187).
+      .eq("falta_factura", false)
       .in("compra_items.producto_id", ids)
       .order("fecha", { ascending: true })
       .limit(30);

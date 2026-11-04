@@ -9173,3 +9173,39 @@ Probado en pantalla (solo lectura): la columna en la CT02-001317, el aviso de
 las 3 órdenes del PED-26-00001 sin recibir, «0 de 2 productos» en la lista,
 y que al recibir la OC02-00002 se proponga FV02-00074879. «Usar el stock» no
 se vio: ningún pedido real tiene hoy el caso.
+
+### §CX.1 · Recibir tal cual se compró, y los números opcionales (187)
+
+Luis, 04/11, después de la reunión:
+
+- *«cuando registras una compra… el número de factura tiene que ser opcional,
+  porque algunos no le dan»*. La compra suelta ya lo era. «Registrar compra»
+  de una orden (`completar_compra`) lo exigía, y ya no. Ahora «comprada»
+  quiere decir **registrada** (`falta_factura = false`), con número o sin él.
+- *«al recepcionar, número de guía y factura opcional también… si lo ponen de
+  antes, que lo traiga, pero si no quiere, que deje pasar nomás»*. Ya no se
+  exige ningún número. Si la recepción no los trae, copia los de la compra.
+  Lo que sigue siendo un paso es registrar la orden antes de recibirla.
+- Los números se ponen después en la ficha de la recepción («Poner o corregir
+  los números», ya existía). Desde la 187, si la compra no tenía factura o
+  guía, también llegan a la compra.
+- **«Documentos»** en la ficha de la compra dice «Es opcional».
+- *«al recepcionar no debería dejar cambiar la cantidad ni el costo unitario,
+  ni quitar ni agregar otro producto… a menos que sea una compra»*. Una
+  recepción **de una compra** recibe lo que falta de cada producto, entero y
+  al costo de la compra. Si llegó distinto, se corrige la compra. En pantalla,
+  la cantidad y el costo salen como texto, sin «Quitar» y sin buscador. La
+  base lo exige con dos disparadores en `recepcion_items`: el costo se impone
+  y la cantidad tiene que ser la pendiente, y al terminar no puede faltar
+  ningún producto. La recepción suelta, sin compra, sigue igual. **Esto quita
+  las recepciones parciales de una compra**; al aplicarla no había ninguna.
+
+Centinela: ejecuta el registro sin número, recibir sin registrar, recibir otra
+cantidad, recibir con un producto de menos y recibir con otro costo, y que los
+números puestos después lleguen a la compra. Todo se deshace.
+
+Visto en pantalla (solo lectura): al recibir la OC02-00002 no hay campos de
+cantidad ni de costo, sale FV02-00074879 propuesta y el stock pasa de -6 a 0
+(la guía T002-00000576 ya los había sacado). La OC02-00006 dice «Orden
+pedida: falta registrar la compra» con «Recibir» bloqueado, y su «Registrar
+compra» pone «(opcional)».

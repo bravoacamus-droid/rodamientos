@@ -236,12 +236,10 @@ export function ConstructorCompra({
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
   const bloqueos = useMemo(() => {
-    const b = calcularBloqueos(estado);
-    // Es lo que convierte la orden en compra: sin el papel no hay nada que registrar.
-    return orden && !estado.documentoProveedor.trim()
-      ? [...b, { campo: "documentoProveedor" as const, mensaje: "Falta el número de la factura del proveedor." }]
-      : b;
-  }, [estado, orden]);
+    // El número de la factura ya no se exige, tampoco en una orden (187).
+    // Luis, 04/11: «algunos no le dan».
+    return calcularBloqueos(estado);
+  }, [estado]);
   const avisos = useMemo(() => calcularAvisos(estado), [estado]);
 
   useEffect(() => {
@@ -652,7 +650,9 @@ export function ConstructorCompra({
                 de lado a 390 (revisión por módulos del 02/10). */}
             <div className="mt-3 grid grid-cols-1 gap-3 @2xl:grid-cols-3">
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">N.° de la factura del proveedor</span>
+                <span className="text-sm font-medium">
+                  N.° de la factura del proveedor <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
+                </span>
                 <Input
                   value={estado.documentoProveedor}
                   onChange={(e) =>
