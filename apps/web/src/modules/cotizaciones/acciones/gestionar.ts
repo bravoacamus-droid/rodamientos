@@ -136,6 +136,7 @@ export async function aprobar(
       .from("pedidos")
       .select("id")
       .eq("cotizacion_id", id)
+      .eq("anulado", false)
       .order("secuencia", { ascending: false })
       .limit(1)
       .maybeSingle();

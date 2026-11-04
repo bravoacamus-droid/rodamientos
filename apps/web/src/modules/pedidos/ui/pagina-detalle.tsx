@@ -1,7 +1,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Building2, FileText, Receipt, Truck, Wallet } from "lucide-react";
+import { Ban, Building2, FileText, Receipt, Truck, Wallet } from "lucide-react";
 import { EstadoError, Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -74,7 +74,9 @@ export default async function PaginaDetallePedido({
   if (!r.ok) return <EstadoError titulo="No se pudo cargar el pedido" detalle={r.error} />;
   if (!r.datos) notFound();
   const p = r.datos;
-  const vigente = p.hermanos.length === 0 || p.hermanos[p.hermanos.length - 1]?.id === p.id;
+  // 188: el vigente es el último que no está anulado; uno anulado no lo es nunca.
+  const vivos = p.hermanos.filter((h) => !h.anulado);
+  const vigente = !p.anulado && (vivos.length === 0 || vivos[vivos.length - 1]?.id === p.id);
   const guiaEmitida = p.guias.find((g) => g.estado === "emitida");
   const borrador = p.guias.find((g) => g.estado === "borrador");
   const papel = papelDelPedido(p, unidadLegible);
@@ -217,7 +219,14 @@ export default async function PaginaDetallePedido({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} grande />
+          {p.anulado ? (
+            <span className="inline-flex h-control-md items-center gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-3 text-base font-semibold text-[var(--danger)]">
+              <Ban className="size-5" aria-hidden="true" />
+              Anulado
+            </span>
+          ) : (
+            <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} grande />
+          )}
           {/* La hoja de pedido (Luis, 15/10: «se puede imprimir, igual
               descargar la hoja de pedido»). */}
           {p.lineas.length > 0 ? (
@@ -250,11 +259,34 @@ export default async function PaginaDetallePedido({
               facturado: p.facturas.length > 0,
               conCompras: ordenes.ok ? ordenes.datos.some((o) => o.estado !== "anulada") : true,
               otraGuia,
+              anulado: Boolean(p.anulado),
             }}
           />
           {repetir}
         </div>
       </header>
+
+      {/*
+        Anulado (188). Luis, 04/11: «tiene que quedar… para que quede ahí
+        registro». Lo que pedía es la foto que se guardó al anularlo.
+      */}
+      {p.anulado ? (
+        <div className="flex gap-3 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-4 py-3">
+          <Ban className="mt-0.5 size-5 shrink-0 text-[var(--danger)]" aria-hidden="true" />
+          <div>
+            <p className="text-base font-semibold">
+              Pedido anulado
+              {p.anulado.en ? ` el ${formatearFecha(p.anulado.en.slice(0, 10))}` : ""}
+              {p.anulado.por ? ` por ${p.anulado.por}` : ""}
+            </p>
+            {p.anulado.motivo ? <p className="text-base">Motivo: {p.anulado.motivo}</p> : null}
+            <p className="mt-1 text-sm text-[var(--fg-muted)]">
+              Se queda aquí para el registro: no lleva compras, guía ni factura. Si se vuelve a aprobar la cotización{" "}
+              {p.cotizacion.numero}, sale un pedido nuevo con el número siguiente.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {/* Los otros pedidos de la misma cotización: el cliente repite. */}
       {p.hermanos.length > 1 ? (
@@ -264,6 +296,7 @@ export default async function PaginaDetallePedido({
             h.id === p.id ? (
               <span key={h.id} className="rounded-md border-2 border-brand-600 px-2.5 py-1 font-semibold">
                 {h.numero}
+                {h.anulado ? " (anulado)" : ""}
               </span>
             ) : (
               <Link
@@ -272,6 +305,7 @@ export default async function PaginaDetallePedido({
                 className="rounded-md border border-[var(--border-strong)] px-2.5 py-1 hover:bg-[var(--surface-2)]"
               >
                 {h.numero}
+                {h.anulado ? " (anulado)" : ""}
               </Link>
             ),
           )}
@@ -279,7 +313,7 @@ export default async function PaginaDetallePedido({
       ) : null}
 
       {/* 161: lo despachado, lo facturado y lo cobrado, de un vistazo. */}
-      <CuadreDelPedido despacho={p.despacho} facturas={p.facturas} />
+      {p.anulado ? null : <CuadreDelPedido despacho={p.despacho} facturas={p.facturas} />}
 
       {/* ------------------------------------------------ Qué pidió */}
       <section className="card p-4">
@@ -301,6 +335,8 @@ export default async function PaginaDetallePedido({
         )}
       </section>
 
+      {p.anulado ? null : (
+      <>
       {/* ------------------------------------------------ Compras */}
       {ordenes.ok ? (
         <ComprasDelPedido
@@ -403,6 +439,8 @@ export default async function PaginaDetallePedido({
       </section>
 
       <p className="text-sm text-[var(--fg-subtle)]">Etapa: {textoEtapa(p.etapa, p.despacho)}.</p>
+      </>
+      )}
 
       {/* Quién lo creó o lo cambió (TR-03). */}
       <HistorialDocumento entidad="pedidos" id={p.id} />

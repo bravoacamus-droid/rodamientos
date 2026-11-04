@@ -98,6 +98,11 @@ export interface FilaPedido {
    * pedido— cuelga siempre del vigente (130), así que solo ahí se ofrece.
    */
   vigente: boolean;
+  /**
+   * Anulado (188): se queda en la lista con su motivo, para el registro
+   * (Luis, 04/11). No suma en las cifras de arriba.
+   */
+  anulado?: { motivo: string | null } | null;
 }
 
 /** El margen sobre el COSTO (023), o null si no hay costo con qué medirlo. */
@@ -204,7 +209,9 @@ export interface Cifras {
 }
 
 /** Las cifras de arriba, de TODO lo filtrado (no solo de la página). */
-export function cifras(filas: readonly FilaPedido[]): Cifras {
+export function cifras(todas: readonly FilaPedido[]): Cifras {
+  // Lo anulado no es una venta (188).
+  const filas = todas.filter((p) => !p.anulado);
   const venta = Math.round(filas.reduce((a, p) => a + p.venta, 0) * 100) / 100;
   const costo = Math.round(filas.reduce((a, p) => a + p.costo, 0) * 100) / 100;
   return {

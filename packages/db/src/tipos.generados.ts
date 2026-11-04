@@ -3802,6 +3802,9 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          anulado: boolean
+          anulado_en: string | null
+          anulado_por: string | null
           cliente_id: string
           cotizacion_id: string
           creado_en: string
@@ -3809,10 +3812,15 @@ export type Database = {
           desde_aprobacion: boolean
           fecha: string
           id: string
+          lineas_anuladas: Json | null
+          motivo_anulacion: string | null
           numero: string
           secuencia: number
         }
         Insert: {
+          anulado?: boolean
+          anulado_en?: string | null
+          anulado_por?: string | null
           cliente_id: string
           cotizacion_id: string
           creado_en?: string
@@ -3820,10 +3828,15 @@ export type Database = {
           desde_aprobacion?: boolean
           fecha?: string
           id?: string
+          lineas_anuladas?: Json | null
+          motivo_anulacion?: string | null
           numero: string
           secuencia: number
         }
         Update: {
+          anulado?: boolean
+          anulado_en?: string | null
+          anulado_por?: string | null
           cliente_id?: string
           cotizacion_id?: string
           creado_en?: string
@@ -3831,10 +3844,19 @@ export type Database = {
           desde_aprobacion?: boolean
           fecha?: string
           id?: string
+          lineas_anuladas?: Json | null
+          motivo_anulacion?: string | null
           numero?: string
           secuencia?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pedidos_anulado_por_fkey"
+            columns: ["anulado_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedidos_cliente_id_fkey"
             columns: ["cliente_id"]
@@ -6004,6 +6026,7 @@ export type Database = {
         Returns: Json
       }
       anular_guia: { Args: { p_id: string; p_motivo: string }; Returns: Json }
+      anular_pedido: { Args: { p_id: string; p_motivo: string }; Returns: Json }
       aprobar_cotizacion: {
         Args: { p_id: string; p_lineas?: Json; p_tipo_cambio?: number }
         Returns: Json

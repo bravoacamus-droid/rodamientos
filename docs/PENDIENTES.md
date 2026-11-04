@@ -9209,3 +9209,48 @@ cantidad ni de costo, sale FV02-00074879 propuesta y el stock pasa de -6 a 0
 (la guía T002-00000576 ya los había sacado). La OC02-00006 dice «Orden
 pedida: falta registrar la compra» con «Recibir» bloqueado, y su «Registrar
 compra» pone «(opcional)».
+
+## §CY · 04/11 — El pedido se anula, no se borra (188)
+
+Luis, 04/11: *«el Sr. Willy eliminó el pedido dos, pero no se quedó en
+pedidos como anulado; tiene que quedar… para que quede ahí registro. Entonces
+puedo hacer de nuevo la cotización, pero ya sería la 3»*.
+
+`eliminar_pedido` (135) **borraba la fila**. Willy borró el PED-26-00002 a las
+13:00 y no quedó nada; sus órdenes OC02-00006 y 007 sí quedaron anuladas, con
+sus motivos. Y como `crear_pedido` numera con el máximo que existe, el
+siguiente habría vuelto a ser el 00002.
+
+- **`anular_pedido(id, motivo)`** sigue las mismas reglas que eliminar: solo
+  el último pedido, sin órdenes vivas, sin guía y sin factura, y la cotización
+  vuelve a «enviada». La diferencia es que el pedido **se queda**: lleva
+  `anulado`, quién, cuándo, el motivo y `lineas_anuladas`, una foto de lo que
+  pedía, porque la cotización se puede editar después. `eliminar_pedido`
+  ahora anula, para la pantalla vieja.
+- **El número sigue**: el anulado cuenta para el máximo, así que el próximo
+  pedido es el 00003.
+- **Lo anulado no es vigente**:
+  - `tg_pedido_vigente` no le cuelga compras, guías ni facturas;
+  - `tg_pedido_al_aprobar` crea un pedido nuevo al volver a aprobar;
+  - `v_pedido_lineas` da 0 en sus líneas y no se las resta a los demás;
+  - `v_ventas_concretadas` (el tablero) no lo cuenta como venta.
+- **En pantalla**:
+  - «Acciones → Anular pedido» pide el motivo.
+  - En la lista sale atenuado, con «Anulado» y su motivo, y no suma en las
+    cifras de arriba.
+  - La ficha lleva un aviso rojo, «Qué pidió» con su foto y no tiene
+    acciones, compras, guía ni factura.
+
+**El PED-26-00002 se repuso por SQL** como anulado: el mismo id y número, sus
+2 líneas (B-56 × 24 y 6208LLBCM × 8, USD 230.24 sin IGV), anulado por Willy
+el 04/11 a las 13:00:16 según `actividad`, con el motivo «Eliminado por Willy…
+repuesto como anulado para que quede el registro». La CT02-001312 sigue en
+«enviada»: al aprobarla sale el PED-26-00003.
+
+Centinela: aprueba, anula, comprueba la foto y que la cotización vuelva a
+«enviada», aprueba otra vez y espera el número siguiente con secuencia 2.
+Todo se deshace. Visto en pantalla (solo lectura): la lista, la ficha del
+anulado y «Anular pedido» en el menú del PED-26-00001, sin anularlo.
+
+Desde hoy los commits de este repo salen como `bravoacamus-droid` (Luis,
+04/11), configurado solo en esta carpeta.

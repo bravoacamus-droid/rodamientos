@@ -44,7 +44,13 @@ export function PedidosDeLaCotizacion({ pedidos }: { pedidos: PedidoLista[] }) {
               <p className="truncate text-sm">{p.productos.map((x) => `${x.codigo} × ${x.cantidad}`).join(" · ")}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
+              {p.anulado ? (
+                <span className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] px-2 py-0.5 text-sm font-semibold text-[var(--danger)]">
+                  Anulado
+                </span>
+              ) : (
+                <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
+              )}
               <Link href={`/pedidos/${p.id}`} className={cn(buttonVariants({ variant: "outline" }), "px-4")}>
                 Ver pedido
               </Link>

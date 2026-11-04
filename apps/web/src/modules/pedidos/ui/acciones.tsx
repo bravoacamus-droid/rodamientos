@@ -1,17 +1,17 @@
 "use client";
 
-// Cliente: el menú, los avisos (toast) y el diálogo de eliminar.
+// Cliente: el menú, los avisos (toast) y el diálogo de anular.
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
+  Ban,
   ClipboardList,
   EllipsisVertical,
   FileSearch,
   FileText,
   Receipt,
   Repeat,
-  Trash2,
   Truck,
 } from "lucide-react";
 import {
@@ -32,7 +32,7 @@ import {
 
 import { OpcionMenu, TONO_OPCION } from "@/componentes/opcion-menu";
 
-import { eliminarPedido } from "../acciones/gestionar";
+import { anularPedido } from "../acciones/gestionar";
 
 /** Lo que el menú necesita saber de un pedido, venga de la lista o de la ficha. */
 export interface PedidoParaAcciones {
@@ -51,6 +51,8 @@ export interface PedidoParaAcciones {
    * (revisión del 15/10). Solo lo sabe la ficha; en la lista no se calcula.
    */
   otraGuia?: boolean;
+  /** Anulado (188): no tiene acciones. */
+  anulado?: boolean;
 }
 
 const AVISO = { richColors: true, position: "top-center" as const, duration: 6000 };
@@ -79,6 +81,9 @@ export function AccionesPedido({
 }) {
   const router = useRouter();
   const [borrando, setBorrando] = React.useState(false);
+
+  // Un pedido anulado ya no se toca (188).
+  if (p.anulado) return null;
 
   const urlGuia =
     p.guia && !p.guia.emitida ? `/guias/${p.guia.id}` : `/guias/nueva?cotizacion=${p.cotizacionId}`;
@@ -114,7 +119,7 @@ export function AccionesPedido({
 
   const eliminar = () => {
     const motivo = !p.vigente
-      ? "Solo se elimina el último pedido de la cotización."
+      ? "Solo se anula el último pedido de la cotización."
       : p.facturado
         ? "Ya está facturado: se corrige con una nota de crédito."
         : p.guia
@@ -122,7 +127,7 @@ export function AccionesPedido({
           : p.conCompras
             ? "Tiene órdenes de compra: anúlalas antes."
             : null;
-    if (motivo) return toast.error(`No se puede eliminar ${p.numero}`, { ...AVISO, description: motivo });
+    if (motivo) return toast.error(`No se puede anular ${p.numero}`, { ...AVISO, description: motivo });
     setBorrando(true);
   };
 
@@ -203,48 +208,51 @@ export function AccionesPedido({
           ) : null}
 
           <DropdownMenuSeparator />
-          <OpcionMenu icono={Trash2} tono="rojo" titulo="Eliminar pedido" peligro onSelect={eliminar} />
+          <OpcionMenu icono={Ban} tono="rojo" titulo="Anular pedido" peligro onSelect={eliminar} />
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DialogoEliminar p={p} abierto={borrando} onCerrar={() => setBorrando(false)} enFicha={enFicha} />
+      <DialogoAnular p={p} abierto={borrando} onCerrar={() => setBorrando(false)} enFicha={enFicha} />
     </>
   );
 }
 
-function DialogoEliminar({
+function DialogoAnular({
   p,
   abierto,
   onCerrar,
-  enFicha,
 }: {
   p: PedidoParaAcciones;
   abierto: boolean;
   onCerrar: () => void;
-  enFicha: boolean;
+  /** La ficha se queda: el anulado sigue ahí (188). */
+  enFicha?: boolean;
 }) {
   const router = useRouter();
   const [pendiente, iniciar] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  const [motivo, setMotivo] = React.useState("");
 
   React.useEffect(() => {
-    if (abierto) setError(null);
+    if (abierto) {
+      setError(null);
+      setMotivo("");
+    }
   }, [abierto]);
 
   const confirmar = () =>
     iniciar(async () => {
-      const r = await eliminarPedido(p.id);
+      const r = await anularPedido({ id: p.id, motivo });
       if (!r.ok) {
         setError(r.error);
         return;
       }
       onCerrar();
-      toast.success(`Pedido ${r.numero} eliminado`, {
+      toast.success(`Pedido ${r.numero} anulado`, {
         ...AVISO,
-        description: `La cotización ${p.cotizacion} queda como estaba antes de este pedido.`,
+        description: `Se queda en la lista como anulado. La cotización ${p.cotizacion} queda como estaba antes de este pedido.`,
       });
-      if (enFicha) router.push("/pedidos");
-      else router.refresh();
+      router.refresh();
     });
 
   return (
@@ -253,25 +261,43 @@ function DialogoEliminar({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span className={`grid size-9 place-items-center rounded-lg ${TONO_OPCION.rojo} text-white`}>
-              <Trash2 className="size-5" aria-hidden="true" />
+              <Ban className="size-5" aria-hidden="true" />
             </span>
-            Eliminar {p.numero}
+            Anular {p.numero}
           </DialogTitle>
-          <DialogDescription>
-            No tiene compras, guía ni factura, así que se puede deshacer entero. Si es el único pedido de{" "}
-            {p.cotizacion}, la cotización vuelve a «Enviada» y la puedes aprobar otra vez.
+          <DialogDescription className="text-base">
+            Se queda en la lista como <strong>anulado</strong>, con lo que pedía y el motivo. Si es el único pedido de{" "}
+            {p.cotizacion}, la cotización vuelve a «Enviada»: al aprobarla otra vez sale un pedido nuevo, con el número
+            siguiente.
           </DialogDescription>
         </DialogHeader>
-        <DialogBody>
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+        <DialogBody className="space-y-2">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">¿Por qué se anula?</span>
+            <textarea
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              rows={3}
+              maxLength={300}
+              placeholder="Ej.: el cliente cambió las cantidades; se aprueba otra vez."
+              className="rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-base"
+            />
+          </label>
+          {error ? <p className="text-base text-[var(--danger)]">{error}</p> : null}
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onCerrar} disabled={pendiente} className="h-11 w-full sm:w-auto md:h-control-md">
             Cancelar
           </Button>
-          <Button type="button" variant="danger" onClick={confirmar} disabled={pendiente} className="h-11 w-full sm:w-auto md:h-control-md">
-            <Trash2 className="size-4" aria-hidden="true" />
-            {pendiente ? "Eliminando…" : "Eliminar pedido"}
+          <Button
+            type="button"
+            variant="danger"
+            onClick={confirmar}
+            disabled={pendiente || motivo.trim().length < 3}
+            className="h-11 w-full sm:w-auto md:h-control-md"
+          >
+            <Ban className="size-4" aria-hidden="true" />
+            {pendiente ? "Anulando…" : "Anular pedido"}
           </Button>
         </DialogFooter>
       </DialogContent>

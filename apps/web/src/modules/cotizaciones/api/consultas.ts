@@ -57,7 +57,7 @@ export async function listarCotizaciones(
          clientes!inner(razon_social, numero_documento),
          perfiles!cotizaciones_vendedor_id_fkey(nombre),
          cotizacion_items(count),
-         pedidos(id, numero, secuencia)`,
+         pedidos(id, numero, secuencia, anulado)`,
       )
       // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
       .order("fecha", { ascending: atras })
@@ -96,7 +96,7 @@ export async function listarCotizaciones(
         clientes: { razon_social: string; numero_documento: string | null } | null;
         perfiles: { nombre: string } | null;
         cotizacion_items: { count: number }[] | null;
-        pedidos: { id: string; numero: string; secuencia: number }[] | null;
+        pedidos: { id: string; numero: string; secuencia: number; anulado: boolean }[] | null;
       }
     >;
 
@@ -118,7 +118,9 @@ export async function listarCotizaciones(
       estado: c.estado as CotizacionLista["estado"],
       vendedor: c.perfiles?.nombre ?? null,
       items: c.cotizacion_items?.[0]?.count ?? 0,
+      // 188: el anulado no es «el pedido» de la cotización.
       pedidos: [...(c.pedidos ?? [])]
+        .filter((p) => !p.anulado)
         .sort((a, b) => a.secuencia - b.secuencia)
         .map((p) => ({ id: p.id, numero: p.numero })),
     }));

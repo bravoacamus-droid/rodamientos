@@ -26,6 +26,8 @@ export interface PedidoLista {
   despacho: DespachoDelPedido | null;
   /** Órdenes sin registrar la compra: lo que más se olvida. */
   porRegistrar: number;
+  /** Anulado (188): se enseña, pero ya no es vigente. */
+  anulado?: boolean;
 }
 
 type ColgadoCrudo = {
@@ -86,7 +88,7 @@ export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Pro
     let consulta = supabase
       .from("pedidos")
       .select(
-        `id, numero, secuencia, fecha, cotizacion_id,
+        `id, numero, secuencia, fecha, cotizacion_id, anulado,
          cotizaciones(numero), clientes(razon_social),
          compras(estado, falta_factura),
          guias_remision(estado),
@@ -105,6 +107,7 @@ export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Pro
       secuencia: number;
       fecha: string;
       cotizacion_id: string;
+      anulado: boolean;
       cotizaciones: { numero: string | null } | null;
       clientes: { razon_social: string } | null;
     })[];
@@ -142,6 +145,7 @@ export async function listarPedidos(filtro: { cotizacionId?: string } = {}): Pro
           despacho,
           productos: lineas.get(f.id) ?? [],
           porRegistrar: c.compras.filter((k) => k.falta_factura && k.estado === "registrada").length,
+          anulado: Boolean(f.anulado),
         };
       }),
     };
@@ -163,7 +167,12 @@ export interface PedidoDetalle {
   /** Para el botón «Ficha del cliente» (FS-08). */
   clienteId: string | null;
   /** Los demás pedidos de la misma cotización, para ir de uno a otro. */
-  hermanos: { id: string; numero: string; secuencia: number }[];
+  hermanos: { id: string; numero: string; secuencia: number; anulado: boolean }[];
+  /**
+   * Anulado (188): se queda con su motivo, y sus líneas salen de la foto que
+   * se guardó al anularlo. Null si está vivo.
+   */
+  anulado: { motivo: string | null; en: string | null; por: string | null } | null;
   lineas: {
     /** La línea de la cotización (169: para numerar 1, 1.1…). */
     id: string;
@@ -205,6 +214,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
       .from("pedidos")
       .select(
         `id, numero, secuencia, fecha, cotizacion_id, cliente_id,
+         anulado, anulado_en, motivo_anulacion, lineas_anuladas, anulador:perfiles!pedidos_anulado_por_fkey(nombre),
          cotizaciones(id, numero, orden_compra_cliente, estado, moneda, tipo_cambio),
          clientes(razon_social, tipo_documento, numero_documento, direccion),
          compras(estado, falta_factura),
@@ -253,7 +263,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
     };
 
     const [{ data: hermanos }, { data: lineas }, { data: marcas }, avance] = await Promise.all([
-      supabase.from("pedidos").select("id, numero, secuencia").eq("cotizacion_id", f.cotizacion_id).order("secuencia"),
+      supabase.from("pedidos").select("id, numero, secuencia, anulado").eq("cotizacion_id", f.cotizacion_id).order("secuencia"),
       supabase
         .from("v_pedido_lineas")
         .select("cotizacion_item_id, producto_id, codigo, descripcion, cantidad, unidad_codigo, valor_unitario, descuento_pct, orden")
@@ -269,11 +279,36 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
     const marcaDe = new Map((marcas ?? []).map((m) => [m.id, m.marca]));
     const alternativaDe = new Map((marcas ?? []).map((m) => [m.id, m.alternativa_de]));
     const tc = Number(f.cotizaciones?.tipo_cambio ?? 0);
+    // 188: el anulado guarda lo que pedía; la cotización puede haber cambiado.
+    const a = f as unknown as {
+      anulado: boolean;
+      anulado_en: string | null;
+      motivo_anulacion: string | null;
+      lineas_anuladas: { codigo: string; descripcion: string; cantidad: number; unidad_codigo: string; valor_unitario: number; descuento_pct: number }[] | null;
+      anulador: { nombre: string | null } | null;
+    };
+    const lineasDelPedido = a.anulado
+      ? (a.lineas_anuladas ?? []).map((l, i) => ({
+          id: `anulada-${i + 1}`,
+          productoId: null,
+          alternativaDe: null,
+          codigo: String(l.codigo),
+          marca: null,
+          descripcion: String(l.descripcion),
+          cantidad: Number(l.cantidad),
+          unidad: String(l.unidad_codigo ?? "NIU"),
+          valorUnitario: Number(l.valor_unitario ?? 0),
+          descuentoPct: Number(l.descuento_pct ?? 0),
+        }))
+      : null;
 
     return {
       ok: true,
       datos: {
         id: f.id,
+        anulado: a.anulado
+          ? { motivo: a.motivo_anulacion, en: a.anulado_en, por: a.anulador?.nombre ?? null }
+          : null,
         numero: f.numero,
         secuencia: f.secuencia,
         fecha: String(f.fecha),
@@ -287,8 +322,8 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         },
         cliente: f.clientes?.razon_social ?? "—",
         clienteId: f.cliente_id ?? null,
-        hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia })),
-        lineas: (lineas ?? []).map((l) => ({
+        hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia, anulado: Boolean(h.anulado) })),
+        lineas: lineasDelPedido ?? (lineas ?? []).map((l) => ({
           id: String(l.cotizacion_item_id),
           productoId: l.producto_id ? String(l.producto_id) : null,
           alternativaDe: alternativaDe.get(String(l.cotizacion_item_id)) ?? null,
@@ -457,6 +492,7 @@ export async function pedidoVigente(cotizacionId: string): Promise<string | null
     .from("pedidos")
     .select("id")
     .eq("cotizacion_id", cotizacionId)
+    .eq("anulado", false)
     .order("secuencia", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -474,7 +510,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
     let consulta = supabase
       .from("pedidos")
       .select(
-        `id, numero, secuencia, fecha, cotizacion_id, cliente_id,
+        `id, numero, secuencia, fecha, cotizacion_id, cliente_id, anulado, motivo_anulacion, lineas_anuladas,
          cotizaciones(numero, moneda, tipo_cambio), clientes(razon_social),
          compras(estado, falta_factura, compra_items(producto_id)),
          guias_remision(id, numero, estado),
@@ -495,6 +531,9 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       fecha: string;
       cotizacion_id: string;
       cliente_id: string;
+      anulado: boolean;
+      motivo_anulacion: string | null;
+      lineas_anuladas: { codigo: string; cantidad: number; importe: number }[] | null;
       cotizaciones: { numero: string | null; moneda: string | null; tipo_cambio: number | null } | null;
       clientes: { razon_social: string } | null;
       compras: { estado: string; falta_factura: boolean; compra_items: { producto_id: string }[] | null }[] | null;
@@ -547,7 +586,9 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       const { data: ps, error: ep } = await supabase
         .from("pedidos")
         .select("cotizacion_id, secuencia")
-        .in("cotizacion_id", cots.slice(i, i + 200));
+        .in("cotizacion_id", cots.slice(i, i + 200))
+        // 188: el vigente es el último que NO está anulado.
+        .eq("anulado", false);
       if (ep) return fallo(ep, "pedidos/filasDePedidos");
       for (const p of ps ?? []) {
         ultimo.set(p.cotizacion_id, Math.max(ultimo.get(p.cotizacion_id) ?? 0, p.secuencia));
@@ -565,7 +606,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       Y desde el 04/11, para todos los vigentes: qué productos no cubre el
       almacén, para contar «1 de 2» por producto.
     */
-    const vigentes = filas.filter((f) => (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia);
+    const vigentes = filas.filter((f) => !f.anulado && (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia);
     const faltaPorCotizacion = new Map<string, number>();
     const faltaDelAlmacen = new Map<string, Set<string>>();
     if (vigentes.length > 0) {
@@ -586,7 +627,14 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
     return {
       ok: true,
       datos: filas.map((f): FilaPedido => {
-        const d = dinero.get(f.id) ?? { venta: 0, costo: 0, productos: [] };
+        // 188: lo del anulado sale de su foto, y no suma en las cifras.
+        const d = f.anulado
+          ? {
+              venta: (f.lineas_anuladas ?? []).reduce((s, l) => s + Number(l.importe ?? 0), 0),
+              costo: 0,
+              productos: (f.lineas_anuladas ?? []).map((l) => ({ codigo: String(l.codigo), cantidad: Number(l.cantidad) })),
+            }
+          : (dinero.get(f.id) ?? { venta: 0, costo: 0, productos: [] });
         const compras = (f.compras ?? []).filter((k) => k.estado !== "anulada");
         const guias = (f.guias_remision ?? []).filter((g) => g.estado !== "anulada");
         const guia = guias.find((g) => g.estado === "emitida") ?? guias[0] ?? null;
@@ -644,7 +692,8 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
           etapa: etapaDe(colg),
           despacho,
           productos: d.productos,
-          vigente: (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
+          vigente: !f.anulado && (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
+          anulado: f.anulado ? { motivo: f.motivo_anulacion } : null,
         };
       }),
     };

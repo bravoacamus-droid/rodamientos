@@ -22,6 +22,7 @@ const paraAcciones = (p: FilaPedido): PedidoParaAcciones => ({
   guia: p.guia ? { id: p.guia.id, emitida: p.guia.emitida } : null,
   facturado: p.facturas.length > 0,
   conCompras: p.compras.total > 0,
+  anulado: Boolean(p.anulado),
 });
 
 type Params = Record<string, string | undefined>;
@@ -135,6 +136,20 @@ function Compras({ p }: { p: FilaPedido }) {
   );
 }
 
+/** Anulado (188): en rojo, con su motivo. Se queda para el registro. */
+function Anulado({ motivo }: { motivo: string | null }) {
+  return (
+    <span className="block max-w-[14rem] whitespace-normal">
+      <span className="inline-flex items-center rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] px-2 py-0.5 text-sm font-semibold text-[var(--danger)]">
+        Anulado
+      </span>
+      {motivo ? <span className="mt-0.5 block text-sm text-[var(--fg-muted)]">{motivo}</span> : null}
+    </span>
+  );
+}
+
+const nada = <span className="text-[var(--fg-subtle)]">—</span>;
+
 function Guia({ p }: { p: FilaPedido }) {
   if (!p.guia) return <span className="text-[var(--fg-subtle)]">—</span>;
   return (
@@ -226,7 +241,7 @@ export function TablaPedidos({
             {filas.map((p, i) => (
               <tr
                 key={p.id}
-                className="group/fila anim-entrada border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)]"
+                className={`group/fila anim-entrada border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)] ${p.anulado ? "opacity-70" : ""}`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
                 <td className="whitespace-nowrap px-3 py-2.5">
@@ -252,20 +267,22 @@ export function TablaPedidos({
                   <span className="block text-[var(--fg-subtle)]">con IGV</span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                  <Margen p={p} />
+                  {p.anulado ? nada : <Margen p={p} />}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <Compras p={p} />
+                  {p.anulado ? nada : <Compras p={p} />}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <Guia p={p} />
+                  {p.anulado ? nada : <Guia p={p} />}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <Cobro p={p} />
+                  {p.anulado ? nada : <Cobro p={p} />}
                 </td>
-                <td className={`whitespace-nowrap px-3 py-2.5 ${SUNAT[sunatDe(p)].clase}`}>{SUNAT[sunatDe(p)].texto}</td>
+                <td className={`whitespace-nowrap px-3 py-2.5 ${SUNAT[sunatDe(p)].clase}`}>
+                  {p.anulado ? nada : SUNAT[sunatDe(p)].texto}
+                </td>
                 <td className="px-3 py-2.5">
-                  <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
+                  {p.anulado ? <Anulado motivo={p.anulado.motivo} /> : <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />}
                 </td>
                 <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
                   <AccionesPedido p={paraAcciones(p)} />
@@ -297,7 +314,7 @@ export function TablaPedidos({
                   {p.cotizacion} · {formatearFecha(p.fecha)}
                 </p>
               </div>
-              <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />
+              {p.anulado ? <Anulado motivo={p.anulado.motivo} /> : <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />}
             </div>
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
               <div>
