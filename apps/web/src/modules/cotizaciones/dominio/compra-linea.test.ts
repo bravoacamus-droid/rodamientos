@@ -102,6 +102,17 @@ describe("las órdenes de compra", () => {
     expect(proponerOrdenes([linea(10, 0, [prov("p2", 10, 10)])])).toEqual([]);
   });
 
+  it("si el stock llegó después del análisis, no se propone comprar (04/11)", () => {
+    // PED-26-00002: 24 fajas analizadas sin stock; luego entraron 24.
+    expect(proponerOrdenes([{ ...linea(24, 24, [prov("p2", 24, 5.13)]), stock: 24 }])).toEqual([]);
+    // Con «Comprar igual», sí.
+    expect(proponerOrdenes([{ ...linea(24, 24, [prov("p2", 24, 5.13)]), stock: 24, comprarIgual: true }])).toHaveLength(1);
+    // Con menos de lo que falta entregar, también.
+    expect(proponerOrdenes([{ ...linea(24, 24, [prov("p2", 24, 5.13)]), stock: 20 }])).toHaveLength(1);
+    // Lo ya entregado no cuenta: quedan 4 por entregar y hay 4.
+    expect(proponerOrdenes([{ ...linea(24, 24, [prov("p2", 24, 5.13)]), stock: 4, atendida: 20 }])).toEqual([]);
+  });
+
   it("en soles, la orden va en soles y sin IGV", () => {
     const [o] = proponerOrdenes([
       linea(3, 3, [prov("p3", 3, 49.56, { moneda: "PEN", tipoCambio: 3.5, incluyeIgv: true })]),

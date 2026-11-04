@@ -111,10 +111,11 @@ export default async function PaginaDetalleCompra({
   const editableOrden =
     puedeEditar && c.estado === "registrada" && !c.documento_proveedor && c.recepciones.length === 0;
   const archivo = nombreArchivo(c.numero, c.proveedor);
-  // Sin la factura del proveedor subida no se recibe (182). Moisés, 02/11:
-  // «antes de recepcionar tiene que subir las facturas que le envió el
-  // proveedor». La base lo exige igual; aquí se dice antes de entrar.
-  const tieneFactura = c.documentos.some((d) => d.tipo === "factura");
+  // Sin el NÚMERO de la factura del proveedor no se recibe (186; la 182
+  // pedía el archivo). Willy, 04/11: «con los datos de la factura bien
+  // puestos —la serie, el número…— ya debería ser suficiente». El PDF y la
+  // guía se suben cuando lleguen. La base lo exige igual.
+  const tieneFactura = Boolean(c.documento_proveedor?.trim());
   const porRecibir = c.estado !== "anulada" && falta.length > 0;
 
   return (
@@ -180,7 +181,7 @@ export default async function PaginaDetalleCompra({
             </Link>
           ) : porRecibir ? (
             <BotonBloqueado
-              mensaje="Antes de recibir la mercadería, sube la factura del proveedor (PDF o foto) en «Documentos», más abajo."
+              mensaje="Antes de recibir la mercadería, registra la compra con el número de la factura del proveedor."
               className="h-9 md:h-9"
             >
               Recibir mercadería
@@ -226,8 +227,8 @@ export default async function PaginaDetalleCompra({
           <div>
             <p className="text-base font-semibold">Orden pedida: falta la factura del proveedor</p>
             <p className="text-sm">
-              Cuando la compres, regístrala con su factura: cómo llegó, el número y lo que cobró. El PDF
-              puede esperar, pero sin él no se recibe la mercadería.
+              Cuando la compres, regístrala con su factura: cómo llegó, el número y lo que cobró. Con el número
+              ya se puede recibir; el PDF y la guía son opcionales.
             </p>
           </div>
           <Button asChild>
@@ -236,17 +237,20 @@ export default async function PaginaDetalleCompra({
         </div>
       ) : null}
 
-      {!c.falta_factura && porRecibir && !tieneFactura ? (
+      {/* Comprada y sin recibir (04/11): la compra 005 se registró y nadie
+          la recibió, así que el stock no se enteró y otra cotización pidió
+          comprarla otra vez. Que se vea, con el botón. */}
+      {!c.falta_factura && porRecibir && tieneFactura && recibido === 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
           <div>
-            <p className="text-base font-semibold">Falta subir la factura del proveedor</p>
+            <p className="text-base font-semibold">Comprada, falta recibir la mercadería</p>
             <p className="text-sm">
-              Sin el PDF o la foto de su factura no se puede recibir la mercadería. Pídesela al proveedor y súbela
-              en «Documentos».
+              Hasta que la recibas no entra al almacén: el stock sigue sin contarla y las cotizaciones piden
+              comprarla otra vez.
             </p>
           </div>
           <Button asChild>
-            <a href="#documentos">Subir la factura</a>
+            <Link href={`/recepciones/nueva?compra=${c.id}`}>Recibir mercadería</Link>
           </Button>
         </div>
       ) : null}

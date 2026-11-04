@@ -28,6 +28,7 @@ import { listarPedidos } from "@/modules/pedidos/api/consultas";
 import { PedidosDeLaCotizacion } from "@/modules/pedidos/ui/de-la-cotizacion";
 import { OrdenCliente } from "./detalle/orden-cliente";
 import { demandaDeProductos } from "../api/demanda";
+import { ResumenSituacionCompra, SituacionCompra, datosDeSituacion, resumenDeSituaciones } from "./detalle/situacion-compra";
 import { proveedoresGuardados } from "../dominio/compra-linea";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -288,6 +289,10 @@ export default async function PaginaDetalleCotizacion({
       confirmada: Number(l.cantidad_aprobada ?? 0),
       unidad: l.unidad_codigo,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+      // Lo que llegó después del análisis no se vuelve a comprar (04/11).
+      stock: l.stock,
+      atendida: Number(l.cantidad_atendida ?? 0),
+      comprarIgual: l.comprar_igual,
     }));
 
   /*
@@ -296,6 +301,14 @@ export default async function PaginaDetalleCotizacion({
     sumado al total: *«no es dinámico, no podemos equivocarnos así»*. La base
     lo tenía bien (`cantidad_aprobada` = 0); la pantalla leía `cantidad`.
   */
+  /*
+    Almacén o compra, línea a línea, mientras no se apruebe (Luis, 04/11).
+    Aprobada, lo dice la columna «Almacén» con el reparto de la bandeja.
+  */
+  const porDecidir = cabecera.estado === "borrador" || cabecera.estado === "enviada";
+  const situacionDe = new Map(lineas.map((l) => [l.id, datosDeSituacion(l)]));
+  const resumenSituacion = resumenDeSituaciones([...situacionDe.values()]);
+
   const lleva = (l: (typeof lineas)[number]) =>
     confirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
   const importeDe = (l: (typeof lineas)[number], cantidad: number) =>
@@ -581,6 +594,7 @@ export default async function PaginaDetalleCotizacion({
               {lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} en la
               cotización.
             </p>
+            {porDecidir ? <ResumenSituacionCompra r={resumenSituacion} /> : null}
             {/* El cambio, a la vista: sin él no se sabe de dónde salen los soles. */}
             {moneda === "PEN" ? (
               <p className="mt-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-sm">
@@ -629,6 +643,8 @@ export default async function PaginaDetalleCotizacion({
                   */}
                   {cabecera.estado === "aprobada" ? (
                     <th className="px-3 py-2.5 font-medium">Almacén</th>
+                  ) : porDecidir ? (
+                    <th className="px-3 py-2.5 font-medium">Almacén o compra</th>
                   ) : null}
                   <th className="px-3 py-2.5 text-right font-medium">Valor unitario</th>
                   <th className="px-4 py-2.5 text-right font-medium">Importe</th>
@@ -688,6 +704,10 @@ export default async function PaginaDetalleCotizacion({
                             despachado={despachado.get(l.id) ?? 0}
                           />
                         )}
+                      </td>
+                    ) : porDecidir ? (
+                      <td className="px-3 py-2.5 align-top">
+                        {situacionDe.get(l.id) ? <SituacionCompra d={situacionDe.get(l.id)!} /> : null}
                       </td>
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular">
@@ -774,6 +794,8 @@ export default async function PaginaDetalleCotizacion({
                       despachado={despachado.get(l.id) ?? 0}
                     />
                   )
+                ) : porDecidir && situacionDe.get(l.id) ? (
+                  <SituacionCompra d={situacionDe.get(l.id)!} />
                 ) : null}
               </li>
             ))}

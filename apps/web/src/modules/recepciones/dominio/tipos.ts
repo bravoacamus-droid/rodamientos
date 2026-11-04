@@ -129,6 +129,11 @@ export interface CompraPendiente {
   moneda: "USD" | "PEN";
   /** Soles por dólar. Null en las compras en dólares. */
   tipo_cambio: number | null;
+  /**
+   * El número de la factura del proveedor, si ya se registró (04/11). Se
+   * propone al recibir: en la reunión Willy lo volvió a teclear.
+   */
+  documento_proveedor?: string | null;
   lineas: LineaPendiente[];
   /** Cómo se reparten sus gastos: por valor de la compra y por kilo (097). */
   reparto: RepartoCompra;

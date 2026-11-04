@@ -205,6 +205,9 @@ export function reducir(estado: EstadoRecepcion, accion: Accion): EstadoRecepcio
         ...estado,
         compraId: accion.compra.id,
         proveedorId: accion.compra.proveedor_id,
+        // La factura que ya se registró en la compra (04/11), si no se
+        // escribió otra.
+        facturaProveedor: estado.facturaProveedor.trim() || (accion.compra.documento_proveedor ?? ""),
         gastosImportacion: accion.compra.gastos_importacion,
         reparto: accion.compra.reparto,
         lineas: pendientes.map((l, i) => ({

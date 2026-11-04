@@ -182,6 +182,7 @@ export default async function PaginaEditarCotizacion({
       disponibilidad: l.disponibilidad,
       diasEntrega: l.dias_entrega,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+      comprarIgual: l.comprar_igual,
       nota: l.nota ?? "",
       // 114: en un pedido aprobado, lo que el cliente confirmó de cada línea.
       confirmada: cabecera.estado === "aprobada" ? Number(l.cantidad_aprobada ?? l.cantidad) : null,

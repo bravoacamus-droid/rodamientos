@@ -1,12 +1,13 @@
 import type * as React from "react";
 import Link from "next/link";
-import { CircleCheck, Clock, FileText, PackageCheck, Receipt } from "lucide-react";
+import { CircleCheck, Clock, FileText, PackageCheck, PackageOpen, Receipt } from "lucide-react";
 import { Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 
 import type { OrdenDePedido } from "@/modules/compras/api/consultas";
 import { ETIQUETA_MODALIDAD, modalidadDe } from "@/modules/compras/dominio/gastos";
 
-import type { RecepcionDeOrden } from "../api/consultas";
+import type { CompraSinRecibir, RecepcionDeOrden } from "../api/consultas";
+import { UsarStock, type StockUsable } from "./usar-stock";
 
 /**
  * Las órdenes de compra del pedido (128, 130).
@@ -22,8 +23,19 @@ export function ComprasDelPedido({
   cotizacionId,
   generar,
   recepciones,
+  usables,
+  sinRecibir = [],
+  pedidoId,
 }: {
   ordenes: OrdenDePedido[];
+  /**
+   * Por orden sin comprar, lo que el almacén ya cubre (04/11): ahí sale
+   * «Usar el stock». Solo en el pedido vigente y para quien edita compras.
+   */
+  usables?: Map<string, StockUsable[]>;
+  /** Las compras de sus productos que se compraron y no se recibieron (04/11). */
+  sinRecibir?: CompraSinRecibir[];
+  pedidoId?: string;
   /**
    * Con qué recepción entró cada orden, por id de compra (TR-13). Sin esto,
    * «¿ya llegó?» obligaba a abrir cada compra.
@@ -61,6 +73,44 @@ export function ComprasDelPedido({
           </p>
         ) : null}
       </header>
+
+      {/*
+        Lo comprado y sin recibir, arriba y con su botón (04/11). Sin recibir,
+        el stock no lo cuenta y otra cotización vuelve a pedir comprarlo.
+      */}
+      {sinRecibir.length > 0 ? (
+        <div className="flex flex-col gap-2 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-3">
+          <p className="flex items-center gap-2 text-base font-semibold">
+            <PackageOpen className="size-5 shrink-0 text-[var(--warn)]" aria-hidden="true" />
+            {sinRecibir.length === 1
+              ? "Hay una compra de estos productos que falta recibir"
+              : `Hay ${sinRecibir.length} compras de estos productos que faltan recibir`}
+          </p>
+          <p className="text-sm">Hasta que la recibas no entra al almacén y el sistema no la cuenta como stock.</p>
+          <ul className="flex flex-col gap-2">
+            {sinRecibir.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-[var(--surface)] px-3 py-2">
+                <span className="text-base">
+                  <Link href={`/compras/${c.id}`} className="font-mono font-semibold text-brand-600 underline underline-offset-4">
+                    {c.numero}
+                  </Link>{" "}
+                  · {c.proveedor} · {c.productos.map((x) => `${x.codigo} × ${x.falta}`).join(" · ")}
+                  <span className="block text-sm text-[var(--fg-muted)]">
+                    Comprada el {formatearFecha(c.fecha)}
+                    {c.delPedido ? " · orden de este pedido" : " · comprada por fuera del pedido"}
+                  </span>
+                </span>
+                {puede ? (
+                  <Link href={`/recepciones/nueva?compra=${c.id}`} className={cn(buttonVariants(), "h-11 px-4 text-base")}>
+                    <PackageCheck className="size-5" aria-hidden="true" />
+                    Recibir mercadería
+                  </Link>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {ordenes.length === 0 && generar ? (
         <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm">
@@ -118,6 +168,20 @@ export function ComprasDelPedido({
                   )}
                   {/* Si la mercadería ya entró (TR-13), con la recepción enlazada. */}
                   {recepciones ? <Llegada recepciones={recepciones.get(o.id) ?? []} /> : null}
+                  {/* Lo que el almacén ya cubre: «Usar el stock» (04/11). */}
+                  {porRegistrar && pedidoId
+                    ? (usables?.get(o.id) ?? []).map((u) => (
+                        <div key={u.itemId} className="mt-2">
+                          <UsarStock
+                            usable={u}
+                            orden={o.numero}
+                            soloEste={o.productos.length === 1}
+                            pedidoId={pedidoId}
+                            cotizacionId={cotizacionId}
+                          />
+                        </div>
+                      ))
+                    : null}
                 </div>
                 {porRegistrar && puede ? (
                   <Link href={`/compras/${o.id}/factura`} className={cn(buttonVariants(), "h-11 px-5 text-base")}>

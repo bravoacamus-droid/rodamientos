@@ -1,5 +1,6 @@
 import { aUsdSinIgv, type Moneda } from "@/modules/compras/dominio/comparador";
 
+import { saleDelAlmacen } from "./situacion-linea";
 import { redondear2, redondear4 } from "./totales";
 
 /**
@@ -128,6 +129,26 @@ export interface LineaConfirmada {
   confirmada: number;
   unidad: string;
   proveedores: readonly ProveedorLinea[];
+  /**
+   * Lo que hay en el almacén, lo ya atendido y «Comprar igual» (04/11). Si
+   * el almacén alcanza para lo que falta entregar, no se propone comprar:
+   * el análisis era de cuando no había. Sin estos datos, como antes.
+   */
+  stock?: number;
+  atendida?: number;
+  comprarIgual?: boolean;
+}
+
+/** ¿Esta línea ya la cubre el almacén? Entonces no lleva orden (186). */
+export function cubiertaPorElAlmacen(l: LineaConfirmada): boolean {
+  if (l.stock === undefined) return false;
+  return saleDelAlmacen({
+    productoId: l.productoId,
+    esKit: false,
+    necesita: Math.max(0, l.confirmada - (l.atendida ?? 0)),
+    stock: l.stock,
+    comprarIgual: l.comprarIgual ?? false,
+  });
 }
 
 export interface ItemOrden {
@@ -168,6 +189,7 @@ export function proponerOrdenes(lineas: readonly LineaConfirmada[], igv = 0.18):
 
   for (const linea of lineas) {
     if (!(linea.confirmada > 0)) continue;
+    if (cubiertaPorElAlmacen(linea)) continue;
     const comprables = linea.proveedores.filter((p) => p.cantidad > 0 && costoUsd(p) !== null);
     if (comprables.length === 0) continue;
 

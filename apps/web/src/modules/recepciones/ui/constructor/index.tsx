@@ -327,7 +327,9 @@ export function ConstructorRecepcion({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Guía del proveedor</span>
+            <span className="text-sm font-medium">
+              Guía del proveedor <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
+            </span>
             <Input
               value={estado.guiaProveedor}
               onChange={(e) =>

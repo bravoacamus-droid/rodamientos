@@ -69,6 +69,7 @@ import { DialogoStock } from "@/modules/productos/ui/dialogo-stock";
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { revisionDe } from "../../dominio/constructor";
 import { margenSobreCosto, resumirCompra } from "../../dominio/compra-linea";
+import { situacionDeLinea } from "../../dominio/situacion-linea";
 import {
   DIAS_POR_DEFECTO,
   DISPONIBILIDADES,
@@ -209,6 +210,22 @@ export function FilaLinea({
   const puedeAnalizar = linea.productoId !== null && !esKit;
   const compra = resumirCompra(linea.cantidad, linea.proveedores);
   const analizada = compra.costo !== null;
+  /*
+    De dónde sale (04/11): con el almacén alcanzando, sale del almacén aunque
+    haya un análisis de antes —el stock llegó después—, salvo «Comprar igual».
+  */
+  const situacion = situacionDeLinea({
+    productoId: linea.productoId,
+    esKit,
+    necesita: linea.confirmada ?? linea.cantidad,
+    stock: linea.stock,
+    analizada,
+    comprarIgual: linea.comprarIgual ?? false,
+  });
+  const nombreCompra =
+    linea.proveedores.filter((p) => p.cantidad > 0).length === 1
+      ? linea.proveedores.find((p) => p.cantidad > 0)?.nombre.split(" ")[0]
+      : `${linea.proveedores.filter((p) => p.cantidad > 0).length} proveedores`;
   const neto = linea.valorUnitario * (1 - linea.descuentoPct / 100);
   const margenLinea = margenSobreCosto(neto, linea.costoUnitario > 0 ? linea.costoUnitario : null);
   const celdaCosto = (
@@ -224,14 +241,50 @@ export function FilaLinea({
         </span>
       ) : null}
       {puedeAnalizar ? (
-        analizada ? (
-          <Button type="button" variant="link" onClick={() => setAnalizando(true)} className="text-sm">
-            {linea.proveedores.filter((p) => p.cantidad > 0).length === 1
-              ? linea.proveedores.find((p) => p.cantidad > 0)?.nombre.split(" ")[0]
-              : `${linea.proveedores.filter((p) => p.cantidad > 0).length} proveedores`}
-            {compra.falta > 0 ? ` · faltan ${compra.falta}` : ""}
-          </Button>
-        ) : linea.stock >= linea.cantidad && linea.cantidad > 0 ? (
+        situacion === "almacen_con_analisis" ? (
+          /*
+            Se analizó cuando no había y luego llegó (Luis, 04/11: «que
+            automáticamente se actualice y tome el stock»). Sale del almacén;
+            el análisis queda a la vista, y «Comprar igual» lo reactiva.
+          */
+          <span className="flex flex-col items-start gap-0.5">
+            <span className="rounded-sm bg-[var(--ok-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--ok)]">
+              Del almacén · ya hay {linea.stock}
+            </span>
+            <span className="text-sm text-[var(--fg-muted)]">
+              El análisis ({nombreCompra}) queda de referencia.
+            </span>
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => despachar({ tipo: "comprarIgual", key: linea.key, valor: true })}
+              className="text-sm"
+            >
+              Comprar igual
+            </Button>
+          </span>
+        ) : analizada ? (
+          <span className="flex flex-col items-start gap-0.5">
+            <Button type="button" variant="link" onClick={() => setAnalizando(true)} className="text-sm">
+              {nombreCompra}
+              {compra.falta > 0 ? ` · faltan ${compra.falta}` : ""}
+            </Button>
+            {linea.comprarIgual && linea.stock > 0 ? (
+              // Se compra teniendo: que se vea, y que se pueda deshacer.
+              <>
+                <span className="text-sm font-medium text-[var(--info)]">Comprar igual · hay {linea.stock}</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={() => despachar({ tipo: "comprarIgual", key: linea.key, valor: false })}
+                  className="text-sm"
+                >
+                  Usar el stock
+                </Button>
+              </>
+            ) : null}
+          </span>
+        ) : situacion === "almacen" ? (
           /*
             El almacén alcanza (02/11). Moisés, con Willy en vivo: *«si está
             usando el stock ya no debería salirle el analizar costo»*. No es

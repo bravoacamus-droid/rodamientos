@@ -104,6 +104,13 @@ export interface LineaConstructor {
    * precio. Vacío = no se analizó; el costo es el de la ficha.
    */
   proveedores: ProveedorLinea[];
+  /**
+   * «Comprar igual» (186): se compra aunque el almacén alcance. Se marca sola
+   * al guardar un análisis con stock suficiente —comprar teniéndolo es una
+   * decisión—, y se quita con «Usar el stock». Sin la marca, con stock
+   * suficiente la línea sale del almacén y su análisis queda de referencia.
+   */
+  comprarIgual?: boolean;
   /** Nota de la línea, impresa debajo de la descripción (112). Vacía = sin nota. */
   nota: string;
   /**
@@ -256,6 +263,8 @@ export type Accion =
    * ellos, su costo —el promedio ponderado— y el precio de venta elegido.
    */
   | { tipo: "compraAnalizada"; key: string; proveedores: ProveedorLinea[]; valorUnitario: number }
+  /** «Comprar igual» o «Usar el stock», con el análisis ya hecho (186). */
+  | { tipo: "comprarIgual"; key: string; valor: boolean }
   /** «No lo quiso» / «Volver a incluir», al editar un pedido aprobado (114). */
   | { tipo: "incluir"; key: string; incluida: boolean }
   /** Luis, 09/10: *«en cada producto, un botón para que agreguen notas»*. */
@@ -585,10 +594,13 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
 
     case "compraAnalizada":
       return mapear(estado, accion.key, (l) => {
-        const { costo } = resumirCompra(l.cantidad, accion.proveedores);
+        const { costo, compradas } = resumirCompra(l.cantidad, accion.proveedores);
         return {
           ...l,
           proveedores: accion.proveedores,
+          // Analizar una compra cuando el almacén ya alcanza es comprar igual
+          // (Willy, 04/11: «tengo 10 y me piden 10, pero tengo que comprar»).
+          comprarIgual: compradas > 0 && l.cantidad > 0 && l.stock >= l.cantidad,
           // El costo de ESTA compra manda sobre el de la ficha; sin nada
           // comprable (solo precios apuntados) se queda el que había.
           costoUnitario: costo ?? l.costoUnitario,
@@ -596,6 +608,9 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
           valorUnitario: montoValido(accion.valorUnitario),
         };
       });
+
+    case "comprarIgual":
+      return mapear(estado, accion.key, (l) => ({ ...l, comprarIgual: accion.valor }));
 
     case "fichaActualizada":
       return mapear(estado, accion.key, (l) => ({
@@ -1049,6 +1064,7 @@ export function aPayload(estado: EstadoConstructor) {
       dias_entrega: l.diasEntrega,
       // A quién se le compra (111). La base recalcula con esto el costo.
       proveedores: proveedoresAPayload(l.proveedores),
+      comprar_igual: l.comprarIgual ?? false,
       nota: l.nota.trim() || null,
       // Solo al editar un pedido aprobado; la base no deja pasar de lo cotizado.
       cantidad_aprobada: l.confirmada,

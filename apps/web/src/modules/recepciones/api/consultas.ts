@@ -266,7 +266,7 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
     const { data, error } = await supabase
       .from("compras")
       .select(
-        `id, numero, fecha, proveedor_id, gastos_importacion, moneda, tipo_cambio,
+        `id, numero, fecha, proveedor_id, gastos_importacion, moneda, tipo_cambio, documento_proveedor,
          proveedores(razon_social),
          gastos_importacion_detalle:gastos_importacion(monto, reparto),
          compra_items(
@@ -305,6 +305,7 @@ export async function comprasPendientes(): Promise<Resultado<CompraPendiente[]>>
       gastos_importacion: Number(c.gastos_importacion ?? 0),
       moneda: (c.moneda === "PEN" ? "PEN" : "USD") as "USD" | "PEN",
       tipo_cambio: c.tipo_cambio === null ? null : Number(c.tipo_cambio),
+      documento_proveedor: typeof c.documento_proveedor === "string" ? c.documento_proveedor : null,
       lineas: (c.compra_items ?? []).map((i) => ({
         producto_id: i.producto_id,
         codigo: i.productos?.codigo ?? "—",

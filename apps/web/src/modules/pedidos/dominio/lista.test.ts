@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cifras, cobroDe, filtrar, leerOrden, margenPct, ordenar, paginar, sunatDe, totalVisible, type FilaPedido } from "./lista";
+import { cifras, cobroDe, comprasPorProducto, filtrar, leerOrden, margenPct, ordenar, paginar, sunatDe, totalVisible, type FilaPedido } from "./lista";
 
 const fila = (o: Partial<FilaPedido>): FilaPedido => ({
   id: "1",
@@ -79,5 +79,39 @@ describe("tabla de pedidos", () => {
   it("pagina sin salirse", () => {
     const p = paginar([1, 2, 3, 4, 5], 9, 2);
     expect(p).toMatchObject({ filas: [5], actual: 3, paginas: 3, anterior: "2", siguiente: null });
+  });
+});
+
+describe("comprasPorProducto (04/11)", () => {
+  const sinFactura = (productos: string[]) => ({ falta_factura: true, estado: "registrada", productos });
+  const comprada = (productos: string[]) => ({ falta_factura: false, estado: "registrada", productos });
+
+  it("PED-26-00002: dos órdenes sin comprar y nada en el almacén → 0 de 2", () => {
+    expect(comprasPorProducto(["b56", "6208"], [sinFactura(["b56"]), sinFactura(["6208"])], new Set(["b56", "6208"]))).toEqual({
+      productos: 2,
+      listos: 0,
+      conStock: 0,
+    });
+  });
+
+  it("si la faja ya está en el almacén y se usó el stock (orden anulada) → 1 de 2", () => {
+    const anulada = { falta_factura: true, estado: "anulada", productos: ["b56"] };
+    expect(comprasPorProducto(["b56", "6208"], [anulada, sinFactura(["6208"])], new Set(["6208"]))).toEqual({
+      productos: 2,
+      listos: 1,
+      conStock: 0,
+    });
+  });
+
+  it("con stock y la orden todavía viva: no está listo, pero se avisa", () => {
+    expect(comprasPorProducto(["b56", "6208"], [sinFactura(["b56"]), sinFactura(["6208"])], new Set(["6208"]))).toEqual({
+      productos: 2,
+      listos: 0,
+      conStock: 1,
+    });
+  });
+
+  it("comprada con factura cuenta como lista aunque no haya llegado", () => {
+    expect(comprasPorProducto(["b56"], [comprada(["b56"])], new Set(["b56"]))).toEqual({ productos: 1, listos: 1, conStock: 0 });
   });
 });

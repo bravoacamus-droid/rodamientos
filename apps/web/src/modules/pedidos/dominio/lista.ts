@@ -15,6 +15,37 @@ import { ETAPAS, type DespachoDelPedido, type Etapa } from "./etapa";
 
 export type EstadoSunatFactura = "aceptado" | "pendiente" | "rechazado";
 
+/**
+ * «Compras 1 de 2», contado por PRODUCTO (Willy, 04/11).
+ *
+ * Con la OC02-00005 ya recibida, el PED-26-00002 seguía diciendo «0 de 2»:
+ * contaba órdenes con factura, y el producto que salía del almacén no tenía
+ * orden que contar. Willy: *«¿compras 1 de 2 o no?»*. Un producto del
+ * pedido está listo si ya se compró (su orden tiene la factura del
+ * proveedor) o si sale del almacén sin orden pendiente.
+ *
+ * `faltaDelAlmacen`: los productos que el almacén NO cubre según el reparto
+ * de la bandeja (solo en el pedido vigente; en uno anterior, vacío).
+ */
+export function comprasPorProducto(
+  productos: readonly string[],
+  ordenes: readonly { falta_factura: boolean; estado: string; productos: readonly string[] }[],
+  faltaDelAlmacen: ReadonlySet<string>,
+): { productos: number; listos: number; conStock: number } {
+  const unicos = [...new Set(productos)];
+  const vivas = ordenes.filter((o) => o.estado !== "anulada");
+  let listos = 0;
+  let conStock = 0;
+  for (const id of unicos) {
+    const comprado = vivas.some((o) => !o.falta_factura && o.productos.includes(id));
+    const pendiente = vivas.some((o) => o.falta_factura && o.estado === "registrada" && o.productos.includes(id));
+    const falta = faltaDelAlmacen.has(id);
+    if (comprado || (!pendiente && !falta)) listos++;
+    else if (pendiente && !falta) conStock++;
+  }
+  return { productos: unicos.length, listos, conStock };
+}
+
 export interface FacturaDelPedido {
   id: string;
   numero: string;
@@ -46,7 +77,16 @@ export interface FilaPedido {
    * `faltaPedir`: sin órdenes, cuántos productos no cubre el almacén
    * (16/10). Cero sin órdenes es que sale del almacén.
    */
-  compras: { total: number; porRegistrar: number; faltaPedir?: number };
+  compras: {
+    total: number;
+    porRegistrar: number;
+    faltaPedir?: number;
+    /** Por producto (04/11): ver `comprasPorProducto`. */
+    productos?: number;
+    listos?: number;
+    /** Con una orden sin comprar que el almacén ya cubre: «Usar el stock». */
+    conStock?: number;
+  };
   guia: { id: string; numero: string; emitida: boolean } | null;
   facturas: FacturaDelPedido[];
   etapa: Etapa;

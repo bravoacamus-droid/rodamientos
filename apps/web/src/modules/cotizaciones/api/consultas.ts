@@ -399,6 +399,14 @@ export async function cotizacionPorId(id: string): Promise<
       nota: string | null;
       /** El `id` de la línea de la que esta es alternativa, o null (169). */
       alternativa_de: string | null;
+      /** «Comprar igual» aunque el almacén alcance (186). */
+      comprar_igual: boolean;
+      /**
+       * Lo que hay HOY en el almacén de su producto (cantidad − reservado), 0
+       * sin producto (04/11). Con esto la ficha dice si sale del almacén o
+       * si hay que comprarlo, y las órdenes no proponen lo que ya llegó.
+       */
+      stock: number;
       /** A quién se le compraría y a cuánto (111). */
       cotizacion_item_proveedores: {
         proveedor_id: string;
@@ -462,7 +470,7 @@ export async function cotizacionPorId(id: string): Promise<
                             cantidad, unidad_codigo, valor_unitario,
                             descuento_pct, costo_unitario, precio_minimo_ref,
                             importe, disponibilidad, dias_entrega,
-                            cantidad_aprobada, cantidad_atendida, nota, alternativa_de,
+                            cantidad_aprobada, cantidad_atendida, nota, alternativa_de, comprar_igual,
                             cotizacion_item_proveedores(proveedor_id, orden, cantidad,
                               costo_unitario, moneda, incluye_igv, tipo_cambio,
                               costo_usd, fecha, proveedores(razon_social)),
@@ -497,6 +505,18 @@ export async function cotizacionPorId(id: string): Promise<
     const items = (c.cotizacion_items ?? []) as Record<string, unknown>[];
     const vendedor = (c.perfiles as { nombre?: string } | null)?.nombre ?? null;
 
+    // El stock de hoy de cada producto (04/11), en una sola lectura.
+    const productos = [...new Set(items.map((i) => i.producto_id).filter((x): x is string => typeof x === "string"))];
+    const stockDe = new Map<string, number>();
+    if (productos.length > 0) {
+      const { data: st, error: es } = await supabase
+        .from("stock")
+        .select("producto_id, cantidad, reservado")
+        .in("producto_id", productos);
+      if (es) return fallo(es);
+      for (const r of st ?? []) stockDe.set(String(r.producto_id), Number(r.cantidad ?? 0) - Number(r.reservado ?? 0));
+    }
+
     return {
       ok: true,
       datos: {
@@ -510,9 +530,13 @@ export async function cotizacionPorId(id: string): Promise<
           vendedor,
         } as never,
         // El orden lo fija la cotización, no el orden de llegada de la fila.
-        lineas: [...items].sort(
-          (a, b) => Number(a.orden) - Number(b.orden),
-        ) as never,
+        lineas: [...items]
+          .sort((a, b) => Number(a.orden) - Number(b.orden))
+          .map((i) => ({
+            ...i,
+            comprar_igual: Boolean(i.comprar_igual),
+            stock: typeof i.producto_id === "string" ? (stockDe.get(i.producto_id) ?? 0) : 0,
+          })) as never,
         emisor: emisor.data as never,
       },
     };

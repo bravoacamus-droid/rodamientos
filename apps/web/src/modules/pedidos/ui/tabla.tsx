@@ -99,6 +99,30 @@ function Compras({ p }: { p: FilaPedido }) {
       <span className="text-[var(--fg-subtle)]">sin órdenes</span>
     );
   }
+  /*
+    Por producto (Willy, 04/11: «¿compras 1 de 2 o no?»): listo si ya se
+    compró o si sale del almacén. Contar órdenes dejaba en «0 de 2» un pedido
+    con uno de sus dos productos ya en el estante.
+  */
+  const { productos = 0, listos = 0, conStock = 0 } = p.compras;
+  if (productos > 0 && listos < productos) {
+    const faltan = productos - listos - conStock;
+    return (
+      <span className="block">
+        <span className="font-medium">
+          {listos} de {productos} {productos === 1 ? "producto" : "productos"}
+        </span>
+        {faltan > 0 ? (
+          <span className="block text-[var(--warn)]">falta comprar {faltan}</span>
+        ) : null}
+        {conStock > 0 ? (
+          <span className="block font-medium text-[var(--ok)]">
+            {conStock === 1 ? "1 ya está en el almacén" : `${conStock} ya están en el almacén`}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
   return p.compras.porRegistrar > 0 ? (
     <span className="font-medium">
       {p.compras.total - p.compras.porRegistrar} de {p.compras.total} compradas

@@ -497,7 +497,8 @@ export interface OrdenDePedido {
   moneda: "USD" | "PEN";
   total: number;
   fecha: string;
-  productos: { codigo: string; cantidad: number }[];
+  /** Con su producto (04/11): para ofrecer «Usar el stock» por producto. */
+  productos: { codigo: string; cantidad: number; producto_id?: string }[];
 }
 
 /**
@@ -514,7 +515,7 @@ export async function ordenesDelPedido(pedidoId: string): Promise<Resultado<Orde
       .select(
         `id, numero, estado, falta_factura, tipo, via_importacion, documento_proveedor, moneda, total, fecha,
          proveedores(razon_social),
-         compra_items(cantidad, productos(codigo))`,
+         compra_items(cantidad, producto_id, productos(codigo))`,
       )
       .eq("pedido_id", pedidoId)
       .neq("estado", "anulada")
@@ -533,7 +534,7 @@ export async function ordenesDelPedido(pedidoId: string): Promise<Resultado<Orde
       total: number;
       fecha: string;
       proveedores: { razon_social: string } | null;
-      compra_items: { cantidad: number; productos: { codigo: string } | null }[] | null;
+      compra_items: { cantidad: number; producto_id: string; productos: { codigo: string } | null }[] | null;
     }[];
     return {
       ok: true,
@@ -549,7 +550,11 @@ export async function ordenesDelPedido(pedidoId: string): Promise<Resultado<Orde
         moneda: f.moneda === "PEN" ? "PEN" : "USD",
         total: Number(f.total ?? 0),
         fecha: String(f.fecha),
-        productos: (f.compra_items ?? []).map((i) => ({ codigo: i.productos?.codigo ?? "—", cantidad: Number(i.cantidad ?? 0) })),
+        productos: (f.compra_items ?? []).map((i) => ({
+          codigo: i.productos?.codigo ?? "—",
+          cantidad: Number(i.cantidad ?? 0),
+          producto_id: i.producto_id,
+        })),
       })),
     };
   } catch (e) {

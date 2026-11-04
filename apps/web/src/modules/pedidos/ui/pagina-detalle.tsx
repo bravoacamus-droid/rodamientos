@@ -21,7 +21,9 @@ import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { GenerarOrdenes } from "@/modules/cotizaciones/ui/detalle/ordenes-compra";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
-import { detallePedido, recepcionesDeLasOrdenes } from "../api/consultas";
+import { comprasSinRecibir, detallePedido, recepcionesDeLasOrdenes } from "../api/consultas";
+import { cubiertaPorElAlmacen } from "@/modules/cotizaciones/dominio/compra-linea";
+import type { StockUsable } from "./usar-stock";
 import { textoEtapa } from "../dominio/etapa";
 import { papelDelPedido } from "../dominio/hoja";
 import { OtroPedido } from "@/modules/cotizaciones/ui/detalle/otro-pedido";
@@ -76,6 +78,7 @@ export default async function PaginaDetallePedido({
   const guiaEmitida = p.guias.find((g) => g.estado === "emitida");
   const borrador = p.guias.find((g) => g.estado === "borrador");
   const papel = papelDelPedido(p, unidadLegible);
+  const puedeEditarCompras = permisos.tiene("compras", "editar");
 
   /*
     Ordenar las compras desde aquí (Luis, 15/10: «de ahí se hace todo»): lo
@@ -120,6 +123,10 @@ export default async function PaginaDetallePedido({
           confirmada: Number(l.cantidad_aprobada ?? 0),
           unidad: l.unidad_codigo,
           proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
+          // Lo que llegó después del análisis no se vuelve a comprar (04/11).
+          stock: l.stock,
+          atendida: Number(l.cantidad_atendida ?? 0),
+          comprarIgual: l.comprar_igual,
         }));
       const [existentes, demanda] = await Promise.all([
         ordenesDeLaCotizacion(p.cotizacion.id),
@@ -135,6 +142,46 @@ export default async function PaginaDetallePedido({
       );
     }
   }
+
+  /*
+    Lo que llegó después del análisis (04/11). Por cada orden del pedido que
+    todavía no se compró, los productos que el almacén ya cubre: ahí sale
+    «Usar el stock». Solo en el vigente, con su cotización a mano.
+  */
+  const usables = new Map<string, StockUsable[]>();
+  if (vigente && cot?.ok && ordenes.ok && puedeEditarCompras) {
+    for (const o of ordenes.datos) {
+      if (!(o.falta_factura && o.estado === "registrada")) continue;
+      for (const x of o.productos) {
+        const l = cot.datos.lineas.find((y) => y.producto_id === x.producto_id && Number(y.cantidad_aprobada ?? 0) > 0);
+        if (!l || !l.producto_id) continue;
+        const linea = {
+          productoId: l.producto_id,
+          codigo: l.codigo,
+          cantidad: Number(l.cantidad),
+          confirmada: Number(l.cantidad_aprobada ?? 0),
+          unidad: l.unidad_codigo,
+          proveedores: [],
+          stock: l.stock,
+          atendida: Number(l.cantidad_atendida ?? 0),
+          // Aquí manda lo que hay: la orden ya existe y la pregunta es si
+          // hace falta. «Comprar igual» no esconde el botón.
+          comprarIgual: false,
+        };
+        if (!cubiertaPorElAlmacen(linea)) continue;
+        const lista = usables.get(o.id) ?? [];
+        lista.push({
+          itemId: l.id,
+          codigo: l.codigo,
+          stock: l.stock,
+          necesita: Math.max(0, linea.confirmada - linea.atendida),
+        });
+        usables.set(o.id, lista);
+      }
+    }
+  }
+  const productosDelPedido = p.lineas.map((l) => l.productoId).filter((x): x is string => x !== null);
+  const sinRecibir = await comprasSinRecibir(productosDelPedido, p.id);
 
   return (
     <>
@@ -262,6 +309,9 @@ export default async function PaginaDetallePedido({
           cotizacionId={p.cotizacion.id}
           generar={generar}
           recepciones={recepciones}
+          usables={usables}
+          sinRecibir={sinRecibir}
+          pedidoId={p.id}
         />
       ) : (
         <EstadoError titulo="No se pudieron cargar las compras" detalle={ordenes.error} />

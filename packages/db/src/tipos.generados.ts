@@ -2281,6 +2281,7 @@ export type Database = {
           cantidad_aprobada: number | null
           cantidad_atendida: number
           codigo: string
+          comprar_igual: boolean
           costo_unitario: number
           cotizacion_id: string
           descripcion: string
@@ -2304,6 +2305,7 @@ export type Database = {
           cantidad_aprobada?: number | null
           cantidad_atendida?: number
           codigo: string
+          comprar_igual?: boolean
           costo_unitario?: number
           cotizacion_id: string
           descripcion: string
@@ -2327,6 +2329,7 @@ export type Database = {
           cantidad_aprobada?: number | null
           cantidad_atendida?: number
           codigo?: string
+          comprar_igual?: boolean
           costo_unitario?: number
           cotizacion_id?: string
           descripcion?: string
@@ -6773,6 +6776,7 @@ export type Database = {
         }[]
       }
       unidad_periodo: { Args: { p_grano: string }; Returns: string }
+      usar_stock_en_vez_de_comprar: { Args: { p_item: string }; Returns: Json }
       vincular_guias_comprobante: {
         Args: { p_comprobante: string; p_guias: string[] }
         Returns: undefined

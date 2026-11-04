@@ -6,7 +6,7 @@ import { fallo } from "@/lib/errores";
 import { bandejaPorComprar, loQueFaltaDe } from "@/modules/compras";
 
 import { etapaDe, type DespachoDelPedido, type Etapa } from "../dominio/etapa";
-import type { EstadoSunatFactura, FilaPedido } from "../dominio/lista";
+import { comprasPorProducto, type EstadoSunatFactura, type FilaPedido } from "../dominio/lista";
 
 export type Resultado<T> = { ok: true; datos: T } | { ok: false; error: string };
 
@@ -167,6 +167,8 @@ export interface PedidoDetalle {
   lineas: {
     /** La línea de la cotización (169: para numerar 1, 1.1…). */
     id: string;
+    /** Su producto del catálogo, o null si es una línea libre (04/11). */
+    productoId: string | null;
     alternativaDe: string | null;
     codigo: string;
     marca: string | null;
@@ -254,7 +256,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
       supabase.from("pedidos").select("id, numero, secuencia").eq("cotizacion_id", f.cotizacion_id).order("secuencia"),
       supabase
         .from("v_pedido_lineas")
-        .select("cotizacion_item_id, codigo, descripcion, cantidad, unidad_codigo, valor_unitario, descuento_pct, orden")
+        .select("cotizacion_item_id, producto_id, codigo, descripcion, cantidad, unidad_codigo, valor_unitario, descuento_pct, orden")
         .eq("pedido_id", id)
         .gt("cantidad", 0)
         .order("orden"),
@@ -288,6 +290,7 @@ export async function detallePedido(id: string): Promise<Resultado<PedidoDetalle
         hermanos: (hermanos ?? []).map((h) => ({ id: h.id, numero: h.numero, secuencia: h.secuencia })),
         lineas: (lineas ?? []).map((l) => ({
           id: String(l.cotizacion_item_id),
+          productoId: l.producto_id ? String(l.producto_id) : null,
           alternativaDe: alternativaDe.get(String(l.cotizacion_item_id)) ?? null,
           codigo: String(l.codigo),
           marca: marcaDe.get(String(l.cotizacion_item_id)) ?? null,
@@ -379,6 +382,73 @@ export async function recepcionesDeLasOrdenes(pedidoId: string): Promise<Map<str
   }
 }
 
+/** Una compra ya hecha (con su factura) cuya mercadería no se recibió entera. */
+export interface CompraSinRecibir {
+  id: string;
+  numero: string;
+  proveedor: string;
+  fecha: string;
+  /** Si es una orden de ESTE pedido. */
+  delPedido: boolean;
+  productos: { codigo: string; falta: number }[];
+}
+
+/**
+ * Las compras de estos productos que ya se compraron y no se recibieron
+ * (04/11). La OC02-00005 se registró con su factura y nadie la recibió: el
+ * stock no se enteró y la cotización siguiente pidió comprar otra vez. Willy:
+ * *«yo pensé que al ingresar la factura ya estaba recibiendo»*. Esto lo
+ * dice en el pedido, con el botón de recibir.
+ */
+export async function comprasSinRecibir(productoIds: string[], pedidoId: string): Promise<CompraSinRecibir[]> {
+  const ids = [...new Set(productoIds)].filter(Boolean);
+  if (ids.length === 0) return [];
+  try {
+    const supabase = await clienteServidor();
+    const { data, error } = await supabase
+      .from("compras")
+      .select(
+        `id, numero, fecha, pedido_id, documento_proveedor, proveedores(razon_social),
+         compra_items!inner(producto_id, cantidad, cantidad_recibida, productos(codigo))`,
+      )
+      .in("estado", ["registrada", "recibida_parcial"])
+      .not("documento_proveedor", "is", null)
+      .in("compra_items.producto_id", ids)
+      .order("fecha", { ascending: true })
+      .limit(30);
+    if (error) {
+      fallo(error, "pedidos/comprasSinRecibir");
+      return [];
+    }
+    const filas = (data ?? []) as unknown as {
+      id: string;
+      numero: string;
+      fecha: string;
+      pedido_id: string | null;
+      proveedores: { razon_social: string } | null;
+      compra_items: { producto_id: string; cantidad: number; cantidad_recibida: number; productos: { codigo: string } | null }[];
+    }[];
+    return filas
+      .map((f) => ({
+        id: f.id,
+        numero: f.numero,
+        proveedor: f.proveedores?.razon_social ?? "—",
+        fecha: String(f.fecha),
+        delPedido: f.pedido_id === pedidoId,
+        productos: f.compra_items
+          .map((i) => ({
+            codigo: i.productos?.codigo ?? "—",
+            falta: Math.round((Number(i.cantidad ?? 0) - Number(i.cantidad_recibida ?? 0)) * 100) / 100,
+          }))
+          .filter((i) => i.falta > 0),
+      }))
+      .filter((c) => c.productos.length > 0);
+  } catch (e) {
+    fallo(e, "pedidos/comprasSinRecibir");
+    return [];
+  }
+}
+
 /** El pedido vigente de una cotización: el último. */
 export async function pedidoVigente(cotizacionId: string): Promise<string | null> {
   const supabase = await clienteServidor();
@@ -405,7 +475,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       .select(
         `id, numero, secuencia, fecha, cotizacion_id, cliente_id,
          cotizaciones(numero, moneda, tipo_cambio), clientes(razon_social),
-         compras(estado, falta_factura),
+         compras(estado, falta_factura, compra_items(producto_id)),
          guias_remision(id, numero, estado),
          comprobantes(id, numero, tipo, estado, saldo, total, moneda, pen_total, estado_sunat, fecha_vencimiento)`,
       )
@@ -426,7 +496,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       cliente_id: string;
       cotizaciones: { numero: string | null; moneda: string | null; tipo_cambio: number | null } | null;
       clientes: { razon_social: string } | null;
-      compras: { estado: string; falta_factura: boolean }[] | null;
+      compras: { estado: string; falta_factura: boolean; compra_items: { producto_id: string }[] | null }[] | null;
       guias_remision: { id: string; numero: string | null; estado: string }[] | null;
       comprobantes:
         | {
@@ -445,11 +515,13 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
     }[];
 
     const ids = filas.map((f) => f.id);
+    /** Los productos del catálogo de cada pedido, para contar compras por producto (04/11). */
+    const productosDe = new Map<string, string[]>();
     const dinero = new Map<string, { venta: number; costo: number; productos: { codigo: string; cantidad: number }[] }>();
     for (let i = 0; i < ids.length; i += 200) {
       const { data: ls, error: el } = await supabase
         .from("v_pedido_lineas")
-        .select("pedido_id, codigo, cantidad, importe, costo, orden")
+        .select("pedido_id, producto_id, codigo, cantidad, importe, costo, orden")
         .in("pedido_id", ids.slice(i, i + 200))
         .gt("cantidad", 0)
         .order("orden");
@@ -461,6 +533,7 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
         d.costo += Number(l.costo ?? 0);
         d.productos.push({ codigo: String(l.codigo), cantidad: Number(l.cantidad) });
         dinero.set(k, d);
+        if (l.producto_id) productosDe.set(k, [...(productosDe.get(k) ?? []), String(l.producto_id)]);
       }
     }
 
@@ -487,17 +560,20 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
       la ficha—: si le falta algo, falta hacer la orden; si no, sale del
       almacén. Una sola lectura para toda la lista, y solo si hace falta.
     */
-    const sinOrdenes = filas.filter(
-      (f) =>
-        (f.compras ?? []).every((k) => k.estado === "anulada") &&
-        (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia,
-    );
+    /*
+      Y desde el 04/11, para todos los vigentes: qué productos no cubre el
+      almacén, para contar «1 de 2» por producto.
+    */
+    const vigentes = filas.filter((f) => (ultimo.get(f.cotizacion_id) ?? f.secuencia) === f.secuencia);
     const faltaPorCotizacion = new Map<string, number>();
-    if (sinOrdenes.length > 0) {
+    const faltaDelAlmacen = new Map<string, Set<string>>();
+    if (vigentes.length > 0) {
       const b = await bandejaPorComprar();
       if (b.ok) {
-        for (const f of sinOrdenes) {
-          faltaPorCotizacion.set(f.cotizacion_id, loQueFaltaDe(f.cotizacion_id, b.datos.filas).length);
+        for (const f of vigentes) {
+          const falta = loQueFaltaDe(f.cotizacion_id, b.datos.filas);
+          faltaPorCotizacion.set(f.cotizacion_id, falta.length);
+          faltaDelAlmacen.set(f.id, new Set(falta.map((x) => x.producto_id)));
         }
       }
     }
@@ -540,6 +616,15 @@ export async function filasDePedidos(periodo: { desde?: string; hasta?: string }
             total: compras.length,
             porRegistrar: compras.filter((k) => k.falta_factura && k.estado === "registrada").length,
             faltaPedir: compras.length === 0 ? (faltaPorCotizacion.get(f.cotizacion_id) ?? 0) : 0,
+            ...comprasPorProducto(
+              productosDe.get(f.id) ?? [],
+              compras.map((k) => ({
+                falta_factura: k.falta_factura,
+                estado: k.estado,
+                productos: (k.compra_items ?? []).map((x) => x.producto_id),
+              })),
+              faltaDelAlmacen.get(f.id) ?? new Set(),
+            ),
           },
           guia: guia ? { id: guia.id, numero: guia.numero ?? "borrador", emitida: guia.estado === "emitida" } : null,
           facturas: facturas.map((c) => {

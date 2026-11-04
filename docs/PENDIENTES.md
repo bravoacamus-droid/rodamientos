@@ -9116,3 +9116,60 @@ desordenado; debe ser Excel para ver lo que deben, fechas, todo eso»*.
 Probado el 03/11: el Excel de REACTIVOS (568 con 19 días de atraso arriba,
 luego 556, 561 mañana…) y el de los 12 que deben (Resumen, Todas las
 facturas y 12 hojas), con las mismas cifras que Cobranzas.
+
+## §CX · 04/11 — El stock que llega después del análisis, y recibir sin papeles (186)
+
+Reunión de Moisés con Willy del 04/11 (Fathom). El PED-26-00002 pedía comprar
+24 fajas cuando la OC02-00005 (24, ROATSA, F006-0060866) ya estaba registrada,
+y nadie la había recibido. Willy: *«yo pensé que al ingresar la factura ya
+estaba recibiendo automáticamente»*.
+
+**Recibir (186).** El número de la factura del proveedor sí es obligatorio, y
+la guía y el PDF no. Willy: *«muchas veces no nos envían el PDF, solo en
+físico… recibimos varias facturas al día»*, y *«con los datos de la factura
+bien puestos… ya debería ser suficiente»*. El disparador de la 182 ahora pide
+el número, de la recepción o de la compra, y lo copia a la recepción. El
+formulario de recibir propone la factura de la compra y marca la guía como
+«(opcional)». La compra comprada y sin recibir lleva un aviso con su botón.
+
+**«Comprar igual» se guarda (186).** Va en `cotizacion_items.comprar_igual`.
+Regla única (`dominio/situacion-linea.ts`): si el almacén alcanza, la línea
+sale del almacén aunque tenga un análisis de antes, y ese análisis queda de
+referencia. Solo se compra igual si se marcó. Willy: *«tengo 10 y me piden
+10, pero tengo que comprar para seguir teniendo stock»*. La marca se pone
+sola al guardar un análisis cuando el stock ya alcanzaba, y en el editor se
+quita con «Usar el stock». `proponerOrdenes` ya no propone lo que cubre el
+almacén, y eso vale para la cotización sin aprobar (Luis: *«que
+automáticamente se actualice y tome el stock»*) y para el pedido.
+
+**«Usar el stock» en el pedido (186).** Sale cuando una orden **sin comprar**
+lleva un producto que el almacén ya cubre. Pregunta antes de hacer nada.
+`usar_stock_en_vez_de_comprar` quita ese producto de las órdenes del pedido
+sin factura ni recepción, y anula la orden que se queda vacía. Se niega si el
+stock no alcanza o si la orden ya se compró. El centinela lo ejecuta y lo
+deshace.
+
+**Compras que faltan recibir** salen arriba de «Compras» en el pedido, con
+«Recibir mercadería». Cuentan las de sus productos, sean del pedido o de
+fuera.
+
+**El contador «Compras» de la lista, por producto.** Willy: *«¿compras 1 de 2
+o no?»*. Un producto está listo si su orden ya tiene la factura o si sale del
+almacén sin orden pendiente (`comprasPorProducto`).
+
+**La ficha de una cotización sin aprobar** lleva la columna «Almacén o
+compra» y un resumen arriba: «3 salen del almacén · 20 sin análisis de compra
+· se pide al aprobar». Luis lo pidió con la captura de la CT02-001317.
+
+**Lo que NO cuadra en los datos, sin tocar:** la OC02-00005 es **B-54**,
+mientras que el PED-26-00002 y su OC02-00006 piden **B-56**. Las dos son de
+ROATSA, por USD 145.28 y 24 unidades, y Willy dijo en la reunión *«de las
+dos compras iguales… tiene que anularse una, entre la 5 y la 6»*. Por eso
+«Usar el stock» no sale en ese pedido: la B-56 no tiene stock. Falta que
+Willy mire la F006-0060866 y diga qué faja es. Si es la B-56, hay que pasar
+las 24 de B-54 a B-56 y, después, usar el stock en el pedido.
+
+Probado en pantalla (solo lectura): la columna en la CT02-001317, el aviso de
+las 3 órdenes del PED-26-00001 sin recibir, «0 de 2 productos» en la lista,
+y que al recibir la OC02-00002 se proponga FV02-00074879. «Usar el stock» no
+se vio: ningún pedido real tiene hoy el caso.
