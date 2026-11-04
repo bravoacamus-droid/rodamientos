@@ -12,6 +12,7 @@ import { CandadoEdicion } from "@/componentes/candado-edicion";
 import {
   comprasAbiertasDe,
   cotizacionPorId,
+  reglaUtilidad,
   type CompraAbierta,
 } from "../api/consultas";
 import { proveedoresGuardados } from "../dominio/compra-linea";
@@ -226,6 +227,7 @@ export default async function PaginaEditarCotizacion({
       puedeEditarKit={permisos.tiene("productos", "editar")}
       // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
       puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}
+      reglaUtilidad={await reglaUtilidad()}
       hoy={new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Lima" }).format(
         new Date(),
       )}

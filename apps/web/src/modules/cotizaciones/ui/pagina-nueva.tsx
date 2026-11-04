@@ -5,7 +5,7 @@ import { Volver } from "@/componentes/volver";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 
-import { clientesParaCotizar } from "../api/consultas";
+import { clientesParaCotizar, reglaUtilidad } from "../api/consultas";
 import { Constructor } from "./constructor";
 
 /**
@@ -68,6 +68,7 @@ export default async function PaginaNuevaCotizacion({
       puedeEditarKit={puedeEditarKit}
       // Los mismos que `ajustarStock` y `registrar_ajuste_inventario` (06/10).
       puedeAjustarStock={!!perfil?.activo && ["gerencia", "admin"].includes(perfil.rol)}
+      reglaUtilidad={await reglaUtilidad()}
     />
   );
 }

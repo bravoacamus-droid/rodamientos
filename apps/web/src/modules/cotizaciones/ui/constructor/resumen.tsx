@@ -4,6 +4,7 @@ import { Switch } from "@rodatech/ui";
 
 import type { Bloqueo } from "../../dominio/constructor";
 import type { TotalesCotizacion } from "../../dominio/totales";
+import type { EstadoUtilidad } from "../../dominio/utilidad-minima";
 
 /**
  * Totales y opciones del documento.
@@ -26,7 +27,10 @@ export function ResumenConstructor({
   hayNoInmediatos,
   guardando,
   sinAnalizar = 0,
+  utilidad = null,
 }: {
+  /** ¿Llega a la utilidad mínima? (189). Null sin costo. */
+  utilidad?: EstadoUtilidad | null;
   /**
    * Líneas cuyo costo todavía es el del CATÁLOGO, no el analizado (14/10).
    * Willy, 13/10: le salió un 230 % *«antes de que se cargue el precio de
@@ -110,10 +114,27 @@ export function ResumenConstructor({
                 venta − costo, sin IGV. */}
             <div className="mt-1.5 flex items-baseline justify-between">
               <span className="text-base font-medium">Utilidad</span>
-              <span className="tabular text-base font-semibold">
+              <span
+                className={`tabular text-base font-semibold ${
+                  utilidad && !utilidad.llega ? "text-[var(--danger)]" : ""
+                }`}
+              >
                 {dolar(totales.subtotal - totales.costoTotal)}
               </span>
             </div>
+            {utilidad ? (
+              <div className="mt-0.5 flex items-baseline justify-between">
+                <span className="text-sm text-[var(--fg-muted)]">Utilidad mínima</span>
+                <span
+                  className={`tabular text-sm ${
+                    utilidad.llega ? "text-[var(--fg-muted)]" : "font-semibold text-[var(--danger)]"
+                  }`}
+                >
+                  {dolar(utilidad.minima)}
+                  {utilidad.llega ? "" : ` · faltan ${dolar(utilidad.falta)}`}
+                </span>
+              </div>
+            ) : null}
             <div className="mt-0.5 flex items-baseline justify-between">
               <span className="text-sm text-[var(--fg-muted)]">Costo total</span>
               <span className="tabular text-sm text-[var(--fg-muted)]">{dolar(totales.costoTotal)}</span>

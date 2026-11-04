@@ -9299,3 +9299,42 @@ Visto en papel (`page.pdf` y el PDF descargado, pintados con pdf.js) en la
 guía T002-00000577 y la factura F002-581, y en pantalla a 1280 y a 390 px. De
 paso, los botones Descargar/Imprimir desbordaban 19 px a 390 px: ahora bajan
 de renglón.
+
+## §DA · 04/11 — La utilidad mínima, que crece con la venta (189)
+
+Willy, reunión del 04/11 (31:01): *«como regla… debe haber una utilidad
+mínima de 20 dólares… si son 100 dólares, 20 dólares como mínimo; si es más,
+aumenta la utilidad»*. Luis: *«eso es dinámico, como lo dijo el Sr. Willy»*.
+
+**La regla:** utilidad mínima = el mayor de USD 20 y el 20 % de la venta sin
+IGV. Una venta de 100 pide 20, una de 500 pide 100 y una de 40 pide 20, que
+es el piso. Las dos cifras están en `empresa` (`utilidad_minima_usd`,
+`utilidad_minima_pct`, 189) y se cambian en **Datos de la empresa →
+Utilidad mínima de una cotización**. **Es un aviso, no un bloqueo**: Willy lo
+quiere ver «para ver si puedo subir o bajar los precios».
+
+**Pendiente de confirmar con Willy:** que «aumenta» signifique el 20 % de la
+venta. Si quiere otro porcentaje, lo cambia él en esa pantalla.
+
+Dónde sale:
+- **Editor, en la barra de abajo:** la utilidad va en rojo mientras no llega
+  y dice «faltan USD X para el mínimo (USD Y)»; cuando llega, va en verde.
+  Antes el color lo ponía el margen (12 % y 20 %). Además, en el celular
+  la barra se apretaba en cuatro columnas; ahora la utilidad baja de
+  renglón.
+- **Tarjeta «Totales»:** una fila «Utilidad mínima» con lo que falta.
+- **Ficha, en la tarjeta «Margen al costo»:** lo mismo, y el tono sigue al
+  mínimo. Se calcula sobre lo confirmado si cambió al confirmar.
+
+Sin costo cargado no dice nada (`estadoUtilidad` da null), porque la
+utilidad saldría como la venta entera.
+
+Visto en pantalla (solo lectura):
+- en la CT02-001313, la de la reunión, «USD 15.90 de utilidad · faltan
+  USD 4.10 para el mínimo (USD 20.00)»;
+- en una cotización nueva sin guardar con la B-54, «faltan USD 18.15»;
+- a 1440 y a 390 px, sin desbordes;
+- en Datos de la empresa, con 20 y 20.
+
+Guardar la empresa no se probó en pantalla, para no escribir en la base de
+Willy. Lo cubre el centinela de la 189.

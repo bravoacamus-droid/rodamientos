@@ -55,6 +55,11 @@ import { AvisoDeuda } from "./aviso-deuda";
 import { SelectorCondiciones } from "./selector-condiciones";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
+import {
+  REGLA_UTILIDAD_POR_DEFECTO,
+  estadoUtilidad,
+  type ReglaUtilidad,
+} from "../../dominio/utilidad-minima";
 
 /**
  * Constructor de cotizaciones.
@@ -66,6 +71,9 @@ import type { DemandaProducto } from "../../dominio/demanda";
  * que no se podía probar sin montar React.
  */
 
+const dolarCorto = (n: number) =>
+  n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
+
 export function Constructor({
   sugeridos,
   clienteInicial = null,
@@ -73,7 +81,10 @@ export function Constructor({
   editando = null,
   puedeEditarKit = false,
   puedeAjustarStock = false,
+  reglaUtilidad = REGLA_UTILIDAD_POR_DEFECTO,
 }: {
+  /** La utilidad mínima de «Datos de la empresa» (189, Willy 04/11). */
+  reglaUtilidad?: ReglaUtilidad;
   /**
    * Si quien cotiza puede cambiar un kit desde aquí (25/09). Gerencia, admin
    * y compras, que son los que `guardarKit` deja pasar: a un vendedor se le
@@ -200,6 +211,8 @@ export function Constructor({
   }, null);
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
+  // ¿Llega a la utilidad mínima? (189). Null sin costo: no se sabe.
+  const utilidad = estadoUtilidad(totales.subtotal, totales.costoTotal, reglaUtilidad);
   /** 1, 1.1, 1.2, 2… (169): el número de ítem de cada línea, en orden. */
   const numeros = useMemo(() => numerosDe(estado), [estado]);
   /** En qué ítem está ya cada producto, para avisar al añadir una alternativa. */
@@ -714,6 +727,7 @@ export function Constructor({
       */}
       <ResumenConstructor
           totales={totales}
+          utilidad={utilidad}
           bloqueos={bloqueos}
           avisos={avisos}
           mostrarDescuento={estado.mostrarDescuento}
@@ -748,7 +762,7 @@ export function Constructor({
       */}
       <div className="sticky bottom-0 -mx-3 -mb-3 mt-1 border-t border-[var(--border)] bg-[var(--surface)] px-3 py-3 elev-2 sm:-mx-6 sm:-mb-6 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-baseline gap-2">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-sm text-[var(--fg-muted)]">
               {estado.lineas.length === 1
                 ? "1 producto · total"
@@ -768,17 +782,15 @@ export function Constructor({
               interno: no sale en el papel.
             */}
             {totales.costoTotal > 0 ? (
-              <span className="flex items-baseline gap-2 border-l border-[var(--border)] pl-3">
+              <span className="flex w-full flex-wrap items-baseline gap-x-2 sm:w-auto sm:border-l sm:border-[var(--border)] sm:pl-3">
                 <span className="text-sm text-[var(--fg-muted)]">
                   {totales.subtotal >= totales.costoTotal ? "utilidad" : "pierdes"}
                 </span>
+                {/* El color lo pone la utilidad mínima (189): en rojo
+                    mientras no llega, en verde cuando llega. */}
                 <span
                   className={`tabular text-lg font-semibold ${
-                    totales.margenPct < 12
-                      ? "text-[var(--danger)]"
-                      : totales.margenPct < 20
-                        ? "text-[var(--warn)]"
-                        : "text-[var(--ok)]"
+                    utilidad && !utilidad.llega ? "text-[var(--danger)]" : "text-[var(--ok)]"
                   }`}
                 >
                   {Math.abs(totales.subtotal - totales.costoTotal).toLocaleString("es-PE", {
@@ -787,9 +799,25 @@ export function Constructor({
                   })}
                 </span>
                 <span className="tabular text-base font-medium">· margen {totales.margenPct.toFixed(2)} %</span>
+                {/*
+                  La utilidad mínima (Willy, 04/11: «si son 100 dólares, 20
+                  dólares como mínimo; si es más, aumenta la utilidad»). Dice
+                  cuánto falta, que es lo que le hace subir o no el precio.
+                */}
+                {utilidad ? (
+                  utilidad.llega ? (
+                    <span className="text-sm text-[var(--fg-muted)]">
+                      · llega al mínimo ({dolarCorto(utilidad.minima)})
+                    </span>
+                  ) : (
+                    <span className="text-sm font-semibold text-[var(--danger)]">
+                      · faltan {dolarCorto(utilidad.falta)} para el mínimo ({dolarCorto(utilidad.minima)})
+                    </span>
+                  )
+                ) : null}
               </span>
             ) : (
-              <span className="border-l border-[var(--border)] pl-3 text-sm text-[var(--fg-muted)]">
+              <span className="w-full text-sm sm:w-auto sm:border-l sm:border-[var(--border)] sm:pl-3 text-[var(--fg-muted)]">
                 utilidad: falta el costo
               </span>
             )}

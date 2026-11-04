@@ -95,6 +95,9 @@ const esquemaEmpresa = z.object({
     .nullable()
     .default(null)
     .transform((n) => (n && n > 0 ? Math.round(n * 100) / 100 : null)),
+  // La utilidad mínima de una cotización (189). La base tiene los mismos topes.
+  utilidad_minima_usd: z.number().finite().min(0).max(1_000_000).default(20),
+  utilidad_minima_pct: z.number().finite().min(0).max(100).default(20),
 
   // La cuenta a la que cobra. Distinta de la de detracción, que es del Banco
   // de la Nación y no sirve para que el cliente transfiera.

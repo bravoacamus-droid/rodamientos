@@ -253,6 +253,54 @@ export function FormEmpresa({ empresa, puedeEditar }: { empresa: Empresa; puedeE
         </div>
       </div>
 
+      {/* La utilidad mínima (189). Willy, 04/11: «si son 100 dólares, 20
+          dólares como mínimo; si es más, aumenta la utilidad». */}
+      <div className="seccion-form">
+        <h3 className="text-base font-semibold tracking-tight text-[var(--titulo)]">
+          Utilidad mínima de una cotización
+        </h3>
+        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
+          Al cotizar, la utilidad sale en rojo si no llega al mínimo, y dice cuánto falta. El mínimo
+          es lo mayor de las dos cifras: con $ 20 y 20 %, una venta de $ 100 pide $ 20 y una de $ 500
+          pide $ 100. Solo avisa: no impide guardar.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Campo id="utilidad_minima_usd" label="Utilidad mínima ($)" ayuda="Lo menos que debe dejar cualquier venta.">
+            <Input
+              id="utilidad_minima_usd"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="1"
+              value={datos.utilidad_minima_usd}
+              onChange={(e) =>
+                setDatos((d) => ({ ...d, utilidad_minima_usd: Number(e.target.value) || 0 }))
+              }
+              disabled={!puedeEditar}
+            />
+          </Campo>
+          <Campo
+            id="utilidad_minima_pct"
+            label="Utilidad mínima (% de la venta sin IGV)"
+            ayuda="Para que el mínimo crezca con el monto."
+          >
+            <Input
+              id="utilidad_minima_pct"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={100}
+              step="1"
+              value={datos.utilidad_minima_pct}
+              onChange={(e) =>
+                setDatos((d) => ({ ...d, utilidad_minima_pct: Number(e.target.value) || 0 }))
+              }
+              disabled={!puedeEditar}
+            />
+          </Campo>
+        </div>
+      </div>
+
       {resultado && !resultado.ok ? (
         <p className="text-sm text-[var(--danger)]">{resultado.error}</p>
       ) : null}

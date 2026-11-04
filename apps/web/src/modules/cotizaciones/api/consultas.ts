@@ -1,6 +1,7 @@
 import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
+import { REGLA_UTILIDAD_POR_DEFECTO, type ReglaUtilidad } from "../dominio/utilidad-minima";
 import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
@@ -328,6 +329,28 @@ const COLUMNAS_OPCION = `id, codigo, razon_social, nombre_comercial, numero_docu
  * Cabecera, líneas, cliente y emisor en DOS consultas y no en cuatro: la ficha
  * se abre después de cada guardado y cada viaje de más se nota.
  */
+/**
+ * La regla de la utilidad mínima (189), de «Datos de la empresa». Si no se
+ * puede leer, la de Willy: el aviso nunca tumba la pantalla.
+ */
+export async function reglaUtilidad(): Promise<ReglaUtilidad> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("empresa")
+      .select("utilidad_minima_usd, utilidad_minima_pct")
+      .eq("id", 1)
+      .maybeSingle();
+    if (!data) return REGLA_UTILIDAD_POR_DEFECTO;
+    return {
+      minimoUsd: Number(data.utilidad_minima_usd ?? 20),
+      porcentaje: Number(data.utilidad_minima_pct ?? 20),
+    };
+  } catch {
+    return REGLA_UTILIDAD_POR_DEFECTO;
+  }
+}
+
 export async function cotizacionPorId(id: string): Promise<
   Resultado<{
     cabecera: {

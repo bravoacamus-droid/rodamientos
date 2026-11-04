@@ -2626,6 +2626,8 @@ export type Database = {
           ruc: string
           telefono: string | null
           ubigeo_codigo: string | null
+          utilidad_minima_pct: number
+          utilidad_minima_usd: number
           web: string | null
         }
         Insert: {
@@ -2653,6 +2655,8 @@ export type Database = {
           ruc: string
           telefono?: string | null
           ubigeo_codigo?: string | null
+          utilidad_minima_pct?: number
+          utilidad_minima_usd?: number
           web?: string | null
         }
         Update: {
@@ -2680,6 +2684,8 @@ export type Database = {
           ruc?: string
           telefono?: string | null
           ubigeo_codigo?: string | null
+          utilidad_minima_pct?: number
+          utilidad_minima_usd?: number
           web?: string | null
         }
         Relationships: [

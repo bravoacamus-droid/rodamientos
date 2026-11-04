@@ -13,6 +13,7 @@ import {
   despachoDelPedido,
   ordenesDelPedido,
   tieneGuia,
+  reglaUtilidad,
 } from "../api/consultas";
 import { despachadoPorLinea, loQueFaltaDelPedido } from "../api/falta";
 import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresion";
@@ -36,6 +37,7 @@ import { YaFacturado } from "./detalle/ya-facturado";
 import { VistaPreviaDocumento } from "./detalle/vista-previa";
 import { unidadLegible } from "../dominio/unidades";
 import { Volver } from "@/componentes/volver";
+import { estadoUtilidad } from "../dominio/utilidad-minima";
 
 /**
  * Ficha de una cotización.
@@ -329,6 +331,8 @@ export default async function PaginaDetalleCotizacion({
   const costoMargen = cambioAlConfirmar
     ? Math.round(lineas.reduce((t, l) => t + Number(l.costo_unitario) * lleva(l), 0) * 100) / 100
     : cabecera.costo_total;
+  // La utilidad mínima (189, Willy 04/11), sobre lo mismo que el margen.
+  const utilidad = estadoUtilidad(ventaMargen, costoMargen, await reglaUtilidad());
   const margenPct = cambioAlConfirmar
     ? costoMargen > 0
       ? ((ventaMargen - costoMargen) / costoMargen) * 100
@@ -525,21 +529,19 @@ export default async function PaginaDetalleCotizacion({
             }
             detalle={
               costoMargen > 0
-                ? ventaMargen >= costoMargen
-                  ? `${dolar(ventaMargen - costoMargen)} de utilidad${cambioAlConfirmar ? " en lo confirmado" : ""}`
-                  : // «-USD 0.47 de utilidad» se lee al revés (02/10).
-                    `pierde ${dolar(costoMargen - ventaMargen)}`
+                ? (ventaMargen >= costoMargen
+                    ? `${dolar(ventaMargen - costoMargen)} de utilidad${cambioAlConfirmar ? " en lo confirmado" : ""}`
+                    : // «-USD 0.47 de utilidad» se lee al revés (02/10).
+                      `pierde ${dolar(costoMargen - ventaMargen)}`) +
+                  (utilidad
+                    ? utilidad.llega
+                      ? ` · llega al mínimo (${dolar(utilidad.minima)})`
+                      : ` · faltan ${dolar(utilidad.falta)} para el mínimo (${dolar(utilidad.minima)})`
+                    : "")
                 : "sin costo cargado"
             }
-            tono={
-              costoMargen <= 0
-                ? undefined
-                : margenPct < 12
-                  ? "malo"
-                  : margenPct < 20
-                    ? "aviso"
-                    : "ok"
-            }
+            // El color lo pone la utilidad mínima (189), como en el editor.
+            tono={utilidad ? (utilidad.llega ? "ok" : "malo") : undefined}
           />
         </div>
 

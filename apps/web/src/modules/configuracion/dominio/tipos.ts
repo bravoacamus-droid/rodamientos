@@ -99,6 +99,9 @@ export interface Empresa {
   agente_retencion: boolean;
   /** Meta de venta del mes, USD sin IGV (140). Null: Informes usa el promedio. */
   meta_venta_mensual: number | null;
+  /** Utilidad mínima de una cotización (189): el mayor de los dos. */
+  utilidad_minima_usd: number;
+  utilidad_minima_pct: number;
 
   /**
    * La cuenta a la que COBRA. Nada que ver con `cuenta_detraccion`, que es la
