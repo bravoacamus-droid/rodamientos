@@ -17,7 +17,10 @@
     "SUNAT_CERT_PFX_BASE64",
     "SUNAT_CERT_CLAVE",
     "RODATECH_DEV_PASSWORD",
-    "RODATECH_ATAJOS"
+    "RODATECH_ATAJOS",
+    "SUNAT_ENCRYPTION_KEY",
+    "CRON_SECRET",
+    "VAPID_PRIVATE_KEY"
   ],
   "tasks": {
     "build": {
