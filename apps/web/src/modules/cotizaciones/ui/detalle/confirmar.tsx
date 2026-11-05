@@ -25,7 +25,12 @@ import {
   ponerOrdenCliente,
   type LineaParaAnalisis,
 } from "../../acciones/gestionar";
-import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis } from "../../dominio/analisis-al-aprobar";
+import {
+  faltaAnalizarAlAprobar,
+  mensajeFaltaAnalisis,
+  mensajeSinRegistrar,
+  sinRegistrarAlAprobar,
+} from "../../dominio/analisis-al-aprobar";
 import { importeLinea } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
 
@@ -177,6 +182,11 @@ export function DialogoConfirmar({
   const sinAnalisis = paraAnalisis
     ? faltaAnalizarAlAprobar(paraAnalisis.map((l) => ({ ...l, confirmada: cantidades[l.itemId] ?? 0 })))
     : [];
+  // Y lo que ni siquiera está en el catálogo (05/11): eso va antes que el análisis.
+  const sinRegistrar =
+    paraAnalisis && !corrigiendo
+      ? sinRegistrarAlAprobar(paraAnalisis.map((l) => ({ ...l, confirmada: cantidades[l.itemId] ?? 0 })))
+      : [];
 
   /** ¿Se tocó algo, o el cliente confirmó tal cual se cotizó? */
   const completa = lineas.every((l) => (cantidades[l.id] ?? 0) === l.cantidad);
@@ -256,7 +266,28 @@ export function DialogoConfirmar({
         </DialogHeader>
 
         <DialogBody className="flex flex-col gap-4">
-          {sinAnalisis.length > 0 ? (
+          {/*
+            Productos sin registrar (05/11). La CT02-1320 vino clonada de una
+            de SIMPLE y se aprobó con dos líneas que no existían en el
+            catálogo: nació un pedido sin poder comprarse ni facturarse.
+            Ahora se avisa al abrir y «Aprobar» no se puede pulsar.
+          */}
+          {sinRegistrar.length > 0 ? (
+            <div role="alert" className="anim-entrada flex flex-col gap-2 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
+              <p className="font-medium text-[var(--danger)]">{mensajeSinRegistrar(sinRegistrar)}</p>
+              <p className="text-[var(--fg-muted)]">
+                En «Editar», cada una tiene su botón «Registrar producto»: los datos ya vienen puestos y tú completas
+                la marca y la familia. Si el cliente no lleva alguna, ponla en cero.
+              </p>
+              <Button
+                type="button"
+                className="self-start"
+                onClick={() => router.push(`/cotizaciones/${cotizacionId}/editar`)}
+              >
+                Registrar los productos
+              </Button>
+            </div>
+          ) : sinAnalisis.length > 0 ? (
             <div role="alert" className="anim-entrada flex flex-col gap-2 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
               <p className="font-medium">{mensajeFaltaAnalisis(sinAnalisis)}</p>
               <p className="text-[var(--fg-muted)]">
@@ -448,7 +479,7 @@ export function DialogoConfirmar({
             type="button"
             className="h-11 md:h-control-md"
             onClick={enviar}
-            disabled={pendiente || sinAnalisis.length > 0}
+            disabled={pendiente || sinAnalisis.length > 0 || sinRegistrar.length > 0}
             loading={pendiente}
           >
             {/*

@@ -381,6 +381,8 @@ export async function cotizacionPorId(id: string): Promise<
       moneda: "USD" | "PEN";
       tipo_cambio: number | null;
       aprobada_en: string | null;
+      /** De qué cotización se clonó, si se clonó (193, 05/11). */
+      origen: { id: string; numero: string } | null;
       /** El de la URL que se le manda al cliente (072). */
       token_publico: string;
       cliente_id: string;
@@ -485,7 +487,7 @@ export async function cotizacionPorId(id: string): Promise<
            orden_compra_cliente, contacto, contacto_id, condiciones, observaciones,
            mostrar_descuento, mostrar_disponibilidad, subtotal, descuento_total,
            igv, total, costo_total, margen_pct, cliente_id, token_publico,
-           moneda, tipo_cambio, aprobada_en,
+           moneda, tipo_cambio, aprobada_en, clonada_de,
            clientes!inner(razon_social, numero_documento, tipo_documento,
                           direccion, whatsapp, telefono,
                           condicion_pago, dias_credito, email,
@@ -530,6 +532,17 @@ export async function cotizacionPorId(id: string): Promise<
     const items = (c.cotizacion_items ?? []) as Record<string, unknown>[];
     const vendedor = (c.perfiles as { nombre?: string } | null)?.nombre ?? null;
 
+    /*
+      De qué cotización sale (05/11). En otra lectura y no embebida: la clave
+      apunta a la misma tabla, y un segundo camino entre dos tablas es lo que
+      ya tumbó una consulta entera con PGRST201 (§AN).
+    */
+    let origen: { id: string; numero: string } | null = null;
+    if (typeof c.clonada_de === "string") {
+      const { data: o } = await supabase.from("cotizaciones").select("id, numero").eq("id", c.clonada_de).maybeSingle();
+      origen = o ? { id: o.id, numero: o.numero ?? "" } : null;
+    }
+
     // El stock de hoy de cada producto (04/11), en una sola lectura.
     const productos = [...new Set(items.map((i) => i.producto_id).filter((x): x is string => typeof x === "string"))];
     const stockDe = new Map<string, number>();
@@ -553,6 +566,7 @@ export async function cotizacionPorId(id: string): Promise<
           // cotización, y sale de `cliente_contactos` desde la 035.
           cliente: { ...cli, contacto: aQuienSeLeHabla(gente).contacto },
           vendedor,
+          origen,
         } as never,
         // El orden lo fija la cotización, no el orden de llegada de la fila.
         lineas: [...items]

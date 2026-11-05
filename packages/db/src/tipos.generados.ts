@@ -2419,6 +2419,7 @@ export type Database = {
           aprobada_en: string | null
           aprobada_por: string | null
           cliente_id: string
+          clonada_de: string | null
           condiciones: string | null
           contacto: string | null
           contacto_id: string | null
@@ -2454,6 +2455,7 @@ export type Database = {
           aprobada_en?: string | null
           aprobada_por?: string | null
           cliente_id: string
+          clonada_de?: string | null
           condiciones?: string | null
           contacto?: string | null
           contacto_id?: string | null
@@ -2489,6 +2491,7 @@ export type Database = {
           aprobada_en?: string | null
           aprobada_por?: string | null
           cliente_id?: string
+          clonada_de?: string | null
           condiciones?: string | null
           contacto?: string | null
           contacto_id?: string | null
@@ -2547,6 +2550,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_clonada_de_fkey"
+            columns: ["clonada_de"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_clonada_de_fkey"
+            columns: ["clonada_de"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cotizacion_id"]
           },
           {
             foreignKeyName: "cotizaciones_contacto_id_fkey"
@@ -6029,6 +6046,10 @@ export type Database = {
         Args: { p_datos: Json; p_id: string }
         Returns: Json
       }
+      anotar_clon: {
+        Args: { p_id: string; p_origen: string }
+        Returns: undefined
+      }
       anotar_productos_de_proveedor: {
         Args: {
           p_comprado?: boolean
@@ -6829,6 +6850,10 @@ export type Database = {
       vincular_guias_comprobante: {
         Args: { p_comprobante: string; p_guias: string[] }
         Returns: undefined
+      }
+      vincular_producto_linea: {
+        Args: { p_item: string; p_producto: string }
+        Returns: Json
       }
     }
     Enums: {

@@ -191,6 +191,9 @@ export function Constructor({
   */
   /** El código que se está dando de alta, o null. */
   const [creando, setCreando] = useState<string | null>(null);
+  /** La línea suelta que se está registrando en el catálogo (05/11). */
+  const [registrando, setRegistrando] = useState<string | null>(null);
+  const lineaRegistrando = registrando ? estado.lineas.find((l) => l.key === registrando) : undefined;
 
 
   // Editar y crear van a acciones distintas: crear inserta y devuelve un
@@ -640,6 +643,7 @@ export function Constructor({
                         puedeAjustarStock={puedeAjustarStock}
                     demanda={l.productoId ? demanda.get(l.productoId) : undefined}
                     cotizacionActual={editando?.id ?? null}
+                    onRegistrar={() => setRegistrando(l.key)}
                   />
                 ))}
               </ul>
@@ -682,6 +686,7 @@ export function Constructor({
                         puedeAjustarStock={puedeAjustarStock}
                         demanda={l.productoId ? demanda.get(l.productoId) : undefined}
                         cotizacionActual={editando?.id ?? null}
+                        onRegistrar={() => setRegistrando(l.key)}
                       />
                     ))}
                   </TBody>
@@ -876,6 +881,17 @@ export function Constructor({
         Se monta solo cuando hace falta: así las listas de marcas y familias se
         piden la vez que se usa y no en cada cotización.
       */}
+
+      {lineaRegistrando ? (
+        <AltaProducto
+          registrandoLinea
+          codigoInicial={lineaRegistrando.codigo}
+          descripcionInicial={lineaRegistrando.descripcion}
+          unidadInicial={lineaRegistrando.unidad}
+          onCerrar={() => setRegistrando(null)}
+          onCreado={(producto) => despachar({ tipo: "registrado", key: lineaRegistrando.key, producto })}
+        />
+      ) : null}
 
       {creando !== null ? (
         <AltaProducto

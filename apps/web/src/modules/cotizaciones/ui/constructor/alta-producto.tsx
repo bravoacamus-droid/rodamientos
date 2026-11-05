@@ -31,6 +31,8 @@ import {
   crearProductoRapido,
 } from "@/modules/productos/acciones/alta-rapida";
 
+import { proponerClasificacion } from "@/modules/productos/dominio/clasificar";
+
 import { SelectorCatalogo, type OpcionCatalogo } from "./selector-catalogo";
 
 import type { ProductoParaCotizar } from "../../dominio/constructor";
@@ -59,10 +61,22 @@ interface Catalogos {
  */
 export function AltaProducto({
   codigoInicial,
+  descripcionInicial = "",
+  unidadInicial = "NIU",
+  registrandoLinea = false,
   onCerrar,
   onCreado,
 }: {
   codigoInicial: string;
+  /** Lo que ya trae la línea suelta (05/11): no se vuelve a escribir. */
+  descripcionInicial?: string;
+  unidadInicial?: string;
+  /**
+   * Se registra una línea que YA está en la cotización (venida de SIMPLE o
+   * de un clon), en vez de añadir una nueva. Cambia los textos y propone
+   * marca y familia por la descripción.
+   */
+  registrandoLinea?: boolean;
   onCerrar: () => void;
   onCreado: (p: ProductoParaCotizar) => void;
 }) {
@@ -72,20 +86,45 @@ export function AltaProducto({
 
   const [datos, setDatos] = React.useState({
     codigo: codigoInicial,
-    descripcion: "",
+    descripcion: descripcionInicial,
     marca_id: "",
     familia_id: "",
     subfamilia_id: "",
-    unidad_codigo: "NIU",
+    unidad_codigo: unidadInicial || "NIU",
     precio_venta: "",
   });
+  // La de entrada, fija: el efecto corre una vez, al abrir.
+  const descripcionDeEntrada = React.useRef(descripcionInicial);
+  /** Qué rellenó el sistema leyendo la descripción, para decirlo. */
+  const [propuesto, setPropuesto] = React.useState(false);
 
   React.useEffect(() => {
     let vivo = true;
     catalogosParaAlta().then((r) => {
       if (!vivo) return;
-      if (r.ok) setCatalogos(r.datos);
-      else setErrorCarga(r.error);
+      if (!r.ok) {
+        setErrorCarga(r.error);
+        return;
+      }
+      setCatalogos(r.datos);
+      /*
+        Luis, 05/11: *«que se rellenen los datos y él ponga la marca si no
+        tiene, la familia, etc.»*. La descripción de SIMPLE ya dice la marca
+        (al final) y el tipo: se proponen, y lo que no se reconoce se queda
+        vacío para que lo elija él.
+      */
+      if (descripcionDeEntrada.current) {
+        const p = proponerClasificacion(descripcionDeEntrada.current, r.datos);
+        if (p.marcaId || p.familiaId) {
+          setPropuesto(true);
+          setDatos((d) => ({
+            ...d,
+            marca_id: d.marca_id || p.marcaId,
+            familia_id: d.familia_id || p.familiaId,
+            subfamilia_id: d.familia_id ? d.subfamilia_id : p.subfamiliaId,
+          }));
+        }
+      }
     });
     return () => {
       vivo = false;
@@ -194,7 +233,11 @@ export function AltaProducto({
         return;
       }
 
-      toast.success(`${r.producto.codigo} dado de alta y añadido.`);
+      toast.success(
+        registrandoLinea
+          ? `${r.producto.codigo} registrado en el catálogo. Guarda la cotización para que quede enlazado.`
+          : `${r.producto.codigo} dado de alta y añadido.`,
+      );
       onCreado({
         id: r.producto.id,
         codigo: r.producto.codigo,
@@ -220,10 +263,11 @@ export function AltaProducto({
       */}
       <DialogContent ancho="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Crear producto</DialogTitle>
+          <DialogTitle>{registrandoLinea ? "Registrar el producto en el catálogo" : "Crear producto"}</DialogTitle>
           <DialogDescription>
-            Lo mínimo para poder cotizarlo. El costo, el peso y los mínimos se
-            completan después, en su ficha.
+            {registrandoLinea
+              ? "Esta línea no está en el catálogo, y sin eso no se puede aprobar, comprar ni facturar. El código y la descripción ya vienen de la cotización; revisa la marca y la familia. El precio cotizado no cambia."
+              : "Lo mínimo para poder cotizarlo. El costo, el peso y los mínimos se completan después, en su ficha."}
           </DialogDescription>
         </DialogHeader>
 
@@ -232,6 +276,12 @@ export function AltaProducto({
             {errorCarga ? (
               <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
                 {errorCarga}
+              </p>
+            ) : null}
+
+            {propuesto ? (
+              <p className="rounded-md border border-[var(--info)] bg-[var(--info-bg)] p-3 text-sm">
+                La marca y la familia las propuso el sistema leyendo la descripción. Revísalas y cámbialas si no son.
               </p>
             ) : null}
 
@@ -371,7 +421,7 @@ export function AltaProducto({
               Cancelar
             </Button>
             <Button type="submit" disabled={!listo || guardando || !catalogos}>
-              {guardando ? "Creando…" : "Crear y añadir"}
+              {guardando ? (registrandoLinea ? "Registrando…" : "Creando…") : registrandoLinea ? "Registrar producto" : "Crear y añadir"}
             </Button>
           </DialogFooter>
         </form>

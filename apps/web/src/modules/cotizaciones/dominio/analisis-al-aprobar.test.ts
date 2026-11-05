@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis, type LineaAlAprobar } from "./analisis-al-aprobar";
+import {
+  faltaAnalizarAlAprobar,
+  mensajeFaltaAnalisis,
+  mensajeSinRegistrar,
+  sinRegistrarAlAprobar,
+  type LineaAlAprobar,
+} from "./analisis-al-aprobar";
 
 const linea = (campos: Partial<LineaAlAprobar> = {}): LineaAlAprobar => ({
   codigo: "6205ZZ/2AU1",
@@ -41,5 +47,26 @@ describe("el análisis de compra al aprobar (02/11)", () => {
   it("el mensaje dice cuáles", () => {
     expect(mensajeFaltaAnalisis(["A"])).toContain("de A");
     expect(mensajeFaltaAnalisis(["A", "B"])).toContain("(A, B)");
+  });
+});
+
+describe("los productos sin registrar al aprobar (05/11)", () => {
+  it("una línea sin producto del catálogo no deja aprobar", () => {
+    expect(sinRegistrarAlAprobar([linea({ codigo: "NJ207-E-XL-M1.C3", productoId: null })])).toEqual([
+      "NJ207-E-XL-M1.C3",
+    ]);
+  });
+
+  it("si el cliente no la lleva (en cero), no estorba", () => {
+    expect(sinRegistrarAlAprobar([linea({ productoId: null, confirmada: 0 })])).toEqual([]);
+  });
+
+  it("registrada, pasa", () => {
+    expect(sinRegistrarAlAprobar([linea()])).toEqual([]);
+  });
+
+  it("la frase nombra los códigos", () => {
+    expect(mensajeSinRegistrar(["A", "B"])).toContain("(A, B)");
+    expect(mensajeSinRegistrar(["A"])).toContain("registra A en el catálogo");
   });
 });

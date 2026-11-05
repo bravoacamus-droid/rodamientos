@@ -768,3 +768,40 @@ describe("alternativas como sub-ítem (169)", () => {
     expect(numerosDe(r)).toEqual(["1", "2", "2.1"]);
   });
 });
+
+describe("registrado: la línea de SIMPLE se enlaza al producto nuevo (05/11)", () => {
+  const suelta = () => {
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: P6209, cantidad: 3 });
+    return {
+      ...e,
+      lineas: e.lineas.map((l) => ({
+        ...l,
+        productoId: null,
+        codigo: "NJ207-E-XL-M1.C3",
+        marca: null,
+        descripcion: "NJ207-E-XL-M1.C3 RODAMIENTO DE RODILLOS CILINDRICOS FAG",
+        valorUnitario: 46.35,
+        costoUnitario: 0,
+        stock: 0,
+      })),
+    };
+  };
+
+  it("toma el producto y CONSERVA lo cotizado", () => {
+    const e = reducir(suelta(), { tipo: "registrado", key: "l1", producto: FAG6209 });
+    expect(e.lineas[0]).toMatchObject({
+      productoId: "p-fag",
+      marca: "FAG",
+      cantidad: 3,
+      valorUnitario: 46.35,
+      descripcion: "NJ207-E-XL-M1.C3 RODAMIENTO DE RODILLOS CILINDRICOS FAG",
+      costoUnitario: 9,
+      stock: 5,
+    });
+  });
+
+  it("una clave que no existe no cambia nada", () => {
+    const e = suelta();
+    expect(reducir(e, { tipo: "registrado", key: "nope", producto: FAG6209 }).lineas).toEqual(e.lineas);
+  });
+});

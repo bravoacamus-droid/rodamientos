@@ -275,6 +275,12 @@ export type Accion =
   | { tipo: "diasEntrega"; key: string; valor: number | null }
   | { tipo: "sustituir"; key: string; producto: ProductoParaCotizar }
   /**
+   * La línea suelta (sin producto, p. ej. venida de SIMPLE) se acaba de
+   * registrar en el catálogo (05/11): se enlaza al producto nuevo SIN tocar
+   * lo pactado —cantidad, precio, descuento, descripción, nota—.
+   */
+  | { tipo: "registrado"; key: string; producto: ProductoParaCotizar }
+  /**
    * «Añadir como 1.1» (169): el producto entra como una línea NUEVA, debajo
    * de `key` y de sus alternativas anteriores, con la cantidad del principal.
    * Si `key` ya es una alternativa, la nueva cuelga del mismo principal.
@@ -679,6 +685,31 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         alternativaDe: l.alternativaDe ?? null,
       }));
     }
+
+    case "registrado":
+      /*
+        A diferencia de «sustituir», aquí NO cambia el artículo: es el mismo,
+        que ahora existe en el catálogo. Lo cotizado se queda como estaba —el
+        cliente lo vio así—; del producto solo entra lo que la línea no tenía:
+        el enlace, el código del catálogo, la marca, el stock y los topes.
+      */
+      return mapear(estado, accion.key, (l) => {
+        const p = desdeProducto(accion.producto, l.key, l.cantidad);
+        return {
+          ...l,
+          productoId: p.productoId,
+          esKit: p.esKit,
+          codigo: p.codigo,
+          marca: p.marca ?? l.marca,
+          unidad: p.unidad,
+          costoUnitario: l.costoUnitario > 0 ? l.costoUnitario : p.costoUnitario,
+          costoDelKardex: l.costoUnitario > 0 ? l.costoDelKardex : p.costoDelKardex,
+          precioMinimo: p.precioMinimo,
+          precioMercado: p.precioMercado,
+          precioLista: p.precioLista > 0 ? p.precioLista : l.precioLista,
+          stock: p.stock,
+        };
+      });
 
     case "agregarAlternativa": {
       /*

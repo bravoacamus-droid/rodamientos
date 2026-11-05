@@ -34,6 +34,7 @@ import {
   Trash2,
   Ban,
   PackageCheck,
+  PackagePlus,
   RotateCcw,
   Scale,
   StickyNote,
@@ -119,6 +120,11 @@ interface PropsLinea {
   demanda?: DemandaProducto;
   cotizacionActual?: string | null;
   /**
+   * La línea no está en el catálogo (05/11): abre el alta con sus datos y,
+   * al crear, la enlaza. Sin esto no se puede aprobar (193).
+   */
+  onRegistrar?: () => void;
+  /**
    * Fila de tabla o tarjeta (revisión de diseño del 02/10). Es el mismo
    * componente y no dos: la línea lleva sus diálogos, sus paneles y sus
    * cargas, y duplicarlos sería tener dos líneas que se pueden desalinear.
@@ -146,6 +152,7 @@ export function FilaLinea({
   vista = "fila",
   demanda,
   cotizacionActual = null,
+  onRegistrar,
 }: PropsLinea) {
   /** El cuadre de stock, sin salir de la cotización (06/10). */
   const [cuadrando, setCuadrando] = useState(false);
@@ -364,7 +371,28 @@ export function FilaLinea({
     la tarjeta del teléfono. Salen de aquí para que las dos editen lo mismo
     con el mismo código: un campo copiado acaba comportándose distinto.
   */
-  const textoStock = (
+  /*
+    Una línea sin producto del catálogo (venida de SIMPLE, o de un clon de
+    una de SIMPLE). Luis, 05/11: *«debería salir en la cotización un botón de
+    guardar el producto, registrar el producto nuevo»*. En rojo y con su
+    palabra: es lo que impide aprobarla.
+  */
+  const registrar =
+    !linea.productoId && onRegistrar ? (
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onRegistrar}
+        className="mt-1 h-9 gap-1.5 whitespace-nowrap border-[var(--danger)] text-[var(--danger)] hover:border-[var(--danger)] hover:bg-[var(--danger-bg)]"
+      >
+        <PackagePlus className="size-4" aria-hidden="true" />
+        Registrar producto
+      </Button>
+    ) : null;
+
+  const textoStock = !linea.productoId ? (
+    <span className="text-sm font-medium text-[var(--danger)]">no está en el catálogo</span>
+  ) : (
     <>
       <span
         className={`text-sm ${noAlcanza ? "font-medium text-[var(--warn)]" : "text-[var(--fg-muted)]"}`}
@@ -948,6 +976,7 @@ export function FilaLinea({
           </p>
           <div className="shrink-0">{menuOpciones(true)}</div>
         </div>
+        {registrar}
         <p className="mt-1 text-sm">{linea.descripcion}</p>
         <NotaLinea linea={linea} despachar={despachar} />
         <div className="mt-1">
@@ -1107,6 +1136,7 @@ export function FilaLinea({
           {marcaAlternativa}
           <div className="whitespace-nowrap font-medium">{linea.codigo}</div>
           {textoStock}
+          {registrar ? <div>{registrar}</div> : null}
           {/* Si otros piden lo mismo (09/10): pequeño, con su «Ver». */}
           <div className="mt-1">
             <OtrosPedidos demanda={demanda} actual={cotizacionActual} codigo={linea.codigo} />

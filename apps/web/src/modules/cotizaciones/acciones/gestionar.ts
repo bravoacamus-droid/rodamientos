@@ -8,7 +8,13 @@ import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
 
-import { faltaAnalizarAlAprobar, mensajeFaltaAnalisis, type LineaAlAprobar } from "../dominio/analisis-al-aprobar";
+import {
+  faltaAnalizarAlAprobar,
+  mensajeFaltaAnalisis,
+  mensajeSinRegistrar,
+  sinRegistrarAlAprobar,
+  type LineaAlAprobar,
+} from "../dominio/analisis-al-aprobar";
 import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
 
 /**
@@ -22,7 +28,8 @@ export type ResultadoGestion =
   | { ok: true; id?: string; numero?: string; pedidoId?: string }
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
   /** `faltaAnalisis`: los productos que hay que comprar sin análisis (02/11). */
-  | { ok: false; error: string; pideTipoCambio?: boolean; faltaAnalisis?: string[] };
+  /** `sinRegistrar`: las líneas que no están en el catálogo (05/11). */
+  | { ok: false; error: string; pideTipoCambio?: boolean; faltaAnalisis?: string[]; sinRegistrar?: string[] };
 
 async function exigirPermiso(accion: Accion): Promise<string | null> {
   const perfil = await perfilActual();
@@ -118,6 +125,21 @@ export async function aprobar(
       que llenar su análisis de costo para las compras»*. Aquí y no solo en la
       pantalla: una Server Action es un endpoint público.
     */
+    /*
+      Y antes que el análisis, que el producto EXISTA (05/11): la CT02-1320,
+      clonada de una de SIMPLE, se aprobó con dos líneas sin producto y nació
+      un pedido que no se podía comprar, ni despachar, ni facturar. La base lo
+      rechaza también (193).
+    */
+    const lineasAnalisis = await leerLineasParaAnalisis(supabase, id);
+    const confirmadaDe = detalle ? new Map(detalle.map((d) => [d.item_id, d.cantidad])) : null;
+    const sinRegistrar = sinRegistrarAlAprobar(
+      lineasAnalisis.map((l) => ({ ...l, confirmada: confirmadaDe ? (confirmadaDe.get(l.itemId) ?? 0) : l.cantidad })),
+    );
+    if (sinRegistrar.length > 0) {
+      return { ok: false, error: mensajeSinRegistrar(sinRegistrar), sinRegistrar };
+    }
+
     const faltan = await faltaAnalisisDe(supabase, id, detalle);
     if (faltan.length > 0) {
       return { ok: false, error: mensajeFaltaAnalisis(faltan), faltaAnalisis: faltan };
@@ -271,6 +293,17 @@ async function faltaAnalisisDe(
   );
 }
 
+/**
+ * Quita la nota que dejó la carga de SIMPLE («Cargada el 07/10/2026 del
+ * sistema anterior (CT02-1102). Asesor: … Estado …»). Es la única que empieza
+ * así; lo demás que haya escrito Willy se queda.
+ */
+function sinNotaDeCarga(observaciones: string | null): string | null {
+  if (!observaciones) return observaciones;
+  if (!/^Cargada el \d{2}\/\d{2}\/\d{4} del sistema anterior/.test(observaciones)) return observaciones;
+  return null;
+}
+
 /** Una línea, para elegir qué se lleva la copia (02/11). */
 export interface LineaParaClonar {
   id: string;
@@ -396,6 +429,28 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
       }
     }
 
+    /*
+      Una línea suelta cuyo código YA está en el catálogo (se registró después,
+      o entró con el Excel de SIMPLE) sale enlazada en la copia (05/11). Así
+      el clon de una cotización de SIMPLE no arrastra líneas sin producto que
+      luego no dejan aprobar.
+    */
+    const sueltas = items
+      .filter((i) => !i.producto_id && typeof i.codigo === "string" && (i.codigo as string).trim() !== "")
+      .map((i) => (i.codigo as string).trim());
+    const porCodigo = new Map<string, { id: string; precio_venta: number; costo_promedio: number }>();
+    if (sueltas.length > 0) {
+      const { data: hallados } = await supabase
+        .from("productos")
+        .select("id, codigo, precio_venta, costo_promedio")
+        .in("codigo", [...new Set(sueltas)])
+        .eq("archivado", false);
+      for (const p of hallados ?? []) {
+        porCodigo.set(p.codigo.toUpperCase(), { id: p.id, precio_venta: p.precio_venta, costo_promedio: p.costo_promedio });
+        vigentes.set(p.id, { precio_venta: p.precio_venta, costo_promedio: p.costo_promedio });
+      }
+    }
+
     const ordenadas = [...items].sort((a, b) => Number(a.orden) - Number(b.orden));
     // 169: la copia conserva qué línea es alternativa de cuál, por posición.
     const posicion = new Map(ordenadas.map((i, n) => [i.id as string, n + 1]));
@@ -408,11 +463,17 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
       orden_compra_cliente: null,
       contacto: data.contacto,
       condiciones: data.condiciones,
-      observaciones: data.observaciones,
+      // La nota de la carga de SIMPLE («Cargada el 01/11 del sistema
+      // anterior (CT02-1303)…») es de AQUELLA cotización: en la copia sería
+      // falsa (05/11). De dónde sale la copia lo dice `clonada_de`.
+      observaciones: sinNotaDeCarga(data.observaciones),
       mostrar_descuento: data.mostrar_descuento,
       estado: "borrador",
       items: ordenadas.map((i, n) => {
-          const pid = i.producto_id as string | null;
+          const pid =
+            (i.producto_id as string | null) ??
+            porCodigo.get(String(i.codigo ?? "").trim().toUpperCase())?.id ??
+            null;
           const vigente = pid && !mantenerPrecios ? vigentes.get(pid) : undefined;
           return {
             producto_id: pid,
@@ -440,6 +501,12 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
     if (e3) return { ok: false, error: e3.message };
 
     const r = creada as unknown as { id: string; numero: string };
+    /*
+      De dónde sale (Luis, 05/11: *«debería decirme de qué cotización viene
+      clonada, cuál es su origen, para ir a la cotización original»*). Si
+      fallara, la copia ya existe y vale igual: no se pierde por esto.
+    */
+    await supabase.rpc("anotar_clon", { p_id: r.id, p_origen: id });
     revalidatePath("/cotizaciones");
     revalidatePath("/dashboard");
     return { ok: true, id: r.id, numero: r.numero };

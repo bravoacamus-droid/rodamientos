@@ -45,3 +45,25 @@ export function mensajeFaltaAnalisis(codigos: readonly string[]): string {
     ? `Antes de aprobar, llena el análisis de compra de ${codigos[0]}: hay que comprarlo y todavía no dice a quién ni a cuánto.`
     : `Antes de aprobar, llena el análisis de compra de estos ${codigos.length} productos: hay que comprarlos y todavía no dicen a quién ni a cuánto (${codigos.join(", ")}).`;
 }
+
+/**
+ * Las líneas confirmadas que NO están en el catálogo (05/11).
+ *
+ * Willy clonó la CT02-1303, que vino de SIMPLE con dos productos que el ERP
+ * no tenía, pulsó «Aprobar» sin querer y nació el PED-26-00005. Luis: *«no
+ * debería dejarlo aprobar si los productos no están registrados… tiene que
+ * hacer su análisis de costo»*. `faltaAnalizarAlAprobar` las dejaba pasar
+ * —«sin producto no se compra por aquí»— y era el hueco: sin producto no hay
+ * análisis, ni orden de compra, ni guía (`guia_items.producto_id` es NOT
+ * NULL), ni factura. Se registran primero; la base lo exige también (193).
+ */
+export function sinRegistrarAlAprobar(lineas: readonly LineaAlAprobar[]): string[] {
+  return lineas.filter((l) => l.confirmada > 0 && l.productoId === null).map((l) => l.codigo);
+}
+
+/** La frase, con los códigos. */
+export function mensajeSinRegistrar(codigos: readonly string[]): string {
+  return codigos.length === 1
+    ? `Antes de aprobar, registra ${codigos[0]} en el catálogo: no está registrado, y sin eso no se puede hacer su análisis de compra, ni la orden, la guía ni la factura.`
+    : `Antes de aprobar, registra estos ${codigos.length} productos en el catálogo: no están registrados, y sin eso no se puede hacer su análisis de compra, ni la orden, la guía ni la factura (${codigos.join(", ")}).`;
+}

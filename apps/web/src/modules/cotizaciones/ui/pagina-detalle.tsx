@@ -3,7 +3,7 @@ import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Building2, Copy, PackagePlus } from "lucide-react";
 import { EstadoBadge, buttonVariants, cn } from "@rodatech/ui";
 import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 
@@ -399,6 +399,18 @@ export default async function PaginaDetalleCotizacion({
                 <Building2 className="size-4" aria-hidden="true" />
                 Ficha del cliente
               </Link>
+              {/* De dónde sale la copia (Luis, 05/11: *«debería decirme de qué
+                  cotización viene clonada… para ir a la cotización
+                  original»*). */}
+              {cabecera.origen ? (
+                <Link
+                  href={`/cotizaciones/${cabecera.origen.id}`}
+                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
+                >
+                  <Copy className="size-4" aria-hidden="true" />
+                  Clonada de {cabecera.origen.numero}
+                </Link>
+              ) : null}
             </div>
           </div>
 
@@ -553,6 +565,41 @@ export default async function PaginaDetalleCotizacion({
           no compre es ruido. Va antes de los productos porque, recién
           confirmado, conseguir la mercadería es lo siguiente que hay que hacer.
         */}
+        {/*
+          Líneas que no están en el catálogo (05/11). Pasa con lo que vino de
+          SIMPLE y con sus clones: la CT02-1320 se aprobó así y nació un pedido
+          que no se podía comprar ni facturar. Mientras se pueda editar, se
+          dice aquí, antes de que nadie pulse «Aprobar».
+        */}
+        {(cabecera.estado === "borrador" || cabecera.estado === "enviada") &&
+        lineas.some((l) => !l.producto_id) ? (
+          <section
+            role="alert"
+            className="flex flex-col gap-2 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-4 text-sm"
+          >
+            <h2 className="text-base font-semibold text-[var(--danger)]">
+              {lineas.filter((l) => !l.producto_id).length === 1
+                ? "Un producto no está registrado en el catálogo"
+                : `${lineas.filter((l) => !l.producto_id).length} productos no están registrados en el catálogo`}
+            </h2>
+            <p>
+              {lineas
+                .filter((l) => !l.producto_id)
+                .map((l) => l.codigo)
+                .join(", ")}
+              . Sin registrarlos no se puede aprobar: no habría con qué hacer el análisis de compra, la orden, la
+              guía ni la factura.
+            </p>
+            <Link
+              href={`/cotizaciones/${cabecera.id}/editar`}
+              className={cn(buttonVariants({ variant: "primary" }), "self-start")}
+            >
+              <PackagePlus className="size-4" aria-hidden="true" />
+              Registrar los productos
+            </Link>
+          </section>
+        ) : null}
+
         {/* Sus pedidos (130): cada confirmación del cliente, con su etapa. */}
         {pedidos?.ok ? <PedidosDeLaCotizacion pedidos={pedidos.datos} /> : null}
 

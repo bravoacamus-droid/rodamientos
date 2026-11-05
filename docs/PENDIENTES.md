@@ -9513,3 +9513,52 @@ Visto en pantalla, sin guardar:
 De paso: la ficha de la OC02-00008, ya recibida, dice en «Para quién es»
 «ningún pedido confirmado está esperando esto», aunque es del PED-26-00003.
 No se tocó.
+
+## §DF · 05/11 — Aprobar pide los productos registrados, el clon dice su origen, y los nuevos de SIMPLE (193)
+
+Willy clonó la **CT02-1303** (de SIMPLE, con productos que el ERP no tenía) en
+la **CT02-1320**, pulsó «Aprobar» sin querer a los 44 s y nació el
+**PED-26-00005**. Luis: *«no debería dejarlo aprobar si los productos no están
+registrados… tiene que hacer su análisis de costo, no hizo nada»*, *«debería
+decirme de qué cotización viene clonada»* y *«ese pedido lo eliminamos, no lo
+anulamos… tiene que seguir con el mismo correlativo porque nunca debió
+existir»*.
+
+**El hueco:** el análisis obligatorio al aprobar (02/11) se saltaba las líneas
+sin producto. Sin producto no hay análisis, orden, guía (`guia_items.producto_id`
+NOT NULL) ni factura: el pedido nacía atascado.
+
+- **193:** aprobar con una línea confirmada sin producto se rechaza en la base
+  (`tg_cotizacion_aprobar_pide_productos`), en `aprobar` y en la ventana, que
+  avisa en rojo al abrir y apaga «Aprobar». Una línea en cero no estorba.
+- **Registrar producto** en cada línea suelta del editor (rojo, «no está en el
+  catálogo»): abre el alta con código, descripción y unidad de la línea, y
+  **propone marca, familia y sub-familia** leyendo la descripción
+  (`productos/dominio/clasificar.ts`, avisado como propuesta). Al crear, la línea
+  se enlaza sin tocar cantidad, precio ni descripción (acción `registrado`); hay
+  que guardar la cotización. La ficha avisa también, con «Registrar los productos».
+- **`cotizaciones.clonada_de`** + `anotar_clon`: la ficha dice «Clonada de
+  CT02-…» con enlace. El clon ya no copia la nota «Cargada el … del sistema
+  anterior», y enlaza solo las líneas cuyo código ya existe en el catálogo.
+- `vincular_producto_linea` (RPC, borrador/enviada) queda escrita para enlazar
+  desde fuera del editor; hoy no la usa ninguna pantalla.
+
+**Datos (SQL directo, respaldo antes, ensayado):** borrado el PED-26-00005 (sin
+órdenes, guías ni facturas) y sus dos filas de bitácora: el siguiente pedido es
+otra vez el **00005**. La CT02-1320 vuelve a **borrador**. 1319 y 1320 con su
+origen (CT02-1102 y CT02-1303) y sin la nota falsa.
+
+**Productos del Excel de SIMPLE** (`2026-11-05-productos.xlsx`, 7 930 filas):
+**29 nuevos** (código que no existía ni escrito de otra forma), con la marca y la
+familia propuestas por la misma regla; todo lo demás en cero para que Willy lo
+complete. `80X100X10TC*` (NQX) entró como `80X100X10TC-NQX`: el código era de un
+WLK. Marcas nuevas: AST, EBARA, AESSEAL, WURTH. **31 líneas** de cotizaciones
+quedaron enlazadas (las 2 de la 1320, la de la 1303 y 28 del historial).
+**No se crearon** unos 70 del Excel cuyo código ya existe escrito de otra forma
+(`6203.2Z/C3` = `6203-2Z/C3`), aunque a veces con otra marca
+(`6204-2Z.C3` FAG vs `6204-2Z/C3` SKF): la carga del 20/10 tampoco los creó.
+
+**Visto en pantalla (sin guardar):** la 1320 con «Clonada de CT02-001303»; la
+1303 con el aviso; la ventana de aprobar con el aviso y «Aprobar» apagado; el
+botón en el editor y el alta con NQX / SELLADO / RETENES propuestos.
+**Sin ver:** registrar de verdad desde el alta ni clonar con el código nuevo (no se guardó nada).
