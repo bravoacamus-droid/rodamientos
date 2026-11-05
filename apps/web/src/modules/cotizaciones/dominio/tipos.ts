@@ -40,6 +40,12 @@ export interface CotizacionLista {
    * de la fila. La guía y la factura se hacen en el pedido, no aquí.
    */
   pedidos: { id: string; numero: string }[];
+  /**
+   * Por qué todavía no se puede aprobar (194, 05/11): productos sin registrar
+   * o por comprar sin análisis. Null si se puede, o si ya no está en curso.
+   * La misma regla que la ficha y que la base.
+   */
+  bloqueoAprobar: string | null;
 }
 
 /**

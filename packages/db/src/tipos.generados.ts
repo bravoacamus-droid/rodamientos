@@ -6389,6 +6389,14 @@ export type Database = {
       }
       es_gerencia: { Args: never; Returns: boolean }
       escribe_una_funcion: { Args: never; Returns: boolean }
+      faltas_para_aprobar: {
+        Args: { p_ids: string[] }
+        Returns: {
+          cotizacion_id: string
+          sin_analisis: string[]
+          sin_registrar: string[]
+        }[]
+      }
       frecuencia_de_venta: {
         Args: { p_productos: string[] }
         Returns: {

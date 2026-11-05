@@ -71,7 +71,19 @@ export function AccionesFilaCotizacion({
             hacer aquí. Aprobar es pasar a pedidos: abre la ficha con «¿Qué te
             confirmó el cliente?» y, al aprobar, lleva al pedido. Las opciones
             con su pastilla de color, como en pedidos (02/11). */}
-          {viva ? (
+          {/* Con candado si todavía no se puede (194, 05/11): Luis vio aquí
+              «Aprobar» en verde en la CT02-1320, sin análisis ni stock. Al
+              pulsarlo dice qué falta; «Editar» es donde se resuelve. */}
+          {viva && c.bloqueoAprobar ? (
+            <OpcionMenu
+              icono={Lock}
+              tono="gris"
+              titulo="Aprobar cotización"
+              detalle="Falta algo: pulsa para ver qué"
+              apagada
+              onSelect={() => toast.info(c.bloqueoAprobar, { duration: 10000 })}
+            />
+          ) : viva ? (
             <OpcionMenu
               icono={Check}
               tono="verde"

@@ -5,6 +5,7 @@ import { REGLA_UTILIDAD_POR_DEFECTO, type ReglaUtilidad } from "../dominio/utili
 import { cursorDe, filtroCursor } from "@/lib/orden-reciente";
 
 import { fallo } from "@/lib/errores";
+import { mensajeFaltaAnalisis, mensajeSinRegistrar } from "../dominio/analisis-al-aprobar";
 // La regla de a quién se le habla vive en `clientes` y la usan los dos
 // módulos. Por la ruta profunda: es dominio puro, no la superficie del
 // módulo, y así no arrastra nada de su `api/`.
@@ -36,6 +37,24 @@ export type Resultado<T> =
  *
  * Pide un elemento de más para saber si hay página siguiente sin hacer count.
  */
+/**
+ * Qué impide aprobar cada cotización, con la frase que se le enseña a Willy
+ * (194, 05/11). Luis: *«en todos los módulos que corresponde, no dejar un
+ * hueco libre»*. La regla vive en la base (`faltas_para_aprobar`), que es la
+ * misma que usa el candado al aprobar; aquí solo se pone en palabras.
+ */
+export async function faltasParaAprobar(ids: readonly string[]): Promise<Map<string, string>> {
+  const fuera = new Map<string, string>();
+  if (ids.length === 0) return fuera;
+  const supabase = await clienteServidor();
+  const { data } = await supabase.rpc("faltas_para_aprobar", { p_ids: [...ids] });
+  for (const f of (data ?? []) as { cotizacion_id: string; sin_registrar: string[]; sin_analisis: string[] }[]) {
+    if (f.sin_registrar.length > 0) fuera.set(f.cotizacion_id, mensajeSinRegistrar(f.sin_registrar));
+    else if (f.sin_analisis.length > 0) fuera.set(f.cotizacion_id, mensajeFaltaAnalisis(f.sin_analisis));
+  }
+  return fuera;
+}
+
 export async function listarCotizaciones(
   filtros: FiltrosCotizaciones,
 ): Promise<
@@ -124,6 +143,7 @@ export async function listarCotizaciones(
         .filter((p) => !p.anulado)
         .sort((a, b) => a.secuencia - b.secuencia)
         .map((p) => ({ id: p.id, numero: p.numero })),
+      bloqueoAprobar: null,
     }));
 
     /*
@@ -136,6 +156,12 @@ export async function listarCotizaciones(
     const porPagina = filtros.limite ?? POR_PAGINA;
     const hayMas = todas.length > porPagina;
     const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+
+    // Lo que impide aprobar, en una sola lectura para toda la página (194).
+    const faltas = await faltasParaAprobar(
+      recortadas.filter((c) => c.estado === "borrador" || c.estado === "enviada").map((c) => c.id),
+    );
+    for (const c of recortadas) c.bloqueoAprobar = faltas.get(c.id) ?? null;
 
     /*
       Yendo hacia atrás, la fila «de más» sobra por ARRIBA y el orden viene

@@ -9574,3 +9574,24 @@ estaban (escritos distinto) y no se duplicaron. **Fuera, a propósito:** GE-112
 (VULKAN), CF.3.S y CF.3-1/2S (MC GILL), porque el que existe está «SIN MARCA» y
 es casi seguro el mismo producto: lo que toca es ponerle la marca al que hay. Y
 HK-1015 y SR-120X10, sin marca reconocible en SIMPLE.
+
+## §DG · 05/11 — Una sola regla para aprobar, en la base, la lista y la ficha (194)
+
+Luis, viendo la lista: la CT02-1320, sin stock ni análisis, seguía ofreciendo
+«Aprobar cotización» en verde en el menú de la fila. *«Tenemos que, siempre, en
+todos los módulos que corresponde, no dejar un hueco libre»*.
+
+- **`faltas_para_aprobar(ids)`** (194): por cotización, las líneas sin producto
+  y las que hay que comprar sin análisis (la regla de `faltaAnalizarAlAprobar`:
+  confirmada, no kit, sin proveedor con cantidad, almacén − reservado < lo que
+  pide). La leen la **lista** (una llamada por página) y la **ficha**.
+- El candado de la 193 la usa también: **la base ya rechaza aprobar sin el
+  análisis**, no solo sin el producto. Centinela que ejecuta los tres casos.
+- Menú de la fila: «Aprobar cotización» con candado y «Falta algo: pulsa para
+  ver qué», que dice los códigos. Antes de esto ya estaba la ficha (6d44097).
+- Visto en pantalla: CT02-1320 y CT02-1319 con candado en la lista y la ficha.
+
+**Ojo:** la ficha pintaba «Almacén o compra» con su propia cuenta, que además
+mira «comprar igual»; el candado usa la regla de la base, que no lo mira (igual
+que `aprobar` desde el 02/11). Una línea con stock y «comprar igual» marcada sin
+análisis no bloquea.

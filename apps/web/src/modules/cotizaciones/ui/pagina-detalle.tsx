@@ -10,6 +10,7 @@ import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 import {
   comprobantesDelPedido,
   cotizacionPorId,
+  faltasParaAprobar,
   despachoDelPedido,
   ordenesDelPedido,
   tieneGuia,
@@ -20,7 +21,6 @@ import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresi
 import { esSubitem, numerosDeItem } from "../dominio/numeracion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
-import { mensajeFaltaAnalisis, mensajeSinRegistrar } from "../dominio/analisis-al-aprobar";
 import { DocumentoEnMoneda, MonedaDelPapel } from "./detalle/moneda-papel";
 import { DescargarPdf } from "./detalle/descargar-pdf";
 import { MonedaVenta } from "./detalle/moneda-venta";
@@ -317,22 +317,18 @@ export default async function PaginaDetalleCotizacion({
     está en el catálogo, luego lo que hay que comprar sin análisis. Es la
     misma regla de `aprobar` y de la ventana, con todas las líneas.
   */
-  const codigosSinRegistrar = lineas.filter((l) => !l.producto_id && Number(l.cantidad) > 0).map((l) => l.codigo);
-  const codigosSinAnalisis = lineas
-    .filter((l) => {
-      const s = situacionDe.get(l.id)?.situacion;
-      return s === "parcial" || s === "falta_analizar";
-    })
-    .map((l) => l.codigo);
-  const bloqueoAprobar =
-    codigosSinRegistrar.length > 0
-      ? { mensaje: mensajeSinRegistrar(codigosSinRegistrar), boton: "Registrar los productos" }
-      : codigosSinAnalisis.length > 0
-        ? {
-            mensaje: `${mensajeFaltaAnalisis(codigosSinAnalisis)} Si el cliente no lleva alguno, quítalo en «Editar».`,
-            boton: "Llenar el análisis de compra",
-          }
-        : null;
+  const enCursoFicha = cabecera.estado === "borrador" || cabecera.estado === "enviada";
+  const faltaParaAprobar = enCursoFicha ? (await faltasParaAprobar([cabecera.id])).get(cabecera.id) : undefined;
+  const bloqueoAprobar = faltaParaAprobar
+    ? {
+        mensaje: faltaParaAprobar.startsWith("Antes de aprobar, registra")
+          ? faltaParaAprobar
+          : `${faltaParaAprobar} Si el cliente no lleva alguno, quítalo en «Editar».`,
+        boton: faltaParaAprobar.startsWith("Antes de aprobar, registra")
+          ? "Registrar los productos"
+          : "Llenar el análisis de compra",
+      }
+    : null;
 
   const lleva = (l: (typeof lineas)[number]) =>
     confirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
