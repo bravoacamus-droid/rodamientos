@@ -18,6 +18,8 @@ import {
   toast,
 } from "@rodatech/ui";
 
+import { BotonBloqueado } from "@/componentes/sin-permiso";
+
 import { cambiarEstado } from "../../acciones/gestionar";
 import { DialogoClonar } from "../dialogo-clonar";
 import type { EstadoCotizacion } from "../../dominio/tipos";
@@ -54,6 +56,7 @@ export function AccionesCotizacion({
   sinPermisoAnular = "",
   enSoles = false,
   abrirAprobar = false,
+  bloqueoAprobar = null,
 }: {
   id: string;
   /** Para el diálogo de eliminar, mientras la base contesta. */
@@ -61,6 +64,12 @@ export function AccionesCotizacion({
   estado: EstadoCotizacion;
   /** Viene de «Aprobar» en la lista (`?aprobar=1`): el diálogo, ya abierto. */
   abrirAprobar?: boolean;
+  /**
+   * Lo que falta antes de poder aprobar (05/11): productos sin registrar o
+   * sin análisis de compra. Con esto «Aprobar» sale con candado y, a su
+   * lado, el botón que lleva a resolverlo.
+   */
+  bloqueoAprobar?: { mensaje: string; boton: string } | null;
   /** Venta en soles (116): el diálogo de aprobar avisa que fija el cambio. */
   enSoles?: boolean;
   /**
@@ -128,7 +137,7 @@ export function AccionesCotizacion({
   const [pendiente, iniciar] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const enCurso = estado === "borrador" || estado === "enviada";
-  const [confirmando, setConfirmando] = useState(abrirAprobar && enCurso);
+  const [confirmando, setConfirmando] = useState(abrirAprobar && enCurso && !bloqueoAprobar);
   const [pidiendoContacto, setPidiendoContacto] = useState(false);
   const [clonando, setClonando] = useState(false);
   // Anular no se deshace: se pregunta en la pantalla y no con window.confirm,
@@ -238,10 +247,27 @@ export function AccionesCotizacion({
           // al que lleva se llama `aprobada`, la pastilla de la lista dice
           // «Aprobada» y Luis la pide por ese nombre. Tres palabras para una
           // sola cosa hacían que el botón que sí existe no se encontrara.
-          <Button disabled={pendiente} onClick={() => setConfirmando(true)}>
-            <Check className="size-[18px] shrink-0" />
-            Aprobar cotización
-          </Button>
+          bloqueoAprobar ? (
+            /*
+              Luis, 05/11, viendo la CT02-1320: *«si en esta cotización no
+              tiene stock y peor aún no tiene análisis de compra, ¿por qué el
+              botón de aprobar está habilitado?»*. Abría la ventana y era ahí
+              donde se apagaba. Ahora se ve desde la ficha: con candado, y al
+              lado lo que hay que hacer primero.
+            */
+            <>
+              <Button onClick={() => router.push(`/cotizaciones/${id}/editar`)}>
+                <Pencil className="size-[18px] shrink-0" />
+                {bloqueoAprobar.boton}
+              </Button>
+              <BotonBloqueado mensaje={bloqueoAprobar.mensaje}>Aprobar cotización</BotonBloqueado>
+            </>
+          ) : (
+            <Button disabled={pendiente} onClick={() => setConfirmando(true)}>
+              <Check className="size-[18px] shrink-0" />
+              Aprobar cotización
+            </Button>
+          )
         ) : estado === "aprobada" ? (
           <>
             {/*

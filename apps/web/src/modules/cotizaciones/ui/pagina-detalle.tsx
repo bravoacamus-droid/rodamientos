@@ -20,6 +20,7 @@ import { armarCotizacionImpresa, enSoles, formaDePago } from "../dominio/impresi
 import { esSubitem, numerosDeItem } from "../dominio/numeracion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
+import { mensajeFaltaAnalisis, mensajeSinRegistrar } from "../dominio/analisis-al-aprobar";
 import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
 import { DescargarPdf } from "./detalle/descargar-pdf";
 import { MonedaVenta } from "./detalle/moneda-venta";
@@ -311,6 +312,28 @@ export default async function PaginaDetalleCotizacion({
   const situacionDe = new Map(lineas.map((l) => [l.id, datosDeSituacion(l)]));
   const resumenSituacion = resumenDeSituaciones([...situacionDe.values()]);
 
+  /*
+    Lo que impide aprobar, visto desde la ficha (05/11): primero lo que no
+    está en el catálogo, luego lo que hay que comprar sin análisis. Es la
+    misma regla de `aprobar` y de la ventana, con todas las líneas.
+  */
+  const codigosSinRegistrar = lineas.filter((l) => !l.producto_id && Number(l.cantidad) > 0).map((l) => l.codigo);
+  const codigosSinAnalisis = lineas
+    .filter((l) => {
+      const s = situacionDe.get(l.id)?.situacion;
+      return s === "parcial" || s === "falta_analizar";
+    })
+    .map((l) => l.codigo);
+  const bloqueoAprobar =
+    codigosSinRegistrar.length > 0
+      ? { mensaje: mensajeSinRegistrar(codigosSinRegistrar), boton: "Registrar los productos" }
+      : codigosSinAnalisis.length > 0
+        ? {
+            mensaje: `${mensajeFaltaAnalisis(codigosSinAnalisis)} Si el cliente no lleva alguno, quítalo en «Editar».`,
+            boton: "Llenar el análisis de compra",
+          }
+        : null;
+
   const lleva = (l: (typeof lineas)[number]) =>
     confirmado ? Number(l.cantidad_aprobada ?? l.cantidad) : Number(l.cantidad);
   const importeDe = (l: (typeof lineas)[number], cantidad: number) =>
@@ -421,6 +444,7 @@ export default async function PaginaDetalleCotizacion({
             sinPermisoAnular={avisoSinPermiso("cotizaciones", "eliminar", permisos.nombreRol)}
             estado={cabecera.estado}
             abrirAprobar={abrirAprobar}
+            bloqueoAprobar={bloqueoAprobar}
             datosMensaje={datosMensaje}
             cliente={{
               id: cabecera.cliente_id,
