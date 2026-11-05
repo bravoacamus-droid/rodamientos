@@ -9562,3 +9562,15 @@ quedaron enlazadas (las 2 de la 1320, la de la 1303 y 28 del historial).
 1303 con el aviso; la ventana de aprobar con el aviso y «Aprobar» apagado; el
 botón en el editor y el alta con NQX / SELLADO / RETENES propuestos.
 **Sin ver:** registrar de verdad desde el alta ni clonar con el código nuevo (no se guardó nada).
+
+**Y las otras marcas del mismo código (05/11, tarde).** Luis: *«puede ser que
+tenga lo mismo pero diferentes marcas… porque puede ofrecer de una marca u
+otra»*. Del Excel, los de código ya existente pero **de otra marca** entraron
+como `código-MARCA` (la regla del 20/10): **11** —`6204-2Z.C3-FAG`,
+`6309-2Z.C3-FAG`, `6312.2Z.C3-FAG`, `6409C3-FAG`, `6012.2Z.C3-FAG`,
+`6008.2Z.C3-FAG`, `6217C3-NTN`, `HK-1412-NTN`, `FRB-8/80-ZSG`, `KM-22-FSQ`,
+`W14-TIMKEN`—; ninguna línea suelta que enlazar. Los de la **misma** marca ya
+estaban (escritos distinto) y no se duplicaron. **Fuera, a propósito:** GE-112
+(VULKAN), CF.3.S y CF.3-1/2S (MC GILL), porque el que existe está «SIN MARCA» y
+es casi seguro el mismo producto: lo que toca es ponerle la marca al que hay. Y
+HK-1015 y SR-120X10, sin marca reconocible en SIMPLE.
