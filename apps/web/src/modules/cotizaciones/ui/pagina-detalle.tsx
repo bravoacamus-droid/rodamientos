@@ -21,7 +21,7 @@ import { esSubitem, numerosDeItem } from "../dominio/numeracion";
 import { ETIQUETA_ESTADO } from "../dominio/tipos";
 import { AccionesCotizacion } from "./detalle/acciones";
 import { mensajeFaltaAnalisis, mensajeSinRegistrar } from "../dominio/analisis-al-aprobar";
-import { DocumentoEnMoneda, MonedaDelPapel, SelectorMonedaPapel } from "./detalle/moneda-papel";
+import { DocumentoEnMoneda, MonedaDelPapel } from "./detalle/moneda-papel";
 import { DescargarPdf } from "./detalle/descargar-pdf";
 import { MonedaVenta } from "./detalle/moneda-venta";
 import { LoQueFalta } from "./detalle/lo-que-falta";
@@ -368,7 +368,14 @@ export default async function PaginaDetalleCotizacion({
   return (
     <MonedaDelPapel
       key={`${moneda}-${tcFijo ?? ""}`}
-      inicial={{ enSoles: moneda === "PEN", tipoCambio: tcFijo, fecha: fechaTc, fijo: tcFijo !== null }}
+      inicial={{
+        enSoles: moneda === "PEN",
+        // Sin el de su fecha (SUNAT no lo dio), el de hoy: el papel de una
+        // venta en soles no puede salir en dólares por falta de cambio.
+        tipoCambio: tcFijo ?? (tcHoy?.ok ? tcHoy.venta : null),
+        fecha: tcFijo ? fechaTc : tcHoy?.ok ? tcHoy.fecha : fechaTc,
+        fijo: tcFijo !== null,
+      }}
     >
       {/* ------------------------------------------------ Ficha de trabajo */}
       {/*
@@ -474,7 +481,21 @@ export default async function PaginaDetalleCotizacion({
               <>
                 <VistaPreviaDocumento
                   numero={cabecera.numero}
-                  encima={<SelectorMonedaPapel />}
+                  /*
+                    Sin el interruptor «solo del papel» (Luis, 05/11: *«no se
+                    vaya a equivocar, sería mejor utilizar la de cotización»*).
+                    Había dos: este, que solo cambiaba lo impreso, y «Moneda de
+                    la venta», que cambia la venta entera. Con los dos se podía
+                    mandar un papel en soles y facturar en dólares. Ahora el
+                    papel sale en la moneda de la venta, y se cambia en un sitio.
+                  */
+                  encima={
+                    <p className="text-sm text-[var(--fg-muted)]">
+                      {moneda === "PEN"
+                        ? "En soles, como la venta."
+                        : "En dólares, como la venta. Para venderla en soles, cámbialo en «Moneda de la venta»."}
+                    </p>
+                  }
                   junto={<DescargarPdf c={impresa} cuentas={cuentas} />}
                 >
                   <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
