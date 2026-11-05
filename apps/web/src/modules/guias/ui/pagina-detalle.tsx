@@ -140,7 +140,18 @@ export default async function PaginaDetalleGuia({
             descargar PDF»*. Con la guía en borrador, la previa es justo eso:
             ver el papel antes de pulsar «Emitir y despachar».
           */}
-          <VistaPreviaDocumento numero={g.numero} junto={<BotonDescargarPdf hoja={hoja} nombre={archivo} />}>
+          {/*
+            En borrador, SOLO la vista previa (Willy, 05/11, 7:45: descargó el
+            PDF antes de emitir e imprimió una guía «borrador sin validez»).
+            Moisés: *«no pueda descargar el PDF hasta emitir, solamente va a
+            poder vista previa… una vez que esté emitido recién podrá
+            descargar»*.
+          */}
+          <VistaPreviaDocumento
+            numero={g.numero}
+            junto={g.estado === "borrador" ? undefined : <BotonDescargarPdf hoja={hoja} nombre={archivo} />}
+            sinImprimir={g.estado === "borrador"}
+          >
             <DocumentoGuia g={g} emisor={emisor} />
           </VistaPreviaDocumento>
           {/* En azul solo ya emitida: en un borrador lo principal es
@@ -160,18 +171,32 @@ export default async function PaginaDetalleGuia({
               Facturar
             </Link>
           ) : null}
-          <BotonDescargarPdf
-            hoja={hoja}
-            nombre={archivo}
-            variante={g.estado === "borrador" || (puedeFacturar && porFacturar) ? "outline" : "primary"}
-          />
-          <Link
-            href={`/guias/${g.id}/imprimir?auto=1`}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
-          >
-            <IconoImprimir />
-            Imprimir
-          </Link>
+          {g.estado === "borrador" ? (
+            <>
+              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-9">
+                Descargar PDF
+              </BotonBloqueado>
+              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-9">
+                <IconoImprimir />
+                Imprimir
+              </BotonBloqueado>
+            </>
+          ) : (
+            <>
+              <BotonDescargarPdf
+                hoja={hoja}
+                nombre={archivo}
+                variante={puedeFacturar && porFacturar ? "outline" : "primary"}
+              />
+              <Link
+                href={`/guias/${g.id}/imprimir?auto=1`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <IconoImprimir />
+                Imprimir
+              </Link>
+            </>
+          )}
           {/*
             Editar, solo en borrador. Se llamó «Corregir» hasta el 14/10; Luis:
             *«en vez de corregir, ¿no sería editar?»*. Abre el mismo formulario

@@ -56,7 +56,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
           <thead>
             <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
               <th className="px-4 py-2.5 font-medium">Número</th>
-              <th className="px-4 py-2.5 font-medium">Fecha</th>
+              <th className="px-4 py-2.5 font-medium">Ingreso</th>
               <th className="px-4 py-2.5 font-medium">Proveedor</th>
               <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">
                 Documentos
@@ -185,7 +185,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
             <p className="text-sm font-medium">{r.proveedor ?? "—"}</p>
 
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-              <Dato etiqueta="Fecha">{r.fecha}</Dato>
+              <Dato etiqueta="Ingreso al almacén">{r.fecha}</Dato>
               <Dato etiqueta="Líneas">{r.items}</Dato>
               <Dato etiqueta="Valorizado">
                 <Moneda valor={r.valorizado} tamano="sm" />

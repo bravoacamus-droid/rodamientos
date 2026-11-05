@@ -59,12 +59,12 @@ export default async function PaginaImprimirGuia({
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 no-print">
         <Volver href={`/guias/${g.id}`}>Volver a la guía</Volver>
-        {/* Un borrador impreso no vale: la mercadería no ha salido y el
-            número todavía se puede mover. Se dice aquí y no se bloquea,
-            porque revisar el papel antes de emitir es lo que Willy pidió. */}
+        {/* Un borrador impreso no vale. Desde el 05/11 aquí tampoco se
+            descarga ni se imprime: se mira, y se emite en la ficha (Willy
+            imprimió uno sin validez). */}
         {g.estado === "borrador" ? (
           <span className="text-sm font-medium text-[var(--warn)]">
-            Es un borrador. Emítela antes de que salga con la mercadería.
+            Es un borrador: solo para revisarlo. Emítela en la ficha y ahí se descarga y se imprime.
           </span>
         ) : null}
         {g.estado === "anulada" ? (
@@ -75,12 +75,14 @@ export default async function PaginaImprimirGuia({
 
         {/* Aquí, y no solo en la ficha: quien llega a la hoja ya viene a
             sacarla, y hasta hoy tenía que acordarse de Ctrl+P. */}
-        <BotonesDocumento
-          auto={auto}
-          descargar={
-            <BotonDescargarPdf hoja={hojaDeGuia(g, emisor)} nombre={nombreArchivo(g.numero, g.cliente)} variante="primary" />
-          }
-        />
+        {g.estado === "borrador" ? null : (
+          <BotonesDocumento
+            auto={auto}
+            descargar={
+              <BotonDescargarPdf hoja={hojaDeGuia(g, emisor)} nombre={nombreArchivo(g.numero, g.cliente)} variante="primary" />
+            }
+          />
+        )}
       </div>
 
       <div className="overflow-hidden rounded-md bg-white elev-2 print:rounded-none print:shadow-none">

@@ -634,7 +634,11 @@ export function ConstructorCompra({
               </label>
 
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Fecha</span>
+                {/* La de la FACTURA, no la de hoy (Willy, 05/11, 17:30: «la
+                    factura es de ayer… no hay campo para registrar la fecha
+                    de la factura»). La de entrada al almacén es la de la
+                    recepción. */}
+                <span className="text-sm font-medium">Fecha de la factura</span>
                 <Input
                   type="date"
                   value={estado.fecha}
@@ -764,13 +768,17 @@ export function ConstructorCompra({
           </section>
 
           {/* --------------------------------------------------- Gastos */}
-          <GastosDeCompra
-            modalidad={modalidad}
-            gastos={estado.gastos}
-            moneda={estado.moneda}
-            costeo={costeo}
-            despachar={despachar}
-          />
+          {/* Solo en importación, como control interno (05/11). En la compra
+              local no van: Willy, «nada que ver». */}
+          {esImportacion ? (
+            <GastosDeCompra
+              modalidad={modalidad}
+              gastos={estado.gastos}
+              moneda={estado.moneda}
+              costeo={costeo}
+              despachar={despachar}
+            />
+          ) : null}
 
           {/* --------------------------------------------------- Líneas */}
           <section className="card @container p-4">
@@ -816,17 +824,31 @@ export function ConstructorCompra({
               </ul>
               <div className="hidden @3xl:block">
               <TableContenedor>
-                <Table>
+                {/*
+                  Anchos fijos (Luis, 05/11: «los productos con las cantidades
+                  tienen bastante espacio, pero mira cómo se rompe todo a la
+                  derecha»). La descripción se quedaba con todo el ancho y el
+                  costo, su referencia y el stock se apretaban en un rincón.
+                */}
+                <Table className="table-fixed">
+                  <colgroup>
+                    <col className="w-[14%]" />
+                    <col />
+                    <col className="w-[11%]" />
+                    <col className="w-[14rem]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[9rem]" />
+                    {orden ? null : <col className="w-[7.5rem]" />}
+                  </colgroup>
                   <THead>
                     <tr>
                       <th className="text-left">Código</th>
                       <th className="text-left">Descripción</th>
-                      <th className="text-right">Cant.</th>
-                      <th className="text-left">U.M.</th>
+                      <th className="text-right">Cantidad</th>
                       <th className="text-right">Costo unit.</th>
                       <th className="text-right">Importe</th>
                       <th className="text-right">Stock</th>
-                      <th />
+                      {orden ? null : <th />}
                     </tr>
                   </THead>
                   <TBody>
@@ -965,7 +987,7 @@ export function ConstructorCompra({
               {totales.gastos > 0 ? (
                 <>
                   <div className="my-1 border-t border-[var(--border-soft)]" />
-                  <Fila etiqueta="Gastos" valor={`$ ${totales.gastos.toFixed(2)}`} />
+                  <Fila etiqueta="Gastos (control interno)" valor={`$ ${totales.gastos.toFixed(2)}`} />
                   {/* El «$/Kg.» de su hoja (097). */}
                   {costeo.repartePorPeso ? (
                     <Fila
@@ -973,13 +995,15 @@ export function ConstructorCompra({
                       valor={`$ ${costeo.porKg.toFixed(2)}/kg`}
                     />
                   ) : null}
-                  {/* Lo que de verdad va a costar la mercadería en almacén. El
-                      IGV no entra: es crédito fiscal recuperable, no costo. */}
+                  {/* Referencia: cuánto salió traerla. No cambia el total
+                      de la factura ni el costo del stock (192, 05/11). */}
                   <Fila
-                    etiqueta="Costo en almacén"
+                    etiqueta="Puesta en Lima, con gastos"
                     valor={`$ ${totales.costoEnAlmacen.toFixed(2)}`}
-                    fuerte
                   />
+                  <p className="text-sm text-[var(--fg-muted)]">
+                    Solo para tu control: no se suma a la factura ni al costo de los productos.
+                  </p>
                 </>
               ) : null}
             </dl>

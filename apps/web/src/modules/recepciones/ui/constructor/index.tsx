@@ -316,7 +316,10 @@ export function ConstructorRecepcion({
           )}
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Fecha de recepción</span>
+            {/* El día que entra al almacén (Willy, 05/11, 21:30: «en la
+                recepción es cuando ya está ingresando»). Hoy por defecto; se
+                cambia si llegó otro día. La de la factura va en la compra. */}
+            <span className="text-sm font-medium">Fecha de ingreso al almacén</span>
             <Input
               type="date"
               value={estado.fecha}
@@ -324,6 +327,7 @@ export function ConstructorRecepcion({
                 despachar({ tipo: "cabecera", campo: "fecha", valor: e.target.value })
               }
             />
+            <span className="text-sm text-[var(--fg-subtle)]">Hoy, si llegó hoy.</span>
           </label>
 
           <label className="flex flex-col gap-1">

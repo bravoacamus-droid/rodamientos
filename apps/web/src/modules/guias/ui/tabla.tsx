@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Eye, Printer } from "lucide-react";
+import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { EstadoBadge, EstadoError, EstadoVacio, PaginacionKeyset, formatearFecha } from "@rodatech/ui";
 
 import { listarGuias } from "../api/consultas";
@@ -175,13 +176,21 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                       que crea algo, que es «Preparar guía». Con el icono en
                       color se distingue del de Ver sin robarle el papel.
                     */}
-                    <Link
-                      href={`/guias/${g.id}/imprimir?auto=1`}
-                      className={`${SECUNDARIO} w-full justify-center [&>svg]:text-brand-600`}
-                    >
-                      <IconoImprimir />
-                      Imprimir
-                    </Link>
+                    {/* Un borrador no se imprime: se emite antes (05/11). */}
+                    {g.estado === "borrador" ? (
+                      <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="w-full md:h-9">
+                        <IconoImprimir />
+                        Imprimir
+                      </BotonBloqueado>
+                    ) : (
+                      <Link
+                        href={`/guias/${g.id}/imprimir?auto=1`}
+                        className={`${SECUNDARIO} w-full justify-center [&>svg]:text-brand-600`}
+                      >
+                        <IconoImprimir />
+                        Imprimir
+                      </Link>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -278,13 +287,20 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <IconoVer />
                 Ver
               </Link>
-              <Link
-                href={`/guias/${g.id}/imprimir?auto=1`}
-                className={`${SECUNDARIO} flex-1 justify-center [&>svg]:text-brand-600`}
-              >
-                <IconoImprimir />
-                Imprimir
-              </Link>
+              {g.estado === "borrador" ? (
+                <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="flex-1">
+                  <IconoImprimir />
+                  Imprimir
+                </BotonBloqueado>
+              ) : (
+                <Link
+                  href={`/guias/${g.id}/imprimir?auto=1`}
+                  className={`${SECUNDARIO} flex-1 justify-center [&>svg]:text-brand-600`}
+                >
+                  <IconoImprimir />
+                  Imprimir
+                </Link>
+              )}
             </div>
           </li>
         ))}

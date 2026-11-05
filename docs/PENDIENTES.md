@@ -9449,3 +9449,67 @@ Visto en pantalla (solo lectura):
   debe, y de mayor a menor en «Todas», con la 579 entre la 578 y la 580;
 - a 390 px, sin desbordes;
 - la ficha de la F002-579 y la T002-575 marcada como facturada.
+
+## §DE · 05/11 — Reunión con Willy: el PDF de la guía tras emitir, dos fechas y los gastos fuera del costo (192)
+
+Reunión del 05/11, de 25 minutos: Willy sacó la guía de ayer y registró dos
+compras con Moisés.
+
+**1. La guía en borrador no se descarga ni se imprime.** Willy descargó el
+PDF antes de pulsar «Emitir y despachar» e imprimió una guía «BORRADOR SIN
+VALIDEZ» (7:45). Moisés (9:41): *«no pueda descargar el PDF hasta emitir,
+solamente va a poder vista previa»*. En borrador:
+- en la ficha, «Descargar PDF» e «Imprimir» salen apagados; al pulsarlos
+  explican «primero pulsa "Emitir y despachar"»;
+- la vista previa no lleva «Imprimir» (prop `sinImprimir`);
+- en la lista, «Imprimir» sale apagado en la fila y en la tarjeta;
+- `/guias/[id]/imprimir` deja mirar pero no descargar ni imprimir.
+
+**2. Dos fechas con su nombre** (17:30–22:09). Willy: *«la factura es de
+ayer… no hay campo para registrar la fecha de la factura»*. Así lo hacía en
+su sistema anterior: la compra era del día 4 y el ingreso del día 5.
+- En «Registrar compra», «Fecha» pasa a **«Fecha de la factura»**, editable.
+  Es `compras.fecha`, que ya se guardaba. En la ficha de la compra también
+  se llama así.
+- En la recepción, **«Fecha de ingreso al almacén»**, con hoy por defecto y
+  editable («Hoy, si llegó hoy»). En la lista de recepciones, «Ingreso».
+
+**3. Los gastos son control interno (192).** Willy (14:00): *«gastos compra
+local, transporte, eso no, mejor hay que quitarlo… me confunde»*. Luis:
+*«los gastos no tienen que ver con las facturas… es como unos gastos
+internos… cuánto gastó traer esa mercadería… no se suma nada»*.
+- **Compra local:** sin sección de gastos, y no se mandan aunque el estado
+  traiga la fila de transporte.
+- **Importación aérea o marítima:** la sección pasa a llamarse «Gastos de
+  traer la mercadería», y avisa que es solo para control y que no se suma a
+  la factura ni al costo. En el resumen: «Gastos (control interno)» y
+  «Puesta en Lima, con gastos» como referencia.
+- **En la base:** `recepcionar_mercaderia` repartía los gastos en el costo
+  del stock desde la 022, y por kilo desde la 097. Ahora pasa al kardex el
+  costo de la factura, porque el factor vuelve a 1 y lo de por kilo a 0.
+  Hoy ninguna de las 791 compras tenía gastos, así que lo guardado no
+  cambia.
+- El centinela **recibe de verdad** una orden con un gasto de 100 (salió la
+  OC02-00003), comprueba que el kardex entra a 48.7288 y no inflado, y
+  deshace.
+- Tres tests de `constructor.test.ts` comprobaban que la compra local
+  sumaba su transporte; ahora comprueban lo contrario.
+
+**4. La tabla de productos de «Registrar compra».** Luis: *«mira cómo se
+rompe todo a la derecha»*. La descripción se quedaba con todo el ancho.
+- Ahora es `table-fixed` con anchos por columna.
+- La cantidad de una orden del pedido sale como texto («24 UND»), no como
+  campo apagado, y la unidad va a su lado.
+- La referencia del costo («OC02-00010: 5.1300») va en un renglón.
+- Sin la columna «Quitar» cuando es de una orden.
+- En las tarjetas, la cantidad fija también es texto.
+
+Visto en pantalla, sin guardar:
+- «Registrar compra» de la OC02-00010 a 1920, 1280 y 390 px;
+- los gastos al pasar a aérea;
+- la recepción de la OC02-00003 con su fecha de ingreso.
+
+**Sin ver con los ojos:** la guía en borrador, porque hoy no hay ninguna.
+De paso: la ficha de la OC02-00008, ya recibida, dice en «Para quién es»
+«ningún pedido confirmado está esperando esto», aunque es del PED-26-00003.
+No se tocó.

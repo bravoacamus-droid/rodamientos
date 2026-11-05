@@ -41,7 +41,13 @@ export function VistaPreviaDocumento({
   children,
   abiertaInicial = false,
   alCerrarIr,
+  sinImprimir = false,
 }: {
+  /**
+   * Solo mirar (05/11): la guía en borrador. Willy imprimió una «sin validez»
+   * antes de emitirla; el papel sale después de «Emitir y despachar».
+   */
+  sinImprimir?: boolean;
   /** Llega abierta: «Hoja de pedido» desde el menú de acciones (15/10). */
   abiertaInicial?: boolean;
   /** A dónde volver al cerrarla, para que recargar no la reabra. */
@@ -89,6 +95,9 @@ export function VistaPreviaDocumento({
               para que React termine de desmontarlo.
             */}
             <div className="flex flex-wrap items-center gap-2">
+              {sinImprimir ? (
+                <span className="text-sm font-medium text-[var(--warn)]">Borrador: solo para revisarlo. Se imprime después de emitir.</span>
+              ) : (
               <Button
                 variant="outline"
                 onClick={() => {
@@ -99,6 +108,7 @@ export function VistaPreviaDocumento({
                 <Printer className="size-[18px] shrink-0" />
                 Imprimir
               </Button>
+              )}
               {junto}
             </div>
           </DialogHeader>

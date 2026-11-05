@@ -488,7 +488,7 @@ export default async function PaginaDetalleCompra({
           <section className="card p-4">
             <h2 className="mb-3 text-sm font-semibold">Datos</h2>
             <dl className="flex flex-col gap-2 text-sm">
-              <Dato etiqueta="Fecha" valor={c.fecha} />
+              <Dato etiqueta="Fecha de la factura" valor={c.fecha} />
               <Dato etiqueta="Llega el" valor={c.fecha_estimada ?? "—"} />
               <Dato etiqueta="Pago" valor={textoCondicionPago(c) ?? "—"} />
               <Dato etiqueta="Entrega" valor={textoEntrega(c, emisor) ?? "—"} />

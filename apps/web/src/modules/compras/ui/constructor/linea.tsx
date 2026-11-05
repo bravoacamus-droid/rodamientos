@@ -67,7 +67,7 @@ export function FilaCompra({
           ancho. Con `max-w-xs` pedía siempre sus 340 px y empujaba el costo
           fuera de la vista. Dos renglones y no uno: «RODAMIENTO DE RODIL…»
           no dice qué rodamiento es. */}
-      <td className="w-full max-w-0 px-2 py-2">
+      <td className="px-2 py-2">
         <span className="line-clamp-2 text-sm" title={linea.descripcion}>
           {linea.descripcion}
         </span>
@@ -86,25 +86,34 @@ export function FilaCompra({
           se equivocó de tecla, y un error que se corrige solo es mejor que uno
           que hay que leer.
         */}
-        <Input
-          type="number"
-          min={0}
-          step={1}
-          value={linea.cantidad}
-          disabled={fija}
-          onChange={(e) =>
-            despachar({
-              tipo: "cantidad",
-              key: linea.key,
-              valor: Math.round(Number(e.target.value)),
-            })
-          }
-          className="w-24 text-right tabular"
-          aria-label={`Cantidad a comprar de ${linea.codigo}`}
-        />
+        {/* La de la orden del pedido no se cambia: se lee, no es un campo
+            apagado (05/11). La unidad, a su lado, y no en otra columna. */}
+        {fija ? (
+          <p className="text-right text-sm">
+            <span className="tabular text-base font-semibold">{linea.cantidad}</span>{" "}
+            <span className="text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</span>
+          </p>
+        ) : (
+          <div className="flex items-center justify-end gap-1.5">
+            <Input
+              type="number"
+              min={0}
+              step={1}
+              value={linea.cantidad}
+              onChange={(e) =>
+                despachar({
+                  tipo: "cantidad",
+                  key: linea.key,
+                  valor: Math.round(Number(e.target.value)),
+                })
+              }
+              className="w-20 text-right tabular"
+              aria-label={`Cantidad a comprar de ${linea.codigo}`}
+            />
+            <span className="text-sm text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</span>
+          </div>
+        )}
       </td>
-
-      <td className="px-2 py-2 text-sm text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</td>
 
       <td className="px-2 py-2">
         <Input
@@ -115,7 +124,7 @@ export function FilaCompra({
           onChange={(e) =>
             despachar({ tipo: "costo", key: linea.key, valor: Number(e.target.value) })
           }
-          className="w-28 text-right tabular"
+          className="ml-auto w-32 text-right tabular"
           aria-label={`Costo unitario de ${linea.codigo}`}
         />
         <ReferenciaCosto linea={linea} ultimoCosto={ultimoCosto} />
@@ -146,10 +155,10 @@ export function FilaCompra({
         ) : null}
       </td>
 
-      <td className="px-2 py-2 text-right">
+      {fija ? null : <td className="px-2 py-2 text-right">
         {/* Un botón que parece botón: era un «Quitar» en gris de 12 px, sin
             borde, que Willy no habría reconocido como algo que se pulsa. */}
-        {fija ? null : <Button
+        <Button
           type="button"
           variant="outline"
           size="sm"
@@ -161,8 +170,8 @@ export function FilaCompra({
               qué hace (revisión por módulos del 02/10). */}
           <Trash2 className="size-4" aria-hidden />
           Quitar
-        </Button>}
-      </td>
+        </Button>
+      </td>}
     </tr>
   );
 }
@@ -224,25 +233,35 @@ export function TarjetaCompra({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">Cantidad ({unidadLegible(linea.unidad)})</span>
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1}
-            value={linea.cantidad}
-            disabled={fija}
-            onChange={(e) =>
-              despachar({
-                tipo: "cantidad",
-                key: linea.key,
-                valor: Math.round(Number(e.target.value)),
-              })
-            }
-            className="text-right tabular"
-          />
-        </label>
+        {/* La de la orden del pedido se lee, no se teclea (05/11). */}
+        {fija ? (
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Cantidad</span>
+            <p className="flex h-11 items-center text-sm">
+              <span className="tabular text-base font-semibold">{linea.cantidad}</span>
+              <span className="ml-1 text-[var(--fg-muted)]">{unidadLegible(linea.unidad)}</span>
+            </p>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Cantidad ({unidadLegible(linea.unidad)})</span>
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              value={linea.cantidad}
+              onChange={(e) =>
+                despachar({
+                  tipo: "cantidad",
+                  key: linea.key,
+                  valor: Math.round(Number(e.target.value)),
+                })
+              }
+              className="text-right tabular"
+            />
+          </label>
+        )}
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Costo unitario</span>
           <Input
@@ -315,7 +334,7 @@ function ReferenciaCosto({
 }) {
   if (ultimoCosto) {
     return (
-      <span className="mt-0.5 block text-right text-sm text-[var(--fg-subtle)] tabular">
+      <span className="mt-0.5 block whitespace-nowrap text-right text-sm text-[var(--fg-subtle)] tabular">
         {linea.costoPropuesto ? "de " : ""}
         {ultimoCosto.numero}: {ultimoCosto.costo.toFixed(4)}
       </span>

@@ -535,9 +535,11 @@ export function totalesDe(estado: EstadoCompra): TotalesCompra {
     estado.lineas.reduce((a, l) => a + importeLinea(l), 0),
   );
   const igv = estado.afectoIgv ? redondear2(subtotal * IGV) : 0;
-  // En las TRES modalidades desde el 25/09: el transporte de una compra local
-  // también es costo (§AO.4). Antes solo contaban en importación.
-  const gastos = totalGastos(estado.gastos);
+  // Solo en importación, y como CONTROL INTERNO (05/11): cuánto costó traer
+  // la mercadería. Luis: «los gastos no tienen que ver con las facturas…
+  // no se suma nada, solo algo de control interno». En la compra local se
+  // quitaron (Willy: «nada que ver»). Ver la 192.
+  const gastos = estado.tipo === "importacion" ? totalGastos(estado.gastos) : 0;
 
   return {
     subtotal,
@@ -654,8 +656,10 @@ export function aPayload(estado: EstadoCompra) {
     // El DETALLE, que es lo que manda: la base lo suma (022). El total se
     // manda también por si alguien llama a la RPC vieja, y coincide.
     // Sin pesos, nada «por kilo» (Willy, 02/10: la compra no lleva peso).
-    gastos: gastosParaEnviar(gastosSegunPesos(estado.lineas, estado.gastos)),
-    gastos_importacion: totalGastos(estado.gastos),
+    // La compra local ya no lleva gastos (05/11): no se mandan aunque el
+    // estado tuviera la fila de transporte propuesta.
+    gastos: esImportacion ? gastosParaEnviar(gastosSegunPesos(estado.lineas, estado.gastos)) : [],
+    gastos_importacion: esImportacion ? totalGastos(estado.gastos) : 0,
     // Tracking y courier NO viajan en una compra local, aunque el estado los
     // tuviera de antes de cambiar la modalidad.
     tracking: esImportacion ? estado.tracking.trim() || null : null,

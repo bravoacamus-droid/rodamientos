@@ -134,7 +134,7 @@ describe("totalesDe", () => {
     porque es un gasto al final»*. Si alguien vuelve a poner la regla vieja,
     el transporte de las compras de Lima deja de entrar al costo.
   */
-  it("una compra local SÍ cuenta su transporte", () => {
+  it("una compra local ya NO lleva gastos (05/11): ni en el total ni en lo que se manda", () => {
     const estado = conGasto(
       construir({ tipo: "agregar", producto: P6205, cantidad: 10 }),
       "Transporte",
@@ -142,8 +142,9 @@ describe("totalesDe", () => {
     );
 
     expect(estado.tipo).toBe("local");
-    expect(totalesDe(estado).gastos).toBe(15);
-    expect(totalesDe(estado).costoEnAlmacen).toBe(redondear(10 * 3.26 + 15));
+    // Willy, 05/11: «nada que ver». Los gastos son de importación y de control.
+    expect(totalesDe(estado).gastos).toBe(0);
+    expect(totalesDe(estado).costoEnAlmacen).toBe(redondear(10 * 3.26));
   });
 
   it("cambiar de modalidad NO borra un gasto que alguien escribió", () => {
@@ -153,8 +154,10 @@ describe("totalesDe", () => {
 
     // El dinero sigue ahí, a la vista, para quitarlo a mano si sobra. Borrarlo
     // en silencio sería sacar 40 del costo sin que nadie se entere.
-    expect(totalesDe(local).gastos).toBe(40);
     expect(local.gastos.some((g) => g.concepto === "Courier")).toBe(true);
+    // En local no cuentan (05/11); si se vuelve a importación, ahí siguen.
+    expect(totalesDe(local).gastos).toBe(0);
+    expect(totalesDe(reducir(local, { tipo: "modalidad", valor: "aerea" })).gastos).toBe(40);
   });
 
   it("cambiar de modalidad SIN dinero escrito trae los gastos de la nueva", () => {
@@ -568,7 +571,7 @@ describe("volver a comprar (aplicarPlantilla)", () => {
     });
     expect(e.tipo).toBe("local");
     expect(e.courier).toBe("");
-    expect(totalesDe(e).gastos).toBe(10);
+    expect(totalesDe(e).gastos).toBe(0);
   });
 });
 

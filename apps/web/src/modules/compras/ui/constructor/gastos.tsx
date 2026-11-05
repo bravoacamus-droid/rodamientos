@@ -74,9 +74,13 @@ export function GastosDeCompra({
     <section className="card p-4">
       <div className="mb-3">
         <h2 className="text-base font-semibold">
-          Gastos · {ETIQUETA_MODALIDAD[modalidad].toLowerCase()}
+          Gastos de traer la mercadería · {ETIQUETA_MODALIDAD[modalidad].toLowerCase()}
         </h2>
-        <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{AYUDA_MODALIDAD[modalidad]}</p>
+        {/* Control interno (05/11): cuánto costó traerla, para saber si
+            convino. No va en la factura ni en el costo de los productos. */}
+        <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+          {AYUDA_MODALIDAD[modalidad]} Es solo para tu control: no se suma a la factura ni al costo de los productos.
+        </p>
       </div>
 
       {gastos.length === 0 ? (
