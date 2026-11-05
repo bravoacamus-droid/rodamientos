@@ -490,13 +490,13 @@ export default async function PaginaDetalleCotizacion({
                     papel sale en la moneda de la venta, y se cambia en un sitio.
                   */
                   encima={
-                    <p className="text-sm text-[var(--fg-muted)]">
+                    <p key="moneda-del-papel" className="text-sm text-[var(--fg-muted)]">
                       {moneda === "PEN"
                         ? "En soles, como la venta."
                         : "En dólares, como la venta. Para venderla en soles, cámbialo en «Moneda de la venta»."}
                     </p>
                   }
-                  junto={<DescargarPdf c={impresa} cuentas={cuentas} />}
+                  junto={<DescargarPdf key="descargar-pdf" c={impresa} cuentas={cuentas} />}
                 >
                   <DocumentoEnMoneda c={impresa} cuentas={cuentas} />
                 </VistaPreviaDocumento>
