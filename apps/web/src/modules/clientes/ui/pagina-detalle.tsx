@@ -12,6 +12,7 @@ import { clientePorId } from "../api/consultas";
 import { ETIQUETA_DOCUMENTO } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
 import { Volver } from "@/componentes/volver";
+import { DireccionesDelCliente } from "@/modules/guias/ui/elegir-direccion";
 
 /**
  * Ficha de un cliente.
@@ -194,6 +195,9 @@ export default async function PaginaDetalleCliente({
         {/* La empresa y su gente, separadas. Antes iban en la misma caja
             llamada «Contacto» y con un solo nombre dentro; desde la 035 son
             varios, y el correo de la empresa no es el de la persona. */}
+        {/* Sus locales de entrega, con su distrito (195, 06/11). */}
+        <DireccionesDelCliente clienteId={c.id} puedeEditar={puedeEditar} />
+
         <section className="card p-4">
           <h2 className="mb-3 text-sm font-semibold">La empresa</h2>
           <dl className="flex flex-col gap-2 text-sm">

@@ -185,8 +185,6 @@ export function ConstructorGuia({
   }, [estado.ubigeoLlegada, lugar.codigo]);
   const [cargando, cargar] = useTransition();
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
-  /** El local guardado del que se partió: si se corrige, se corrige ese (195). */
-  const [direccionOrigen, setDireccionOrigen] = useState<string | null>(null);
 
   const [resultado, guardar, guardando] = useActionState<ResultadoGuia | null, FormData>(
     async (previo, formData) => {
@@ -195,9 +193,7 @@ export function ConstructorGuia({
         // Editar: la misma pantalla, otra acción. Lo que viaja lo arma el
         // dominio (`aPayloadEdicion`), con los productos incluidos.
         const crudo = formData.get("edicion");
-        const a = await actualizarGuia(
-          typeof crudo === "string" ? { ...JSON.parse(crudo), direccion_origen_id: direccionOrigen } : null,
-        );
+        const a = await actualizarGuia(typeof crudo === "string" ? JSON.parse(crudo) : null);
         r = a.ok
           ? { ok: true, id: edicion.guiaId, numero: edicion.numero, pesoBrutoKg: 0 }
           : { ok: false, error: a.error };
@@ -287,7 +283,6 @@ export function ConstructorGuia({
   return (
     <form action={guardar} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="guia" value={JSON.stringify(aPayload(estado))} />
-      {direccionOrigen ? <input type="hidden" name="direccion_origen" value={direccionOrigen} /> : null}
       {edicion ? (
         <input type="hidden" name="edicion" value={JSON.stringify(aPayloadEdicion(edicion.guiaId, estado))} />
       ) : null}
@@ -612,9 +607,7 @@ export function ConstructorGuia({
                 {/* La fiscal o un local ya usado, con su distrito (195). */}
                 <ElegirDireccion
                   clienteId={estado.clienteId}
-                  onOrigen={setDireccionOrigen}
                   direccionActual={estado.direccionLlegada}
-                  ubigeoActual={estado.ubigeoLlegada}
                   onElegir={(direccion, ubigeo) => {
                     despachar({ tipo: "campo", campo: "direccionLlegada", valor: direccion });
                     despachar({ tipo: "campo", campo: "ubigeoLlegada", valor: ubigeo });
