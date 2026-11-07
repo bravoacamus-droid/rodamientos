@@ -23,6 +23,7 @@ import { emisorParaImprimir } from "@/lib/emisor";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 import { DocumentoOrdenCompra } from "./documento-orden";
 import { hojaDeOrdenCompra, textoCondicionPago, textoEntrega } from "./papel";
+import { enDolares } from "../dominio/moneda";
 
 /**
  * Ficha de una compra.
@@ -290,7 +291,18 @@ export default async function PaginaDetalleCompra({
           valor={<Moneda valor={c.igv} moneda={c.moneda} enfasis="suave" />}
           pie={c.igv === 0 ? "no afecto" : undefined}
         />
-        <Tarjeta etiqueta="Total" valor={<Moneda valor={c.total} moneda={c.moneda} />} />
+        {/* En soles, también lo que es en dólares para el sistema (06/11). */}
+        <Tarjeta
+          etiqueta="Total"
+          valor={<Moneda valor={c.total} moneda={c.moneda} />}
+          pie={
+            c.moneda === "PEN" && c.tipo_cambio
+              ? `US$ ${enDolares(c.total, c.tipo_cambio).toFixed(2)} al T.C. ${c.tipo_cambio.toFixed(3)}`
+              : c.moneda === "PEN"
+                ? "sin tipo de cambio"
+                : undefined
+          }
+        />
         <Tarjeta
           etiqueta="Recibido"
           valor={`${pedido > 0 ? Math.round((recibido / pedido) * 100) : 0}%`}

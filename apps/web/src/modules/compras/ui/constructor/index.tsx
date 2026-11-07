@@ -34,6 +34,7 @@ import {
   totalesDe,
   type ProductoParaComprar,
 } from "../../dominio/constructor";
+import { enDolares } from "../../dominio/moneda";
 import { InputSugerencias } from "@/componentes/input-sugerencias";
 import { BuscadorProveedores } from "@/modules/proveedores/ui/buscador";
 import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
@@ -235,6 +236,9 @@ export function ConstructorCompra({
   );
 
   const totales = useMemo(() => totalesDe(estado), [estado]);
+  // Las cifras en la moneda de la factura (06/11): antes ponía «$» siempre.
+  const enSoles = estado.moneda === "PEN";
+  const simbolo = enSoles ? "S/" : "US$";
   const bloqueos = useMemo(() => {
     // El número de la factura ya no se exige, tampoco en una orden (187).
     // Luis, 04/11: «algunos no le dan».
@@ -971,35 +975,64 @@ export function ConstructorCompra({
           <div className="card sticky top-4 flex flex-col gap-3 p-4">
             <h2 className="text-sm font-semibold">Resumen</h2>
 
+            {/*
+              En la moneda de la factura, y si es en soles, también en
+              dólares (06/11). Moisés: «selecciono soles, pongo 160 soles y en
+              el resumen aparece 160 dólares… tenemos que tener cuánto es en
+              soles, como le manda su proveedor, y para el sistema a cuánto se
+              convierte en dólares». Se guarda en soles con su tipo de cambio
+              (042); los dólares son los que entran al kardex al recibir.
+            */}
             <dl className="flex flex-col gap-1.5 text-sm">
               <Fila etiqueta="Líneas" valor={String(totales.lineas)} />
               <Fila etiqueta="Unidades" valor={totales.unidades.toLocaleString("es-PE")} />
               <div className="my-1 border-t border-[var(--border-soft)]" />
-              <Fila etiqueta="Subtotal" valor={`$ ${totales.subtotal.toFixed(2)}`} />
+              <Fila etiqueta="Subtotal" valor={`${simbolo} ${totales.subtotal.toFixed(2)}`} />
               <Fila
                 etiqueta={estado.afectoIgv ? "IGV (18 %)" : "IGV (no afecto)"}
-                valor={`$ ${totales.igv.toFixed(2)}`}
+                valor={`${simbolo} ${totales.igv.toFixed(2)}`}
               />
-              <Fila etiqueta="Total" valor={`$ ${totales.total.toFixed(2)}`} fuerte />
+              <Fila etiqueta="Total" valor={`${simbolo} ${totales.total.toFixed(2)}`} fuerte />
+
+              {enSoles ? (
+                <div className="mt-1 flex flex-col gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                  <p className="text-sm font-medium">
+                    {estado.tipoCambio > 0
+                      ? `Para el sistema, en dólares (T.C. ${estado.tipoCambio.toFixed(3)})`
+                      : "Para el sistema, en dólares"}
+                  </p>
+                  {estado.tipoCambio > 0 ? (
+                    <>
+                      <Fila etiqueta="Subtotal" valor={`US$ ${enDolares(totales.subtotal, estado.tipoCambio).toFixed(2)}`} />
+                      <Fila etiqueta="IGV" valor={`US$ ${enDolares(totales.igv, estado.tipoCambio).toFixed(2)}`} />
+                      <Fila etiqueta="Total" valor={`US$ ${enDolares(totales.total, estado.tipoCambio).toFixed(2)}`} fuerte />
+                    </>
+                  ) : (
+                    <p className="text-sm text-[var(--fg-muted)]">
+                      Falta el tipo de cambio: tráelo de SUNAT o escríbelo arriba, junto a la moneda.
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               {/* En las tres modalidades desde el 25/09: el transporte de una
                   compra local también es costo (§AO.4). */}
               {totales.gastos > 0 ? (
                 <>
                   <div className="my-1 border-t border-[var(--border-soft)]" />
-                  <Fila etiqueta="Gastos (control interno)" valor={`$ ${totales.gastos.toFixed(2)}`} />
+                  <Fila etiqueta="Gastos (control interno)" valor={`${simbolo} ${totales.gastos.toFixed(2)}`} />
                   {/* El «$/Kg.» de su hoja (097). */}
                   {costeo.repartePorPeso ? (
                     <Fila
                       etiqueta={`Gastos por kilo (${costeo.kilos.toFixed(1)} kg)`}
-                      valor={`$ ${costeo.porKg.toFixed(2)}/kg`}
+                      valor={`${simbolo} ${costeo.porKg.toFixed(2)}/kg`}
                     />
                   ) : null}
                   {/* Referencia: cuánto salió traerla. No cambia el total
                       de la factura ni el costo del stock (192, 05/11). */}
                   <Fila
                     etiqueta="Puesta en Lima, con gastos"
-                    valor={`$ ${totales.costoEnAlmacen.toFixed(2)}`}
+                    valor={`${simbolo} ${totales.costoEnAlmacen.toFixed(2)}`}
                   />
                   <p className="text-sm text-[var(--fg-muted)]">
                     Solo para tu control: no se suma a la factura ni al costo de los productos.
