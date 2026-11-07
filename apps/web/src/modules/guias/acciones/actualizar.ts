@@ -39,6 +39,8 @@ import { recordarDireccionDeGuia } from "../api/recordar-direccion";
 /** La misma lista que `permisos_rol` tiene para `guias_remision`. */
 const esquema = z.object({
   id: z.string().uuid(),
+  /** El local guardado del que se partió, para corregirlo (195). */
+  direccion_origen_id: z.string().uuid().nullable().optional(),
   fecha_traslado: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "La fecha de inicio de traslado no es válida."),
@@ -197,7 +199,7 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
     }
 
     // La dirección de entrega queda para la próxima guía de este cliente (195).
-    await recordarDireccionDeGuia(supabase, d.id);
+    await recordarDireccionDeGuia(supabase, d.id, d.direccion_origen_id ?? null);
 
     revalidatePath("/guias");
     revalidatePath(`/guias/${d.id}`);
