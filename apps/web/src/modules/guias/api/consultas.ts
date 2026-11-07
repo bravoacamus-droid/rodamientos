@@ -218,6 +218,28 @@ export interface AnulacionGuia {
 }
 
 /** La ficha de una guía, con sus líneas. */
+/**
+ * ¿Qué se puede descargar de SUNAT de esta guía? (07/11). El XML desde la 199
+ * y el CDR desde la 168; las 575 de SIMPLE no tienen ninguno. Sin esto, la
+ * ficha pondría botones que llevan a un «no existe».
+ */
+export async function archivosSunatDeGuia(id: string): Promise<{ xml: boolean; cdr: boolean }> {
+  try {
+    const supabase = await clienteServidor();
+    const { data } = await supabase
+      .from("guias_remision")
+      .select("sunat_xml_firmado, sunat_respuesta")
+      .eq("id", id)
+      .maybeSingle();
+    return {
+      xml: Boolean(data?.sunat_xml_firmado),
+      cdr: Boolean((data?.sunat_respuesta as { cdrXml?: string } | null)?.cdrXml),
+    };
+  } catch {
+    return { xml: false, cdr: false };
+  }
+}
+
 export async function detalleGuia(
   id: string,
   /** Sin sesión (el reenvío automático a SUNAT, 183) se lee con el de servicio. */

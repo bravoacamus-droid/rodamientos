@@ -113,7 +113,20 @@ export async function mandarGuiaASunat(id: string, supabase: SupabaseClient<Data
     numero: g.numero,
     previo: { ticket: antes?.sunat_ticket ?? null, yaSeMando: Boolean(antes?.sunat_enviado_en) },
     sunat: {
-      enviar: () => datos.emitirGuia(guiaParaSunat(g, { ruc: empresa.ruc, razonSocial: empresa.razon_social }, emitidaEn)),
+      enviar: async () => {
+        const envio = await datos.emitirGuia(
+          guiaParaSunat(g, { ruc: empresa.ruc, razonSocial: empresa.razon_social }, emitidaEn),
+        );
+        // El XML tal como se firmó y se mandó (199): no se puede rehacer
+        // después. Se guarda en cuanto SUNAT lo recibe; si esto falla, el
+        // envío sigue y solo se pierde la copia para descargar.
+        const { error } = await admin
+          .from("guias_remision")
+          .update({ sunat_xml_firmado: envio.xmlFirmado })
+          .eq("id", id);
+        if (error) console.error(`[guias] no se guardó el XML de ${g.numero}`, error.message);
+        return envio;
+      },
       consultar: (ticket) => datos.consultarGuia(ticket),
     },
     guia: puertoGuia(id),

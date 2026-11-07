@@ -3220,6 +3220,7 @@ export type Database = {
           sunat_reintentos_auto: number
           sunat_respuesta: Json | null
           sunat_ticket: string | null
+          sunat_xml_firmado: string | null
           sunat_xml_url: string | null
           transportista_documento: string | null
           transportista_placa: string | null
@@ -3276,6 +3277,7 @@ export type Database = {
           sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
+          sunat_xml_firmado?: string | null
           sunat_xml_url?: string | null
           transportista_documento?: string | null
           transportista_placa?: string | null
@@ -3332,6 +3334,7 @@ export type Database = {
           sunat_reintentos_auto?: number
           sunat_respuesta?: Json | null
           sunat_ticket?: string | null
+          sunat_xml_firmado?: string | null
           sunat_xml_url?: string | null
           transportista_documento?: string | null
           transportista_placa?: string | null

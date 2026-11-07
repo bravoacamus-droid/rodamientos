@@ -9632,3 +9632,21 @@ día, para ver si está ganando o perdiendo»*.
   en la base, y por eso ya corrige producción.
 - El costo que entra al kardex ya se convertía (`a_dolares`, 042): el margen
   estaba bien. Lo que mentía era la pantalla y ese reporte.
+
+## §DI · 07/11 — La guía de remitente se descarga en XML y CDR (199)
+
+Moisés, 07/11: *«las guías de remitente también deberían descargar el XML y el
+CDR?»*. Sí: son comprobantes electrónicos como la factura (que los tiene desde
+el 02/11).
+- El CDR ya se guardaba (`sunat_respuesta.cdrXml`, 168): faltaba el botón.
+- El XML firmado NO se guardaba: `emitirGuia` lo devolvía y el envío solo se
+  quedaba el ticket. Desde la 199 se guarda al mandar (`sunat_xml_firmado`).
+  Las guías enviadas antes se quedan sin XML: firmarlo otra vez daría otra
+  firma, y ya no sería el documento que recibió SUNAT.
+- Ruta `/guias/[id]/sunat?que=xml|cdr`, con los nombres de SUNAT
+  (`RUC-09-T002-…`). Los botones salen solo si hay qué descargar (las 575 de
+  SIMPLE no tienen ninguno).
+- La guía de TRANSPORTISTA (31) la emite la empresa de transporte con su RUC:
+  no le toca al ERP.
+
+Sin ver en pantalla al cerrar (el navegador no tenía sesión).

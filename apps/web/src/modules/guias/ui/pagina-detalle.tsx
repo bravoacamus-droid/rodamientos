@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { Building2, FileText, Printer, Pencil } from "lucide-react";
+import { Building2, FileArchive, FileCode, FileText, Printer, Pencil } from "lucide-react";
 import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
@@ -13,7 +13,7 @@ import { emisorParaImprimir } from "@/lib/emisor";
 import { nombreArchivo } from "@/lib/pdf-hoja";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 
-import { detalleGuia } from "../api/consultas";
+import { archivosSunatDeGuia, detalleGuia } from "../api/consultas";
 import { ETIQUETA_ESTADO, ETIQUETA_MODALIDAD } from "../dominio/tipos";
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { AnularGuia } from "./anular-guia";
@@ -62,6 +62,11 @@ export default async function PaginaDetalleGuia({
   if (!resultado.datos) notFound();
 
   const g = resultado.datos;
+  // El XML y el CDR, si los hay (07/11): solo en las guías que SUNAT tiene.
+  const archivos =
+    g && (g.estado_sunat === "aceptado" || g.estado_sunat === "observado")
+      ? await archivosSunatDeGuia(g.id)
+      : { xml: false, cdr: false };
   // Corregir y emitir un borrador es «editar» la guía; anularla, «eliminar» (143).
   const puedeEmitir = perfil.tiene("guias", "editar");
   const puedeAnular = perfil.tiene("guias", "eliminar");
@@ -488,6 +493,33 @@ export default async function PaginaDetalleGuia({
               faltaGuia={faltaParaSunat(g).filter((f) => !f.startsWith("Solo se manda"))}
               puede={puedeEmitir}
             />
+            {/* El XML y la constancia (CDR), como en la factura (07/11).
+                Moisés: «las guías de remitente también deberían descargar el
+                XML y el CDR?». Solo lo que esté guardado. */}
+            {archivos.xml || archivos.cdr ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {archivos.xml ? (
+                  <a
+                    href={`/guias/${g.id}/sunat?que=xml`}
+                    download
+                    className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+                  >
+                    <FileCode className="size-4" aria-hidden />
+                    Descargar XML
+                  </a>
+                ) : null}
+                {archivos.cdr ? (
+                  <a
+                    href={`/guias/${g.id}/sunat?que=cdr`}
+                    download
+                    className={cn(buttonVariants({ variant: "outline" }), "gap-1.5")}
+                  >
+                    <FileArchive className="size-4" aria-hidden />
+                    Descargar CDR
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         </div>
       </div>
