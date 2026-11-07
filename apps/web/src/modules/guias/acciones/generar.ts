@@ -107,7 +107,12 @@ export async function generarGuia(
     };
 
     // La dirección de entrega queda para la próxima guía de este cliente (195).
-    await recordarDireccionDeGuia(supabase, r.id);
+    const origen = formData.get("direccion_origen");
+    await recordarDireccionDeGuia(
+      supabase,
+      r.id,
+      typeof origen === "string" && z.string().uuid().safeParse(origen).success ? origen : null,
+    );
 
     revalidatePath("/guias");
     revalidatePath("/cotizaciones");

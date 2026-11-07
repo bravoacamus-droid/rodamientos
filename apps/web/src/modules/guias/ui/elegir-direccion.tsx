@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button, toast } from "@rodatech/ui";
 import { Building2, Check, MapPin, Trash2 } from "lucide-react";
 
@@ -24,14 +24,32 @@ export function ElegirDireccion({
   direccionActual,
   ubigeoActual,
   onElegir,
+  onOrigen,
 }: {
   clienteId: string | null;
   direccionActual: string;
   ubigeoActual: string;
   onElegir: (direccion: string, ubigeo: string) => void;
+  /**
+   * El local guardado del que se parte (null si la fiscal o ninguno). Si se
+   * corrige el texto o el distrito, al guardar la guía se corrige ESE local
+   * y no se añade otro (Moisés, 06/11: «¿cómo hago para editar esa
+   * dirección?»).
+   */
+  onOrigen: (id: string | null) => void;
 }) {
   const [lista, setLista] = useState<DireccionCliente[] | null>(null);
   const [quitando, empezar] = useTransition();
+  /** «fiscal», el id de un local guardado, o null si no se partió de ninguno. */
+  const [origen, setOrigenLocal] = useState<string | null>(null);
+  const setOrigen = (o: string | null) => {
+    setOrigenLocal(o);
+    onOrigen(o && o !== "fiscal" ? o : null);
+  };
+  // La dirección con la que se abrió, para saber de qué local se parte al
+  // cargar la lista sin que la carga dependa de cada tecla.
+  const direccionInicial = useRef(direccionActual);
+  direccionInicial.current = lista === null ? direccionActual : direccionInicial.current;
 
   useEffect(() => {
     if (!clienteId) {
@@ -40,22 +58,37 @@ export function ElegirDireccion({
     }
     let vigente = true;
     void direccionesDeCliente(clienteId).then((r) => {
-      if (vigente) setLista(r.ok ? r.datos : null);
+      if (!vigente) return;
+      const datos = r.ok ? r.datos : null;
+      setLista(datos);
+      const inicial = claveDireccion(direccionInicial.current);
+      const igual = datos?.find((d) => claveDireccion(d.direccion) === inicial);
+      setOrigenLocal(igual ? (igual.id ?? "fiscal") : null);
+      onOrigen(igual?.id ?? null);
     });
     return () => {
       vigente = false;
     };
+    // onOrigen es un setState del padre: estable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clienteId]);
 
   if (!lista || lista.length === 0) return null;
   const actual = claveDireccion(direccionActual);
+  const deOrigen = lista.find((d) => (d.id ?? "fiscal") === origen) ?? null;
+  // Se partió de un local guardado y se le cambió algo: al guardar, se corrige.
+  const corrigiendo =
+    deOrigen !== null &&
+    deOrigen.id !== null &&
+    actual.length > 0 &&
+    (claveDireccion(deOrigen.direccion) !== actual || (deOrigen.ubigeo ?? "") !== ubigeoActual);
 
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-sm font-medium">¿A dónde se entrega?</legend>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {lista.map((d) => {
-          const elegida = claveDireccion(d.direccion) === actual && (d.ubigeo ?? "") === ubigeoActual;
+          const elegida = (d.id ?? "fiscal") === origen;
           return (
             <div
               key={d.id ?? "fiscal"}
@@ -66,7 +99,10 @@ export function ElegirDireccion({
               <button
                 type="button"
                 aria-pressed={elegida}
-                onClick={() => onElegir(d.direccion, d.ubigeo ?? "")}
+                onClick={() => {
+                  setOrigen(d.id ?? "fiscal");
+                  onElegir(d.direccion, d.ubigeo ?? "");
+                }}
                 className="flex min-w-0 flex-1 items-start gap-2 text-left"
               >
                 <span
@@ -81,6 +117,9 @@ export function ElegirDireccion({
                   <span className="flex items-center gap-1.5 text-sm font-semibold">
                     {d.fiscal ? <Building2 className="size-4" aria-hidden /> : <MapPin className="size-4" aria-hidden />}
                     {d.fiscal ? "La del RUC (fiscal)" : "Otro local"}
+                    {elegida && corrigiendo ? (
+                      <span className="rounded-sm bg-[var(--warn-bg)] px-1.5 text-sm font-medium">se corregirá</span>
+                    ) : null}
                   </span>
                   <span className="block break-words text-sm">{d.direccion}</span>
                   <span className="block text-sm text-[var(--fg-muted)]">{d.lugar ?? "Sin distrito: elígelo abajo"}</span>
@@ -100,6 +139,7 @@ export function ElegirDireccion({
                         return;
                       }
                       setLista((l) => (l ? l.filter((x) => x.id !== d.id) : l));
+                      if (origen === d.id) setOrigen(null);
                       toast.success("Dirección quitada de la lista.");
                     })
                   }
@@ -112,9 +152,17 @@ export function ElegirDireccion({
           );
         })}
       </div>
-      <p className="text-sm text-[var(--fg-muted)]">
-        ¿Va a otro sitio? Escríbelo abajo y elige su distrito: al guardar la guía queda en esta lista para la próxima.
-      </p>
+      {corrigiendo ? (
+        <p className="rounded-sm border border-[var(--warn)] bg-[var(--warn-bg)] px-3 py-2 text-sm">
+          Al guardar la guía, este local se <strong>corrige</strong> con la dirección y el distrito de abajo. Si es
+          un local distinto, elige primero «La del RUC» y escribe el nuevo: así se guarda aparte.
+        </p>
+      ) : (
+        <p className="text-sm text-[var(--fg-muted)]">
+          Para corregir un local, elígelo y cambia la dirección o el distrito de abajo. ¿Va a otro sitio? Elige «La
+          del RUC», escribe el nuevo y su distrito: al guardar la guía queda en esta lista.
+        </p>
+      )}
     </fieldset>
   );
 }
