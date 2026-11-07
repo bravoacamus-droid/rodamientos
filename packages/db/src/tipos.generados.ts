@@ -641,6 +641,61 @@ export type Database = {
           },
         ]
       }
+      cliente_direcciones: {
+        Row: {
+          clave: string | null
+          cliente_id: string
+          creado_en: string
+          creado_por: string | null
+          direccion: string
+          id: string
+          ubigeo_codigo: string | null
+          usado_en: string
+        }
+        Insert: {
+          clave?: string | null
+          cliente_id: string
+          creado_en?: string
+          creado_por?: string | null
+          direccion: string
+          id?: string
+          ubigeo_codigo?: string | null
+          usado_en?: string
+        }
+        Update: {
+          clave?: string | null
+          cliente_id?: string
+          creado_en?: string
+          creado_por?: string | null
+          direccion?: string
+          id?: string
+          ubigeo_codigo?: string | null
+          usado_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_direcciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_direcciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_resumen_clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_direcciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "v_trazabilidad_venta"
+            referencedColumns: ["cliente_id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           activo: boolean

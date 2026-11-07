@@ -126,6 +126,8 @@ export interface CompraDetalle {
   via_importacion: "aerea" | "maritima" | null;
   /** La moneda de la factura del proveedor (042). */
   moneda: "USD" | "PEN";
+  /** Con soles, el tipo de cambio de la compra (042). null en dólares. */
+  tipo_cambio: number | null;
   /**
    * El detalle de los gastos, de más caro a más barato. Vacío si no se
    * detalló. Con su reparto desde la 097.

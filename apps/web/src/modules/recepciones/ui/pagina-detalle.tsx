@@ -1,5 +1,6 @@
 // «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
+import { enDolares } from "@/modules/compras/dominio/moneda";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EstadoError, Moneda } from "@rodatech/ui";
@@ -57,6 +58,11 @@ export default async function PaginaDetalleRecepcion({
   // Colgarle papeles o corregir números es «Almacén · Editar» (143).
   const puedeAdjuntar = permisos.tiene("almacen", "editar");
   const total = r.lineas.reduce((a, l) => a + l.importe, 0);
+  // En soles, lo que es en dólares: es lo que entró al kardex (042, 06/11).
+  const enDolaresTexto =
+    r.moneda === "PEN" && r.tipo_cambio
+      ? `US$ ${enDolares(total, r.tipo_cambio).toFixed(2)} al T.C. ${r.tipo_cambio.toFixed(3)}`
+      : null;
   const unidades = r.lineas.reduce((a, l) => a + l.cantidad, 0);
 
   return (
@@ -162,13 +168,13 @@ export default async function PaginaDetalleRecepcion({
                 <div className="min-w-0">
                   <dt className="text-[var(--fg-subtle)]">Costo c/u</dt>
                   <dd>
-                    <Moneda valor={l.costo_unitario} tamano="sm" enfasis="suave" />
+                    <Moneda valor={l.costo_unitario} moneda={r.moneda} tamano="sm" enfasis="suave" />
                   </dd>
                 </div>
                 <div className="min-w-0">
                   <dt className="text-[var(--fg-subtle)]">Importe</dt>
                   <dd>
-                    <Moneda valor={l.importe} tamano="sm" />
+                    <Moneda valor={l.importe} moneda={r.moneda} tamano="sm" />
                   </dd>
                 </div>
               </dl>
@@ -190,8 +196,9 @@ export default async function PaginaDetalleRecepcion({
             </span>
             <span className="flex items-baseline gap-2">
               <span className="text-[var(--fg-muted)]">Valor al proveedor</span>
-              <Moneda valor={total} enfasis="fuerte" />
+              <Moneda valor={total} moneda={r.moneda} enfasis="fuerte" />
             </span>
+            {enDolaresTexto ? <span className="text-[var(--fg-muted)]">{enDolaresTexto}</span> : null}
           </li>
         </ul>
         <div className="scroll-x hidden @3xl:block">
@@ -228,10 +235,10 @@ export default async function PaginaDetalleRecepcion({
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Moneda valor={l.costo_unitario} tamano="sm" enfasis="suave" />
+                    <Moneda valor={l.costo_unitario} moneda={r.moneda} tamano="sm" enfasis="suave" />
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <Moneda valor={l.importe} tamano="sm" />
+                    <Moneda valor={l.importe} moneda={r.moneda} tamano="sm" />
                   </td>
                 </tr>
               ))}
@@ -248,7 +255,10 @@ export default async function PaginaDetalleRecepcion({
                   Valor al proveedor
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <Moneda valor={total} enfasis="fuerte" />
+                  <Moneda valor={total} moneda={r.moneda} enfasis="fuerte" />
+                  {enDolaresTexto ? (
+                    <span className="block text-sm text-[var(--fg-muted)]">{enDolaresTexto}</span>
+                  ) : null}
                 </td>
               </tr>
             </tfoot>

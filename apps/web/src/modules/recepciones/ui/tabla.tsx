@@ -120,7 +120,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
                 </td>
                 <td className="px-4 py-2.5 text-right tabular">{r.items}</td>
                 <td className="px-4 py-2.5 text-right">
-                  <Moneda valor={r.valorizado} tamano="sm" />
+                  <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" />
                 </td>
                 <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
                   {r.recibido_por ?? "—"}
@@ -188,7 +188,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
               <Dato etiqueta="Ingreso al almacén">{r.fecha}</Dato>
               <Dato etiqueta="Líneas">{r.items}</Dato>
               <Dato etiqueta="Valorizado">
-                <Moneda valor={r.valorizado} tamano="sm" />
+                <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" />
               </Dato>
               <Dato etiqueta="Recibió">{r.recibido_por ?? "—"}</Dato>
               <div className="col-span-2 min-w-0">

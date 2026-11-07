@@ -9595,3 +9595,35 @@ todos los módulos que corresponde, no dejar un hueco libre»*.
 mira «comprar igual»; el candado usa la regla de la base, que no lo mira (igual
 que `aprobar` desde el 02/11). Una línea con stock y «comprar igual» marcada sin
 análisis no bloquea.
+
+## §DH · 06/11 — Direcciones de entrega por cliente (195) y las compras en soles (196)
+
+**Direcciones de entrega.** Moisés, 06/11, desde la T002-00000581 (TECNOFIL,
+RUC en Independencia, entrega en Comas): *«que se guarde por cliente… y si
+hago otra cotización y guía a ese cliente pueda seleccionar una dirección u
+otra… tiene que ser dinámico con el ubigeo»*.
+- `cliente_direcciones` (195): dirección + ubigeo por cliente, con `clave`
+  (sin espacios ni signos) para no duplicar variantes de escritura.
+- En la guía, «¿A dónde se entrega?»: la fiscal y los locales ya usados, cada
+  uno con su distrito; elegir pone la dirección y el ubigeo a la vez. Una
+  dirección nueva se guarda sola al guardar la guía (`recordarDireccionDeGuia`,
+  desde la Server Action: sin disparador, para no cambiar producción antes de
+  desplegar). Se puede quitar.
+- **Sin cargar** las ~100 direcciones del histórico de SIMPLE: vienen muy
+  repetidas (COFACO, «Av. San Genaro 222» de cinco formas). Pendiente de que
+  Moisés decida.
+
+**Compras en soles.** Moisés, 06/11: *«selecciono soles, pongo 160 soles y en
+el resumen aparece 160 dólares… lo que va a digitar tiene que calzar con la
+factura, pero para el sistema tiene que ser en dólares, con la conversión del
+día, para ver si está ganando o perdiendo»*.
+- El resumen de «Registrar compra» ponía «$» fijo: ahora va en la moneda de la
+  factura y, en soles, «Para el sistema, en dólares (T.C. …)».
+- La ficha de la compra y la de la recepción dicen el equivalente en dólares;
+  la recepción y su lista pintaban sus costos en soles con «$».
+- **`serie_compras` sumaba los soles como dólares** (196): el «Informe
+  general» y el tablero tenían 202 compras en soles (S/ 33 629) contadas
+  3,7 veces de más. Ahora convierte como `reporte_compras` (133). Esto ya está
+  en la base, y por eso ya corrige producción.
+- El costo que entra al kardex ya se convertía (`a_dolares`, 042): el margen
+  estaba bien. Lo que mentía era la pantalla y ese reporte.

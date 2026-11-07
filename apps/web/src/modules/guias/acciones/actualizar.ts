@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
+import { recordarDireccionDeGuia } from "../api/recordar-direccion";
 
 /**
  * Corregir un borrador de guía.
@@ -194,6 +195,9 @@ export async function actualizarGuia(crudos: unknown): Promise<ResultadoActualiz
         error: "No se guardó: alguien emitió la guía mientras la estabas corrigiendo.",
       };
     }
+
+    // La dirección de entrega queda para la próxima guía de este cliente (195).
+    await recordarDireccionDeGuia(supabase, d.id);
 
     revalidatePath("/guias");
     revalidatePath(`/guias/${d.id}`);

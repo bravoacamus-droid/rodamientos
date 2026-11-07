@@ -27,6 +27,7 @@ import type { ConductorMaestro, VehiculoMaestro } from "@/modules/transporte";
 
 import { Pencil, Plus } from "lucide-react";
 import { SelectorUbigeoCascada } from "@/modules/clientes/ui/selector-ubigeo";
+import { ElegirDireccion } from "./elegir-direccion";
 import { departamentosUbigeo, distritosUbigeo, provinciasUbigeo } from "@/modules/clientes/acciones/ubigeo";
 import { nombreDelUbigeo } from "@/modules/configuracion/acciones/ubigeo";
 
@@ -603,6 +604,16 @@ export function ConstructorGuia({
               </div>
 
               <div className="mt-3 flex flex-col gap-3">
+                {/* La fiscal o un local ya usado, con su distrito (195). */}
+                <ElegirDireccion
+                  clienteId={estado.clienteId}
+                  direccionActual={estado.direccionLlegada}
+                  ubigeoActual={estado.ubigeoLlegada}
+                  onElegir={(direccion, ubigeo) => {
+                    despachar({ tipo: "campo", campo: "direccionLlegada", valor: direccion });
+                    despachar({ tipo: "campo", campo: "ubigeoLlegada", valor: ubigeo });
+                  }}
+                />
                 <label className="flex flex-col gap-1">
                   <span className="text-sm font-medium">
                     Dirección de entrega <span className="text-[var(--danger)]">*</span>
@@ -619,8 +630,8 @@ export function ConstructorGuia({
                     placeholder="Dónde se descarga la mercadería"
                   />
                   <span className="text-sm text-[var(--fg-subtle)]">
-                    Sale la del cliente, pero se entrega en obra más veces de las que se
-                    entrega en la oficina fiscal.
+                    Se puede corregir a mano. Si cambias de local, cambia también el
+                    distrito de abajo.
                   </span>
                 </label>
 

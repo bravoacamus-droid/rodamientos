@@ -220,7 +220,7 @@ export async function detalleCompra(
         `id, numero, fecha, fecha_estimada, proveedor_id, tipo,
          documento_proveedor, guia_proveedor, tracking, courier, estado,
          subtotal, igv, total, gastos_importacion, observaciones,
-         motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda, falta_factura,
+         motivo_anulacion, creado_en, consulta_precio_id, via_importacion, moneda, tipo_cambio, falta_factura,
          condicion_pago, dias_credito, entrega, direccion_entrega,
          gastos_importacion_detalle:gastos_importacion(id, concepto, monto, reparto),
          consulta:consultas_precio!compras_consulta_precio_id_fkey(numero),
@@ -305,6 +305,7 @@ export async function detalleCompra(
         via_importacion: (c.via_importacion as "aerea" | "maritima" | null) ?? null,
         // 042. La moneda de la FACTURA del proveedor; USD si no consta.
         moneda: (c.moneda as "USD" | "PEN" | null) ?? "USD",
+        tipo_cambio: Number(c.tipo_cambio) > 0 ? Number(c.tipo_cambio) : null,
         // El detalle, en el orden en que pesa: lo caro arriba.
         gastos: (
           (c.gastos_importacion_detalle as

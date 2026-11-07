@@ -53,7 +53,7 @@ export async function listarRecepciones(
     let consulta = supabase
       .from("recepciones")
       .select(
-        `id, creado_en, numero, fecha, guia_proveedor, factura_proveedor, anulada,
+        `id, creado_en, numero, fecha, guia_proveedor, factura_proveedor, anulada, moneda,
          proveedores(razon_social),
          compras(numero),
          perfiles(nombre),
@@ -113,6 +113,7 @@ export async function listarRecepciones(
         factura_proveedor: (r.factura_proveedor as string | null) ?? null,
         recibido_por: r.perfiles?.nombre ?? null,
         anulada: Boolean(r.anulada),
+        moneda: r.moneda === "PEN" ? "PEN" : "USD",
         items: items.length,
         // Sin los gastos prorrateados: es lo que se le pagó al proveedor, que
         // es contra lo que se cuadra la factura.
@@ -174,7 +175,7 @@ export async function detalleRecepcion(
       .from("recepciones")
       .select(
         `id, numero, fecha, compra_id, guia_proveedor, factura_proveedor,
-         observaciones, anulada, creado_en,
+         observaciones, anulada, creado_en, moneda, tipo_cambio,
          proveedores(razon_social, numero_documento),
          compras(numero),
          perfiles(nombre),
@@ -210,6 +211,8 @@ export async function detalleRecepcion(
         fecha: String(r.fecha),
         proveedor: r.proveedores?.razon_social ?? null,
         proveedor_documento: r.proveedores?.numero_documento ?? null,
+        moneda: r.moneda === "PEN" ? "PEN" : "USD",
+        tipo_cambio: Number(r.tipo_cambio) > 0 ? Number(r.tipo_cambio) : null,
         compra_id: (r.compra_id as string | null) ?? null,
         compra_numero: r.compras?.numero ?? null,
         guia_proveedor: (r.guia_proveedor as string | null) ?? null,

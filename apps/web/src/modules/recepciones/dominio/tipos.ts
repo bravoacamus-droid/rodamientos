@@ -22,8 +22,10 @@ export interface RecepcionLista {
   anulada: boolean;
   /** Cuántas líneas trae. Sale de un conteo, no de traer los ítems. */
   items: number;
-  /** Suma de cantidad × costo, sin prorratear gastos. */
+  /** Suma de cantidad × costo, sin prorratear gastos, en `moneda`. */
   valorizado: number;
+  /** La moneda de la factura del proveedor (042): el valorizado va en ella. */
+  moneda: "USD" | "PEN";
 }
 
 /** Una línea de la ficha de una recepción ya registrada. */
@@ -55,6 +57,12 @@ export interface RecepcionDetalle {
   observaciones: string | null;
   anulada: boolean;
   creado_en: string;
+  /**
+   * La moneda de los costos (042) y su tipo de cambio. Los costos de las
+   * líneas van en ella —lo que dice la factura—; al kardex entran en dólares.
+   */
+  moneda: "USD" | "PEN";
+  tipo_cambio: number | null;
   lineas: LineaRecepcion[];
 }
 
