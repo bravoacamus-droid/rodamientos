@@ -9,15 +9,12 @@ import { claveDireccion as clave } from "../dominio/direccion";
  * falla, la guía ya está bien y no se le dice nada a nadie —es una comodidad
  * para la próxima, no parte del documento—.
  *
- * Con `origenId` —se partió de un local guardado y se corrigió— ese local se
- * CORRIGE en vez de añadir otro (Moisés, 06/11: «¿y cómo hago para editar
- * esa dirección?»). Si la corrección coincide con otro local ya guardado, o
- * se partió de la fiscal, se añade o se refresca como siempre.
+ * Corregir o borrar una dirección guardada se hace aparte, en la ventana
+ * «Direcciones» de la guía (06/11).
  */
 export async function recordarDireccionDeGuia(
   supabase: Awaited<ReturnType<typeof clienteServidor>>,
   guiaId: string,
-  origenId?: string | null,
 ): Promise<void> {
   try {
     const { data: g } = await supabase
@@ -29,19 +26,6 @@ export async function recordarDireccionDeGuia(
     if (!g?.cliente_id || !direccion || direccion.length < 3) return;
     const fiscal = (g.clientes as { direccion: string | null } | null)?.direccion ?? "";
     if (clave(direccion) === clave(fiscal)) return;
-
-    if (origenId) {
-      const { error, count } = await supabase
-        .from("cliente_direcciones")
-        .update(
-          { direccion, ubigeo_codigo: g.ubigeo_llegada ?? null, usado_en: new Date().toISOString() },
-          { count: "exact" },
-        )
-        .eq("id", origenId)
-        .eq("cliente_id", g.cliente_id);
-      // Corregido. Si choca con otro local (23505) o ya no existe, sigue abajo.
-      if (!error && count) return;
-    }
 
     await supabase.from("cliente_direcciones").upsert(
       {

@@ -9609,6 +9609,11 @@ otra… tiene que ser dinámico con el ubigeo»*.
   dirección nueva se guarda sola al guardar la guía (`recordarDireccionDeGuia`,
   desde la Server Action: sin disparador, para no cambiar producción antes de
   desplegar). Se puede quitar.
+- Rehecho el mismo 06/11 (Moisés: *«¿por qué no lo sacamos en el mismo
+  select… que se abra un modal y guardar, editar o borrar?»*): en la guía, un
+  selector con buscador + botón «Direcciones» que abre la ventana para
+  añadir, corregir y borrar. La misma ventana en la ficha del cliente
+  («Direcciones de entrega»), con permiso de quien edita clientes (197).
 - **Sin cargar** las ~100 direcciones del histórico de SIMPLE: vienen muy
   repetidas (COFACO, «Av. San Genaro 222» de cinco formas). Pendiente de que
   Moisés decida.
