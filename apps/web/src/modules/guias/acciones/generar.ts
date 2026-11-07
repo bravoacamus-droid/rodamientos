@@ -5,6 +5,7 @@ import { z } from "zod";
 import { clienteServidor, perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
+import { recordarDireccionDeGuia } from "../api/recordar-direccion";
 
 /**
  * Genera la guía en BORRADOR desde una cotización aprobada.
@@ -104,6 +105,9 @@ export async function generarGuia(
       numero: string;
       peso_bruto_kg: number;
     };
+
+    // La dirección de entrega queda para la próxima guía de este cliente (195).
+    await recordarDireccionDeGuia(supabase, r.id);
 
     revalidatePath("/guias");
     revalidatePath("/cotizaciones");
