@@ -9732,3 +9732,5 @@ unidad del producto, 0e7e85c) y cuadra con la factura del proveedor. Sigue
 pendiente: al recibir los 4.5 m el kardex quedará en +1.5 → ajuste de −1.5 m.
 
 **Cerrado (16/11):** ajuste **AJU-26-00002** (descuadre, −1.5 m de CA-ASA60-1; stock −3 → −4.5, queda en 0 al recibir los 4.5 m de MEGACHAIN). La CT02-1337 se queda en 3 und a 11.98 por decisión de Luis: pasarla a 4.5 m a 7.9867 descuadraba el pedido (confirmado 20.5 contra 19 despachados).
+
+**Revertido (16/11, a pedido de Luis: «déjalo como estaba, con entero»):** borrado el AJU-26-00002 (movimiento 685, sus ítems y su bitácora; el número vuelve a quedar libre), stock de CA-ASA60-1 otra vez en **−3**, y el análisis de MEGACHAIN otra vez en **3 × 9.30**. La CT02-1337 queda exactamente como antes de tocarla.
