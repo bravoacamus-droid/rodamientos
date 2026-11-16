@@ -257,6 +257,8 @@ export type Accion =
         costoUnitario: number;
         precioMinimo: number;
         precioLista: number;
+        /** La unidad de la ficha (16/11): la línea la sigue. Ausente: no cambia. */
+        unidad?: string;
       };
     }
   /**
@@ -628,6 +630,13 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
     case "fichaActualizada":
       return mapear(estado, accion.key, (l) => ({
         ...l,
+        /*
+          La unidad sigue a la ficha (16/11), y la cantidad se ajusta a ella:
+          pasar de «Metro» a «Unidad» deja 4.5 en 5, no en un 4.5 que la base
+          rechazaría. De «Unidad» a «Metro» no cambia nada.
+        */
+        unidad: accion.datos.unidad ?? l.unidad,
+        cantidad: accion.datos.unidad ? ajustarCantidad(l.cantidad, accion.datos.unidad) || 1 : l.cantidad,
         codigo: accion.datos.codigo,
         marca: accion.datos.marca,
         descripcion: accion.datos.descripcion,

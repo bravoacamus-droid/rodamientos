@@ -19,6 +19,8 @@ import { proveedoresGuardados } from "../dominio/compra-linea";
 import { estadoInicial, type EstadoConstructor } from "../dominio/constructor";
 import { entregaDelDocumento } from "../dominio/disponibilidad";
 import { Constructor } from "./constructor";
+import { ajustarCantidad } from "@/lib/cantidad";
+import { unidadLegible } from "../dominio/unidades";
 
 /** La misma lista que `permisos_rol` tiene para `cotizaciones`. */
 
@@ -86,6 +88,12 @@ export default async function PaginaEditarCotizacion({
   }
 
   const { cabecera, lineas } = resultado.datos;
+
+  // La unidad de cada línea, la de la ficha del producto HOY (16/11).
+  const unidadDeHoy = (l: (typeof lineas)[number]) => l.productos?.unidad_codigo ?? l.unidad_codigo;
+  const cambiaron = lineas
+    .filter((l) => unidadDeHoy(l) !== l.unidad_codigo)
+    .map((l) => `${l.codigo}: decía ${Number(l.cantidad)} ${unidadLegible(l.unidad_codigo)}, ahora se vende en ${unidadLegible(unidadDeHoy(l))}.`);
 
   /*
     El stock de cada producto, como al cotizar (02/11). Iba `stock: 0` a mano
@@ -161,8 +169,10 @@ export default async function PaginaEditarCotizacion({
       codigo: l.codigo,
       marca: l.marca,
       descripcion: l.descripcion,
-      unidad: l.unidad_codigo,
-      cantidad: l.cantidad,
+      // La unidad del PRODUCTO de hoy (16/11): si se cambió en Productos
+      // después de cotizar, al editar la línea la sigue, y se avisa arriba.
+      unidad: unidadDeHoy(l),
+      cantidad: ajustarCantidad(Number(l.cantidad), unidadDeHoy(l)) || 1,
       valorUnitario: l.valor_unitario,
       descuentoPct: l.descuento_pct,
       costoUnitario: l.costo_unitario,
@@ -221,6 +231,24 @@ export default async function PaginaEditarCotizacion({
       esGerencia={perfil.rol === "gerencia"}
     >
       {compras.length > 0 ? <AvisoDeCompras compras={compras} /> : null}
+      {cambiaron.length > 0 ? (
+        <div role="note" className="mb-4 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3.5 text-sm">
+          <p className="font-medium text-[var(--warn)]">
+            {cambiaron.length === 1
+              ? "Un producto cambió de unidad en su ficha"
+              : `${cambiaron.length} productos cambiaron de unidad en su ficha`}
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {cambiaron.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+          <p className="mt-1 text-[var(--fg-muted)]">
+            La línea ya usa la unidad nueva. Revisa la cantidad y el precio antes de guardar; si no guardas, queda como
+            estaba.
+          </p>
+        </div>
+      ) : null}
       <Constructor
       sugeridos={[]}
       // El mismo permiso que `guardarKit`.

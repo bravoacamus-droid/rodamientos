@@ -805,3 +805,18 @@ describe("registrado: la línea de SIMPLE se enlaza al producto nuevo (05/11)", 
     expect(reducir(e, { tipo: "registrado", key: "nope", producto: FAG6209 }).lineas).toEqual(e.lineas);
   });
 });
+
+describe("la línea sigue a la unidad de la ficha (16/11)", () => {
+  it("de unidad a metro: la unidad cambia y la cantidad se queda", () => {
+    const e = correr(estadoInicial("cli"), { tipo: "agregar", producto: P6209, cantidad: 3 });
+    const d = { codigo: "CA-ASA60-1", marca: "SWF", descripcion: "CADENA", costoUnitario: 0, precioMinimo: 0, precioLista: 0 };
+    const r = reducir(e, { tipo: "fichaActualizada", key: "l1", datos: { ...d, unidad: "MTR" } });
+    expect(r.lineas[0]).toMatchObject({ unidad: "MTR", cantidad: 3 });
+    const r2 = reducir(reducir(r, { tipo: "cantidad", key: "l1", valor: 4.5 }), {
+      tipo: "fichaActualizada",
+      key: "l1",
+      datos: { ...d, unidad: "NIU" },
+    });
+    expect(r2.lineas[0]).toMatchObject({ unidad: "NIU", cantidad: 5 });
+  });
+});

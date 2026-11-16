@@ -9711,3 +9711,13 @@ Luis: la CT02-1337 lleva «CA-ASA60-1 CADENA… (x1.5m)», 3 und; se vendieron
 11.98 (35.94, la varilla). El kardex de CA-ASA60-1 quedó en −3 (salieron 3,
 pero en metros fueron 4.5): al recibir los 4.5 m de la compra quedará en 1.5
 y habrá que ajustar −1.5 m. Pendiente de que Luis lo diga.
+
+**Y la unidad se cambia desde la cotización o desde Productos (16/11, tarde).**
+Luis: *«que puedan editar de cotización o productos los tipos de unidades y la
+cantidad»*. «Editar artículo» ya cambiaba la unidad en la ficha, pero la línea
+se quedaba con la vieja. Ahora `fichaActualizada` lleva la unidad y la línea
+la sigue, ajustando la cantidad (4.5 m → 5 und). Y al **abrir el editor** de
+una cotización guardada, cada línea toma la unidad del producto de hoy, con un
+aviso arriba de cuáles cambiaron; si no se guarda, queda como estaba.
+Revisado en la base: de las cotizaciones vivas, solo la **CT02-1304** (la de
+SIMPLE, enviada) tiene una línea con otra unidad que su producto.

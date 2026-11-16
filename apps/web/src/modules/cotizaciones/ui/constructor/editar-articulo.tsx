@@ -79,7 +79,7 @@ export function EditarArticulo({
     marca: string;
     descripcion: string;
     /** Solo cuando se guardó en el CATÁLOGO: la línea copia lo nuevo. */
-    ficha?: { costoUnitario: number; precioMinimo: number; precioLista: number };
+    ficha?: { costoUnitario: number; precioMinimo: number; precioLista: number; unidad: string };
   }) => void;
 }) {
   /** ¿Tiene ficha que editar, o es una línea escrita a mano? */
@@ -318,6 +318,9 @@ export function EditarArticulo({
           costoUnitario: Number(datos.ultimo_costo) || 0,
           precioMinimo: Number(datos.precio_minimo) || 0,
           precioLista: Number(datos.precio_venta) || 0,
+          // La unidad también (16/11): cambiarla a «Metro» en la ficha y que
+          // la línea siga en «Unidad» era el caso de la CT02-1337.
+          unidad: datos.unidad_codigo,
         },
       });
       onCerrar();
