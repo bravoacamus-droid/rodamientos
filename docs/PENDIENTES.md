@@ -9721,3 +9721,12 @@ una cotización guardada, cada línea toma la unidad del producto de hoy, con un
 aviso arriba de cuáles cambiaron; si no se guarda, queda como estaba.
 Revisado en la base: de las cotizaciones vivas, solo la **CT02-1304** (la de
 SIMPLE, enviada) tiene una línea con otra unidad que su producto.
+
+**CT02-1337, la compra en metros (16/11, por SQL, a pedido de Luis).** El
+análisis de CA-ASA60-1 (`cotizacion_item_proveedores` 108abd45…, MEGACHAIN)
+pasó de **3 × 9.30** a **4.5 × 6.20** (costo_usd 6.20; mismo total 27.90): las
+varillas eran de 1.5 m y 9.30 = 1.5 × 6.20, el precio por metro de MEGACHAIN en
+SIMPLE. La línea de la cotización, la T002-586 y la F002-588 siguen en 3 und a
+11.98: emitidas, y cuadran entre sí. Con eso la orden sale en metros (la
+unidad del producto, 0e7e85c) y cuadra con la factura del proveedor. Sigue
+pendiente: al recibir los 4.5 m el kardex quedará en +1.5 → ajuste de −1.5 m.
