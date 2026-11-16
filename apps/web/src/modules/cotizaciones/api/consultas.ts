@@ -482,6 +482,13 @@ export async function cotizacionPorId(id: string): Promise<
        */
       productos: {
         es_kit: boolean;
+        /**
+         * La unidad del PRODUCTO hoy (16/11). La línea guarda la suya, que es
+         * como se vendió; se compra en la del producto. La CT02-1337, clonada
+         * de SIMPLE, vendía «3 und» de una cadena que el catálogo lleva en
+         * metros, y la orden no dejaba pedir 4.5.
+         */
+        unidad_codigo: string;
         kit_componentes: {
           cantidad: number;
           orden: number;
@@ -528,7 +535,7 @@ export async function cotizacionPorId(id: string): Promise<
                               costo_unitario, moneda, incluye_igv, tipo_cambio,
                               costo_usd, fecha, proveedores(razon_social)),
                             productos(
-                              es_kit,
+                              es_kit, unidad_codigo,
                               kit_componentes!kit_componentes_kit_id_fkey(
                                 cantidad, orden,
                                 productos!kit_componentes_producto_id_fkey(codigo, descripcion)

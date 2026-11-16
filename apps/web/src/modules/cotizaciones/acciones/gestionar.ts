@@ -7,6 +7,8 @@ import { type Accion, sinPermiso } from "@/lib/permisos";
 import type { Json } from "@rodatech/db/tipos";
 
 import { consultarTipoCambio } from "@/lib/tipo-cambio";
+import { ajustarCantidad } from "@/lib/cantidad";
+import { unidadLegible } from "../dominio/unidades";
 
 import {
   faltaAnalizarAlAprobar,
@@ -25,7 +27,7 @@ import { type PreviaEliminar, leerPrevia } from "../dominio/eliminar";
 const uuid = z.string().uuid();
 
 export type ResultadoGestion =
-  | { ok: true; id?: string; numero?: string; pedidoId?: string }
+  | { ok: true; id?: string; numero?: string; pedidoId?: string; avisos?: string[] }
   /** `pideTipoCambio`: es en soles y SUNAT no contestó; que lo escriban. */
   /** `faltaAnalisis`: los productos que hay que comprar sin análisis (02/11). */
   /** `sinRegistrar`: las líneas que no están en el catálogo (05/11). */
@@ -388,7 +390,7 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
     const { data, error } = await supabase
       .from("cotizaciones")
       .select(
-        `cliente_id, validez_dias, tiempo_entrega, contacto, condiciones,
+        `numero, cliente_id, validez_dias, tiempo_entrega, contacto, condiciones,
          observaciones, mostrar_descuento,
          cotizacion_items(id, producto_id, orden, codigo, marca, descripcion,
                           cantidad, unidad_codigo, valor_unitario,
@@ -415,10 +417,12 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
       .filter((x): x is string => x !== null);
 
     const vigentes = new Map<string, { precio_venta: number; costo_promedio: number }>();
+    /** La unidad del producto HOY (16/11): la copia se vende en ella. */
+    const unidadDe = new Map<string, string>();
     if (ids.length > 0) {
       const { data: productos, error: e2 } = await supabase
         .from("productos")
-        .select("id, precio_venta, costo_promedio")
+        .select("id, precio_venta, costo_promedio, unidad_codigo")
         .in("id", ids);
       if (e2) return { ok: false, error: e2.message };
       for (const p of productos ?? []) {
@@ -426,6 +430,7 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
           precio_venta: p.precio_venta,
           costo_promedio: p.costo_promedio,
         });
+        unidadDe.set(p.id, p.unidad_codigo);
       }
     }
 
@@ -442,16 +447,18 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
     if (sueltas.length > 0) {
       const { data: hallados } = await supabase
         .from("productos")
-        .select("id, codigo, precio_venta, costo_promedio")
+        .select("id, codigo, precio_venta, costo_promedio, unidad_codigo")
         .in("codigo", [...new Set(sueltas)])
         .eq("archivado", false);
       for (const p of hallados ?? []) {
         porCodigo.set(p.codigo.toUpperCase(), { id: p.id, precio_venta: p.precio_venta, costo_promedio: p.costo_promedio });
         vigentes.set(p.id, { precio_venta: p.precio_venta, costo_promedio: p.costo_promedio });
+        unidadDe.set(p.id, p.unidad_codigo);
       }
     }
 
     const ordenadas = [...items].sort((a, b) => Number(a.orden) - Number(b.orden));
+    const avisos: string[] = [];
     // 169: la copia conserva qué línea es alternativa de cuál, por posición.
     const posicion = new Map(ordenadas.map((i, n) => [i.id as string, n + 1]));
 
@@ -475,14 +482,30 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
             porCodigo.get(String(i.codigo ?? "").trim().toUpperCase())?.id ??
             null;
           const vigente = pid && !mantenerPrecios ? vigentes.get(pid) : undefined;
+          /*
+            La unidad del PRODUCTO de hoy, no la de la cotización vieja (16/11).
+            La CT02-1337, clonada de la CT02-1304 de SIMPLE, salió con «3 und»
+            de una cadena que el catálogo lleva en metros: se facturó así y la
+            orden de compra no dejó pedir los 4.5 m. Si cambia, se avisa: la
+            cantidad puede no significar lo mismo.
+          */
+          const antes = String(i.unidad_codigo ?? "NIU");
+          const unidad = (pid && unidadDe.get(pid)) || antes;
+          const pedida = Number(elegidas?.get(i.id as string) ?? i.cantidad);
+          const cantidad = ajustarCantidad(pedida, unidad) || 1;
+          if (unidad !== antes) {
+            avisos.push(
+              `${String(i.codigo)}: en ${data.numero ?? "la original"} decía ${pedida} ${unidadLegible(antes)}, y el producto se vende en ${unidadLegible(unidad)}. Revisa la cantidad y el precio.`,
+            );
+          }
           return {
             producto_id: pid,
             orden: n + 1,
             codigo: i.codigo,
             marca: i.marca,
             descripcion: i.descripcion,
-            cantidad: elegidas?.get(i.id as string) ?? i.cantidad,
-            unidad_codigo: i.unidad_codigo,
+            cantidad,
+            unidad_codigo: unidad,
             // Un precio o un costo de catálogo en cero no es un precio: se
             // queda el de la cotización.
             valor_unitario: vigente && Number(vigente.precio_venta) > 0 ? vigente.precio_venta : i.valor_unitario,
@@ -509,7 +532,7 @@ export async function clonar(id: string, opcionesCrudas?: unknown): Promise<Resu
     await supabase.rpc("anotar_clon", { p_id: r.id, p_origen: id });
     revalidatePath("/cotizaciones");
     revalidatePath("/dashboard");
-    return { ok: true, id: r.id, numero: r.numero };
+    return { ok: true, id: r.id, numero: r.numero, avisos };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "No se pudo clonar." };
   }

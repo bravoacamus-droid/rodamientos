@@ -85,6 +85,13 @@ export function DialogoClonar({
       toast.success(`Se creó ${r.numero ?? "la copia"}`, {
         description: `Con ${elegidas.length} ${elegidas.length === 1 ? "línea" : "líneas"} de ${numero}. ${numero} queda como estaba.`,
       });
+      // Si alguna línea cambió de unidad al pasar a la del producto (16/11).
+      if (r.avisos && r.avisos.length > 0) {
+        toast.warning("Revisa estas líneas antes de mandarla", {
+          description: r.avisos.join(" "),
+          duration: 20000,
+        });
+      }
       onCerrar();
       if (r.id) router.push(`/cotizaciones/${r.id}`);
     });

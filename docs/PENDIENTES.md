@@ -9688,3 +9688,26 @@ la unidad. Hoy hay 30 productos en metros.
 
 **Sin ver en pantalla:** el permiso para entrar con la clave de desarrollo se
 denegó en esta sesión; lo probado es la base (centinela) y 1840 tests.
+
+## §DI · 16/11 — La CT02-1337: se compra en la unidad del producto, y el clon toma la de hoy
+
+Luis: la CT02-1337 lleva «CA-ASA60-1 CADENA… (x1.5m)», 3 und; se vendieron
+3 varillas de 1.5 m = **4.5 m**, y la orden de compra no dejaba pedir 4.5.
+
+- **No la editaron en el ERP:** es un **clon de la CT02-1304 de SIMPLE**, cuya
+  línea ya decía «(x1.5m)», 3, unidad NIU. El clon copió texto y unidad; la
+  ficha del producto (en **metros** desde antes) nunca tuvo «(x1.5m)». Para
+  cambiar la ficha desde la cotización está «Editar artículo»; el texto de la
+  línea es solo de esa cotización.
+- **La orden de compra usaba la unidad de la LÍNEA** (NIU → entero). Ahora la
+  sección «Órdenes de compra» usa la del **producto** (`productos.unidad_codigo`
+  en `cotizacionPorId`): 4.5 m se puede pedir. Con la línea en NIU, además, el
+  candado de la 200 habría rechazado 4.5 en `compra_items`.
+- **El clon toma la unidad del producto de hoy** y avisa (toast de 20 s) si
+  cambia: «en CT02-1304 decía 3 und, y el producto se vende en m. Revisa la
+  cantidad y el precio». La cantidad se ajusta a la unidad nueva.
+
+**Lo ya emitido no se tocó:** T002-586 y F002-588 salieron con 3 NIU a
+11.98 (35.94, la varilla). El kardex de CA-ASA60-1 quedó en −3 (salieron 3,
+pero en metros fueron 4.5): al recibir los 4.5 m de la compra quedará en 1.5
+y habrá que ajustar −1.5 m. Pendiente de que Luis lo diga.

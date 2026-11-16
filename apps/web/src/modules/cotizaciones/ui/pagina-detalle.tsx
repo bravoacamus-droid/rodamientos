@@ -290,7 +290,9 @@ export default async function PaginaDetalleCotizacion({
       codigo: l.codigo,
       cantidad: Number(l.cantidad),
       confirmada: Number(l.cantidad_aprobada ?? 0),
-      unidad: l.unidad_codigo,
+      // Se compra en la unidad del PRODUCTO, no en la de la línea (16/11):
+      // la CT02-1337 vendía «3 und» de una cadena que se compra en metros.
+      unidad: l.productos?.unidad_codigo ?? l.unidad_codigo,
       proveedores: proveedoresGuardados(l.cotizacion_item_proveedores),
       // Lo que llegó después del análisis no se vuelve a comprar (04/11).
       stock: l.stock,
