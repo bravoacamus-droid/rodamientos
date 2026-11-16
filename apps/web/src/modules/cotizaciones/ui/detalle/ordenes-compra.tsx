@@ -26,6 +26,7 @@ import type { OrdenDelPedido } from "../../api/consultas";
 import { proponerPendientes, type LineaConfirmada, type OrdenPropuesta } from "../../dominio/compra-linea";
 import { faltanParaOtros, otrosPedidos, type DemandaProducto } from "../../dominio/demanda";
 import { OtrosPedidos } from "../otros-pedidos";
+import { admiteDecimales, ajustarCantidad, pasoCantidad } from "@/lib/cantidad";
 
 const dinero = (n: number, moneda: string) =>
   n.toLocaleString("es-PE", { style: "currency", currency: moneda === "PEN" ? "PEN" : "USD" });
@@ -228,7 +229,7 @@ function DialogoGenerar({
       os.map((o) =>
         o.proveedorId !== prov
           ? o
-          : { ...o, items: o.items.map((i) => (i.productoId === prod ? { ...i, cantidad: Math.max(0, Math.round(n)) } : i)) },
+          : { ...o, items: o.items.map((i) => (i.productoId === prod ? { ...i, cantidad: ajustarCantidad(n, i.unidad) } : i)) },
       ),
     );
 
@@ -323,9 +324,9 @@ function DialogoGenerar({
                         Cantidad
                         <Input
                           type="number"
-                          inputMode="numeric"
+                          inputMode={admiteDecimales(i.unidad) ? "decimal" : "numeric"}
                           min={0}
-                          step={1}
+                          step={pasoCantidad(i.unidad)}
                           value={i.cantidad}
                           disabled={excluida}
                           onChange={(e) => cantidad(o.proveedorId, i.productoId, Number(e.target.value) || 0)}

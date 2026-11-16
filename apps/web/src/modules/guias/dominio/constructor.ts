@@ -1,4 +1,5 @@
 import { redondear2 } from "@rodatech/config";
+import { ajustarCantidad } from "@/lib/cantidad";
 
 import type { CotizacionDespachable, GuiaDetalle, ModalidadTraslado } from "./tipos";
 
@@ -161,12 +162,13 @@ export function estadoInicial(hoy: string): EstadoGuiaEnCurso {
   };
 }
 
-const cantidadValida = (n: number, tope: number) => {
+const cantidadValida = (n: number, tope: number, unidad: string) => {
   if (!Number.isFinite(n) || n <= 0) return 0;
   // Nunca por encima de lo que queda por despachar: pasarse deja el kardex
   // diciendo que salió algo que no se vendió, y eso no lo arregla ningún
-  // documento posterior.
-  return redondear2(Math.min(n, tope));
+  // documento posterior. Y según la unidad (16/11): 2.5 metros sí, 2.5
+  // rodamientos no.
+  return Math.min(ajustarCantidad(n, unidad), redondear2(tope));
 };
 
 export function reducir(
@@ -248,7 +250,7 @@ export function reducir(
         ...estado,
         lineas: estado.lineas.map((l) =>
           l.key === accion.key
-            ? { ...l, cantidad: cantidadValida(accion.valor, tope) }
+            ? { ...l, cantidad: cantidadValida(accion.valor, tope, l.unidad) }
             : l,
         ),
       };

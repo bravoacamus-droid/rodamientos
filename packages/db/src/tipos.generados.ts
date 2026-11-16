@@ -6911,6 +6911,7 @@ export type Database = {
           provincia: string
         }[]
       }
+      unidad_admite_decimales: { Args: { p_unidad: string }; Returns: boolean }
       unidad_periodo: { Args: { p_grano: string }; Returns: string }
       usar_stock_en_vez_de_comprar: { Args: { p_item: string }; Returns: Json }
       vincular_guias_comprobante: {

@@ -2,6 +2,7 @@ import { aUsdSinIgv, type Moneda } from "@/modules/compras/dominio/comparador";
 
 import { saleDelAlmacen } from "./situacion-linea";
 import { redondear2, redondear4 } from "./totales";
+import { ajustarCantidad } from "@/lib/cantidad";
 
 /**
  * A quién se le compra cada línea de la cotización, y a cuánto (111).
@@ -205,7 +206,8 @@ export function proponerOrdenes(lineas: readonly LineaConfirmada[], igv = 0.18):
     }
 
     for (const p of comprables) {
-      const cantidad = Math.round(cantidades.get(p.proveedorId) ?? 0);
+      // Según la unidad (16/11): 7.5 metros de cadena se piden como 7.5.
+      const cantidad = ajustarCantidad(cantidades.get(p.proveedorId) ?? 0, linea.unidad);
       if (cantidad <= 0) continue;
       const grupo = porProveedor.get(p.proveedorId) ?? { nombre: p.nombre, filas: [] };
       grupo.filas.push({ linea, p, cantidad });

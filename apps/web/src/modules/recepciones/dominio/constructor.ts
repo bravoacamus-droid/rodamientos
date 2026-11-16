@@ -5,7 +5,8 @@ import {
   type CosteoRecepcion,
   type RepartoCompra,
 } from "./costeo";
-import type { CompraPendiente } from "./tipos";
+import type { CompraPendiente } from "./tipos";
+import { ajustarCantidad } from "@/lib/cantidad";
 
 /**
  * El estado del registro de recepción, como reducer PURO.
@@ -115,8 +116,11 @@ export function estadoInicial(fecha: string): EstadoRecepcion {
 }
 
 /** Redondeo defensivo de lo que llega de un input. */
-const cantidadValida = (n: number) =>
-  Number.isFinite(n) && n > 0 ? redondear2(n) : 1;
+/** Según la unidad (16/11): dos decimales si se mide, entera si es pieza. */
+const cantidadValida = (n: number, unidad?: string | null) => {
+  const c = ajustarCantidad(n, unidad);
+  return c > 0 ? c : 1;
+};
 const costoValido = (n: number) =>
   Number.isFinite(n) && n >= 0 ? redondear4(n) : 0;
 
@@ -184,7 +188,7 @@ export function reducir(estado: EstadoRecepcion, accion: Accion): EstadoRecepcio
     case "cantidad":
       return mapear(estado, accion.key, (l) => ({
         ...l,
-        cantidad: cantidadValida(accion.valor),
+        cantidad: cantidadValida(accion.valor, l.unidad),
       }));
 
     case "costo":

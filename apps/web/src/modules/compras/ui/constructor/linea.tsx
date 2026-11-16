@@ -2,6 +2,7 @@
 
 // «NIU» es el código de SUNAT; en la tienda se dice «UND» (revisión por módulos del 02/10).
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
+import { ajustarCantidad, pasoCantidad } from "@/lib/cantidad";
 import { Button, Input } from "@rodatech/ui";
 import { ArrowRight, Trash2 } from "lucide-react";
 
@@ -75,16 +76,20 @@ export function FilaCompra({
 
       <td className="px-2 py-2">
         {/*
-          ENTERA. No se compran 3,30 rodamientos.
+          ENTERA si se cuenta por pieza: no se compran 3,30 rodamientos.
 
           Luis, 21/09: *«la cantidad tiene que ser siempre entero, yo no puedo
           pedir cantidad 3.30, no, eso no»*. Admitía dos decimales desde
           siempre, y con ellos un 3,3 tecleado sin querer se convertía en una
           orden de compra que ningún proveedor sabe atender.
 
-          Se redondea al vuelo en vez de rechazar: quien teclea un decimal aquí
-          se equivocó de tecla, y un error que se corrige solo es mejor que uno
-          que hay que leer.
+          Desde el 16/11, con DOS decimales si la unidad se mide: Willy compra
+          y vende cadena y faja por metro (7.50 m de CA-ASA60-1 ya venía así
+          de SIMPLE). Lo decide la unidad del producto (`lib/cantidad.ts`).
+
+          Se redondea al vuelo en vez de rechazar: quien teclea un decimal en
+          una pieza se equivocó de tecla, y un error que se corrige solo es
+          mejor que uno que hay que leer.
         */}
         {/* La de la orden del pedido no se cambia: se lee, no es un campo
             apagado (05/11). La unidad, a su lado, y no en otra columna. */}
@@ -98,13 +103,13 @@ export function FilaCompra({
             <Input
               type="number"
               min={0}
-              step={1}
+              step={pasoCantidad(linea.unidad)}
               value={linea.cantidad}
               onChange={(e) =>
                 despachar({
                   tipo: "cantidad",
                   key: linea.key,
-                  valor: Math.round(Number(e.target.value)),
+                  valor: ajustarCantidad(Number(e.target.value), linea.unidad),
                 })
               }
               className="w-20 text-right tabular"
@@ -249,13 +254,13 @@ export function TarjetaCompra({
               type="number"
               inputMode="numeric"
               min={0}
-              step={1}
+              step={pasoCantidad(linea.unidad)}
               value={linea.cantidad}
               onChange={(e) =>
                 despachar({
                   tipo: "cantidad",
                   key: linea.key,
-                  valor: Math.round(Number(e.target.value)),
+                  valor: ajustarCantidad(Number(e.target.value), linea.unidad),
                 })
               }
               className="text-right tabular"

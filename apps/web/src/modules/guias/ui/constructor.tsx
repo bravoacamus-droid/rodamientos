@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useReducer, useRef, useState, useTransition } from "react";
+import { pasoCantidad } from "@/lib/cantidad";
 import { useRouter } from "next/navigation";
 import { Combobox, Button, Input, SelectNativo, Textarea } from "@rodatech/ui";
 
@@ -429,7 +430,7 @@ export function ConstructorGuia({
                           type="number"
                           min={0}
                           max={l.pedido - l.despachado}
-                          step="0.01"
+                          step={pasoCantidad(l.unidad)}
                           value={l.cantidad}
                           onChange={(e) =>
                             despachar({
@@ -521,7 +522,7 @@ export function ConstructorGuia({
                             type="number"
                             min={0}
                             max={l.pedido - l.despachado}
-                            step="0.01"
+                            step={pasoCantidad(l.unidad)}
                             value={l.cantidad}
                             onChange={(e) =>
                               despachar({

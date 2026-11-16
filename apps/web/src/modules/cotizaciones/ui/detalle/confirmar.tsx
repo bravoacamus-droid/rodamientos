@@ -33,6 +33,7 @@ import {
 } from "../../dominio/analisis-al-aprobar";
 import { importeLinea } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
+import { ajustarCantidad, pasoCantidad } from "@/lib/cantidad";
 
 /**
  * «¿Qué te confirmó el cliente?»
@@ -153,7 +154,9 @@ export function DialogoConfirmar({
   }, [abierto, corrigiendo, cotizacionId]);
 
   const poner = (id: string, valor: number, tope: number) => {
-    const n = Number.isFinite(valor) ? Math.max(0, Math.min(tope, valor)) : 0;
+    // Según la unidad (16/11): 2.5 metros sí, 2.5 rodamientos no.
+    const unidad = lineas.find((l) => l.id === id)?.unidad;
+    const n = Math.min(tope, ajustarCantidad(valor, unidad));
     setCantidades((x) => ({ ...x, [id]: n }));
   };
 
@@ -345,7 +348,7 @@ export function DialogoConfirmar({
                           type="number"
                           min={0}
                           max={l.cantidad}
-                          step="any"
+                          step={pasoCantidad(l.unidad)}
                           numerico
                           value={conf}
                           onChange={(e) =>

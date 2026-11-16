@@ -1,5 +1,7 @@
 import { IGV, importeExacto, redondear2, redondear4 } from "@rodatech/config";
 
+import { ajustarCantidad } from "@/lib/cantidad";
+
 import type { TipoCompra } from "./tipos";
 import {
   CONCEPTOS_SUGERIDOS,
@@ -272,8 +274,11 @@ function cambiarModalidad(estado: EstadoCompra, m: Modalidad): EstadoCompra {
 }
 
 /** Redondeo defensivo de lo que llega de un input. */
-const cantidadValida = (n: number) =>
-  Number.isFinite(n) && n > 0 ? redondear2(n) : 1;
+/** Según la unidad (16/11): dos decimales si se mide, entera si es pieza. */
+const cantidadValida = (n: number, unidad?: string | null) => {
+  const c = ajustarCantidad(n, unidad);
+  return c > 0 ? c : 1;
+};
 const costoValido = (n: number) =>
   Number.isFinite(n) && n >= 0 ? redondear4(n) : 0;
 const montoValido = (n: number) =>
@@ -385,7 +390,7 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
       return { ...estado, afectoIgv: accion.valor };
 
     case "agregar": {
-      const cantidad = cantidadValida(accion.cantidad ?? 1);
+      const cantidad = cantidadValida(accion.cantidad ?? 1, accion.producto.unidad);
 
       // Si el producto ya está, se suma a la línea existente. No es cosmético:
       // `compra_items` tiene UNIQUE (compra_id, producto_id), así que dos
@@ -451,7 +456,7 @@ export function reducir(estado: EstadoCompra, accion: Accion): EstadoCompra {
     case "cantidad":
       return mapear(estado, accion.key, (l) => ({
         ...l,
-        cantidad: cantidadValida(accion.valor),
+        cantidad: cantidadValida(accion.valor, l.unidad),
       }));
 
     case "costo":

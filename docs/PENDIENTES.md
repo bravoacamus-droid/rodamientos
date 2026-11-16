@@ -9650,3 +9650,41 @@ el 02/11).
   no le toca al ERP.
 
 Sin ver en pantalla al cerrar (el navegador no tenía sesión).
+
+## §DH · 16/11 — Cantidades con decimales según la unidad (200)
+
+Willy, por Luis: *«algunos productos los puede vender 3.5 metros, 2.98… él ya
+sabe qué productos son, pero quiere la cantidad en decimales»*. Luis eligió
+**según la unidad**: lo que se mide (metro, cm, mm, pulgada, pie, yarda, m², m³,
+litro, galón, kilo, gramo, tonelada, libra, onza, hora, día, mes, año) y los
+grupos (docena, gruesa, ciento, millar) admiten **dos decimales**; lo que se
+cuenta por pieza (unidad, kit, caja, par, paquete, servicio…) sigue **entero**.
+Un producto que se vende en fracciones se arregla poniéndole su unidad en la
+ficha.
+
+- **La base ya guardaba dos decimales** (`numeric(14,2)` en todas las
+  cantidades) y ninguna función redondeaba. SUNAT admite decimales en factura
+  y guía (`InvoicedQuantity` va tal cual, la GRE con `toFixed(10)`).
+- **Una regla:** `lib/cantidad.ts` (`admiteDecimales`, `pasoCantidad`,
+  `ajustarCantidad`) y en la base `unidad_admite_decimales` (200): **la misma
+  lista en los dos sitios**.
+- **Candado (200):** `tg_cantidad_segun_unidad` en `cotizacion_items`,
+  `guia_items`, `compra_items` y `comprobante_items` (cantidad y
+  cantidad_aprobada). Solo mira lo que se escribe o cambia: el historial de
+  SIMPLE trae 7 líneas con decimales (cadenas registradas como «unidad», 0.25
+  de un ciento) y se quedan. Centinela que ejecuta: 2.5 m sí, 1.5 und no.
+- **Pantallas:** cotización (línea y «¿Qué te confirmó?»), registrar compra (era
+  entera a propósito desde el 21/09; sigue entera para piezas), análisis de
+  compra, órdenes del pedido y su reparto entre proveedores, guía, recepción y
+  cantidad a facturar. El campo tiene paso 0.01 o 1 según la unidad y lo
+  tecleado se ajusta solo (3.5 en una pieza → 4).
+- **Sin tocar:** bultos de la guía (siempre enteros), kits («alcanza para»
+  entero), conteo de inventario (sigue con 0.01), pedir precios y la hoja de
+  precios (siguen enteras).
+
+**Ojo, para Willy:** CAD-49046871 y CAD-39926718 (cadenas) están como «unidad»
+y en SIMPLE se vendieron a 1.5 y 6.5: si se venden por metro, hay que cambiarles
+la unidad. Hoy hay 30 productos en metros.
+
+**Sin ver en pantalla:** el permiso para entrar con la clave de desarrollo se
+denegó en esta sesión; lo probado es la base (centinela) y 1840 tests.

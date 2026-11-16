@@ -46,6 +46,7 @@ import type { CotizacionFacturable, TipoComprobante } from "../dominio/tipos";
 import { sinEnvioConEnter } from "@/lib/formularios";
 import { useBorrador } from "@/componentes/borrador";
 import { distinto } from "@/lib/borrador";
+import { ajustarCantidad, pasoCantidad } from "@/lib/cantidad";
 
 /** Lo que se teclea o se elige al emitir; lo que guarda el borrador. */
 interface DatosEmision {
@@ -1257,11 +1258,11 @@ function CantidadLinea({
           type="number"
           min={0}
           max={l.cantidad}
-          step="0.01"
+          step={pasoCantidad(l.unidad)}
           numerico
           className="w-24 text-right"
           value={valor}
-          onChange={(e) => onCambiar(Number(e.target.value))}
+          onChange={(e) => onCambiar(ajustarCantidad(Number(e.target.value), l.unidad))}
           aria-label={`Cantidad a facturar de ${l.codigo}`}
         />
         <span className="text-sm text-[var(--fg-muted)]">{abreviaturaUnidad(l.unidad)}</span>

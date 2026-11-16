@@ -7,6 +7,7 @@ import { ArrowRight, Trash2 } from "lucide-react";
 
 import type { Accion, LineaRecibida } from "../../dominio/constructor";
 import type { LineaCosteada } from "../../dominio/costeo";
+import { pasoCantidad } from "@/lib/cantidad";
 
 /**
  * Una línea del registro de recepción.
@@ -62,7 +63,7 @@ export function FilaRecepcion({
           <Input
             type="number"
             min={0}
-            step="0.01"
+            step={pasoCantidad(linea.unidad)}
             value={linea.cantidad}
             onChange={(e) =>
               despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })
@@ -208,7 +209,7 @@ export function TarjetaRecepcion({
           <Input
             type="number"
             min={0}
-            step="0.01"
+            step={pasoCantidad(linea.unidad)}
             value={linea.cantidad}
             onChange={(e) =>
               despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })

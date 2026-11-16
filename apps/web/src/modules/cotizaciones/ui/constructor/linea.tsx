@@ -80,6 +80,7 @@ import {
 } from "../../dominio/disponibilidad";
 import { importeLinea } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
+import { admiteDecimales, pasoCantidad } from "@/lib/cantidad";
 
 /**
  * Una línea de la cotización.
@@ -408,10 +409,13 @@ export function FilaLinea({
 
   const campoCantidad = (
     <>
+      {/* Decimales solo si la unidad se mide (16/11): 3.5 metros sí, 3.5
+          rodamientos no. El reducer ajusta lo tecleado a la unidad. */}
       <Input
         type="number"
         min={0}
-        step="any"
+        step={pasoCantidad(linea.unidad)}
+        inputMode={admiteDecimales(linea.unidad) ? "decimal" : "numeric"}
         value={linea.cantidad}
         onChange={(e) =>
           despachar({ tipo: "cantidad", key: linea.key, valor: Number(e.target.value) })

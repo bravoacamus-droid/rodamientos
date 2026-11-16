@@ -34,6 +34,7 @@ import {
 import type { Accion, LineaConstructor } from "../../dominio/constructor";
 import { redondear2 } from "../../dominio/totales";
 import { unidadLegible } from "../../dominio/unidades";
+import { admiteDecimales, ajustarCantidad, pasoCantidad } from "@/lib/cantidad";
 
 const usd = (n: number) => n.toLocaleString("es-PE", { style: "currency", currency: "USD" });
 // Dos decimales en todo margen (Willy, 14/10).
@@ -373,12 +374,12 @@ export function AnalizarCompra({
                         Cantidad
                         <Input
                           type="number"
-                          inputMode="numeric"
+                          inputMode={admiteDecimales(linea.unidad) ? "decimal" : "numeric"}
                           min={0}
-                          step={1}
+                          step={pasoCantidad(linea.unidad)}
                           value={f.cantidad}
                           aria-label={`Cantidad a ${f.nombre}`}
-                          onChange={(e) => cambiar(f.proveedorId, { cantidad: Math.max(0, Math.round(numero(e.target.value) ?? 0)) })}
+                          onChange={(e) => cambiar(f.proveedorId, { cantidad: ajustarCantidad(numero(e.target.value) ?? 0, linea.unidad) })}
                           className="tabular text-right"
                         />
                       </label>

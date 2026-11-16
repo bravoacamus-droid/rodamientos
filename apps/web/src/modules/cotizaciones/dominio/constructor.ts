@@ -2,6 +2,7 @@ import { proveedoresAPayload, resumirCompra, type ProveedorLinea } from "./compr
 import { lineasBajoPiso, revisarPiso, type RevisionPiso } from "./piso";
 import { numerosDeItem } from "./numeracion";
 import { calcularTotales, redondear2, redondear4, type TotalesCotizacion } from "./totales";
+import { ajustarCantidad } from "@/lib/cantidad";
 
 /**
  * El estado del constructor de cotizaciones, como reducer PURO.
@@ -327,8 +328,14 @@ export function estadoInicial(clienteId: string | null = null): EstadoConstructo
 }
 
 /** Redondeo defensivo de lo que llega de un input. */
-const cantidadValida = (n: number) =>
-  Number.isFinite(n) && n > 0 ? redondear2(n) : 1;
+/**
+ * Según la unidad (16/11): dos decimales si se mide (metro, kilo…), entera si
+ * se cuenta por pieza. Lo que no es una cantidad vuelve a 1, como siempre.
+ */
+const cantidadValida = (n: number, unidad?: string | null) => {
+  const c = ajustarCantidad(n, unidad);
+  return c > 0 ? c : 1;
+};
 const montoValido = (n: number) =>
   Number.isFinite(n) && n >= 0 ? redondear4(n) : 0;
 const pctValido = (n: number) =>
@@ -499,7 +506,7 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
       return { ...estado, [accion.campo]: accion.valor } as EstadoConstructor;
 
     case "agregar": {
-      const cantidad = cantidadValida(accion.cantidad ?? 1);
+      const cantidad = cantidadValida(accion.cantidad ?? 1, accion.producto.unidad ?? "NIU");
 
       // Si el producto ya está, se suma a la línea existente en vez de
       // duplicarla. Cotizar dos veces el mismo código es un error que el
@@ -530,7 +537,7 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
 
     case "cantidad":
       return mapear(estado, accion.key, (l) => {
-        const cantidad = cantidadValida(accion.valor);
+        const cantidad = cantidadValida(accion.valor, l.unidad);
         // En un pedido aprobado, lo confirmado sigue a la cantidad si iba
         // entera, y nunca la pasa. Una línea fuera (0) sigue fuera.
         const confirmada =
