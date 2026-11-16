@@ -9730,3 +9730,5 @@ SIMPLE. La línea de la cotización, la T002-586 y la F002-588 siguen en 3 und a
 11.98: emitidas, y cuadran entre sí. Con eso la orden sale en metros (la
 unidad del producto, 0e7e85c) y cuadra con la factura del proveedor. Sigue
 pendiente: al recibir los 4.5 m el kardex quedará en +1.5 → ajuste de −1.5 m.
+
+**Cerrado (16/11):** ajuste **AJU-26-00002** (descuadre, −1.5 m de CA-ASA60-1; stock −3 → −4.5, queda en 0 al recibir los 4.5 m de MEGACHAIN). La CT02-1337 se queda en 3 und a 11.98 por decisión de Luis: pasarla a 4.5 m a 7.9867 descuadraba el pedido (confirmado 20.5 contra 19 despachados).
