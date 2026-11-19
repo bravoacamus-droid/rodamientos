@@ -1451,7 +1451,7 @@ function PanelSustitutos({
     </ul>
     <div className="scroll-x hidden sm:block">
       <table className="w-full text-sm">
-        <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+        <thead className="cabecera-tabla">
           <tr>
             <th className="py-2 pr-3 font-medium">Código</th>
             <th className="px-3 py-2 font-medium">Descripción</th>

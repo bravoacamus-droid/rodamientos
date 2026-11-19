@@ -75,7 +75,7 @@ export function AccionesFila({
           // Con borde, como el menú de las piezas del kit: los tres puntos
           // sueltos en gris no parecían un botón (revisión por módulos del
           // 02/10).
-          className="flex size-9 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+          className="boton-fila shrink-0 !w-10 !px-0"
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
         </DropdownMenuTrigger>

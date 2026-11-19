@@ -39,8 +39,8 @@ export function THead({ className, ...props }: React.ComponentPropsWithRef<"thea
         // nada legible baja de 14 px. Luis, 17/09, con la medición delante.
         // Lo que se pierde es ancho —la fila crece un pelo de alto— y lo que
         // se gana es que «VALOR UNIT.» e «IMPORTE» no se confundan.
-        "[&_th]:border-b [&_th]:border-brand-100 dark:[&_th]:border-[var(--border)] [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-sm",
-        "[&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-brand-800 dark:[&_th]:text-[var(--fg-muted)] [&_th]:whitespace-nowrap",
+        "[&_th]:border-b-2 [&_th]:border-[var(--cabecera-borde)] dark:[&_th]:border-[var(--border)] [&_th]:px-3 [&_th]:py-2.5 [&_th]:text-left [&_th]:text-sm",
+        "[&_th]:font-semibold [&_th]:text-brand-800 dark:[&_th]:text-[var(--fg-muted)] [&_th]:whitespace-nowrap",
         className,
       )}
       {...props}

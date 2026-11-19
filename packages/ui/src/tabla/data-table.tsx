@@ -221,8 +221,8 @@ export function DataTable<TDato>({
                             // títulos de columna y tienen que medir lo mismo,
                             // o la misma tabla se vería de dos tamaños según
                             // con cuál esté hecha.
-                            "sticky top-0 z-10 border-b border-brand-100 bg-brand-50 text-sm font-semibold uppercase dark:border-[var(--border)] dark:bg-surface-3",
-                            "tracking-wide text-brand-800 whitespace-nowrap dark:text-[var(--fg-muted)]",
+                            "sticky top-0 z-10 border-b-2 border-[var(--cabecera-borde)] bg-[var(--cabecera-bg)] text-sm font-semibold",
+                            "text-[var(--cabecera-fg)] whitespace-nowrap",
                             paddingCelda,
                             meta?.alineacion === "derecha" && "text-right",
                             meta?.alineacion === "centro" && "text-center",

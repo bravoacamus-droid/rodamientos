@@ -627,7 +627,7 @@ export function ConstructorRecepcion({
                 después es el precio de venta, no si se recibe. */}
             {impactos.length > 0 ? (
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+                <p className="text-sm font-medium text-[var(--fg-muted)]">
                   Qué pasa con el precio
                 </p>
                 {impactos.map((x) => (

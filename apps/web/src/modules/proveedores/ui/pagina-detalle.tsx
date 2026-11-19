@@ -164,7 +164,7 @@ export default async function PaginaDetalleProveedor({
           {p.email ? <Dato etiqueta="Correo" valor={p.email} /> : null}
           {p.notas ? (
             <div className="sm:col-span-2">
-              <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+              <dt className="etiqueta-dato">
                 Notas
               </dt>
               <dd className="mt-0.5 whitespace-pre-wrap text-sm">{p.notas}</dd>
@@ -187,7 +187,7 @@ function Dato({
 }) {
   return (
     <div>
-      <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+      <dt className="etiqueta-dato">
         {etiqueta}
       </dt>
       <dd className="mt-0.5 text-sm">{valor}</dd>

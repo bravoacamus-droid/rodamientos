@@ -314,7 +314,7 @@ export function QueVende({
           <div className="scroll-x hidden @2xl:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr className="cabecera-tabla">
                   <th className="py-2 pr-3 font-medium">Producto</th>
                   <th className="py-2 pr-3 font-medium">Cómo se sabe</th>
                   <th className="py-2 pr-3 font-medium">Última compra</th>

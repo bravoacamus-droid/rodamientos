@@ -408,7 +408,7 @@ export default async function PaginaDetalleCompra({
           <div className="hidden scroll-x @3xl:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr className="cabecera-tabla">
                   <th className="py-2 pr-3 font-medium">Código</th>
                   <th className="py-2 pr-3 font-medium">Descripción</th>
                   <th className="py-2 pr-3 text-right font-medium">Pedido</th>

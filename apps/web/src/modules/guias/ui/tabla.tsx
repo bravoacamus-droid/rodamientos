@@ -69,7 +69,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
       <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="px-3 py-2.5 font-medium">Número</th>
               <th className="px-3 py-2.5 font-medium">Traslado</th>
               <th className="px-3 py-2.5 font-medium">Cliente</th>
@@ -331,8 +331,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
   leían como dos recuadros más, no como dos botones. Igual en recepciones y
   en pedidos.
 */
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+const SECUNDARIO = "boton-fila";
 
 function IconoVer() {
   return <Eye aria-hidden="true" className="size-4 shrink-0" />;

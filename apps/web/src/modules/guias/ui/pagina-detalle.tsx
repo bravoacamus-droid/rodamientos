@@ -314,7 +314,7 @@ export default async function PaginaDetalleGuia({
           <div className="scroll-x hidden md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr className="cabecera-tabla">
                   <th className="py-2 pr-3 font-medium">Código</th>
                   <th className="py-2 pr-3 font-medium">Descripción</th>
                   <th className="py-2 pr-3 text-right font-medium">Cantidad</th>
@@ -555,7 +555,7 @@ function Tarjeta({
   */
   return (
     <div className="card anim-entrada p-4">
-      <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+      <p className="text-sm font-medium text-[var(--fg-muted)]">
         {etiqueta}
       </p>
       <p className="mt-1 truncate text-xl font-semibold tabular">{valor}</p>

@@ -128,7 +128,7 @@ export function KpiCard({
       {/* El filo azul → dorado del logo: une las cifras del tablero con la marca. */}
       <span className="filo-marca anim-crecer absolute inset-x-0 top-0 h-1" aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-semibold uppercase tracking-wide text-subtle">{etiqueta}</p>
+        <p className="text-base font-semibold text-muted">{etiqueta}</p>
         {icono && (
           // En su propia caja con fondo: un icono suelto en gris al lado de un
           // título se lee como decoración. Con superficie propia se lee como

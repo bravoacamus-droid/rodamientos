@@ -97,7 +97,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
             <col className="w-14" />
           </colgroup>
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="px-3 py-2.5 font-medium">Código</th>
               <th className="px-3 py-2.5 font-medium">Marca</th>
               <th className="px-3 py-2.5 font-medium">Descripción</th>
@@ -299,8 +299,7 @@ function Estado({ p }: { p: ProductoLista }) {
   Los dos botones de la tarjeta de móvil. Mismo aspecto que en guías y
   facturación: en esta casa un botón tiene que parecer un botón.
 */
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+const SECUNDARIO = "boton-fila";
 
 const PRINCIPAL =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";

@@ -722,7 +722,7 @@ export default async function PaginaDetalleCotizacion({
           */}
           <div className="scroll-x hidden @2xl:block">
             <table className="w-full text-sm">
-              <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+              <thead className="cabecera-tabla">
                 <tr>
                   {/* El ítem, como en el papel: 1, 1.1, 2… (169). */}
                   <th className="py-2.5 pl-4 pr-1 font-medium">#</th>
@@ -1061,7 +1061,7 @@ function Resumen({
 
   return (
     <div className="card p-4">
-      <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+      <p className="text-sm font-medium text-[var(--fg-muted)]">
         {etiqueta}
       </p>
       <p className={`mt-1 truncate text-xl font-semibold ${color}`} title={valor}>

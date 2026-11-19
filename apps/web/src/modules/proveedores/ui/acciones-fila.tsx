@@ -66,17 +66,10 @@ export function AccionesFila({
         factura, los días de pago cuando cambian, la marca que empezó a
         traer. Eso es lo que sale a la vista.
       */}
-      <Button
-        asChild
-        variant="outline"
-        size="sm"
-        className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
-      >
-        <Link href={`/proveedores/${id}`}>
-          <Eye className="size-4" aria-hidden="true" />
-          Ver
-        </Link>
-      </Button>
+      <Link href={`/proveedores/${id}`} className={`boton-fila ${ancho ? "flex-1" : ""}`}>
+        <Eye className="size-4" aria-hidden="true" />
+        Ver
+      </Link>
 
       {puedeEditar ? (
         <Button asChild size="sm" className={`gap-1.5 ${ancho ? "flex-1" : ""}`}>
@@ -97,7 +90,7 @@ export function AccionesFila({
           // quepa. 36 px de alto, el de «Ver» y «Editar».
           type="button"
           title="Más acciones"
-          className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "px-2.5" : "w-9"}`}
+          className={`boton-fila shrink-0 ${ancho ? "" : "!w-10 !px-0"}`}
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
           {ancho ? "Más" : null}

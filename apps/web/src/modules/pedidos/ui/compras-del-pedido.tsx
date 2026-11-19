@@ -141,7 +141,7 @@ export function ComprasDelPedido({
               >
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
+                    <span className="text-sm font-semibold text-[var(--fg-muted)]">
                       Orden {i + 1}
                     </span>
                     <span className="text-base font-semibold">{o.proveedor}</span>

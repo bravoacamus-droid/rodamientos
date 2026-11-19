@@ -29,7 +29,7 @@ export function Label({ className, requerido, children, ...props }: LabelProps) 
         // En el azul del logo y no en gris (02/11): el nombre del campo es lo
         // que se busca con la vista, y el gris lo confundía con la ayuda de
         // debajo. brand-700 da 11:1 sobre blanco; en oscuro pasa a brand-300.
-        "mb-1.5 block text-sm font-semibold uppercase tracking-wide text-brand-700",
+        "mb-1.5 block text-sm font-semibold text-brand-700",
         "peer-disabled:opacity-60",
         className,
       )}

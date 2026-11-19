@@ -220,7 +220,7 @@ async function Bandeja({ filtros }: { filtros: FiltrosBandeja }) {
     <div className="flex flex-col">
       {grupos.map((grupo) => (
         <section key={grupo.familia}>
-          <h2 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+          <h2 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-sm font-semibold text-[var(--fg-muted)]">
             {ETIQUETA_FAMILIA[grupo.familia]}
             <span className="ml-2 font-normal normal-case tracking-normal text-[var(--fg-subtle)]">
               {grupo.alertas.length}

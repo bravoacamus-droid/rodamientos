@@ -12,6 +12,7 @@ import { Check, ChevronsUpDown, X } from "lucide-react";
 
 import { cn } from "../lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./command";
+import { campoBase } from "./input";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 export interface OpcionCombobox {
@@ -86,8 +87,11 @@ export function Combobox({
           aria-invalid={invalido || undefined}
           disabled={deshabilitado}
           className={cn(
-            "flex h-control-md w-full items-center justify-between gap-2 rounded-md border bg-surface px-3 text-sm",
-            "transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-600/15",
+            // La misma cara que el resto de los campos (19/11): era blanco con el
+            // borde suave, y en una fila de filtros salía distinto de la casilla
+            // de al lado, que lleva el velo azul.
+            campoBase,
+            "flex h-control-md items-center justify-between gap-2 px-3 text-sm",
             "disabled:cursor-not-allowed disabled:bg-surface-2 disabled:opacity-60",
             invalido && "border-danger",
             seleccionada && limpiable && "pr-14",

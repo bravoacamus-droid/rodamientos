@@ -294,7 +294,7 @@ export function ClienteRapido({
         <DialogBody className="flex flex-col gap-5">
           {/* ---------------------------------------------- 1 · Quién es */}
           <section className="flex flex-col gap-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
+            <h3 className="text-sm font-semibold text-[var(--fg-muted)]">
               Identificación
             </h3>
 

@@ -102,7 +102,7 @@ export default async function PaginaFichaAjuste({ params }: { params: Promise<{ 
         <div className="hidden scroll-x @3xl:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+              <tr className="cabecera-tabla">
                 <th className="px-4 py-2.5 font-medium">Producto</th>
                 <th className="px-4 py-2.5 text-right font-medium">Había</th>
                 <th className="px-4 py-2.5 text-right font-medium">Se contaron</th>
@@ -146,7 +146,7 @@ export default async function PaginaFichaAjuste({ params }: { params: Promise<{ 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div>
-      <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="etiqueta-dato">{etiqueta}</dt>
       <dd className="mt-1 text-sm font-medium">{valor}</dd>
     </div>
   );

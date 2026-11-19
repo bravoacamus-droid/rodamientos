@@ -35,7 +35,7 @@ function Casilla({
   const e = ESTILO[estado];
   return (
     <div className={`flex flex-col gap-1 rounded-lg border-2 p-3 ${e.clase}`}>
-      <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--fg-muted)]">
+      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--fg-muted)]">
         <Icono className="size-4" aria-hidden="true" />
         {titulo}
       </p>

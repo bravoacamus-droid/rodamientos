@@ -964,7 +964,7 @@ export function Comparativa({
         </ul>
         <div className="hidden overflow-x-auto @2xl:block">
           <table className="w-full text-sm">
-            <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <thead className="cabecera-tabla">
               <tr>
                 {/*
                   La columna del producto se queda quieta al desplazar.

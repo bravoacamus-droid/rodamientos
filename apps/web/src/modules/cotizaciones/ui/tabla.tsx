@@ -111,7 +111,7 @@ export async function TablaCotizaciones({
       <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="w-1 p-0">
                 <span className="sr-only">Estado</span>
               </th>

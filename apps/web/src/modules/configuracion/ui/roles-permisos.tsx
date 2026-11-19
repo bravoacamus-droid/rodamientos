@@ -303,7 +303,7 @@ export function RolesYPermisos({
       <div className="hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="px-3 py-2 font-medium">Módulo</th>
               {ACCIONES.map((a) => (
                 <th key={a} className="w-28 px-2 py-2 text-center font-medium">

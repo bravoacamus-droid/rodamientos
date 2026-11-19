@@ -163,7 +163,7 @@ export default async function PaginaPrecios() {
           </ul>
           <div className="hidden overflow-x-auto @5xl:block">
             <table className="w-full min-w-[60rem] text-sm">
-              <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+              <thead className="cabecera-tabla">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Consulta</th>
                   <th className="px-4 py-2.5 font-medium">Fecha</th>

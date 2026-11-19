@@ -56,7 +56,7 @@ function Cabecera({
     <th className={`px-3 py-2.5 font-medium ${derecha ? "text-right" : "text-left"}`} aria-sort={activa ? (orden.desc ? "descending" : "ascending") : undefined}>
       <Link
         href={hrefOrden(params, campo, orden)}
-        className={`inline-flex items-center gap-1 rounded-sm uppercase hover:text-[var(--fg)] ${activa ? "text-[var(--fg)]" : ""}`}
+        className={`inline-flex items-center gap-1 rounded-sm hover:text-[var(--fg)] ${activa ? "text-[var(--fg)]" : ""}`}
       >
         {children}
         <Icono className="size-3.5" aria-hidden="true" />
@@ -221,18 +221,18 @@ export function TablaPedidos({
       <div className="scroll-x hidden @4xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-sm tracking-wide text-[var(--fg-subtle)]">
-              <th className="px-3 py-2.5 text-left font-medium uppercase">Pedido</th>
+            <tr className="cabecera-tabla">
+              <th className="px-3 py-2.5 text-left font-medium">Pedido</th>
               <Cabecera campo="fecha" params={params} orden={orden}>Fecha</Cabecera>
               <Cabecera campo="cliente" params={params} orden={orden}>Cliente</Cabecera>
               <Cabecera campo="total" params={params} orden={orden} derecha>Total</Cabecera>
               <Cabecera campo="margen" params={params} orden={orden} derecha>Margen</Cabecera>
-              <th className="px-3 py-2.5 text-left font-medium uppercase">Compras</th>
-              <th className="px-3 py-2.5 text-left font-medium uppercase">Guía</th>
-              <th className="px-3 py-2.5 text-left font-medium uppercase">Factura · cobro</th>
-              <th className="px-3 py-2.5 text-left font-medium uppercase">SUNAT</th>
+              <th className="px-3 py-2.5 text-left font-medium">Compras</th>
+              <th className="px-3 py-2.5 text-left font-medium">Guía</th>
+              <th className="px-3 py-2.5 text-left font-medium">Factura · cobro</th>
+              <th className="px-3 py-2.5 text-left font-medium">SUNAT</th>
               <Cabecera campo="etapa" params={params} orden={orden}>Etapa</Cabecera>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium uppercase">
+              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
                 Acciones
               </th>
             </tr>

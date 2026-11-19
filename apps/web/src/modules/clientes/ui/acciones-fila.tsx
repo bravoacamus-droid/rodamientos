@@ -82,17 +82,10 @@ export function AccionesFila({
   return (
     <div className={`flex items-center gap-1.5 ${ancho ? "w-full" : "justify-end"}`}>
       {enFicha ? null : (
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className={`gap-1.5 ${ancho ? "flex-1" : ""}`}
-        >
-          <Link href={`/clientes/${id}`}>
-            <Eye className="size-4" aria-hidden="true" />
-            Ver
-          </Link>
-        </Button>
+        <Link href={`/clientes/${id}`} className={`boton-fila ${ancho ? "flex-1" : ""}`}>
+          <Eye className="size-4" aria-hidden="true" />
+          Ver
+        </Link>
       )}
 
       {/* A un cliente bloqueado no se le cotiza: el botón no aparece, en vez
@@ -140,7 +133,7 @@ export function AccionesFila({
           // «Ver» y «Cotizar», para que los tres midan lo mismo.
           type="button"
           title="Más acciones"
-          className={`inline-flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-[var(--border)] bg-[var(--surface)] text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "px-2.5" : "w-9"}`}
+          className={`boton-fila shrink-0 ${ancho ? "" : "!w-10 !px-0"}`}
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
           {ancho ? "Más" : null}

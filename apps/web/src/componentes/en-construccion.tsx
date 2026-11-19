@@ -32,7 +32,7 @@ export function EnConstruccion({
       </div>
 
       <div className="card p-5">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
+        <h2 className="mb-3 text-sm font-semibold text-[var(--fg-subtle)]">
           Qué va a hacer
         </h2>
         <ul className="flex flex-col gap-2">

@@ -117,7 +117,7 @@ export default async function PaginaDetalleRecepcion({
           // La compra, con su botón: el número en texto plano no llevaba a
           // ninguna parte (revisión por módulos del 02/10).
           <div>
-            <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">Compra</dt>
+            <dt className="etiqueta-dato">Compra</dt>
             <dd className="mt-1">
               <Link
                 href={`/compras/${r.compra_id}`}
@@ -204,7 +204,7 @@ export default async function PaginaDetalleRecepcion({
         <div className="scroll-x hidden @3xl:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+              <tr className="cabecera-tabla">
                 <th className="px-4 py-2.5 font-medium">Código</th>
                 <th className="px-4 py-2.5 font-medium">Marca</th>
                 <th className="px-4 py-2.5 font-medium">Descripción</th>
@@ -308,7 +308,7 @@ function Dato({
 }) {
   return (
     <div>
-      <dt className="text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+      <dt className="etiqueta-dato">
         {etiqueta}
       </dt>
       <dd className="mt-0.5 text-sm">{valor}</dd>

@@ -537,7 +537,7 @@ export function CarteraVista({
       <div className="scroll-x hidden @3xl:block">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="px-3 py-2.5 font-medium">Documento</th>
             <th className="px-3 py-2.5 font-medium">Cliente</th>
             <th className="px-3 py-2.5 font-medium">Vencimiento</th>

@@ -229,7 +229,7 @@ async function Tabla({ filtros }: { filtros: FiltrosBitacora }) {
       <div className="hidden scroll-x @3xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="px-4 py-2.5 font-medium">Cuándo</th>
               <th className="px-4 py-2.5 font-medium">Quién</th>
               <th className="px-4 py-2.5 font-medium">Qué</th>

@@ -60,7 +60,7 @@ export function AccionesFilaCotizacion({
         <DropdownMenuTrigger
           type="button"
           aria-label={`Acciones de ${c.numero}`}
-          className={`inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${ancho ? "w-full" : "ml-auto"}`}
+          className={`boton-fila ${ancho ? "w-full" : "ml-auto"}`}
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
           Acciones

@@ -592,7 +592,7 @@ function Cifra({
     tono === "ok" ? "text-[var(--ok)]" : tono === "aviso" ? "text-[var(--warn)]" : tono === "mal" ? "text-[var(--danger)]" : "";
   return (
     <div className="flex flex-col gap-0.5 rounded-lg bg-[var(--surface-2)] px-3 py-2.5">
-      <span className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">{etiqueta}</span>
+      <span className="text-sm font-semibold text-[var(--fg-muted)]">{etiqueta}</span>
       <span className={`text-2xl font-semibold tabular ${color}`}>{valor}</span>
       <span className="text-sm text-[var(--fg-muted)]">{detalle}</span>
     </div>

@@ -560,7 +560,7 @@ async function BloqueTop({ rango }: { rango: Rango }) {
       {/* `text-sm`: era `text-sm` y un informe está para leerse. */}
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="py-1.5 pr-3 font-medium">Código</th>
             <th className="py-1.5 pr-3 text-right font-medium">Uds.</th>
             <th className="py-1.5 pr-3 text-right font-medium">Vendido</th>
@@ -718,7 +718,7 @@ async function BloqueClientes({ rango }: { rango: Rango }) {
       <div className="hidden scroll-x @3xl:block">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="py-1.5 pr-3 font-medium">Cliente</th>
             <th className="py-1.5 pr-3 text-right font-medium">Comprado</th>
             <th className="py-1.5 pr-3 text-right font-medium">Margen</th>

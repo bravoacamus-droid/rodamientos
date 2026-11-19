@@ -103,7 +103,7 @@ export function TablaPorComprar({
       <div className="scroll-x hidden @3xl:block">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               <th className="w-10 px-3 py-2.5">
                 <Checkbox
                   checked={todos ? true : algunos ? "indeterminate" : false}
@@ -475,7 +475,7 @@ function DetalleLineas({ fila }: { fila: ProductoPorComprar }) {
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+        <tr className="cabecera-tabla">
           <th className="py-1.5 pr-3 font-medium">Cliente</th>
           <th className="py-1.5 pr-3 font-medium">Cotización</th>
           <th className="py-1.5 pr-3 text-right font-medium">Confirmó</th>

@@ -258,7 +258,7 @@ function TablaFacturasPantalla({ documentos }: { documentos: readonly EstadoDeCu
     <div className="scroll-x">
       <table className="w-full text-base">
         <thead>
-          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="px-3 py-2 font-medium">Factura</th>
             <th className="px-3 py-2 font-medium">Emisión</th>
             <th className="px-3 py-2 font-medium">Vence</th>
@@ -315,7 +315,7 @@ function TablaClientesPantalla({
     <div className="scroll-x">
       <table className="w-full text-base">
         <thead>
-          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="px-3 py-2 font-medium">Cliente</th>
             <th className="px-3 py-2 text-center font-medium">Pendientes</th>
             <th className="px-3 py-2 text-right font-medium">Vencido</th>

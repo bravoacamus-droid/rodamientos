@@ -38,7 +38,7 @@ export function FilaIndicadores({ items }: { items: Indicador[] }) {
           const cuerpo = (
             <>
               <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--fg-subtle)]">
+                <p className="text-sm font-semibold text-[var(--fg-muted)]">
                   {i.etiqueta}
                 </p>
                 {i.icono ? (

@@ -194,7 +194,7 @@ export default async function PaginaListos({ searchParams }: Props) {
 
             <div className="hidden scroll-x @6xl:block">
               <table className="w-full text-sm">
-                <thead className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                <thead className="cabecera-tabla">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">Cotización</th>
                     <th className="px-3 py-2.5 font-medium">Fecha</th>
@@ -446,8 +446,7 @@ function Siguiente({ pedido }: { pedido: PedidoDelCliente }) {
   );
 }
 
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+const SECUNDARIO = "boton-fila";
 
 const PRINCIPAL =
   "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-brand-600 px-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";

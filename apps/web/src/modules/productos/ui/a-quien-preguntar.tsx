@@ -95,7 +95,7 @@ export function AQuienPreguntar({ precios }: { precios: PrecioDeProveedor[] }) {
           <div className="scroll-x hidden @md:block">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+                <tr className="cabecera-tabla">
                   <th className="py-2 pr-3 font-medium">Proveedor</th>
                   <th className="py-2 pr-3 text-right font-medium">Te lo deja a</th>
                   <th className="py-2 pr-3 font-medium">Cuándo</th>

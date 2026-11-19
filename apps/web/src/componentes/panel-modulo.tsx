@@ -65,7 +65,7 @@ export function PanelModulo({
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/12 text-accent-300 ring-1 ring-inset ring-white/20">
             <IconoNav nombre={item.icono} className="size-6" />
           </span>
-          <span className="rounded-full bg-white/12 px-3 py-1 text-sm font-semibold uppercase tracking-wider text-white/90 ring-1 ring-inset ring-white/15">
+          <span className="rounded-full bg-white/12 px-3 py-1 text-sm font-semibold text-white/90 ring-1 ring-inset ring-white/15">
             {grupo.titulo}
           </span>
         </div>

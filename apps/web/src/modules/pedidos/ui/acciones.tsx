@@ -137,7 +137,7 @@ export function AccionesPedido({
         <DropdownMenuTrigger
           type="button"
           aria-label={`Acciones de ${p.numero}`}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${enFicha ? "h-control-md text-base" : "h-9 text-sm"} ${ancho ? "w-full" : ""}`}
+          className={`boton-fila ${enFicha ? "!h-control-md !text-base" : ""} ${ancho ? "w-full" : ""}`}
         >
           <EllipsisVertical className="size-4" aria-hidden="true" />
           Acciones

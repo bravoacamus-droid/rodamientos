@@ -157,26 +157,26 @@ const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
 };
 
 const CLASES_TONO: Record<Tono, string> = {
-  gris: "bg-surface-2 text-muted border-app",
-  azul: "bg-info-bg text-info border-transparent",
-  verde: "bg-ok-bg text-ok border-transparent",
-  ambar: "bg-warn-bg text-warn border-transparent",
-  rojo: "bg-danger-bg text-danger border-transparent",
+  gris: "bg-surface-2 text-fg border-[var(--border-strong)]",
+  azul: "bg-info-bg text-info border-info/30",
+  verde: "bg-ok-bg text-ok border-ok/30",
+  ambar: "bg-warn-bg text-warn border-warn/35",
+  rojo: "bg-danger-bg text-danger border-danger/30",
   marca: "bg-brand-50 text-brand-700 border-brand-100 dark:bg-brand-950 dark:text-brand-200 dark:border-brand-800",
 };
 
 /** Segundo canal, además del color: la forma del punto. */
 function Punto({ forma }: { forma: Forma }) {
   const base = "inline-block shrink-0";
-  if (forma === "raya") return <span aria-hidden="true" className={cn(base, "h-0.5 w-2 rounded-full bg-current")} />;
+  if (forma === "raya") return <span aria-hidden="true" className={cn(base, "h-0.5 w-2.5 rounded-full bg-current")} />;
   if (forma === "hueco")
     return (
-      <span aria-hidden="true" className={cn(base, "size-1.5 rounded-full border border-current bg-transparent")} />
+      <span aria-hidden="true" className={cn(base, "size-2 rounded-full border-[1.5px] border-current bg-transparent")} />
     );
   // Rombo: forma claramente distinta del círculo, para que "en curso" no se
   // confunda con "terminado" cuando el color no se percibe.
-  if (forma === "anillo") return <span aria-hidden="true" className={cn(base, "size-1.5 rotate-45 bg-current")} />;
-  return <span aria-hidden="true" className={cn(base, "size-1.5 rounded-full bg-current")} />;
+  if (forma === "anillo") return <span aria-hidden="true" className={cn(base, "size-2 rotate-45 bg-current")} />;
+  return <span aria-hidden="true" className={cn(base, "size-2 rounded-full bg-current")} />;
 }
 
 export interface EstadoBadgeProps {
@@ -203,7 +203,7 @@ export function EstadoBadge({ estado, etiqueta, size = "sm", className }: Estado
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-full border font-medium",
+        "inline-flex items-center whitespace-nowrap rounded-full border font-semibold",
         CLASES_TONO[def.tono],
         TAMANOS[size],
         // Un documento anulado se lee tachado además de en rojo.

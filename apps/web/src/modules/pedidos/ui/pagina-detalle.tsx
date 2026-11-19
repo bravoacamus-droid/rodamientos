@@ -192,7 +192,7 @@ export default async function PaginaDetallePedido({
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-[var(--fg-subtle)]">
+          <p className="text-sm font-medium text-[var(--fg-muted)]">
             Pedido {p.secuencia > 1 ? `${p.secuencia} ` : ""}de la cotización{" "}
             <Link href={`/cotizaciones/${p.cotizacion.id}`} className="text-brand-600 hover:underline">
               {p.cotizacion.numero}

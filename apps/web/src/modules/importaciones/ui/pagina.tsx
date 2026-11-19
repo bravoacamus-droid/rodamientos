@@ -249,7 +249,7 @@ async function Listado({
       <div className="scroll-x hidden @3xl:block">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+          <tr className="cabecera-tabla">
             <th className="px-4 py-2.5 font-medium">Compra</th>
             <th className="px-4 py-2.5 font-medium">Proveedor</th>
             <th className="px-4 py-2.5 font-medium">Envío</th>

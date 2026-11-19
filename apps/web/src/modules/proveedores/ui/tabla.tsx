@@ -60,7 +60,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
       <div className="scroll-x hidden @3xl:block">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
+            <tr className="cabecera-tabla">
               {/*
                 Sin columna «Documento»: los 97 proveedores entraron del Excel
                 con el código formado a partir del RUC —«RUC-20605598553»— y
