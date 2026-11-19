@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
+import { ChartPie, RefreshCw, type LucideIcon } from "lucide-react";
 
 import { ResumenInventario } from "./resumen";
 import { TablaReposicion } from "./reposicion";
@@ -20,6 +21,25 @@ const BOTON_SECUNDARIO = cn(
   "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
 );
 
+type Vista = "valorizacion" | "reposicion";
+
+const VISTAS: { clave: Vista; titulo: string; ayuda: string; icono: LucideIcon; fondoIcono: string }[] = [
+  {
+    clave: "valorizacion",
+    titulo: "Valorización",
+    ayuda: "Cuánto vale lo que hay, por familia",
+    icono: ChartPie,
+    fondoIcono: "bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-200",
+  },
+  {
+    clave: "reposicion",
+    titulo: "Reposición y sobrestock",
+    ayuda: "Qué comprar y qué sobra",
+    icono: RefreshCw,
+    fondoIcono: "bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-200",
+  },
+];
+
 /**
  * Inventario.
  *
@@ -32,7 +52,13 @@ const BOTON_SECUNDARIO = cn(
  * reposición —que lleva un lateral sobre 90 días de movimientos— no debe
  * retrasar a la valorización.
  */
-export default async function PaginaInventario() {
+export default async function PaginaInventario({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const vista: Vista = params.vista === "reposicion" ? "reposicion" : "valorizacion";
   const perfil = await perfilActual();
 
   const rol = perfil?.activo ? perfil.rol : null;
@@ -72,28 +98,65 @@ export default async function PaginaInventario() {
         </Suspense>
       </PanelModulo>
 
-      <section className="card">
-        <header className="px-4 pt-4">
-          <h2 className="text-lg font-semibold">Valorización</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
-            A costo promedio, por familia y subfamilia. Sin contar archivados.
-          </p>
-        </header>
-        <Suspense fallback={<Skeleton className="m-4 h-64" />}>
-          <TablaValorizacion />
-        </Suspense>
-      </section>
+      {/*
+        UNA LISTA A LA VEZ (19/11).
+
+        Luis: *«las listas están muy largas, todo de igual»*. Valorización y
+        reposición iban una debajo de otra, y para llegar a lo que hay que
+        comprar había que bajar 1.800 px de familias. Son dos preguntas
+        distintas, así que van en dos pestañas grandes, con su color y una
+        frase que dice para qué es cada una. En la URL (`?vista=`), para que
+        se pueda volver a la misma con «atrás» y mandar el enlace.
+      */}
+      <nav className="grid gap-3 sm:grid-cols-2" aria-label="Vistas del inventario">
+        {VISTAS.map((v) => {
+          const activa = v.clave === vista;
+          const Icono = v.icono;
+          return (
+            <Link
+              key={v.clave}
+              href={v.clave === "valorizacion" ? "/inventario" : `/inventario?vista=${v.clave}`}
+              aria-current={activa ? "page" : undefined}
+              className={cn(
+                "flex items-center gap-4 rounded-xl border-2 p-4 transition-colors",
+                activa
+                  ? "border-[var(--color-brand-600)] bg-[var(--color-brand-600)] text-white shadow-md"
+                  : "border-[var(--border-strong)] bg-[var(--surface)] hover:border-[var(--color-brand-500)] hover:bg-[var(--color-brand-50)] dark:hover:bg-[var(--surface-2)]",
+              )}
+            >
+              <span
+                className={cn(
+                  "grid size-12 shrink-0 place-items-center rounded-full",
+                  activa ? "bg-[var(--color-accent-400)] text-[#0b3450]" : v.fondoIcono,
+                )}
+                aria-hidden="true"
+              >
+                <Icono className="size-6" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-lg font-bold">{v.titulo}</span>
+                <span className={cn("block text-sm", activa ? "text-white/85" : "text-[var(--fg-muted)]")}>
+                  {v.ayuda}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
 
       <section className="card">
         <header className="px-4 pt-4">
-          <h2 className="text-lg font-semibold">Reposición y sobrestock</h2>
+          <h2 className="text-lg font-semibold">
+            {vista === "valorizacion" ? "Valorización" : "Reposición y sobrestock"}
+          </h2>
           <p className="text-sm text-[var(--fg-muted)]">
-            Lo que está bajo el mínimo y lo que sobra. La cobertura sale del
-            consumo real de los últimos 90 días.
+            {vista === "valorizacion"
+              ? "A costo promedio, por familia y subfamilia. Sin contar archivados. Pulsa una familia para ver sus subfamilias."
+              : "Lo que está bajo el mínimo y lo que sobra. La cobertura sale del consumo real de los últimos 90 días."}
           </p>
         </header>
-        <Suspense fallback={<Skeleton className="m-4 h-64" />}>
-          <TablaReposicion />
+        <Suspense key={vista} fallback={<Skeleton className="m-4 h-64" />}>
+          {vista === "valorizacion" ? <TablaValorizacion /> : <TablaReposicion />}
         </Suspense>
       </section>
     </div>
