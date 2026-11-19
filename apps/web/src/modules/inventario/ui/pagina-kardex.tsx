@@ -1,25 +1,20 @@
 import { Suspense } from "react";
-import { FileDown, FileSpreadsheet } from "lucide-react";
-import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
+import Link from "next/link";
+import { ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
+import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
 
-import { Volver } from "@/componentes/volver";
 import { PanelModulo } from "@/componentes/panel-modulo";
+import { leerCuantos } from "@/lib/ver-mas";
 
 import { opcionesDelKardex, productoDelKardex } from "../api/consultas";
 import { filtrosAQuery, leerFiltrosKardex } from "../dominio/filtros-kardex";
 import type { FiltrosKardex } from "../dominio/tipos";
 import { FiltrosKardexBarra } from "./filtros-kardex";
 import { ResumenDelKardex } from "./resumen-kardex";
-import { TablaKardex } from "./tabla-kardex";
+import { TANDA_KARDEX, TablaKardex } from "./tabla-kardex";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-/** Toma el primer valor de un search param, que puede venir repetido. */
-function uno(v: string | string[] | undefined): string | undefined {
-  const valor = Array.isArray(v) ? v[0] : v;
-  return valor && valor.length > 0 ? valor : undefined;
 }
 
 // Los de la cabecera de Productos: 44 px en el teléfono, y el vidrio del
@@ -47,9 +42,8 @@ export default async function PaginaKardex({ searchParams }: Props) {
 
   const filtros: FiltrosKardex = {
     ...leerFiltrosKardex(sp),
-    cursor: uno(sp.cursor),
-    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
-    limite: leerTamano(uno(sp.n)),
+    // Sin páginas (19/11): la lista empieza en 20 y crece con «Ver más».
+    limite: leerCuantos(sp.n, TANDA_KARDEX),
   };
 
   const [producto, opciones] = await Promise.all([
@@ -65,15 +59,20 @@ export default async function PaginaKardex({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* «Volver» arriba y con el de todas las fichas (revisión por módulos del
-          02/10): era un enlace con borde hecho a mano, a la derecha del título
-          en escritorio y debajo en el teléfono. */}
+      {/*
+        EL TÍTULO ARRIBA, Y LO QUE SE MOVIÓ DEBAJO (19/11).
+
+        Luis: «que arriba salga la información o el título de kardex». Entre
+        la etiqueta del módulo y el título iba el botón «Volver a inventario»,
+        así que lo primero que se leía era un botón y no dónde se estaba.
+        Ahora «Volver» va con los demás botones, a la derecha, y debajo del
+        título salen las cifras de lo filtrado, como en Inventario.
+      */}
       <PanelModulo ruta="/inventario/kardex">
         <div className="flex flex-col gap-1">
-          <Volver href="/inventario">Volver a inventario</Volver>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Kardex</h1>
+              <h1 className="text-3xl font-semibold tracking-tight">Kardex</h1>
               {p ? (
                 <p className="text-sm text-[var(--fg-muted)]">
                   <span className="font-mono font-medium">{p.codigo}</span> · {p.descripcion} · saldo actual{" "}
@@ -91,6 +90,10 @@ export default async function PaginaKardex({ searchParams }: Props) {
               sin la página: se baja todo lo que coincide, no solo lo visible.
             */}
             <div className="flex flex-wrap items-center gap-2">
+              <Link href="/inventario" className={BOTON_SECUNDARIO}>
+                <ArrowLeft aria-hidden="true" />
+                Volver a inventario
+              </Link>
               <a href={`/inventario/kardex/excel${sufijo}`} className={BOTON_SECUNDARIO}>
                 <FileSpreadsheet aria-hidden="true" />
                 Descargar en Excel
@@ -102,6 +105,10 @@ export default async function PaginaKardex({ searchParams }: Props) {
             </div>
           </div>
         </div>
+
+        <Suspense key={claveResumen} fallback={<Skeleton className="h-28 w-full bg-white/10" />}>
+          <ResumenDelKardex filtros={filtros} />
+        </Suspense>
       </PanelModulo>
 
       <section className="card pt-4">
@@ -113,10 +120,6 @@ export default async function PaginaKardex({ searchParams }: Props) {
           usuarios={o.usuarios}
         />
 
-        <Suspense key={claveResumen} fallback={<Skeleton className="mx-4 mb-4 h-20" />}>
-          <ResumenDelKardex filtros={filtros} />
-        </Suspense>
-
         <Suspense
           // La clave fuerza un skeleton nuevo en cada cambio de filtro; sin
           // ella React reutiliza el árbol y la tabla se queda con los datos
@@ -124,7 +127,7 @@ export default async function PaginaKardex({ searchParams }: Props) {
           key={JSON.stringify(filtros)}
           fallback={<Skeleton className="h-96 w-full" />}
         >
-          <TablaKardex filtros={filtros} />
+          <TablaKardex filtros={filtros} query={query} />
         </Suspense>
       </section>
     </div>

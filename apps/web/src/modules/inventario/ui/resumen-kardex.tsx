@@ -1,3 +1,5 @@
+import { KpiCard } from "@rodatech/ui";
+
 import { resumenKardex } from "../api/consultas";
 import type { FiltrosKardex } from "../dominio/tipos";
 
@@ -6,13 +8,18 @@ const usd = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
 /**
- * Los totales de lo filtrado, encima de la tabla (19/11).
+ * Los totales de lo filtrado (19/11).
  *
  * Un kardex de verdad se lee como «saldo anterior + entradas − salidas =
  * saldo final». Con UN producto puesto salen los cuatro; con varios, los
  * saldos no se suman (tres rodamientos y dos metros de cadena no son cinco
  * de nada), así que salen los movimientos, los productos y lo que entró y
  * salió, en cantidad y al costo.
+ *
+ * Van dentro del panel azul de la cabecera, con las mismas tarjetas de cifras
+ * que Inventario (Luis, 19/11: «que arriba salga la información»): el kardex
+ * dice lo que movió antes de enseñar la lista. Siguen siendo de lo FILTRADO,
+ * así que cambian al cambiar un filtro de abajo.
  */
 export async function ResumenDelKardex({ filtros }: { filtros: FiltrosKardex }) {
   const r = await resumenKardex(filtros);
@@ -26,22 +33,25 @@ export async function ResumenDelKardex({ filtros }: { filtros: FiltrosKardex }) 
     tarjetas.push({ etiqueta: "Movimientos", valor: cant(d.movimientos), detalle: `${cant(d.productos)} productos` });
   }
   tarjetas.push(
+    // Sobre el azul del panel: los verdes y rojos de estado se aclaran para
+    // seguir leyéndose (el panel redefine `--ok` y `--danger`).
     { etiqueta: "Entró", valor: `+${cant(d.entradas)}`, detalle: usd(d.valorEntradas), tono: "text-[var(--ok)]" },
-    { etiqueta: "Salió", valor: `−${cant(d.salidas)}`, detalle: usd(d.valorSalidas) },
+    { etiqueta: "Salió", valor: `−${cant(d.salidas)}`, detalle: usd(d.valorSalidas), tono: "text-[var(--danger)]" },
   );
   if (d.saldoFinal !== null) {
     tarjetas.push({ etiqueta: "Saldo al terminar", valor: cant(d.saldoFinal), detalle: `${cant(d.movimientos)} movimientos` });
   }
 
   return (
-    <dl className="mx-4 mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {tarjetas.map((t) => (
-        <div key={t.etiqueta} className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
-          <dt className="text-sm text-[var(--fg-muted)]">{t.etiqueta}</dt>
-          <dd className={`tabular text-lg font-semibold ${t.tono ?? ""}`}>{t.valor}</dd>
-          {t.detalle ? <dd className="tabular text-sm text-[var(--fg-subtle)]">{t.detalle}</dd> : null}
-        </div>
+        <KpiCard
+          key={t.etiqueta}
+          etiqueta={t.etiqueta}
+          valor={t.tono ? <span className={t.tono}>{t.valor}</span> : t.valor}
+          detalle={t.detalle}
+        />
       ))}
-    </dl>
+    </div>
   );
 }

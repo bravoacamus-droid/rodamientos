@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { FileDown, FileSpreadsheet } from "lucide-react";
-import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
+import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
+import { leerCuantos } from "@/lib/ver-mas";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -18,12 +19,6 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/** Toma el primer valor de un search param, que puede venir repetido. */
-function uno(v: string | string[] | undefined): string | undefined {
-  const valor = Array.isArray(v) ? v[0] : v;
-  return valor && valor.length > 0 ? valor : undefined;
-}
-
 /**
  * Recepciones de mercadería.
  *
@@ -37,9 +32,8 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
   const filtros: FiltrosRecepciones = {
     // Todos los filtros, ya limpios (19/11): los mismos que leen el Excel y el PDF.
     ...leerFiltrosRecepciones(sp),
-    cursor: uno(sp.cursor),
-    direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
-    limite: leerTamano(uno(sp.n)),
+    // Sin páginas (19/11): la lista empieza en 30 y crece con «Ver más».
+    limite: leerCuantos(sp.n),
   };
 
   const [proveedores, permisos, opciones] = await Promise.all([
@@ -64,7 +58,7 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
       <PanelModulo ruta="/recepciones">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Recepciones</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Recepciones</h1>
             <p className="text-sm text-[var(--fg-muted)]">
               Lo que entra al almacén. Es lo único que mueve el stock.
             </p>
@@ -91,6 +85,11 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
             )}
           </div>
         </div>
+
+        {/* Lo que entró, arriba y dentro del panel (19/11), como en el kardex. */}
+        <Suspense key={query} fallback={<Skeleton className="h-28 w-full bg-white/10" />}>
+          <ResumenRecepciones filtros={filtros} />
+        </Suspense>
       </PanelModulo>
 
       <section className="card pt-4">
@@ -103,20 +102,13 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
         />
 
         <Suspense
-          key={query}
-          fallback={<Skeleton className="mx-4 mb-4 h-20" />}
-        >
-          <ResumenRecepciones filtros={filtros} />
-        </Suspense>
-
-        <Suspense
           // La clave fuerza un skeleton nuevo en cada cambio de filtro; sin
           // ella React reutiliza el árbol y la tabla se queda con los datos
           // viejos hasta que llega la consulta.
           key={JSON.stringify(filtros)}
           fallback={<Skeleton className="h-96 w-full" />}
         >
-          <TablaRecepciones filtros={filtros} />
+          <TablaRecepciones filtros={filtros} query={query} />
         </Suspense>
       </section>
     </div>

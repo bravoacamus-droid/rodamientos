@@ -1,7 +1,10 @@
-import Link from "next/link";
-import { hayFiltrosRecepciones } from "../dominio/filtros";
-import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
+import Link from "next/link";
+import { Ban, Eye, PackageCheck } from "lucide-react";
+import { EstadoError, EstadoVacio, Moneda, cn } from "@rodatech/ui";
 
+import { VerMas } from "@/componentes/ver-mas";
+
+import { hayFiltrosRecepciones } from "../dominio/filtros";
 import { listarRecepciones } from "../api/consultas";
 import type { FiltrosRecepciones } from "../dominio/tipos";
 
@@ -9,10 +12,15 @@ import type { FiltrosRecepciones } from "../dominio/tipos";
  * Listado de recepciones.
  *
  * En móvil NO es una tabla: ocho columnas en un teléfono no se leen ni con
- * scroll horizontal, así que por debajo de `md` cada recepción es una tarjeta
- * con lo mismo apilado. Es el mismo criterio que el catálogo.
+ * scroll horizontal, así que por debajo del corte cada recepción es una
+ * tarjeta con lo mismo apilado. Es el mismo criterio que el catálogo.
+ *
+ * Desde el 19/11 (Luis: «lo mismo aplica para recepciones», tras el kardex)
+ * la fila lleva color: un filo verde si entró al almacén y rojo si se anuló,
+ * la moneda en su propia etiqueta —dólares y soles no se suman y no deben
+ * confundirse de un vistazo— y la lista empieza en 30 con «Ver más».
  */
-export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepciones }) {
+export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRecepciones; query: string }) {
   const resultado = await listarRecepciones(filtros);
 
   if (!resultado.ok) {
@@ -25,7 +33,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
     );
   }
 
-  const { filas, siguiente, anterior } = resultado.datos;
+  const { filas, siguiente } = resultado.datos;
 
   if (filas.length === 0) {
     const filtrando = hayFiltrosRecepciones(filtros);
@@ -50,185 +58,171 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
         módulos del 02/10).
       */}
       {/* ------------------------------------------------ Escritorio */}
-      <div className="scroll-x hidden @3xl:block">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--border)] text-left text-sm uppercase tracking-wide text-[var(--fg-subtle)]">
-              <th className="px-4 py-2.5 font-medium">Número</th>
-              <th className="px-4 py-2.5 font-medium">Ingreso</th>
-              <th className="px-4 py-2.5 font-medium">Proveedor</th>
-              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">
-                Documentos
-              </th>
-              <th className="px-4 py-2.5 text-right font-medium">Líneas</th>
-              <th className="px-4 py-2.5 text-right font-medium">Valorizado</th>
-              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Recibió</th>
-              {/*
-                La fila de escritorio se quedó sin botón.
-
-                El 11/09 la tarjeta de móvil estrenó su «Ver recepción» y esta
-                tabla no se abrió: en escritorio la única forma de entrar
-                seguía siendo pulsar el número. Es el fallo contra el que avisa
-                el propio revisor —*«cambié la tabla, la miré en el escritorio,
-                y no abrí lo de al lado»*—, esta vez del revés. Y es el mismo
-                que Luis dio por cerrado en compras: *«falta el botón de
-                recibir mercadería, no darle clic al número»*.
-              */}
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((r) => (
-              <tr
-                key={r.id}
-                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
-                  r.anulada ? "opacity-60" : ""
-                }`}
-              >
-                <td className="px-4 py-2.5">
-                  <Link
-                    href={`/recepciones/${r.id}`}
-                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
-                  >
-                    {r.numero}
-                  </Link>
-                  {r.anulada ? (
-                    <span className="ml-2 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
-                      Anulada
-                    </span>
-                  ) : null}
-                  {r.compra_numero ? (
-                    <span className="ml-2 font-mono text-sm text-[var(--fg-subtle)]">
-                      {r.compra_numero}
-                    </span>
-                  ) : null}
-                </td>
-                <td className="whitespace-nowrap px-4 py-2.5 tabular">{r.fecha}</td>
-                <td className="max-w-xs px-4 py-2.5">
-                  <span className="block truncate">{r.proveedor ?? "—"}</span>
-                </td>
-                {/* Los papeles del proveedor son por lo que se busca una
-                    recepción cuando llama reclamando —así lo dice el marcador
-                    del buscador—, así que se leen: en 14, no en 12. */}
-                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
-                  {r.guia_proveedor ? <span className="block">Guía {r.guia_proveedor}</span> : null}
-                  {r.factura_proveedor ? (
-                    <span className="block">Factura {r.factura_proveedor}</span>
-                  ) : null}
-                  {!r.guia_proveedor && !r.factura_proveedor ? "—" : null}
-                </td>
-                <td className="px-4 py-2.5 text-right tabular">{r.items}</td>
-                <td className="px-4 py-2.5 text-right">
-                  <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" />
-                </td>
-                <td className="hidden px-4 py-2.5 text-[var(--fg-muted)] 2xl:table-cell">
-                  {r.recibido_por ?? "—"}
-                </td>
-                {/* Ancho fijo y no el del texto, como en guías y facturación:
-                    es lo que mantiene la columna a plomo entre filas. */}
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-4 py-2.5">
-                  <div className="ml-auto w-[140px]">
-                    <Link
-                      href={`/recepciones/${r.id}`}
-                      className={`${SECUNDARIO} w-full justify-center`}
-                    >
-                      Ver recepción
-                    </Link>
-                  </div>
-                </td>
+      <div className="hidden px-4 @3xl:block">
+        <div className="scroll-x rounded-lg border border-[var(--border)]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="cabecera-tabla">
+                <th className="px-4 py-3">Recepción</th>
+                <th className="px-4 py-3">Ingreso</th>
+                <th className="px-4 py-3">Proveedor</th>
+                <th className="hidden px-4 py-3 2xl:table-cell">Papeles</th>
+                <th className="px-4 py-3 text-right">Líneas</th>
+                <th className="px-4 py-3 text-right">Valorizado</th>
+                <th className="hidden px-4 py-3 2xl:table-cell">Recibió</th>
+                {/*
+                  La fila de escritorio se quedó sin botón el 11/09, cuando la
+                  tarjeta de móvil estrenó su «Ver recepción»: en escritorio la
+                  única forma de entrar era pulsar el número. Luis, en compras:
+                  *«falta el botón de recibir mercadería, no darle clic al
+                  número»*.
+                */}
+                <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] px-4 py-3 text-right">
+                  Acciones
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filas.map((r, i) => {
+                const fondo = i % 2 === 1 ? "bg-[var(--surface-2)]" : "bg-[var(--surface)]";
+                return (
+                  <tr
+                    key={r.id}
+                    className={cn(
+                      "group/fila border-b border-l-[3px] border-b-[var(--border-soft)] transition-colors last:border-b-0 hover:bg-[var(--color-brand-50)] dark:hover:bg-[var(--surface-3)]",
+                      r.anulada ? "border-l-rose-400" : "border-l-emerald-400",
+                      fondo,
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/recepciones/${r.id}`}
+                        className={cn(
+                          "whitespace-nowrap font-mono text-sm font-semibold text-brand-600 underline-offset-2 hover:underline",
+                          r.anulada && "line-through",
+                        )}
+                      >
+                        {r.numero}
+                      </Link>
+                      {r.compra_numero ? (
+                        <span className="block font-mono text-[var(--fg-muted)]">{r.compra_numero}</span>
+                      ) : null}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-medium tabular">{fechaPeru(r.fecha)}</td>
+                    <td className="max-w-xs px-4 py-3">
+                      <span className="block truncate font-medium" title={r.proveedor ?? undefined}>
+                        {r.proveedor ?? "—"}
+                      </span>
+                      {r.anulada ? <EtiquetaAnulada /> : null}
+                    </td>
+                    {/* Los papeles del proveedor son por lo que se busca una
+                        recepción cuando llama reclamando, así que se leen. */}
+                    <td className="hidden px-4 py-3 2xl:table-cell">
+                      <Papeles guia={r.guia_proveedor} factura={r.factura_proveedor} />
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-block min-w-8 rounded-full bg-[var(--color-brand-50)] px-2 py-0.5 text-center font-semibold tabular text-brand-700 dark:bg-[var(--surface-3)]">
+                        {r.items}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <span className={cn("inline-flex items-center gap-2", r.anulada && "line-through opacity-70")}>
+                        <EtiquetaMoneda moneda={r.moneda} />
+                        <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" enfasis="fuerte" />
+                      </span>
+                    </td>
+                    <td className="hidden max-w-[11rem] px-4 py-3 text-[var(--fg-muted)] 2xl:table-cell">
+                      <span className="block truncate" title={r.recibido_por ?? undefined}>{r.recibido_por ?? "—"}</span>
+                    </td>
+                    {/* El fondo de la celda fija sigue al de la fila: si no,
+                        la columna quedaba blanca en las filas de dos tonos. */}
+                    <td
+                      className={cn(
+                        "sticky right-0 z-10 border-l border-[var(--border-soft)] px-4 py-3 group-hover/fila:bg-[var(--color-brand-50)] dark:group-hover/fila:bg-[var(--surface-3)]",
+                        fondo,
+                      )}
+                    >
+                      <div className="ml-auto w-[150px]">
+                        <Link href={`/recepciones/${r.id}`} className={cn(SECUNDARIO, "w-full justify-center")}>
+                          <Eye className="size-4" aria-hidden="true" />
+                          Ver recepción
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* ----------------------------------------------------- Móvil */}
       {/*
-        Las recepciones, en tarjetas sueltas y con etiquetas.
-
-        Luis, 11/09: *«todo junto, apegado»*. Y faltaban los papeles del
-        proveedor —la guía y la factura con las que llegó la mercadería—, que
-        en escritorio están en su columna y en el teléfono no salían: son el
-        dato por el que se busca una recepción cuando el proveedor llama
-        reclamando.
+        Las recepciones, en tarjetas sueltas y con etiquetas. Luis, 11/09:
+        *«todo junto, apegado»*. Con los papeles del proveedor, que son el dato
+        por el que se busca una recepción cuando el proveedor llama reclamando.
       */}
-      <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
+      <ul className="flex flex-col gap-2.5 px-3 pb-1 @3xl:hidden">
         {filas.map((r) => (
           <li
             key={r.id}
-            className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${
-              r.anulada ? "opacity-60" : ""
-            }`}
+            className={cn(
+              "flex flex-col gap-2 rounded-lg border border-l-[3px] border-[var(--border)] bg-[var(--surface)] p-3",
+              r.anulada ? "border-l-rose-400" : "border-l-emerald-400",
+            )}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <Link
                   href={`/recepciones/${r.id}`}
-                  className="font-mono text-sm font-semibold text-brand-600"
+                  className={cn("font-mono text-sm font-semibold text-brand-600", r.anulada && "line-through")}
                 >
                   {r.numero}
                 </Link>
                 {r.compra_numero ? (
-                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
-                    {r.compra_numero}
-                  </span>
+                  <span className="block font-mono text-sm text-[var(--fg-muted)]">{r.compra_numero}</span>
                 ) : null}
               </div>
-              {r.anulada ? (
-                <span className="shrink-0 rounded-sm bg-[var(--danger-bg)] px-1.5 py-0.5 text-sm font-medium text-[var(--danger)]">
-                  Anulada
-                </span>
-              ) : null}
+              {r.anulada ? <EtiquetaAnulada /> : <EtiquetaRecibida />}
             </div>
 
-            <p className="text-sm font-medium">{r.proveedor ?? "—"}</p>
+            <p className="text-base font-semibold">{r.proveedor ?? "—"}</p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <EtiquetaMoneda moneda={r.moneda} />
+              <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" enfasis="fuerte" />
+            </div>
 
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-              <Dato etiqueta="Ingreso al almacén">{r.fecha}</Dato>
+              <Dato etiqueta="Ingreso al almacén">{fechaPeru(r.fecha)}</Dato>
               <Dato etiqueta="Líneas">{r.items}</Dato>
-              <Dato etiqueta="Valorizado">
-                <Moneda valor={r.valorizado} moneda={r.moneda} tamano="sm" />
-              </Dato>
               <Dato etiqueta="Recibió">{r.recibido_por ?? "—"}</Dato>
               <div className="col-span-2 min-w-0">
-                <dt className="text-sm text-[var(--fg-subtle)]">
-                  Papeles del proveedor
-                </dt>
+                <dt className="text-sm text-[var(--fg-muted)]">Papeles del proveedor</dt>
                 <dd className="text-sm">
-                  {/* «Guía» y «Factura» enteras: «G:» y «F:» eran claves que
-                      había que saber (revisión por módulos del 02/10). */}
-                  {r.guia_proveedor || r.factura_proveedor
-                    ? [
-                        r.guia_proveedor ? `Guía ${r.guia_proveedor}` : null,
-                        r.factura_proveedor ? `Factura ${r.factura_proveedor}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : "—"}
+                  <Papeles guia={r.guia_proveedor} factura={r.factura_proveedor} />
                 </dd>
               </div>
             </dl>
 
             {/* Una recepción no se edita ni se imprime: solo se abre para ver
                 qué llegó y colgarle los papeles. Un botón, entero. */}
-            <Link
-              href={`/recepciones/${r.id}`}
-              className={`${SECUNDARIO} w-full justify-center`}
-            >
+            <Link href={`/recepciones/${r.id}`} className={cn(SECUNDARIO, "w-full justify-center")}>
+              <Eye className="size-4" aria-hidden="true" />
               Ver recepción
             </Link>
           </li>
         ))}
       </ul>
 
-      <div className="px-3 py-3 sm:px-4">
-        <PaginacionKeyset
-          porPagina={filtros.limite}
-          cantidadEnPagina={filas.length}
-          cursorSiguiente={siguiente}
-          cursorAnterior={anterior}
-        />
-      </div>
+      <VerMas
+        query={query}
+        cuantos={filtros.limite ?? filas.length}
+        enPantalla={filas.length}
+        hayMas={siguiente !== null}
+        nombre="recepciones"
+      />
     </div>
   );
 }
@@ -237,27 +231,82 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
   El botón de la fila y el de la tarjeta. Mismo aspecto que el «Ver» de guías y
   facturación: en esta casa un botón tiene que parecer un botón.
 */
-const SECUNDARIO =
-  "inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-2.5 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]";
+const SECUNDARIO = "boton-fila";
 
 /**
- * Un dato de la tarjeta de móvil: su etiqueta encima, pequeña, y el valor
- * debajo.
- *
- * Sin cabecera de tabla que diga qué es cada cosa, cada dato tiene que
- * presentarse solo. La etiqueta va en 12 px porque no se lee, se reconoce; el
- * valor, en 14, que es el mínimo de esta casa.
+ * «16/11/2026», como se escribe en Perú, y no «2026-11-16»: el ISO hay que
+ * leerlo al revés (revisión por módulos del 02/10). Si no viene en ISO, tal
+ * cual.
  */
-function Dato({
-  etiqueta,
-  children,
-}: {
-  etiqueta: string;
-  children: React.ReactNode;
-}) {
+function fechaPeru(fecha: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : fecha;
+}
+
+/** La moneda en su etiqueta: azul el dólar, ámbar el sol. */
+function EtiquetaMoneda({ moneda }: { moneda: "USD" | "PEN" | string }) {
+  const soles = moneda === "PEN";
+  return (
+    <span
+      className={cn(
+        "rounded-md px-1.5 py-0.5 text-sm font-semibold",
+        soles
+          ? "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200"
+          : "bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200",
+      )}
+    >
+      {soles ? "Soles" : "Dólares"}
+    </span>
+  );
+}
+
+function EtiquetaAnulada() {
+  return (
+    <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-sm font-semibold text-rose-800 dark:bg-rose-950/60 dark:text-rose-200">
+      <Ban className="size-4" aria-hidden="true" />
+      Anulada, no suma
+    </span>
+  );
+}
+
+function EtiquetaRecibida() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+      <PackageCheck className="size-4" aria-hidden="true" />
+      Entró
+    </span>
+  );
+}
+
+/** «Guía» y «Factura» enteras: «G:» y «F:» eran claves que había que saber (02/10). */
+function Papeles({ guia, factura }: { guia: string | null; factura: string | null }) {
+  if (!guia && !factura) return <span className="text-[var(--fg-subtle)]">Sin papeles</span>;
+  return (
+    <span className="flex flex-col whitespace-nowrap">
+      {guia ? (
+        <span>
+          <span className="text-[var(--fg-muted)]">Guía </span>
+          <span className="font-mono">{guia}</span>
+        </span>
+      ) : null}
+      {factura ? (
+        <span>
+          <span className="text-[var(--fg-muted)]">Factura </span>
+          <span className="font-mono">{factura}</span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/**
+ * Un dato de la tarjeta de móvil: su etiqueta encima y el valor debajo. Sin
+ * cabecera de tabla que diga qué es cada cosa, cada dato se presenta solo.
+ */
+function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
+      <dt className="text-sm text-[var(--fg-muted)]">{etiqueta}</dt>
       <dd className="min-w-0 truncate">{children}</dd>
     </div>
   );
