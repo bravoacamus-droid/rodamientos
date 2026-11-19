@@ -1,13 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Skeleton, buttonVariants, leerTamano } from "@rodatech/ui";
+import { FileDown, FileSpreadsheet } from "lucide-react";
+import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 
-import { proveedoresActivos } from "../api/consultas";
+import { opcionesDeFiltroRecepciones, proveedoresActivos } from "../api/consultas";
+import { filtrosRecepcionesAQuery, leerFiltrosRecepciones } from "../dominio/filtros";
 import type { FiltrosRecepciones } from "../dominio/tipos";
 import { FiltrosRecepcionesBarra } from "./filtros";
+import { ResumenRecepciones } from "./resumen";
 import { TablaRecepciones } from "./tabla";
 import { PanelModulo } from "@/componentes/panel-modulo";
 
@@ -32,19 +35,25 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
   const sp = await searchParams;
 
   const filtros: FiltrosRecepciones = {
-    q: uno(sp.q),
-    proveedor: uno(sp.proveedor),
-    desde: uno(sp.desde),
-    hasta: uno(sp.hasta),
+    // Todos los filtros, ya limpios (19/11): los mismos que leen el Excel y el PDF.
+    ...leerFiltrosRecepciones(sp),
     cursor: uno(sp.cursor),
     direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [proveedores, permisos] = await Promise.all([
+  const [proveedores, permisos, opciones] = await Promise.all([
     proveedoresActivos(),
     misPermisos(),
+    opcionesDeFiltroRecepciones(),
   ]);
+  const o = opciones.ok ? opciones.datos : { familias: [], subfamilias: [], marcas: [], usuarios: [] };
+  const query = filtrosRecepcionesAQuery(filtros);
+  const sufijo = query ? `?${query}` : "";
+  const botonSecundario = cn(
+    buttonVariants({ variant: "outline" }),
+    "h-11 md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+  );
 
   // Configuración › Roles y permisos (143). Sin permiso, el botón sale con candado y
   // dice por qué, en vez de esconderse (QA, 20/10).
@@ -61,25 +70,44 @@ export default async function PaginaRecepciones({ searchParams }: Props) {
             </p>
           </div>
 
-          {puedeRecibir ? (
-            <Link
-              href="/recepciones/nueva"
-              className={buttonVariants()}
-            >
-              Recibir mercadería
-            </Link>
-          ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)}>
-              Recibir mercadería
-            </BotonBloqueado>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Bajar lo filtrado (Luis, 19/11), todo lo que coincide y no solo la página. */}
+            <a href={`/recepciones/excel${sufijo}`} className={botonSecundario}>
+              <FileSpreadsheet aria-hidden="true" />
+              Descargar en Excel
+            </a>
+            <a href={`/recepciones/pdf${sufijo}`} target="_blank" rel="noopener" className={botonSecundario}>
+              <FileDown aria-hidden="true" />
+              Descargar PDF
+            </a>
+            {puedeRecibir ? (
+              <Link href="/recepciones/nueva" className={cn(buttonVariants(), "h-11 md:h-control-md")}>
+                Recibir mercadería
+              </Link>
+            ) : (
+              <BotonBloqueado mensaje={avisoSinPermiso("almacen", "crear", permisos.nombreRol)}>
+                Recibir mercadería
+              </BotonBloqueado>
+            )}
+          </div>
         </div>
       </PanelModulo>
 
       <section className="card pt-4">
         <FiltrosRecepcionesBarra
           proveedores={proveedores.ok ? proveedores.datos : []}
+          familias={o.familias}
+          subfamilias={o.subfamilias}
+          marcas={o.marcas}
+          usuarios={o.usuarios}
         />
+
+        <Suspense
+          key={query}
+          fallback={<Skeleton className="mx-4 mb-4 h-20" />}
+        >
+          <ResumenRecepciones filtros={filtros} />
+        </Suspense>
 
         <Suspense
           // La clave fuerza un skeleton nuevo en cada cambio de filtro; sin

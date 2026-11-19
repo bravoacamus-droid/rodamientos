@@ -50,14 +50,13 @@ export async function listarRecepciones(
 
     const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
 
+    // De `v_recepciones_lista` (202): trae ya sumadas las líneas y el valor,
+    // y deja filtrar por los productos que trae cada recepción.
     let consulta = supabase
-      .from("recepciones")
+      .from("v_recepciones_lista")
       .select(
         `id, creado_en, numero, fecha, guia_proveedor, factura_proveedor, anulada, moneda,
-         proveedores(razon_social),
-         compras(numero),
-         perfiles(nombre),
-         recepcion_items(cantidad, costo_unitario)`,
+         proveedor, compra_numero, recibido_por_nombre, items, valorizado`,
       )
       // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
       .order("fecha", { ascending: atras })
@@ -72,60 +71,13 @@ export async function listarRecepciones(
     */
     const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha");
     if (desdeCursor) consulta = consulta.or(desdeCursor);
-    if (filtros.proveedor) consulta = consulta.eq("proveedor_id", filtros.proveedor);
-    if (filtros.desde) consulta = consulta.gte("fecha", filtros.desde);
-    if (filtros.hasta) consulta = consulta.lte("fecha", filtros.hasta);
-    if (filtros.q) {
-      // Por lo que se busca una recepción concreta: su número, o el documento
-      // del proveedor que se tiene delante en papel.
-      consulta = consulta.or(
-        `numero.ilike.%${filtros.q}%,guia_proveedor.ilike.%${filtros.q}%,factura_proveedor.ilike.%${filtros.q}%`,
-      );
-    }
+    consulta = filtrarRecepciones(consulta, filtros);
 
     const { data, error } = await consulta;
     if (error) return fallo(error, "recepciones/listarRecepciones");
 
-    const crudas = (data ?? []) as unknown as Array<
-      Record<string, unknown> & {
-        proveedores: { razon_social: string } | null;
-        moneda: string | null;
-        tipo_cambio: number | string | null;
-        compras: { numero: string } | null;
-        perfiles: { nombre: string } | null;
-        // Se traen los ítems en vez de pedir `recepcion_items(count)` porque
-        // hacen falta las dos cosas —cuántos y por cuánto— y una recepción
-        // tiene decenas de líneas, no miles: sale más barato una consulta con
-        // el anidado que dos viajes.
-        recepcion_items: { cantidad: number; costo_unitario: number }[] | null;
-      }
-    >;
-
-    const todas: RecepcionLista[] = crudas.map((r) => {
-      const items = r.recepcion_items ?? [];
-      return {
-        id: String(r.id),
-        numero: String(r.numero),
-        fecha: String(r.fecha),
-        proveedor: r.proveedores?.razon_social ?? null,
-        compra_numero: r.compras?.numero ?? null,
-        guia_proveedor: (r.guia_proveedor as string | null) ?? null,
-        factura_proveedor: (r.factura_proveedor as string | null) ?? null,
-        recibido_por: r.perfiles?.nombre ?? null,
-        anulada: Boolean(r.anulada),
-        moneda: r.moneda === "PEN" ? "PEN" : "USD",
-        items: items.length,
-        // Sin los gastos prorrateados: es lo que se le pagó al proveedor, que
-        // es contra lo que se cuadra la factura.
-        valorizado:
-          Math.round(
-            items.reduce(
-              (a, i) => a + Number(i.cantidad ?? 0) * Number(i.costo_unitario ?? 0),
-              0,
-            ) * 100,
-          ) / 100,
-      };
-    });
+    const crudas = (data ?? []) as unknown as Record<string, unknown>[];
+    const todas: RecepcionLista[] = crudas.map(aLista);
 
     /*
       El corte usa el MISMO número que el límite, no la constante: es la mitad
@@ -162,6 +114,213 @@ export async function listarRecepciones(
   } catch (e) {
     return fallo(e, "recepciones/listarRecepciones");
   }
+}
+
+/**
+ * Los filtros de la lista sobre `v_recepciones_lista` (19/11). Los usan la
+ * pantalla, el resumen y la exportación: lo que se ve es lo que se baja.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function filtrarRecepciones<Q extends { eq: any; gte: any; lte: any; or: any; ilike: any; contains: any }>(
+  consulta: Q,
+  filtros: FiltrosRecepciones,
+): Q {
+  let c = consulta;
+  if (filtros.proveedor) c = c.eq("proveedor_id", filtros.proveedor);
+  if (filtros.usuario) c = c.eq("recibido_por", filtros.usuario);
+  if (filtros.moneda) c = c.eq("moneda", filtros.moneda);
+  if (filtros.estado) c = c.eq("anulada", filtros.estado === "anuladas");
+  if (filtros.familia) c = c.contains("familia_ids", [filtros.familia]);
+  if (filtros.subfamilia) c = c.contains("subfamilia_ids", [filtros.subfamilia]);
+  if (filtros.marca) c = c.contains("marca_ids", [filtros.marca]);
+  if (filtros.desde) c = c.gte("fecha", filtros.desde);
+  if (filtros.hasta) c = c.lte("fecha", filtros.hasta);
+  if (filtros.producto) {
+    // Cada palabra tiene que estar: «6205 2rs» encuentra «6205-2RS1/C3».
+    for (const palabra of filtros.producto.split(" ").filter(Boolean)) {
+      c = c.ilike("productos_texto", `%${palabra}%`);
+    }
+  }
+  if (filtros.q) {
+    // Por lo que se busca una recepción concreta: su número, la orden de
+    // compra, o el documento del proveedor que se tiene delante en papel.
+    c = c.or(
+      `numero.ilike.%${filtros.q}%,guia_proveedor.ilike.%${filtros.q}%,factura_proveedor.ilike.%${filtros.q}%,compra_numero.ilike.%${filtros.q}%,proveedor.ilike.%${filtros.q}%`,
+    );
+  }
+  return c;
+}
+
+/** Una fila de `v_recepciones_lista`, como la pinta la lista. */
+function aLista(r: Record<string, unknown>): RecepcionLista {
+  return {
+    id: String(r.id),
+    numero: String(r.numero),
+    fecha: String(r.fecha),
+    proveedor: (r.proveedor as string | null) ?? null,
+    compra_numero: (r.compra_numero as string | null) ?? null,
+    guia_proveedor: (r.guia_proveedor as string | null) ?? null,
+    factura_proveedor: (r.factura_proveedor as string | null) ?? null,
+    recibido_por: (r.recibido_por_nombre as string | null) ?? null,
+    anulada: Boolean(r.anulada),
+    moneda: r.moneda === "PEN" ? "PEN" : "USD",
+    items: Number(r.items ?? 0),
+    // Sin los gastos prorrateados: es lo que se le pagó al proveedor, que es
+    // contra lo que se cuadra la factura.
+    valorizado: Number(r.valorizado ?? 0),
+  };
+}
+
+/** Tope de la exportación y del resumen. */
+export const TOPE_RECEPCIONES = 5000;
+
+/**
+ * Todas las recepciones del filtro, de la más antigua a la más reciente, para
+ * el resumen y la exportación. De mil en mil, el tope de PostgREST.
+ */
+export async function recepcionesParaExportar(
+  filtros: FiltrosRecepciones,
+): Promise<Resultado<{ filas: RecepcionLista[]; truncado: boolean }>> {
+  try {
+    const supabase = await clienteServidor();
+    const filas: RecepcionLista[] = [];
+    for (let desde = 0; desde < TOPE_RECEPCIONES; desde += 1000) {
+      const { data, error } = await filtrarRecepciones(
+        supabase
+          .from("v_recepciones_lista")
+          .select(
+            "id, numero, fecha, guia_proveedor, factura_proveedor, anulada, moneda, proveedor, compra_numero, recibido_por_nombre, items, valorizado",
+          )
+          .order("fecha", { ascending: true })
+          .order("creado_en", { ascending: true }),
+        filtros,
+      ).range(desde, desde + 999);
+      if (error) return fallo(error, "recepciones/recepcionesParaExportar");
+      const lote = ((data ?? []) as unknown as Record<string, unknown>[]).map(aLista);
+      filas.push(...lote);
+      if (lote.length < 1000) return { ok: true, datos: { filas, truncado: false } };
+    }
+    return { ok: true, datos: { filas: filas.slice(0, TOPE_RECEPCIONES), truncado: true } };
+  } catch (e) {
+    return fallo(e, "recepciones/recepcionesParaExportar");
+  }
+}
+
+/** Una línea recibida, para la hoja «Detalle» del Excel. */
+export interface LineaExportada {
+  recepcion_id: string;
+  codigo: string;
+  descripcion: string;
+  marca: string;
+  familia: string;
+  subfamilia: string;
+  unidad: string;
+  cantidad: number;
+  costo_unitario: number;
+}
+
+/** Las líneas de esas recepciones, de cien en cien para no alargar la URL. */
+export async function lineasDeRecepciones(ids: string[]): Promise<Resultado<LineaExportada[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const salida: LineaExportada[] = [];
+    for (let i = 0; i < ids.length; i += 100) {
+      const { data, error } = await supabase
+        .from("recepcion_items")
+        .select("recepcion_id, cantidad, costo_unitario, productos(codigo, descripcion, unidad_codigo, marcas(nombre), subfamilias(nombre, familias(nombre)))")
+        .in("recepcion_id", ids.slice(i, i + 100));
+      if (error) return fallo(error, "recepciones/lineasDeRecepciones");
+      for (const r of (data ?? []) as unknown as Array<{
+        recepcion_id: string;
+        cantidad: number;
+        costo_unitario: number;
+        productos: {
+          codigo: string;
+          descripcion: string;
+          unidad_codigo: string | null;
+          marcas: { nombre: string } | null;
+          subfamilias: { nombre: string; familias: { nombre: string } | null } | null;
+        } | null;
+      }>) {
+        salida.push({
+          recepcion_id: r.recepcion_id,
+          codigo: r.productos?.codigo ?? "",
+          descripcion: r.productos?.descripcion ?? "",
+          marca: r.productos?.marcas?.nombre ?? "",
+          familia: r.productos?.subfamilias?.familias?.nombre ?? "",
+          subfamilia: r.productos?.subfamilias?.nombre ?? "",
+          unidad: r.productos?.unidad_codigo ?? "",
+          cantidad: Number(r.cantidad ?? 0),
+          costo_unitario: Number(r.costo_unitario ?? 0),
+        });
+      }
+    }
+    return { ok: true, datos: salida };
+  } catch (e) {
+    return fallo(e, "recepciones/lineasDeRecepciones");
+  }
+}
+
+/** Los desplegables nuevos: familias, subfamilias, marcas y quién recibe. */
+export async function opcionesDeFiltroRecepciones(): Promise<
+  Resultado<{
+    familias: { id: string; nombre: string }[];
+    subfamilias: { id: string; nombre: string; familia_id: string }[];
+    marcas: { id: string; nombre: string }[];
+    usuarios: { id: string; nombre: string }[];
+  }>
+> {
+  try {
+    const supabase = await clienteServidor();
+    const [familias, subfamilias, marcas, usuarios] = await Promise.all([
+      supabase.from("familias").select("id, nombre").order("nombre"),
+      supabase.from("subfamilias").select("id, nombre, familia_id").order("nombre"),
+      supabase.from("marcas").select("id, nombre").order("nombre"),
+      supabase.from("perfiles").select("id, nombre").order("nombre"),
+    ]);
+    const primerError = familias.error ?? subfamilias.error ?? marcas.error ?? usuarios.error;
+    if (primerError) return fallo(primerError, "recepciones/opcionesDeFiltro");
+    return {
+      ok: true,
+      datos: {
+        familias: (familias.data ?? []) as { id: string; nombre: string }[],
+        subfamilias: (subfamilias.data ?? []) as { id: string; nombre: string; familia_id: string }[],
+        marcas: (marcas.data ?? []) as { id: string; nombre: string }[],
+        usuarios: ((usuarios.data ?? []) as { id: string; nombre: string | null }[]).map((u) => ({
+          id: u.id,
+          nombre: u.nombre ?? "(sin nombre)",
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "recepciones/opcionesDeFiltro");
+  }
+}
+
+/** Los nombres de lo filtrado, para la cabecera del Excel y del PDF. */
+export async function nombresDeFiltrosRecepciones(f: FiltrosRecepciones) {
+  const supabase = await clienteServidor();
+  const nombre = async (
+    tabla: "familias" | "subfamilias" | "marcas" | "perfiles",
+    id?: string,
+  ): Promise<string | null> => {
+    if (!id) return null;
+    const { data } = await supabase.from(tabla).select("nombre").eq("id", id).maybeSingle();
+    return (data?.nombre as string | null | undefined) ?? null;
+  };
+  const proveedor = async () => {
+    if (!f.proveedor) return null;
+    const { data } = await supabase.from("proveedores").select("razon_social").eq("id", f.proveedor).maybeSingle();
+    return (data?.razon_social as string | undefined) ?? null;
+  };
+  const [p, familia, subfamilia, marca, usuario] = await Promise.all([
+    proveedor(),
+    nombre("familias", f.familia),
+    nombre("subfamilias", f.subfamilia),
+    nombre("marcas", f.marca),
+    nombre("perfiles", f.usuario),
+  ]);
+  return { proveedor: p, familia, subfamilia, marca, usuario };
 }
 
 /** La ficha de una recepción, con sus líneas. */

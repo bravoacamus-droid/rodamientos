@@ -70,6 +70,16 @@ export interface RecepcionDetalle {
 export interface FiltrosRecepciones {
   q?: string;
   proveedor?: string;
+  /** Desde el 19/11 (Luis: «buenos filtros, igual que en el inventario»). */
+  /** Código, código de fábrica o descripción de un producto que trae. */
+  producto?: string;
+  familia?: string;
+  subfamilia?: string;
+  marca?: string;
+  /** Quién la recibió. */
+  usuario?: string;
+  moneda?: "USD" | "PEN";
+  estado?: "vigentes" | "anuladas";
   desde?: string;
   hasta?: string;
   cursor?: string;

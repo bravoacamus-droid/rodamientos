@@ -9751,3 +9751,14 @@ Luis, 19/11: *«en la página de kardex tenemos que poner más filtros profesion
 - Excel (acción `excelDeLaHoja`, con fórmulas de diferencia e impacto) y PDF (`lib/pdf-listado.ts`) de lo que se ve; sin contar, sirve de hoja impresa para el almacén.
 
 **Sin ver en pantalla**: el navegador no tenía sesión y no se entra con contraseña. Probado: tsc, lint, 1851 tests (incluido que el PDF se arma en Node), y la 201 contra la base.
+
+## §DK · 19/11 — Recepciones: filtros por producto, familia, marca y Excel/PDF (202)
+
+Luis, 19/11: *«en el módulo de recepciones también faltan buenos filtros, necesarios, igual que en el inventario»*.
+
+- **202 APLICADA**: `v_recepciones_lista` (security_invoker), una fila por recepción con proveedor, orden, quién la recibió, líneas, unidades, valor, el texto de sus productos y los ids de familias/subfamilias/marcas que trae. Centinela: mismo número de filas que la tabla y valor = suma de líneas. La lista ya no suma las líneas en Node.
+- Filtros: buscador de cabecera (número, orden, guía, factura, proveedor), **caja de producto** (código/descripción dentro de las líneas, palabra por palabra), proveedor, familia → subfamilia, marca, moneda, vigentes/anuladas y «Recibido por». Lectura común en `recepciones/dominio/filtros.ts`.
+- Totales encima de la tabla: recepciones, líneas, lo que entró en dólares y en soles por separado (las anuladas no suman).
+- «Descargar en Excel» (`/recepciones/excel`: hoja Recepciones + hoja «Detalle por producto» con costo e importe) y «Descargar PDF» (`/recepciones/pdf`), con los filtros puestos.
+
+**Sin ver en pantalla** (sin sesión en el navegador). tsc, lint y tests en verde; la vista y sus filtros probados por SQL.

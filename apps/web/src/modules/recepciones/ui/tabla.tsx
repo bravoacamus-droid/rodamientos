@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from "next/link";
+import { hayFiltrosRecepciones } from "../dominio/filtros";
 import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui";
 
 import { listarRecepciones } from "../api/consultas";
@@ -27,9 +28,7 @@ export async function TablaRecepciones({ filtros }: { filtros: FiltrosRecepcione
   const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
-    const filtrando = Boolean(
-      filtros.q || filtros.proveedor || filtros.desde || filtros.hasta,
-    );
+    const filtrando = hayFiltrosRecepciones(filtros);
     return (
       <EstadoVacio
         titulo={filtrando ? "Ninguna recepción coincide" : "Todavía no se ha recibido nada"}

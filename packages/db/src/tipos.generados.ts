@@ -4560,6 +4560,13 @@ export type Database = {
             referencedColumns: ["recepcion_id"]
           },
           {
+            foreignKeyName: "recepcion_adjuntos_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "v_recepciones_lista"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recepcion_adjuntos_subido_por_fkey"
             columns: ["subido_por"]
             isOneToOne: false
@@ -4625,6 +4632,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_precios_compra"
             referencedColumns: ["recepcion_id"]
+          },
+          {
+            foreignKeyName: "recepcion_items_recepcion_id_fkey"
+            columns: ["recepcion_id"]
+            isOneToOne: false
+            referencedRelation: "v_recepciones_lista"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5840,6 +5854,56 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_recepciones_lista: {
+        Row: {
+          anulada: boolean | null
+          compra_id: string | null
+          compra_numero: string | null
+          creado_en: string | null
+          factura_proveedor: string | null
+          familia_ids: string[] | null
+          fecha: string | null
+          guia_proveedor: string | null
+          id: string | null
+          items: number | null
+          marca_ids: string[] | null
+          moneda: string | null
+          numero: string | null
+          observaciones: string | null
+          productos_texto: string | null
+          proveedor: string | null
+          proveedor_id: string | null
+          recibido_por: string | null
+          recibido_por_nombre: string | null
+          subfamilia_ids: string[] | null
+          tipo_cambio: number | null
+          unidades: number | null
+          valorizado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recepciones_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recepciones_recibido_por_fkey"
+            columns: ["recibido_por"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
             referencedColumns: ["id"]
           },
         ]
