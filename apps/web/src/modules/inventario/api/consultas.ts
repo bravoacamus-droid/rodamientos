@@ -13,8 +13,10 @@ import {
   type FiltrosKardex,
   type ProductoContable,
   type ResumenInventario,
+  type ResumenKardex,
   type TipoMovimiento,
 } from "../dominio/tipos";
+import { rangoLima } from "../dominio/filtros-kardex";
 
 /** ¿Es este texto uno de los cuatro tipos de movimiento que existen? */
 function esTipoMovimiento(v: string): v is TipoMovimiento {
@@ -189,18 +191,7 @@ export async function kardex(
       const desde = Number(filtros.cursor);
       consulta = atras ? consulta.gt("id", desde) : consulta.lt("id", desde);
     }
-    if (filtros.producto) consulta = consulta.eq("producto_id", filtros.producto);
-    // El tipo llega de la URL, así que se contrasta contra el enum antes de
-    // usarlo: un `?tipo=loquesea` no tiene por qué llegar a Postgres para que
-    // este lo rechace con un error que no se le puede enseñar a nadie.
-    if (filtros.tipo && esTipoMovimiento(filtros.tipo)) {
-      consulta = consulta.eq("tipo", filtros.tipo);
-    }
-    if (filtros.referencia) consulta = consulta.eq("referencia_tipo", filtros.referencia);
-    if (filtros.desde) consulta = consulta.gte("fecha", filtros.desde);
-    // `hasta` es un día y `fecha` lleva hora: sin llevarlo al final del día, un
-    // movimiento de las 3 de la tarde quedaría fuera de su propio día.
-    if (filtros.hasta) consulta = consulta.lte("fecha", `${filtros.hasta}T23:59:59.999Z`);
+    consulta = filtrarKardex(consulta, filtros);
 
     const { data, error } = await consulta;
     if (error) return fallo(error, "inventario/kardex");
@@ -239,6 +230,183 @@ export async function kardex(
   } catch (e) {
     return fallo(e, "inventario/kardex");
   }
+}
+
+/**
+ * Los filtros del kardex sobre una consulta a `v_kardex` (19/11). Los usan
+ * la lista y la exportación, así que lo que se ve es lo que se baja.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function filtrarKardex<Q extends { eq: any; gte: any; lte: any; or: any }>(consulta: Q, filtros: FiltrosKardex): Q {
+  let c = consulta;
+  if (filtros.producto) c = c.eq("producto_id", filtros.producto);
+  if (filtros.familia) c = c.eq("familia_id", filtros.familia);
+  if (filtros.subfamilia) c = c.eq("subfamilia_id", filtros.subfamilia);
+  if (filtros.marca) c = c.eq("marca_id", filtros.marca);
+  if (filtros.usuario) c = c.eq("usuario_id", filtros.usuario);
+  // El tipo llega de la URL, así que se contrasta contra el enum antes de
+  // usarlo: un `?tipo=loquesea` no tiene por qué llegar a Postgres para que
+  // este lo rechace con un error que no se le puede enseñar a nadie.
+  if (filtros.tipo && esTipoMovimiento(filtros.tipo)) c = c.eq("tipo", filtros.tipo);
+  if (filtros.referencia) c = c.eq("referencia_tipo", filtros.referencia);
+  // En hora de Lima (19/11): con la medianoche de Greenwich, lo movido a las
+  // 8 de la noche caía en el día siguiente.
+  const rango = rangoLima(filtros.desde, filtros.hasta);
+  if (rango.desde) c = c.gte("fecha", rango.desde);
+  if (rango.hasta) c = c.lte("fecha", rango.hasta);
+  if (filtros.q) {
+    const q = filtros.q.replace(/[,()*%\\]/g, " ").trim();
+    if (q) {
+      c = c.or(
+        `codigo.ilike.%${q}%,descripcion.ilike.%${q}%,codigo_fabricante.ilike.%${q}%,referencia_numero.ilike.%${q}%`,
+      );
+    }
+  }
+  return c;
+}
+
+/** Los totales del kardex con los filtros de la lista (201). */
+export async function resumenKardex(filtros: FiltrosKardex): Promise<Resultado<ResumenKardex>> {
+  try {
+    const supabase = await clienteServidor();
+    const rango = rangoLima(filtros.desde, filtros.hasta);
+    const { data, error } = await supabase.rpc("kardex_resumen", {
+      p_producto: filtros.producto,
+      p_familia: filtros.familia,
+      p_subfamilia: filtros.subfamilia,
+      p_marca: filtros.marca,
+      p_tipo: filtros.tipo && esTipoMovimiento(filtros.tipo) ? filtros.tipo : undefined,
+      p_referencia: filtros.referencia,
+      p_usuario: filtros.usuario,
+      p_texto: filtros.q,
+      p_desde: rango.desde,
+      p_hasta: rango.hasta,
+    });
+    if (error) return fallo(error, "inventario/resumenKardex");
+    const r = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | undefined;
+    const n = (v: unknown) => Number(v ?? 0);
+    const oNulo = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+    return {
+      ok: true,
+      datos: {
+        movimientos: n(r?.movimientos),
+        productos: n(r?.productos),
+        entradas: n(r?.entradas),
+        salidas: n(r?.salidas),
+        valorEntradas: n(r?.valor_entradas),
+        valorSalidas: n(r?.valor_salidas),
+        saldoInicial: oNulo(r?.saldo_inicial),
+        saldoFinal: oNulo(r?.saldo_final),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "inventario/resumenKardex");
+  }
+}
+
+/** Tope de la exportación: un kardex de más filas no se lee en papel. */
+export const TOPE_EXPORTAR = 10000;
+
+/**
+ * El kardex entero con los filtros, para el Excel y el PDF: del más ANTIGUO
+ * al más reciente, que es como se lee un libro (el saldo va corriendo hacia
+ * abajo). De mil en mil, que es el tope de PostgREST.
+ */
+export async function kardexParaExportar(
+  filtros: FiltrosKardex,
+): Promise<Resultado<{ filas: FilaKardex[]; truncado: boolean }>> {
+  try {
+    const supabase = await clienteServidor();
+    const filas: FilaKardex[] = [];
+    const PAGINA = 1000;
+    for (let desde = 0; desde < TOPE_EXPORTAR; desde += PAGINA) {
+      const { data, error } = await filtrarKardex(
+        supabase
+          .from("v_kardex")
+          .select(
+            "id, fecha, producto_id, codigo, descripcion, tipo, entrada, salida, costo_unitario, saldo_cantidad, saldo_valorizado, costo_promedio, referencia_tipo, referencia_id, referencia_numero, motivo, usuario, codigo_fabricante, unidad_codigo, marca, familia, subfamilia",
+          )
+          .order("id", { ascending: true }),
+        filtros,
+      ).range(desde, desde + PAGINA - 1);
+      if (error) return fallo(error, "inventario/kardexParaExportar");
+      const lote = (data ?? []) as unknown as FilaKardex[];
+      filas.push(...lote);
+      if (lote.length < PAGINA) return { ok: true, datos: { filas, truncado: false } };
+    }
+    return { ok: true, datos: { filas: filas.slice(0, TOPE_EXPORTAR), truncado: true } };
+  } catch (e) {
+    return fallo(e, "inventario/kardexParaExportar");
+  }
+}
+
+/** Los desplegables del kardex: familias, subfamilias, marcas y usuarios. */
+export async function opcionesDelKardex(): Promise<
+  Resultado<{
+    familias: { id: string; nombre: string }[];
+    subfamilias: { id: string; nombre: string; familia_id: string }[];
+    marcas: { id: string; nombre: string }[];
+    usuarios: { id: string; nombre: string }[];
+  }>
+> {
+  try {
+    const supabase = await clienteServidor();
+    const [familias, subfamilias, marcas, usuarios] = await Promise.all([
+      supabase.from("familias").select("id, nombre").order("nombre"),
+      supabase.from("subfamilias").select("id, nombre, familia_id").order("nombre"),
+      supabase.from("marcas").select("id, nombre").order("nombre"),
+      supabase.from("perfiles").select("id, nombre").order("nombre"),
+    ]);
+    const primerError = familias.error ?? subfamilias.error ?? marcas.error ?? usuarios.error;
+    if (primerError) return fallo(primerError, "inventario/opcionesDelKardex");
+    return {
+      ok: true,
+      datos: {
+        familias: (familias.data ?? []) as { id: string; nombre: string }[],
+        subfamilias: (subfamilias.data ?? []) as { id: string; nombre: string; familia_id: string }[],
+        marcas: (marcas.data ?? []) as { id: string; nombre: string }[],
+        usuarios: ((usuarios.data ?? []) as { id: string; nombre: string | null }[]).map((u) => ({
+          id: u.id,
+          nombre: u.nombre ?? "(sin nombre)",
+        })),
+      },
+    };
+  } catch (e) {
+    return fallo(e, "inventario/opcionesDelKardex");
+  }
+}
+
+/** Los nombres de lo filtrado, para la cabecera del Excel y del PDF. */
+export async function nombresDeFiltrosKardex(filtros: FiltrosKardex): Promise<{
+  producto: string | null;
+  familia: string | null;
+  subfamilia: string | null;
+  marca: string | null;
+  usuario: string | null;
+}> {
+  const supabase = await clienteServidor();
+  const nombre = async (tabla: "familias" | "subfamilias" | "marcas" | "perfiles", id?: string) => {
+    if (!id) return null;
+    const { data } = await supabase.from(tabla).select("nombre").eq("id", id).maybeSingle();
+    return (data?.nombre as string | null | undefined) ?? null;
+  };
+  const producto = async () => {
+    if (!filtros.producto) return null;
+    const { data } = await supabase
+      .from("productos")
+      .select("codigo, descripcion")
+      .eq("id", filtros.producto)
+      .maybeSingle();
+    return data ? `${data.codigo} (${data.descripcion})` : null;
+  };
+  const [p, familia, subfamilia, marca, usuario] = await Promise.all([
+    producto(),
+    nombre("familias", filtros.familia),
+    nombre("subfamilias", filtros.subfamilia),
+    nombre("marcas", filtros.marca),
+    nombre("perfiles", filtros.usuario),
+  ]);
+  return { producto: p, familia, subfamilia, marca, usuario };
 }
 
 /** Un producto concreto, para encabezar su kardex. */
@@ -292,7 +460,14 @@ export async function productosParaContar(
       .limit(limite + 1);
 
     if (filtros.familia) consulta = consulta.eq("familia_id", filtros.familia);
+    if (filtros.subfamilia) consulta = consulta.eq("subfamilia_id", filtros.subfamilia);
     if (filtros.marca) consulta = consulta.eq("marca_id", filtros.marca);
+    // Por código o descripción (19/11): para traer a la hoja un producto o
+    // unos pocos sin tener que cargar la familia entera.
+    if (filtros.q) {
+      const q = filtros.q.replace(/[,()*%\\]/g, " ").trim();
+      if (q) consulta = consulta.or(`codigo.ilike.%${q}%,codigo_fabricante.ilike.%${q}%,descripcion.ilike.%${q}%`);
+    }
     if (filtros.soloConStock) consulta = consulta.gt("stock", 0);
 
     const { data, error } = await consulta;
@@ -310,27 +485,30 @@ export async function productosParaContar(
   }
 }
 
-/** Familias y marcas, para los desplegables del cuadre y del kardex. */
+/** Familias, subfamilias y marcas, para los desplegables del cuadre. */
 export async function opcionesDeInventario(): Promise<
   Resultado<{
     familias: { id: string; nombre: string }[];
+    subfamilias: { id: string; nombre: string; familia_id: string }[];
     marcas: { id: string; nombre: string }[];
   }>
 > {
   try {
     const supabase = await clienteServidor();
-    const [familias, marcas] = await Promise.all([
+    const [familias, subfamilias, marcas] = await Promise.all([
       supabase.from("familias").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("subfamilias").select("id, nombre, familia_id").order("nombre"),
       supabase.from("marcas").select("id, nombre").eq("activo", true).order("nombre"),
     ]);
 
-    const primerError = familias.error ?? marcas.error;
+    const primerError = familias.error ?? subfamilias.error ?? marcas.error;
     if (primerError) return fallo(primerError);
 
     return {
       ok: true,
       datos: {
         familias: (familias.data ?? []) as { id: string; nombre: string }[],
+        subfamilias: (subfamilias.data ?? []) as { id: string; nombre: string; familia_id: string }[],
         marcas: (marcas.data ?? []) as { id: string; nombre: string }[],
       },
     };

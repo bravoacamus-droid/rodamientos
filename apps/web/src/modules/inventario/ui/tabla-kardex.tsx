@@ -3,6 +3,7 @@ import { EstadoError, EstadoVacio, Moneda, PaginacionKeyset } from "@rodatech/ui
 
 import { kardex } from "../api/consultas";
 import { enlaceDeReferencia } from "../dominio/enlaces";
+import { hayFiltros } from "../dominio/filtros-kardex";
 import { ETIQUETA_MOVIMIENTO, type FiltrosKardex, type TipoMovimiento } from "../dominio/tipos";
 
 const COLOR: Record<TipoMovimiento, string> = {
@@ -52,9 +53,7 @@ export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
   const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
-    const filtrando = Boolean(
-      filtros.producto || filtros.tipo || filtros.referencia || filtros.desde || filtros.hasta,
-    );
+    const filtrando = hayFiltros(filtros);
     return (
       <EstadoVacio
         titulo={filtrando ? "Ningún movimiento coincide" : "El kardex está vacío"}

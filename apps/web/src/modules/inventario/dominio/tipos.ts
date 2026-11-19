@@ -87,11 +87,37 @@ export interface FilaKardex {
   referencia_numero: string | null;
   motivo: string | null;
   usuario: string | null;
+  /** Desde la 201: para filtrar y para el Excel. */
+  codigo_fabricante: string | null;
+  unidad_codigo: string | null;
+  marca: string | null;
+  familia: string | null;
+  subfamilia: string | null;
+}
+
+/** Los totales del kardex con los mismos filtros que la lista (201). */
+export interface ResumenKardex {
+  movimientos: number;
+  productos: number;
+  entradas: number;
+  salidas: number;
+  valorEntradas: number;
+  valorSalidas: number;
+  /** Solo con UN producto: sumar saldos de productos distintos no es nada. */
+  saldoInicial: number | null;
+  saldoFinal: number | null;
 }
 
 /** Filtros del kardex. Viajan en los search params, así que todo es texto. */
 export interface FiltrosKardex {
   producto?: string;
+  /** Desde el 19/11 (Luis: «más filtros profesionales… buscar por producto»). */
+  familia?: string;
+  subfamilia?: string;
+  marca?: string;
+  usuario?: string;
+  /** Código, descripción, código de fábrica o número del documento. */
+  q?: string;
   tipo?: string;
   referencia?: string;
   desde?: string;
@@ -118,6 +144,9 @@ export interface FiltrosKardex {
 /** Filtros con los que se carga la hoja de conteo del cuadre. */
 export interface FiltrosConteo {
   familia?: string;
+  subfamilia?: string;
+  /** Código, código de fábrica o descripción (19/11). */
+  q?: string;
   marca?: string;
   /** Contar solo lo que el sistema cree que existe. */
   soloConStock?: boolean;

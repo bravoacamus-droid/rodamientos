@@ -19,11 +19,16 @@ import {
   aPayload,
   bloqueos as calcularBloqueos,
   estadoInicial,
+  filtrarLineas,
+  FILTRO_HOJA_VACIO,
+  hayFiltroHoja,
   impactoDe,
   reducir,
+  type FiltroHoja,
 } from "../../dominio/ajuste";
 import { TIPOS_AJUSTE, type ProductoContable } from "../../dominio/tipos";
 import { FilaConteo, TarjetaConteo } from "./linea";
+import { BarraHoja } from "./barra-hoja";
 import { useBorrador } from "@/componentes/borrador";
 import { PanelModulo } from "@/componentes/panel-modulo";
 
@@ -42,10 +47,12 @@ import { PanelModulo } from "@/componentes/panel-modulo";
  */
 export function HojaDeConteo({
   familias,
+  subfamilias,
   marcas,
   hoy,
 }: {
   familias: { id: string; nombre: string }[];
+  subfamilias: { id: string; nombre: string; familia_id: string }[];
   marcas: { id: string; nombre: string }[];
   /** La fecha la fija el servidor: el dominio es puro y no lee reloj. */
   hoy: string;
@@ -54,7 +61,14 @@ export function HojaDeConteo({
   const [estado, despachar] = useReducer(reducir, estadoInicial(hoy));
 
   const [familia, setFamilia] = useState("");
+  const [subfamilia, setSubfamilia] = useState("");
   const [marca, setMarca] = useState("");
+  /** Código o descripción, para traer uno o unos pocos (19/11). */
+  const [buscar, setBuscar] = useState("");
+  /** El filtro sobre la hoja YA cargada: no vuelve a la base (19/11). */
+  const [filtroHoja, setFiltroHoja] = useState<FiltroHoja>(FILTRO_HOJA_VACIO);
+  /** Con qué se cargó, en palabras, para la cabecera del Excel y el PDF. */
+  const [descripcionCarga, setDescripcionCarga] = useState("");
   const [soloConStock, setSoloConStock] = useState(true);
   const [avisoCarga, setAvisoCarga] = useState<string | null>(null);
   const [cargando, cargar] = useTransition();
@@ -134,14 +148,27 @@ export function HojaDeConteo({
   });
 
   const impacto = useMemo(() => impactoDe(estado), [estado]);
+  const visibles = useMemo(() => filtrarLineas(estado.lineas, filtroHoja), [estado.lineas, filtroHoja]);
+  const subfamiliasVisibles = useMemo(
+    () => (familia ? subfamilias.filter((s) => s.familia_id === familia) : subfamilias),
+    [familia, subfamilias],
+  );
   const bloqueos = useMemo(() => calcularBloqueos(estado), [estado]);
 
-  const traerProductos = () => {
+  /**
+   * «Cargar hoja» la REEMPLAZA con lo del filtro (lo contado de lo que siga
+   * en ella se conserva); «Añadir a la hoja» SUMA lo encontrado a lo que ya
+   * hay. Lo segundo es el buscador por producto que pidió Luis el 19/11:
+   * escribir un código y añadirlo, sin cargar la familia entera.
+   */
+  const traerProductos = (modo: "cargar" | "agregar") => {
     setAvisoCarga(null);
     cargar(async () => {
       const r = await cargarHoja({
         familia: familia || undefined,
+        subfamilia: subfamilia || undefined,
         marca: marca || undefined,
+        q: buscar.trim() || undefined,
         soloConStock,
       });
       if (!r.ok) {
@@ -149,7 +176,33 @@ export function HojaDeConteo({
         return;
       }
       const productos: ProductoContable[] = r.datos.filas;
+      const nombre = (lista: { id: string; nombre: string }[], id: string) => lista.find((x) => x.id === id)?.nombre;
+      const carga = [
+        familia ? `Familia ${nombre(familias, familia) ?? ""}` : null,
+        subfamilia ? `subfamilia ${nombre(subfamilias, subfamilia) ?? ""}` : null,
+        marca ? `marca ${nombre(marcas, marca) ?? ""}` : null,
+        buscar.trim() ? `«${buscar.trim()}»` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      if (modo === "agregar") {
+        const antes = estado.lineas.length;
+        despachar({ tipo: "agregar", productos });
+        const ya = new Set(estado.lineas.map((l) => l.productoId));
+        const nuevos = productos.filter((p) => !ya.has(p.id)).length;
+        setDescripcionCarga((d) => (d && carga ? `${d} + ${carga}` : d || carga));
+        setAvisoCarga(
+          productos.length === 0
+            ? "Ningún producto coincide con esa búsqueda."
+            : nuevos === 0
+              ? "Ya estaban todos en la hoja."
+              : `Se añadieron ${nuevos} a la hoja (ahora son ${antes + nuevos}).`,
+        );
+        return;
+      }
       despachar({ tipo: "cargar", productos });
+      setDescripcionCarga(carga || "Todo el almacén");
+      setFiltroHoja(FILTRO_HOJA_VACIO);
       if (productos.length === 0) {
         setAvisoCarga("Ningún producto coincide con ese filtro.");
       } else if (r.datos.truncado) {
@@ -287,9 +340,26 @@ export function HojaDeConteo({
               id="conteo-familia"
               opciones={familias.map((x) => ({ valor: x.id, etiqueta: x.nombre }))}
               valor={familia || null}
-              onCambio={(v) => setFamilia(v ?? "")}
+              onCambio={(v) => {
+                setFamilia(v ?? "");
+                // Otra familia invalida la subfamilia elegida.
+                setSubfamilia("");
+              }}
               placeholder="Todas"
               placeholderBusqueda="Escribe parte del nombre…"
+              textoVacio="Ninguna coincide."
+            />
+          </div>
+
+          <div className="flex w-full flex-col gap-1 sm:w-52">
+            <label htmlFor="conteo-subfamilia" className="text-sm font-medium text-[var(--fg-muted)]">Subfamilia</label>
+            <Combobox
+              id="conteo-subfamilia"
+              opciones={subfamiliasVisibles.map((x) => ({ valor: x.id, etiqueta: x.nombre }))}
+              valor={subfamilia || null}
+              onCambio={(v) => setSubfamilia(v ?? "")}
+              placeholder="Todas"
+              placeholderBusqueda="Rígido de bolas, cónicos…"
               textoVacio="Ninguna coincide."
             />
           </div>
@@ -307,6 +377,20 @@ export function HojaDeConteo({
             />
           </div>
 
+          <div className="flex w-full flex-col gap-1 sm:w-64">
+            <label htmlFor="conteo-buscar" className="text-sm font-medium text-[var(--fg-muted)]">
+              Código o descripción
+            </label>
+            <Input
+              id="conteo-buscar"
+              type="search"
+              value={buscar}
+              onChange={(e) => setBuscar(e.target.value)}
+              placeholder="6205, retén 50x68…"
+              autoComplete="off"
+            />
+          </div>
+
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input
               type="checkbox"
@@ -317,17 +401,13 @@ export function HojaDeConteo({
             Solo con stock
           </label>
 
-          <Button type="button" variant="outline" onClick={traerProductos} disabled={cargando}>
-            {cargando ? "Cargando…" : "Cargar hoja"}
+          <Button type="button" variant="outline" onClick={() => traerProductos("cargar")} disabled={cargando}>
+            {cargando ? "Cargando…" : estado.lineas.length > 0 ? "Cargar hoja nueva" : "Cargar hoja"}
           </Button>
 
           {estado.lineas.length > 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => despachar({ tipo: "contarTodoConforme" })}
-            >
-              Marcar el resto como conforme
+            <Button type="button" variant="outline" onClick={() => traerProductos("agregar")} disabled={cargando}>
+              Añadir a la hoja
             </Button>
           ) : null}
         </div>
@@ -357,9 +437,27 @@ export function HojaDeConteo({
           firma quedaba a 27.000 px del botón de confirmar.
         */
         <div className="flex flex-col-reverse gap-5 2xl:flex-row">
-          <section className="@container min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+          <section className="@container flex min-w-0 flex-1 flex-col gap-3 rounded-md border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+            <BarraHoja
+              lineas={estado.lineas}
+              visibles={visibles}
+              filtro={filtroHoja}
+              onFiltro={setFiltroHoja}
+              onConforme={() =>
+                despachar({
+                  tipo: "contarTodoConforme",
+                  ids: hayFiltroHoja(filtroHoja) ? visibles.map((l) => l.productoId) : undefined,
+                })
+              }
+              descripcionCarga={descripcionCarga}
+            />
+            {visibles.length === 0 ? (
+              <p className="rounded-md border border-dashed border-[var(--border)] p-4 text-center text-sm text-[var(--fg-muted)]">
+                Ninguna línea de la hoja coincide con el filtro. Lo contado sigue ahí: quita el filtro para verlo.
+              </p>
+            ) : null}
             <ul className="flex flex-col gap-2.5 @3xl:hidden">
-              {estado.lineas.map((l) => (
+              {visibles.map((l) => (
                 <TarjetaConteo key={l.productoId} linea={l} despachar={despachar} />
               ))}
             </ul>
@@ -377,7 +475,7 @@ export function HojaDeConteo({
                   </tr>
                 </THead>
                 <TBody>
-                  {estado.lineas.map((l) => (
+                  {visibles.map((l) => (
                     <FilaConteo key={l.productoId} linea={l} despachar={despachar} />
                   ))}
                 </TBody>

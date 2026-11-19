@@ -40,6 +40,8 @@ export async function cargarHoja(
   const limpios: FiltrosConteo = {
     familia: filtros.familia && uuid.test(filtros.familia) ? filtros.familia : undefined,
     marca: filtros.marca && uuid.test(filtros.marca) ? filtros.marca : undefined,
+    subfamilia: filtros.subfamilia && uuid.test(filtros.subfamilia) ? filtros.subfamilia : undefined,
+    q: typeof filtros.q === "string" ? filtros.q.trim().slice(0, 80) || undefined : undefined,
     soloConStock: filtros.soloConStock === true,
   };
 

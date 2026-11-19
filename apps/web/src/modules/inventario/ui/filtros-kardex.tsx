@@ -3,31 +3,66 @@
 // Cliente: escribe los filtros en la URL conforme se usan. La lectura sigue
 // pasando en el servidor — la URL es el estado.
 
+import * as React from "react";
 import { ArrowLeftRight, FileText, X } from "lucide-react";
 
 import { BarraPeriodo } from "@/componentes/barra-periodo";
-import { FiltroDesplegable, FilaFiltros, LimpiarFiltros, useBarraFiltros } from "@/componentes/filtros";
+import {
+  CajaBuscar,
+  FiltroBuscable,
+  FiltroDesplegable,
+  FilaFiltros,
+  LimpiarFiltros,
+  useBarraFiltros,
+} from "@/componentes/filtros";
 
+import { ORIGENES_KARDEX } from "../dominio/filtros-kardex";
 import { ETIQUETA_MOVIMIENTO } from "../dominio/tipos";
 
-const ORIGENES = [
-  { valor: "recepcion", etiqueta: "Recepción" },
-  { valor: "comprobante", etiqueta: "Comprobante" },
-  { valor: "guia", etiqueta: "Guía" },
-  { valor: "ajuste", etiqueta: "Ajuste" },
-  { valor: "compra", etiqueta: "Compra" },
-  { valor: "importacion", etiqueta: "Carga inicial" },
-];
+interface Opcion {
+  id: string;
+  nombre: string;
+}
 
 /**
- * El kárdex (13/10): el periodo arriba y una fila debajo, como el resto de
- * listas. El producto no es un desplegable —con 2.000+ códigos no cabe—: se
- * llega a él desde el catálogo o pinchando un código, y aquí solo se enseña
- * cuál está puesto y cómo quitarlo.
+ * Los filtros del kárdex.
+ *
+ * Luis, 19/11: *«tenemos que poner más filtros profesionales, como también
+ * buscar por producto, porque si no, ¿cómo sé qué producto?»*. Hasta ese día
+ * el producto solo se ponía llegando desde el catálogo. Ahora:
+ *
+ *  · una caja que busca por código, código de fábrica, descripción o número
+ *    del documento (la guía, la recepción, el ajuste);
+ *  · familia, subfamilia y marca, con buscador, como en Productos;
+ *  · movimiento, origen y quién lo hizo.
+ *
+ * Pinchar un código en la tabla sigue dejando el kardex de ESE producto, con
+ * su saldo inicial y final arriba.
  */
-export function FiltrosKardexBarra({ productoActivo }: { productoActivo: string | null }) {
-  const { valor, aplicar, limpiar } = useBarraFiltros();
-  const hay = ["producto", "tipo", "referencia", "desde", "hasta"].some((k) => valor(k));
+export function FiltrosKardexBarra({
+  productoActivo,
+  familias,
+  subfamilias,
+  marcas,
+  usuarios,
+}: {
+  productoActivo: string | null;
+  familias: Opcion[];
+  subfamilias: (Opcion & { familia_id: string })[];
+  marcas: Opcion[];
+  usuarios: Opcion[];
+}) {
+  const { valor, aplicar, aplicarVarios, limpiar, texto, setTexto } = useBarraFiltros();
+  const familia = valor("familia");
+  const hay = ["producto", "q", "familia", "subfamilia", "marca", "usuario", "tipo", "referencia", "desde", "hasta"].some(
+    (k) => valor(k),
+  );
+
+  // Con una familia elegida, solo sus subfamilias.
+  const subfamiliasVisibles = React.useMemo(
+    () => (familia ? subfamilias.filter((s) => s.familia_id === familia) : subfamilias),
+    [familia, subfamilias],
+  );
 
   return (
     <div className="flex flex-col gap-3 px-4 pb-4">
@@ -44,6 +79,42 @@ export function FiltrosKardexBarra({ productoActivo }: { productoActivo: string 
             <span className="sr-only">Quitar el filtro de producto</span>
           </button>
         ) : null}
+        <CajaBuscar
+          valor={texto}
+          onCambiar={setTexto}
+          placeholder="Buscar código, descripción o documento…"
+          etiqueta="Buscar en el kardex"
+        />
+        <FiltroBuscable
+          id="k-familia"
+          etiqueta="Familia"
+          todos="Todas las familias"
+          buscar="Rodamiento, retén…"
+          valor={familia}
+          opciones={familias.map((f) => ({ valor: f.id, etiqueta: f.nombre }))}
+          // Cambiar de familia invalida la subfamilia elegida.
+          onCambiar={(v) => aplicarVarios({ familia: v, subfamilia: "" })}
+        />
+        <FiltroBuscable
+          id="k-subfamilia"
+          etiqueta="Subfamilia"
+          todos="Todas las subfamilias"
+          buscar="Rígido de bolas, cónicos…"
+          valor={valor("subfamilia")}
+          opciones={subfamiliasVisibles.map((s) => ({ valor: s.id, etiqueta: s.nombre }))}
+          onCambiar={(v) => aplicar("subfamilia", v)}
+        />
+        <FiltroBuscable
+          id="k-marca"
+          etiqueta="Marca"
+          todos="Todas las marcas"
+          buscar="SKF, FAG, NTN…"
+          valor={valor("marca")}
+          opciones={marcas.map((m) => ({ valor: m.id, etiqueta: m.nombre }))}
+          onCambiar={(v) => aplicar("marca", v)}
+        />
+      </FilaFiltros>
+      <FilaFiltros>
         <FiltroDesplegable
           icono={ArrowLeftRight}
           etiqueta="Movimiento"
@@ -57,8 +128,17 @@ export function FiltrosKardexBarra({ productoActivo }: { productoActivo: string 
           etiqueta="Origen"
           todos="Origen: todos"
           valor={valor("referencia")}
-          opciones={ORIGENES}
+          opciones={ORIGENES_KARDEX}
           onCambiar={(v) => aplicar("referencia", v)}
+        />
+        <FiltroBuscable
+          id="k-usuario"
+          etiqueta="Hecho por"
+          todos="Hecho por: todos"
+          buscar="Nombre…"
+          valor={valor("usuario")}
+          opciones={usuarios.map((u) => ({ valor: u.id, etiqueta: u.nombre }))}
+          onCambiar={(v) => aplicar("usuario", v)}
         />
         <LimpiarFiltros visible={hay} onLimpiar={limpiar} />
       </FilaFiltros>

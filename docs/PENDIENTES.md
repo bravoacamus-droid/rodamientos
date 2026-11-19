@@ -9734,3 +9734,20 @@ pendiente: al recibir los 4.5 m el kardex quedará en +1.5 → ajuste de −1.5 
 **Cerrado (16/11):** ajuste **AJU-26-00002** (descuadre, −1.5 m de CA-ASA60-1; stock −3 → −4.5, queda en 0 al recibir los 4.5 m de MEGACHAIN). La CT02-1337 se queda en 3 und a 11.98 por decisión de Luis: pasarla a 4.5 m a 7.9867 descuadraba el pedido (confirmado 20.5 contra 19 despachados).
 
 **Revertido (16/11, a pedido de Luis: «déjalo como estaba, con entero»):** borrado el AJU-26-00002 (movimiento 685, sus ítems y su bitácora; el número vuelve a quedar libre), stock de CA-ASA60-1 otra vez en **−3**, y el análisis de MEGACHAIN otra vez en **3 × 9.30**. La CT02-1337 queda exactamente como antes de tocarla.
+
+## §DJ · 19/11 — Kardex y cuadre de inventario: filtros, buscador y Excel/PDF (201)
+
+Luis, 19/11: *«en la página de kardex tenemos que poner más filtros profesionales, como también buscar por producto… mejor trazabilidad… igual que ajuste de inventario… que me traiga todo por familia pero una vez que me traiga también tengo que filtrar la lista… exportarlo por Excel y PDF»*.
+
+**Kardex** (`/inventario/kardex`):
+- **201 APLICADA**: `v_kardex` suma al final código de fábrica, unidad, marca, familia, subfamilia y `usuario_id`; `kardex_resumen(...)` da movimientos, entradas, salidas (cantidad y al costo) y, con UN producto, saldo al empezar y al terminar el periodo. Centinela ejecuta la función.
+- Caja que busca código, código de fábrica, descripción o número de documento; familia → subfamilia encadenadas, marca, movimiento, origen y «Hecho por». Todo en la URL, leído por `dominio/filtros-kardex.ts` (lo comparten pantalla, Excel y PDF).
+- El periodo ahora es el día de **Lima** (antes `hasta` cortaba en UTC).
+- Tarjetas de totales sobre la tabla; «Descargar en Excel» (`/inventario/kardex/excel`) y «Descargar PDF» (`/inventario/kardex/pdf`, jsPDF en el servidor) con los filtros puestos, del más antiguo al más reciente, tope 10.000 filas.
+
+**Cuadrar inventario** (`/inventario/ajuste`):
+- Se carga también por subfamilia y por «Código o descripción»; «Añadir a la hoja» suma sin borrar (el buscador por producto) y «Cargar hoja nueva» reemplaza (lo contado se conserva).
+- Filtro sobre la hoja YA cargada, en el navegador: texto, marca, subfamilia y «Sin contar / Contadas / Conformes / Con diferencia / Sobran / Faltan», con «Mostrando N de M». «Marcar conformes» con filtro solo toca lo que se ve.
+- Excel (acción `excelDeLaHoja`, con fórmulas de diferencia e impacto) y PDF (`lib/pdf-listado.ts`) de lo que se ve; sin contar, sirve de hoja impresa para el almacén.
+
+**Sin ver en pantalla**: el navegador no tenía sesión y no se entra con contraseña. Probado: tsc, lint, 1851 tests (incluido que el PDF se arma en Node), y la 201 contra la base.

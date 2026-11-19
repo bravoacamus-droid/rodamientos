@@ -46,6 +46,7 @@ export default async function PaginaAjusteInventario() {
       // Que fallen los catálogos no impide contar: los desplegables se quedan
       // en «todas» y se carga el almacén entero.
       familias={opciones.ok ? opciones.datos.familias : []}
+      subfamilias={opciones.ok ? opciones.datos.subfamilias : []}
       marcas={opciones.ok ? opciones.datos.marcas : []}
       hoy={hoy}
     />

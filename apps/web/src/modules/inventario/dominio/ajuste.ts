@@ -48,8 +48,12 @@ export interface EstadoConteo {
 export type Accion =
   | { tipo: "cabecera"; campo: "tipo" | "motivo" | "fecha"; valor: string }
   | { tipo: "cargar"; productos: readonly ProductoContable[]; fecha?: string }
+  /** Suma a la hoja sin quitar lo que ya había (19/11). */
+  | { tipo: "agregar"; productos: readonly ProductoContable[] }
+  | { tipo: "quitar"; productoId: string }
   | { tipo: "contar"; productoId: string; valor: number | null }
-  | { tipo: "contarTodoConforme" }
+  /** Con `ids`, solo esas líneas: las que quedan a la vista con el filtro. */
+  | { tipo: "contarTodoConforme"; ids?: readonly string[] }
   | { tipo: "limpiar" };
 
 export function estadoInicial(fecha: string): EstadoConteo {
@@ -105,6 +109,17 @@ export function reducir(estado: EstadoConteo, accion: Accion): EstadoConteo {
       };
     }
 
+    case "agregar": {
+      // Lo que ya está en la hoja se queda como está, contado o no: añadir
+      // el 6205 otra vez no puede borrar lo que se contó de él.
+      const ya = new Set(estado.lineas.map((l) => l.productoId));
+      const nuevas = accion.productos.filter((p) => !ya.has(p.id)).map(desdeProducto);
+      return nuevas.length === 0 ? estado : { ...estado, lineas: [...estado.lineas, ...nuevas] };
+    }
+
+    case "quitar":
+      return { ...estado, lineas: estado.lineas.filter((l) => l.productoId !== accion.productoId) };
+
     case "contar": {
       const valor = contadaValida(accion.valor);
       const lineas = estado.lineas.map((l) =>
@@ -113,16 +128,21 @@ export function reducir(estado: EstadoConteo, accion: Accion): EstadoConteo {
       return { ...estado, lineas };
     }
 
-    case "contarTodoConforme":
+    case "contarTodoConforme": {
       // Atajo para el caso habitual: casi todo cuadra y solo dos referencias
-      // están mal. Se declara todo conforme y se corrigen esas dos.
+      // están mal. Se declara todo conforme y se corrigen esas dos. Con la
+      // hoja filtrada (19/11), solo lo que se ve: declarar conforme lo que
+      // no está en pantalla es declarar algo que nadie miró.
+      const solo = accion.ids ? new Set(accion.ids) : null;
       return {
         ...estado,
-        lineas: estado.lineas.map((l) => ({
-          ...l,
-          cantidadFisica: l.cantidadFisica ?? l.cantidadSistema,
-        })),
+        lineas: estado.lineas.map((l) =>
+          solo && !solo.has(l.productoId)
+            ? l
+            : { ...l, cantidadFisica: l.cantidadFisica ?? l.cantidadSistema },
+        ),
       };
+    }
 
     case "limpiar":
       return { ...estado, lineas: [] };
@@ -140,6 +160,75 @@ export function reducir(estado: EstadoConteo, accion: Accion): EstadoConteo {
 export function diferenciaDe(linea: LineaConteo): number | null {
   if (linea.cantidadFisica === null) return null;
   return redondear2(linea.cantidadFisica - linea.cantidadSistema);
+}
+
+/**
+ * Filtrar la hoja YA CARGADA (19/11).
+ *
+ * Luis: *«que me traiga todo por familia, pero una vez que me traiga también
+ * tengo que filtrar la lista que me dio»*. Esto no vuelve a la base: mira las
+ * líneas que hay, así que lo contado no se pierde al cambiar el filtro.
+ */
+export type EstadoLinea = "" | "sin_contar" | "contadas" | "con_diferencia" | "sobran" | "faltan" | "conformes";
+
+export const ETIQUETA_ESTADO_LINEA: Record<Exclude<EstadoLinea, "">, string> = {
+  sin_contar: "Sin contar",
+  contadas: "Contadas",
+  conformes: "Contadas y conformes",
+  con_diferencia: "Con diferencia",
+  sobran: "Sobran",
+  faltan: "Faltan",
+};
+
+export interface FiltroHoja {
+  texto: string;
+  marca: string;
+  subfamilia: string;
+  estado: EstadoLinea;
+}
+
+export const FILTRO_HOJA_VACIO: FiltroHoja = { texto: "", marca: "", subfamilia: "", estado: "" };
+
+/** Sin tildes ni mayúsculas: «rodamiento» encuentra «RODAMIENTO RÍGIDO». */
+const normal = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+export function filtrarLineas(lineas: readonly LineaConteo[], f: FiltroHoja): LineaConteo[] {
+  // Cada palabra tiene que estar, en cualquier orden: «6205 skf» o «skf 6205».
+  const palabras = normal(f.texto).split(/\s+/).filter(Boolean);
+  return lineas.filter((l) => {
+    if (f.marca && l.marca !== f.marca) return false;
+    if (f.subfamilia && l.subfamilia !== f.subfamilia) return false;
+    if (palabras.length > 0) {
+      const donde = normal(`${l.codigo} ${l.descripcion} ${l.marca} ${l.subfamilia}`);
+      if (!palabras.every((p) => donde.includes(p))) return false;
+    }
+    if (f.estado) {
+      const d = diferenciaDe(l);
+      switch (f.estado) {
+        case "sin_contar":
+          return d === null;
+        case "contadas":
+          return d !== null;
+        case "conformes":
+          return d === 0;
+        case "con_diferencia":
+          return d !== null && d !== 0;
+        case "sobran":
+          return d !== null && d > 0;
+        case "faltan":
+          return d !== null && d < 0;
+      }
+    }
+    return true;
+  });
+}
+
+export function hayFiltroHoja(f: FiltroHoja): boolean {
+  return Boolean(f.texto.trim() || f.marca || f.subfamilia || f.estado);
 }
 
 export interface ImpactoConteo {

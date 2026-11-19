@@ -5,6 +5,8 @@ import {
   bloqueos,
   diferenciaDe,
   estadoInicial,
+  filtrarLineas,
+  FILTRO_HOJA_VACIO,
   impactoDe,
   reducir,
   type EstadoConteo,
@@ -245,5 +247,44 @@ describe("payload", () => {
     );
 
     expect(aPayload(e).motivo).toBe("Conteo de agosto");
+  });
+});
+
+describe("la hoja se filtra y se amplía sin perder lo contado (19/11)", () => {
+  const base = correr(estadoInicial(FECHA), { tipo: "cargar", productos: [RODAMIENTO] });
+
+  it("agregar suma productos y no toca lo que ya estaba contado", () => {
+    const contado = reducir(base, { tipo: "contar", productoId: RODAMIENTO.id, valor: 30 });
+    const r = reducir(contado, { tipo: "agregar", productos: [RODAMIENTO, ANGULAR] });
+    expect(r.lineas.map((l) => l.codigo)).toEqual(["6205-2RS1/C3", "7210 BEP"]);
+    expect(r.lineas[0]?.cantidadFisica).toBe(30);
+  });
+
+  it("quitar saca una línea de la hoja", () => {
+    const r = reducir(reducir(base, { tipo: "agregar", productos: [ANGULAR] }), { tipo: "quitar", productoId: RODAMIENTO.id });
+    expect(r.lineas.map((l) => l.codigo)).toEqual(["7210 BEP"]);
+  });
+
+  it("conforme con ids solo marca esas líneas", () => {
+    const dos = reducir(base, { tipo: "agregar", productos: [ANGULAR] });
+    const r = reducir(dos, { tipo: "contarTodoConforme", ids: [ANGULAR.id] });
+    expect(r.lineas[0]?.cantidadFisica).toBeNull();
+    expect(r.lineas[1]?.cantidadFisica).toBe(8);
+  });
+
+  it("filtra por palabras en cualquier orden, sin tildes, y por estado", () => {
+    const dos = reducir(reducir(base, { tipo: "agregar", productos: [ANGULAR] }), {
+      tipo: "contar",
+      productoId: ANGULAR.id,
+      valor: 6,
+    });
+    expect(filtrarLineas(dos.lineas, { ...FILTRO_HOJA_VACIO, texto: "skf rigido" }).map((l) => l.codigo)).toEqual([
+      "6205-2RS1/C3",
+    ]);
+    expect(filtrarLineas(dos.lineas, { ...FILTRO_HOJA_VACIO, estado: "faltan" }).map((l) => l.codigo)).toEqual(["7210 BEP"]);
+    expect(filtrarLineas(dos.lineas, { ...FILTRO_HOJA_VACIO, estado: "sin_contar" }).map((l) => l.codigo)).toEqual([
+      "6205-2RS1/C3",
+    ]);
+    expect(filtrarLineas(dos.lineas, { ...FILTRO_HOJA_VACIO, subfamilia: "Contacto angular" })).toHaveLength(1);
   });
 });

@@ -5489,12 +5489,17 @@ export type Database = {
       v_kardex: {
         Row: {
           codigo: string | null
+          codigo_fabricante: string | null
           costo_promedio: number | null
           costo_unitario: number | null
           descripcion: string | null
           entrada: number | null
+          familia: string | null
+          familia_id: string | null
           fecha: string | null
           id: number | null
+          marca: string | null
+          marca_id: string | null
           motivo: string | null
           producto_id: string | null
           referencia_id: string | null
@@ -5503,8 +5508,12 @@ export type Database = {
           saldo_cantidad: number | null
           saldo_valorizado: number | null
           salida: number | null
+          subfamilia: string | null
+          subfamilia_id: string | null
           tipo: Database["public"]["Enums"]["tipo_movimiento"] | null
+          unidad_codigo: string | null
           usuario: string | null
+          usuario_id: string | null
         }
         Relationships: [
           {
@@ -5527,6 +5536,34 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_reposicion"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "perfiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_marca_id_fkey"
+            columns: ["marca_id"]
+            isOneToOne: false
+            referencedRelation: "marcas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_subfamilia_fk"
+            columns: ["subfamilia_id", "familia_id"]
+            isOneToOne: false
+            referencedRelation: "subfamilias"
+            referencedColumns: ["id", "familia_id"]
+          },
+          {
+            foreignKeyName: "productos_unidad_codigo_fkey"
+            columns: ["unidad_codigo"]
+            isOneToOne: false
+            referencedRelation: "unidades_medida"
+            referencedColumns: ["codigo"]
           },
         ]
       }
@@ -6502,6 +6539,30 @@ export type Database = {
       indicadores_guias: {
         Args: { p_cliente?: string; p_desde?: string; p_hasta?: string }
         Returns: Json
+      }
+      kardex_resumen: {
+        Args: {
+          p_desde?: string
+          p_familia?: string
+          p_hasta?: string
+          p_marca?: string
+          p_producto?: string
+          p_referencia?: string
+          p_subfamilia?: string
+          p_texto?: string
+          p_tipo?: string
+          p_usuario?: string
+        }
+        Returns: {
+          entradas: number
+          movimientos: number
+          productos: number
+          saldo_final: number
+          saldo_inicial: number
+          salidas: number
+          valor_entradas: number
+          valor_salidas: number
+        }[]
       }
       kit_suma: {
         Args: { p_kit: string }
