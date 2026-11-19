@@ -424,10 +424,6 @@ export function BuscadorClientes({
         </div>
       ) : null}
 
-      <span className="text-sm text-[var(--fg-subtle)]">
-        Es lo único que hace falta para empezar.
-      </span>
-
       {/* Solo para lectores de pantalla: cuántos hay, sin robar el foco. */}
       <span className="sr-only" role="status" aria-live="polite">
         {resultados === null ? "" : `${resultados.length} clientes encontrados`}

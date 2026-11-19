@@ -53,6 +53,7 @@ import {
 } from "../../dominio/borrador";
 import { AvisoDeuda } from "./aviso-deuda";
 import { SelectorCondiciones } from "./selector-condiciones";
+import { CabeceraPaso } from "./paso";
 import { demandaParaLineas } from "../../acciones/analizar-compra";
 import type { DemandaProducto } from "../../dominio/demanda";
 import {
@@ -392,14 +393,35 @@ export function Constructor({
             «a las justas me dan correo». Pedir todo por adelantado no hace que
             los datos aparezcan, solo que la pantalla estorbe.
           */}
-          <section className="card p-4">
+          <section className="@container card">
+            <CabeceraPaso
+              numero={1}
+              titulo="Para quién es"
+              ayuda="Solo el cliente es obligatorio. Todo lo de aquí sale impreso en la cotización."
+            />
             {/* `overflow-visible` no está de más: el panel de resultados se
                 posiciona en el flujo del documento y un ancestro que recorte
                 lo dejaría cortado a media lista. */}
-            {/* Tres columnas desde `lg`: cliente, a quién va dirigida, y la
-                validez. En `sm` el destinatario baja a su propia fila entera
-                antes que quedarse en una columna donde no cabe un nombre. */}
-            <div className="grid gap-3 overflow-visible sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,0.6fr)]">
+            {/*
+              Una sola fila: cliente, a quién va dirigida, condiciones y
+              validez (Luis, 19/11: «quien va dirigido y condiciones, en la
+              misma línea»). Las condiciones iban debajo, separadas por una
+              raya, y la cabecera ocupaba el doble de alto que lo que pide.
+
+              Sin ayuda debajo de cada campo: eran tres «sale impreso en la
+              cotización» seguidos, que es una sola idea, y ahora la dice la
+              banda de arriba una vez.
+
+              El corte va por el ancho de ESTA tarjeta y no de la pantalla: a
+              1280 con el menú abierto la tarjeta mide ~870 px, y en cuatro
+              columnas al buscador de clientes no le quedaba sitio al lado de
+              «Cliente nuevo». Por debajo, dos y dos; en el teléfono, una.
+            */}
+            <div className="p-4 sm:p-5">
+            <div className="grid items-start gap-4 overflow-visible @xl:grid-cols-2 @5xl:grid-cols-[minmax(0,2.3fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto]">
+              {/* En dos columnas el cliente va solo en su fila: a media
+                  columna, «Cliente nuevo» dejaba la caja en «Busca |». */}
+              <div className="min-w-0 @xl:col-span-2 @5xl:col-span-1">
               <BuscadorClientes
                 sugeridos={sugeridos}
                 elegido={cliente}
@@ -416,6 +438,7 @@ export function Constructor({
                 // se repinta la tarjeta; la cabecera no cambia.
                 onCorregido={setCliente}
               />
+              </div>
 
               {/* Aquí y no dentro de «Más datos del documento», que está
                   plegado por defecto: es pedido de Willy (31/08) y estando
@@ -438,9 +461,25 @@ export function Constructor({
                 }}
               />
 
+              {/*
+                Sin «Más datos del documento» (Luis, 12/10): lo único que
+                quedaba dentro eran las condiciones, y escondidas detrás de un
+                botón no se ponían. La entrega sale de las líneas y la O/C se
+                pone al aprobar (09/10).
+              */}
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium">Condiciones</span>
+                <SelectorCondiciones
+                  valor={estado.condiciones}
+                  onCambiar={(texto) => despachar({ tipo: "cabecera", campo: "condiciones", valor: texto })}
+                />
+              </div>
+
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Válida por</span>
-                <div className="flex items-center gap-2">
+                {/* «días» dentro de la caja: fuera, colgaba suelto a la
+                    derecha y desalineaba el final de la fila. */}
+                <div className="relative w-32">
                   <Input
                     type="number"
                     min={1}
@@ -453,14 +492,17 @@ export function Constructor({
                         valor: Number(e.target.value),
                       })
                     }
-                    className="w-20 tabular"
+                    className="w-full pr-14 tabular"
                   />
-                  <span className="text-sm text-[var(--fg-muted)]">días</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
+                    días
+                  </span>
                 </div>
               </label>
             </div>
 
             <AvisoDeuda clienteId={estado.clienteId} />
+            </div>
 
             {/*
               Fuera del desplegable (06/10). El aviso solo estaba DENTRO de
@@ -468,22 +510,6 @@ export function Constructor({
               COT1-000004 con «Stock inmediato» arriba y una línea a 15 días,
               y no llegó a verlo nunca.
             */}
-            {/*
-              Sin «Más datos del documento» (Luis, 12/10): lo único que
-              quedaba dentro eran las condiciones, y escondidas detrás de un
-              botón no se ponían. La entrega sale de las líneas y la O/C se
-              pone al aprobar (09/10).
-            */}
-            <div className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 sm:max-w-2xl">
-              <span className="text-sm font-medium">Condiciones</span>
-              <SelectorCondiciones
-                valor={estado.condiciones}
-                onCambiar={(texto) => despachar({ tipo: "cabecera", campo: "condiciones", valor: texto })}
-              />
-              <span className="text-sm text-[var(--fg-muted)]">
-                Sale impresa en la cotización. Elige de la lista, o escribe y guarda una nueva.
-              </span>
-            </div>
           </section>
 
           {/* --------------------------------------------------- Líneas */}
@@ -502,7 +528,15 @@ export function Constructor({
             cuatro campos en una fila; en la pantalla de Willy (1600) sigue
             la tabla.
           */}
-          <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+          {/*
+            La tarjeta que manda (Luis, 19/11: «productos es lo más importante,
+            darle jerarquía para que el cliente sepa dónde ir»). Era un
+            recuadro gris de 1 px igual que la cabecera, con el título en
+            16 px: nada decía que el trabajo se hace aquí. Ahora es el paso 2,
+            con la cabecera en el azul de la marca —como las de los módulos—,
+            el número en dorado y el buscador grande y blanco dentro.
+          */}
+          <section className="@container relative overflow-visible card border-[#0b3d5e] shadow-lg">
             {/*
               La sección se presenta, y el subtítulo hace un trabajo de verdad.
 
@@ -521,42 +555,40 @@ export function Constructor({
               media descripción—, y un modal por producto son dos clics de más
               en lo que más veces se repite de la pantalla.
             */}
-            <div className="mb-3 flex flex-col gap-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-semibold">Productos</h2>
-                  <p className="text-sm text-[var(--fg-muted)]">
-                    Agrega productos y revisa las alternativas y las ventas
-                    anteriores de cada uno.
-                  </p>
-                </div>
-                {/* Arriba a la derecha (Luis, 09/10): lo que no está en el catálogo.
-                    Y al lado, darlo de alta en el catálogo sin tener que
-                    buscarlo antes (Willy, 29/10, por Luis: «un botón de crear
-                    un nuevo producto al costado de producto no registrado»). */}
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={() => setCreando("")} className="gap-1.5">
-                    <Plus className="size-4" aria-hidden="true" />
-                    Crear nuevo producto
-                  </Button>
-                  <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
-                </div>
-              </div>
-              {/*
-                Y la salida cuando el código no existe.
+            <CabeceraPaso
+              numero={2}
+              titulo="Productos"
+              ayuda="Busca por código o descripción. En cada línea verás sus alternativas y las ventas anteriores."
+              marca
+              pie={
+                /*
+                  Y la salida cuando el código no existe.
 
-                Willy, 16/09: *«digito un código que no está creado y no me sale
-                la opción para crearlo en el sistema»*. El buscador se abría
-                vacío y no había por dónde seguir. Ahora ofrece darlo de alta
-                aquí mismo — el constructor no guarda borrador, así que
-                mandarlo a «Nuevo producto» se llevaría por delante la
-                cotización a medias.
-              */}
-              <BuscadorLineas
-                onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
-                onCrear={(codigo) => setCreando(codigo)}
-              />
-            </div>
+                  Willy, 16/09: *«digito un código que no está creado y no me sale
+                  la opción para crearlo en el sistema»*. El buscador se abría
+                  vacío y no había por dónde seguir. Ahora ofrece darlo de alta
+                  aquí mismo — el constructor no guarda borrador, así que
+                  mandarlo a «Nuevo producto» se llevaría por delante la
+                  cotización a medias.
+                */
+                <BuscadorLineas
+                  grande
+                  onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
+                  onCrear={(codigo) => setCreando(codigo)}
+                />
+              }
+            >
+              {/* Arriba a la derecha (Luis, 09/10): lo que no está en el catálogo.
+                  Y al lado, darlo de alta en el catálogo sin tener que
+                  buscarlo antes (Willy, 29/10, por Luis: «un botón de crear
+                  un nuevo producto al costado de producto no registrado»). */}
+              <Button type="button" variant="outline" onClick={() => setCreando("")} className="gap-1.5">
+                <Plus className="size-4" aria-hidden="true" />
+                Crear nuevo producto
+              </Button>
+              <NoRegistrado onAgregar={(producto, cantidad) => despachar({ tipo: "agregar", producto, cantidad })} />
+            </CabeceraPaso>
+            <div className="p-4 sm:p-5">
 
             {estado.lineas.length === 0 ? (
               /*
@@ -695,6 +727,7 @@ export function Constructor({
               </div>
               </>
             )}
+            </div>
           </section>
 
           <section className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">

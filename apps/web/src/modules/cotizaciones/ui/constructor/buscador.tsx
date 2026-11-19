@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Badge, Input } from "@rodatech/ui";
-import { ArrowLeftRight, Plus } from "lucide-react";
+import { Badge, Input, cn } from "@rodatech/ui";
+import { ArrowLeftRight, Plus, Search } from "lucide-react";
 
 import { useBusqueda } from "@/lib/usar-busqueda";
 
@@ -23,8 +23,11 @@ import {
 export function BuscadorLineas({
   onElegir,
   onCrear,
+  grande = false,
 }: {
   onElegir: (p: ProductoBusqueda) => void;
+  /** La caja grande y blanca, para ir sobre la banda azul de «Productos». */
+  grande?: boolean;
   /**
    * Qué hacer cuando lo que se busca no existe.
    *
@@ -136,7 +139,23 @@ export function BuscadorLineas({
     <div ref={contenedor} className="relative">
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-0 flex-1 basis-60">
+          {/* Más alto y con lupa (Luis, 19/11): es el sitio donde empieza el
+              trabajo de la pantalla, y tenía la misma cara que cualquier campo. */}
+          <Search
+            className={cn(
+              "pointer-events-none absolute top-1/2 -translate-y-1/2 text-[var(--color-brand-600)]",
+              grande ? "left-4 size-6" : "left-3.5 size-5",
+            )}
+            aria-hidden="true"
+          />
           <Input
+            className={cn(
+              "h-12 pl-11 text-base",
+              // Sobre la banda azul: blanco macizo, sin el velo azul de los
+              // campos, que sobre azul se leía como un hueco.
+              grande &&
+                "h-14 border-transparent bg-[var(--surface)] pl-13 text-lg shadow-lg hover:border-transparent focus:border-[var(--color-accent-400)] focus:ring-[var(--color-accent-400)]/40",
+            )}
             value={termino}
             onChange={(e) => setTermino(e.target.value)}
             onFocus={() => resultados.length > 0 && setAbierto(true)}
@@ -150,7 +169,7 @@ export function BuscadorLineas({
           />
 
           {buscando ? (
-            <span className="absolute right-3 top-2.5 text-sm text-[var(--fg-muted)]">
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-muted)]">
               buscando…
             </span>
           ) : null}
@@ -158,7 +177,10 @@ export function BuscadorLineas({
       </div>
 
       {abierto && (resultados.length > 0 || error || crudos?.length === 0) ? (
-        <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-3">
+        // `text-fg` explícito: dentro de la banda azul de «Productos» el color
+        // heredado es blanco, y el código y la descripción salían en blanco
+        // sobre blanco (19/11).
+        <div className="absolute z-30 mt-1.5 max-h-80 w-full overflow-y-auto overscroll-contain rounded-md border border-[var(--border-strong)] bg-[var(--surface)] text-fg elev-3">
           {error && resultados.length === 0 ? (
             <p className="p-3 text-sm text-[var(--fg-muted)]">{error}</p>
           ) : null}

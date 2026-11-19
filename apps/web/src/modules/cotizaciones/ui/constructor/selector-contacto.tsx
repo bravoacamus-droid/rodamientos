@@ -169,7 +169,7 @@ export function SelectorContacto({
         {cargando
           ? "Cargando sus contactos…"
           : sinCliente
-            ? "Sale impreso en la cotización."
+            ? null
             : aMano && lista.length > 0 ? (
                 <button
                   type="button"
@@ -183,9 +183,7 @@ export function SelectorContacto({
                 </button>
               ) : lista.length === 0 ? (
                 "Este cliente no tiene contactos guardados."
-              ) : (
-                "Sale impreso en la cotización."
-              )}
+              ) : null}
 
         {/*
           Guardarlo en el cliente, sin salir de la cotización.
