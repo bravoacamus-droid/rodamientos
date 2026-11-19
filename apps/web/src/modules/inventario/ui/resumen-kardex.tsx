@@ -4,6 +4,10 @@ import { resumenKardex } from "../api/consultas";
 import type { FiltrosKardex } from "../dominio/tipos";
 
 const cant = (n: number) => n.toLocaleString("es-PE", { maximumFractionDigits: 2 });
+// «1 producto», «2 productos»: «1 movimientos» se leía como un error.
+const contar = (n: number, uno: string, varios: string) => `${cant(n)} ${n === 1 ? uno : varios}`;
+// Sin signo cuando es cero: «−0» parecía una salida negativa.
+const conSigno = (signo: string, n: number) => (n === 0 ? "0" : `${signo}${cant(n)}`);
 const usd = (n: number) =>
   n.toLocaleString("es-PE", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
 
@@ -30,16 +34,16 @@ export async function ResumenDelKardex({ filtros }: { filtros: FiltrosKardex }) 
   if (d.saldoInicial !== null) {
     tarjetas.push({ etiqueta: "Saldo al empezar", valor: cant(d.saldoInicial) });
   } else {
-    tarjetas.push({ etiqueta: "Movimientos", valor: cant(d.movimientos), detalle: `${cant(d.productos)} productos` });
+    tarjetas.push({ etiqueta: "Movimientos", valor: cant(d.movimientos), detalle: contar(d.productos, "producto", "productos") });
   }
   tarjetas.push(
     // Sobre el azul del panel: los verdes y rojos de estado se aclaran para
     // seguir leyéndose (el panel redefine `--ok` y `--danger`).
-    { etiqueta: "Entró", valor: `+${cant(d.entradas)}`, detalle: usd(d.valorEntradas), tono: "text-[var(--ok)]" },
-    { etiqueta: "Salió", valor: `−${cant(d.salidas)}`, detalle: usd(d.valorSalidas), tono: "text-[var(--danger)]" },
+    { etiqueta: "Entró", valor: conSigno("+", d.entradas), detalle: usd(d.valorEntradas), tono: d.entradas ? "text-[var(--ok)]" : undefined },
+    { etiqueta: "Salió", valor: conSigno("−", d.salidas), detalle: usd(d.valorSalidas), tono: d.salidas ? "text-[var(--danger)]" : undefined },
   );
   if (d.saldoFinal !== null) {
-    tarjetas.push({ etiqueta: "Saldo al terminar", valor: cant(d.saldoFinal), detalle: `${cant(d.movimientos)} movimientos` });
+    tarjetas.push({ etiqueta: "Saldo al terminar", valor: cant(d.saldoFinal), detalle: contar(d.movimientos, "movimiento", "movimientos") });
   }
 
   return (

@@ -18,7 +18,7 @@ export function VerMas({
   enPantalla,
   hayMas,
   total,
-  nombre = "movimientos",
+  nombre = ["movimiento", "movimientos"],
   tanda = TANDA,
 }: {
   /** Los filtros de la pantalla, sin `?`. */
@@ -30,7 +30,8 @@ export function VerMas({
   hayMas: boolean;
   /** Si se sabe, cuántas hay en total con estos filtros. */
   total?: number | null;
-  nombre?: string;
+  /** Cómo se llama lo que se lista, en singular y en plural. */
+  nombre?: [string, string];
   /** De a cuántas crece; tiene que ser la misma con la que se leyó `n`. */
   tanda?: number;
 }) {
@@ -48,7 +49,7 @@ export function VerMas({
             {" "}de <span className="font-semibold tabular text-[var(--fg)]">{total.toLocaleString("es-PE")}</span>
           </>
         ) : null}{" "}
-        {nombre}
+        {(total ?? enPantalla) === 1 ? nombre[0] : nombre[1]}
       </p>
       <div className="flex flex-wrap justify-center gap-2">
         {hayMas && !alTope ? (

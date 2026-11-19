@@ -221,7 +221,7 @@ export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRec
         cuantos={filtros.limite ?? filas.length}
         enPantalla={filas.length}
         hayMas={siguiente !== null}
-        nombre="recepciones"
+        nombre={["recepción", "recepciones"]}
       />
     </div>
   );

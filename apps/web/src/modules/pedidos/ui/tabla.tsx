@@ -53,10 +53,12 @@ function Cabecera({
   const activa = orden.campo === campo;
   const Icono = !activa ? ArrowUpDown : orden.desc ? ArrowDown : ArrowUp;
   return (
-    <th className={`px-3 py-2.5 font-medium ${derecha ? "text-right" : "text-left"}`} aria-sort={activa ? (orden.desc ? "descending" : "ascending") : undefined}>
+    // La celda entera ordena, no solo la palabra: el enlace medía 21 px de
+    // alto y había que apuntar a una línea de texto (auditoría del 19/11).
+    <th className={`p-0 font-medium ${derecha ? "text-right" : "text-left"}`} aria-sort={activa ? (orden.desc ? "descending" : "ascending") : undefined}>
       <Link
         href={hrefOrden(params, campo, orden)}
-        className={`inline-flex items-center gap-1 rounded-sm hover:text-[var(--fg)] ${activa ? "text-[var(--fg)]" : ""}`}
+        className={`flex w-full items-center gap-1 px-3 py-2.5 transition-colors hover:bg-[var(--boton-fila-bg-hover)] ${derecha ? "justify-end" : ""} ${activa ? "underline underline-offset-4" : ""}`}
       >
         {children}
         <Icono className="size-3.5" aria-hidden="true" />
