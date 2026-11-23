@@ -32,6 +32,7 @@ const DOCUMENTO: Record<string, string> = {
   importacion: "Carga inicial",
   venta_anterior: "Factura del sistema anterior",
   compra_anterior: "Compra del sistema anterior",
+  devolucion_anterior: "Devolución del sistema anterior",
 };
 
 /**

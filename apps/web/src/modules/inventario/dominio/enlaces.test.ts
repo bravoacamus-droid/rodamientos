@@ -46,7 +46,9 @@ function tiposQueGrabaLaBase(): string[] {
     }
     // 203: las filas del sistema anterior no las graba una función, las
     // arma `v_kardex` con `'venta_anterior'::text as referencia_tipo`.
-    for (const m of sql.matchAll(/'([a-z_]+)'::text\s+as\s+referencia_tipo/g)) {
+    for (const m of sql.matchAll(/'([a-z_]+)'::text\s+as\s+referencia_tipo|'([a-z]+_anterior)'::text/g)) {
+      if (m[2]) encontrados.add(m[2]);
+      if (!m[1]) continue;
       encontrados.add(m[1]!);
     }
   }

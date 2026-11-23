@@ -97,7 +97,7 @@ function lineasResumen(r: ResumenKardex | null): { etiqueta: string; valor: stri
   if (r.anteriores > 0) {
     partes.push({
       etiqueta: "Sistema anterior",
-      valor: `${cant(r.anteriores)} líneas · vendió ${cant(r.anterioresSalidas)} · compró ${cant(r.anterioresEntradas)}`,
+      valor: `${cant(r.anteriores)} líneas · salió ${cant(r.anterioresSalidas)} · entró ${cant(r.anterioresEntradas)}`,
     });
   }
   return partes;

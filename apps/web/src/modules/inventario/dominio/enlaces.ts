@@ -25,6 +25,7 @@ export const TIPOS_REFERENCIA = [
   // con las ventas y compras del sistema anterior.
   "venta_anterior",
   "compra_anterior",
+  "devolucion_anterior",
 ] as const;
 
 export type TipoReferencia = (typeof TIPOS_REFERENCIA)[number];
@@ -63,6 +64,9 @@ export function enlaceDeReferencia(
       return `/facturacion/${id}`;
     case "compra_anterior":
       return `/compras/${id}`;
+    // 204: la nota de crédito se abre en facturación, como la factura.
+    case "devolucion_anterior":
+      return `/facturacion/${id}`;
     default:
       // Un tipo que no conocemos. No se inventa una ruta: se enseña el número
       // sin enlazar, que es lo que se hacía antes con todos.

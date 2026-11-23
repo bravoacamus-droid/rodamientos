@@ -22,6 +22,8 @@ export const ORIGENES_KARDEX = [
   // 203: no son movimientos de stock, son el historial del sistema de Willy.
   { valor: "venta_anterior", etiqueta: "Venta del sistema anterior" },
   { valor: "compra_anterior", etiqueta: "Compra del sistema anterior" },
+  // 204: las notas de crédito por devolución (FC02-1 a 4).
+  { valor: "devolucion_anterior", etiqueta: "Devolución del sistema anterior" },
 ] as const;
 
 export function etiquetaOrigen(v: string | null | undefined): string {

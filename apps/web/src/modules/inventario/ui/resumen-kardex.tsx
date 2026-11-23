@@ -52,7 +52,8 @@ export async function ResumenDelKardex({ filtros }: { filtros: FiltrosKardex }) 
     tarjetas.push({
       etiqueta: "Sistema anterior",
       valor: `${cant(d.anteriores)} ${d.anteriores === 1 ? "línea" : "líneas"}`,
-      detalle: `vendió ${cant(d.anterioresSalidas)} · compró ${cant(d.anterioresEntradas)}`,
+      // «Entró» y no «compró»: también entran las devoluciones (204).
+      detalle: `salió ${cant(d.anterioresSalidas)} · entró ${cant(d.anterioresEntradas)}`,
     });
   }
 
