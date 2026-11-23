@@ -5514,7 +5514,9 @@ export type Database = {
           id: number | null
           marca: string | null
           marca_id: string | null
+          moneda: string | null
           motivo: string | null
+          precio_unitario: number | null
           producto_id: string | null
           referencia_id: string | null
           referencia_numero: string | null
@@ -5522,64 +5524,16 @@ export type Database = {
           saldo_cantidad: number | null
           saldo_valorizado: number | null
           salida: number | null
+          sistema_anterior: boolean | null
           subfamilia: string | null
           subfamilia_id: string | null
+          tercero: string | null
           tipo: Database["public"]["Enums"]["tipo_movimiento"] | null
           unidad_codigo: string | null
           usuario: string | null
           usuario_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "movimientos_inventario_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movimientos_inventario_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "v_productos_stock"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movimientos_inventario_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "v_reposicion"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "movimientos_inventario_usuario_id_fkey"
-            columns: ["usuario_id"]
-            isOneToOne: false
-            referencedRelation: "perfiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "productos_marca_id_fkey"
-            columns: ["marca_id"]
-            isOneToOne: false
-            referencedRelation: "marcas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "productos_subfamilia_fk"
-            columns: ["subfamilia_id", "familia_id"]
-            isOneToOne: false
-            referencedRelation: "subfamilias"
-            referencedColumns: ["id", "familia_id"]
-          },
-          {
-            foreignKeyName: "productos_unidad_codigo_fkey"
-            columns: ["unidad_codigo"]
-            isOneToOne: false
-            referencedRelation: "unidades_medida"
-            referencedColumns: ["codigo"]
-          },
-        ]
+        Relationships: []
       }
       v_pedido_avance: {
         Row: {
@@ -6618,6 +6572,9 @@ export type Database = {
           p_usuario?: string
         }
         Returns: {
+          anteriores: number
+          anteriores_entradas: number
+          anteriores_salidas: number
           entradas: number
           movimientos: number
           productos: number

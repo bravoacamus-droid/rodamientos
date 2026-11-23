@@ -21,6 +21,10 @@ export const TIPOS_REFERENCIA = [
   "guia",
   "ajuste",
   "importacion",
+  // 203: no los graba `registrar_movimientos` sino la vista `v_kardex`,
+  // con las ventas y compras del sistema anterior.
+  "venta_anterior",
+  "compra_anterior",
 ] as const;
 
 export type TipoReferencia = (typeof TIPOS_REFERENCIA)[number];
@@ -54,6 +58,11 @@ export function enlaceDeReferencia(
       return `/inventario/ajustes/${id}`;
     case "importacion":
       return null;
+    // 203: las filas del sistema anterior abren su factura o su compra.
+    case "venta_anterior":
+      return `/facturacion/${id}`;
+    case "compra_anterior":
+      return `/compras/${id}`;
     default:
       // Un tipo que no conocemos. No se inventa una ruta: se enseña el número
       // sin enlazar, que es lo que se hacía antes con todos.

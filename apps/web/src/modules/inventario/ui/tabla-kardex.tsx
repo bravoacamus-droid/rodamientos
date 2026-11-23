@@ -13,7 +13,7 @@ import { VerMas } from "@/componentes/ver-mas";
 import { kardex } from "../api/consultas";
 import { enlaceDeReferencia } from "../dominio/enlaces";
 import { hayFiltros } from "../dominio/filtros-kardex";
-import { ETIQUETA_MOVIMIENTO, type FiltrosKardex, type TipoMovimiento } from "../dominio/tipos";
+import { ETIQUETA_MOVIMIENTO, type FilaKardex, type FiltrosKardex, type TipoMovimiento } from "../dominio/tipos";
 
 /**
  * De a cuántos movimientos crece la lista. 20 y no los 30 de las demás
@@ -74,6 +74,50 @@ function ChipTipo({ tipo }: { tipo: TipoMovimiento }) {
     >
       <Icono className="size-4" aria-hidden="true" />
       {ETIQUETA_MOVIMIENTO[tipo]}
+    </span>
+  );
+}
+
+/**
+ * La marca de las filas del sistema anterior (203).
+ *
+ * Luis, 23/11: *«ponerlo que fue el otro sistema»*. Son ventas y compras de
+ * antes del 28/10: dicen qué se vendió, a quién y a cuánto, pero no movieron
+ * el saldo de este sistema —que empieza en el conteo del 28/10—, así que su
+ * saldo sale como «—» y no como un número que no es.
+ */
+function ChipAnterior() {
+  return (
+    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-dashed border-slate-400 px-2.5 py-0.5 text-sm font-medium text-slate-700 dark:border-slate-500 dark:text-slate-300">
+      Sistema anterior
+    </span>
+  );
+}
+
+/** «$ 166.80» o «S/ 45.00»: el precio como lo dice el papel, en su moneda. */
+function precioDelPapel(m: FilaKardex): string | null {
+  if (m.precio_unitario === null || m.precio_unitario === undefined) return null;
+  const n = Number(m.precio_unitario).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `${m.moneda === "PEN" ? "S/" : "$"} ${n} c/u`;
+}
+
+/**
+ * A quién y a cuánto (23/11): el cliente o el proveedor del documento y, en
+ * lo del sistema anterior, el precio de la línea. Debajo del número del
+ * documento, que es donde se busca.
+ */
+function QuienYCuanto({ m }: { m: FilaKardex }) {
+  const precio = precioDelPapel(m);
+  if (!m.tercero && !precio) return null;
+  return (
+    <span className="block text-[var(--fg-muted)]">
+      {m.tercero ? (
+        <span className="block truncate" title={m.tercero}>
+          {m.entrada > 0 ? "De " : "A "}
+          {m.tercero}
+        </span>
+      ) : null}
+      {precio ? <span className="block font-medium tabular text-[var(--fg)]">{precio}</span> : null}
     </span>
   );
 }
@@ -178,7 +222,10 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
               className={cn("rounded-lg border border-l-[3px] border-[var(--border)] p-3", TIPO[m.tipo].filo)}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <ChipTipo tipo={m.tipo} />
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <ChipTipo tipo={m.tipo} />
+                  {m.sistema_anterior ? <ChipAnterior /> : null}
+                </span>
                 <Cantidad entrada={m.entrada} salida={m.salida} tipo={m.tipo} />
               </div>
               <Link
@@ -189,17 +236,19 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
               </Link>
               <p className="text-sm">{m.descripcion}</p>
               <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-                <span className="text-[var(--fg-muted)]">
-                  Quedan{" "}
-                  <span
-                    className={cn(
-                      "font-semibold tabular text-[var(--fg)]",
-                      Number(m.saldo_cantidad) < 0 && "text-[var(--danger)]",
-                    )}
-                  >
-                    {Number(m.saldo_cantidad).toLocaleString("es-PE")}
+                {m.saldo_cantidad !== null ? (
+                  <span className="text-[var(--fg-muted)]">
+                    Quedan{" "}
+                    <span
+                      className={cn(
+                        "font-semibold tabular text-[var(--fg)]",
+                        Number(m.saldo_cantidad) < 0 && "text-[var(--danger)]",
+                      )}
+                    >
+                      {Number(m.saldo_cantidad).toLocaleString("es-PE")}
+                    </span>
                   </span>
-                </span>
+                ) : null}
                 <span className="tabular text-[var(--fg-muted)]">
                   {fechaCorta(m.fecha)} {horaLima(m.fecha)}
                 </span>
@@ -212,6 +261,9 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
                     <span className="font-mono">{m.referencia_numero}</span>
                   )
                 ) : null}
+              </div>
+              <div className="mt-1 text-sm">
+                <QuienYCuanto m={m} />
               </div>
             </li>
           );
@@ -266,7 +318,10 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <ChipTipo tipo={m.tipo} />
+                      <span className="flex flex-col items-start gap-1">
+                        <ChipTipo tipo={m.tipo} />
+                        {m.sistema_anterior ? <ChipAnterior /> : null}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
                       <Cantidad entrada={m.entrada} salida={m.salida} tipo={m.tipo} />
@@ -277,15 +332,27 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
                         Number(m.saldo_cantidad) < 0 && "text-[var(--danger)]",
                       )}
                     >
-                      {Number(m.saldo_cantidad).toLocaleString("es-PE")}
+                      {m.saldo_cantidad !== null ? (
+                        Number(m.saldo_cantidad).toLocaleString("es-PE")
+                      ) : (
+                        <span className="text-[var(--fg-subtle)]" title="Del sistema anterior: no movió el saldo de este sistema">—</span>
+                      )}
                     </td>
                     <td className="hidden px-4 py-3 text-right 2xl:table-cell">
-                      <Moneda valor={m.costo_unitario} tamano="sm" enfasis="suave" />
+                      {m.costo_unitario !== null ? (
+                        <Moneda valor={m.costo_unitario} tamano="sm" enfasis="suave" />
+                      ) : (
+                        <span className="text-[var(--fg-subtle)]">—</span>
+                      )}
                     </td>
                     <td className="hidden px-4 py-3 text-right 2xl:table-cell">
-                      <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
+                      {m.costo_promedio !== null ? (
+                        <Moneda valor={m.costo_promedio} tamano="sm" enfasis="suave" />
+                      ) : (
+                        <span className="text-[var(--fg-subtle)]">—</span>
+                      )}
                     </td>
-                    <td className="max-w-[14rem] px-4 py-3">
+                    <td className="max-w-[16rem] px-4 py-3">
                       {m.referencia_numero ? (
                         enlace ? (
                           <Link
@@ -300,6 +367,7 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
                       ) : (
                         <span className="text-[var(--fg-subtle)]">{m.referencia_tipo ?? "—"}</span>
                       )}
+                      <QuienYCuanto m={m} />
                       {m.motivo ? (
                         <span className="block truncate text-[var(--fg-muted)]" title={m.motivo}>
                           {m.motivo}

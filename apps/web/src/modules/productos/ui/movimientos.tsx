@@ -30,6 +30,8 @@ const DOCUMENTO: Record<string, string> = {
   comprobante: "Factura",
   ajuste: "Ajuste",
   importacion: "Carga inicial",
+  venta_anterior: "Factura del sistema anterior",
+  compra_anterior: "Compra del sistema anterior",
 };
 
 /**
@@ -108,7 +110,13 @@ export function MovimientosDelProducto({
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-semibold">
                     {q.texto(n)}
-                    {m.tipo === "ingreso" && Number(m.costo_unitario) > 0 ? (
+                    {m.precio_unitario !== null ? (
+                      // Sistema anterior (203): el precio del papel, en su moneda.
+                      <span className="font-normal text-[var(--fg-muted)]">
+                        {" "}
+                        a {m.moneda === "PEN" ? "S/" : "$"} {Number(m.precio_unitario).toFixed(2)} c/u
+                      </span>
+                    ) : m.tipo === "ingreso" && Number(m.costo_unitario) > 0 ? (
                       <span className="font-normal text-[var(--fg-muted)]">
                         {" "}
                         a $ {Number(m.costo_unitario).toFixed(2)} c/u
@@ -138,15 +146,20 @@ export function MovimientosDelProducto({
                         ) : null}
                       </>
                     ) : null}
+                    {m.tercero ? ` · ${m.entrada > 0 ? "de" : "a"} ${m.tercero}` : ""}
                     {m.usuario ? ` · ${m.usuario}` : ""}
                   </p>
                 </div>
-                <p className="shrink-0 text-right text-sm text-[var(--fg-muted)]">
-                  Quedaron
-                  <span className="block text-base font-semibold tabular text-[var(--fg)]">
-                    {cantidad(m.saldo_cantidad, unidad)}
-                  </span>
-                </p>
+                {m.saldo_cantidad !== null ? (
+                  <p className="shrink-0 text-right text-sm text-[var(--fg-muted)]">
+                    Quedaron
+                    <span className="block text-base font-semibold tabular text-[var(--fg)]">
+                      {cantidad(m.saldo_cantidad, unidad)}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="shrink-0 text-right text-sm text-[var(--fg-muted)]">Sistema anterior</p>
+                )}
               </li>
             );
           })}

@@ -82,7 +82,7 @@ export function FiltrosKardexBarra({
         <CajaBuscar
           valor={texto}
           onCambiar={setTexto}
-          placeholder="Buscar código, descripción o documento…"
+          placeholder="Código, descripción, documento, cliente o proveedor…"
           etiqueta="Buscar en el kardex"
         />
         <FiltroBuscable

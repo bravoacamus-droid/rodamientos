@@ -78,10 +78,12 @@ export interface FilaKardex {
   tipo: TipoMovimiento;
   entrada: number;
   salida: number;
-  costo_unitario: number;
-  saldo_cantidad: number;
-  saldo_valorizado: number;
-  costo_promedio: number;
+  /** En dólares. Null en una venta del sistema anterior: no se sabe a cuánto costó. */
+  costo_unitario: number | null;
+  /** Null en las filas del sistema anterior (203): esas no mueven el saldo. */
+  saldo_cantidad: number | null;
+  saldo_valorizado: number | null;
+  costo_promedio: number | null;
   referencia_tipo: string | null;
   referencia_id: string | null;
   referencia_numero: string | null;
@@ -93,6 +95,13 @@ export interface FilaKardex {
   marca: string | null;
   familia: string | null;
   subfamilia: string | null;
+  /** Desde la 203: a quién se le vendió o a quién se le compró. */
+  tercero: string | null;
+  /** Lo que dice el papel, en su moneda. Solo en las filas del sistema anterior. */
+  precio_unitario: number | null;
+  moneda: string | null;
+  /** Venta o compra del sistema anterior de Willy, de antes del 28/10. */
+  sistema_anterior: boolean;
 }
 
 /** Los totales del kardex con los mismos filtros que la lista (201). */
@@ -106,6 +115,10 @@ export interface ResumenKardex {
   /** Solo con UN producto: sumar saldos de productos distintos no es nada. */
   saldoInicial: number | null;
   saldoFinal: number | null;
+  /** Lo del sistema anterior, APARTE: no entra en las cifras del saldo (203). */
+  anteriores: number;
+  anterioresEntradas: number;
+  anterioresSalidas: number;
 }
 
 /** Filtros del kardex. Viajan en los search params, así que todo es texto. */

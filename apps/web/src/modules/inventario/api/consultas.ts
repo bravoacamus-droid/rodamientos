@@ -258,7 +258,7 @@ function filtrarKardex<Q extends { eq: any; gte: any; lte: any; or: any }>(consu
     const q = filtros.q.replace(/[,()*%\\]/g, " ").trim();
     if (q) {
       c = c.or(
-        `codigo.ilike.%${q}%,descripcion.ilike.%${q}%,codigo_fabricante.ilike.%${q}%,referencia_numero.ilike.%${q}%`,
+        `codigo.ilike.%${q}%,descripcion.ilike.%${q}%,codigo_fabricante.ilike.%${q}%,referencia_numero.ilike.%${q}%,tercero.ilike.%${q}%`,
       );
     }
   }
@@ -297,6 +297,9 @@ export async function resumenKardex(filtros: FiltrosKardex): Promise<Resultado<R
         valorSalidas: n(r?.valor_salidas),
         saldoInicial: oNulo(r?.saldo_inicial),
         saldoFinal: oNulo(r?.saldo_final),
+        anteriores: n(r?.anteriores),
+        anterioresEntradas: n(r?.anteriores_entradas),
+        anterioresSalidas: n(r?.anteriores_salidas),
       },
     };
   } catch (e) {
@@ -324,7 +327,7 @@ export async function kardexParaExportar(
         supabase
           .from("v_kardex")
           .select(
-            "id, fecha, producto_id, codigo, descripcion, tipo, entrada, salida, costo_unitario, saldo_cantidad, saldo_valorizado, costo_promedio, referencia_tipo, referencia_id, referencia_numero, motivo, usuario, codigo_fabricante, unidad_codigo, marca, familia, subfamilia",
+            "id, fecha, producto_id, codigo, descripcion, tipo, entrada, salida, costo_unitario, saldo_cantidad, saldo_valorizado, costo_promedio, referencia_tipo, referencia_id, referencia_numero, motivo, usuario, codigo_fabricante, unidad_codigo, marca, familia, subfamilia, tercero, precio_unitario, moneda, sistema_anterior",
           )
           .order("id", { ascending: true }),
         filtros,

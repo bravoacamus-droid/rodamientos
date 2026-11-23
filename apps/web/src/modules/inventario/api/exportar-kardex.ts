@@ -33,9 +33,18 @@ const horaLima = (iso: string) =>
     hour12: false,
   }).format(new Date(iso));
 
-const cant = (n: number) => Number(n).toLocaleString("es-PE", { maximumFractionDigits: 2 });
-const usd = (n: number) =>
-  `$ ${Number(n).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// Null en las filas del sistema anterior (203): sin saldo, y la venta sin
+// costo. Una celda vacía, no un 0 que no es.
+const cant = (n: number | null) =>
+  n === null ? "" : Number(n).toLocaleString("es-PE", { maximumFractionDigits: 2 });
+const usd = (n: number | null) =>
+  n === null ? "" : `$ ${Number(n).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const numOVacio = (n: number | null) => (n === null ? "" : Number(n));
+/** El precio como lo dice el papel, en su moneda. */
+const precioPapel = (f: FilaKardex) =>
+  f.precio_unitario === null
+    ? ""
+    : `${f.moneda === "PEN" ? "S/" : "$"} ${Number(f.precio_unitario).toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface Datos {
   filas: FilaKardex[];
@@ -85,6 +94,12 @@ function lineasResumen(r: ResumenKardex | null): { etiqueta: string; valor: stri
     { etiqueta: "Salidas", valor: `${cant(r.salidas)} · ${usd(r.valorSalidas)}` },
   );
   if (r.saldoFinal !== null) partes.push({ etiqueta: "Saldo final", valor: cant(r.saldoFinal) });
+  if (r.anteriores > 0) {
+    partes.push({
+      etiqueta: "Sistema anterior",
+      valor: `${cant(r.anteriores)} líneas · vendió ${cant(r.anterioresSalidas)} · compró ${cant(r.anterioresEntradas)}`,
+    });
+  }
   return partes;
 }
 
@@ -118,12 +133,15 @@ export async function excelKardex(filtros: FiltrosKardex): Promise<{ libro: Buff
     { titulo: "Movimiento", ancho: 16, valor: (f) => ETIQUETA_MOVIMIENTO[f.tipo] ?? f.tipo },
     { titulo: "Entrada", ancho: 10, valor: (f) => (Number(f.entrada) > 0 ? Number(f.entrada) : ""), formato: CANTIDAD, suma: true },
     { titulo: "Salida", ancho: 10, valor: (f) => (Number(f.salida) > 0 ? Number(f.salida) : ""), formato: CANTIDAD, suma: true },
-    { titulo: "Costo unitario", ancho: 13, valor: (f) => Number(f.costo_unitario), formato: DINERO },
-    { titulo: "Saldo", ancho: 10, valor: (f) => Number(f.saldo_cantidad), formato: CANTIDAD },
-    { titulo: "Costo promedio", ancho: 13, valor: (f) => Number(f.costo_promedio), formato: DINERO },
-    { titulo: "Saldo valorizado", ancho: 14, valor: (f) => Number(f.saldo_valorizado), formato: DINERO },
-    { titulo: "Origen", ancho: 18, valor: (f) => etiquetaOrigen(f.referencia_tipo) },
+    { titulo: "Costo unitario", ancho: 13, valor: (f) => numOVacio(f.costo_unitario), formato: DINERO },
+    { titulo: "Saldo", ancho: 10, valor: (f) => numOVacio(f.saldo_cantidad), formato: CANTIDAD },
+    { titulo: "Costo promedio", ancho: 13, valor: (f) => numOVacio(f.costo_promedio), formato: DINERO },
+    { titulo: "Saldo valorizado", ancho: 14, valor: (f) => numOVacio(f.saldo_valorizado), formato: DINERO },
+    { titulo: "Origen", ancho: 24, valor: (f) => etiquetaOrigen(f.referencia_tipo) },
     { titulo: "Documento", ancho: 16, valor: (f) => f.referencia_numero ?? "" },
+    // 203: a quién y a cuánto.
+    { titulo: "Cliente / proveedor", ancho: 32, valor: (f) => f.tercero ?? "" },
+    { titulo: "Precio del documento", ancho: 16, valor: (f) => precioPapel(f) },
     { titulo: "Motivo", ancho: 30, valor: (f) => f.motivo ?? "" },
     { titulo: "Usuario", ancho: 18, valor: (f) => f.usuario ?? "" },
   ];
@@ -216,14 +234,14 @@ export async function pdfKardex(filtros: FiltrosKardex): Promise<{ pdf: ArrayBuf
         { titulo: "Saldo", ancho: 18, derecha: true },
         { titulo: "Costo unit.", ancho: 22, derecha: true },
         { titulo: "Costo prom.", ancho: 22, derecha: true },
-        { titulo: "Motivo / usuario" },
+        { titulo: "Cliente / proveedor · precio" },
       ]
     : [
         { titulo: "Fecha", ancho: 24 },
         { titulo: "Código", ancho: 28 },
         { titulo: "Descripción" },
         { titulo: "Movimiento", ancho: 26 },
-        { titulo: "Documento", ancho: 30 },
+        { titulo: "Documento", ancho: 46 },
         { titulo: "Entrada", ancho: 16, derecha: true },
         { titulo: "Salida", ancho: 16, derecha: true },
         { titulo: "Saldo", ancho: 16, derecha: true },
@@ -233,7 +251,8 @@ export async function pdfKardex(filtros: FiltrosKardex): Promise<{ pdf: ArrayBuf
   const fecha = (f: FilaKardex) => `${fechaLima(f.fecha)} ${horaLima(f.fecha)}`;
   const ent = (f: FilaKardex) => (Number(f.entrada) > 0 ? cant(f.entrada) : "");
   const sal = (f: FilaKardex) => (Number(f.salida) > 0 ? cant(f.salida) : "");
-  const doc = (f: FilaKardex) => f.referencia_numero ?? etiquetaOrigen(f.referencia_tipo);
+  const doc = (f: FilaKardex) =>
+    [f.referencia_numero ?? etiquetaOrigen(f.referencia_tipo), f.tercero, precioPapel(f)].filter(Boolean).join(" · ");
   const filas = d.filas.map((f) =>
     unSolo
       ? [
@@ -246,7 +265,7 @@ export async function pdfKardex(filtros: FiltrosKardex): Promise<{ pdf: ArrayBuf
           cant(f.saldo_cantidad),
           usd(f.costo_unitario),
           usd(f.costo_promedio),
-          [f.motivo, f.usuario].filter(Boolean).join(" · "),
+          [f.tercero, precioPapel(f), f.motivo, f.usuario].filter(Boolean).join(" · "),
         ]
       : [
           fecha(f),
