@@ -188,7 +188,7 @@ export default async function PaginaDetalleProducto({
       <MovimientosDelProducto
         productoId={p.id}
         filas={movimientos.ok ? movimientos.datos.filas : []}
-        hayMas={movimientos.ok && movimientos.datos.siguiente !== null}
+        hayMas={movimientos.ok && movimientos.datos.total > movimientos.datos.filas.length}
         unidad={abreviaturaUnidad(p.unidad)}
         error={movimientos.ok ? null : movimientos.error}
       />

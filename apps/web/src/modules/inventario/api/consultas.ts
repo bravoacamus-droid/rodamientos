@@ -158,74 +158,45 @@ export async function reposicion(
 }
 
 /**
- * Kardex, paginado por keyset.
+ * Kardex, por páginas numeradas (23/11).
  *
- * El cursor es el `id` del movimiento, que es una identidad siempre creciente:
- * ordena igual que la fecha para lo que importa —el orden en que ocurrieron—
- * y además desempata dos movimientos del mismo instante, que es justo lo que
- * pasa cuando una recepción registra sus líneas de una tacada.
+ * Luis: *«no tiene paginación, sale con un botón de mostrar más… que tenga un
+ * select de mostrar 10, 15, 30, 50, pero igual una paginación»*. Antes iba por
+ * keyset (el id como cursor), que no sabe saltar a la página 7 ni decir
+ * cuántas hay. Aquí sí hace falta, y se puede pagar: el kardex con todo el
+ * historial anterior son unas 2,800 filas, y el desplazamiento sobre eso
+ * cuesta milisegundos.
+ *
+ * Ordena por id descendente: lo más reciente arriba y, debajo de todo lo de
+ * este sistema, lo del sistema anterior (ids negativos, 203).
  */
 export async function kardex(
   filtros: FiltrosKardex,
-): Promise<
-  Resultado<{
-    filas: FilaKardex[];
-    siguiente: string | null;
-    anterior: string | null;
-  }>
-> {
+): Promise<Resultado<{ filas: FilaKardex[]; total: number; pagina: number }>> {
   try {
     const supabase = await clienteServidor();
-
-    const atras = filtros.direccion === "ant" && Boolean(filtros.cursor);
-
-    let consulta = supabase
-      .from("v_kardex")
-      .select("*")
-      .order("id", { ascending: atras })
-      .limit((filtros.limite ?? POR_PAGINA) + 1);
-
-    // Hacia atrás, lo que está POR ENCIMA del cursor y en orden ascendente;
-    // el array se da la vuelta al final.
-    if (filtros.cursor) {
-      const desde = Number(filtros.cursor);
-      consulta = atras ? consulta.gt("id", desde) : consulta.lt("id", desde);
-    }
-    consulta = filtrarKardex(consulta, filtros);
-
-    const { data, error } = await consulta;
-    if (error) return fallo(error, "inventario/kardex");
-
-    const todas = (data ?? []) as unknown as FilaKardex[];
-    /*
-      El corte usa el MISMO número que el límite.
-
-      Aquí estaba la mitad del fallo del selector de filas (10/09): se pedían
-      `limite + 1` para saber si hay siguiente, pero se cortaba por
-      `POR_PAGINA` —una constante— así que con 25 pedidas se pintaban 26.
-    */
     const porPagina = filtros.limite ?? POR_PAGINA;
-    const hayMas = todas.length > porPagina;
-    const recortadas = hayMas ? todas.slice(0, porPagina) : todas;
+    const pagina = Math.max(1, filtros.pagina ?? 1);
+    const desde = (pagina - 1) * porPagina;
 
-    // Se recorta primero y se da la vuelta después: yendo hacia atrás la fila
-    // «de más» sobra por arriba.
-    const filas = atras ? [...recortadas].reverse() : recortadas;
-
-    const idDe = (f: FilaKardex | undefined) =>
-      f ? String(f.id ?? "") || null : null;
-    const primera = idDe(filas[0]);
-    const ultima = idDe(filas[filas.length - 1]);
+    const { data, error, count } = await filtrarKardex(
+      supabase.from("v_kardex").select("*", { count: "exact" }).order("id", { ascending: false }),
+      filtros,
+    ).range(desde, desde + porPagina - 1);
+    // Una página más allá del final (alguien cambió un filtro con ?p=40 en
+    // la URL) no es un error: sale vacía y el total dice cuántas hay.
+    if (error && error.code === "PGRST103") {
+      const cuenta = await filtrarKardex(
+        supabase.from("v_kardex").select("id", { count: "exact", head: true }),
+        filtros,
+      );
+      return { ok: true, datos: { filas: [], total: cuenta.count ?? 0, pagina } };
+    }
+    if (error) return fallo(error, "inventario/kardex");
 
     return {
       ok: true,
-      datos: {
-        filas,
-        // Yendo hacia atrás siempre hay siguiente —se viene de ahí—; yendo
-        // hacia adelante, siempre hay anterior salvo en la primera página.
-        siguiente: atras ? ultima : hayMas ? ultima : null,
-        anterior: atras ? (hayMas ? primera : null) : filtros.cursor ? primera : null,
-      },
+      datos: { filas: (data ?? []) as unknown as FilaKardex[], total: count ?? 0, pagina },
     };
   } catch (e) {
     return fallo(e, "inventario/kardex");

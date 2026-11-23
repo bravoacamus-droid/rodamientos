@@ -90,7 +90,7 @@ export function BarraPeriodo({
 
   function aplicar(nuevo: { desde: string | null; hasta: string | null }) {
     // La página en la que se estaba deja de valer con otro periodo.
-    aplicarUrl(nuevo, ["cursor", "dir"]);
+    aplicarUrl(nuevo, ["cursor", "dir", "p"]);
   }
 
   return (

@@ -4,14 +4,14 @@ import { ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
 import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
 
 import { PanelModulo } from "@/componentes/panel-modulo";
-import { leerCuantos } from "@/lib/ver-mas";
+import { leerFilasPorPagina, leerPagina } from "@/lib/paginacion";
 
 import { opcionesDelKardex, productoDelKardex } from "../api/consultas";
 import { filtrosAQuery, leerFiltrosKardex } from "../dominio/filtros-kardex";
 import type { FiltrosKardex } from "../dominio/tipos";
 import { FiltrosKardexBarra } from "./filtros-kardex";
 import { ResumenDelKardex } from "./resumen-kardex";
-import { TANDA_KARDEX, TablaKardex } from "./tabla-kardex";
+import { TablaKardex } from "./tabla-kardex";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -42,8 +42,9 @@ export default async function PaginaKardex({ searchParams }: Props) {
 
   const filtros: FiltrosKardex = {
     ...leerFiltrosKardex(sp),
-    // Sin páginas (19/11): la lista empieza en 20 y crece con «Ver más».
-    limite: leerCuantos(sp.n, TANDA_KARDEX),
+    // Páginas numeradas (23/11): `?p=` la página y `?n=` cuántas filas.
+    pagina: leerPagina(sp.p),
+    limite: leerFilasPorPagina(sp.n),
   };
 
   const [producto, opciones] = await Promise.all([
@@ -55,7 +56,7 @@ export default async function PaginaKardex({ searchParams }: Props) {
   const query = filtrosAQuery(filtros);
   const sufijo = query ? `?${query}` : "";
   // Sin la paginación: el resumen es del filtro entero, no de la página.
-  const claveResumen = JSON.stringify({ ...filtros, cursor: undefined, direccion: undefined, limite: undefined });
+  const claveResumen = JSON.stringify({ ...filtros, pagina: undefined, limite: undefined });
 
   return (
     <div className="flex flex-col gap-5">
@@ -127,7 +128,7 @@ export default async function PaginaKardex({ searchParams }: Props) {
           key={JSON.stringify(filtros)}
           fallback={<Skeleton className="h-96 w-full" />}
         >
-          <TablaKardex filtros={filtros} query={query} />
+          <TablaKardex filtros={filtros} />
         </Suspense>
       </section>
     </div>

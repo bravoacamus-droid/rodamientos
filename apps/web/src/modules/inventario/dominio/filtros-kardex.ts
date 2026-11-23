@@ -44,7 +44,7 @@ function leer(p: Params, k: string): string | undefined {
  * existe o una fecha mal escrita se IGNORAN, en vez de viajar a Postgres para
  * que los rechace con un error que no se le puede enseñar a nadie.
  */
-export function leerFiltrosKardex(p: Params): Omit<FiltrosKardex, "cursor" | "direccion" | "limite"> {
+export function leerFiltrosKardex(p: Params): Omit<FiltrosKardex, "pagina" | "limite"> {
   const id = (k: string) => {
     const v = leer(p, k);
     return v && UUID.test(v) ? v : undefined;

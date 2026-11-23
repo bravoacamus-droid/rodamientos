@@ -34,6 +34,7 @@ export function useBarraFiltros() {
       // Con otro criterio, la página en la que se estaba deja de valer.
       siguientes.delete("cursor");
       siguientes.delete("dir");
+      siguientes.delete("p");
       const query = siguientes.toString();
       vigentes.current = siguientes;
       iniciar(() => router.replace(query ? `${ruta}?${query}` : ruta, { scroll: false }));

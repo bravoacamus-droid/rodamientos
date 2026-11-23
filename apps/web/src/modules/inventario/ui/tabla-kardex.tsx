@@ -8,20 +8,12 @@ import {
 } from "lucide-react";
 import { EstadoError, EstadoVacio, Moneda, cn } from "@rodatech/ui";
 
-import { VerMas } from "@/componentes/ver-mas";
+import { PaginacionNumerada } from "@/componentes/paginacion-numerada";
 
 import { kardex } from "../api/consultas";
 import { enlaceDeReferencia } from "../dominio/enlaces";
 import { hayFiltros } from "../dominio/filtros-kardex";
 import { ETIQUETA_MOVIMIENTO, type FilaKardex, type FiltrosKardex, type TipoMovimiento } from "../dominio/tipos";
-
-/**
- * De a cuántos movimientos crece la lista. 20 y no los 30 de las demás
- * (Luis, 19/11: «cambia 30 a 20 nomás, sigue viéndose mucho»): cada
- * movimiento ocupa dos renglones —código y descripción, fecha y hora— y con
- * 30 la lista seguía midiendo tres pantallas.
- */
-export const TANDA_KARDEX = 20;
 
 /**
  * Cada tipo de movimiento con su color, su icono y su filo (19/11).
@@ -171,9 +163,9 @@ function horaLima(iso: string): string {
  * reconstruir el stock si las copias denormalizadas se corrompen — que es como
  * se reparó el costo del 6205.
  *
- * Empieza en 20 filas y crece con «Ver más» (19/11, ver `lib/ver-mas.ts`).
+ * Por páginas numeradas, de 15 por defecto (23/11, ver `lib/paginacion.ts`).
  */
-export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; query: string }) {
+export async function TablaKardex({ filtros }: { filtros: FiltrosKardex }) {
   const resultado = await kardex(filtros);
 
   if (!resultado.ok) {
@@ -186,7 +178,30 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
     );
   }
 
-  const { filas, siguiente } = resultado.datos;
+  const { filas, total, pagina } = resultado.datos;
+  const porPagina = filtros.limite ?? filas.length;
+  const paginacion = (
+    <PaginacionNumerada
+      pagina={pagina}
+      porPagina={porPagina}
+      total={total}
+      nombre={{ uno: "movimiento", varios: "movimientos" }}
+    />
+  );
+
+  // Una página que ya no existe (se quitó un filtro con ?p=40 en la URL):
+  // se dice, y debajo están las páginas que sí hay.
+  if (filas.length === 0 && total > 0) {
+    return (
+      <div>
+        <EstadoVacio
+          titulo="Esa página ya no existe"
+          descripcion={`Con estos filtros hay ${total.toLocaleString("es-PE")} movimientos. Elige una página de abajo.`}
+        />
+        {paginacion}
+      </div>
+    );
+  }
 
   if (filas.length === 0) {
     const filtrando = hayFiltros(filtros);
@@ -382,13 +397,7 @@ export async function TablaKardex({ filtros, query }: { filtros: FiltrosKardex; 
         </div>
       </div>
 
-      <VerMas
-        query={query}
-        cuantos={filtros.limite ?? filas.length}
-        enPantalla={filas.length}
-        hayMas={siguiente !== null}
-        tanda={TANDA_KARDEX}
-      />
+      {paginacion}
     </div>
   );
 }
