@@ -12,7 +12,8 @@ function pedido(): EstadoConstructor {
     tipo: "agregar",
     producto: { id: "p2", codigo: "B-118", descripcion: "Faja", marca: null, precio_venta: 13 },
   });
-  return { ...e, lineas: e.lineas.map((l, i) => ({ ...l, confirmada: i === 0 ? 1 : 0 })) };
+  // La nueva va arriba (24/11): se devuelven en el orden del papel, XPA2000 primero.
+  return { ...e, lineas: [...e.lineas].reverse().map((l, i) => ({ ...l, confirmada: i === 0 ? 1 : 0 })) };
 }
 
 describe("editar un pedido aprobado (114)", () => {

@@ -111,10 +111,10 @@ export async function listarComprobantes(
          cotizaciones(numero),
          perfiles!comprobantes_vendedor_id_fkey(nombre)`,
       )
-      // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
+      // Lo último arriba: fecha y, dentro del día, el correlativo (24/11, ver lib/orden-reciente).
       .order("fecha_emision", { ascending: atras })
-      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     const desdeCursor = filtroCursor(filtros.cursor, atras, "fecha_emision");

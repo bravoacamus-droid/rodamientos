@@ -81,8 +81,8 @@ export async function listarCotizaciones(
       )
       // Lo último arriba: fecha, hora de creación y número (12/10, ver lib/orden-reciente).
       .order("fecha", { ascending: atras })
-      .order("creado_en", { ascending: atras })
       .order("numero", { ascending: atras })
+      .order("creado_en", { ascending: atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
     /*
