@@ -1265,8 +1265,24 @@ export function FilaLinea({
           A cambio, la columna baja de 414 px fijos a los 52 de un botón, que
           es de donde sale el sitio para que se lea la cantidad.
         */}
+        {/*
+          El tacho, fuera del menú y a la derecha de los tres puntos (Luis,
+          24/11: *«para que no vaya hasta los tres puntos para quitar»*).
+          Sigue también dentro del menú: quien ya lo busca ahí lo encuentra.
+        */}
         <td>
-          {menuOpciones(false)}
+          <div className="flex items-center justify-end gap-2">
+            {menuOpciones(false)}
+            <button
+              type="button"
+              onClick={() => despachar({ tipo: "quitar", key: linea.key })}
+              title={`Quitar ${linea.codigo} de la cotización`}
+              aria-label={`Quitar ${linea.codigo} de la cotización`}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--border)] px-2 text-[var(--danger)] transition-colors hover:bg-[var(--danger-bg)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+            >
+              <Trash2 className="size-[18px]" aria-hidden="true" />
+            </button>
+          </div>
         </td>
       </tr>
 
