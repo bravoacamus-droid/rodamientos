@@ -521,16 +521,11 @@ function reducirCrudo(estado: EstadoConstructor, accion: Accion): EstadoConstruc
         }));
       }
 
-      // La nueva va ARRIBA, como ítem 1 (24/11). Luis: *«cada vez que añade
-      // un producto tiene que aparecer arriba, no abajo… el que añade nuevo
-      // se queda primero»*. Con veinte líneas, la que se acaba de buscar
-      // quedaba al fondo, fuera de la pantalla, justo cuando hay que ponerle
-      // cantidad y precio. Las alternativas siguen debajo de su principal.
       return {
         ...estado,
         lineas: [
-          desdeProducto(accion.producto, `l${estado.proximaKey}`, cantidad),
           ...estado.lineas,
+          desdeProducto(accion.producto, `l${estado.proximaKey}`, cantidad),
         ],
         proximaKey: estado.proximaKey + 1,
       };

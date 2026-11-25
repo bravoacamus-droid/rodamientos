@@ -101,8 +101,7 @@ describe("agregar", () => {
       { tipo: "agregar", producto: P6209 },
       { tipo: "agregar", producto: P7210 },
     );
-    // La última que se añade queda arriba, como ítem 1 (Luis, 24/11).
-    expect(a.lineas.map((l) => l.key)).toEqual(["l2", "l1"]);
+    expect(a.lineas.map((l) => l.key)).toEqual(["l1", "l2"]);
     expect(a).toEqual(b);
   });
 
@@ -252,13 +251,13 @@ describe("orden y borrado", () => {
   );
 
   it("mover intercambia posiciones", () => {
-    const e = reducir(dos, { tipo: "mover", key: "l1", direccion: -1 });
-    expect(e.lineas.map((l) => l.key)).toEqual(["l1", "l2"]);
+    const e = reducir(dos, { tipo: "mover", key: "l2", direccion: -1 });
+    expect(e.lineas.map((l) => l.key)).toEqual(["l2", "l1"]);
   });
 
   it("mover fuera de rango no hace nada", () => {
-    expect(reducir(dos, { tipo: "mover", key: "l2", direccion: -1 })).toBe(dos);
-    expect(reducir(dos, { tipo: "mover", key: "l1", direccion: 1 })).toBe(dos);
+    expect(reducir(dos, { tipo: "mover", key: "l1", direccion: -1 })).toBe(dos);
+    expect(reducir(dos, { tipo: "mover", key: "l2", direccion: 1 })).toBe(dos);
   });
 
   it("quitar elimina solo esa línea", () => {
@@ -273,7 +272,7 @@ describe("orden y borrado", () => {
       { tipo: "quitar", key: "l1" },
       { tipo: "agregar", producto: FAG6209 },
     );
-    expect(e.lineas.map((l) => l.key)).toEqual(["l3", "l2"]);
+    expect(e.lineas.map((l) => l.key)).toEqual(["l2", "l3"]);
   });
 });
 
@@ -526,7 +525,7 @@ describe("la marca de la línea · el caso del retén (Willy, 16/09)", () => {
       valor: "LYO",
     });
     expect(e.lineas[0]!.marca).toBe("LYO");
-    expect(e.lineas[1]!.marca).toBe(RETEN.marca);
+    expect(e.lineas[1]!.marca).toBe(P6209.marca);
   });
 
   it("la marca editada es la que viaja al guardar", () => {
@@ -691,8 +690,6 @@ describe("alternativas como sub-ítem (169)", () => {
       { tipo: "agregarAlternativa", key: "l1", producto: P3 },
       { tipo: "agregar", producto: P7210 },
       { tipo: "agregarAlternativa", key: "l4", producto: FAG6209 },
-      // El 7210 nace arriba (24/11); se baja para leer 6209 primero.
-      { tipo: "mover", key: "l4", direccion: 1 },
     );
 
   it("numera 1, 1.1, 1.2, 2, 2.1, como lo pidió Luis", () => {

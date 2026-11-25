@@ -725,6 +725,26 @@ export function Constructor({
                 </Table>
               </TableContenedor>
               </div>
+
+              {/*
+                Y otra vez el buscador, DEBAJO del último ítem (Luis, 25/11):
+                *«a veces hace cotizaciones de 20, 30 ítems y es molestoso
+                bajar hasta el último ítem y después subir y añadir otro»*.
+                Es el mismo buscador de arriba —busca, ofrece crear el código
+                que no existe— y la línea nueva cae justo encima de él, al
+                final, donde se está mirando.
+              */}
+              <div className="mt-4 flex flex-col gap-2 rounded-md border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-3 sm:p-4">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--fg)]">
+                  <Plus className="size-4" aria-hidden="true" />
+                  Añadir otro producto
+                  <span className="font-normal text-[var(--fg-muted)]">· va como ítem {estado.lineas.length + 1}</span>
+                </span>
+                <BuscadorLineas
+                  onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
+                  onCrear={(codigo) => setCreando(codigo)}
+                />
+              </div>
               </>
             )}
             </div>
