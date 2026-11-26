@@ -19,4 +19,29 @@ describe("listado en PDF (19/11)", () => {
     expect(String.fromCharCode(...bytes.slice(0, 4))).toBe("%PDF");
     expect(doc.getNumberOfPages()).toBeGreaterThan(1);
   });
+
+  it("lleva más tablas debajo, con su título, y una vacía no rompe (26/11)", async () => {
+    const una = await armarListadoPdf({
+      titulo: "Ventas",
+      columnas: [{ titulo: "Número" }, { titulo: "Importe", derecha: true }],
+      filas: [["F002-1", "$ 1.00"]],
+    });
+    const conSecciones = await armarListadoPdf({
+      titulo: "Ventas",
+      columnas: [{ titulo: "Número" }, { titulo: "Importe", derecha: true }],
+      filas: [["F002-1", "$ 1.00"]],
+      secciones: [
+        {
+          titulo: "Por cliente",
+          columnas: [{ titulo: "Cliente" }, { titulo: "Importe", derecha: true }],
+          filas: Array.from({ length: 80 }, (_, i) => [`Cliente ${i}`, "$ 1.00"]),
+        },
+        { titulo: "Por producto", columnas: [{ titulo: "Código" }, { titulo: "Importe" }], filas: [] },
+      ],
+      nota: "Fin",
+    });
+    const texto = new TextDecoder("latin1").decode(new Uint8Array(conSecciones.output("arraybuffer")));
+    expect(texto.startsWith("%PDF")).toBe(true);
+    expect(conSecciones.getNumberOfPages()).toBeGreaterThan(una.getNumberOfPages());
+  });
 });

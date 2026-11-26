@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FileDown, FileSpreadsheet, Plus } from "lucide-react";
 import { Skeleton, buttonVariants, cn, leerTamano } from "@rodatech/ui";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 
-import type { CondicionPago, FiltrosClientes } from "../dominio/tipos";
+import type { FiltrosClientes } from "../dominio/tipos";
+import { filtrosClientesAQuery, leerFiltrosClientes, lectorDe } from "../dominio/filtros";
 import { rubrosDeCliente, zonasDeVisita } from "../api/consultas";
 import { FiltrosClientesBarra } from "./filtros";
 import { ResumenCartera } from "./resumen-cartera";
@@ -33,19 +34,11 @@ function uno(v: string | string[] | undefined): string | undefined {
 export default async function PaginaClientes({ searchParams }: Props) {
   const sp = await searchParams;
 
-  const condicion = uno(sp.condicion);
+  // Los filtros se validan en `leerFiltrosClientes`, el mismo que leen el
+  // Excel y el PDF: un `?condicion=cualquiercosa` no llega al `where`.
+  const soloFiltros = leerFiltrosClientes(lectorDe(sp));
   const filtros: FiltrosClientes = {
-    q: uno(sp.q),
-    // Se valida aquí y no en la consulta: un `?condicion=cualquiercosa` escrito
-    // a mano en la barra del navegador no debe llegar al `where`.
-    condicion:
-      condicion === "contado" || condicion === "credito"
-        ? (condicion as CondicionPago)
-        : undefined,
-    zona: /^[0-9a-f-]{36}$/i.test(uno(sp.zona) ?? "") ? uno(sp.zona) : undefined,
-    rubro: /^[0-9a-f-]{36}$/i.test(uno(sp.rubro) ?? "") ? uno(sp.rubro) : undefined,
-    bloqueados: uno(sp.bloqueados) === "1",
-    inactivos: uno(sp.inactivos) === "1",
+    ...soloFiltros,
     cursor: uno(sp.cursor),
     direccion: uno(sp.dir) === "ant" ? "ant" : "sig",
     limite: leerTamano(uno(sp.n)),
@@ -55,6 +48,12 @@ export default async function PaginaClientes({ searchParams }: Props) {
   // Sin permiso el botón sale con candado y dice por qué (QA, 20/10): que
   // aparezca y rebote al guardar es lo peor; que no aparezca, tampoco explica.
   const puedeCrear = permisos.tiene("clientes", "crear");
+  const query = filtrosClientesAQuery(soloFiltros);
+  const sufijo = query ? `?${query}` : "";
+  const botonSecundario = cn(
+    buttonVariants({ variant: "outline" }),
+    "h-11 w-full sm:w-auto md:h-control-md hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)]",
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -67,6 +66,17 @@ export default async function PaginaClientes({ searchParams }: Props) {
             </p>
           </div>
 
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          {/* Bajar lo filtrado (Luis, 26/11): todos los clientes que
+              coinciden, no solo la página, y siempre con los filtros puestos. */}
+          <a href={`/clientes/excel${sufijo}`} className={botonSecundario}>
+            <FileSpreadsheet aria-hidden="true" />
+            Descargar en Excel
+          </a>
+          <a href={`/clientes/pdf${sufijo}`} target="_blank" rel="noopener" className={botonSecundario}>
+            <FileDown aria-hidden="true" />
+            Descargar PDF
+          </a>
           {puedeCrear ? (
             <Link
               href="/clientes/nuevo"
@@ -85,6 +95,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
               Nuevo cliente
             </BotonBloqueado>
           )}
+          </div>
         </div>
 
         {/* Por zona y por rubro (141), encima de la lista: es la pregunta con

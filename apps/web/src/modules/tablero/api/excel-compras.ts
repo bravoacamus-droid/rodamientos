@@ -2,6 +2,8 @@ import "server-only";
 
 import { clienteServidor } from "@rodatech/db/servidor";
 
+import { armarListadoPdf } from "@/lib/pdf-listado";
+
 import { datosCompras } from "./ejecutivo";
 
 /**
@@ -192,4 +194,142 @@ export async function libroCompras(opciones: {
 
   const datos = await wb.xlsx.writeBuffer();
   return Buffer.from(datos as ArrayBuffer);
+}
+
+/**
+ * Lo mismo en PDF (26/11), con los mismos filtros (periodo y proveedor). En
+ * papel va un renglón por compra y, debajo, por proveedor, por producto y el
+ * mejor precio. El detalle línea por línea se queda en el Excel.
+ */
+export async function pdfCompras(opciones: {
+  desde: string;
+  hasta: string;
+  proveedor: string | null;
+  nombreProveedor: string | null;
+  descripcionRango: string;
+}): Promise<ArrayBuffer> {
+  const { desde, hasta, proveedor } = opciones;
+  const supabase = await clienteServidor();
+  let consulta = supabase
+    .from("compras")
+    .select(
+      `numero, fecha, estado, moneda, tipo_cambio, documento_proveedor, falta_factura,
+       proveedores(razon_social),
+       compra_items(importe)`,
+    )
+    .neq("estado", "anulada")
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    .order("fecha")
+    .order("numero")
+    .limit(5000);
+  if (proveedor) consulta = consulta.eq("proveedor_id", proveedor);
+  const [{ data, error }, resumen] = await Promise.all([consulta, datosCompras({ desde, hasta, grano: "mes" }, proveedor)]);
+  if (error) throw new Error(error.message);
+
+  const usd = (n: number) => `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fecha = (iso: string) => {
+    const [a, m, d] = iso.slice(0, 10).split("-");
+    return `${d}/${m}/${a}`;
+  };
+  const filas = ((data ?? []) as unknown as {
+    numero: string;
+    fecha: string;
+    estado: string;
+    moneda: string;
+    tipo_cambio: number | null;
+    documento_proveedor: string | null;
+    falta_factura: boolean;
+    proveedores: { razon_social: string } | null;
+    compra_items: { importe: number }[];
+  }[]).map((c) => {
+    const aUsd = c.moneda === "USD" || !(Number(c.tipo_cambio) > 0) ? 1 : 1 / Number(c.tipo_cambio);
+    const importe = Math.round((c.compra_items ?? []).reduce((a, i) => a + Number(i.importe), 0) * aUsd * 100) / 100;
+    const estado = c.falta_factura
+      ? "Falta registrar"
+      : c.estado === "registrada"
+        ? "Por recibir"
+        : c.estado === "recibida_parcial"
+          ? "Recibida en parte"
+          : "Recibida";
+    return { ...c, importe, estadoTexto: estado };
+  });
+  const total = filas.reduce((a, f) => a + f.importe, 0);
+  const d = resumen.ok ? resumen.datos : null;
+  const TOPE = 100;
+
+  const doc = await armarListadoPdf({
+    titulo: "Lo comprado",
+    empresa: "Inversiones Rodatech E.I.R.L.",
+    subtitulo: [opciones.descripcionRango, opciones.nombreProveedor ?? "todos los proveedores", "en dólares, sin IGV"].join(" · "),
+    resumen: [
+      { etiqueta: "Compras", valor: filas.length.toLocaleString("es-PE") },
+      { etiqueta: "Proveedores", valor: String(d?.proveedores.length ?? new Set(filas.map((f) => f.proveedores?.razon_social)).size) },
+      { etiqueta: "Comprado", valor: usd(total) },
+    ],
+    columnas: [
+      { titulo: "Fecha", ancho: 20 },
+      { titulo: "Compra", ancho: 28 },
+      { titulo: "Proveedor" },
+      { titulo: "Factura del proveedor", ancho: 40 },
+      { titulo: "Estado", ancho: 30 },
+      { titulo: "Importe", ancho: 30, derecha: true },
+    ],
+    filas: filas.map((f) => [fecha(f.fecha), f.numero, f.proveedores?.razon_social ?? "", f.documento_proveedor ?? "", f.estadoTexto, usd(f.importe)]),
+    pie: filas.length > 0 ? ["", "", "Total", "", "", usd(total)] : undefined,
+    secciones: d
+      ? [
+          {
+            titulo: "Por proveedor",
+            columnas: [
+              { titulo: "Proveedor" },
+              { titulo: "Compras", ancho: 20, derecha: true },
+              { titulo: "Comprado", ancho: 32, derecha: true },
+              { titulo: "Parte del total", ancho: 26, derecha: true },
+              { titulo: "Última compra", ancho: 26 },
+            ],
+            filas: d.proveedores.map((x) => [
+              x.proveedor,
+              String(x.compras),
+              usd(x.monto),
+              d.resumen.comprado > 0 ? `${((x.monto / d.resumen.comprado) * 100).toFixed(1)} %` : "",
+              fecha(x.ultima),
+            ]),
+          },
+          {
+            titulo: d.productos.length > TOPE ? `Por producto (los ${TOPE} de más importe; el resto en el Excel)` : "Por producto",
+            columnas: [
+              { titulo: "Código", ancho: 34 },
+              { titulo: "Descripción" },
+              { titulo: "Marca", ancho: 24 },
+              { titulo: "Unidades", ancho: 20, derecha: true },
+              { titulo: "Comprado", ancho: 30, derecha: true },
+              { titulo: "Costo promedio", ancho: 28, derecha: true },
+            ],
+            filas: d.productos.slice(0, TOPE).map((x) => [
+              x.codigo,
+              x.descripcion,
+              x.marca ?? "",
+              x.unidades.toLocaleString("es-PE", { maximumFractionDigits: 2 }),
+              usd(x.monto),
+              usd(x.costoPromedio),
+            ]),
+          },
+          {
+            titulo: "Mejor precio",
+            columnas: [
+              { titulo: "Código", ancho: 32 },
+              { titulo: "Descripción" },
+              { titulo: "El más barato", ancho: 46 },
+              { titulo: "Costo", ancho: 22, derecha: true },
+              { titulo: "El más caro", ancho: 46 },
+              { titulo: "Costo", ancho: 22, derecha: true },
+            ],
+            filas: d.mejorPrecio.slice(0, TOPE).map((x) => [x.codigo, x.descripcion, x.proveedorMejor, usd(x.mejor), x.proveedorPeor, usd(x.peor)]),
+          },
+        ]
+      : undefined,
+    nota: filas.length === 0 ? "Ninguna compra con estos filtros." : undefined,
+  });
+  return doc.output("arraybuffer");
 }

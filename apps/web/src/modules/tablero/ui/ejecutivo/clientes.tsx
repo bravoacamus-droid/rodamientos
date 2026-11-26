@@ -20,6 +20,7 @@ import { FiltroComparar } from "./filtros";
 import { GraficoBarras } from "./grafico-lazy";
 import {
   Bloque,
+  BotonExcel,
   EsqueletoReporte,
   Ranking,
   claveFiltros,
@@ -458,6 +459,13 @@ async function CifrasClientes({ sp }: { sp: ParamsBusqueda }) {
           </>
         )}
       </Bloque>
+
+      {/* Bajar la tabla ENTERA con estos filtros (Luis, 26/11), no solo los doce que se ven. */}
+      <BotonExcel
+        tipo="clientes"
+        sp={sp}
+        explicacion={`Todos los clientes de este periodo${grupo ? ` del grupo «${ETIQUETA_SEGMENTO[grupo]}»` : ""}, con lo facturado, lo vendido, el margen${f.hayComparacion ? ", la comparación" : ""} y su última compra.`}
+      />
     </div>
   );
 }

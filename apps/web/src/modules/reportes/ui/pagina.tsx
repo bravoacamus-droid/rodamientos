@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { CifraAnimada, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
+import { FileDown, FileSpreadsheet } from "lucide-react";
+import { Button, CifraAnimada, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
 
 import {
   agingCartera,
@@ -91,6 +92,14 @@ export default async function PaginaReportes({ searchParams }: Props) {
   // datos viejos hasta que algo más la obliga a repintar.
   const clave = `${rango.desde}|${rango.hasta}|${rango.grano}`;
 
+  // El mismo periodo que se ve, para bajarlo en Excel o PDF (Luis, 26/11).
+  const qDescarga = new URLSearchParams();
+  for (const k of ["atajo", "desde", "hasta", "grano"] as const) {
+    const v = uno(sp[k]);
+    if (v) qDescarga.set(k, v);
+  }
+  const sufijoDescarga = qDescarga.toString() ? `?${qDescarga.toString()}` : "";
+
   return (
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/reportes">
@@ -109,6 +118,29 @@ export default async function PaginaReportes({ searchParams }: Props) {
         grano={rango.grano}
         atajo={rango.atajo}
       />
+
+      {/* Bajar el informe con el periodo elegido (Luis, 26/11: «dependiendo
+          los filtros… siempre dinámico»). */}
+      <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base text-[var(--fg-muted)]">
+          El informe de este periodo: ventas y compras por periodo, lo más vendido, quién más compra, lo
+          que falta cobrar y el capital en el almacén.
+        </p>
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <Button asChild size="lg" className="text-base [&_svg]:size-5">
+            <a href={`/reportes/general/excel${sufijoDescarga}`} download>
+              <FileSpreadsheet aria-hidden="true" />
+              Descargar en Excel
+            </a>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="text-base [&_svg]:size-5">
+            <a href={`/reportes/general/pdf${sufijoDescarga}`} target="_blank" rel="noopener">
+              <FileDown aria-hidden="true" />
+              Descargar PDF
+            </a>
+          </Button>
+        </div>
+      </div>
 
       {/* «¿Cómo voy este mes?» (20/10): lo primero, porque es la pregunta con
           que se abre esta pantalla. Compara con el rango elegido arriba; sin

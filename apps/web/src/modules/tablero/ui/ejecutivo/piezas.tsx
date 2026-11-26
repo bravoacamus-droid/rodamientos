@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FileSpreadsheet } from "lucide-react";
+import { ArrowRight, FileDown, FileSpreadsheet } from "lucide-react";
 import { Button, Skeleton, SkeletonTarjetas, formatearMoneda } from "@rodatech/ui";
 
 import {
@@ -328,16 +328,30 @@ export function BotonExcel({
   sp,
   explicacion,
 }: {
-  tipo: "ventas" | "cotizaciones" | "compras";
+  tipo: "ventas" | "cotizaciones" | "compras" | "clientes" | "general";
   sp: ParamsBusqueda;
   explicacion: string;
 }) {
-  // Compras va a su propia ruta (133); las otras dos, a la de siempre.
-  const q = new URLSearchParams(tipo === "compras" ? {} : { tipo });
-  for (const k of ["atajo", "desde", "hasta", "cliente", "proveedor"]) {
+  /*
+    Cada reporte tiene su ruta; ventas y cotizaciones comparten la de siempre.
+    Y el PDF al lado, con los MISMOS filtros (Luis, 26/11: *«dependiendo los
+    filtros… tiene que ser siempre dinámico»*).
+  */
+  const base =
+    tipo === "compras"
+      ? "/reportes/compras"
+      : tipo === "clientes"
+        ? "/reportes/clientes"
+        : tipo === "general"
+          ? "/reportes/general"
+          : "/reportes";
+  const q = new URLSearchParams(tipo === "ventas" || tipo === "cotizaciones" ? { tipo } : {});
+  for (const k of ["atajo", "desde", "hasta", "grano", "comparar", "cliente", "proveedor", "grupo"]) {
     const v = uno(sp[k]);
     if (v) q.set(k, v);
   }
+  const query = q.toString();
+  const sufijo = query ? `?${query}` : "";
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-base text-[var(--fg-muted)]">{explicacion}</p>
@@ -347,15 +361,20 @@ export function BotonExcel({
         que la misma acción —bajar un Excel— tuviera dos aspectos. El icono de
         hoja de cálculo es lo que dice que sale un Excel.
       */}
-      <Button asChild size="lg" className="shrink-0 text-base [&_svg]:size-5">
-        <a
-          href={`${tipo === "compras" ? "/reportes/compras/excel" : "/reportes/excel"}?${q.toString()}`}
-          download
-        >
-          <FileSpreadsheet aria-hidden="true" />
-          Descargar en Excel
-        </a>
-      </Button>
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+        <Button asChild size="lg" className="text-base [&_svg]:size-5">
+          <a href={`${base}/excel${sufijo}`} download>
+            <FileSpreadsheet aria-hidden="true" />
+            Descargar en Excel
+          </a>
+        </Button>
+        <Button asChild size="lg" variant="outline" className="text-base [&_svg]:size-5">
+          <a href={`${base}/pdf${sufijo}`} target="_blank" rel="noopener">
+            <FileDown aria-hidden="true" />
+            Descargar PDF
+          </a>
+        </Button>
+      </div>
     </div>
   );
 }

@@ -144,6 +144,30 @@ function citar(valor: string): string {
 }
 
 /**
+ * Los filtros de la lista, en un solo sitio: los usan la página y la
+ * exportación (26/11), y lo que se baja tiene que ser lo que se ve.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function filtrarClientes<Q extends { eq: any; like: any }>(consulta: Q, filtros: FiltrosClientes): Q {
+  let c = consulta;
+  // El índice keyset es PARCIAL (`where activo`): mientras no se pidan los
+  // desactivados, el filtro tiene que estar para que Postgres pueda usarlo.
+  if (!filtros.inactivos) c = c.eq("activo", true);
+  if (!filtros.bloqueados) c = c.eq("bloqueado", false);
+  if (filtros.condicion) c = c.eq("condicion_pago", filtros.condicion);
+  if (filtros.zona) c = c.eq("zona_id", filtros.zona);
+  if (filtros.rubro) c = c.eq("rubro_id", filtros.rubro);
+  if (filtros.q) {
+    const termino = normalizarTexto(filtros.q.trim());
+    // `like` y no `ilike`: la columna generada ya está en minúsculas y sin
+    // tildes, así que `ilike` solo añadiría trabajo. El GIN trigram sobre
+    // (busqueda, activo) resuelve el '%…%' sin recorrer la tabla.
+    if (termino !== "") c = c.like("busqueda", `%${termino}%`);
+  }
+  return c;
+}
+
+/**
  * Una página del maestro de clientes, por keyset.
  *
  * Ordena por `razon_social` y desempata por `id`, que es exactamente el índice
@@ -178,23 +202,7 @@ export async function listarClientes(
       .order("id", { ascending: !atras })
       .limit((filtros.limite ?? POR_PAGINA) + 1);
 
-    // El índice keyset es PARCIAL (`where activo`): mientras no se pidan los
-    // desactivados, el filtro tiene que estar para que Postgres pueda usarlo.
-    if (!filtros.inactivos) consulta = consulta.eq("activo", true);
-    if (!filtros.bloqueados) consulta = consulta.eq("bloqueado", false);
-    if (filtros.condicion) consulta = consulta.eq("condicion_pago", filtros.condicion);
-    if (filtros.zona) consulta = consulta.eq("zona_id", filtros.zona);
-    if (filtros.rubro) consulta = consulta.eq("rubro_id", filtros.rubro);
-
-    if (filtros.q) {
-      const termino = normalizarTexto(filtros.q.trim());
-      if (termino !== "") {
-        // `like` y no `ilike`: la columna generada ya está en minúsculas y sin
-        // tildes, así que `ilike` solo añadiría trabajo. El GIN trigram sobre
-        // (busqueda, activo) resuelve el '%…%' sin recorrer la tabla.
-        consulta = consulta.like("busqueda", `%${termino}%`);
-      }
-    }
+    consulta = filtrarClientes(consulta, filtros);
 
     if (filtros.cursor) {
       const cursor = decodificarCursor(filtros.cursor);
@@ -254,6 +262,97 @@ export async function listarClientes(
   } catch (e) {
     return fallo(e);
   }
+}
+
+export const TOPE_CLIENTES = 5000;
+
+/** Una fila de la exportación: la de la lista más lo de la ficha que se imprime. */
+export interface ClienteExportar extends ClienteLista {
+  direccion: string | null;
+  ubigeo_nombre: string | null;
+  agente_retencion: boolean;
+  vendedor_nombre: string | null;
+  /** Teléfono y correo del contacto principal, si el cliente no tiene los suyos. */
+  contacto_telefono: string | null;
+  contacto_email: string | null;
+}
+
+/**
+ * Todos los clientes del filtro, por razón social, para el Excel y el PDF
+ * (26/11). Luis: *«no se puede exportar ni por PDF ni por Excel todos los
+ * clientes que tengo»*. De mil en mil, el tope de PostgREST.
+ */
+export async function clientesParaExportar(
+  filtros: FiltrosClientes,
+): Promise<Resultado<{ filas: ClienteExportar[]; truncado: boolean }>> {
+  try {
+    const supabase = await clienteServidor();
+    const filas: ClienteExportar[] = [];
+    for (let desde = 0; desde < TOPE_CLIENTES; desde += 1000) {
+      const { data, error } = await filtrarClientes(
+        supabase
+          .from("clientes")
+          .select(
+            `id, codigo, tipo_documento, numero_documento, razon_social,
+             nombre_comercial, telefono, whatsapp, email, condicion_pago,
+             dias_credito, linea_credito, bloqueado, activo, zona_id, rubro_id,
+             direccion, agente_retencion,
+             zonas(nombre), rubros(nombre),
+             ubigeo:ubigeo!clientes_ubigeo_codigo_fkey(departamento, provincia, distrito),
+             perfiles(nombre),
+             cliente_contactos(nombre, principal, activo, telefono, email)`,
+          ),
+        filtros,
+      )
+        .order("razon_social")
+        .order("id")
+        .range(desde, desde + 999);
+      if (error) return fallo(error);
+      for (const crudo of data ?? []) {
+        const f = crudo as unknown as {
+          ubigeo: { departamento: string; provincia: string; distrito: string } | null;
+          perfiles: { nombre: string } | null;
+          cliente_contactos: { nombre: string; principal: boolean; activo: boolean; telefono: string | null; email: string | null }[] | null;
+          direccion: string | null;
+          agente_retencion: boolean;
+        };
+        const activos = (f.cliente_contactos ?? []).filter((g) => g.activo);
+        const principal = activos.find((g) => g.principal) ?? activos[0] ?? null;
+        const base = conContactos(crudo as { cliente_contactos?: unknown }) as unknown as ClienteLista & {
+          ubigeo?: unknown;
+          perfiles?: unknown;
+        };
+        const { ubigeo: _u, perfiles: _p, ...lista } = base;
+        filas.push({
+          ...(lista as ClienteLista),
+          direccion: f.direccion,
+          agente_retencion: Boolean(f.agente_retencion),
+          ubigeo_nombre: f.ubigeo ? [f.ubigeo.departamento, f.ubigeo.provincia, f.ubigeo.distrito].join(" · ") : null,
+          vendedor_nombre: f.perfiles?.nombre ?? null,
+          contacto_telefono: principal?.telefono ?? null,
+          contacto_email: principal?.email ?? null,
+        });
+      }
+      if ((data ?? []).length < 1000) return { ok: true, datos: { filas, truncado: false } };
+    }
+    return { ok: true, datos: { filas, truncado: true } };
+  } catch (e) {
+    return fallo(e);
+  }
+}
+
+/** Los nombres de la zona y el rubro filtrados, para la cabecera. */
+export async function nombresDeFiltrosClientes(
+  filtros: FiltrosClientes,
+): Promise<{ zona: string | null; rubro: string | null }> {
+  const supabase = await clienteServidor();
+  const nombre = async (tabla: "zonas" | "rubros", id: string | undefined) => {
+    if (!id) return null;
+    const { data } = await supabase.from(tabla).select("nombre").eq("id", id).maybeSingle();
+    return (data as { nombre: string } | null)?.nombre ?? null;
+  };
+  const [zona, rubro] = await Promise.all([nombre("zonas", filtros.zona), nombre("rubros", filtros.rubro)]);
+  return { zona, rubro };
 }
 
 /**

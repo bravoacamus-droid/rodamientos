@@ -42,6 +42,11 @@ export interface ListadoPdf {
   pie?: string[];
   /** Una nota al final: «Se cortó en 10.000 filas…». */
   nota?: string;
+  /**
+   * Más tablas debajo de la primera, cada una con su título (26/11): un
+   * reporte lleva «por cliente» y «por producto» en el mismo papel.
+   */
+  secciones?: { titulo: string; columnas: ColumnaListado[]; filas: string[][]; pie?: string[] }[];
   orientacion?: "landscape" | "portrait";
 }
 
@@ -106,33 +111,51 @@ export async function armarListadoPdf(l: ListadoPdf): Promise<jsPDF> {
     y += alturaFranja + 3;
   }
 
-  const estilosColumna: Record<number, { cellWidth?: number; halign?: "right" | "left" }> = {};
-  l.columnas.forEach((c, i) => {
-    estilosColumna[i] = { ...(c.ancho ? { cellWidth: c.ancho } : {}), ...(c.derecha ? { halign: "right" } : {}) };
-  });
+  const tabla = (columnas: ColumnaListado[], filas: string[][], pie: string[] | undefined, desdeY: number) => {
+    const estilosColumna: Record<number, { cellWidth?: number; halign?: "right" | "left" }> = {};
+    columnas.forEach((c, i) => {
+      estilosColumna[i] = { ...(c.ancho ? { cellWidth: c.ancho } : {}), ...(c.derecha ? { halign: "right" } : {}) };
+    });
+    autoTable(doc, {
+      startY: desdeY,
+      margin: { left: MARGEN, right: MARGEN, bottom: 12 },
+      head: [columnas.map((c) => textoPdf(c.titulo))],
+      body: filas.map((f) => f.map((c) => textoPdf(c))),
+      foot: pie ? [pie.map((c) => textoPdf(c))] : undefined,
+      showFoot: "lastPage",
+      theme: "grid",
+      styles: { font: "helvetica", fontSize: 7.5, cellPadding: 1.4, lineColor: [210, 210, 210], lineWidth: 0.1, textColor: [17, 17, 17] },
+      headStyles: { fillColor: AZUL, textColor: 255, fontStyle: "bold", fontSize: 7.5 },
+      footStyles: { fillColor: AZUL_CLARO, textColor: [17, 17, 17], fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: estilosColumna,
+      didParseCell: (d) => {
+        // El pie también se alinea a la derecha donde las cifras.
+        if (d.section !== "body" && columnas[d.column.index]?.derecha) d.cell.styles.halign = "right";
+      },
+    });
+  };
+  const finDeTabla = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: MARGEN, right: MARGEN, bottom: 12 },
-    head: [l.columnas.map((c) => textoPdf(c.titulo))],
-    body: l.filas.map((f) => f.map((c) => textoPdf(c))),
-    foot: l.pie ? [l.pie.map((c) => textoPdf(c))] : undefined,
-    showFoot: "lastPage",
-    theme: "grid",
-    styles: { font: "helvetica", fontSize: 7.5, cellPadding: 1.4, lineColor: [210, 210, 210], lineWidth: 0.1, textColor: [17, 17, 17] },
-    headStyles: { fillColor: AZUL, textColor: 255, fontStyle: "bold", fontSize: 7.5 },
-    footStyles: { fillColor: AZUL_CLARO, textColor: [17, 17, 17], fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    columnStyles: estilosColumna,
-    didParseCell: (d) => {
-      // El pie también se alinea a la derecha donde las cifras.
-      if (d.section !== "body" && l.columnas[d.column.index]?.derecha) d.cell.styles.halign = "right";
-    },
-  });
+  tabla(l.columnas, l.filas, l.pie, y);
+
+  for (const sec of l.secciones ?? []) {
+    let ys = finDeTabla() + 8;
+    // El título no se queda solo al pie de una hoja.
+    if (ys > alto - 30) {
+      doc.addPage();
+      ys = MARGEN + 5;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...AZUL);
+    doc.text(textoPdf(sec.titulo), MARGEN, ys);
+    doc.setFont("helvetica", "normal");
+    tabla(sec.columnas, sec.filas.length > 0 ? sec.filas : [sec.columnas.map((_, i) => (i === 0 ? "Nada en este periodo." : ""))], sec.pie, ys + 3);
+  }
 
   if (l.nota) {
-    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-    let yn = finalY + 5;
+    let yn = finDeTabla() + 5;
     if (yn > alto - 15) {
       doc.addPage();
       yn = MARGEN + 5;

@@ -5,6 +5,7 @@ import { filasDePedidos } from "@/modules/pedidos/api/consultas";
 import { ETIQUETA_ETAPA } from "@/modules/pedidos/dominio/etapa";
 import { margenPct, sunatDe } from "@/modules/pedidos/dominio/lista";
 import { numerosDeItem } from "@/modules/cotizaciones/dominio/numeracion";
+import { armarListadoPdf } from "@/lib/pdf-listado";
 
 /**
  * El detalle de lo vendido o lo cotizado, como libro de Excel (105).
@@ -504,4 +505,107 @@ export async function libroDetalle(opciones: {
 
   const datos = await wb.xlsx.writeBuffer();
   return { libro: Buffer.from(datos as ArrayBuffer), lineas: lineas.length };
+}
+
+/**
+ * Lo mismo en PDF (26/11). Luis: *«en reporte, dependiendo los filtros,
+ * también… tiene que ser siempre dinámico»*. Línea por línea no se lee en
+ * papel —son miles—, así que el PDF lleva lo que se lee: un renglón por
+ * documento y, debajo, por cliente y por producto. Las mismas líneas, los
+ * mismos filtros que el Excel.
+ */
+export async function pdfDetalle(opciones: {
+  tipo: TipoDetalle;
+  desde: string;
+  hasta: string;
+  cliente: string | null;
+  nombreCliente: string | null;
+  descripcionRango: string;
+  estado?: string | null;
+  serie?: string | null;
+}): Promise<{ pdf: ArrayBuffer; lineas: number }> {
+  const { tipo, desde, hasta, cliente, nombreCliente, descripcionRango, estado, serie } = opciones;
+  const lineas = (await leerLineas(tipo, desde, hasta, cliente)).filter(
+    (l) => (!estado || l.estado === estado) && (!serie || l.numero.startsWith(`${serie}-`)),
+  );
+  const usd = (n: number) => `$ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const cant = (n: number) => n.toLocaleString("es-PE", { maximumFractionDigits: 2 });
+  const fecha = (iso: string) => {
+    const [a, m, d] = iso.slice(0, 10).split("-");
+    return `${d}/${m}/${a}`;
+  };
+  const etiquetaEstado = (e: string) => (tipo === "ventas" ? ESTADO_VENTA[e] : ESTADO_COTIZACION[e]) ?? e;
+
+  const porDoc = new Map<string, { fecha: string; numero: string; cliente: string; estado: string; lineas: number; importe: number }>();
+  const porCliente = new Map<string, { cliente: string; documento: string; importe: number; docs: Set<string> }>();
+  const porProducto = new Map<string, { codigo: string; descripcion: string; marca: string; cantidad: number; importe: number }>();
+  for (const l of lineas) {
+    const d = porDoc.get(l.numero) ?? { fecha: l.fecha, numero: l.numero, cliente: l.cliente, estado: l.estado, lineas: 0, importe: 0 };
+    d.lineas += 1;
+    d.importe += l.importe;
+    porDoc.set(l.numero, d);
+    const c = porCliente.get(l.cliente) ?? { cliente: l.cliente, documento: l.documento ?? "", importe: 0, docs: new Set<string>() };
+    c.importe += l.importe;
+    c.docs.add(l.numero);
+    porCliente.set(l.cliente, c);
+    const pr = porProducto.get(l.codigo) ?? { codigo: l.codigo, descripcion: l.descripcion, marca: l.marca ?? "", cantidad: 0, importe: 0 };
+    pr.cantidad += l.cantidad;
+    pr.importe += l.importe;
+    porProducto.set(l.codigo, pr);
+  }
+  const docs = [...porDoc.values()].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.numero.localeCompare(b.numero));
+  const total = docs.reduce((a, d) => a + d.importe, 0);
+  const TOPE_PRODUCTOS = 100;
+  const productos = [...porProducto.values()].sort((a, b) => b.importe - a.importe);
+
+  const doc = await armarListadoPdf({
+    titulo: tipo === "ventas" ? "Ventas" : "Cotizaciones",
+    empresa: "Inversiones Rodatech E.I.R.L.",
+    subtitulo: [descripcionRango, nombreCliente ?? "todos los clientes", estado ? etiquetaEstado(estado) : null, serie ? `serie ${serie}` : null, "importes sin IGV, en dólares"]
+      .filter(Boolean)
+      .join(" · "),
+    resumen: [
+      { etiqueta: tipo === "ventas" ? "Documentos" : "Cotizaciones", valor: cant(docs.length) },
+      { etiqueta: "Clientes", valor: cant(porCliente.size) },
+      { etiqueta: "Productos distintos", valor: cant(porProducto.size) },
+      { etiqueta: "Importe sin IGV", valor: usd(total) },
+    ],
+    columnas: [
+      { titulo: "Fecha", ancho: 20 },
+      { titulo: "Número", ancho: 30 },
+      { titulo: "Cliente" },
+      { titulo: tipo === "ventas" ? "Cobro" : "Estado", ancho: 30 },
+      { titulo: "Líneas", ancho: 16, derecha: true },
+      { titulo: "Importe", ancho: 32, derecha: true },
+    ],
+    filas: docs.map((d) => [fecha(d.fecha), d.numero, d.cliente, etiquetaEstado(d.estado), String(d.lineas), usd(d.importe)]),
+    pie: docs.length > 0 ? ["", "", "Total", "", cant(lineas.length), usd(total)] : undefined,
+    secciones: [
+      {
+        titulo: "Por cliente",
+        columnas: [
+          { titulo: "Cliente" },
+          { titulo: "RUC / DNI", ancho: 30 },
+          { titulo: tipo === "ventas" ? "Documentos" : "Cotizaciones", ancho: 26, derecha: true },
+          { titulo: "Importe", ancho: 34, derecha: true },
+        ],
+        filas: [...porCliente.values()]
+          .sort((a, b) => b.importe - a.importe)
+          .map((c) => [c.cliente, c.documento, String(c.docs.size), usd(c.importe)]),
+      },
+      {
+        titulo: productos.length > TOPE_PRODUCTOS ? `Por producto (los ${TOPE_PRODUCTOS} de más importe; el resto en el Excel)` : "Por producto",
+        columnas: [
+          { titulo: "Código", ancho: 34 },
+          { titulo: "Descripción" },
+          { titulo: "Marca", ancho: 26 },
+          { titulo: "Cantidad", ancho: 22, derecha: true },
+          { titulo: "Importe", ancho: 32, derecha: true },
+        ],
+        filas: productos.slice(0, TOPE_PRODUCTOS).map((p) => [p.codigo, p.descripcion, p.marca, cant(p.cantidad), usd(p.importe)]),
+      },
+    ],
+    nota: docs.length === 0 ? "Nada con estos filtros." : undefined,
+  });
+  return { pdf: doc.output("arraybuffer"), lineas: lineas.length };
 }
