@@ -47,10 +47,18 @@ export interface ContactoNuevo extends BorradorContacto {
 export function ContactosNuevos({
   lista,
   onCambio,
+  ubicacionCliente,
 }: {
   lista: ContactoNuevo[];
   onCambio: (lista: ContactoNuevo[]) => void;
+  /** El distrito y la zona del cliente: el contacto nuevo nace con ellos (205). */
+  ubicacionCliente?: { zona_id: string; subzona_id: string };
 }) {
+  const vacio = (): BorradorContacto => ({
+    ...CONTACTO_VACIO,
+    zona_id: ubicacionCliente?.zona_id ?? "",
+    subzona_id: ubicacionCliente?.subzona_id ?? "",
+  });
   const [abierto, setAbierto] = React.useState(false);
   const [editando, setEditando] = React.useState<string | null>(null);
   const [borrador, setBorrador] = React.useState<BorradorContacto>(CONTACTO_VACIO);
@@ -66,14 +74,15 @@ export function ContactosNuevos({
 
   const abrirNuevo = () => {
     setEditando(null);
-    setBorrador(CONTACTO_VACIO);
+    setBorrador(vacio());
     setError(null);
     setAbierto(true);
   };
 
   const abrirEdicion = (c: ContactoNuevo) => {
     setEditando(c.clave);
-    setBorrador({ ...c });
+    // Sobre el vacío: un borrador de antes del 26/11 no trae fijo ni distrito.
+    setBorrador({ ...CONTACTO_VACIO, ...c });
     setError(null);
     setAbierto(true);
   };
@@ -107,6 +116,9 @@ export function ContactosNuevos({
       email: borrador.email.trim(),
       telefono: borrador.telefono.trim(),
       whatsapp: borrador.whatsapp.trim(),
+      telefono_fijo: borrador.telefono_fijo.trim(),
+      zona_id: borrador.zona_id,
+      subzona_id: borrador.subzona_id,
     };
 
     if (editando) {
@@ -136,7 +148,7 @@ export function ContactosNuevos({
   const guardarYSeguir = () => {
     if (!meter()) return;
     setEditando(null);
-    setBorrador(CONTACTO_VACIO);
+    setBorrador(vacio());
     // El cursor vuelve al nombre. Sin esto hay que ir a buscarlo con el ratón
     // entre seis campos, que es la mitad de lo que cuesta escribir el contacto.
     refNombre.current?.focus();

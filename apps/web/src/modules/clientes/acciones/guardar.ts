@@ -98,6 +98,11 @@ const esquema = z.object({
     (v) => v === null || z.string().uuid().safeParse(v).success,
     "El rubro elegido no es válido.",
   ),
+  // La zona dentro del distrito (205): «celima», «cajamarquilla».
+  subzona_id: opcional(36, "La zona").refine(
+    (v) => v === null || z.string().uuid().safeParse(v).success,
+    "La zona no es válida. Elígela de la lista.",
+  ),
   email: opcional(160, "El correo").refine(
     (v) => v === null || z.string().email().safeParse(v).success,
     "El correo no tiene un formato válido.",
@@ -150,6 +155,16 @@ const esquema = z.object({
         telefono: opcional(40, "El teléfono"),
         whatsapp: opcional(40, "El WhatsApp"),
         principal: z.coerce.boolean().default(false),
+        // 205: el fijo y dónde trabaja.
+        telefono_fijo: opcional(40, "El fijo"),
+        zona_id: opcional(36, "El distrito").refine(
+          (v) => v === null || z.string().uuid().safeParse(v).success,
+          "El distrito del contacto no es válido.",
+        ),
+        subzona_id: opcional(36, "La zona").refine(
+          (v) => v === null || z.string().uuid().safeParse(v).success,
+          "La zona del contacto no es válida.",
+        ),
       }),
     )
     // Un tope por si acaso: esto llega de un JSON del navegador y no hay
@@ -292,6 +307,7 @@ export async function guardarCliente(
     referencia_direccion: datos.referencia_direccion,
     sector: datos.sector,
     zona_id: datos.zona_id,
+    subzona_id: datos.subzona_id,
     rubro_id: datos.rubro_id,
     email: datos.email,
     telefono: datos.telefono,

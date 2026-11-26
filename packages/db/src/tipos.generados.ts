@@ -582,8 +582,11 @@ export type Database = {
           nombre: string
           notas: string | null
           principal: boolean
+          subzona_id: string | null
           telefono: string | null
+          telefono_fijo: string | null
           whatsapp: string | null
+          zona_id: string | null
         }
         Insert: {
           activo?: boolean
@@ -598,8 +601,11 @@ export type Database = {
           nombre: string
           notas?: string | null
           principal?: boolean
+          subzona_id?: string | null
           telefono?: string | null
+          telefono_fijo?: string | null
           whatsapp?: string | null
+          zona_id?: string | null
         }
         Update: {
           activo?: boolean
@@ -614,8 +620,11 @@ export type Database = {
           nombre?: string
           notas?: string | null
           principal?: boolean
+          subzona_id?: string | null
           telefono?: string | null
+          telefono_fijo?: string | null
           whatsapp?: string | null
+          zona_id?: string | null
         }
         Relationships: [
           {
@@ -638,6 +647,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_trazabilidad_venta"
             referencedColumns: ["cliente_id"]
+          },
+          {
+            foreignKeyName: "cliente_contactos_subzona_id_fkey"
+            columns: ["subzona_id"]
+            isOneToOne: false
+            referencedRelation: "subzonas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_contactos_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -722,6 +745,7 @@ export type Database = {
           referencia_direccion: string | null
           rubro_id: string | null
           sector: string | null
+          subzona_id: string | null
           telefono: string | null
           tipo_documento: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo: string | null
@@ -754,6 +778,7 @@ export type Database = {
           referencia_direccion?: string | null
           rubro_id?: string | null
           sector?: string | null
+          subzona_id?: string | null
           telefono?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo?: string | null
@@ -786,6 +811,7 @@ export type Database = {
           referencia_direccion?: string | null
           rubro_id?: string | null
           sector?: string | null
+          subzona_id?: string | null
           telefono?: string | null
           tipo_documento?: Database["public"]["Enums"]["tipo_documento_identidad"]
           ubigeo_codigo?: string | null
@@ -799,6 +825,13 @@ export type Database = {
             columns: ["rubro_id"]
             isOneToOne: false
             referencedRelation: "rubros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_subzona_id_fkey"
+            columns: ["subzona_id"]
+            isOneToOne: false
+            referencedRelation: "subzonas"
             referencedColumns: ["id"]
           },
           {
@@ -4935,6 +4968,38 @@ export type Database = {
           },
         ]
       }
+      subzonas: {
+        Row: {
+          creado_en: string
+          id: string
+          nombre: string
+          nombre_norm: string | null
+          zona_id: string | null
+        }
+        Insert: {
+          creado_en?: string
+          id?: string
+          nombre: string
+          nombre_norm?: string | null
+          zona_id?: string | null
+        }
+        Update: {
+          creado_en?: string
+          id?: string
+          nombre?: string
+          nombre_norm?: string | null
+          zona_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subzonas_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sunat_bajas: {
         Row: {
           actualizado_en: string
@@ -6413,6 +6478,10 @@ export type Database = {
         Args: { p_familia: string; p_nombre: string }
         Returns: Json
       }
+      crear_subzona: {
+        Args: { p_nombre: string; p_zona?: string }
+        Returns: Json
+      }
       crear_tipo: {
         Args: { p_nombre: string; p_subfamilia: string }
         Returns: Json
@@ -6493,6 +6562,7 @@ export type Database = {
       eliminar_pedido: { Args: { p_id: string }; Returns: Json }
       eliminar_rol: { Args: { p_clave: string }; Returns: undefined }
       eliminar_rubro: { Args: { p_id: string }; Returns: undefined }
+      eliminar_subzona: { Args: { p_id: string }; Returns: undefined }
       eliminar_zona: { Args: { p_id: string }; Returns: undefined }
       emitir_comprobante: { Args: { p_datos: Json }; Returns: Json }
       emitir_guia: { Args: { p_id: string }; Returns: Json }
@@ -6802,6 +6872,10 @@ export type Database = {
         Returns: Json
       }
       renombrar_subfamilia: {
+        Args: { p_id: string; p_nombre: string }
+        Returns: Json
+      }
+      renombrar_subzona: {
         Args: { p_id: string; p_nombre: string }
         Returns: Json
       }

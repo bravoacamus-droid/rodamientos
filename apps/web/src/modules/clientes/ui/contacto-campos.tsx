@@ -9,6 +9,8 @@ import { Star } from "lucide-react";
 
 import { InputSugerencias } from "@/componentes/input-sugerencias";
 
+import { ErrorUbicacion, nombreUbicacion, SelectorDistritoZona, useUbicacion } from "./ubicacion";
+
 // Vivía aquí hasta el 21/10; se reexporta para quien ya lo importaba de aquí.
 export { InputSugerencias };
 
@@ -30,8 +32,13 @@ export interface BorradorContacto {
   cargo: string;
   area: string;
   email: string;
+  /** El celular. Se llamaba «teléfono» y es el que ya estaba lleno. */
   telefono: string;
   whatsapp: string;
+  /** 205: el fijo con su anexo, y el distrito y la zona donde trabaja. */
+  telefono_fijo: string;
+  zona_id: string;
+  subzona_id: string;
 }
 
 export const CONTACTO_VACIO: BorradorContacto = {
@@ -41,7 +48,51 @@ export const CONTACTO_VACIO: BorradorContacto = {
   email: "",
   telefono: "",
   whatsapp: "",
+  telefono_fijo: "",
+  zona_id: "",
+  subzona_id: "",
 };
+
+/** Un contacto guardado, de vuelta a borrador para corregirlo. */
+export function aBorrador(c: {
+  nombre: string;
+  cargo: string | null;
+  area: string | null;
+  email: string | null;
+  telefono: string | null;
+  whatsapp: string | null;
+  telefono_fijo?: string | null;
+  zona_id?: string | null;
+  subzona_id?: string | null;
+}): BorradorContacto {
+  return {
+    nombre: c.nombre,
+    cargo: c.cargo ?? "",
+    area: c.area ?? "",
+    email: c.email ?? "",
+    telefono: c.telefono ?? "",
+    whatsapp: c.whatsapp ?? "",
+    telefono_fijo: c.telefono_fijo ?? "",
+    zona_id: c.zona_id ?? "",
+    subzona_id: c.subzona_id ?? "",
+  };
+}
+
+/** Lo que viaja a `guardarContacto`, recortado. */
+export function cargaContacto(v: BorradorContacto, conUbicacion: boolean) {
+  return {
+    nombre: v.nombre.trim(),
+    cargo: v.cargo.trim(),
+    area: v.area.trim(),
+    email: v.email.trim(),
+    telefono: v.telefono.trim(),
+    whatsapp: v.whatsapp.trim(),
+    telefono_fijo: v.telefono_fijo.trim(),
+    // Sin los selectores en pantalla no se mandan: la acción no toca lo que
+    // no llega, y así no se borra la planta de nadie.
+    ...(conUbicacion ? { zona_id: v.zona_id, subzona_id: v.subzona_id } : {}),
+  };
+}
 
 /**
  * 44 px de alto en móvil, la altura de control del ERP a partir de `md`.
@@ -74,6 +125,7 @@ export function CamposContacto({
 }) {
   const set = (k: keyof BorradorContacto, v: string) => onCambio({ ...valor, [k]: v });
   const id = (k: string) => `${idPrefijo}-${k}`;
+  const ubicacion = useUbicacion();
 
   return (
     <div className="flex flex-col gap-3">
@@ -107,19 +159,35 @@ export function CamposContacto({
         </Campo>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Campo id={id("area")} label="Área">
-          <InputSugerencias
-            id={id("area")}
+      {/* Como en el directorio de Willy (205): celular, fijo y correo,
+          que es por donde se le llama. */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Campo id={id("telefono")} label="Celular">
+          <Input
+            id={id("telefono")}
+            type="tel"
+            inputMode="tel"
             className={ALTO_TACTIL}
-            valor={valor.area}
-            onCambio={(v) => set("area", v)}
-            sugerencias={AREAS}
-            placeholder="Ej.: Compras"
+            value={valor.telefono}
+            onChange={(e) => set("telefono", e.target.value)}
+            placeholder="9XX XXX XXX"
+            autoComplete="off"
           />
         </Campo>
 
-        <Campo id={id("email")} label="Su correo">
+        <Campo id={id("fijo")} label="Fijo y anexo">
+          <Input
+            id={id("fijo")}
+            type="tel"
+            className={ALTO_TACTIL}
+            value={valor.telefono_fijo}
+            onChange={(e) => set("telefono_fijo", e.target.value)}
+            placeholder="Ej.: 4595152 - 207"
+            autoComplete="off"
+          />
+        </Campo>
+
+        <Campo id={id("email")} label="Correo">
           <Input
             id={id("email")}
             type="email"
@@ -131,20 +199,36 @@ export function CamposContacto({
             autoComplete="off"
           />
         </Campo>
+      </div>
 
-        <Campo id={id("telefono")} label="Su teléfono">
-          <Input
-            id={id("telefono")}
-            type="tel"
-            inputMode="tel"
+      {ubicacion ? (
+        <div className="flex flex-col gap-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SelectorDistritoZona
+              idPrefijo={id("ubicacion")}
+              distrito={valor.zona_id}
+              zona={valor.subzona_id}
+              onCambio={(d, z) => onCambio({ ...valor, zona_id: d, subzona_id: z })}
+              ayudaDistrito="Dónde trabaja. Sale el del cliente; cámbialo si está en otra planta."
+            />
+          </div>
+          <ErrorUbicacion />
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Campo id={id("area")} label="Área">
+          <InputSugerencias
+            id={id("area")}
             className={ALTO_TACTIL}
-            value={valor.telefono}
-            onChange={(e) => set("telefono", e.target.value)}
-            autoComplete="off"
+            valor={valor.area}
+            onCambio={(v) => set("area", v)}
+            sugerencias={AREAS}
+            placeholder="Ej.: Compras"
           />
         </Campo>
 
-        <Campo id={id("whatsapp")} label="Su WhatsApp">
+        <Campo id={id("whatsapp")} label="WhatsApp, si es otro número">
           <Input
             id={id("whatsapp")}
             type="tel"
@@ -183,13 +267,16 @@ export function FilaContacto({
   // El WhatsApp también, y dicho: se pedía en el alta y luego no salía en la
   // lista, justo el dato «por donde de verdad se les escribe» (revisión por
   // módulos del 02/10).
+  const ubicacion = nombreUbicacion(useUbicacion(), contacto.zona_id, contacto.subzona_id);
   const detalle = [
     contacto.cargo,
     contacto.area,
+    ubicacion,
+    contacto.telefono ? `Cel. ${contacto.telefono}` : null,
+    contacto.telefono_fijo ? `Fijo ${contacto.telefono_fijo}` : null,
     contacto.email,
-    contacto.telefono,
     contacto.whatsapp && contacto.whatsapp.trim() !== "" ? `WhatsApp ${contacto.whatsapp}` : null,
-  ].filter((x) => x && x.trim() !== "");
+  ].filter((x): x is string => Boolean(x && x.trim() !== ""));
 
   return (
     <li className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:gap-3">

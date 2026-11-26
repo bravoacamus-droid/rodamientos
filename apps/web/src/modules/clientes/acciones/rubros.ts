@@ -87,3 +87,32 @@ export async function eliminarZona(idZona: string): Promise<Resultado<null>> {
   if (!i.success) return invalido(i.error);
   return ejecutar<null>("eliminar_zona", { p_id: i.data }, "eliminar");
 }
+
+/*
+  La ZONA dentro del distrito (205): «celima», «cajamarquilla», «lomas». Se
+  crea con el distrito elegido en ese momento, si lo hay, para proponerla la
+  próxima vez que se elija ese distrito.
+*/
+type OpcionSubzona = { id: string; nombre: string; zona_id: string | null };
+
+export async function crearSubzona(texto: string, idDistrito?: string | null): Promise<Resultado<OpcionSubzona>> {
+  const n = nombre.safeParse(texto);
+  if (!n.success) return invalido(n.error);
+  const d = idDistrito ? id.safeParse(idDistrito) : null;
+  if (d && !d.success) return invalido(d.error);
+  return ejecutar<OpcionSubzona>("crear_subzona", { p_nombre: n.data, p_zona: d?.data ?? null }, "editar");
+}
+
+export async function renombrarSubzona(idSubzona: string, texto: string): Promise<Resultado<OpcionSubzona>> {
+  const i = id.safeParse(idSubzona);
+  const n = nombre.safeParse(texto);
+  if (!i.success) return invalido(i.error);
+  if (!n.success) return invalido(n.error);
+  return ejecutar<OpcionSubzona>("renombrar_subzona", { p_id: i.data, p_nombre: n.data }, "editar");
+}
+
+export async function eliminarSubzona(idSubzona: string): Promise<Resultado<null>> {
+  const i = id.safeParse(idSubzona);
+  if (!i.success) return invalido(i.error);
+  return ejecutar<null>("eliminar_subzona", { p_id: i.data }, "eliminar");
+}

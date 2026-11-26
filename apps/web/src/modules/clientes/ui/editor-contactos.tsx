@@ -12,8 +12,11 @@ import {
   CONTACTO_VACIO,
   CamposContacto,
   FilaContacto,
+  aBorrador,
+  cargaContacto,
   type BorradorContacto,
 } from "./contacto-campos";
+import { useUbicacion } from "./ubicacion";
 import type { ContactoCliente } from "../dominio/tipos";
 
 /**
@@ -39,10 +42,19 @@ import type { ContactoCliente } from "../dominio/tipos";
 export function EditorContactos({
   clienteId,
   iniciales,
+  ubicacionCliente,
 }: {
   clienteId: string;
   iniciales: ContactoCliente[];
+  /** El distrito y la zona del cliente: el contacto nuevo nace con ellos (205). */
+  ubicacionCliente?: { zona_id: string; subzona_id: string };
 }) {
+  const conUbicacion = useUbicacion() !== null;
+  const vacio = (): BorradorContacto => ({
+    ...CONTACTO_VACIO,
+    zona_id: ubicacionCliente?.zona_id ?? "",
+    subzona_id: ubicacionCliente?.subzona_id ?? "",
+  });
   const [lista, setLista] = React.useState(iniciales);
   const [editando, setEditando] = React.useState<string | null>(null);
   const [creando, setCreando] = React.useState(iniciales.length === 0);
@@ -64,7 +76,7 @@ export function EditorContactos({
   const abrirNuevo = () => {
     setCreando(true);
     setEditando(null);
-    setF(CONTACTO_VACIO);
+    setF(vacio());
     setError(null);
     setErrorNombre(null);
   };
@@ -74,14 +86,7 @@ export function EditorContactos({
     setEditando(c.id);
     setError(null);
     setErrorNombre(null);
-    setF({
-      nombre: c.nombre,
-      cargo: c.cargo ?? "",
-      area: c.area ?? "",
-      email: c.email ?? "",
-      telefono: c.telefono ?? "",
-      whatsapp: c.whatsapp ?? "",
-    });
+    setF(aBorrador(c));
   };
 
   /**
@@ -101,12 +106,7 @@ export function EditorContactos({
         JSON.stringify({
           ...(editando ? { id: editando } : {}),
           cliente_id: clienteId,
-          nombre: f.nombre.trim(),
-          cargo: f.cargo.trim(),
-          area: f.area.trim(),
-          email: f.email.trim(),
-          telefono: f.telefono.trim(),
-          whatsapp: f.whatsapp.trim(),
+          ...cargaContacto(f, conUbicacion),
           principal,
         }),
       );
@@ -129,6 +129,9 @@ export function EditorContactos({
         telefono: f.telefono.trim() || null,
         whatsapp: f.whatsapp.trim() || null,
         principal,
+        telefono_fijo: f.telefono_fijo.trim() || null,
+        zona_id: f.zona_id || null,
+        subzona_id: f.subzona_id || null,
       };
 
       setLista((previa) => {
@@ -149,7 +152,7 @@ export function EditorContactos({
       if (seguir) {
         setEditando(null);
         setCreando(true);
-        setF(CONTACTO_VACIO);
+        setF(vacio());
         refNombre.current?.focus();
         return;
       }
@@ -208,14 +211,7 @@ export function EditorContactos({
           {lista.map((c) => (
             <FilaContacto
               key={c.id}
-              contacto={{
-                nombre: c.nombre,
-                cargo: c.cargo ?? "",
-                area: c.area ?? "",
-                email: c.email ?? "",
-                telefono: c.telefono ?? "",
-                whatsapp: c.whatsapp ?? "",
-              }}
+              contacto={aBorrador(c)}
               principal={c.principal}
               /*
                * Botones CON TEXTO, no un lápiz y una papelera sueltos.

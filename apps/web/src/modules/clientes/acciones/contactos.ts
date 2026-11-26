@@ -54,6 +54,31 @@ const esquema = z.object({
   telefono: opcional(40, "El teléfono"),
   whatsapp: opcional(40, "El WhatsApp"),
   principal: z.coerce.boolean().default(false),
+  // El directorio de Willy (205). OPCIONALES de verdad —sin `default`—: el
+  // alta rápida desde la cotización no los pinta, y si llegaran como null al
+  // corregir a alguien desde allí, se le borraría el fijo y la planta.
+  // Ausente = no se toca.
+  telefono_fijo: z
+    .string()
+    .trim()
+    .max(40, "El fijo no puede pasar de 40 caracteres.")
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
+  zona_id: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .refine((v) => v === null || z.string().uuid().safeParse(v).success, "El distrito no es válido. Elígelo de la lista.")
+    .optional(),
+  subzona_id: z
+    .string()
+    .trim()
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .refine((v) => v === null || z.string().uuid().safeParse(v).success, "La zona no es válido. Elígelo de la lista.")
+    .optional(),
 });
 
 async function permiso(): Promise<string | null> {
@@ -130,6 +155,9 @@ export async function guardarContacto(formData: FormData): Promise<ResultadoCont
     telefono: datos.telefono,
     whatsapp: datos.whatsapp,
     principal: datos.principal,
+    ...(datos.telefono_fijo !== undefined ? { telefono_fijo: datos.telefono_fijo } : {}),
+    ...(datos.zona_id !== undefined ? { zona_id: datos.zona_id } : {}),
+    ...(datos.subzona_id !== undefined ? { subzona_id: datos.subzona_id } : {}),
   };
 
   const { data, error } = datos.id

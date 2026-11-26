@@ -20,15 +20,15 @@ export async function ResumenCartera({ hoy }: { hoy: string }) {
   if (r.conDatos === 0) {
     return (
       <p className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-base">
-        <strong>Todavía ningún cliente tiene zona ni rubro.</strong> Pónselos al editar cada cliente y aquí
-        verás cuántos hay y cuánto te compran por zona y por rubro.
+        <strong>Todavía ningún cliente tiene distrito ni rubro.</strong> Pónselos al editar cada cliente y aquí
+        verás cuántos hay y cuánto te compran por distrito y por rubro.
       </p>
     );
   }
 
   return (
     <section className="grid gap-3 lg:grid-cols-2">
-      <Tabla titulo="Por zona" icono={MapPin} grupos={r.zonas} param="zona" />
+      <Tabla titulo="Por distrito" icono={MapPin} grupos={r.zonas} param="zona" />
       <Tabla titulo="Por rubro" icono={Factory} grupos={r.rubros} param="rubro" />
     </section>
   );
@@ -58,7 +58,7 @@ function Tabla({
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-[var(--fg-muted)]">
-            <th className="px-4 py-2 font-medium">{param === "zona" ? "Zona" : "Rubro"}</th>
+            <th className="px-4 py-2 font-medium">{param === "zona" ? "Distrito" : "Rubro"}</th>
             <th className="px-4 py-2 text-right font-medium">Clientes</th>
             <th className="px-4 py-2 text-right font-medium">Compró en 12 meses</th>
           </tr>
@@ -85,7 +85,7 @@ function Tabla({
         </tbody>
       </table>
       <p className="border-t border-[var(--border-soft)] px-4 py-2 text-sm text-[var(--fg-subtle)]">
-        Facturado sin IGV. Pulsa {param === "zona" ? "una zona" : "un rubro"} para ver sus clientes.
+        Facturado sin IGV. Pulsa {param === "zona" ? "un distrito" : "un rubro"} para ver sus clientes.
       </p>
     </div>
   );

@@ -30,6 +30,16 @@ export interface ContactoCliente {
   whatsapp: string | null;
   /** A quién se dirige la cotización si nadie elige. Uno como mucho. */
   principal: boolean;
+  /**
+   * El directorio de Willy (205, 26/11): el fijo con su anexo, y el distrito y
+   * la zona donde trabaja —una empresa puede tener gente en dos plantas—.
+   * Opcionales: el selector de la cotización no los trae.
+   */
+  telefono_fijo?: string | null;
+  /** Distrito (tabla `zonas`, 142). Vacío = el del cliente. */
+  zona_id?: string | null;
+  /** Zona dentro del distrito (`subzonas`, 205). Vacía = la del cliente. */
+  subzona_id?: string | null;
 }
 
 /** Una fila del listado. Solo lo que se pinta en la tabla. */
@@ -57,8 +67,11 @@ export interface ClienteLista {
    * zonas»* y *«el sector productivo al que pertenece»*.
    */
   zona_id: string | null;
-  /** El nombre de la zona, ya resuelto: «Callao», «Ate». */
+  /** El nombre de la zona, ya resuelto: «Callao», «Ate». En pantalla es el DISTRITO (205). */
   zona_nombre: string | null;
+  /** La ZONA dentro del distrito (205): «celima», «cajamarquilla». */
+  subzona_id: string | null;
+  subzona_nombre: string | null;
   rubro_id: string | null;
   rubro_nombre: string | null;
 }
@@ -67,6 +80,16 @@ export interface ClienteLista {
 export interface ZonaCliente {
   id: string;
   nombre: string;
+}
+
+/**
+ * Una ZONA dentro del distrito (205): «celima», «cajamarquilla», «lomas». Con
+ * el distrito al que pertenece si se sabe, para proponerla al elegirlo.
+ */
+export interface SubzonaCliente {
+  id: string;
+  nombre: string;
+  zona_id: string | null;
 }
 
 export interface RubroCliente {
@@ -101,8 +124,10 @@ export interface ClienteDetalle extends ClienteLista {
 export interface FiltrosClientes {
   q?: string;
   condicion?: CondicionPago;
-  /** Id de la zona (142). */
+  /** Id de la zona (142). En pantalla, el DISTRITO. */
   zona?: string;
+  /** Id de la zona dentro del distrito (205). */
+  subzona?: string;
   /** Id del rubro (141). */
   rubro?: string;
   /** "1" incluye los bloqueados; por defecto se ocultan. */
@@ -154,8 +179,10 @@ export interface ClienteEditable {
   ubigeo_distrito?: string | null;
   referencia_direccion: string | null;
   sector: string | null;
-  /** Zona de visita y rubro (141/142). */
+  /** Distrito de visita y rubro (141/142). */
   zona_id: string | null;
+  /** Zona dentro del distrito (205). */
+  subzona_id?: string | null;
   rubro_id: string | null;
   email: string | null;
   telefono: string | null;

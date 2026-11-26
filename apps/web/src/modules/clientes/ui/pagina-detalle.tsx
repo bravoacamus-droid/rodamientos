@@ -120,15 +120,19 @@ export default async function PaginaDetalleCliente({
           como se arma la ruta de visitas. */}
       <div className="grid gap-3 sm:grid-cols-3">
         <Tarjeta
-          etiqueta="Zona"
-          valor={c.zona_nombre ?? "Sin zona"}
+          etiqueta="Distrito y zona"
+          valor={[c.zona_nombre, c.subzona_nombre].filter(Boolean).join(" · ") || "Sin distrito"}
           pie={
-            c.zona_id ? (
-              <Link href={`/clientes?zona=${c.zona_id}`} className="font-medium text-brand-700 underline underline-offset-4">
+            c.subzona_id ? (
+              <Link href={`/clientes?subzona=${c.subzona_id}`} className="font-medium text-brand-700 underline underline-offset-4">
                 Ver los clientes de esta zona
               </Link>
+            ) : c.zona_id ? (
+              <Link href={`/clientes?zona=${c.zona_id}`} className="font-medium text-brand-700 underline underline-offset-4">
+                Ver los clientes de este distrito
+              </Link>
             ) : (
-              "ponla al editar"
+              "ponlos al editar"
             )
           }
         />

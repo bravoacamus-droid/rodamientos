@@ -8,6 +8,7 @@ import type {
   ClienteDetalle,
   ClienteLista,
   RubroCliente,
+  SubzonaCliente,
   ZonaCliente,
   FiltrosClientes,
   Resultado,
@@ -44,8 +45,9 @@ export const POR_PAGINA = 50;
 const COLUMNAS_LISTA_LEFT = `id, codigo, tipo_documento, numero_documento, razon_social,
    nombre_comercial, telefono, whatsapp, email, condicion_pago,
    dias_credito, linea_credito, bloqueado, activo,
-   zona_id, rubro_id,
-   zonas(nombre),
+   zona_id, subzona_id, rubro_id,
+   zonas!clientes_zona_id_fkey(nombre),
+   subzonas!clientes_subzona_id_fkey(nombre),
    rubros(nombre),
    cliente_contactos(nombre, principal, activo)`;
 
@@ -57,10 +59,12 @@ function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
   contacto: string | null;
   contactos: number;
   zona_nombre: string | null;
+  subzona_nombre: string | null;
   rubro_nombre: string | null;
 } {
-  const { cliente_contactos, zonas, rubros, ...resto } = fila as T & {
+  const { cliente_contactos, zonas, subzonas, rubros, ...resto } = fila as T & {
     zonas?: { nombre: string } | null;
+    subzonas?: { nombre: string } | null;
     rubros?: { nombre: string } | null;
   };
   const gente = (cliente_contactos ?? []) as {
@@ -78,6 +82,7 @@ function conContactos<T extends { cliente_contactos?: unknown }>(fila: T): T & {
     contacto: principal?.nombre ?? null,
     contactos: activos.length,
     zona_nombre: zonas?.nombre ?? null,
+    subzona_nombre: subzonas?.nombre ?? null,
     rubro_nombre: rubros?.nombre ?? null,
   };
 }
@@ -156,6 +161,7 @@ function filtrarClientes<Q extends { eq: any; like: any }>(consulta: Q, filtros:
   if (!filtros.bloqueados) c = c.eq("bloqueado", false);
   if (filtros.condicion) c = c.eq("condicion_pago", filtros.condicion);
   if (filtros.zona) c = c.eq("zona_id", filtros.zona);
+  if (filtros.subzona) c = c.eq("subzona_id", filtros.subzona);
   if (filtros.rubro) c = c.eq("rubro_id", filtros.rubro);
   if (filtros.q) {
     const termino = normalizarTexto(filtros.q.trim());
@@ -295,9 +301,9 @@ export async function clientesParaExportar(
           .select(
             `id, codigo, tipo_documento, numero_documento, razon_social,
              nombre_comercial, telefono, whatsapp, email, condicion_pago,
-             dias_credito, linea_credito, bloqueado, activo, zona_id, rubro_id,
+             dias_credito, linea_credito, bloqueado, activo, zona_id, subzona_id, rubro_id,
              direccion, agente_retencion,
-             zonas(nombre), rubros(nombre),
+             zonas!clientes_zona_id_fkey(nombre), subzonas!clientes_subzona_id_fkey(nombre), rubros(nombre),
              ubigeo:ubigeo!clientes_ubigeo_codigo_fkey(departamento, provincia, distrito),
              perfiles(nombre),
              cliente_contactos(nombre, principal, activo, telefono, email)`,
@@ -341,18 +347,111 @@ export async function clientesParaExportar(
   }
 }
 
-/** Los nombres de la zona y el rubro filtrados, para la cabecera. */
+/** Los nombres del distrito, la zona y el rubro filtrados, para la cabecera. */
 export async function nombresDeFiltrosClientes(
   filtros: FiltrosClientes,
-): Promise<{ zona: string | null; rubro: string | null }> {
+): Promise<{ zona: string | null; subzona: string | null; rubro: string | null }> {
   const supabase = await clienteServidor();
-  const nombre = async (tabla: "zonas" | "rubros", id: string | undefined) => {
+  const nombre = async (tabla: "zonas" | "subzonas" | "rubros", id: string | undefined) => {
     if (!id) return null;
     const { data } = await supabase.from(tabla).select("nombre").eq("id", id).maybeSingle();
     return (data as { nombre: string } | null)?.nombre ?? null;
   };
-  const [zona, rubro] = await Promise.all([nombre("zonas", filtros.zona), nombre("rubros", filtros.rubro)]);
-  return { zona, rubro };
+  const [zona, subzona, rubro] = await Promise.all([
+    nombre("zonas", filtros.zona),
+    nombre("subzonas", filtros.subzona),
+    nombre("rubros", filtros.rubro),
+  ]);
+  return { zona, subzona, rubro };
+}
+
+/** Una fila del DIRECTORIO: una persona, con su empresa, dónde trabaja y cómo llamarla. */
+export interface ContactoDirectorio {
+  empresa: string;
+  documento: string | null;
+  distrito: string | null;
+  zona: string | null;
+  rubro: string | null;
+  nombre: string;
+  cargo: string | null;
+  area: string | null;
+  celular: string | null;
+  fijo: string | null;
+  whatsapp: string | null;
+  correo: string | null;
+  principal: boolean;
+}
+
+/**
+ * El directorio de contactos, como el Excel de Willy (26/11): una fila por
+ * persona —EMPRESA · DISTRITO · ZONA · CONTACTO · CARGO · TELÉFONO · FIJO ·
+ * CORREO—, de los clientes del MISMO filtro que la lista.
+ *
+ * El distrito y la zona son los del contacto si los tiene (otra planta de la
+ * misma empresa); si no, los del cliente (205). Filtrar por distrito o zona
+ * filtra por los del CLIENTE: es la lista de la pantalla, desglosada.
+ */
+export async function directorioParaExportar(
+  filtros: FiltrosClientes,
+): Promise<Resultado<ContactoDirectorio[]>> {
+  try {
+    const supabase = await clienteServidor();
+    const filas: ContactoDirectorio[] = [];
+    for (let desde = 0; desde < TOPE_CLIENTES; desde += 1000) {
+      const { data, error } = await filtrarClientes(
+        supabase
+          .from("clientes")
+          .select(
+            `id, razon_social, tipo_documento, numero_documento,
+             zonas!clientes_zona_id_fkey(nombre), subzonas!clientes_subzona_id_fkey(nombre), rubros(nombre),
+             cliente_contactos(nombre, cargo, area, telefono, telefono_fijo, whatsapp, email, principal, activo,
+               zonas!cliente_contactos_zona_id_fkey(nombre), subzonas!cliente_contactos_subzona_id_fkey(nombre))`,
+          ),
+        filtros,
+      )
+        .order("razon_social")
+        .order("id")
+        .range(desde, desde + 999);
+      if (error) return fallo(error);
+      type Persona = {
+        nombre: string; cargo: string | null; area: string | null; telefono: string | null;
+        telefono_fijo: string | null; whatsapp: string | null; email: string | null;
+        principal: boolean; activo: boolean;
+        zonas: { nombre: string } | null; subzonas: { nombre: string } | null;
+      };
+      for (const crudo of data ?? []) {
+        const c = crudo as unknown as {
+          razon_social: string; tipo_documento: string; numero_documento: string | null;
+          zonas: { nombre: string } | null; subzonas: { nombre: string } | null; rubros: { nombre: string } | null;
+          cliente_contactos: Persona[] | null;
+        };
+        const gente = (c.cliente_contactos ?? [])
+          .filter((g) => g.activo)
+          .sort((a, b) => (a.principal === b.principal ? a.nombre.localeCompare(b.nombre, "es") : a.principal ? -1 : 1));
+        for (const g of gente) {
+          filas.push({
+            empresa: c.razon_social,
+            documento: c.numero_documento ? `${c.tipo_documento} ${c.numero_documento}` : null,
+            distrito: g.zonas?.nombre ?? c.zonas?.nombre ?? null,
+            zona: g.subzonas?.nombre ?? c.subzonas?.nombre ?? null,
+            rubro: c.rubros?.nombre ?? null,
+            nombre: g.nombre,
+            cargo: g.cargo,
+            area: g.area,
+            celular: g.telefono,
+            fijo: g.telefono_fijo,
+            whatsapp: g.whatsapp,
+            correo: g.email,
+            principal: g.principal,
+          });
+        }
+      }
+      if ((data ?? []).length < 1000) break;
+    }
+    return { ok: true, datos: filas };
+  } catch (e) {
+    return fallo(e);
+  }
 }
 
 /**
@@ -401,7 +500,7 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
     // piden sus datos —a diferencia del listado, que solo cuenta—.
     const { data: gente } = await supabase
       .from("cliente_contactos")
-      .select("id, nombre, cargo, area, email, telefono, whatsapp, principal")
+      .select("id, nombre, cargo, area, email, telefono, whatsapp, principal, telefono_fijo, zona_id, subzona_id")
       .eq("cliente_id", id)
       .eq("activo", true)
       .order("principal", { ascending: false })
@@ -441,11 +540,16 @@ export async function clientePorId(id: string): Promise<Resultado<ClienteDetalle
  * quien nunca los va a visitar.
  */
 export async function catalogosCliente(): Promise<
-  Resultado<{ vendedores: { id: string; nombre: string }[]; zonas: ZonaCliente[]; rubros: RubroCliente[] }>
+  Resultado<{
+    vendedores: { id: string; nombre: string }[];
+    zonas: ZonaCliente[];
+    subzonas: SubzonaCliente[];
+    rubros: RubroCliente[];
+  }>
 > {
   try {
     const supabase = await clienteServidor();
-    const [{ data, error }, zonas, rubros] = await Promise.all([
+    const [{ data, error }, zonas, subzonas, rubros] = await Promise.all([
       supabase
         .from("perfiles")
         .select("id, nombre")
@@ -453,11 +557,12 @@ export async function catalogosCliente(): Promise<
         .in("rol", ["ventas", "gerencia"])
         .order("nombre"),
       zonasDeVisita(),
+      subzonasDeCliente(),
       rubrosDeCliente(),
     ]);
 
     if (error) return fallo(error);
-    return { ok: true, datos: { vendedores: data ?? [], zonas, rubros } };
+    return { ok: true, datos: { vendedores: data ?? [], zonas, subzonas, rubros } };
   } catch (e) {
     return fallo(e);
   }
@@ -567,6 +672,17 @@ export async function zonasDeVisita(): Promise<ZonaCliente[]> {
   return (data ?? []).map((z) => ({ id: String(z.id), nombre: String(z.nombre) }));
 }
 
+/** Las zonas dentro del distrito (205): «celima», «cajamarquilla». */
+export async function subzonasDeCliente(): Promise<SubzonaCliente[]> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("subzonas").select("id, nombre, zona_id").order("nombre").limit(1000);
+  return (data ?? []).map((z) => ({
+    id: String(z.id),
+    nombre: String(z.nombre),
+    zona_id: z.zona_id ? String(z.zona_id) : null,
+  }));
+}
+
 /** Los rubros activos, por nombre (141). */
 export async function rubrosDeCliente(): Promise<RubroCliente[]> {
   const supabase = await clienteServidor();
@@ -600,7 +716,7 @@ export async function resumenCartera(
   const [cli, docs, prueba] = await Promise.all([
     supabase
       .from("clientes")
-      .select("id, zona_id, rubro_id, zonas(nombre), rubros(nombre)")
+      .select("id, zona_id, rubro_id, zonas!clientes_zona_id_fkey(nombre), rubros(nombre)")
       .eq("activo", true)
       .limit(5000),
     supabase

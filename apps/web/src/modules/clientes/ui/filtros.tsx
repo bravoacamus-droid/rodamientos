@@ -14,7 +14,7 @@ import {
   useBarraFiltros,
 } from "@/componentes/filtros";
 
-import type { RubroCliente, ZonaCliente } from "../dominio/tipos";
+import type { RubroCliente, SubzonaCliente, ZonaCliente } from "../dominio/tipos";
 
 /**
  * Clientes (13/10): una fila de desplegables, como el resto de listas.
@@ -23,12 +23,23 @@ import type { RubroCliente, ZonaCliente } from "../dominio/tipos";
  * desplegable «Mostrar» con las cuatro combinaciones; en la URL siguen siendo
  * las dos claves de siempre, así que los enlaces viejos valen.
  */
-export function FiltrosClientesBarra({ zonas, rubros }: { zonas: ZonaCliente[]; rubros: RubroCliente[] }) {
+export function FiltrosClientesBarra({
+  zonas,
+  subzonas,
+  rubros,
+}: {
+  zonas: ZonaCliente[];
+  subzonas: SubzonaCliente[];
+  rubros: RubroCliente[];
+}) {
   const { valor, aplicar, aplicarVarios, limpiar, texto, setTexto } = useBarraFiltros();
   const bloqueados = valor("bloqueados") === "1";
   const inactivos = valor("inactivos") === "1";
   const mostrar = bloqueados && inactivos ? "todos" : bloqueados ? "bloqueados" : inactivos ? "inactivos" : "";
-  const hay = ["q", "condicion", "zona", "rubro", "bloqueados", "inactivos"].some((k) => valor(k));
+  const hay = ["q", "condicion", "zona", "subzona", "rubro", "bloqueados", "inactivos"].some((k) => valor(k));
+  // Con un distrito elegido, solo sus zonas (y las que no saben su distrito).
+  const distrito = valor("zona");
+  const zonasDelDistrito = distrito ? subzonas.filter((s) => s.zona_id === distrito || s.zona_id === null) : subzonas;
 
   return (
     <div className="px-4 pb-4 sm:px-6">
@@ -42,14 +53,26 @@ export function FiltrosClientesBarra({ zonas, rubros }: { zonas: ZonaCliente[]; 
         {/* Zona y rubro (141) en lugar de la condición de pago, que dejó
             de ser del cliente. Willy, 20/10: *«filtrar a los clientes por
             zona y poder trabajar cada cliente según su zona»*. */}
+        {/* La tabla `zonas` es el DISTRITO en pantalla; la zona dentro de
+            él es `subzona` (205). Cambiar de distrito suelta la zona, que
+            podría no ser suya. */}
         <FiltroBuscable
           id="filtro-zona"
-          etiqueta="Zona"
-          todos="Todas las zonas"
+          etiqueta="Distrito"
+          todos="Todos los distritos"
           buscar="Escribe el distrito…"
           valor={valor("zona")}
           opciones={zonas.map((z) => ({ valor: z.id, etiqueta: z.nombre }))}
-          onCambiar={(v) => aplicar("zona", v)}
+          onCambiar={(v) => aplicarVarios({ zona: v, subzona: "" })}
+        />
+        <FiltroBuscable
+          id="filtro-subzona"
+          etiqueta="Zona"
+          todos="Todas las zonas"
+          buscar="Escribe la zona…"
+          valor={valor("subzona")}
+          opciones={zonasDelDistrito.map((z) => ({ valor: z.id, etiqueta: z.nombre }))}
+          onCambiar={(v) => aplicar("subzona", v)}
         />
         <FiltroBuscable
           id="filtro-rubro"

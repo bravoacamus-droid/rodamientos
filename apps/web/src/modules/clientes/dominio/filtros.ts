@@ -30,11 +30,13 @@ export function lectorDe(
 export function leerFiltrosClientes(leer: Lector): Omit<FiltrosClientes, "cursor" | "direccion" | "limite"> {
   const condicion = leer("condicion");
   const zona = leer("zona");
+  const subzona = leer("subzona");
   const rubro = leer("rubro");
   return {
     q: leer("q")?.trim().slice(0, 80) || undefined,
     condicion: condicion === "contado" || condicion === "credito" ? (condicion as CondicionPago) : undefined,
     zona: zona && UUID.test(zona) ? zona : undefined,
+    subzona: subzona && UUID.test(subzona) ? subzona : undefined,
     rubro: rubro && UUID.test(rubro) ? rubro : undefined,
     bloqueados: leer("bloqueados") === "1",
     inactivos: leer("inactivos") === "1",
@@ -47,6 +49,7 @@ export function filtrosClientesAQuery(f: Omit<FiltrosClientes, "cursor" | "direc
   if (f.q) p.set("q", f.q);
   if (f.condicion) p.set("condicion", f.condicion);
   if (f.zona) p.set("zona", f.zona);
+  if (f.subzona) p.set("subzona", f.subzona);
   if (f.rubro) p.set("rubro", f.rubro);
   if (f.bloqueados) p.set("bloqueados", "1");
   if (f.inactivos) p.set("inactivos", "1");
@@ -56,10 +59,12 @@ export function filtrosClientesAQuery(f: Omit<FiltrosClientes, "cursor" | "direc
 /** Qué se bajó, en palabras, para la cabecera del Excel y del PDF. */
 export function describirFiltrosClientes(
   f: Omit<FiltrosClientes, "cursor" | "direccion" | "limite">,
-  nombres: { zona: string | null; rubro: string | null },
+  nombres: { zona: string | null; subzona?: string | null; rubro: string | null },
 ): string {
+  // La tabla `zonas` es, en pantalla, el DISTRITO (205).
   const partes = [
-    nombres.zona ? `Zona ${nombres.zona}` : "Todas las zonas",
+    nombres.zona ? `Distrito ${nombres.zona}` : "Todos los distritos",
+    nombres.subzona ? `zona ${nombres.subzona}` : null,
     nombres.rubro ? `rubro ${nombres.rubro}` : null,
     f.condicion === "credito" ? "a crédito" : f.condicion === "contado" ? "al contado" : null,
     f.q ? `que dicen «${f.q}»` : null,

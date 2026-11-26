@@ -30,7 +30,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
   const { filas, siguiente, anterior } = resultado.datos;
 
   if (filas.length === 0) {
-    const filtrando = Boolean(filtros.q || filtros.condicion || filtros.zona || filtros.rubro);
+    const filtrando = Boolean(filtros.q || filtros.condicion || filtros.zona || filtros.subzona || filtros.rubro);
     return (
       <EstadoVacio
         titulo={filtrando ? "Ningún cliente coincide" : "La cartera está vacía"}
@@ -75,7 +75,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               <th className="px-4 py-2.5 font-medium">Código</th>
               <th className="px-4 py-2.5 font-medium">Razón social</th>
               <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Contacto</th>
-              <th className="px-4 py-2.5 font-medium">Zona y rubro</th>
+              <th className="px-4 py-2.5 font-medium">Distrito, zona y rubro</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valia cuando ahi solo habia tres puntos. */}
@@ -198,7 +198,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               !c.codigo.includes(c.numero_documento) ? (
                 <Dato etiqueta={c.tipo_documento}>{c.numero_documento}</Dato>
               ) : null}
-              <Dato etiqueta="Zona y rubro">
+              <Dato etiqueta="Distrito, zona y rubro">
                 <ZonaRubro c={c} />
               </Dato>
               <div className="col-span-2 min-w-0">
@@ -259,12 +259,14 @@ function Contacto({ c }: { c: ClienteLista }) {
  * del cliente (Willy, 20/10: se decide en cada cotización y factura).
  */
 function ZonaRubro({ c }: { c: ClienteLista }) {
-  if (!c.zona_nombre && !c.rubro_nombre) {
-    return <span className="text-sm text-[var(--fg-subtle)]">Sin zona ni rubro</span>;
+  if (!c.zona_nombre && !c.subzona_nombre && !c.rubro_nombre) {
+    return <span className="text-sm text-[var(--fg-subtle)]">Sin distrito ni rubro</span>;
   }
+  // «SJL · celima» (205): el distrito y, dentro, la zona.
+  const donde = [c.zona_nombre, c.subzona_nombre].filter(Boolean).join(" · ");
   return (
     <span className="flex flex-col">
-      <span className="truncate font-medium">{c.zona_nombre ?? "Sin zona"}</span>
+      <span className="truncate font-medium">{donde || "Sin distrito"}</span>
       <span className="truncate text-sm text-[var(--fg-muted)]">{c.rubro_nombre ?? "Sin rubro"}</span>
     </span>
   );

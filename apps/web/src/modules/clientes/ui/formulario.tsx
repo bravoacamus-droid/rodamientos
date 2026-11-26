@@ -22,14 +22,8 @@ import { ContactosNuevos, type ContactoNuevo } from "./contactos-nuevos";
 import { EditorContactos } from "./editor-contactos";
 import { SelectorUbigeoCascada, type DistritoUbigeo } from "./selector-ubigeo";
 import { guardarCliente } from "../acciones/guardar";
-import {
-  crearRubro,
-  crearZona,
-  eliminarRubro,
-  eliminarZona,
-  renombrarRubro,
-  renombrarZona,
-} from "../acciones/rubros";
+import { crearRubro, eliminarRubro, renombrarRubro } from "../acciones/rubros";
+import { ErrorUbicacion, ProveedorUbicacion, SelectorDistritoZona } from "./ubicacion";
 import { SelectorCatalogo } from "@/modules/cotizaciones/ui/constructor/selector-catalogo";
 import { esConsultable, revisarDocumento } from "../dominio/documento";
 import {
@@ -41,6 +35,7 @@ import {
   type ResultadoCliente,
   type RubroCliente,
   type TipoDocumento,
+  type SubzonaCliente,
   type ZonaCliente,
 } from "../dominio/tipos";
 
@@ -62,8 +57,10 @@ import {
 
 export interface CatalogosCliente {
   vendedores: { id: string; nombre: string }[];
-  /** Los distritos de Lima y el Callao que se ofrecen como zona (141). */
+  /** Los distritos de Lima y el Callao (141/142). La tabla se llama `zonas`. */
   zonas: ZonaCliente[];
+  /** Las zonas dentro del distrito (205): «celima», «cajamarquilla». */
+  subzonas: SubzonaCliente[];
   rubros: RubroCliente[];
 }
 
@@ -130,6 +127,7 @@ export function FormularioCliente({
     ubigeo_codigo: cliente?.ubigeo_codigo ?? "",
     referencia_direccion: cliente?.referencia_direccion ?? "",
     zona_id: cliente?.zona_id ?? "",
+    subzona_id: cliente?.subzona_id ?? "",
     rubro_id: cliente?.rubro_id ?? "",
     linea_credito: String(cliente?.linea_credito ?? "0"),
     dias_credito: String(cliente?.dias_credito ?? "0"),
@@ -145,7 +143,6 @@ export function FormularioCliente({
    * solo mensaje de error para los dos: el que diga qué pasó con el último.
    */
   const [rubros, setRubros] = React.useState(catalogos.rubros);
-  const [zonas, setZonas] = React.useState(catalogos.zonas);
   const [errorCatalogo, setErrorCatalogo] = React.useState<string | null>(null);
 
   type Opc = { id: string; nombre: string };
@@ -183,7 +180,6 @@ export function FormularioCliente({
       return true;
     },
   });
-  const gestionZonas = gestion(setZonas, "zona_id", { crear: crearZona, renombrar: renombrarZona, eliminar: eliminarZona });
   const gestionRubros = gestion(setRubros, "rubro_id", {
     crear: crearRubro,
     renombrar: renombrarRubro,
@@ -369,6 +365,7 @@ export function FormularioCliente({
     referencia_direccion: f.referencia_direccion.trim() || null,
     sector: f.sector.trim() || null,
     zona_id: f.zona_id || null,
+    subzona_id: f.subzona_id || null,
     rubro_id: f.rubro_id || null,
     email: f.email.trim() || null,
     telefono: f.telefono.trim() || null,
@@ -408,6 +405,10 @@ export function FormularioCliente({
           telefono: c.telefono.trim() || null,
           whatsapp: c.whatsapp.trim() || null,
           principal: c.principal,
+          // 205. Con `?? ""`: un borrador guardado antes de hoy no los trae.
+          telefono_fijo: (c.telefono_fijo ?? "").trim() || null,
+          zona_id: c.zona_id || null,
+          subzona_id: c.subzona_id || null,
         })),
   };
 
@@ -439,6 +440,7 @@ export function FormularioCliente({
   });
 
   return (
+    <ProveedorUbicacion zonas={catalogos.zonas} subzonas={catalogos.subzonas}>
     <form action={guardar} className="flex flex-col gap-4">
       <input type="hidden" name="cliente" value={JSON.stringify(payload)} />
 
@@ -776,16 +778,16 @@ export function FormularioCliente({
           saber *«con cuántas empresas agroindustriales contamos»*. */}
       <section className="card flex flex-col gap-3 p-4">
         <h2 className="text-sm font-semibold">¿Por dónde lo visitas y a qué se dedica?</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <SelectorCatalogo
-            id="zona_id"
-            label="Zona"
-            ayuda="El distrito donde se le visita. No tiene que ser el de la dirección fiscal."
-            opciones={zonas}
-            valor={f.zona_id}
-            onElegir={(o) => set("zona_id", o?.id ?? "")}
-            placeholder="Elige o escribe la zona"
-            {...gestionZonas}
+        {/* Distrito y zona por separado (205, 26/11), como en el directorio
+            de Willy: «SJL · celima», «SJL · cajamarquilla». */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <SelectorDistritoZona
+            idPrefijo="cliente"
+            distrito={f.zona_id}
+            zona={f.subzona_id}
+            onCambio={(d, z) => setF((x) => ({ ...x, zona_id: d, subzona_id: z }))}
+            ayudaDistrito="Donde se le visita. No tiene que ser el de la dirección fiscal."
+            ayudaZona="Dentro del distrito: celima, cajamarquilla… Si no está, créala."
           />
           <SelectorCatalogo
             id="rubro_id"
@@ -800,6 +802,7 @@ export function FormularioCliente({
           />
         </div>
         {errorCatalogo ? <p className="text-sm font-medium text-[var(--danger)]">{errorCatalogo}</p> : null}
+        <ErrorUbicacion />
       </section>
 
       {/* ══════════════════════════════════ ¿Con quién hablas ahí? ═══════
@@ -819,9 +822,17 @@ export function FormularioCliente({
           ficha y volver a escribir — justo cuando se tienen los tres nombres
           delante, en el correo que acaba de llegar. */}
       {cliente ? (
-        <EditorContactos clienteId={cliente.id} iniciales={cliente.contactos_lista} />
+        <EditorContactos
+          clienteId={cliente.id}
+          iniciales={cliente.contactos_lista}
+          ubicacionCliente={{ zona_id: f.zona_id, subzona_id: f.subzona_id }}
+        />
       ) : (
-        <ContactosNuevos lista={contactos} onCambio={setContactos} />
+        <ContactosNuevos
+          lista={contactos}
+          onCambio={setContactos}
+          ubicacionCliente={{ zona_id: f.zona_id, subzona_id: f.subzona_id }}
+        />
       )}
 
       {/* «Más datos» se fue (Luis, 20/10): nombre comercial, teléfonos,
@@ -855,6 +866,7 @@ export function FormularioCliente({
         </Button>
       </div>
     </form>
+    </ProveedorUbicacion>
   );
 }
 

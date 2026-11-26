@@ -14,7 +14,7 @@ import {
 } from "@rodatech/ui";
 
 import { guardarContacto } from "../acciones/contactos";
-import { CamposContacto, CONTACTO_VACIO, type BorradorContacto } from "./contacto-campos";
+import { aBorrador, CamposContacto, cargaContacto, CONTACTO_VACIO, type BorradorContacto } from "./contacto-campos";
 import type { ContactoCliente } from "../dominio/tipos";
 
 /**
@@ -82,14 +82,7 @@ export function DialogoContacto({
   React.useEffect(() => {
     if (!abierto) return;
     if (contacto) {
-      setValor({
-        nombre: contacto.nombre,
-        cargo: contacto.cargo ?? "",
-        area: contacto.area ?? "",
-        email: contacto.email ?? "",
-        telefono: contacto.telefono ?? "",
-        whatsapp: contacto.whatsapp ?? "",
-      });
+      setValor(aBorrador(contacto));
       setPrincipal(contacto.principal);
     } else {
       setValor({ ...CONTACTO_VACIO, nombre: nombreInicial.trim() });
@@ -122,12 +115,14 @@ export function DialogoContacto({
           // Con id, `guardarContacto` corrige en vez de crear.
           ...(contacto ? { id: contacto.id } : {}),
           cliente_id: clienteId,
-          nombre: valor.nombre.trim(),
-          cargo: valor.cargo.trim(),
-          area: valor.area.trim(),
-          email: valor.email.trim(),
-          telefono: valor.telefono.trim(),
-          whatsapp: valor.whatsapp.trim(),
+          // Sin distrito ni zona: aquí no se pintan, y la acción no toca lo
+          // que no llega (205). El fijo sí, que se ve y se escribe.
+          ...cargaContacto(valor, false),
+          // El selector de la cotización no trae el fijo (contactos_de_cliente):
+          // si nadie lo escribió aquí, no se manda, para no borrar el que hubiera.
+          ...(contacto && contacto.telefono_fijo === undefined && valor.telefono_fijo.trim() === ""
+            ? { telefono_fijo: undefined }
+            : {}),
           principal,
         }),
       );
@@ -151,6 +146,7 @@ export function DialogoContacto({
         telefono: valor.telefono.trim() || null,
         whatsapp: valor.whatsapp.trim() || null,
         principal,
+        telefono_fijo: valor.telefono_fijo.trim() || null,
       });
     });
   }

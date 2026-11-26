@@ -8,7 +8,7 @@ import { avisoSinPermiso } from "@/lib/permisos-comun";
 
 import type { FiltrosClientes } from "../dominio/tipos";
 import { filtrosClientesAQuery, leerFiltrosClientes, lectorDe } from "../dominio/filtros";
-import { rubrosDeCliente, zonasDeVisita } from "../api/consultas";
+import { rubrosDeCliente, subzonasDeCliente, zonasDeVisita } from "../api/consultas";
 import { FiltrosClientesBarra } from "./filtros";
 import { ResumenCartera } from "./resumen-cartera";
 import { TablaClientes } from "./tabla";
@@ -44,7 +44,12 @@ export default async function PaginaClientes({ searchParams }: Props) {
     limite: leerTamano(uno(sp.n)),
   };
 
-  const [permisos, zonas, rubros] = await Promise.all([misPermisos(), zonasDeVisita(), rubrosDeCliente()]);
+  const [permisos, zonas, subzonas, rubros] = await Promise.all([
+    misPermisos(),
+    zonasDeVisita(),
+    subzonasDeCliente(),
+    rubrosDeCliente(),
+  ]);
   // Sin permiso el botón sale con candado y dice por qué (QA, 20/10): que
   // aparezca y rebote al guardar es lo peor; que no aparezca, tampoco explica.
   const puedeCrear = permisos.tiene("clientes", "crear");
@@ -62,7 +67,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight">Clientes</h1>
             <p className="text-sm text-[var(--fg-muted)]">
-              Cartera comercial: documento, zona de visita y rubro.
+              Cartera comercial: documento, distrito, zona y rubro.
             </p>
           </div>
 
@@ -106,7 +111,7 @@ export default async function PaginaClientes({ searchParams }: Props) {
       </PanelModulo>
 
       <section className="card @container pt-4">
-        <FiltrosClientesBarra zonas={zonas} rubros={rubros} />
+        <FiltrosClientesBarra zonas={zonas} subzonas={subzonas} rubros={rubros} />
 
         <Suspense
           // La clave fuerza un skeleton nuevo en cada cambio de filtro; sin
