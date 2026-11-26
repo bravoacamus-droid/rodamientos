@@ -154,6 +154,12 @@ async function CifrasClientes({ sp }: { sp: ParamsBusqueda }) {
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Arriba, debajo de los filtros, como en los otros reportes (Luis, 26/11). */}
+      <BotonExcel
+        tipo="clientes"
+        sp={sp}
+        explicacion={`Todos los clientes de este periodo${grupo ? ` del grupo «${ETIQUETA_SEGMENTO[grupo]}»` : ""}, con lo facturado, lo vendido, el margen${f.hayComparacion ? ", la comparación" : ""} y su última compra.`}
+      />
 
       <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
         <KpiCard
@@ -459,13 +465,6 @@ async function CifrasClientes({ sp }: { sp: ParamsBusqueda }) {
           </>
         )}
       </Bloque>
-
-      {/* Bajar la tabla ENTERA con estos filtros (Luis, 26/11), no solo los doce que se ven. */}
-      <BotonExcel
-        tipo="clientes"
-        sp={sp}
-        explicacion={`Todos los clientes de este periodo${grupo ? ` del grupo «${ETIQUETA_SEGMENTO[grupo]}»` : ""}, con lo facturado, lo vendido, el margen${f.hayComparacion ? ", la comparación" : ""} y su última compra.`}
-      />
     </div>
   );
 }
