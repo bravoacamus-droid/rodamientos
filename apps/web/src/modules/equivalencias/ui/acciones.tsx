@@ -184,7 +184,7 @@ function DialogoDeclarar({
           <DialogTitle>Marcar como equivalente</DialogTitle>
           {/* Sin «peldaño» ni «cascada», que eran palabras del código. */}
           <DialogDescription>
-            Con <span className="font-mono">{codigoEquivalente}</span>. Vale en
+            Con <strong className="font-mono text-[var(--fg)]">{codigoEquivalente}</strong>. Vale en
             los dos sentidos, y desde ahora sale el primero cuando se busquen
             equivalentes de cualquiera de los dos.
           </DialogDescription>
@@ -222,7 +222,9 @@ function DialogoDeclarar({
           </div>
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => setAbierto(false)}>
+          {/* Del tamaño normal (27/11): en un diálogo son LA decisión, no un
+              botón de fila. */}
+          <Button variant="outline" onClick={() => setAbierto(false)}>
             Cancelar
           </Button>
           <Button

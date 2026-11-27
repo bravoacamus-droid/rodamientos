@@ -15,7 +15,8 @@ import {
   DialogTitle,
   Input,
 } from "@rodatech/ui";
-import { Eye, FilePenLine, FileUp, Trash2, X } from "lucide-react";
+import { Eye, FilePenLine, FileText, FileUp, Trash2, X } from "lucide-react";
+import { ChipIcono } from "@/modules/compras/ui/ficha";
 
 import {
   corregirNumerosDelProveedor,
@@ -215,7 +216,9 @@ export function EditarPapelesDelProveedor({
 
   return (
     <>
-      <Button type="button" onClick={abrir} className="gap-1.5">
+      {/* En dorado desde el 27/11: vive en la cabecera azul de la ficha, y
+          un botón azul sobre azul era justo lo que Luis no encontraba. */}
+      <Button type="button" variant="accent" size="lg" onClick={abrir} className="gap-1.5">
         <FilePenLine className="size-4" aria-hidden="true" />
         {primeraVez ? "Poner números y papeles" : "Editar papeles"}
       </Button>
@@ -352,12 +355,18 @@ export function PapelesDelProveedor({
   }
 
   return (
-    <section className="card flex flex-col gap-3 p-4">
-      <div>
-        <h2 className="text-base font-semibold">Papeles del proveedor</h2>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Sus números y los escaneos, todos opcionales. PDF o foto.
-        </p>
+    <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+      {/* Título con su icono en chip, como el resto de la ficha (27/11). */}
+      <div className="flex items-center gap-3">
+        <ChipIcono>
+          <FileText />
+        </ChipIcono>
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-[var(--titulo)]">Papeles del proveedor</h2>
+          <p className="text-base text-[var(--fg-muted)]">
+            Sus números y los escaneos, todos opcionales. PDF o foto.
+          </p>
+        </div>
       </div>
 
       {error ? (
@@ -370,11 +379,12 @@ export function PapelesDelProveedor({
       ) : null}
 
       {papeles.length === 0 ? (
-        <p className="rounded-md bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
+        <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
           {/* Se dice «el botón azul de arriba» y no su texto: ese texto
               cambia según sea la primera vez o no, y el color es justo lo que
-              Luis pidió para poder encontrarlo. */}
-          Todavía no hay ningún papel escaneado. Con el <strong>botón azul de
+              Luis pidió para poder encontrarlo. Desde el 27/11 es dorado:
+              va sobre la cabecera azul de la ficha. */}
+          Todavía no hay ningún papel escaneado. Con el <strong>botón dorado de
           arriba</strong> sube la guía y la factura con las que llegó la
           mercadería —es lo que se busca si después no cuadra un precio— y el
           voucher cuando le pagues.
@@ -386,7 +396,7 @@ export function PapelesDelProveedor({
               <Badge tone={TONO[p.tipo]} size="xs">
                 {ETIQUETA[p.tipo]}
               </Badge>
-              <span className="min-w-0 flex-1 truncate text-sm" title={p.nombre}>
+              <span className="min-w-0 flex-1 break-words text-base" title={p.nombre}>
                 {p.nombre}
               </span>
               <span className="shrink-0 text-sm text-[var(--fg-subtle)]">

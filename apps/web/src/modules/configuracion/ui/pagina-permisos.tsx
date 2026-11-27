@@ -33,7 +33,7 @@ export default async function PaginaConfigPermisos() {
       />
 
       {!esGerencia ? (
-        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
+        <p className="card border-l-[6px] border-l-[var(--info)] p-4 text-base text-[var(--fg-muted)]">
           Puedes ver qué puede hacer cada rol, pero <strong>cambiarlo es cosa de Gerencia</strong>. No es
           solo esta pantalla: la base lo impide también.
         </p>
@@ -43,7 +43,7 @@ export default async function PaginaConfigPermisos() {
           media empresa sin poder trabajar, y quien la abre tiene que saberlo
           ANTES de tocar, no después.
         */
-        <p className="rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm">
+        <p className="card elev-2 border-l-[6px] border-l-[var(--warn)] bg-[var(--warn-bg)] p-4 text-base">
           Esto cambia lo que los demás pueden hacer, <strong>de inmediato y para todos</strong> los que
           tengan ese rol: el menú y los botones cambian en cuanto recarguen la página.
         </p>

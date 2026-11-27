@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { Badge, Moneda, formatearFecha } from "@rodatech/ui";
-import { MessageCircleQuestion } from "lucide-react";
+import { Badge, Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
+import { ArrowRight, MessageCircleQuestion, Truck } from "lucide-react";
+
+import { BloqueFicha } from "./ficha";
 
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import type { ProveedorDeProducto } from "@/modules/proveedores";
@@ -32,27 +34,30 @@ export function QuienLoVende({
   sinPermiso: string;
 }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-1 text-base font-semibold">Quién lo vende</h2>
-
+    // Con el lenguaje de las fichas (27/11): chip, título grande, cada
+    // proveedor en su tarjeta y el precio en grande, que es lo que se mira.
+    <BloqueFicha icono={Truck} titulo="Quién lo vende" tono="info">
       {proveedores.length === 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
+        <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
           Todavía nadie. Se llena solo con cada compra que registres, y se
           puede adelantar desde la ficha del proveedor —«Qué vende»— cuando
           alguien te pase su lista de precios.
         </p>
       ) : (
         <>
-          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+          <p className="text-base text-[var(--fg-muted)]">
             Del más barato al más caro, con lo que cobró la última vez. En
             dólares, para que se puedan comparar entre sí.
           </p>
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+          <ul className="flex flex-col gap-2">
             {proveedores.map((v) => (
-              <li key={v.proveedor_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+              <li
+                key={v.proveedor_id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+              >
                 <Link
                   href={`/proveedores/${v.proveedor_id}`}
-                  className={`text-sm font-medium hover:underline ${
+                  className={`min-w-0 text-base font-semibold underline-offset-4 hover:underline ${
                     v.activo ? "text-brand-600" : "text-[var(--fg-muted)]"
                   }`}
                 >
@@ -77,12 +82,12 @@ export function QuienLoVende({
                     : "anotado a mano"}
                 </span>
 
-                <span className="ml-auto tabular text-sm">
+                <span className="ml-auto tabular text-base">
                   {v.ultimoCostoUsd === null ? (
                     <span className="text-[var(--fg-subtle)]">sin precio</span>
                   ) : (
                     <>
-                      <Moneda valor={v.ultimoCostoUsd} tamano="sm" />
+                      <Moneda valor={v.ultimoCostoUsd} tamano="lg" className="font-bold" />
                       {/* Si su factura vino en soles, se dice: es la cifra que
                           aparece cuando se le llama a preguntar. */}
                       {v.moneda && v.moneda !== "USD" && v.ultimoCosto !== null ? (
@@ -112,18 +117,19 @@ export function QuienLoVende({
         se le pregunta.
       */}
       {puedeComprar ? (
-      <Link
-        href={`/compras/pedir-precio?items=${productoId}:1`}
-        className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-      >
-        <MessageCircleQuestion className="size-4" aria-hidden="true" />
-        Pedir precio de este producto
-      </Link>
+        <Link
+          href={`/compras/pedir-precio?items=${productoId}:1`}
+          className={cn(buttonVariants({ variant: "outline" }), "h-11 w-fit md:h-control-md")}
+        >
+          <MessageCircleQuestion aria-hidden="true" />
+          Pedir precio de este producto
+          <ArrowRight aria-hidden="true" />
+        </Link>
       ) : (
-        <BotonBloqueado mensaje={sinPermiso} className="mt-3 h-9 md:h-9">
+        <BotonBloqueado mensaje={sinPermiso} className="w-fit">
           Pedir precio de este producto
         </BotonBloqueado>
       )}
-    </section>
+    </BloqueFicha>
   );
 }

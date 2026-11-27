@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, SelectNativo, campoBase, cn, formatearFecha } from "@rodatech/ui";
-import { CircleCheck, Plus, Save, Search, Trash2, TriangleAlert, X } from "lucide-react";
+import { Check, CircleCheck, Plus, Save, Search, Trash2, TriangleAlert, Trophy, X } from "lucide-react";
 
 import { datosDeProveedor, guardarHojaPrecios, referenciasParaHoja } from "../../acciones/hoja-precios";
 import type { AnalisisParaHoja } from "../../api/hoja-precios";
@@ -232,7 +232,10 @@ export function HojaPrecios({
 
       {/* ---------------------------------------------- Qué y a quién */}
       {soloLectura ? null : (
-        <section className="card flex flex-col gap-3 p-4">
+        <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+          {/* Los tres pasos de la hoja, numerados como en Accesibilidad
+              (27/11): buscar, apuntar, decidir. Se lee el orden sin manual. */}
+          <PasoTitulo numero={1} titulo="Qué productos y a quién preguntar" ayuda="Busca el producto y añade los proveedores a los que vas a llamar." />
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="flex min-w-0 flex-col gap-1">
               {/* Que se vea que AQUÍ se busca (07/10): Luis, *«tenemos que poner
@@ -292,7 +295,10 @@ export function HojaPrecios({
 
       {/* ---------------------------------------------------- La hoja */}
       {hoja.productos.length === 0 ? (
-        <section className="card flex flex-col items-center gap-2 p-8 text-center">
+        <section className="card elev-1 flex flex-col items-center gap-2 border-dashed p-8 text-center">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-surface-3 dark:text-brand-300 dark:ring-[var(--border)]" aria-hidden="true">
+            <Search className="size-6" />
+          </span>
           <p className="text-lg font-semibold">Todavía no hay productos</p>
           <p className="max-w-lg text-base text-[var(--fg-muted)]">
             Búscalos arriba por código o marca, o tráelos de un análisis de importación. Después añade los proveedores a
@@ -300,7 +306,14 @@ export function HojaPrecios({
           </p>
         </section>
       ) : (
-        <section className="card overflow-hidden">
+        <section className="card elev-1 overflow-hidden">
+          <div className="border-b border-[var(--border)] p-4 sm:px-5">
+            <PasoTitulo
+              numero={2}
+              titulo="Apunta lo que te diga cada uno"
+              ayuda="El precio más bajo de cada fila sale marcado «Mejor precio». Si prefieres otro, pulsa «Comprar aquí»."
+            />
+          </div>
           <div className="scroll-x">
             <table className="w-full border-separate border-spacing-0 text-base">
               <thead>
@@ -413,11 +426,21 @@ export function HojaPrecios({
                           </td>
                         );
                       })}
-                      <td className="lg:sticky lg:right-0 lg:z-10 max-w-[12rem] border-b border-l-2 border-[var(--border-soft)] border-l-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5">
+                      <td className="lg:sticky lg:right-0 lg:z-10 min-w-[11rem] max-w-[14rem] border-b border-l-2 border-[var(--border-soft)] border-l-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-2.5">
                         {fila.elegido ? (
                           <div className="flex flex-col gap-0.5">
-                            <span className="truncate font-semibold" title={nombreDe(fila.elegido.proveedorId)}>
+                            {/* El ganador con su nombre entero y en grande (27/11):
+                                cortado con «…» no se sabía a quién llamar. */}
+                            <span className="flex items-start gap-1.5 break-words text-base font-bold text-[var(--fg)]">
+                              {fila.elegidoAMano ? (
+                                <Check className="mt-0.5 size-4 shrink-0 text-[var(--info)]" aria-hidden="true" />
+                              ) : (
+                                <Trophy className="mt-0.5 size-4 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                              )}
                               {nombreDe(fila.elegido.proveedorId)}
+                            </span>
+                            <span className="text-sm font-semibold text-[var(--fg-muted)]">
+                              {fila.elegidoAMano ? "elegido a mano" : "mejor precio"}
                             </span>
                             <span className="text-sm tabular">
                               {Math.min(fila.elegido.puede, p.cantidad)} × {usd(fila.elegido.usd)} = <strong>{usd(fila.total)}</strong>
@@ -511,9 +534,9 @@ export function HojaPrecios({
 
       {/* ----------------------------------------------- Lo que conviene */}
       {hoja.productos.length > 0 && hoja.proveedores.length > 0 ? (
-        <section className="card flex flex-col gap-3 p-4">
-          <h2 className="text-lg font-semibold">Lo que conviene</h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+          <PasoTitulo numero={3} titulo="Lo que conviene" ayuda="Quién da mejor precio, cuánto ganas y cuánto ahorras repartiendo." />
+          <div className="@container"><div className="grid grid-cols-1 gap-3 @lg:grid-cols-2 @5xl:grid-cols-4">
             <Cifra
               etiqueta="Con precio"
               valor={`${analisis.conPrecio} de ${hoja.productos.length}`}
@@ -545,7 +568,7 @@ export function HojaPrecios({
               }
               tono={analisis.ahorro > 0 ? "ok" : undefined}
             />
-          </div>
+          </div></div>
           {compras.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <p className="text-sm font-medium text-[var(--fg-muted)]">Si compras hoy, salen:</p>
@@ -577,6 +600,24 @@ export function HojaPrecios({
   );
 }
 
+/** El título numerado de cada paso de la hoja (el de `Seccion` en Accesibilidad). */
+function PasoTitulo({ numero, titulo, ayuda }: { numero: number; titulo: string; ayuda: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white"
+        aria-hidden="true"
+      >
+        {numero}
+      </span>
+      <div className="min-w-0">
+        <h2 className="text-xl font-bold text-[var(--titulo)]">{titulo}</h2>
+        <p className="mt-0.5 text-base text-[var(--fg-muted)]">{ayuda}</p>
+      </div>
+    </div>
+  );
+}
+
 function Cifra({
   etiqueta,
   valor,
@@ -591,9 +632,21 @@ function Cifra({
   const color =
     tono === "ok" ? "text-[var(--ok)]" : tono === "aviso" ? "text-[var(--warn)]" : tono === "mal" ? "text-[var(--danger)]" : "";
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg bg-[var(--surface-2)] px-3 py-2.5">
-      <span className="text-sm font-semibold text-[var(--fg-muted)]">{etiqueta}</span>
-      <span className={`text-2xl font-semibold tabular ${color}`}>{valor}</span>
+    // Con el filo que dice qué significa (27/11): verde bien, ámbar por
+    // hacer, rojo pierdes; azul lo que sale. El mismo código del tablero.
+    <div
+      className={`card elev-1 flex min-w-0 flex-col gap-0.5 border-l-4 px-4 py-3 ${
+        tono === "ok"
+          ? "border-l-[var(--ok)]"
+          : tono === "aviso"
+            ? "border-l-[var(--warn)]"
+            : tono === "mal"
+              ? "border-l-[var(--danger)]"
+              : "border-l-[var(--info)]"
+      }`}
+    >
+      <span className="text-base font-semibold text-[var(--fg)]">{etiqueta}</span>
+      <span className={`break-words text-3xl font-extrabold tabular ${color || "text-[var(--titulo)]"}`}>{valor}</span>
       <span className="text-sm text-[var(--fg-muted)]">{detalle}</span>
     </div>
   );

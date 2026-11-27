@@ -74,14 +74,14 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
               <th className="px-4 py-2.5 text-right font-medium">Entrega</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valía cuando ahí solo había tres puntos. */}
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((p) => (
               <tr
                 key={p.id}
-                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila fila-lista ${
                   p.activo ? "" : "opacity-60"
                 }`}
               >
@@ -92,7 +92,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                   >
                     {p.razon_social}
                   </Link>
-                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                  <span className="block tabular text-sm text-[var(--fg-subtle)]">
                     {p.codigo}
                     {p.activo ? "" : " · de baja"}
                   </span>
@@ -159,7 +159,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
                 <td className="whitespace-nowrap px-4 py-2.5 text-right tabular">
                   {`${p.lead_time_dias}\u00a0días`}
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-2 py-1.5">
                   <AccionesFila
                     id={p.id}
                     razonSocial={p.razon_social}
@@ -196,7 +196,7 @@ export async function TablaProveedores({ filtros }: { filtros: FiltrosProveedore
             className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${p.activo ? "" : "opacity-60"}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">
+              <span className="min-w-0 truncate tabular text-sm text-[var(--fg-subtle)]">
                 {p.codigo}
               </span>
               <EstadoBadge estado={p.activo ? "activo" : "de_baja"} size="xs" />

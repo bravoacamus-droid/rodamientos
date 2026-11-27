@@ -6,6 +6,8 @@ import { misAvisos, PanelAvisos } from "@/modules/avisos";
 
 import { miPerfil } from "../api/consultas";
 import { FormContrasena, FormMisDatos } from "./formulario";
+import { RodamientoMarca } from "@/componentes/marca-rodatech";
+import { SeccionNumerada } from "@/modules/configuracion/ui/seccion";
 
 /**
  * Mi perfil.
@@ -38,63 +40,79 @@ export default async function PaginaMiPerfil() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex min-w-0 items-start gap-3">
-        {/*
-          Las iniciales, no una foto.
+      {/*
+        Cabecera de marca (27/11), como la portada del tablero: el azul con el
+        rodamiento de agua y la barra dorada. Es «tu» pantalla, y es la única
+        del ERP que habla de una persona y no de un documento.
+      */}
+      <section className="fondo-marca relative overflow-hidden rounded-2xl px-5 py-6 text-white shadow-[var(--elev-2)] sm:px-8">
+        <RodamientoMarca
+          bolas="currentColor"
+          className="pointer-events-none absolute -right-16 -top-24 size-[18rem] text-white/[0.06]"
+        />
+        <div className="relative flex min-w-0 flex-wrap items-center gap-4">
+          {/*
+            Las iniciales, no una foto.
 
-          No hay dónde subir una, y un icono de persona genérico repetido en
-          todas las fichas no distingue a nadie. Dos letras sí.
-        */}
-        <span
-          aria-hidden="true"
-          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-semibold text-white"
-        >
-          {iniciales(perfil.nombre)}
-        </span>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{perfil.nombre}</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            {nombreRol ?? perfil.rol}
-          </p>
+            No hay dónde subir una, y un icono de persona genérico repetido en
+            todas las fichas no distingue a nadie. Dos letras sí.
+          */}
+          <span
+            aria-hidden="true"
+            className="flex size-16 shrink-0 items-center justify-center rounded-full bg-accent-400 text-2xl font-extrabold text-brand-950 ring-4 ring-white/20"
+          >
+            {iniciales(perfil.nombre)}
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-semibold uppercase tracking-wide text-white">Mi perfil</p>
+            <h1 className="break-words text-3xl font-bold tracking-tight text-white">{perfil.nombre}</h1>
+            <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+            <p className="mt-2 text-lg text-white">{nombreRol ?? perfil.rol}</p>
+          </div>
         </div>
-      </div>
-
-      <section className="card p-4">
-        <h2 className="mb-3 text-base font-semibold">Tus datos</h2>
-        <FormMisDatos perfil={perfil} />
       </section>
+
+      <SeccionNumerada
+        numero={1}
+        titulo="Tus datos"
+        ayuda="Tu nombre, tu cargo y tu teléfono."
+      >
+        <FormMisDatos perfil={perfil} />
+      </SeccionNumerada>
 
       {/*
         162. Willy: «pero no te llega como una alerta, tú tienes que entrar y
         ver» (25:21). Aquí es donde se enciende que le llegue.
       */}
-      <section id="avisos" className="card scroll-mt-20 p-4">
-        <h2 className="mb-3 text-base font-semibold">Avisos en el celular</h2>
+      <SeccionNumerada
+        id="avisos"
+        numero={2}
+        titulo="Avisos en el celular"
+        ayuda="Para que las alertas te lleguen al teléfono sin tener que entrar a mirarlas."
+      >
         {avisos.ok ? (
           <PanelAvisos aparatos={avisos.datos.aparatos} clavePublica={avisos.datos.clavePublica} />
         ) : (
-          <p className="text-sm text-[var(--danger)]">
+          <p className="text-base text-[var(--danger)]">
             No se pudieron leer tus aparatos: {avisos.error}
           </p>
         )}
-      </section>
+      </SeccionNumerada>
 
-      <section className="card p-4">
-        <h2 className="text-base font-semibold">Tu contraseña</h2>
-        <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          Si sigues entrando con la que te dieron al principio, cámbiala: es la
-          misma para todos.
-        </p>
+      <SeccionNumerada
+        numero={3}
+        titulo="Tu contraseña"
+        ayuda="Si sigues entrando con la que te dieron al principio, cámbiala: es la misma para todos."
+      >
         <FormContrasena />
-      </section>
+      </SeccionNumerada>
 
       {/*
         Lo que no se toca aquí, dicho en voz alta en vez de con campos
         apagados sin explicación.
       */}
-      <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
-        <h2 className="text-base font-semibold">Lo que no puedes cambiar tú</h2>
-        <dl className="mt-2 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+      <SeccionNumerada tono="aviso" titulo="Lo que no puedes cambiar tú">
+        <dl className="grid gap-x-6 gap-y-3 text-base @container sm:grid-cols-2">
           <Dato etiqueta="Correo con el que entras">
             {perfil.email ?? "—"}
           </Dato>
@@ -114,12 +132,12 @@ export default async function PaginaMiPerfil() {
               : "—"}
           </Dato>
         </dl>
-        <p className="mt-3 text-sm text-[var(--fg-muted)]">
+        <p className="text-base text-[var(--fg-muted)]">
           El correo es la credencial con la que entras y el rol decide lo que
           puedes hacer. Los dos los cambia <strong>Gerencia</strong>, en
           Configuración, «Usuarios».
         </p>
-      </section>
+      </SeccionNumerada>
     </div>
   );
 }
@@ -127,8 +145,10 @@ export default async function PaginaMiPerfil() {
 function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-sm text-[var(--fg-subtle)]">{etiqueta}</dt>
-      <dd className="min-w-0 truncate">{children}</dd>
+      <dt className="text-sm text-[var(--fg-muted)]">{etiqueta}</dt>
+      {/* Sin `truncate`: un correo largo cortado con «…» ya no sirve para
+          saber con cuál entras (27/11). */}
+      <dd className="min-w-0 break-words font-semibold">{children}</dd>
     </div>
   );
 }

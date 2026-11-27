@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ArrowDownToLine, ArrowUpFromLine, History, SlidersHorizontal } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, ArrowUpFromLine, History, SlidersHorizontal } from "lucide-react";
+
+import { BloqueFicha } from "./ficha";
 
 import { enlaceDeReferencia, type FilaKardex, type TipoMovimiento } from "@/modules/inventario";
 
@@ -70,31 +72,30 @@ export function MovimientosDelProducto({
   error?: string | null;
 }) {
   return (
-    <section className="card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <History className="size-5 text-[var(--fg-muted)]" aria-hidden="true" />
-          Movimientos del stock
-        </h2>
-        {filas.length > 0 ? (
-          <Link
-            href={`/inventario/kardex?producto=${productoId}`}
-            className="inline-flex h-control-md items-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-          >
-            {hayMas ? "Ver todos en el kardex" : "Abrir en el kardex"}
-          </Link>
-        ) : null}
-      </div>
+    // Con el lenguaje de las demás fichas (27/11): chip, título grande y el
+    // botón al kardex SIEMPRE a la vista. Antes solo salía con movimientos,
+    // y sin ellos el único camino era «Ver kardex» del menú de tres puntos.
+    <BloqueFicha
+      icono={History}
+      titulo="Movimientos del stock"
+      ayuda="Qué entró, qué salió y qué se ajustó, lo más reciente arriba."
+      acciones={
+        <Link href={`/inventario/kardex?producto=${productoId}`} className="boton-fila">
+          {hayMas ? "Ver todos en el kardex" : "Abrir el kardex"}
+          <ArrowRight aria-hidden="true" />
+        </Link>
+      }
+    >
 
       {error ? (
         <p className="text-sm text-[var(--danger)]">No se pudieron cargar los movimientos: {error}</p>
       ) : filas.length === 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
+        <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
           Todavía no ha entrado ni salido nada de este producto. Se anota solo al recibir
           mercadería, al sacar una guía o al hacer un ajuste de inventario.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+        <ul className="flex flex-col gap-2">
           {filas.map((m) => {
             const q = QUE_PASO[m.tipo];
             const Icono = q.icono;
@@ -103,8 +104,13 @@ export function MovimientosDelProducto({
             const doc = m.referencia_tipo ? (DOCUMENTO[m.referencia_tipo] ?? "Documento") : null;
             const motivo = m.motivo && !MOTIVO_QUE_REPITE.has(m.motivo) ? m.motivo : null;
             return (
-              <li key={m.id} className="flex flex-wrap items-start gap-x-4 gap-y-1 py-3">
-                <Icono className={`mt-0.5 size-5 shrink-0 ${q.color}`} aria-hidden="true" />
+              <li
+                key={m.id}
+                className="flex flex-wrap items-start gap-x-4 gap-y-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+              >
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)]">
+                  <Icono className={`size-5 ${q.color}`} aria-hidden="true" />
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-semibold">
                     {q.texto(n)}
@@ -152,6 +158,6 @@ export function MovimientosDelProducto({
           })}
         </ul>
       )}
-    </section>
+    </BloqueFicha>
   );
 }

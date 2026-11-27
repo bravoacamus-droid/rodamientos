@@ -4,6 +4,8 @@ import { useActionState, useEffect, useMemo, useReducer, useState, useTransition
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useBorrador } from "@/componentes/borrador";
+import { PanelModulo } from "@/componentes/panel-modulo";
+import { Save } from "lucide-react";
 import {
   Button,
   Input,
@@ -368,15 +370,20 @@ export function ConstructorCompra({
 
       {avisoBorrador}
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      {/* Sobre el azul de la marca, como las listas y las fichas (27/11):
+          el título de 20 px y tres líneas grises no decían qué pantalla era
+          ni dónde estaba el botón de guardar. */}
+      <PanelModulo ruta="/compras">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         {orden ? (
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-extrabold tracking-tight text-[var(--titulo)]">
               Registrar compra de la orden {orden.numero}
             </h1>
-            <p className="text-sm text-[var(--fg-muted)]">
+            <span className="mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+            <p className="mt-3 max-w-3xl text-base text-[var(--fg)]">
               Orden {orden.posicion} de {orden.de} del pedido{" "}
-              <Link href={`/pedidos/${orden.pedidoId}`} className="text-brand-600 underline">
+              <Link href={`/pedidos/${orden.pedidoId}`} className="font-semibold text-accent-300 underline">
                 {orden.pedido} · {orden.cliente}
               </Link>{" "}
               (cotización {orden.cotizacion})
@@ -385,8 +392,9 @@ export function ConstructorCompra({
             </p>
           </div>
         ) : (
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Registrar compra</h1>
+        <div className="min-w-0">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--titulo)] sm:text-4xl">Registrar compra</h1>
+          <span className="mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
           {/*
             Se dice que es de UN proveedor, y dónde está la otra.
 
@@ -403,16 +411,16 @@ export function ConstructorCompra({
             Así que lo dice, y lleva. Un aviso que explica y no ofrece camino
             solo consigue que quien lo lee se sienta tonto.
           */}
-          <p className="text-sm text-[var(--fg-muted)]">
+          <p className="mt-3 max-w-3xl text-base text-[var(--fg)]">
             De <strong>un solo proveedor</strong>. Si vas a repartir la compra
             entre varios,{" "}
-            <Link href="/compras/precios" className="text-brand-600 underline">
+            <Link href="/compras/precios" className="font-semibold text-accent-300 underline">
               hazlo desde «Pedir precios»
             </Link>
             : ahí pones todos los productos y todos los proveedores, y salen las
             compras repartidas.
           </p>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+          <p className="mt-1 text-base text-[var(--fg-muted)]">
             El stock no se mueve aquí. Se moverá cuando la mercadería llegue y se
             recepcione.
           </p>
@@ -463,11 +471,13 @@ export function ConstructorCompra({
           >
             Cancelar
           </Button>
-          <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
+          <Button type="submit" variant="accent" disabled={bloqueos.length > 0 || guardando}>
+            <Save aria-hidden="true" />
             {guardando ? "Guardando…" : "Guardar compra"}
           </Button>
         </div>
       </header>
+      </PanelModulo>
 
       {/*
         «Volver a comprar»: se dice de dónde sale todo y qué hay que mirar.
@@ -517,7 +527,7 @@ export function ConstructorCompra({
       ) : null}
 
       {resultado && !resultado.ok ? (
-        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+        <p role="alert" className="rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-base font-medium text-[var(--danger)]">
           {resultado.error}
         </p>
       ) : null}
@@ -924,7 +934,7 @@ export function ConstructorCompra({
               rellenar, es el porqué de lo que se está haciendo. */}
           {esperan.length > 0 ? (
             <section className="card p-4">
-              <h2 className="text-sm font-semibold">Para quién es</h2>
+              <h2 className="text-xl font-bold">Para quién es</h2>
               <p className="mb-2 text-sm text-[var(--fg-subtle)]">
                 Ya está confirmado por estos clientes. Se anota en las
                 observaciones para que quien reciba la mercadería lo sepa.
@@ -973,7 +983,7 @@ export function ConstructorCompra({
         {/* -------------------------------------------------- Resumen */}
         <aside className="w-full shrink-0 lg:w-80">
           <div className="card sticky top-4 flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Resumen</h2>
+            <h2 className="text-xl font-bold">Resumen</h2>
 
             {/*
               En la moneda de la factura, y si es en soles, también en

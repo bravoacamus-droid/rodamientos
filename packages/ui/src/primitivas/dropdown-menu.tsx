@@ -38,11 +38,17 @@ const contenidoBase = [
   La altura mínima va junta: 14 px con `py-1.5` deja un blanco de 30 px, y un
   ratón que no acierta es lo mismo que un botón que no está.
 */
+/*
+  27/11: 40 px de alto, letra en semi-negrita e icono de 16 px. Y la opción
+  señalada se pinta del azul de la cabecera de las tablas, con la letra en el
+  azul de los títulos: en `surface-2` el resaltado era casi blanco sobre
+  blanco y no se sabía qué opción iba a pulsarse.
+*/
 const itemBase = [
-  "relative flex min-h-9 cursor-pointer select-none items-center gap-2 rounded-md px-2 py-1.5 text-sm text-fg outline-none",
-  "focus:bg-surface-2 data-[highlighted]:bg-surface-2",
+  "relative flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-fg outline-none",
+  "focus:bg-[var(--cabecera-bg)] focus:text-[var(--titulo)] data-[highlighted]:bg-[var(--cabecera-bg)] data-[highlighted]:text-[var(--titulo)]",
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-  "[&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-subtle",
+  "[&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted",
 ].join(" ");
 
 export function DropdownMenuContent({
@@ -64,7 +70,7 @@ export function DropdownMenuItem({
 }: React.ComponentPropsWithRef<typeof Menu.Item> & { destructivo?: boolean }) {
   return (
     <Menu.Item
-      className={cn(itemBase, destructivo && "text-danger [&_svg]:text-danger", className)}
+      className={cn(itemBase, destructivo && "text-danger [&_svg]:text-danger focus:text-danger data-[highlighted]:bg-danger-bg data-[highlighted]:text-danger", className)}
       {...props}
     />
   );

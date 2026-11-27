@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { EstadoError } from "@rodatech/ui";
-import { Lightbulb, Minus, Settings, TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
+import { EstadoError, buttonVariants } from "@rodatech/ui";
+import { ArrowRight, Lightbulb, Minus, Settings, TrendingDown, TrendingUp, TriangleAlert } from "lucide-react";
 
 import { cotizacionesPorCerrar, metaDelMes, ventasPorDia } from "../api/consultas";
 import { comoVoy, datosIncompletos, DIA_MINIMO_PARA_PROYECTAR, type Veredicto } from "../dominio/como-voy";
@@ -88,20 +88,20 @@ export async function ComoVoyBloque({
   }));
 
   return (
-    <section className="card flex flex-col gap-4 p-4">
+    <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold">¿Cómo voy este mes?</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <h2 className="text-2xl font-bold text-[var(--titulo)]">¿Cómo voy este mes?</h2>
+          <p className="text-base text-[var(--fg-muted)]">
             {mes.charAt(0).toUpperCase() + mes.slice(1)}, hasta hoy, sin IGV.
             {deQueMeses ? ` Comparado con ${deQueMeses}; para cambiar los meses, usa las fechas de arriba.` : ""}
           </p>
         </div>
         <Link
           href="/configuracion/empresa"
-          className="inline-flex h-10 items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+          className={`${buttonVariants({ variant: "outline" })} text-base`}
         >
-          <Settings className="size-4" aria-hidden="true" />
+          <Settings aria-hidden="true" />
           {c.metaPuesta ? "Cambiar la meta" : "Poner una meta"}
         </Link>
       </div>
@@ -161,7 +161,7 @@ export async function ComoVoyBloque({
 
       {c.serie.length > 1 && c.meta > 0 ? (
         <div>
-          <h3 className="mb-1 text-base font-semibold">Cada mes contra tu meta</h3>
+          <h3 className="mb-2 text-lg font-bold text-[var(--titulo)]">Cada mes contra tu meta</h3>
           <GraficoMeta datos={datos} meta={c.meta} tope={c.mejorMes?.monto ?? null} />
         </div>
       ) : null}
@@ -200,9 +200,10 @@ export async function ComoVoyBloque({
                 </p>
                 <Link
                   href="/cotizaciones?estado=enviada"
-                  className="inline-flex h-10 w-fit items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-4 text-base font-medium hover:bg-[var(--surface-2)]"
+                  className={`${buttonVariants({ variant: "primary" })} w-fit text-base`}
                 >
                   Ver las cotizaciones enviadas
+                  <ArrowRight aria-hidden="true" />
                 </Link>
               </>
             ) : null}
@@ -215,9 +216,9 @@ export async function ComoVoyBloque({
 
 function Cifra({ etiqueta, valor, pie, tono }: { etiqueta: string; valor: string; pie?: string; tono?: "ok" | "malo" }) {
   return (
-    <div className="rounded-md border border-[var(--border)] p-3">
-      <dt className="text-sm text-[var(--fg-muted)]">{etiqueta}</dt>
-      <dd className="mt-0.5 text-xl font-semibold tabular">{valor}</dd>
+    <div className="min-w-0 rounded-xl border border-[var(--border)] p-4">
+      <dt className="text-base font-semibold text-[var(--fg-muted)]">{etiqueta}</dt>
+      <dd className="mt-1 break-words text-2xl font-extrabold tabular text-[var(--titulo)]">{valor}</dd>
       {pie ? (
         <dd
           className={`mt-0.5 text-sm ${tono === "ok" ? "text-[var(--ok)]" : tono === "malo" ? "text-[var(--danger)]" : "text-[var(--fg-subtle)]"}`}

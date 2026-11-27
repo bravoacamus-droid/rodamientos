@@ -1,6 +1,6 @@
 import type * as React from "react";
 import Link from "next/link";
-import { CircleCheck, Clock, FileText, PackageCheck, PackageOpen, Receipt } from "lucide-react";
+import { CircleCheck, Clock, FileText, PackageCheck, PackageOpen, Receipt, ShoppingCart } from "lucide-react";
 import { Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 
 import type { OrdenDePedido } from "@/modules/compras/api/consultas";
@@ -8,6 +8,7 @@ import { ETIQUETA_MODALIDAD, modalidadDe } from "@/modules/compras/dominio/gasto
 
 import type { CompraSinRecibir, RecepcionDeOrden } from "../api/consultas";
 import { UsarStock, type StockUsable } from "./usar-stock";
+import { TituloBloque } from "@/modules/cotizaciones/ui/ficha/piezas";
 
 /**
  * Las órdenes de compra del pedido (128, 130).
@@ -53,15 +54,15 @@ export function ComprasDelPedido({
   const faltan = ordenes.filter((o) => o.falta_factura && o.estado === "registrada").length;
 
   return (
-    <section className="card flex flex-col gap-3 p-4">
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-lg font-semibold">Órdenes de compra</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Una orden por proveedor: lo que se va a pedir, al precio analizado. Cuando la compres, regístrala con su
-            factura.
-          </p>
-        </div>
+    <section className="card elev-1 flex flex-col gap-3 p-4">
+      {/* Un div y no un header (27/11): el chip ya marca el título. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <TituloBloque
+          icono={ShoppingCart}
+          tono="sale"
+          titulo="Órdenes de compra"
+          ayuda="Una orden por proveedor: lo que se va a pedir, al precio analizado. Cuando la compres, regístrala con su factura."
+        />
         {generar}
         {ordenes.length > 0 ? (
           <p
@@ -72,7 +73,7 @@ export function ComprasDelPedido({
             {faltan === 0 ? "Todas compradas" : `${ordenes.length - faltan} de ${ordenes.length} compradas · faltan ${faltan}`}
           </p>
         ) : null}
-      </header>
+      </div>
 
       {/*
         Lo comprado y sin recibir, arriba y con su botón (04/11). Sin recibir,

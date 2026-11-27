@@ -77,7 +77,7 @@ export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRec
                   *«falta el botón de recibir mercadería, no darle clic al
                   número»*.
                 */}
-                <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] px-4 py-3 text-right">
+                <th className="sticky right-0 z-20 px-4 py-3 text-right">
                   Acciones
                 </th>
               </tr>
@@ -98,14 +98,14 @@ export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRec
                       <Link
                         href={`/recepciones/${r.id}`}
                         className={cn(
-                          "whitespace-nowrap font-mono text-sm font-semibold text-brand-600 underline-offset-2 hover:underline",
+                          "whitespace-nowrap tabular text-sm font-semibold text-brand-600 underline-offset-2 hover:underline",
                           r.anulada && "line-through",
                         )}
                       >
                         {r.numero}
                       </Link>
                       {r.compra_numero ? (
-                        <span className="block font-mono text-[var(--fg-muted)]">{r.compra_numero}</span>
+                        <span className="block tabular text-[var(--fg-muted)]">{r.compra_numero}</span>
                       ) : null}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 font-medium tabular">{fechaPeru(r.fecha)}</td>
@@ -138,7 +138,7 @@ export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRec
                         la columna quedaba blanca en las filas de dos tonos. */}
                     <td
                       className={cn(
-                        "sticky right-0 z-10 border-l border-[var(--border-soft)] px-4 py-3 group-hover/fila:bg-[var(--color-brand-50)] dark:group-hover/fila:bg-[var(--surface-3)]",
+                        "sticky right-0 z-10 px-4 py-3 group-hover/fila:bg-[var(--color-brand-50)] dark:group-hover/fila:bg-[var(--surface-3)]",
                         fondo,
                       )}
                     >
@@ -176,12 +176,12 @@ export async function TablaRecepciones({ filtros, query }: { filtros: FiltrosRec
               <div className="min-w-0">
                 <Link
                   href={`/recepciones/${r.id}`}
-                  className={cn("font-mono text-sm font-semibold text-brand-600", r.anulada && "line-through")}
+                  className={cn("tabular text-sm font-semibold text-brand-600", r.anulada && "line-through")}
                 >
                   {r.numero}
                 </Link>
                 {r.compra_numero ? (
-                  <span className="block font-mono text-sm text-[var(--fg-muted)]">{r.compra_numero}</span>
+                  <span className="block tabular text-sm text-[var(--fg-muted)]">{r.compra_numero}</span>
                 ) : null}
               </div>
               {r.anulada ? <EtiquetaAnulada /> : <EtiquetaRecibida />}
@@ -286,13 +286,13 @@ function Papeles({ guia, factura }: { guia: string | null; factura: string | nul
       {guia ? (
         <span>
           <span className="text-[var(--fg-muted)]">Guía </span>
-          <span className="font-mono">{guia}</span>
+          <span className="tabular">{guia}</span>
         </span>
       ) : null}
       {factura ? (
         <span>
           <span className="text-[var(--fg-muted)]">Factura </span>
-          <span className="font-mono">{factura}</span>
+          <span className="tabular">{factura}</span>
         </span>
       ) : null}
     </span>

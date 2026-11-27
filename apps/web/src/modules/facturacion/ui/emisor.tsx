@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { abreviaturaUnidad, importeConDescuento } from "@rodatech/config";
 import {
   Combobox,
-  Badge,
+  buttonVariants,
+  cn,
   Button,
   Input,
   Moneda,
@@ -32,6 +33,8 @@ import type { CuentaParaPagar } from "@/componentes/cuentas-para-pagar";
 import type { EmisorHoja } from "@/componentes/hoja-documento";
 
 import { AntesDeEmitir, type OpcionesEmision } from "./antes-de-emitir";
+import { ListaComprobacion } from "./lista-comprobacion";
+import { PanelModulo } from "@/componentes/panel-modulo";
 import { cargarCotizacion } from "../acciones/cargar";
 import { guardarBorradorFactura, type DatosBorradorFactura } from "../acciones/borrador";
 import { emitirComprobante, type ResultadoEmision } from "../acciones/emitir";
@@ -561,12 +564,22 @@ export function EmisorComprobante({
     <form id="form-emitir" action={emitir} onKeyDown={sinEnvioConEnter} className="flex flex-col gap-5">
       <input type="hidden" name="comprobante" value={payload} />
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+      {/*
+        La cabecera de marca, como las fichas (27/11): esta es la pantalla
+        donde más caro sale equivocarse, y era un título de 20 px sobre fondo
+        blanco. Los botones de dentro no cambian; el panel los viste.
+      */}
+      <PanelModulo ruta="/facturacion">
+      <header className="relative flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             {borradorId ? "Borrador de factura" : "Emitir comprobante"}
           </h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <span
+            className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400"
+            aria-hidden="true"
+          />
+          <p className="mt-3 max-w-2xl text-lg text-white">
             {borradorId
               ? "Todavía no tiene número ni está en Cobranzas. Revísala y emítela cuando esté bien."
               : "Nace de una cotización aprobada. El stock sale con la guía, no aquí."}
@@ -612,6 +625,7 @@ export function EmisorComprobante({
           </Button>
         </div>
       </header>
+      </PanelModulo>
 
       {avisoBorrador}
 
@@ -1019,11 +1033,11 @@ export function EmisorComprobante({
         </div>
 
         {/* -------------------------------------------------- Resumen */}
-        <aside className="w-full shrink-0 lg:w-80">
-          <div className="card sticky top-4 flex flex-col gap-3 p-4">
-            <h2 className="text-base font-semibold">Resumen</h2>
+        <aside className="w-full shrink-0 lg:w-96">
+          <div className="card elev-2 sticky top-4 flex flex-col gap-4 p-5">
+            <h2 className="text-xl font-bold">Resumen</h2>
 
-            <dl className="flex flex-col gap-1.5 text-sm">
+            <dl className="flex flex-col gap-2 text-base">
               <Fila etiqueta="Gravada" valor={`${sim}\u00a0${totalesDoc.gravada.toFixed(2)}`} />
               {totalesDoc.descuento > 0 ? (
                 <Fila etiqueta="Descuento" valor={`−\u00a0${sim}\u00a0${totalesDoc.descuento.toFixed(2)}`} />
@@ -1065,6 +1079,66 @@ export function EmisorComprobante({
             ) : null}
 
             {/*
+              La lista de comprobación (27/11): cada requisito en su renglón,
+              «Listo» en verde o «Falta» en rojo, con su palabra. Lee los
+              mismos `bloqueos` de siempre; no decide nada nuevo.
+            */}
+            {cot ? (
+              <div className="border-t border-[var(--border-soft)] pt-3">
+                <h3 className="mb-2 text-lg font-bold text-[var(--titulo)]">Antes de emitir, comprueba</h3>
+                <ListaComprobacion
+                  requisitos={[
+                    {
+                      clave: "cliente",
+                      titulo: "Datos del cliente que pide SUNAT",
+                      falta: textoBloqueos(bloqueos, ["cliente", "tipo", "documento"]),
+                      detalleListo: cot.cliente_documento ? `Documento ${cot.cliente_documento}` : undefined,
+                    },
+                    {
+                      clave: "guia",
+                      titulo: "Guía de remisión emitida",
+                      falta: textoBloqueos(bloqueos, ["guia"]),
+                      detalleListo:
+                        opciones.guias.length === 1
+                          ? "1 guía marcada: su número sale en la factura."
+                          : `${opciones.guias.length} guías marcadas: sus números salen en la factura.`,
+                    },
+                    /*
+                      El descuadre con las guías marcadas (157) tampoco es de
+                      SUNAT: es la regla de Willy de facturar lo que salió. Va
+                      aparte y con lo que hay que hacer en cada línea.
+                    */
+                    {
+                      clave: "cantidades",
+                      titulo: "Cantidades iguales a lo que salió con la guía",
+                      falta: textoBloqueos(bloqueos, ["cantidades"]),
+                    },
+                    {
+                      clave: "lineas",
+                      titulo: "Productos y montos",
+                      falta: textoBloqueos(bloqueos, ["lineas", "montos"]),
+                    },
+                  ]}
+                  aviso={
+                    <>
+                      Se emite como <strong className="font-mono">{serie}</strong>
+                      {opciones.enviarSunat && puedeEnviar
+                        ? " y se manda a SUNAT en el mismo paso."
+                        : " y queda pendiente de enviar a SUNAT, que se hace desde su ficha."}
+                    </>
+                  }
+                />
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base">
+                <strong>Empieza por elegir la cotización aprobada.</strong>{" "}
+                <span className="text-[var(--fg-muted)]">
+                  Con ella se rellenan el cliente, los productos y las guías, y aquí verás qué falta para emitir.
+                </span>
+              </p>
+            )}
+
+            {/*
               La falta de guía va SEPARADA del resto, y no bajo «SUNAT lo
               rechazaría».
 
@@ -1077,7 +1151,7 @@ export function EmisorComprobante({
               quien no la admite es Willy.
             */}
             {bloqueos.some((b) => b.campo === "guia") && cot ? (
-              <div className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3">
+              <div className="anim-entrada rounded-xl border border-l-4 border-[var(--danger)] bg-[var(--danger-bg)] p-4">
                 {/*
                   Dos casos muy distintos, y el segundo casi se me escapa.
 
@@ -1090,7 +1164,7 @@ export function EmisorComprobante({
                 */}
                 {cot.guias_borrador.length > 0 ? (
                   <>
-                    <p className="text-sm font-medium text-[var(--warn)]">
+                    <p className="text-base font-bold text-[var(--danger)]">
                       La guía está sin emitir
                     </p>
                     <p className="mt-0.5 text-sm">
@@ -1101,14 +1175,14 @@ export function EmisorComprobante({
                     </p>
                     <Link
                       href={`/guias/${cot.guias_borrador[0]!.id}`}
-                      className="mt-2 inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                      className={cn(buttonVariants(), "mt-3 px-4")}
                     >
                       Ir a {cot.guias_borrador[0]!.numero}
                     </Link>
                   </>
                 ) : (
                   <>
-                    <p className="text-sm font-medium text-[var(--warn)]">
+                    <p className="text-base font-bold text-[var(--danger)]">
                       Falta la guía de remisión
                     </p>
                     <p className="mt-0.5 text-sm">
@@ -1117,7 +1191,7 @@ export function EmisorComprobante({
                     </p>
                     <Link
                       href={`/guias/nueva?cotizacion=${cot.id}`}
-                      className="mt-2 inline-flex h-control-md items-center rounded-md bg-brand-600 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-700"
+                      className={cn(buttonVariants(), "mt-3 px-4")}
                     >
                       Generar la guía
                     </Link>
@@ -1127,51 +1201,12 @@ export function EmisorComprobante({
             ) : null}
 
             {/*
-              El descuadre con las guías marcadas (157) tampoco es de SUNAT:
-              es la regla de Willy de facturar lo que salió. Va aparte y con
-              lo que hay que hacer en cada línea.
+              27/11: las cajas «La factura no cuadra con la guía» (157) y
+              «SUNAT lo rechazaría» se quitaron de aquí porque sus mensajes ya
+              salen, uno por uno, en la lista de comprobación de arriba, en
+              su renglón y en rojo. La de la guía se queda porque lleva el
+              botón que la resuelve.
             */}
-            {bloqueos.some((b) => b.campo === "cantidades") ? (
-              <div className="anim-entrada rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3">
-                <p className="text-sm font-medium text-[var(--warn)]">
-                  La factura no cuadra con la guía
-                </p>
-                <ul className="mt-1 flex flex-col gap-1 text-sm">
-                  {bloqueos
-                    .filter((b) => b.campo === "cantidades")
-                    .map((b) => (
-                      <li key={b.mensaje}>· {b.mensaje}</li>
-                    ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {bloqueos.some((b) => b.campo !== "guia" && b.campo !== "cantidades") ? (
-              <div className="anim-entrada rounded-sm border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5">
-                <p className="mb-1 text-sm font-medium text-[var(--danger)]">
-                  SUNAT lo rechazaría:
-                </p>
-                {/* `text-sm` y no `text-sm`: es un mensaje que hay que LEER
-                    para saber qué corregir, y la regla de la casa es que eso
-                    no baja de 14 px (17/09). */}
-                <ul className="flex flex-col gap-1 text-sm">
-                  {bloqueos
-                    .filter((b) => b.campo !== "guia" && b.campo !== "cantidades")
-                    .map((b) => (
-                      <li key={b.mensaje}>· {b.mensaje}</li>
-                    ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {cot && bloqueos.length === 0 ? (
-              <p className="text-sm text-[var(--fg-muted)]">
-                Se emite como <Badge tone="neutral" size="xs">{serie}</Badge>
-                {opciones.enviarSunat && puedeEnviar
-                  ? " y se manda a SUNAT en el mismo paso."
-                  : " y queda pendiente de enviar a SUNAT, que se hace desde su ficha."}
-              </p>
-            ) : null}
           </div>
 
           {/* Debajo del resumen, no encima: primero se mira lo que se cobra y
@@ -1286,7 +1321,19 @@ function Fila({
   return (
     <div className="flex items-baseline justify-between gap-2">
       <dt className="text-[var(--fg-muted)]">{etiqueta}</dt>
-      <dd className={`tabular ${fuerte ? "text-base font-semibold" : ""}`}>{valor}</dd>
+      <dd className={`tabular ${fuerte ? "text-2xl font-extrabold text-[var(--titulo)]" : "font-semibold"}`}>{valor}</dd>
     </div>
   );
+}
+
+/**
+ * Los mensajes de los bloqueos de esos campos, en una sola frase, o `null`
+ * si no hay ninguno: es lo que pinta la lista de comprobación (27/11).
+ */
+function textoBloqueos(
+  bloqueos: readonly { campo: string; mensaje: string }[],
+  campos: readonly string[],
+): string | null {
+  const m = bloqueos.filter((b) => campos.includes(b.campo)).map((b) => b.mensaje);
+  return m.length > 0 ? m.join(" ") : null;
 }

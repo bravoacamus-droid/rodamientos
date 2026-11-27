@@ -25,9 +25,15 @@ export function Switch({
   return (
     <SwitchPrimitive.Root
       className={cn(
-        lg ? "h-8 w-14" : "h-5 w-9",
+        // `md` de 24 × 44 y no 20 × 36 (27/11): el interruptor pequeño no se
+        // distinguía de un adorno, y su estado —encendido o apagado— es lo
+        // que hay que leer de un vistazo.
+        lg ? "h-8 w-14" : "h-6 w-11",
         "peer inline-flex shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent",
-        "bg-[var(--border-strong)] transition-colors",
+        // Apagado en el gris de la letra secundaria y no en el de los bordes
+        // (27/11): la bola blanca sobre #c7d2de daba 1,5:1 y no se veía de
+        // qué lado estaba.
+        "bg-[var(--fg-subtle)] transition-colors",
         "data-[state=checked]:bg-brand-600",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
@@ -37,7 +43,7 @@ export function Switch({
       <SwitchPrimitive.Thumb
         className={cn(
           "pointer-events-none block rounded-full bg-white shadow-sm ring-0",
-          lg ? "size-7 data-[state=checked]:translate-x-6" : "size-4 data-[state=checked]:translate-x-4",
+          lg ? "size-7 data-[state=checked]:translate-x-6" : "size-5 data-[state=checked]:translate-x-5",
           "transition-transform data-[state=unchecked]:translate-x-0",
           "motion-reduce:transition-none",
         )}
@@ -62,7 +68,7 @@ export function SwitchCampo({
   return (
     <div className={cn("flex items-start justify-between gap-4 py-1.5", className)}>
       <div className="min-w-0">
-        <label htmlFor={id} className="block cursor-pointer text-sm font-medium text-fg">
+        <label htmlFor={id} className="block cursor-pointer text-sm font-semibold text-fg">
           {label}
         </label>
         {ayuda && (

@@ -161,7 +161,7 @@ export function TablaPorComprar({
                           <ChevronRight className="mt-1 size-4 shrink-0" aria-hidden="true" />
                         )}
                         <span>
-                          <span className="block font-mono text-base font-semibold">
+                          <span className="block tabular text-base font-semibold">
                             {f.codigo}
                           </span>
                           <span className="block text-sm text-[var(--fg-muted)]">
@@ -316,7 +316,7 @@ export function TablaPorComprar({
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <span className="block font-mono text-base font-semibold">
+                  <span className="block tabular text-base font-semibold">
                     {f.codigo}
                   </span>
                   <span className="block text-sm text-[var(--fg-muted)]">
@@ -491,7 +491,7 @@ function DetalleLineas({ fila }: { fila: ProductoPorComprar }) {
             <td className="py-1.5 pr-3">
               <Link
                 href={`/cotizaciones/${l.cotizacion_id}`}
-                className="font-mono text-brand-600 hover:underline"
+                className="tabular text-brand-600 hover:underline"
               >
                 {l.cotizacion}
               </Link>

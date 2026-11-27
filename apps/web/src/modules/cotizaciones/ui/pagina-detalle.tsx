@@ -3,7 +3,21 @@ import { consultarTipoCambio } from "@/lib/tipo-cambio";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Copy, PackagePlus } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  CalendarClock,
+  ClipboardList,
+  Coins,
+  Copy,
+  FileText,
+  Package,
+  PackagePlus,
+  TrendingUp,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
 import { EstadoBadge, buttonVariants, cn } from "@rodatech/ui";
 import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
 
@@ -39,6 +53,7 @@ import { VistaPreviaDocumento } from "./detalle/vista-previa";
 import { unidadLegible } from "../dominio/unidades";
 import { Volver } from "@/componentes/volver";
 import { estadoUtilidad } from "../dominio/utilidad-minima";
+import { BarraAcciones, CabeceraFicha, DatoResumen, PasosFlujo, TituloBloque } from "./ficha/piezas";
 
 /**
  * Ficha de una cotización.
@@ -363,6 +378,48 @@ export default async function PaginaDetalleCotizacion({
   /** Por producto, para poder marcar cada fila de la tabla. */
   const faltaPorProducto = new Map(falta.map((f) => [f.producto_id, f]));
 
+  /** Queda algo confirmado y sin facturar (lo usa el botón «Facturar»). */
+  const facturable = lineas.some((l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0);
+
+  /*
+    El paso del flujo en la cabecera (27/11). Se deduce de lo que YA se sabe
+    en esta pantalla —estado, guías, facturas y saldos—, sin consultas
+    nuevas. El paso actual es el primero que no está hecho. Una cotización
+    rechazada, anulada o vencida no va por ningún paso: no se dibuja.
+  */
+  const cobrado = facturas.length > 0 && facturas.every((f) => f.saldo <= 0.005);
+  const hechos: [string, boolean][] = [
+    ["Cotización", confirmado],
+    ["Pedido", confirmado],
+    ["Guía", despacho.guias.length > 0 && !despacho.pendiente],
+    ["Factura", facturas.length > 0 && !facturable],
+    ["Cobro", cobrado],
+  ];
+  const actual = hechos.findIndex(([, h]) => !h);
+  const pasosFlujo =
+    cabecera.estado === "rechazada" || cabecera.estado === "anulada" || cabecera.estado === "vencida"
+      ? null
+      : hechos.map(([nombre, h], i) => ({
+          nombre,
+          estado: h ? ("hecho" as const) : i === actual ? ("actual" as const) : ("falta" as const),
+        }));
+
+  /** Qué toca ahora, en una frase, encima de los botones. */
+  const queSigue =
+    cabecera.estado === "borrador"
+      ? "Revísala y mándasela al cliente. Cuando te diga que sí, apruébala con lo que lleva."
+      : cabecera.estado === "enviada"
+        ? "Ya la tiene el cliente. Cuando confirme, apruébala con lo que lleva."
+        : cabecera.estado === "aprobada"
+          ? despacho.pendiente
+            ? "Es un pedido: consigue lo que falta y haz la guía. Después se factura."
+            : facturable
+              ? "Ya salió con su guía: falta facturar."
+              : "Despachado y facturado. Si el cliente vuelve a pedir, empieza otro pedido."
+          : cabecera.estado === "atendida"
+            ? "Atendida: entregada y facturada."
+            : "Ya no está en curso. Puedes clonarla para cotizar de nuevo.";
+
   return (
     <MonedaDelPapel
       key={`${moneda}-${tcFijo ?? ""}`}
@@ -386,46 +443,57 @@ export default async function PaginaDetalleCotizacion({
         tarjetas y el papel se mira con «Vista previa» — que enseña el mismo
         componente, así que la ventaja no se pierde.
       */}
-      <div className="flex flex-col gap-5 print:hidden">
+      <div className="@container flex flex-col gap-5 print:hidden">
         <Volver href="/cotizaciones">Volver a cotizaciones</Volver>
 
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-[var(--surface-2)] px-2 py-0.5 font-mono text-sm font-medium">
-                {cabecera.numero}
-              </span>
-              <EstadoBadge
-                estado={cabecera.estado}
-                etiqueta={ETIQUETA_ESTADO[cabecera.estado]}
-              />
-            </div>
+        {/*
+          La cabecera de marca (27/11): número, estado, cliente y TOTAL.
 
-            {/*
-              El CLIENTE en grande, no el número del documento.
+          El total era lo último de la pantalla —al pie de la tabla, en
+          `text-lg`— y es lo primero que se pregunta de una cotización. Ahora
+          es la cifra grande de la derecha, como «Vendido este mes» en el
+          tablero. Y debajo, por qué paso del flujo va.
+        */}
+        <CabeceraFicha
+          icono={FileText}
+          tipo="Cotización"
+          numero={cabecera.numero}
+          estado={
+            <EstadoBadge
+              estado={cabecera.estado}
+              etiqueta={ETIQUETA_ESTADO[cabecera.estado]}
+              size="md"
+              className="px-3 py-1.5 text-base"
+            />
+          }
+          /*
+            El CLIENTE en grande, no el número del documento.
 
-              Es lo que identifica la cotización para quien la abre: Willy no
-              recuerda «la COT1-000006», recuerda «la de ACEROS CHILCA». El
-              número queda arriba, en pastilla, para cuando hace falta
-              exactamente ese dato.
-            */}
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {cabecera.cliente.razon_social}
-            </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <p className="text-sm text-[var(--fg-muted)]">
-                {cabecera.cliente.numero_documento
-                  ? `${cabecera.cliente.tipo_documento} ${cabecera.cliente.numero_documento} · `
-                  : ""}
-                {fechaCorta(cabecera.fecha)}
-              </p>
+            Es lo que identifica la cotización para quien la abre: Willy no
+            recuerda «la COT1-000006», recuerda «la de ACEROS CHILCA». El
+            número queda arriba, junto al estado, para cuando hace falta
+            exactamente ese dato.
+          */
+          titulo={cabecera.cliente.razon_social}
+          detalle={
+            <p>
+              {cabecera.cliente.numero_documento
+                ? `${cabecera.cliente.tipo_documento} ${cabecera.cliente.numero_documento} · `
+                : ""}
+              {fechaCorta(cabecera.fecha)}
+              {cabecera.vendedor ? ` · la hizo ${cabecera.vendedor}` : ""}
+            </p>
+          }
+          enlaces={
+            <>
               {/* Al cliente, para corregir sus datos antes de mandarla (FS-08). */}
               <Link
                 href={`/clientes/${cabecera.cliente_id}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
+                className={cn(buttonVariants({ variant: "outline" }), "px-4")}
               >
-                <Building2 className="size-4" aria-hidden="true" />
+                <Building2 className="size-5" aria-hidden="true" />
                 Ficha del cliente
+                <ArrowRight className="size-5" aria-hidden="true" />
               </Link>
               {/* De dónde sale la copia (Luis, 05/11: *«debería decirme de qué
                   cotización viene clonada… para ir a la cotización
@@ -433,15 +501,29 @@ export default async function PaginaDetalleCotizacion({
               {cabecera.origen ? (
                 <Link
                   href={`/cotizaciones/${cabecera.origen.id}`}
-                  className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
+                  className={cn(buttonVariants({ variant: "outline" }), "px-4")}
                 >
-                  <Copy className="size-4" aria-hidden="true" />
+                  <Copy className="size-5" aria-hidden="true" />
                   Clonada de {cabecera.origen.numero}
                 </Link>
               ) : null}
-            </div>
-          </div>
+            </>
+          }
+          cifra={{
+            etiqueta: cambioAlConfirmar ? "Total confirmado" : "Total con IGV",
+            valor: dinero(cambioAlConfirmar ? subtotalConfirmadoVer + igvConfirmadoVer : totalesVer.total),
+            detalle: cambioAlConfirmar
+              ? `Se había cotizado ${dinero(totalesVer.total)}`
+              : tcVer
+                ? `En dólares: ${dolar(cabecera.total)}`
+                : `${lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} · válida hasta el ${fechaCorta(impresa.validaHasta)}`,
+          }}
+          pasos={
+            pasosFlujo ? <PasosFlujo pasos={pasosFlujo} /> : null
+          }
+        />
 
+        <BarraAcciones titulo="Qué puedes hacer" texto={queSigue}>
           <AccionesCotizacion
             id={cabecera.id}
             numero={cabecera.numero}
@@ -458,9 +540,7 @@ export default async function PaginaDetalleCotizacion({
               whatsapp: cabecera.cliente.whatsapp ?? "",
               email: cabecera.cliente.email ?? "",
             }}
-            facturable={lineas.some(
-              (l) => (l.cantidad_aprobada ?? 0) - l.cantidad_atendida > 0,
-            )}
+            facturable={facturable}
             editable={!despachada && lineas.every((l) => l.cantidad_atendida <= 0)}
             despachable={despacho.pendiente}
             guias={despacho.guias}
@@ -504,7 +584,7 @@ export default async function PaginaDetalleCotizacion({
               </>
             }
           />
-        </header>
+        </BarraAcciones>
 
         {/* ---------------------------------------------------- Resumen */}
         {/*
@@ -515,8 +595,13 @@ export default async function PaginaDetalleCotizacion({
           imprime» — ahora nada de esta mitad se imprime, así que esa
           advertencia sobra y el dato puede estar donde toca.
         */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        {/* Por container queries (27/11): con el menú abierto a 1024 px la
+            ficha mide 760, y por `lg:` salían tres columnas de 240 px donde
+            «A crédito» no cabía a 24 px de letra. */}
+        <div className="grid gap-3 @xl:grid-cols-2 @5xl:grid-cols-3 @7xl:grid-cols-5">
           <Resumen
+            icono={Coins}
+            tono="sale"
             etiqueta="Moneda de la venta"
             valor={moneda === "PEN" ? "Soles" : "Dólares"}
             detalle={
@@ -535,6 +620,8 @@ export default async function PaginaDetalleCotizacion({
             }
           />
           <Resumen
+            icono={Wallet}
+            tono="sale"
             etiqueta="Condición de pago"
             valor={
               cabecera.cliente.condicion_pago === "credito" ? "A crédito" : "Al contado"
@@ -548,6 +635,10 @@ export default async function PaginaDetalleCotizacion({
           <Resumen
             // Sin «O/C» ni una raya sola: dicho con palabras (revisión por
             // módulos del 02/10).
+            icono={ClipboardList}
+            // Ámbar solo cuando ya es pedido y falta: ahí sí es algo por
+            // pedirle al cliente. En un borrador todavía no toca.
+            tono={!cabecera.orden_compra_cliente && confirmado ? "aviso" : undefined}
             etiqueta="Orden de compra del cliente"
             valor={cabecera.orden_compra_cliente ?? "Sin orden"}
             detalle={
@@ -562,6 +653,7 @@ export default async function PaginaDetalleCotizacion({
             }
           />
           <Resumen
+            icono={CalendarClock}
             etiqueta="Validez"
             valor={`${cabecera.validez_dias} días`}
             detalle={`hasta el ${fechaCorta(impresa.validaHasta)}`}
@@ -574,6 +666,7 @@ export default async function PaginaDetalleCotizacion({
             raya, que es la verdad: no se sabe.
           */}
           <Resumen
+            icono={TrendingUp}
             etiqueta="Margen al costo"
             valor={
               // Dos decimales, como lo guarda la base y como lo calcula Willy
@@ -618,9 +711,10 @@ export default async function PaginaDetalleCotizacion({
         lineas.some((l) => !l.producto_id) ? (
           <section
             role="alert"
-            className="flex flex-col gap-2 rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-4 text-sm"
+            className="card elev-2 flex flex-col gap-2 border-l-[6px] border-l-[var(--danger)] bg-danger-bg p-4 text-base"
           >
-            <h2 className="text-base font-semibold text-[var(--danger)]">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--danger)]">
+              <TriangleAlert className="size-5 shrink-0" aria-hidden="true" />
               {lineas.filter((l) => !l.producto_id).length === 1
                 ? "Un producto no está registrado en el catálogo"
                 : `${lineas.filter((l) => !l.producto_id).length} productos no están registrados en el catálogo`}
@@ -679,13 +773,13 @@ export default async function PaginaDetalleCotizacion({
             de la pantalla. Con `md`, a 820 con el menú abierto salía la
             tabla en 500 px y el importe quedaba fuera (revisión por módulos
             del 02/10). */}
-        <section className="card @container overflow-hidden">
-          <header className="border-b border-[var(--border-soft)] px-4 py-3">
-            <h2 className="text-base font-semibold">Productos</h2>
-            <p className="text-sm text-[var(--fg-muted)]">
-              {lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} en la
-              cotización.
-            </p>
+        <section className="card elev-1 @container overflow-hidden">
+          <div className="border-b border-[var(--border-soft)] px-4 py-4">
+            <TituloBloque
+              icono={Package}
+              titulo="Productos"
+              ayuda={`${lineas.length === 1 ? "1 ítem" : `${lineas.length} ítems`} en la cotización.`}
+            />
             {porDecidir ? <ResumenSituacionCompra r={resumenSituacion} /> : null}
             {/* El cambio, a la vista: sin él no se sabe de dónde salen los soles. */}
             {moneda === "PEN" ? (
@@ -703,7 +797,7 @@ export default async function PaginaDetalleCotizacion({
                 )}
               </p>
             ) : null}
-          </header>
+          </div>
 
           {/*
             La tabla, solo de `md` para arriba.
@@ -895,11 +989,11 @@ export default async function PaginaDetalleCotizacion({
 
           {/* Los totales al pie y a la derecha, como en el papel: es donde el
               ojo los busca después de leer la última línea. */}
-          <div className="flex justify-end px-4 py-3">
+          <div className="flex justify-end border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-4">
             {cambioAlConfirmar ? (
               /* Lo que se lleva, que es lo que se va a facturar. Lo cotizado
                  queda debajo, en pequeño: es lo que se le mandó. */
-              <dl className="w-full max-w-xs text-sm">
+              <dl className="w-full max-w-sm text-base">
                 <div className="flex items-baseline justify-between py-1">
                   <dt className="text-[var(--fg-muted)]">Subtotal confirmado (sin IGV)</dt>
                   <dd className="tabular">{dinero(subtotalConfirmadoVer)}</dd>
@@ -909,8 +1003,8 @@ export default async function PaginaDetalleCotizacion({
                   <dd className="tabular">{dinero(igvConfirmadoVer)}</dd>
                 </div>
                 <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
-                  <dt className="font-semibold">Total confirmado</dt>
-                  <dd className="tabular text-lg font-semibold">{dinero(subtotalConfirmadoVer + igvConfirmadoVer)}</dd>
+                  <dt className="text-lg font-bold">Total confirmado</dt>
+                  <dd className="tabular text-2xl font-extrabold text-[var(--titulo)]">{dinero(subtotalConfirmadoVer + igvConfirmadoVer)}</dd>
                 </div>
                 <div className="flex items-baseline justify-between pt-1 text-[var(--fg-muted)]">
                   <dt>Se había cotizado</dt>
@@ -918,7 +1012,7 @@ export default async function PaginaDetalleCotizacion({
                 </div>
               </dl>
             ) : (
-            <dl className="w-full max-w-xs text-sm">
+            <dl className="w-full max-w-sm text-base">
               <div className="flex items-baseline justify-between py-1">
                 <dt className="text-[var(--fg-muted)]">Subtotal (sin IGV)</dt>
                 <dd className="tabular">{dinero(totalesVer.subtotal)}</dd>
@@ -936,8 +1030,8 @@ export default async function PaginaDetalleCotizacion({
                 <dd className="tabular">{dinero(totalesVer.igv)}</dd>
               </div>
               <div className="mt-1 flex items-baseline justify-between border-t border-[var(--border)] pt-2">
-                <dt className="font-semibold">Total</dt>
-                <dd className="tabular text-lg font-semibold">{dinero(totalesVer.total)}</dd>
+                <dt className="text-lg font-bold">Total</dt>
+                <dd className="tabular text-2xl font-extrabold text-[var(--titulo)]">{dinero(totalesVer.total)}</dd>
               </div>
               {tcVer ? (
                 <div className="flex items-baseline justify-between pt-1 text-[var(--fg-muted)]">
@@ -1035,41 +1129,42 @@ function EstadoDeLinea({
   );
 }
 
-/** Una de las cuatro tarjetas de arriba. */
+/**
+ * Una de las tarjetas de arriba.
+ *
+ * Desde el 27/11 con su icono en chip y el filo de color del tablero, y sin
+ * `truncate`: «Sin orden» o «A crédito» cortados a 24 px de letra eran un
+ * dato que no se leía. El tono sigue diciendo lo mismo que antes —el margen
+ * en verde si llega al mínimo, en rojo si no—, ahora también en el filo.
+ */
 function Resumen({
+  icono,
   etiqueta,
   valor,
   detalle,
   tono,
   accion,
 }: {
+  icono: LucideIcon;
   etiqueta: string;
   valor: string;
   detalle: string;
-  tono?: "ok" | "aviso" | "malo";
+  /** `sale` = informativo (azul); el resto, como antes. */
+  tono?: "ok" | "aviso" | "malo" | "sale";
   /** Un botón debajo, para cambiar el dato sin salir de la ficha. */
   accion?: React.ReactNode;
 }) {
-  const color =
-    tono === "malo"
-      ? "text-[var(--danger)]"
-      : tono === "aviso"
-        ? "text-[var(--warn)]"
-        : tono === "ok"
-          ? "text-[var(--ok)]"
-          : "";
-
+  const t = tono === "ok" ? "entra" : tono === "aviso" ? "revisar" : tono === "malo" ? "urgente" : tono === "sale" ? "sale" : "marca";
   return (
-    <div className="card p-4">
-      <p className="text-sm font-medium text-[var(--fg-muted)]">
-        {etiqueta}
-      </p>
-      <p className={`mt-1 truncate text-xl font-semibold ${color}`} title={valor}>
-        {valor}
-      </p>
-      <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{detalle}</p>
-      {accion}
-    </div>
+    <DatoResumen
+      icono={icono}
+      tono={t}
+      colorValor={tono === "ok" || tono === "malo" || tono === "aviso"}
+      etiqueta={etiqueta}
+      valor={valor}
+      detalle={detalle}
+      accion={accion}
+    />
   );
 }
 

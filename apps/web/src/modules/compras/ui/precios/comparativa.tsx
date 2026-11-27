@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Input, formatearMoneda } from "@rodatech/ui";
 import {
+  ArrowRight,
   Check,
   ClipboardPen,
   PackageSearch,
   Plus,
   TriangleAlert,
+  Trophy,
 } from "lucide-react";
 
 import {
@@ -480,10 +482,16 @@ export function Comparativa({
                 fondo propio compiten de igual a igual, que
                 es justo lo que hay que comparar.
               */
+              /*
+                Y desde el 27/11 con FORMA además de color: el mejor lleva
+                borde grueso verde y trofeo; el elegido, el azul sólido y la
+                marca de hecho. En contraste alto los fondos de estado pasan
+                a blanco, y ahí el color solo no distinguía nada.
+              */
               esElegido
-                ? "bg-brand-600 text-white"
+                ? `bg-brand-600 font-bold text-white ${gana ? "ring-[3px] ring-[var(--ok)] ring-offset-1" : ""}`
                 : gana
-                  ? "bg-[var(--ok-bg)] font-semibold text-[var(--ok)]"
+                  ? "border-2 border-[var(--ok)] bg-[var(--ok-bg)] font-bold text-[var(--ok)]"
                   : masCaro
                     ? "text-[var(--danger)] hover:bg-[var(--surface-2)]"
                     : "hover:bg-[var(--surface-2)]"
@@ -494,10 +502,19 @@ export function Comparativa({
                 : undefined
             }
           >
-            {esElegido ? <Check className="size-3" /> : null}
+            {esElegido ? <Check className="size-4" aria-hidden="true" /> : gana ? <Trophy className="size-4" aria-hidden="true" /> : null}
             {formatearMoneda(celda.costoUsd, "USD")}
+            {esElegido ? <span className="sr-only"> (elegido)</span> : null}
           </button>
         )}
+        {gana && celda.costoUsd !== null && conPrecio.length > 1 ? (
+          <span className="mt-0.5 flex items-center gap-1 text-sm font-bold text-[var(--ok)]">
+            {esElegido ? <Trophy className="size-4" aria-hidden="true" /> : null}
+            mejor precio
+          </span>
+        ) : masCaro ? (
+          <span className="mt-0.5 block text-sm font-medium text-[var(--danger)]">el más caro</span>
+        ) : null}
         {celda.dias !== null && celda.costoUsd !== null ? (
           /* 10 px era el texto más pequeño de todo el ERP, y
              dice en cuántos días entrega ese proveedor: es
@@ -650,12 +667,12 @@ export function Comparativa({
       {ronda.compras.length > 0 ? (
         <section className="flex flex-col gap-3">
           <div>
-            <h2 className="text-base font-semibold">
+            <h2 className="text-xl font-bold text-[var(--titulo)]">
               {ronda.compras.length === 1
                 ? "La compra que salió de aquí"
                 : "Las compras que salieron de aquí"}
             </h2>
-            <p className="text-sm text-[var(--fg-muted)]">
+            <p className="text-base text-[var(--fg-muted)]">
               Una por proveedor. Ahí se registra lo que llega y lo que se le
               paga.
             </p>
@@ -663,14 +680,11 @@ export function Comparativa({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {ronda.compras.map((c) => (
-              <div key={c.id} className="card flex min-w-0 flex-col gap-2 p-4">
-                <span className="font-mono text-base font-semibold">
+              <div key={c.id} className="card elev-1 flex min-w-0 flex-col gap-2 border-l-4 border-l-[var(--info)] p-4">
+                <span className="font-mono text-lg font-bold">
                   {c.numero}
                 </span>
-                <span
-                  className="truncate text-sm text-[var(--fg-muted)]"
-                  title={c.proveedor}
-                >
+                <span className="break-words text-base font-semibold text-[var(--fg)]">
                   {c.proveedor}
                 </span>
 
@@ -680,7 +694,7 @@ export function Comparativa({
                   <span className="text-sm text-[var(--fg-muted)]">
                     Total a pagar
                   </span>
-                  <strong className="text-lg tabular-nums">
+                  <strong className="text-2xl font-extrabold tabular-nums">
                     {formatearMoneda(c.total, "USD")}
                   </strong>
                 </span>
@@ -689,6 +703,7 @@ export function Comparativa({
                   <Link href={`/compras/${c.id}`}>
                     <PackageSearch className="size-4" aria-hidden="true" />
                     Ver la compra
+                    <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                 </Button>
               </div>
@@ -848,7 +863,7 @@ export function Comparativa({
       */}
       {ronda.estado === "abierta" ? (
         <section className="card p-4">
-          <h2 className="text-base font-semibold">¿Te falta preguntarle a alguien?</h2>
+          <h2 className="text-xl font-bold">¿Te falta preguntarle a alguien?</h2>
           <p className="mb-3 text-sm text-[var(--fg-muted)]">
             Marca los productos, elige de los que ya los venden —o búscalo— y
             su columna aparece al momento.
@@ -1087,7 +1102,7 @@ export function Comparativa({
       {filas.some((f) => f.celdas.some((c) => c.costoUsd !== null)) ? (
         <section className="flex flex-col gap-3">
           <div>
-            <h2 className="text-base font-semibold">A cuánto lo vendes</h2>
+            <h2 className="text-xl font-bold text-[var(--titulo)]">A cuánto lo vendes</h2>
             <p className="text-sm text-[var(--fg-muted)]">
               Ya sabes lo que te cuesta. Ajusta tu precio si hace falta, o
               déjalo como está.

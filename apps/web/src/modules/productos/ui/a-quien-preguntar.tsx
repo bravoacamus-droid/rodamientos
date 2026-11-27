@@ -1,4 +1,7 @@
 import { Badge } from "@rodatech/ui";
+import { PhoneCall } from "lucide-react";
+
+import { BloqueFicha } from "./ficha";
 
 import type { PrecioDeProveedor } from "../api/compras";
 
@@ -36,17 +39,15 @@ export function AQuienPreguntar({ precios }: { precios: PrecioDeProveedor[] }) {
     f ? new Date(`${f.slice(0, 10)}T12:00:00`).toLocaleDateString("es-PE") : "—";
 
   return (
-    <section className="card p-4">
-      <h2 className="mb-1 text-base font-semibold">A quién preguntarle</h2>
-
+    <BloqueFicha icono={PhoneCall} titulo="A quién preguntarle" tono="info">
       {precios.length === 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
+        <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
           Todavía no consta que nadie te haya dado precio de este producto. En
           cuanto le compres o le preguntes a alguien, aparece aquí.
         </p>
       ) : (
         <>
-          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+          <p className="text-base text-[var(--fg-muted)]">
             Lo último que te dejó cada uno, del más barato al más caro. Por ahí
             se empieza.
           </p>
@@ -157,6 +158,6 @@ export function AQuienPreguntar({ precios }: { precios: PrecioDeProveedor[] }) {
           </div>
         </>
       )}
-    </section>
+    </BloqueFicha>
   );
 }

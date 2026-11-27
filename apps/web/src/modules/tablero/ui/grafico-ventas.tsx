@@ -4,7 +4,6 @@
 // `ventas.tsx`, así los ~90 kB de la librería no entran al bundle inicial —
 // en la demo se importaba estáticamente y viajaba en cada carga del tablero.
 
-import { useEffect, useRef, useState } from "react";
 import { formatearMoneda } from "@rodatech/ui";
 import {
   Area,
@@ -20,6 +19,21 @@ import {
   YAxis,
 } from "recharts";
 
+import {
+  Globo,
+  Leyenda,
+  RADIO_ARRIBA,
+  REJILLA,
+  anchoTexto,
+  cifraCorta as cifraCortaComun,
+  cifraEncima,
+  margenGrafico,
+  propsEjeX,
+  propsEjeY,
+  useAncho,
+  useLetraGrafico,
+} from "@/modules/reportes/ui/graficos-base";
+
 import type { PuntoSerie } from "../api/consultas";
 
 // «$ 1,234.50» como el resto del ERP, no «USD 1,234.50» (auditoría 27/10).
@@ -32,32 +46,14 @@ const dolaresExactos = (n: number) => formatearMoneda(n);
  * columna de 72 y se comía la primera letra —«SD 20,000», «JSD 5,000»—. Y
  * repetir «USD» en cada marca no añade nada: la moneda va UNA vez, en el
  * título del gráfico.
+ *
+ * Desde el 27/11 es la misma de todos los gráficos (`graficos-base`).
  */
-export function cifraCorta(n: number): string {
-  const abs = Math.abs(n);
-  if (abs < 1000) return Math.round(n).toLocaleString("es-PE");
-  const miles = n / 1000;
-  return `${miles.toLocaleString("es-PE", {
-    maximumFractionDigits: Math.abs(miles) >= 10 ? 0 : 1,
-  })} mil`;
-}
-
-/** Ancho real del gráfico, para decidir si caben las cifras sobre los puntos. */
-function useAncho() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [ancho, setAncho] = useState(0);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(([e]) => setAncho(e?.contentRect.width ?? 0));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return [ref, ancho] as const;
-}
+export const cifraCorta = cifraCortaComun;
 
 /*
-  Las props de los ejes, compartidas por los dos gráficos.
+  Las props de los ejes salen de `graficos-base` (27/11), con la letra del
+  `<html>` en vez de 14 px fijos: ahora crecen con el ajuste de letra.
 
   Se comparten las PROPS y no los elementos: cada gráfico monta su propio
   `<XAxis>` literal. Recharts recorre `children` buscando sus componentes por
@@ -65,63 +61,14 @@ function useAncho() {
   propio— los esconde. Cuando eso pasa el gráfico sale en blanco **sin ningún
   error en consola**, que es lo que lo hace tan difícil de ver: pasó aquí
   mismo el 09/09 al meter las barras.
+
+  Las cifras encima de cada punto o barra. Willy, del tablero: *«se ve
+  feíto»*. Lo que más le faltaba era LEERLO sin pasar el ratón: el globo solo
+  sale al apuntar, y en el teléfono casi nunca. Con la cifra escrita sobre
+  cada mes el gráfico se lee de un vistazo, que es para lo que está (revisión
+  por módulos del 02/10). Solo se ponen si caben —ver `caben`—; amontonadas
+  serían peor que ninguna.
 */
-const EJE_X = {
-  dataKey: "mes",
-  tickLine: false,
-  axisLine: false,
-  tick: { fontSize: 14, fill: "var(--fg-subtle)" },
-  // Con muchos periodos, que la librería salte etiquetas antes de apilarlas.
-  interval: "preserveStartEnd" as const,
-  minTickGap: 16,
-};
-
-const EJE_Y = {
-  tickLine: false,
-  axisLine: false,
-  width: 64,
-  tick: { fontSize: 14, fill: "var(--fg-muted)" },
-  tickFormatter: (v: number) => cifraCorta(v),
-};
-
-/*
-  Las cifras encima de cada punto o barra.
-
-  Willy, del tablero: *«se ve feíto»*. Lo que más le faltaba era LEERLO sin
-  pasar el ratón: el globo solo sale al apuntar, y en el teléfono casi nunca.
-  Con la cifra escrita sobre cada mes el gráfico se lee de un vistazo, que es
-  para lo que está (revisión por módulos del 02/10). Solo se ponen si caben
-  —ver `caben`—; amontonadas serían peor que ninguna.
-*/
-const ETIQUETA_VALOR = {
-  position: "top" as const,
-  offset: 8,
-  fontSize: 14,
-  fill: "var(--fg)",
-  formatter: (v: unknown) => (typeof v === "number" && v !== 0 ? cifraCorta(v) : ""),
-};
-
-const REJILLA = {
-  strokeDasharray: "3 3",
-  stroke: "var(--border-soft)",
-  vertical: false,
-};
-
-const GLOBO = {
-  formatter: (valor: number, nombre: string) =>
-    [dolaresExactos(valor), nombre === "venta" ? "Vendido" : "Margen"] as [string, string],
-  contentStyle: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 6,
-    fontSize: 14,
-  },
-  labelStyle: { color: "var(--fg)", fontWeight: 600 },
-};
-
-// Arriba y a la derecha con aire: arriba va la cifra del punto más alto, y a
-// la derecha la del último mes, que si no se corta contra el borde.
-const MARGENES = { top: 28, right: 24, bottom: 0, left: 0 };
 
 /**
  * Venta y margen a lo largo del periodo.
@@ -177,6 +124,7 @@ export function GraficoVentas({
    */
   ultimoEnCurso?: boolean;
 }) {
+  const px = useLetraGrafico();
   const datos = meses.map((m) => ({
     mes: m.etiqueta,
     venta: m.venta,
@@ -203,91 +151,99 @@ export function GraficoVentas({
   */
   const conPuntos = datos.length <= 15;
 
-  // ~72 px por periodo es lo que ocupa «12.5 mil» a 14 px con su respiro; con
-  // el margen al lado, en barras, son dos cifras por periodo.
+  // Caben si la cifra más larga, a la letra de hoy, entra en el hueco de su
+  // periodo; con el margen al lado, en barras, son dos cifras por periodo.
   const [ref, ancho] = useAncho();
-  const porPeriodo = ancho / Math.max(datos.length, 1);
-  const caben = ancho > 0 && porPeriodo >= (mostrarMargen ? 130 : 72);
+  const mayor = anchoTexto(cifraCorta(Math.max(0, ...datos.map((d) => d.venta))), px);
+  const porPeriodo = (ancho - px * 4.6) / Math.max(datos.length, 1);
+  const caben = ancho > 0 && porPeriodo >= mayor * (mostrarMargen && enBarras ? 2 : 1) + 8;
+  // Las etiquetas del eje, sin montarse, aunque la letra esté a 24 px.
+  const mayorEtiqueta = Math.max(0, ...datos.map((d) => anchoTexto(d.mes, px)));
+  const salto =
+    ancho > 0 ? Math.max(0, Math.ceil((datos.length * mayorEtiqueta) / Math.max(1, ancho - px * 4.6)) - 1) : 0;
+  const altura = Math.round(280 * Math.max(1, px / 17));
+  const Cifra = cifraEncima(px);
+  const CifraMargen = cifraEncima(px, cifraCorta, "var(--viz-3)");
 
   return (
-    <div className="flex flex-col gap-2">
-      <div ref={ref} className="h-64 w-full">
+    <div className="flex flex-col gap-1">
+      <div ref={ref} className="w-full" style={{ height: altura }}>
         <ResponsiveContainer width="100%" height="100%">
           {enBarras ? (
-            <BarChart data={datos} margin={MARGENES}>
+            <BarChart data={datos} margin={margenGrafico(px, 16)} barCategoryGap="18%" barGap={4}>
               <CartesianGrid {...REJILLA} />
-              <XAxis {...EJE_X} />
-              <YAxis {...EJE_Y} />
-              <Tooltip {...GLOBO} cursor={{ fill: "var(--surface-2)" }} />
+              <XAxis dataKey="mes" {...propsEjeX(px)} interval={salto} />
+              <YAxis {...propsEjeY(px)} />
+              <Tooltip content={<Globo formato={dolaresExactos} />} cursor={{ fill: "var(--surface-2)" }} />
               {/* Ancho con tope: una barra sola ocupando todo el gráfico
                   parece un error de maquetación, no un dato. */}
               <Bar
                 dataKey="venta"
+                name="Vendido"
                 fill="var(--viz-1)"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={72}
+                radius={RADIO_ARRIBA}
+                maxBarSize={80}
                 isAnimationActive={false}
               >
-                {caben ? <LabelList dataKey="venta" {...ETIQUETA_VALOR} /> : null}
+                {caben ? <LabelList dataKey="venta" content={Cifra} /> : null}
               </Bar>
               {mostrarMargen ? (
                 <Bar
                   dataKey="margen"
+                  name="Margen"
                   fill="var(--viz-3)"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={72}
+                  radius={RADIO_ARRIBA}
+                  maxBarSize={80}
                   isAnimationActive={false}
                 >
-                  {caben ? <LabelList dataKey="margen" {...ETIQUETA_VALOR} /> : null}
+                  {caben ? <LabelList dataKey="margen" content={Cifra} /> : null}
                 </Bar>
               ) : null}
             </BarChart>
           ) : (
-            <AreaChart data={datos} margin={MARGENES}>
+            <AreaChart data={datos} margin={margenGrafico(px, 24)}>
               <defs>
                 <linearGradient id="degradadoVenta" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--viz-1)" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="var(--viz-1)" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="var(--viz-1)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="var(--viz-1)" stopOpacity={0.03} />
                 </linearGradient>
               </defs>
               <CartesianGrid {...REJILLA} />
-              <XAxis {...EJE_X} />
-              <YAxis {...EJE_Y} />
+              <XAxis dataKey="mes" {...propsEjeX(px)} interval={salto} />
+              <YAxis {...propsEjeY(px)} />
               {/* La guía en vertical: sobre un trazo fino el punto exacto es
                   un blanco imposible, y así basta con estar sobre la columna. */}
-              <Tooltip {...GLOBO} cursor={{ stroke: "var(--border)", strokeWidth: 1 }} />
+              <Tooltip
+                content={<Globo formato={dolaresExactos} />}
+                cursor={{ stroke: "var(--border-strong)", strokeWidth: 2 }}
+              />
               <Area
                 type="monotone"
                 dataKey="venta"
+                name="Vendido"
                 stroke="var(--viz-1)"
-                strokeWidth={2}
+                strokeWidth={3}
                 fill="url(#degradadoVenta)"
-                dot={conPuntos ? { r: 4, fill: "var(--viz-1)", strokeWidth: 0 } : false}
-                activeDot={{ r: 5 }}
+                dot={conPuntos ? { r: 5, fill: "var(--viz-1)", strokeWidth: 0 } : false}
+                activeDot={{ r: 7 }}
                 // Sin animación: el trazo crecía desde cero en cada cambio de
                 // filtro y durante ese segundo el gráfico decía otra cosa.
                 isAnimationActive={false}
               >
-                {caben ? <LabelList dataKey="venta" {...ETIQUETA_VALOR} /> : null}
+                {caben ? <LabelList dataKey="venta" content={Cifra} /> : null}
               </Area>
               {mostrarMargen ? (
                 <Line
                   type="monotone"
                   dataKey="margen"
+                  name="Margen"
                   stroke="var(--viz-3)"
-                  strokeWidth={2}
-                  dot={conPuntos ? { r: 4, fill: "var(--viz-3)", strokeWidth: 0 } : false}
-                  activeDot={{ r: 5 }}
+                  strokeWidth={3}
+                  dot={conPuntos ? { r: 5, fill: "var(--viz-3)", strokeWidth: 0 } : false}
+                  activeDot={{ r: 7 }}
                   isAnimationActive={false}
                 >
-                  {caben ? (
-                    <LabelList
-                      dataKey="margen"
-                      {...ETIQUETA_VALOR}
-                      position="bottom"
-                      fill="var(--viz-3)"
-                    />
-                  ) : null}
+                  {caben ? <LabelList dataKey="margen" content={CifraMargen} /> : null}
                 </Line>
               ) : null}
             </AreaChart>
@@ -303,34 +259,26 @@ export function GraficoVentas({
         gráfico. Se escribe a mano para que use la tipografía del sistema y
         respete el tamaño mínimo —la de Recharts sale a 12 px—.
       */}
-      <div className="flex flex-wrap items-center gap-4 pl-2 text-sm text-[var(--fg-muted)]">
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="size-2.5 rounded-[2px]"
-            style={{ background: "var(--viz-1)" }}
-          />
-          Vendido
-        </span>
-        {mostrarMargen ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="size-2.5 rounded-[2px]"
-              style={{ background: "var(--viz-3)" }}
-            />
-            Margen
-          </span>
-        ) : (
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pl-2">
+        <Leyenda
+          className="mt-0"
+          items={[
+            { color: "var(--viz-1)", texto: "Vendido" },
+            ...(mostrarMargen
+              ? [{ color: "var(--viz-3)", texto: "Margen", forma: enBarras ? undefined : ("linea" as const) }]
+              : []),
+          ]}
+        />
+        {!mostrarMargen ? (
           // Se dice por qué falta. Sin esto, quien conoce el gráfico pensaría
           // que el margen fue cero.
-          <span className="text-[var(--fg-subtle)]">
+          <span className="text-base text-[var(--fg-muted)]">
             El margen no se dibuja: falta el costo de estas ventas.
           </span>
-        )}
+        ) : null}
 
         {ultimoEnCurso ? (
-          <span className="ml-auto text-[var(--warn)]">
+          <span className="ml-auto rounded-full bg-warn-bg px-3 py-1 text-base font-semibold text-warn">
             El último periodo va a medias: todavía no ha terminado.
           </span>
         ) : null}

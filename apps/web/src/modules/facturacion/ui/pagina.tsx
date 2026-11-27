@@ -78,8 +78,9 @@ export default async function PaginaFacturacion({ searchParams }: Props) {
       <PanelModulo ruta="/facturacion">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Facturación</h1>
-            <p className="text-sm text-[var(--fg-muted)]">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Facturación</h1>
+            <span className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+            <p className="mt-3 max-w-2xl text-lg text-white">
               Facturas y notas electrónicas. Cierran el ciclo comercial.
             </p>
           </div>

@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { Receipt } from "lucide-react";
 import { Badge, Moneda, formatearFecha } from "@rodatech/ui";
+
+import { ChipIcono } from "../ficha/piezas";
 
 import type { ComprobanteDelPedido } from "../../api/consultas";
 
@@ -31,21 +34,26 @@ export function YaFacturado({
   const porCobrar = comprobantes.reduce((a, c) => a + c.saldo, 0);
 
   return (
-    <section className="card p-4 print:hidden">
-      <h2 className="mb-1 text-sm font-semibold">Lo que ya se le facturó</h2>
-      <p className="mb-3 text-sm text-[var(--fg-muted)]">
+    <section className="card elev-1 border-l-4 border-l-[var(--ok)] p-4 print:hidden">
+      <div className="mb-3 flex items-start gap-3">
+        <ChipIcono icono={Receipt} tono="entra" chico />
+        <div className="min-w-0">
+      <h2 className="text-xl font-bold text-[var(--titulo)]">Lo que ya se le facturó</h2>
+      <p className="text-base text-[var(--fg-muted)]">
         {comprobantes.length === 1
           ? "Un comprobante salió de este pedido"
           : `${comprobantes.length} comprobantes salieron de este pedido`}
         {porCobrar > 0 ? " · queda saldo por cobrar" : " · todo cobrado"}.
       </p>
+        </div>
+      </div>
 
       <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
         {comprobantes.map((c) => (
           <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
             <Link
               href={`/facturacion/${c.id}`}
-              className="font-mono text-sm font-medium text-brand-600 hover:underline"
+              className="font-mono text-base font-semibold text-brand-600 underline-offset-4 hover:underline"
             >
               {c.numero}
             </Link>

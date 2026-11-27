@@ -16,6 +16,7 @@ import {
   DialogTrigger,
   Textarea,
 } from "@rodatech/ui";
+import { Ban } from "lucide-react";
 
 import { anularCompra } from "../acciones/anular";
 
@@ -78,7 +79,12 @@ export function AnularCompra({
         }
       }}
     >
-      <DialogTrigger className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] px-3 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-bg)]">
+      {/* Con la altura y el borde de los demás botones de la ficha (27/11):
+          era un rectángulo de 36 px con borde gris, el único sin forma de
+          botón en la fila. El rojo va en el borde y la letra, no en el
+          relleno: anular no es la acción principal. */}
+      <DialogTrigger className="inline-flex h-control-md items-center gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--danger)] hover:bg-[var(--danger-bg)]">
+        <Ban className="size-4 shrink-0" aria-hidden="true" />
         Anular
       </DialogTrigger>
 

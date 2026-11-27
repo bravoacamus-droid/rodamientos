@@ -77,7 +77,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                 el botón cae justo fuera de la vista. Uno al que hay que
                 desplazarse está tan escondido como el que no estaba.
               */}
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5">
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-3 py-2.5">
                 <span className="sr-only">Acciones</span>
               </th>
             </tr>
@@ -86,14 +86,14 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
             {filas.map((c) => (
               <tr
                 key={c.id}
-                className={`group/fila border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`group/fila border-b border-[var(--border-soft)] fila-lista ${
                   c.estado === "anulada" ? "border-dashed" : ""
                 }`}
               >
                 <td className="px-3 py-2.5">
                   <Link
                     href={`/compras/${c.id}`}
-                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap tabular text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.numero}
                   </Link>
@@ -160,7 +160,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
                     </span>
                   ) : null}
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-3 py-2.5 text-right">
                   {/* «Ver» en TODAS las filas (auditoría 27/10): en las
                       recibidas y anuladas la columna quedaba vacía y la única
                       entrada era el número azul, justo lo que Luis pidió no
@@ -210,7 +210,7 @@ export async function TablaCompras({ filtros }: { filtros: FiltrosCompras }) {
               <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <Link
                   href={`/compras/${c.id}`}
-                  className="font-mono text-sm font-semibold text-brand-600"
+                  className="tabular text-sm font-semibold text-brand-600"
                 >
                   {c.numero}
                 </Link>

@@ -106,7 +106,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 Costo prom.
               </th>
               <th className="px-3 py-2.5 text-right font-medium">Precio venta</th>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-2 py-2.5">
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-2 py-2.5">
                 <span className="sr-only">Acciones</span>
               </th>
             </tr>
@@ -115,20 +115,20 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
             {filas.map((p) => (
               <tr
                 key={p.id}
-                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila fila-lista ${
                   p.archivado ? "border-dashed" : ""
                 }`}
               >
                 <td className="px-3 py-2.5">
                   <Link
                     href={`/productos/${p.id}`}
-                    className="break-all font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="break-all tabular text-sm font-medium text-brand-600 hover:underline"
                   >
                     {p.codigo}
                   </Link>
                   {/* Debajo y no al lado: al lado ensanchaba la columna. */}
                   {p.codigo_fabricante ? (
-                    <span className="block break-all font-mono text-sm text-[var(--fg-subtle)]">
+                    <span className="block break-all tabular text-sm text-[var(--fg-subtle)]">
                       {p.codigo_fabricante}
                     </span>
                   ) : null}
@@ -158,7 +158,7 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
                 <td className="whitespace-nowrap px-3 py-2.5 text-right">
                   <Moneda valor={p.precio_venta} tamano="sm" />
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-2 py-1.5">
                   <AccionesFila
                     id={p.id}
                     codigo={p.codigo}
@@ -198,12 +198,12 @@ export async function TablaProductos({ filtros }: { filtros: FiltrosProductos })
               <div className="min-w-0">
                 <Link
                   href={`/productos/${p.id}`}
-                  className="font-mono text-sm font-semibold text-brand-600"
+                  className="tabular text-sm font-semibold text-brand-600"
                 >
                   {p.codigo}
                 </Link>
                 {p.codigo_fabricante ? (
-                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                  <span className="block tabular text-sm text-[var(--fg-subtle)]">
                     {p.codigo_fabricante}
                   </span>
                 ) : null}

@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HistorialProveedor } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { EstadoError, Skeleton } from "@rodatech/ui";
-import { PackageCheck, Pencil } from "lucide-react";
+import { Badge, Button, EstadoError, Skeleton } from "@rodatech/ui";
+import { Globe, PackageCheck, Pencil, Phone, Tags, Truck, Wallet } from "lucide-react";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
@@ -12,9 +12,16 @@ import { productosDeProveedor } from "../api/catalogo";
 import { detalleProveedor } from "../api/consultas";
 import { ETIQUETA_DOCUMENTO, ETIQUETA_TIPO } from "../dominio/tipos";
 import { QueVende } from "./que-vende";
-import { Volver } from "@/componentes/volver";
+import { BloqueFicha, CabeceraFicha, CifraFicha, DatoFicha, DatosFicha, VacioFicha } from "@/modules/compras/ui/ficha";
 
-/** La ficha de un proveedor. */
+/**
+ * La ficha de un proveedor.
+ *
+ * Desde el 27/11 con el patrón de ficha de compras: el nombre en grande
+ * sobre el azul, las tres condiciones que deciden a quién pedirle —de dónde
+ * es, cómo se le paga y cuánto tarda— como cifras, y el contacto en su propio
+ * bloque, que es lo que se viene a buscar para llamarle.
+ */
 export default async function PaginaDetalleProveedor({
   params,
   searchParams,
@@ -46,73 +53,122 @@ export default async function PaginaDetalleProveedor({
   // Configuración › Roles y permisos (143).
   const puedeEditar = permisos.tiene("proveedores", "editar");
 
+  // El código interno suele SER el RUC: no se repite.
+  const documento =
+    p.numero_documento && p.codigo.includes(p.numero_documento)
+      ? `${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}`
+      : `${p.codigo}${p.numero_documento ? ` · ${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}` : " · sin documento"}`;
+
+  // Ninguno de los 97 proveedores tiene teléfono (CLAUDE.md §2): el hueco
+  // tiene que decir qué hacer, no quedarse en una raya.
+  const sinComoLlamar = !p.telefono && !p.whatsapp && !p.email;
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {/* No tenía ninguna forma de volver (revisión de diseño del 02/10). */}
-          <Volver href="/proveedores">Volver a proveedores</Volver>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{p.razon_social}</h1>
-            {p.activo ? null : (
-              <span className="rounded-sm bg-[var(--surface-2)] px-2 py-0.5 text-sm font-medium text-[var(--fg-muted)]">
-                De baja
-              </span>
+      {/* No tenía ninguna forma de volver (revisión de diseño del 02/10). */}
+      <CabeceraFicha
+        ruta="/proveedores"
+        volver={{ href: "/proveedores", texto: "Volver a proveedores" }}
+        tipo="Proveedor"
+        numero={<span className="font-sans">{p.razon_social}</span>}
+        estado={p.activo ? <Badge tone="success">Activo</Badge> : <Badge tone="neutral">De baja</Badge>}
+        quien={{ rotulo: "Documento", nombre: <span className="font-mono">{documento}</span> }}
+        acciones={
+          <>
+            {puedeEditar ? (
+              <Button asChild variant="accent" size="lg">
+                <Link href={`/proveedores/${p.id}/editar`}>
+                  <Pencil aria-hidden="true" />
+                  Editar
+                </Link>
+              </Button>
+            ) : (
+              <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "editar", permisos.nombreRol)}>
+                Editar
+              </BotonBloqueado>
             )}
-          </div>
-          <p className="font-mono text-sm text-[var(--fg-muted)]">
-            {/* El código interno suele SER el RUC: no se repite. */}
-            {p.numero_documento && p.codigo.includes(p.numero_documento)
-              ? `${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}`
-              : `${p.codigo}${p.numero_documento ? ` · ${ETIQUETA_DOCUMENTO[p.tipo_documento]} ${p.numero_documento}` : " · sin documento"}`}
-          </p>
-        </div>
+            {/* Con fondo e icono, como «Editar» en la ficha de cliente: sin
+                fondo era gris sobre el gris de la página (revisión por módulos
+                del 02/10). */}
+            <Button asChild variant="outline">
+              <Link href={`/recepciones?proveedor=${p.id}`}>
+                <PackageCheck aria-hidden="true" />
+                Ver recepciones
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/recepciones?proveedor=${p.id}`}
-            // Con fondo e icono, como «Editar» en la ficha de cliente: sin
-            // fondo era gris sobre el gris de la página (revisión por módulos
-            // del 02/10).
-            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-          >
-            <PackageCheck className="size-4" aria-hidden="true" />
-            Ver recepciones
-          </Link>
-          {puedeEditar ? (
-            <Link
-              href={`/proveedores/${p.id}/editar`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              <Pencil className="size-4" aria-hidden="true" />
-              Editar
-            </Link>
-          ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("proveedores", "editar", permisos.nombreRol)} className="h-9 md:h-9">
-              Editar
-            </BotonBloqueado>
-          )}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-3">
+          <CifraFicha
+            etiqueta="Tipo de compra"
+            valor={ETIQUETA_TIPO[p.tipo]}
+            pie={p.pais || undefined}
+            tono="marca"
+            icono={<Globe />}
+          />
+          <CifraFicha
+            etiqueta="Condición de pago"
+            valor={p.dias_pago === 0 ? "Al contado" : `${p.dias_pago} días`}
+            pie="lo que él nos da a nosotros"
+            tono="sale"
+            icono={<Wallet />}
+          />
+          <CifraFicha
+            etiqueta="Plazo de entrega"
+            valor={`${p.lead_time_dias} días`}
+            pie="desde que se le pide hasta que llega"
+            tono="marca"
+            icono={<Truck />}
+          />
         </div>
       </div>
 
-      <section className="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Dato etiqueta="Tipo de compra" valor={ETIQUETA_TIPO[p.tipo]} pie={p.pais} />
-        <Dato
-          etiqueta="Condición de pago"
-          valor={p.dias_pago === 0 ? "Al contado" : `${p.dias_pago} días`}
-          pie="lo que él nos da a nosotros"
-        />
-        <Dato
-          etiqueta="Plazo de entrega"
-          valor={`${p.lead_time_dias} días`}
-          pie="desde que se le pide hasta que llega"
-        />
-        <Dato
-          etiqueta="Contacto"
-          valor={p.contacto ?? "—"}
-          pie={p.telefono ?? p.whatsapp ?? p.email}
-        />
-      </section>
+      <BloqueFicha
+        icono={<Phone />}
+        tono={sinComoLlamar ? "porHacer" : "marca"}
+        titulo="Contacto"
+        ayuda={sinComoLlamar ? "Todavía no hay cómo llamarle ni escribirle." : undefined}
+        accion={
+          sinComoLlamar && puedeEditar ? (
+            <Button asChild variant="outline">
+              <Link href={`/proveedores/${p.id}/editar`}>
+                <Pencil aria-hidden="true" />
+                Añadir teléfono
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      >
+        <DatosFicha className="@3xl:grid-cols-4">
+          <DatoFicha etiqueta="Persona de contacto" valor={p.contacto ?? "—"} />
+          <DatoFicha etiqueta="Teléfono" valor={p.telefono ?? "—"} />
+          <DatoFicha etiqueta="WhatsApp" valor={p.whatsapp ?? "—"} />
+          <DatoFicha etiqueta="Correo" valor={p.email ?? "—"} />
+          {p.direccion ? (
+            <DatoFicha
+              etiqueta="Dirección"
+              ancho
+              valor={
+                <>
+                  {p.direccion}
+                  {p.ubigeo_nombre ? (
+                    <span className="block text-sm font-normal text-[var(--fg-muted)]">{p.ubigeo_nombre}</span>
+                  ) : null}
+                </>
+              }
+            />
+          ) : null}
+        </DatosFicha>
+        {p.notas ? (
+          <div className="border-t border-[var(--border-soft)] pt-3">
+            <p className="etiqueta-dato">Notas</p>
+            <p className="mt-0.5 whitespace-pre-wrap text-base">{p.notas}</p>
+          </div>
+        ) : null}
+      </BloqueFicha>
 
       {/* Lo que se le ha comprado (134): cifras, gráfico y sus compras, con
           su periodo. Arriba, que es a lo que se viene desde el reporte de
@@ -121,27 +177,25 @@ export default async function PaginaDetalleProveedor({
         <HistorialProveedor id={p.id} sp={sp} />
       </Suspense>
 
-      <section className="card p-4">
-        <h2 className="text-sm font-semibold">Marcas que representa</h2>
+      <BloqueFicha icono={<Tags />} titulo="Marcas que representa">
         {p.marcas.length === 0 ? (
-          <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-            Ninguna todavía. No hace falta escribirlas: se rellenan solas con
-            la marca de lo que se le vaya comprando. Y en cuanto haya alguna,
-            este proveedor aparece al filtrar por marca.
-          </p>
+          <VacioFicha icono={<Tags />} titulo="Ninguna todavía">
+            No hace falta escribirlas: se rellenan solas con la marca de lo que se le vaya comprando. Y en cuanto haya
+            alguna, este proveedor aparece al filtrar por marca.
+          </VacioFicha>
         ) : (
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {p.marcas.map((m) => (
               <span
                 key={m}
-                className="rounded-full border border-[var(--border)] px-3 py-1 text-sm"
+                className="rounded-full border border-[var(--border-strong)] bg-[var(--surface-2)] px-3 py-1.5 text-base font-semibold"
               >
                 {m}
               </span>
             ))}
           </div>
         )}
-      </section>
+      </BloqueFicha>
 
       {/* Qué vende. Va aquí, justo debajo de las marcas, porque las dos
           contestan a la misma pregunta —«¿le pido esto a él?»— y la de
@@ -151,47 +205,6 @@ export default async function PaginaDetalleProveedor({
         productos={catalogo.ok ? catalogo.datos : []}
         puedeEditar={puedeEditar}
       />
-
-      {p.direccion || p.email || p.notas ? (
-        <section className="card grid gap-4 p-4 sm:grid-cols-2">
-          {p.direccion ? (
-            <Dato
-              etiqueta="Dirección"
-              valor={p.direccion}
-              pie={p.ubigeo_nombre}
-            />
-          ) : null}
-          {p.email ? <Dato etiqueta="Correo" valor={p.email} /> : null}
-          {p.notas ? (
-            <div className="sm:col-span-2">
-              <dt className="etiqueta-dato">
-                Notas
-              </dt>
-              <dd className="mt-0.5 whitespace-pre-wrap text-sm">{p.notas}</dd>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-function Dato({
-  etiqueta,
-  valor,
-  pie,
-}: {
-  etiqueta: string;
-  valor: string;
-  pie?: string | null;
-}) {
-  return (
-    <div>
-      <dt className="etiqueta-dato">
-        {etiqueta}
-      </dt>
-      <dd className="mt-0.5 text-sm">{valor}</dd>
-      {pie ? <p className="text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

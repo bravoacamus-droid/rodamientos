@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { RotateCcw } from "lucide-react";
+import { ReceiptText, RotateCcw } from "lucide-react";
 import { Badge } from "@rodatech/ui";
+
+import { BloqueFicha } from "./ficha";
 
 import type { CompraDeProducto } from "../api/compras";
 
@@ -66,17 +68,15 @@ export function ComprasAnteriores({
   puedeComprar?: boolean;
 }) {
   return (
-    <section className="card p-4">
-      <h2 className="mb-1 text-base font-semibold">A quién se le compró</h2>
-
+    <BloqueFicha icono={ReceiptText} titulo="A quién se le compró" tono="info">
       {compras.length === 0 ? (
-        <p className="text-sm text-[var(--fg-muted)]">
+        <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
           Todavía no se ha recibido este producto de ningún proveedor. Aparece
           aquí en cuanto entre la primera mercadería.
         </p>
       ) : (
         <>
-          <p className="mb-3 text-sm text-[var(--fg-muted)]">
+          <p className="text-base text-[var(--fg-muted)]">
             Lo que de verdad entró y se pagó, no lo que cotizaron.
           </p>
           {/* Siete columnas no caben en un teléfono ni en media pantalla: el
@@ -116,14 +116,14 @@ export function ComprasAnteriores({
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/recepciones/${c.recepcionId}`}
-                      className="inline-flex h-9 items-center rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                      className="boton-fila"
                     >
                       Ver recepción {c.documento}
                     </Link>
                     {href ? (
                       <Link
                         href={href}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                        className="boton-fila"
                       >
                         <RotateCcw className="size-4" aria-hidden />
                         Volver a comprar
@@ -184,7 +184,7 @@ export function ComprasAnteriores({
                       <td className="py-2">
                         <Link
                           href={`/recepciones/${c.recepcionId}`}
-                          className="font-mono text-sm text-brand-600 hover:underline"
+                          className="boton-fila font-mono"
                         >
                           {c.documento}
                         </Link>
@@ -198,7 +198,7 @@ export function ComprasAnteriores({
                                  fila, no un enlace más entre números. */
                               <Link
                                 href={href}
-                                className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+                                className="boton-fila"
                               >
                                 <RotateCcw className="size-4" aria-hidden />
                                 Volver a comprar
@@ -231,6 +231,6 @@ export function ComprasAnteriores({
           ) : null}
         </>
       )}
-    </section>
+    </BloqueFicha>
   );
 }

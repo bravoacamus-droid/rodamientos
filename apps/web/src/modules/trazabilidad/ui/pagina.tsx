@@ -18,6 +18,9 @@ import {
   type Referencia,
 } from "../dominio/tipos";
 import { Volver } from "@/componentes/volver";
+import { PanelModulo } from "@/componentes/panel-modulo";
+import { FileText, History, PiggyBank, Truck, Users, type LucideIcon } from "lucide-react";
+import { BloqueFicha, CifraFicha, type TonoFicha } from "@/modules/productos/ui/ficha";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -83,26 +86,64 @@ async function Cabecera({ id }: { id: string }) {
 
   const p = r.datos;
 
+  // Cabecera de marca, como la ficha del producto (27/11): el código en
+  // grande y en letra de máquina, y las cifras que se comparan con la
+  // historia —stock, costo, venta, mínimo— como cifras y no en una línea gris.
+  // Un dato que falta se dice con palabras: la mayoría del catálogo entró
+  // sin costo ni precio mínimo.
+  const cifras: { etiqueta: string; valor: string; falta: boolean; malo?: boolean }[] = [
+    {
+      etiqueta: "En almacén",
+      valor: p.stock > 0 ? String(p.stock) : "Sin stock",
+      falta: false,
+      malo: p.stock <= 0,
+    },
+    {
+      etiqueta: "Costo promedio",
+      valor: p.costo_promedio > 0 ? dinero(p.costo_promedio) : "Sin costo",
+      falta: p.costo_promedio <= 0,
+    },
+    {
+      etiqueta: "Precio de venta",
+      valor: p.precio_venta > 0 ? dinero(p.precio_venta) : "Sin precio",
+      falta: p.precio_venta <= 0,
+    },
+    {
+      etiqueta: "Precio mínimo de venta",
+      valor: p.precio_minimo > 0 ? dinero(p.precio_minimo) : "Sin fijar",
+      falta: p.precio_minimo <= 0,
+    },
+  ];
   return (
-    <div>
-      <Volver href={`/productos/${p.id}`}>Volver a la ficha del producto</Volver>
-      <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Historia del producto</h1>
-        <Link
-          href={`/productos/${p.id}`}
-          className="font-mono text-base font-medium text-brand-600 hover:underline"
-        >
-          {p.codigo}
-        </Link>
-        <span className="text-sm text-[var(--fg-muted)]">{p.marca}</span>
+    <PanelModulo ruta="/productos">
+      <div className="flex min-w-0 flex-col gap-3">
+        <Volver href={`/productos/${p.id}`}>Volver a la ficha del producto</Volver>
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-[var(--fg-muted)]">Compras y ventas del producto</p>
+          <h1 className="font-mono text-3xl font-extrabold tracking-tight text-[var(--titulo)] [overflow-wrap:anywhere] sm:text-4xl">
+            {p.codigo}
+          </h1>
+          <p className="mt-1 text-base text-[var(--fg-muted)]">
+            <span className="font-semibold text-[var(--fg)]">{p.marca}</span> · {p.descripcion}
+          </p>
+        </div>
+        <span className="h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
       </div>
-      <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{p.descripcion}</p>
-      <p className="mt-1 text-sm text-[var(--fg-subtle)]">
-        {p.stock > 0 ? `${p.stock} en stock` : "sin stock"} · costo promedio{" "}
-        {dinero(p.costo_promedio)} · venta {dinero(p.precio_venta)}
-        {p.precio_minimo > 0 ? ` · mínimo ${dinero(p.precio_minimo)}` : ""}
-      </p>
-    </div>
+      <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cifras.map((c) => (
+          <div key={c.etiqueta} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+            <dt className="text-sm font-semibold text-[var(--fg-muted)]">{c.etiqueta}</dt>
+            <dd
+              className={`tabular break-words font-extrabold leading-tight ${
+                c.falta ? "text-xl text-[var(--fg-muted)]" : "text-2xl"
+              } ${c.malo ? "text-[var(--danger)]" : c.falta ? "" : "text-[var(--titulo)]"}`}
+            >
+              {c.valor}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </PanelModulo>
   );
 }
 
@@ -123,8 +164,9 @@ async function Respuestas({ id }: { id: string }) {
 
   if (s.eventos === 0) {
     return (
-      <section className="card p-4">
+      <section className="card elev-1 p-4">
         <EstadoVacio
+          icono={<History />}
           titulo="Este código no se ha movido nunca"
           descripcion="No hay compras, cotizaciones ni ventas registradas. Cuando entre en una orden de compra o en una cotización, aparecerá aquí."
         />
@@ -136,8 +178,10 @@ async function Respuestas({ id }: { id: string }) {
   const dispersion = dispersionCotizada(s);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
       <Tarjeta
+        icono={Truck}
+        tono="info"
         titulo="A quién comprarle"
         vacio="Todavía no se ha comprado"
         referencia={s.mejorProveedor}
@@ -149,6 +193,8 @@ async function Respuestas({ id }: { id: string }) {
       />
 
       <Tarjeta
+        icono={FileText}
+        tono="ok"
         titulo="Último precio cotizado"
         vacio="Nunca se ha cotizado"
         referencia={s.ultimaCotizacion}
@@ -163,62 +209,76 @@ async function Respuestas({ id }: { id: string }) {
         }
       />
 
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Margen de referencia</p>
-        <p
-          className={`mt-0.5 text-xl font-semibold ${
-            margen === null
-              ? "text-[var(--fg-subtle)]"
-              : margen < 12
-                ? "text-[var(--danger)]"
-                : margen < 20
-                  ? "text-[var(--warn)]"
-                  : "text-[var(--ok)]"
-          }`}
-        >
-          {margen === null ? "—" : `${margen.toFixed(2)} %`}
-        </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {margen === null
-            ? "hace falta una compra y una cotización"
-            : "comprando al mejor precio y vendiendo al último cotizado"}
-        </p>
-      </div>
+      <CifraFicha
+        className="anim-entrada"
+        etiqueta="Margen de referencia"
+        icono={PiggyBank}
+        tono={margen === null ? "neutro" : margen < 12 ? "malo" : margen < 20 ? "aviso" : "ok"}
+        pintarCifra={margen !== null}
+        valor={
+          margen === null ? (
+            <span className="text-2xl font-bold text-muted">Sin calcular</span>
+          ) : (
+            `${margen.toFixed(2)} %`
+          )
+        }
+        pie={
+          margen === null
+            ? "Hace falta una compra y una cotización."
+            : "Comprando al mejor precio y vendiendo al último cotizado."
+        }
+      />
     </div>
   );
 }
 
+/**
+ * Una de las tres respuestas. Desde el 27/11 la CIFRA va en grande —es lo que
+ * se viene a buscar— y el nombre debajo, entero y sin `truncate`: un
+ * proveedor cortado en «IMPORTACIONES Y DISTRIBU…» no se puede llamar.
+ */
 function Tarjeta({
   titulo,
   vacio,
   referencia,
   pie,
+  icono,
+  tono,
 }: {
   titulo: string;
   vacio: string;
   referencia: Referencia | null;
   pie?: string;
+  icono: LucideIcon;
+  tono: TonoFicha;
 }) {
   return (
-    <div className="card anim-entrada p-3">
-      <p className="text-sm text-[var(--fg-muted)]">{titulo}</p>
-      {referencia ? (
-        <>
-          <p className="mt-0.5 truncate text-base font-semibold" title={referencia.nombre ?? ""}>
-            {referencia.nombre ?? "—"}
-          </p>
-          <p className="mt-0.5 text-sm">
-            <span className="tabular font-medium">{dinero(referencia.unitario)}</span>
-            <span className="ml-2 text-sm text-[var(--fg-subtle)]">
+    <CifraFicha
+      className="anim-entrada"
+      etiqueta={titulo}
+      icono={icono}
+      tono={referencia ? tono : "neutro"}
+      valor={
+        referencia ? (
+          dinero(referencia.unitario)
+        ) : (
+          <span className="text-2xl font-bold text-muted">{vacio}</span>
+        )
+      }
+      pie={
+        referencia ? (
+          <>
+            <span className="block text-base font-semibold text-fg">{referencia.nombre ?? "—"}</span>
+            <span className="block">
               {referencia.documento} · {referencia.fecha.slice(0, 10)}
             </span>
-          </p>
-        </>
-      ) : (
-        <p className="mt-0.5 text-base font-semibold text-[var(--fg-subtle)]">{vacio}</p>
-      )}
-      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
-    </div>
+            {pie ? <span className="block">{pie}</span> : null}
+          </>
+        ) : (
+          pie
+        )
+      }
+    />
   );
 }
 
@@ -244,23 +304,27 @@ async function Historia({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Proveedores</h2>
-          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
-            Ordenados por el mejor precio conseguido, no por el más reciente.
-          </p>
+        <BloqueFicha
+          icono={Truck}
+          tono="info"
+          titulo="A quién se le compró"
+          ayuda="Ordenados por el mejor precio conseguido, no por el más reciente."
+        >
           {proveedores.length === 0 ? (
-            <p className="py-4 text-center text-sm text-[var(--fg-muted)]">
+            <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
               Todavía no se le ha comprado a nadie.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+            <ul className="flex flex-col gap-2">
               {proveedores.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">
+                <li
+                  key={p.id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+                >
                   <div className="min-w-0">
                     <Link
                       href={`/proveedores/${p.id}`}
-                      className="text-sm font-medium text-brand-600 hover:underline"
+                      className="text-base font-semibold text-brand-600 underline-offset-4 hover:underline"
                     >
                       {p.nombre}
                     </Link>
@@ -269,7 +333,7 @@ async function Historia({ id }: { id: string }) {
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="tabular text-sm font-medium">{dinero(p.mejorPrecio)}</span>
+                    <span className="tabular text-lg font-bold">{dinero(p.mejorPrecio)}</span>
                     {p.ultimoPrecio !== p.mejorPrecio ? (
                       <span className="block text-sm text-[var(--fg-subtle)]">
                         la última vez {dinero(p.ultimoPrecio)}
@@ -280,25 +344,32 @@ async function Historia({ id }: { id: string }) {
               ))}
             </ul>
           )}
-        </section>
+        </BloqueFicha>
 
-        <section className="card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Clientes</h2>
-          <p className="mb-3 text-sm text-[var(--fg-subtle)]">
-            Lo más reciente arriba: es lo que hay que sostener si vuelve a llamar.
-          </p>
+        {/* Las ventas anteriores: a quién se le ofreció y a cuánto. Está en
+            la tabla de CLAUDE.md §2 por haber sido un enlace azul partido en
+            dos líneas; aquí es un bloque del mismo peso que las compras. */}
+        <BloqueFicha
+          icono={Users}
+          tono="ok"
+          titulo="A quién se le cotizó y vendió"
+          ayuda="Lo más reciente arriba: es lo que hay que sostener si vuelve a llamar."
+        >
           {clientes.length === 0 ? (
-            <p className="py-4 text-center text-sm text-[var(--fg-muted)]">
+            <p className="rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4 text-base text-[var(--fg-muted)]">
               Nunca se le ha ofrecido a nadie.
             </p>
           ) : (
-            <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+            <ul className="flex flex-col gap-2">
               {clientes.map((c) => (
-                <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-3 py-2">
+                <li
+                  key={c.id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+                >
                   <div className="min-w-0">
                     <Link
                       href={`/clientes/${c.id}`}
-                      className="text-sm font-medium text-brand-600 hover:underline"
+                      className="text-base font-semibold text-brand-600 underline-offset-4 hover:underline"
                     >
                       {c.nombre}
                     </Link>
@@ -307,7 +378,7 @@ async function Historia({ id }: { id: string }) {
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className="tabular text-sm font-medium">{dinero(c.ultimoPrecio)}</span>
+                    <span className="tabular text-lg font-bold">{dinero(c.ultimoPrecio)}</span>
                     <span className="block text-sm text-[var(--fg-subtle)]">
                       {c.ultimaFecha}
                     </span>
@@ -316,13 +387,13 @@ async function Historia({ id }: { id: string }) {
               ))}
             </ul>
           )}
-        </section>
+        </BloqueFicha>
       </div>
 
-      <section className="card @container overflow-hidden">
-        <header className="border-b border-[var(--border-soft)] px-4 py-3">
-          <h2 className="text-sm font-semibold">Todo lo que ha pasado</h2>
-          <p className="text-sm text-[var(--fg-subtle)]">
+      <section className="card elev-1 @container overflow-hidden">
+        <header className="border-b border-[var(--border-soft)] px-4 py-4">
+          <h2 className="text-xl font-bold">Todo lo que ha pasado</h2>
+          <p className="text-base text-[var(--fg-muted)]">
             {r.datos.length} {r.datos.length === 1 ? "evento" : "eventos"}, del más
             reciente al más antiguo. Dentro de cada día, en el orden en que
             ocurrieron.
@@ -390,10 +461,8 @@ function Fila({ evento, indice }: { evento: EventoTrazabilidad; indice: number }
       */}
       <div className="order-last col-span-2 min-w-0 @2xl:order-none @2xl:flex-1">
         {ruta ? (
-          <Link
-            href={ruta}
-            className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
-          >
+          // Botón con borde y no texto azul (27/11): abre el documento.
+          <Link href={ruta} className="boton-fila font-mono">
             {evento.documento}
           </Link>
         ) : (

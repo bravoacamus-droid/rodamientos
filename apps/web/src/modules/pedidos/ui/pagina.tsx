@@ -161,7 +161,7 @@ async function Contenido({
               <span>
                 Solo los pedidos de la cotización{" "}
                 {deLaCotizacion ? (
-                  <Link href={`/cotizaciones/${filtros.cotizacion}`} className="font-mono font-semibold text-brand-700 hover:underline">
+                  <Link href={`/cotizaciones/${filtros.cotizacion}`} className="tabular font-semibold text-brand-700 hover:underline">
                     {deLaCotizacion.cotizacion}
                   </Link>
                 ) : (

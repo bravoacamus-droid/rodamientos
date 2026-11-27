@@ -1,7 +1,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Ban, Building2, FileText, Receipt, Truck, Wallet } from "lucide-react";
+import { ArrowRight, Ban, Building2, ClipboardList, FileText, Package, Receipt, Truck, Wallet } from "lucide-react";
 import { EstadoError, Moneda, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
 import { perfilActual } from "@rodatech/db/servidor";
 
@@ -24,7 +24,8 @@ import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-pr
 import { comprasSinRecibir, detallePedido, recepcionesDeLasOrdenes } from "../api/consultas";
 import { cubiertaPorElAlmacen } from "@/modules/cotizaciones/dominio/compra-linea";
 import type { StockUsable } from "./usar-stock";
-import { textoEtapa } from "../dominio/etapa";
+import { textoEtapa, type Etapa } from "../dominio/etapa";
+import { BarraAcciones, CabeceraFicha, PasosFlujo, TituloBloque } from "@/modules/cotizaciones/ui/ficha/piezas";
 import { papelDelPedido } from "../dominio/hoja";
 import { OtroPedido } from "@/modules/cotizaciones/ui/detalle/otro-pedido";
 import { AccionesPedido } from "./acciones";
@@ -185,48 +186,93 @@ export default async function PaginaDetallePedido({
   const productosDelPedido = p.lineas.map((l) => l.productoId).filter((x): x is string => x !== null);
   const sinRecibir = await comprasSinRecibir(productosDelPedido, p.id);
 
+  /** El total que ya lleva la hoja de pedido, para la cifra grande (27/11). */
+  const totalPapel = papel.totales.find((t) => t.destacado) ?? papel.totales[papel.totales.length - 1] ?? null;
+
+  /*
+    El paso del flujo (27/11), sacado de la etapa que ya calcula la base: no
+    hay una cuenta nueva que pueda discrepar de la pastilla. Un pedido
+    anulado no va por ningún paso.
+  */
+  const pasoActual: Record<Etapa, number> = {
+    por_registrar_compra: 1,
+    esperando_mercaderia: 1,
+    por_entregar: 1,
+    despacho_parcial: 2,
+    por_facturar: 3,
+    por_cobrar: 4,
+    cobrado: 5,
+  };
+  const enPaso = pasoActual[p.etapa];
+  const pasos = p.anulado
+    ? null
+    : ["Cotización", "Pedido", "Guía", "Factura", "Cobro"].map((nombre, i) => ({
+        nombre,
+        estado: i < enPaso ? ("hecho" as const) : i === enPaso ? ("actual" as const) : ("falta" as const),
+      }));
+
   return (
     <>
     <div className="flex flex-col gap-5 print:hidden">
       <Volver href="/pedidos">Volver a pedidos</Volver>
 
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--fg-muted)]">
-            Pedido {p.secuencia > 1 ? `${p.secuencia} ` : ""}de la cotización{" "}
-            <Link href={`/cotizaciones/${p.cotizacion.id}`} className="text-brand-600 hover:underline">
-              {p.cotizacion.numero}
-            </Link>
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {p.numero} · {p.cliente}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <p className="text-sm text-[var(--fg-muted)]">
-              Confirmado el {formatearFecha(p.fecha)}
-              {p.cotizacion.ordenCompraCliente && vigente ? ` · O/C del cliente ${p.cotizacion.ordenCompraCliente}` : ""}
-            </p>
-            {/* Al cliente, para corregir sus datos sin buscarlo (FS-08). */}
-            {p.clienteId ? (
-              <Link
-                href={`/clientes/${p.clienteId}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}
-              >
-                <Building2 className="size-4" aria-hidden="true" />
-                Ficha del cliente
-              </Link>
-            ) : null}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {p.anulado ? (
-            <span className="inline-flex h-control-md items-center gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-3 text-base font-semibold text-[var(--danger)]">
+      {/*
+        La cabecera de marca (27/11), como la de la cotización: número, etapa,
+        cliente y el total del pedido como cifra grande. El total ya se
+        calculaba para la hoja de pedido (`papelDelPedido`) y la ficha no lo
+        enseñaba: para saber cuánto valía había que abrir la hoja.
+      */}
+      <CabeceraFicha
+        icono={ClipboardList}
+        tipo="Pedido"
+        numero={p.numero}
+        estado={
+          p.anulado ? (
+            <span className="inline-flex items-center gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-3 py-1.5 text-base font-semibold text-[var(--danger)]">
               <Ban className="size-5" aria-hidden="true" />
               Anulado
             </span>
           ) : (
             <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} grande />
-          )}
+          )
+        }
+        titulo={p.cliente}
+        detalle={
+          <p>
+            Pedido {p.secuencia > 1 ? `${p.secuencia} ` : ""}de la cotización {p.cotizacion.numero} · confirmado el{" "}
+            {formatearFecha(p.fecha)}
+            {p.cotizacion.ordenCompraCliente && vigente ? ` · O/C del cliente ${p.cotizacion.ordenCompraCliente}` : ""}
+          </p>
+        }
+        enlaces={
+          <>
+            <Link
+              href={`/cotizaciones/${p.cotizacion.id}`}
+              className={cn(buttonVariants({ variant: "outline" }), "px-4")}
+            >
+              <FileText className="size-5" aria-hidden="true" />
+              Ver cotización {p.cotizacion.numero}
+              <ArrowRight className="size-5" aria-hidden="true" />
+            </Link>
+            {/* Al cliente, para corregir sus datos sin buscarlo (FS-08). */}
+            {p.clienteId ? (
+              <Link
+                href={`/clientes/${p.clienteId}`}
+                className={cn(buttonVariants({ variant: "outline" }), "px-4")}
+              >
+                <Building2 className="size-5" aria-hidden="true" />
+                Ficha del cliente
+                <ArrowRight className="size-5" aria-hidden="true" />
+              </Link>
+            ) : null}
+          </>
+        }
+        cifra={totalPapel ? { etiqueta: "Total del pedido", valor: totalPapel.valor, detalle: "con IGV, lo que confirmó el cliente" } : null}
+        pasos={pasos ? <PasosFlujo pasos={pasos} /> : null}
+      />
+
+      <BarraAcciones titulo="Qué puedes hacer" texto={p.anulado ? "Anulado: se queda para el registro." : `${textoEtapa(p.etapa, p.despacho)}.`}>
+        <div className="flex flex-wrap items-center gap-2">
           {/* La hoja de pedido (Luis, 15/10: «se puede imprimir, igual
               descargar la hoja de pedido»). */}
           {p.lineas.length > 0 ? (
@@ -264,17 +310,17 @@ export default async function PaginaDetallePedido({
           />
           {repetir}
         </div>
-      </header>
+      </BarraAcciones>
 
       {/*
         Anulado (188). Luis, 04/11: «tiene que quedar… para que quede ahí
         registro». Lo que pedía es la foto que se guardó al anularlo.
       */}
       {p.anulado ? (
-        <div className="flex gap-3 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-4 py-3">
+        <div className="card elev-2 flex gap-3 border-l-[6px] border-l-[var(--danger)] bg-danger-bg px-4 py-3">
           <Ban className="mt-0.5 size-5 shrink-0 text-[var(--danger)]" aria-hidden="true" />
           <div>
-            <p className="text-base font-semibold">
+            <p className="text-lg font-bold text-[var(--danger)]">
               Pedido anulado
               {p.anulado.en ? ` el ${formatearFecha(p.anulado.en.slice(0, 10))}` : ""}
               {p.anulado.por ? ` por ${p.anulado.por}` : ""}
@@ -290,11 +336,11 @@ export default async function PaginaDetallePedido({
 
       {/* Los otros pedidos de la misma cotización: el cliente repite. */}
       {p.hermanos.length > 1 ? (
-        <nav className="flex flex-wrap items-center gap-2 text-sm" aria-label="Pedidos de la misma cotización">
-          <span className="text-[var(--fg-muted)]">Pedidos de {p.cotizacion.numero}:</span>
+        <nav className="card elev-1 flex flex-wrap items-center gap-2 p-3 text-base" aria-label="Pedidos de la misma cotización">
+          <span className="font-semibold text-[var(--fg-muted)]">Pedidos de {p.cotizacion.numero}:</span>
           {p.hermanos.map((h) =>
             h.id === p.id ? (
-              <span key={h.id} className="rounded-md border-2 border-brand-600 px-2.5 py-1 font-semibold">
+              <span key={h.id} aria-current="page" className="rounded-md border-2 border-brand-600 bg-brand-50 px-3 py-1.5 font-bold text-brand-700 dark:bg-surface-3 dark:text-brand-200">
                 {h.numero}
                 {h.anulado ? " (anulado)" : ""}
               </span>
@@ -302,7 +348,7 @@ export default async function PaginaDetallePedido({
               <Link
                 key={h.id}
                 href={`/pedidos/${h.id}`}
-                className="rounded-md border border-[var(--border-strong)] px-2.5 py-1 hover:bg-[var(--surface-2)]"
+                className={cn(buttonVariants({ variant: "outline" }), "px-3")}
               >
                 {h.numero}
                 {h.anulado ? " (anulado)" : ""}
@@ -316,17 +362,21 @@ export default async function PaginaDetallePedido({
       {p.anulado ? null : <CuadreDelPedido despacho={p.despacho} facturas={p.facturas} />}
 
       {/* ------------------------------------------------ Qué pidió */}
-      <section className="card p-4">
-        <h2 className="mb-2 text-lg font-semibold">Qué pidió</h2>
+      <section className="card elev-1 flex flex-col gap-3 p-4">
+        <TituloBloque
+          icono={Package}
+          titulo="Qué pidió"
+          ayuda={p.lineas.length === 1 ? "1 producto confirmado." : `${p.lineas.length} productos confirmados.`}
+        />
         {p.lineas.length === 0 ? (
           <p className="text-sm text-[var(--fg-muted)]">Sin productos.</p>
         ) : (
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {p.lineas.map((l) => (
-              <li key={l.codigo} className="flex items-baseline gap-3 py-2">
-                <span className="w-32 shrink-0 font-mono text-sm font-semibold">{l.codigo}</span>
-                <span className="min-w-0 flex-1 text-sm">{l.descripcion}</span>
-                <span className="shrink-0 text-base font-semibold tabular">
+              <li key={l.codigo} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2.5">
+                <span className="shrink-0 font-mono text-base font-semibold sm:w-36">{l.codigo}</span>
+                <span className="min-w-0 flex-1 basis-48 text-base">{l.descripcion}</span>
+                <span className="shrink-0 text-lg font-bold tabular">
                   {l.cantidad} <span className="text-sm font-normal text-[var(--fg-muted)]">{unidadLegible(l.unidad)}</span>
                 </span>
               </li>
@@ -354,23 +404,28 @@ export default async function PaginaDetallePedido({
       )}
 
       {/* ------------------------------------------------ Guía */}
-      <section className="card flex flex-col gap-2 p-4">
-        <h2 className="text-lg font-semibold">Guía de remisión</h2>
+      <section className={cn("card elev-1 flex flex-col gap-3 border-l-4 p-4", guiaEmitida ? "border-l-[var(--ok)]" : "border-l-[var(--warn)]")}>
+        <TituloBloque
+          icono={Truck}
+          tono={guiaEmitida ? "entra" : "revisar"}
+          titulo="Guía de remisión"
+          ayuda="Con la guía sale la mercadería del almacén."
+        />
         {p.guias.length > 0 ? (
           <ul className="flex flex-col gap-1.5">
             {p.guias.map((g) => (
-              <li key={g.id} className="flex flex-wrap items-center gap-x-3 text-sm">
-                <Truck className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
-                <Link href={`/guias/${g.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
+              <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base">
+                <Truck className="size-5 text-[var(--fg-muted)]" aria-hidden="true" />
+                <Link href={`/guias/${g.id}`} className="font-mono text-lg font-bold text-brand-600 underline-offset-4 hover:underline">
                   {g.numero}
                 </Link>
-                <span>{g.estado === "emitida" ? "Emitida" : "Borrador, todavía no sale"}</span>
+                <span className={g.estado === "emitida" ? "font-semibold text-[var(--ok)]" : "font-semibold"}>{g.estado === "emitida" ? "Emitida" : "Borrador, todavía no sale"}</span>
                 <span className="text-[var(--fg-muted)]">{formatearFecha(g.fecha)}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[var(--fg-muted)]">Todavía no se ha despachado.</p>
+          <p className="text-base text-[var(--fg-muted)]">Todavía no se ha despachado.</p>
         )}
         {vigente && puedeDespachar && !guiaEmitida ? (
           <Link
@@ -392,14 +447,30 @@ export default async function PaginaDetallePedido({
       </section>
 
       {/* ------------------------------------------------ Factura y cobro */}
-      <section className="card flex flex-col gap-2 p-4">
-        <h2 className="text-lg font-semibold">Factura y cobro</h2>
+      <section
+        className={cn(
+          "card elev-1 flex flex-col gap-3 border-l-4 p-4",
+          p.facturas.length === 0
+            ? guiaEmitida
+              ? "border-l-[var(--warn)]"
+              : "border-l-[var(--border-strong)]"
+            : p.facturas.some((f) => f.saldo > 0.005)
+              ? "border-l-[var(--warn)]"
+              : "border-l-[var(--ok)]",
+        )}
+      >
+        <TituloBloque
+          icono={Receipt}
+          tono={p.facturas.length > 0 && p.facturas.every((f) => f.saldo <= 0.005) ? "entra" : guiaEmitida ? "revisar" : "marca"}
+          titulo="Factura y cobro"
+          ayuda="La factura sale después de la guía; el cobro, después de la factura."
+        />
         {p.facturas.length > 0 ? (
           <ul className="flex flex-col gap-2">
             {p.facturas.map((f) => (
-              <li key={f.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <FileText className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
-                <Link href={`/facturacion/${f.id}`} className="font-mono font-semibold text-brand-600 hover:underline">
+              <li key={f.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base">
+                <FileText className="size-5 text-[var(--fg-muted)]" aria-hidden="true" />
+                <Link href={`/facturacion/${f.id}`} className="font-mono text-lg font-bold text-brand-600 underline-offset-4 hover:underline">
                   {f.numero}
                 </Link>
                 <Moneda valor={f.total} moneda={f.moneda} tamano="sm" />
@@ -423,7 +494,7 @@ export default async function PaginaDetallePedido({
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-[var(--fg-muted)]">
+          <p className="text-base text-[var(--fg-muted)]">
             {guiaEmitida ? "Despachado y sin facturar." : "Se factura después de la guía."}
           </p>
         )}
@@ -438,7 +509,8 @@ export default async function PaginaDetallePedido({
         ) : null}
       </section>
 
-      <p className="text-sm text-[var(--fg-subtle)]">Etapa: {textoEtapa(p.etapa, p.despacho)}.</p>
+      {/* «Etapa: …» iba aquí, al pie y en gris; desde el 27/11 la etapa es
+          la pastilla de la cabecera y la frase de «Qué puedes hacer». */}
       </>
       )}
 

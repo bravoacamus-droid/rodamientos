@@ -10,6 +10,7 @@ import { DIAS_MAXIMOS_SIN_COPIA, estadoRespaldo, haceCuanto } from "../dominio/r
 import { CabeceraConfig } from "./cabecera";
 import { CuentasParaCobrar } from "./cuentas";
 import { FormEmpresa } from "./form-empresa";
+import { SeccionNumerada } from "./seccion";
 
 /**
  * Datos de la empresa.
@@ -49,11 +50,15 @@ export default async function PaginaConfigEmpresa() {
         </Suspense>
       ) : null}
 
-      <section className="card p-4">
+      <SeccionNumerada
+        numero={1}
+        titulo="Tu empresa en los documentos"
+        ayuda="Razón social, dirección e impuestos: salen impresos en cada cotización, guía y factura."
+      >
         <Suspense fallback={<Skeleton className="h-72 w-full" />}>
           <BloqueEmpresa puedeEditar={puedeEditar} />
         </Suspense>
-      </section>
+      </SeccionNumerada>
 
       {/*
         Las cuentas para cobrar, en su propio bloque.
@@ -63,12 +68,15 @@ export default async function PaginaConfigEmpresa() {
         pantalla. Luis: *«no puedo ver las cuentas que se crearon, que están en
         cotización»*. El caso veintisiete del patrón de esta casa.
       */}
-      <section className="card p-4">
-        <h2 className="mb-3 text-base font-semibold">Cuentas para cobrar</h2>
+      <SeccionNumerada
+        numero={2}
+        titulo="Cuentas para cobrar"
+        ayuda="Las cuentas del banco que salen al pie de cada cotización, para que el cliente sepa dónde pagar."
+      >
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
           <BloqueCuentas puedeEditar={puedeEditar} />
         </Suspense>
-      </section>
+      </SeccionNumerada>
 
       {/*
         Lo que todavía no tiene pantalla, dicho en voz alta.
@@ -110,17 +118,17 @@ async function BloqueRespaldo() {
     <section
       className={
         alerta
-          ? "flex gap-3 rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4"
-          : "flex gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4"
+          ? "card elev-2 flex gap-3 border-l-[6px] border-l-[var(--warn)] bg-[var(--warn-bg)] p-4"
+          : "card elev-1 flex gap-3 border-l-[6px] border-l-[var(--ok)] p-4"
       }
     >
       {alerta ? (
-        <TriangleAlert className="mt-0.5 size-5 shrink-0 text-[var(--warn)]" aria-hidden />
+        <TriangleAlert className="mt-0.5 size-7 shrink-0 text-[var(--warn)]" aria-hidden />
       ) : (
-        <DatabaseBackup className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden />
+        <DatabaseBackup className="mt-0.5 size-7 shrink-0 text-[var(--ok)]" aria-hidden />
       )}
-      <div className="text-sm">
-        <h2 className="font-semibold">Copia de seguridad</h2>
+      <div className="text-base">
+        <h2 className="text-lg font-bold text-[var(--titulo)]">Copia de seguridad</h2>
         {e.nivel === "nunca" ? (
           <p className="mt-1">
             No hay ninguna copia de seguridad apuntada. Si hoy se pierde la base, se pierde todo.
@@ -164,15 +172,14 @@ async function BloqueCatalogos() {
   const r = await conteosCatalogo();
 
   return (
-    <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
+    <SeccionNumerada numero={3} tono="aviso" titulo="Marcas, familias y unidades">
       {/*
         Decía «todavía no se editan aquí… se cargan por migración»: jerga, y
         además ya no era verdad. Desde la ficha del producto se crean marca,
         familia y subfamilia (§AM.7b). Se dice dónde, que es lo que se busca al
         leer esto (revisión por módulos del 02/10).
       */}
-      <h2 className="text-base font-semibold">Marcas, familias y unidades</h2>
-      <p className="mt-1 text-sm text-[var(--fg-muted)]">
+      <p className="text-base text-[var(--fg-muted)]">
         {r.ok ? (
           <>
             Hay <strong className="tabular text-[var(--fg)]">{r.datos.marcas}</strong>{" "}
@@ -192,6 +199,6 @@ async function BloqueCatalogos() {
         producto, desde su propia ficha: ahí mismo, al lado de cada lista,
         está el botón para añadirla.
       </p>
-    </section>
+    </SeccionNumerada>
   );
 }

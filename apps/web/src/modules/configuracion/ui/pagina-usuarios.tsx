@@ -8,6 +8,7 @@ import type { RolDef } from "../dominio/tipos";
 import { AltaUsuario } from "./alta-usuario";
 import { CabeceraConfig } from "./cabecera";
 import { TablaUsuarios } from "./usuarios";
+import { SeccionNumerada } from "./seccion";
 
 /**
  * Usuarios.
@@ -41,7 +42,7 @@ export default async function PaginaConfigUsuarios() {
       />
 
       {!esGerencia ? (
-        <p className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
+        <p className="card border-l-[6px] border-l-[var(--info)] p-4 text-base text-[var(--fg-muted)]">
           Puedes ver quién entra, pero <strong>cambiar un rol es cosa de
           Gerencia</strong>. No es solo esta pantalla: la base lo impide
           también.
@@ -57,19 +58,24 @@ export default async function PaginaConfigUsuarios() {
         esta pantalla cuando entra gente nueva.
       */}
       {esGerencia ? (
-        <section className="card p-4">
+        <SeccionNumerada
+          numero={1}
+          titulo="Dar de alta a alguien"
+          ayuda="Para cada persona nueva: su nombre, sus datos para entrar y qué rol tiene."
+        >
           <AltaUsuario hayClave={hayClaveAdmin()} roles={roles} />
-        </section>
+        </SeccionNumerada>
       ) : null}
 
-      <section className="card p-4">
-        <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          Aquí se cambia el rol y se activa o desactiva a quien ya entra.
-        </p>
+      <SeccionNumerada
+        numero={esGerencia ? 2 : undefined}
+        titulo="Quién entra ya"
+        ayuda="Aquí se cambia el rol y se activa o desactiva a quien ya entra."
+      >
         <Suspense fallback={<Skeleton className="h-48 w-full" />}>
           <BloqueUsuarios idPropio={perfil?.id ?? null} puedeEditar={esGerencia} roles={roles} />
         </Suspense>
-      </section>
+      </SeccionNumerada>
     </div>
   );
 }

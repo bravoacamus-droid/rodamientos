@@ -3,6 +3,7 @@
 // Cliente: mantiene la lista en pantalla y llama a Server Actions por cada
 // contacto, sin recargar la ficha entera.
 
+import { EncabezadoNumerado } from "@/modules/cotizaciones/ui/ficha/piezas";
 import * as React from "react";
 import { Button } from "@rodatech/ui";
 import { Check, Plus, Star, Trash2, X } from "lucide-react";
@@ -173,15 +174,15 @@ export function EditorContactos({
   const abierto = creando || editando !== null;
 
   return (
-    <section className="card flex flex-col gap-4 p-4">
+    <section className="card elev-1 flex flex-col gap-4 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">Contactos</h2>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            Las personas a las que se les cotiza en esta empresa. Al hacer una
-            cotización se elige a cuál va dirigida.
-          </p>
-        </div>
+        {/* El paso 3 del formulario del cliente (27/11, numerado como en
+            /accesibilidad). */}
+        <EncabezadoNumerado
+          numero={3}
+          titulo="Contactos"
+          ayuda="Las personas a las que se les cotiza en esta empresa. Al hacer una cotización se elige a cuál va dirigida."
+        />
         {!abierto ? (
           <Button
             type="button"

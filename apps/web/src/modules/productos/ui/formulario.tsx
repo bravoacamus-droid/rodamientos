@@ -6,6 +6,7 @@
 import { useActionState, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Combobox, Input } from "@rodatech/ui";
+import { CircleAlert, CircleCheck, Info } from "lucide-react";
 
 import { useBorrador } from "@/componentes/borrador";
 import { ProveedorRapido } from "@/modules/proveedores/ui/rapido";
@@ -22,6 +23,7 @@ import {
 } from "../acciones/catalogos";
 import { guardarProducto, type ResultadoProducto } from "../acciones/guardar";
 import { NuevoNodo } from "./nuevo-nodo";
+import { SeccionNumerada } from "./ficha";
 
 /**
  * Alta y edición de un producto.
@@ -310,9 +312,14 @@ export function FormularioProducto({
       ) : null}
 
       {/* ══════════════════════════════════════════ Identificación ══════ */}
-      <section className="card flex flex-col gap-3 p-4">
-        <h2 className="text-base font-semibold">Identificación</h2>
-
+      {/* Secciones numeradas (27/11), con el lenguaje de /accesibilidad:
+          cuatro pasos que se ven de un vistazo, en vez de cuatro tarjetas
+          blancas iguales con el título en letra normal. */}
+      <SeccionNumerada
+        numero={1}
+        titulo="Qué producto es"
+        ayuda="El código y la marca, como vienen en la caja."
+      >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Campo
             id="codigo"
@@ -426,17 +433,14 @@ export function FormularioProducto({
             />
           </Campo>
         </div>
-      </section>
+      </SeccionNumerada>
 
       {/* ═══════════════════════════════════════════ Clasificación ══════ */}
-      <section className="card flex flex-col gap-3 p-4">
-        <div>
-          <h2 className="text-base font-semibold">Clasificación</h2>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            Familia y sub-familia son para buscar y agrupar. La descripción es
-            lo que el cliente lee en la cotización.
-          </p>
-        </div>
+      <SeccionNumerada
+        numero={2}
+        titulo="Clasificación"
+        ayuda="Familia y sub-familia son para buscar y agrupar. La descripción es lo que el cliente lee en la cotización."
+      >
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Campo id="familia_id" label="Familia" requerido error={errorDe("familia_id")}>
@@ -551,20 +555,19 @@ export function FormularioProducto({
             ))}
           </datalist>
         </Campo>
-      </section>
+      </SeccionNumerada>
 
       {/* ═════════════════════════════════════════════════ Precios ══════
           Los cuatro en una fila. Willy, 01/09, señalando la pantalla: *«acá,
           si los inputs los hacemos más pequeños, entran los 4 en una sola
           línea»*. Estaban en `md:grid-cols-3`, así que el de mercado caía
           solo a la segunda fila con tres huecos vacíos al lado. */}
-      <section className="card flex flex-col gap-3 p-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold">Precios</h2>
-          <span className="text-sm text-[var(--fg-muted)]">
-            En dólares y sin IGV.
-          </span>
-        </div>
+      <SeccionNumerada
+        numero={3}
+        titulo="Precios"
+        ayuda="Si no sabes el costo todavía, déjalo en blanco: se puede poner después."
+        extra={<strong className="font-semibold text-fg">En dólares y sin IGV</strong>}
+      >
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Las etiquetas, con todas sus letras: «P.C.», «P.V.» y «P.M.» eran
@@ -649,15 +652,17 @@ export function FormularioProducto({
           </Campo>
         </div>
 
+        {/* El margen en su recuadro y en grande (27/11): es la cuenta que se
+            hace al poner el precio, y en una línea gris no se veía. */}
         {margen !== null ? (
-          <p className="text-sm text-[var(--fg-muted)]">
+          <p className="flex flex-wrap items-baseline gap-x-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-base text-[var(--fg-muted)]">
             Margen sobre el costo:{" "}
             <span
               // Los cortes suben con el denominador: sobre la venta, 10 y 15 %
               // eran «flojo» y «aceptable»; sobre el costo equivalen a 11 y 18.
               // Se redondean a 12 y 20, que además es el objetivo que trae la
               // plantilla de Willy.
-              className={`font-semibold tabular ${
+              className={`text-2xl font-extrabold tabular ${
                 margen < 12
                   ? "text-[var(--danger)]"
                   : margen < 20
@@ -675,11 +680,14 @@ export function FormularioProducto({
             ) : null}
           </p>
         ) : null}
-      </section>
+      </SeccionNumerada>
 
       {/* ═════════════════════════════════════════════════ Almacén ══════ */}
-      <section className="card flex flex-col gap-3 p-4">
-        <h2 className="text-base font-semibold">Almacén</h2>
+      <SeccionNumerada
+        numero={4}
+        titulo="Almacén"
+        ayuda="Cuándo avisar que hay que reponer, dónde se guarda y a quién se le pide."
+      >
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Campo id="stock_minimo" label="Stock mínimo" ayuda="Desde aquí avisa que hay que reponer.">
@@ -779,19 +787,31 @@ export function FormularioProducto({
         </Campo>
 
         {!producto ? (
-          <p className="rounded-md bg-[var(--surface-2)] p-3 text-sm text-[var(--fg-muted)]">
-            El <strong>stock inicial</strong> no se pone aquí. Un saldo escrito a mano
-            rompería el kardex: entra por Recepción cuando llegue la mercadería, o
-            por Ajuste de inventario si es un cuadre.
+          <p className="flex items-start gap-2 rounded-lg border border-[var(--info)] bg-[var(--info-bg)] p-3 text-base">
+            <Info className="mt-0.5 size-5 shrink-0 text-[var(--info)]" aria-hidden="true" />
+            <span>
+              El <strong>stock inicial</strong> no se pone aquí. Un saldo escrito a mano
+              rompería el kardex: entra por Recepción cuando llegue la mercadería, o
+              por Ajuste de inventario si es un cuadre.
+            </span>
           </p>
         ) : null}
-      </section>
+      </SeccionNumerada>
 
-      {faltan.length > 0 ? (
-        <p className="text-sm text-[var(--fg-muted)] sm:text-right">
-          Para guardar falta {faltan.join(", ").replace(/, ([^,]*)$/, " y $1")}.
-        </p>
-      ) : null}
+      {/* El pie, en su propia tarjeta y con lo que falta dicho al lado del
+          botón que lo necesita (27/11). */}
+      <div className="card elev-2 flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        {faltan.length > 0 ? (
+          <p className="flex items-start gap-2 text-base text-[var(--fg-muted)]">
+            <CircleAlert className="mt-0.5 size-5 shrink-0 text-[var(--warn)]" aria-hidden="true" />
+            Para guardar falta {faltan.join(", ").replace(/, ([^,]*)$/, " y $1")}.
+          </p>
+        ) : (
+          <p className="flex items-start gap-2 text-base text-[var(--fg-muted)]">
+            <CircleCheck className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+            Todo lo obligatorio está puesto.
+          </p>
+        )}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         <Button
@@ -814,6 +834,7 @@ export function FormularioProducto({
         >
           {guardando ? "Guardando…" : producto ? "Guardar cambios" : "Crear producto"}
         </Button>
+      </div>
       </div>
     </form>
   );

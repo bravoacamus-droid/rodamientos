@@ -156,7 +156,22 @@ export async function PaginaKits({
       <FiltrosKits />
 
       {filtrados.length === 0 ? (
+        // Con su icono y, si no hay ninguno, el siguiente paso como botón
+        // (27/11): un vacío sin salida parece una pantalla rota.
         <EstadoVacio
+          className="card elev-1"
+          icono={<Boxes />}
+          accion={
+            todos.length === 0 && permisos.tiene("productos", "crear") ? (
+              <Link
+                href="/productos/kits/nuevo"
+                className={cn(buttonVariants({ variant: "primary" }), "h-11 md:h-control-md")}
+              >
+                <Plus strokeWidth={2.5} aria-hidden="true" />
+                Crear el primer kit
+              </Link>
+            ) : undefined
+          }
           titulo={
             todos.length === 0 ? "Todavía no hay kits" : "Ningún kit coincide"
           }

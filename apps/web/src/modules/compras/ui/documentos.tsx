@@ -3,7 +3,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, SelectNativo, toast } from "@rodatech/ui";
-import { Eye, FileUp, Trash2 } from "lucide-react";
+import { Eye, FileText, FileUp, Trash2 } from "lucide-react";
+
+import { BloqueFicha, VacioFicha } from "./ficha";
 
 import {
   enlaceDocumentoCompra,
@@ -91,22 +93,32 @@ export function DocumentosCompra({
   };
 
   return (
-    <section className="card p-4">
-      <h2 className="mb-1 text-sm font-semibold">Documentos</h2>
-      <p className="mb-3 text-sm text-[var(--fg-muted)]">
-        La proforma confirmada, la factura, la guía aérea… en PDF o foto. <strong>Es opcional</strong>: se sube
-        cuando lo tengas.
-      </p>
-
+    <BloqueFicha
+      icono={<FileText />}
+      titulo="Documentos"
+      ayuda={
+        <>
+          La proforma confirmada, la factura, la guía aérea… en PDF o foto. <strong>Es opcional</strong>: se sube
+          cuando lo tengas.
+        </>
+      }
+    >
       {documentos.length === 0 ? (
-        <p className="mb-3 text-sm text-[var(--fg-subtle)]">Todavía no hay ningún documento.</p>
+        // Vacío con su porqué (27/11): una línea gris «no hay ninguno» se
+        // leía como un fallo, no como algo que se puede hacer ahora.
+        <VacioFicha icono={<FileText />} titulo="Todavía no hay ningún documento">
+          {puedeTocar ? "Elige qué es y pulsa «Subir documento»." : null}
+        </VacioFicha>
       ) : (
-        <ul className="mb-3 flex flex-col gap-2">
+        <ul className="flex flex-col gap-2">
           {documentos.map((d) => (
-            <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border-soft)] p-2 text-sm">
-              <span className="min-w-0">
-                <span className="font-medium">{ETIQUETA[d.tipo]}</span>
-                <span className="block truncate text-[var(--fg-muted)]">{d.nombre}</span>
+            <li
+              key={d.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3"
+            >
+              <span className="min-w-0 flex-1 basis-40">
+                <span className="block text-base font-semibold">{ETIQUETA[d.tipo]}</span>
+                <span className="block break-words text-sm text-[var(--fg-muted)]">{d.nombre}</span>
               </span>
               <span className="flex shrink-0 gap-2">
                 <Button type="button" variant="outline" size="sm" className="text-sm" onClick={() => ver(d.id)}>
@@ -139,7 +151,7 @@ export function DocumentosCompra({
       {puedeTocar ? (
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Qué es</span>
+            <span className="text-base font-medium">Qué es</span>
             <SelectNativo value={tipo} onChange={(e) => setTipo(e.target.value as DocumentoCompra["tipo"])}>
               <option value="proforma">Proforma</option>
               <option value="factura">Factura</option>
@@ -163,6 +175,6 @@ export function DocumentosCompra({
           </Button>
         </div>
       ) : null}
-    </section>
+    </BloqueFicha>
   );
 }

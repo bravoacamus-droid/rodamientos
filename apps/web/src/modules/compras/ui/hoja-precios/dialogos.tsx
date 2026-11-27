@@ -62,7 +62,7 @@ export function DialogoProveedor({
               })
             }
           />
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-base font-medium text-[var(--danger)]">{error}</p> : null}
         </DialogBody>
       </DialogContent>
     </Dialog>
@@ -127,7 +127,7 @@ export function DialogoAnalisis({
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-base font-medium text-[var(--danger)]">{error}</p> : null}
 
           {elegido ? (
             <>
@@ -189,7 +189,7 @@ export function DialogoAnalisis({
                   >
                     <span className="min-w-0">
                       <span className="block font-mono text-sm font-semibold">{a.numero}</span>
-                      <span className="block truncate text-sm text-[var(--fg-muted)]">{a.proveedor}</span>
+                      <span className="block break-words text-sm text-[var(--fg-muted)]">{a.proveedor}</span>
                     </span>
                     <span className="shrink-0 text-right text-sm text-[var(--fg-muted)]">
                       {a.productos} {a.productos === 1 ? "producto" : "productos"}
@@ -292,7 +292,7 @@ export function DialogoComprar({
 
   return (
     <Dialog open={abierto} onOpenChange={setAbierto}>
-      <Button type="button" disabled={deshabilitado} onClick={() => setAbierto(true)} className="gap-1.5">
+      <Button type="button" size="lg" disabled={deshabilitado} onClick={() => setAbierto(true)} className="gap-1.5">
         <ShoppingCart className="size-4" aria-hidden="true" />
         Pasar a compras
       </Button>
@@ -305,24 +305,24 @@ export function DialogoComprar({
         </DialogHeader>
         <DialogBody className="flex flex-col gap-3">
           {compras.map((c) => (
-            <section key={c.proveedorId} className="rounded-md border border-[var(--border)] p-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="min-w-0 truncate text-base font-semibold" title={c.proveedor}>
-                  {c.proveedor}
-                </h3>
-                <span className="shrink-0 text-base font-semibold tabular">{dinero(c.subtotal, c.moneda)}</span>
+            // Una tarjeta por compra que va a salir, con el total en grande y
+            // el filo azul de «dinero que sale» (27/11).
+            <section key={c.proveedorId} className="rounded-lg border border-l-4 border-[var(--border)] border-l-[var(--info)] bg-[var(--surface-2)] p-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                <h3 className="min-w-0 break-words text-lg font-bold">{c.proveedor}</h3>
+                <span className="shrink-0 text-xl font-extrabold tabular">{dinero(c.subtotal, c.moneda)}</span>
               </div>
-              <ul className="mt-1 text-sm text-[var(--fg-muted)]">
+              <ul className="mt-1 text-base text-[var(--fg-muted)]">
                 {c.lineas.map((l) => (
                   <li key={l.productoId}>
                     {l.cantidad} × <span className="font-mono">{l.codigo}</span> a {dinero(l.costoUnitario, c.moneda)}
                   </li>
                 ))}
               </ul>
-              <label className="mt-2 flex items-center gap-2 text-sm">
+              <label className="mt-2 flex min-h-10 items-center gap-2 text-base">
                 <input
                   type="checkbox"
-                  className="size-4"
+                  className="size-5"
                   checked={afectos[c.proveedorId] ?? c.afectoIgv}
                   onChange={(e) => setAfectos((a) => ({ ...a, [c.proveedorId]: e.target.checked }))}
                 />
@@ -330,13 +330,14 @@ export function DialogoComprar({
               </label>
             </section>
           ))}
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-base font-medium text-[var(--danger)]">{error}</p> : null}
         </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setAbierto(false)}>
             Todavía no
           </Button>
-          <Button type="button" disabled={enCurso || compras.length === 0} onClick={comprar}>
+          <Button type="button" size="lg" disabled={enCurso || compras.length === 0} onClick={comprar}>
+            <ShoppingCart aria-hidden="true" />
             {enCurso ? "Registrando…" : `Registrar ${compras.length} ${compras.length === 1 ? "compra" : "compras"}`}
           </Button>
         </DialogFooter>
@@ -375,7 +376,8 @@ export function DialogoHistorial({ productoId, codigo }: { productoId: string; c
       <button
         type="button"
         onClick={abrir}
-        className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm font-medium hover:bg-[var(--surface-2)]"
+        // El azul suave de los botones secundarios (27/11), no gris sobre gris.
+        className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] px-2 text-sm font-semibold text-[var(--boton-fila-fg)] hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)]"
       >
         <History className="size-4" aria-hidden="true" />
         Historial
@@ -386,7 +388,7 @@ export function DialogoHistorial({ productoId, codigo }: { productoId: string; c
           <DialogDescription>Lo que te cotizaron, lo que compraste y lo que vendiste. En dólares sin IGV.</DialogDescription>
         </DialogHeader>
         <DialogBody className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto">
-          {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
+          {error ? <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-2.5 text-base font-medium text-[var(--danger)]">{error}</p> : null}
           {datos === null && !error ? (
             <p className="anim-latido py-6 text-center text-sm text-[var(--fg-muted)]">Cargando el historial…</p>
           ) : null}

@@ -26,7 +26,9 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "size-4 shrink-0 rounded-full border-2 border-[var(--border-strong)] bg-surface",
+        // 20 px, como la casilla (27/11).
+        "size-5 shrink-0 rounded-full border-2 border-[var(--campo-borde)] bg-surface",
+        "hover:border-brand-500",
         "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-brand-600",
         className,
@@ -34,7 +36,7 @@ export function RadioGroupItem({
       {...props}
     >
       <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <Circle className="size-2 fill-brand-600 text-brand-600" />
+        <Circle className="size-2.5 fill-brand-600 text-brand-600" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );
@@ -68,7 +70,7 @@ export function RadioCampo({
     >
       <RadioGroupItem id={id} value={value} disabled={disabled} aria-describedby={idAyuda} className="mt-0.5" />
       <div className="min-w-0">
-        <label htmlFor={id} className="block cursor-pointer text-sm font-medium text-fg">
+        <label htmlFor={id} className="block cursor-pointer text-sm font-semibold text-fg">
           {label}
         </label>
         {ayuda && (

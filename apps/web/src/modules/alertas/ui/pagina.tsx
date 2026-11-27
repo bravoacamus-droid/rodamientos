@@ -68,8 +68,9 @@ export default async function PaginaAlertas({ searchParams }: Props) {
       <PanelModulo ruta="/alertas">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Alertas</h1>
-            <p className="text-sm text-[var(--fg-muted)]">
+            <h1 className="text-3xl font-bold tracking-tight">Alertas</h1>
+            <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+            <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">
               Lo que hay que mirar hoy: pedidos, guías y cotizaciones que se
               quedan atrás, quiebres, cartera vencida y documentos rechazados.
             </p>
@@ -131,31 +132,31 @@ async function Indicadores() {
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Sin leer</p>
-        <p className="mt-0.5 text-xl font-semibold">
+      <div className="card elev-1 anim-entrada min-w-0 p-4">
+        <p className="text-base font-semibold text-[var(--fg-muted)]">Sin leer</p>
+        <p className="tabular mt-1 text-3xl font-extrabold leading-tight text-[var(--titulo)]">
           <CifraAnimada valor={sinLeer} decimales={0} />
         </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
+        <p className="mt-1 text-base text-[var(--fg-muted)]">
           {total === 0 ? "la bandeja está vacía" : `de ${total} en la bandeja`}
         </p>
       </div>
 
-      <div className="card anim-entrada p-3">
-        <p className="text-sm text-[var(--fg-muted)]">Críticas</p>
+      <div className="card elev-1 anim-entrada min-w-0 p-4">
+        <p className="text-base font-semibold text-[var(--fg-muted)]">Críticas</p>
         <p
-          className={`mt-0.5 text-xl font-semibold ${criticas > 0 ? "text-[var(--danger)]" : ""}`}
+          className={`tabular mt-1 text-3xl font-extrabold leading-tight ${criticas > 0 ? "text-[var(--danger)]" : "text-[var(--titulo)]"}`}
         >
           <CifraAnimada valor={criticas} decimales={0} />
         </p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
+        <p className="mt-1 text-base text-[var(--fg-muted)]">
           {criticas === 0
             ? "nada que pare la operación"
             : "quiebre, saldo negativo o rechazo de SUNAT"}
         </p>
       </div>
 
-      <div className="card anim-entrada p-3">
+      <div className="card elev-1 anim-entrada min-w-0 p-4">
         {/*
           Decía «Última revisión: nunca · se calculan al pulsar Actualizar», y
           era falso: el cron de la 032 revisa todos los días a las 07:00 y ha
@@ -163,9 +164,9 @@ async function Indicadores() {
           —no hay ninguna— y no de la última revisión. Leído así, la bandeja
           vacía parecía un sistema apagado (revisión por módulos del 02/10).
         */}
-        <p className="text-sm text-[var(--fg-muted)]">Revisión automática</p>
-        <p className="mt-0.5 text-base font-semibold">cada día a las 7:00</p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
+        <p className="text-base font-semibold text-[var(--fg-muted)]">Revisión automática</p>
+        <p className="mt-1 text-2xl font-extrabold leading-tight text-[var(--titulo)]">cada día a las 7:00</p>
+        <p className="mt-1 text-base text-[var(--fg-muted)]">
           {ultima
             ? `última alerta ${haceCuanto(ultima, ahora)}; «Actualizar» revisa ahora`
             : "«Actualizar» revisa ahora, sin esperar a mañana"}
@@ -220,9 +221,9 @@ async function Bandeja({ filtros }: { filtros: FiltrosBandeja }) {
     <div className="flex flex-col">
       {grupos.map((grupo) => (
         <section key={grupo.familia}>
-          <h2 className="border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-1.5 text-sm font-semibold text-[var(--fg-muted)]">
+          <h2 className="flex items-center gap-2 border-t border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-2.5 text-lg font-bold text-[var(--titulo)]">
             {ETIQUETA_FAMILIA[grupo.familia]}
-            <span className="ml-2 font-normal normal-case tracking-normal text-[var(--fg-subtle)]">
+            <span className="tabular rounded-full bg-[var(--surface)] px-2.5 py-0.5 text-base font-bold text-[var(--fg-muted)] ring-1 ring-inset ring-[var(--border)]">
               {grupo.alertas.length}
             </span>
           </h2>
@@ -265,33 +266,34 @@ function FilaAlerta({
     <li
       // En el teléfono los botones van DEBAJO del texto: al lado dejaban el
       // mensaje en una columna de 150 px (revisión por módulos del 02/10).
-      className={`anim-entrada flex flex-col items-stretch gap-2 border-b sm:flex-row sm:items-start sm:gap-3 border-l-2 border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-2)] ${franja} ${
+      className={`anim-entrada flex flex-col items-stretch gap-2 border-b sm:flex-row sm:items-start sm:gap-3 border-l-[6px] border-[var(--border-soft)] px-4 py-4 transition-colors hover:bg-[var(--surface-2)] ${franja} ${
         alerta.leida ? "opacity-70" : ""
       }`}
       style={{ animationDelay: `${Math.min(indice, 6) * 28}ms` }}
     >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className={`text-sm ${alerta.leida ? "" : "font-semibold"}`}>
+          <span className={`text-lg leading-snug ${alerta.leida ? "font-medium" : "font-bold"}`}>
             {alerta.titulo}
           </span>
-          <Badge tone={tonoSeveridad(alerta.severidad)} size="xs">
+          <Badge tone={tonoSeveridad(alerta.severidad)}>
             {ETIQUETA_SEVERIDAD[alerta.severidad]}
           </Badge>
-          <span className="text-sm text-[var(--fg-subtle)]">
+          <span className="text-sm text-[var(--fg-muted)]">
             {ETIQUETA_TIPO[alerta.tipo]}
           </span>
           {!alerta.leida ? (
-            <span
-              className="size-1.5 rounded-full bg-brand-500"
-              aria-label="Sin leer"
-            />
+            // «Nueva» con palabra (27/11): un punto azul de 6 px no lo ve Willy
+            // y no dice qué significa sin pasar el ratón.
+            <span className="rounded-full bg-[var(--info-bg)] px-2.5 py-0.5 text-sm font-bold text-[var(--info)] ring-1 ring-inset ring-[var(--border)]">
+              Nueva
+            </span>
           ) : null}
         </div>
 
-        <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{alerta.mensaje}</p>
+        <p className="mt-1 text-base text-[var(--fg-muted)]">{alerta.mensaje}</p>
 
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-[var(--fg-subtle)]">
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-[var(--fg-muted)]">
           <span className="tabular">{haceCuanto(alerta.generada_en, ahora)}</span>
           {alerta.accion_url ? (
             // Botón con borde y flecha de lucide, no un enlace azul con «→»

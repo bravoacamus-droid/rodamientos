@@ -175,7 +175,7 @@ export default async function PaginaPrecios() {
                       número solo no parece un botón (revisión por módulos
                       del 02/10). Pegado a la derecha por si la tabla se
                       desplaza. */}
-                  <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5">
+                  <th className="sticky right-0 z-20 bg-[var(--surface)] px-4 py-2.5">
                     <span className="sr-only">Acciones</span>
                   </th>
                 </tr>
@@ -215,7 +215,7 @@ export default async function PaginaPrecios() {
                         contestaron={f.contestaron}
                       />
                     </td>
-                    <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right">
+                    <td className="sticky right-0 z-10 bg-[var(--surface)] px-4 py-2.5 text-right">
                       <Button asChild variant="outline">
                         <Link href={`/compras/precios/${f.id}`}>Abrir</Link>
                       </Button>

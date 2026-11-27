@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { cookies } from "next/headers";
+import { Accessibility } from "lucide-react";
 import { redirect } from "next/navigation";
 import { perfilActual } from "@rodatech/db/servidor";
 import { Logo } from "@/componentes/logo";
 import { BarraLateral, MenuMovil } from "@/componentes/barra-lateral";
 import { BarraNavegacion } from "@/componentes/barra-navegacion";
 import { Bienvenida } from "@/componentes/bienvenida";
+import { DondeEstoy } from "@/componentes/donde-estoy";
 import { GuardaVer } from "@/componentes/guarda-ver";
 import { MenuUsuario } from "@/componentes/menu-usuario";
 import { SelectorTema } from "@/componentes/selector-tema";
@@ -90,9 +93,13 @@ export default async function LayoutErp({
       />
 
       <div className="flex min-w-0 flex-1 flex-col print:block">
-        <header className="vidrio sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-[var(--border)] px-3 shadow-[0_1px_0_rgb(11_52_80/0.04),0_4px_14px_rgb(11_52_80/0.05)] sm:px-4 md:px-6 print:hidden">
+        {/* 64 px y no 56 (27/11): con «Letra y colores», el tema y el usuario
+            con su nombre, la barra iba justa, y ahora lleva además dónde
+            estás. El filo de la marca pasa a 4 px, como el de las cabeceras
+            de módulo: a 3 px se leía como una raya de color suelta. */}
+        <header className="vidrio sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-[var(--border)] px-3 shadow-[0_1px_0_rgb(11_52_80/0.04),0_4px_14px_rgb(11_52_80/0.06)] sm:px-4 md:px-6 print:hidden">
           {/* El filo de la marca, azul → dorado, sobre la barra. */}
-          <span className="filo-marca pointer-events-none absolute inset-x-0 top-0 h-[3px]" aria-hidden="true" />
+          <span className="filo-marca pointer-events-none absolute inset-x-0 top-0 h-1" aria-hidden="true" />
           {/* En móvil el logo cede su sitio al botón del menú: sin él no hay
               forma de llegar a ningún módulo desde un teléfono. */}
           <MenuMovil
@@ -106,7 +113,21 @@ export default async function LayoutErp({
               usuario, y empujaba su botón fuera de la pantalla (02/11, a
               360 px). El logo sigue arriba del cajón del menú. */}
           <Logo className="hidden h-7 w-auto min-[380px]:block md:hidden" priority={false} />
-          <div className="ml-auto flex min-w-0 items-center gap-1">
+          {/* En escritorio, donde el logo ya está en el menú (27/11). */}
+          <DondeEstoy />
+          <div className="ml-auto flex min-w-0 items-center gap-1 sm:gap-2">
+            {/* Letra y colores (27/11), con palabra y en todas las pantallas:
+                quien más lo necesita es quien no encontraría un icono
+                suelto. En el teléfono queda el icono, con su nombre para el
+                lector de pantalla. */}
+            <Link
+              href="/accesibilidad"
+              aria-label="Letra y colores"
+              className="inline-flex h-control-md items-center gap-2 rounded-md border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] px-3 text-sm font-semibold text-[var(--boton-fila-fg)] transition-colors hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)]"
+            >
+              <Accessibility className="size-5" aria-hidden="true" />
+              <span className="hidden sm:inline">Letra y colores</span>
+            </Link>
             <SelectorTema />
             <MenuUsuario
               nombre={perfil?.nombre ?? "Sesión"}

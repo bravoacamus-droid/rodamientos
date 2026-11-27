@@ -155,7 +155,7 @@ const nada = <span className="text-[var(--fg-subtle)]">—</span>;
 function Guia({ p }: { p: FilaPedido }) {
   if (!p.guia) return <span className="text-[var(--fg-subtle)]">—</span>;
   return (
-    <Link href={`/guias/${p.guia.id}`} className="font-mono text-sm text-brand-600 hover:underline">
+    <Link href={`/guias/${p.guia.id}`} className="tabular text-sm text-brand-600 hover:underline">
       {p.guia.numero}
       {p.guia.emitida ? null : <span className="block font-sans text-[var(--fg-muted)]">borrador</span>}
     </Link>
@@ -169,7 +169,7 @@ function Cobro({ p }: { p: FilaPedido }) {
   const saldo = p.facturas.reduce((a, x) => a + x.saldo, 0);
   return (
     <span className="block">
-      <Link href={`/facturacion/${f.id}`} className="font-mono text-sm text-brand-600 hover:underline">
+      <Link href={`/facturacion/${f.id}`} className="tabular text-sm text-brand-600 hover:underline">
         {f.numero}
         {p.facturas.length > 1 ? ` +${p.facturas.length - 1}` : ""}
       </Link>
@@ -234,7 +234,7 @@ export function TablaPedidos({
               <th className="px-3 py-2.5 text-left font-medium">Factura · cobro</th>
               <th className="px-3 py-2.5 text-left font-medium">SUNAT</th>
               <Cabecera campo="etapa" params={params} orden={orden}>Etapa</Cabecera>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
                 Acciones
               </th>
             </tr>
@@ -243,14 +243,14 @@ export function TablaPedidos({
             {filas.map((p, i) => (
               <tr
                 key={p.id}
-                className={`group/fila anim-entrada border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)] ${p.anulado ? "opacity-70" : ""}`}
+                className={`group/fila anim-entrada border-b border-[var(--border-soft)] align-top fila-lista ${p.anulado ? "opacity-70" : ""}`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
               >
                 <td className="whitespace-nowrap px-3 py-2.5">
-                  <Link href={`/pedidos/${p.id}`} className="font-mono text-sm font-semibold text-brand-600 hover:underline">
+                  <Link href={`/pedidos/${p.id}`} className="tabular text-sm font-semibold text-brand-600 hover:underline">
                     {p.numero}
                   </Link>
-                  <Link href={`/cotizaciones/${p.cotizacionId}`} className="block font-mono text-sm text-[var(--fg-subtle)] hover:underline">
+                  <Link href={`/cotizaciones/${p.cotizacionId}`} className="block tabular text-sm text-[var(--fg-subtle)] hover:underline">
                     {p.secuencia > 1 ? `${p.secuencia}.º de ` : ""}
                     {p.cotizacion}
                   </Link>
@@ -286,7 +286,7 @@ export function TablaPedidos({
                 <td className="px-3 py-2.5">
                   {p.anulado ? <Anulado motivo={p.anulado.motivo} /> : <InsigniaEtapa etapa={p.etapa} despacho={p.despacho} />}
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right group-hover/fila:bg-[var(--surface-2)]">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-3 py-2.5 text-right">
                   <AccionesPedido p={paraAcciones(p)} />
                 </td>
               </tr>
@@ -308,7 +308,7 @@ export function TablaPedidos({
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <Link href={`/pedidos/${p.id}`} className="font-mono text-base font-semibold text-brand-600 hover:underline">
+                <Link href={`/pedidos/${p.id}`} className="tabular text-base font-semibold text-brand-600 hover:underline">
                   {p.numero}
                 </Link>
                 <p className="truncate font-medium">{p.cliente}</p>

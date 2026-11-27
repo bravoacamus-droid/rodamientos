@@ -27,8 +27,10 @@ export default async function Pagina(props: { searchParams: Promise<Record<strin
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/reportes/cotizaciones">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cotizado y ganado</h1>
-          <p className="text-base text-[var(--fg-muted)]">Cuánto se cotiza, cuánto se gana y qué está en juego.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Cotizado y ganado</h1>
+          {/* La barra dorada del login, como el Informe general (27/11). */}
+          <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">Cuánto se cotiza, cuánto se gana y qué está en juego.</p>
         </div>
       </PanelModulo>
       <PaginaCotizacionesEjecutiva {...props} />

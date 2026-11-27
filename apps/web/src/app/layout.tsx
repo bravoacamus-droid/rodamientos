@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { JetBrains_Mono, Manrope } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@rodatech/ui";
+
+import { COOKIE_ACCESIBILIDAD, atributosHtml, leerPreferencias } from "@/lib/accesibilidad";
 
 import "./globals.css";
 
@@ -59,11 +62,16 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // La letra, el contraste y el movimiento que eligió quien usa este equipo
+  // (ver lib/accesibilidad.ts). Se pintan en el servidor para que la página
+  // no salga a un tamaño y salte a otro al cargar.
+  const accesibilidad = leerPreferencias((await cookies()).get(COOKIE_ACCESIBILIDAD)?.value);
+
   /*
     `data-scroll-behavior="smooth"` no es decorativo.
 
@@ -78,6 +86,7 @@ export default function RootLayout({
       lang="es-PE"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
+      {...atributosHtml(accesibilidad)}
       className={`${manrope.variable} ${mono.variable}`}
     >
       <body className="min-h-dvh bg-[var(--bg)] font-sans text-[var(--fg)] antialiased">

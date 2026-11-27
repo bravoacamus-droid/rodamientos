@@ -87,7 +87,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
             {filas.map((g, i) => (
               <tr
                 key={g.id}
-                className={`anim-entrada border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)] ${
+                className={`anim-entrada border-b border-[var(--border-soft)] fila-lista ${
                   g.estado === "anulada" ? "border-dashed" : ""
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
@@ -95,12 +95,12 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <td className="whitespace-nowrap px-3 py-2.5">
                   <Link
                     href={`/guias/${g.id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="tabular text-sm font-medium text-brand-600 hover:underline"
                   >
                     {g.numero}
                   </Link>
                   {g.cotizacion_numero ? (
-                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                    <span className="block tabular text-sm text-[var(--fg-subtle)]">
                       {g.cotizacion_numero}
                     </span>
                   ) : null}
@@ -121,7 +121,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
                 <td className="max-w-xs px-3 py-2.5">
                   <span className="block truncate font-medium">{g.cliente ?? "—"}</span>
                   {g.cliente_documento ? (
-                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                    <span className="block tabular text-sm text-[var(--fg-subtle)]">
                       {g.cliente_documento}
                     </span>
                   ) : null}
@@ -232,12 +232,12 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
               <div className="min-w-0">
                 <Link
                   href={`/guias/${g.id}`}
-                  className="font-mono text-sm font-semibold text-brand-600"
+                  className="tabular text-sm font-semibold text-brand-600"
                 >
                   {g.numero}
                 </Link>
                 {g.cotizacion_numero ? (
-                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                  <span className="block tabular text-sm text-[var(--fg-subtle)]">
                     {g.cotizacion_numero}
                   </span>
                 ) : null}
@@ -253,7 +253,7 @@ export async function TablaGuias({ filtros }: { filtros: FiltrosGuias }) {
             <div>
               <p className="text-sm font-medium">{g.cliente ?? "—"}</p>
               {g.cliente_documento ? (
-                <p className="font-mono text-sm text-[var(--fg-subtle)]">
+                <p className="tabular text-sm text-[var(--fg-subtle)]">
                   {g.cliente_documento}
                 </p>
               ) : null}

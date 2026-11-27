@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Badge, formatearFecha } from "@rodatech/ui";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, Users } from "lucide-react";
 
 import { alcanzaPara, type QuienEsperaProducto } from "../dominio/listos";
 import { ETIQUETA_URGENCIA } from "../dominio/por-comprar";
+import { BloqueFicha } from "./ficha";
 
 /**
  * Para quién es esta compra.
@@ -44,23 +45,24 @@ export function ParaQuienEs({
 
   if (conDuenno.length === 0) {
     return (
-      <section className="card p-4">
-        <h2 className="mb-1 text-sm font-semibold">Para quién es</h2>
-        <p className="text-sm text-[var(--fg-muted)]">
-          Ningún pedido confirmado está esperando esto. Es reposición de
-          almacén, que también está bien.
-        </p>
-      </section>
+      <BloqueFicha
+        icono={<Users />}
+        tono="sale"
+        titulo="Para quién es"
+        ayuda="Ningún pedido confirmado está esperando esto. Es reposición de almacén, que también está bien."
+      >
+        {null}
+      </BloqueFicha>
     );
   }
 
   return (
-    <section className="card p-4">
-      <h2 className="mb-1 text-sm font-semibold">Para quién es</h2>
-      <p className="mb-3 text-sm text-[var(--fg-muted)]">
-        Pedidos confirmados que esperan esto y que el almacén todavía no cubre.
-      </p>
-
+    <BloqueFicha
+      icono={<Users />}
+      tono="porHacer"
+      titulo="Para quién es"
+      ayuda="Pedidos confirmados que esperan esto y que el almacén todavía no cubre."
+    >
       <ul className="flex flex-col gap-3">
         {conDuenno.map((l) => {
           const e = espera[l.producto_id]!;
@@ -68,8 +70,8 @@ export function ParaQuienEs({
           return (
             <li key={l.producto_id} className="border-b border-[var(--border-soft)] pb-3 last:border-0 last:pb-0">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <span className="font-mono text-sm font-medium">{l.codigo}</span>
-                <span className="text-sm text-[var(--fg-subtle)]">
+                <span className="font-mono text-base font-bold">{l.codigo}</span>
+                <span className="text-sm text-[var(--fg-muted)]">
                   traes {l.cantidad} · esperan {e.total}
                 </span>
                 {alcance === "no_alcanza" ? (
@@ -92,7 +94,7 @@ export function ParaQuienEs({
                     >
                       {p.cotizacion}
                     </Link>
-                    <span className="min-w-0 flex-1 truncate">{p.cliente}</span>
+                    <span className="min-w-0 flex-1 break-words">{p.cliente}</span>
                     <span className="tabular text-sm">{p.esperando}</span>
                     <Badge
                       tone={
@@ -115,6 +117,6 @@ export function ParaQuienEs({
           );
         })}
       </ul>
-    </section>
+    </BloqueFicha>
   );
 }

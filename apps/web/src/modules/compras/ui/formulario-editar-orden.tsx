@@ -3,7 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button, Campo, Input, Textarea, toast } from "@rodatech/ui";
-import { Trash2, Undo2 } from "lucide-react";
+import { Save, Trash2, Undo2, X } from "lucide-react";
+import { TituloPaso } from "./ficha";
 
 import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { editarOrdenCompra } from "../acciones/editar-orden";
@@ -110,10 +111,13 @@ export function FormularioEditarOrden({
   return (
     <div className="flex flex-col gap-6">
       {/* ------------------------------------------------ Productos */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Productos</h2>
+      {/* Cuatro pasos numerados en sus tarjetas, como Accesibilidad (27/11):
+          eran cuatro títulos sueltos sobre el fondo, sin saber dónde
+          acababa uno y empezaba otro. */}
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso numero={1} titulo="Productos" ayuda="Cambia cantidades y costos, o quita lo que ya no va." />
         <div className="overflow-x-auto rounded-md border border-[var(--border)]">
-          <table className="w-full min-w-[720px] text-sm">
+          <table className="w-full min-w-[720px] text-base">
             <thead className="bg-[var(--surface-2)] text-left">
               <tr>
                 <th className="px-3 py-2 font-medium">Código</th>
@@ -188,14 +192,14 @@ export function FormularioEditarOrden({
           <dd className="text-right tabular">{dinero(subtotal)}</dd>
           <dt className="text-[var(--fg-muted)]">IGV</dt>
           <dd className="text-right tabular">{dinero(igv)}</dd>
-          <dt className="font-semibold">Total</dt>
-          <dd className="text-right font-semibold tabular">{dinero(subtotal + igv)}</dd>
+          <dt className="border-t border-[var(--border)] pt-1 text-lg font-bold">Total</dt>
+          <dd className="border-t border-[var(--border)] pt-1 text-right text-lg font-extrabold tabular">{dinero(subtotal + igv)}</dd>
         </dl>
       </section>
 
       {/* ------------------------------------------------ Pago */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Condición de pago</h2>
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso numero={2} titulo="Condición de pago" ayuda="Cómo le pagas a este proveedor." />
         <div className="flex flex-wrap gap-2">
           <Opcion activa={condicion === "contado"} onClick={() => setCondicion("contado")}>
             Contado / previo pago
@@ -211,13 +215,13 @@ export function FormularioEditarOrden({
         </div>
         {condicion === "credito" ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm">Factura a</span>
+            <span className="text-base">Factura a</span>
             {DIAS_FRECUENTES.map((n) => (
               <Opcion key={n} activa={num(dias) === n} onClick={() => setDias(String(n))}>
                 {n} días
               </Opcion>
             ))}
-            <span className="text-sm">u otro:</span>
+            <span className="text-base">u otro:</span>
             <Input
               aria-label="Días de crédito"
               inputMode="numeric"
@@ -225,14 +229,14 @@ export function FormularioEditarOrden({
               value={dias}
               onChange={(e) => setDias(e.target.value.replace(/\D/g, ""))}
             />
-            <span className="text-sm">días</span>
+            <span className="text-base">días</span>
           </div>
         ) : null}
       </section>
 
       {/* ------------------------------------------------ Entrega */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Entrega</h2>
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso numero={3} titulo="Entrega" ayuda="Dónde y cuándo llega la mercadería." />
         <div className="flex flex-wrap gap-2">
           <Opcion activa={entrega === "almacen"} onClick={() => setEntrega("almacen")}>
             Lo traen a nuestro almacén
@@ -263,7 +267,8 @@ export function FormularioEditarOrden({
       </section>
 
       {/* ------------------------------------------------ Notas */}
-      <section className="flex flex-col gap-3">
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso numero={4} titulo="Observaciones" />
         <Campo id="observaciones" label="Observaciones para el proveedor" ayuda="Salen al pie de la orden.">
           <Textarea
             id="observaciones"
@@ -275,16 +280,18 @@ export function FormularioEditarOrden({
       </section>
 
       {error ? (
-        <p role="alert" className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] px-3 py-2 text-sm">
+        <p role="alert" className="rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-3 py-2 text-base font-medium text-[var(--danger)]">
           {error}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={guardar} disabled={guardando}>
+        <Button type="button" size="lg" onClick={guardar} disabled={guardando}>
+          <Save aria-hidden="true" />
           {guardando ? "Guardando…" : "Guardar orden"}
         </Button>
-        <Button type="button" variant="outline" onClick={() => router.push(`/compras/${c.id}`)} disabled={guardando}>
+        <Button type="button" variant="outline" size="lg" onClick={() => router.push(`/compras/${c.id}`)} disabled={guardando}>
+          <X aria-hidden="true" />
           Cancelar
         </Button>
       </div>

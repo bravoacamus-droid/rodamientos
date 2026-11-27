@@ -5,6 +5,7 @@
 // condición de pago habilita o apaga el bloque de crédito. Todo eso es estado
 // local y eventos: no hay forma de hacerlo en el servidor.
 
+import { EncabezadoNumerado } from "@/modules/cotizaciones/ui/ficha/piezas";
 import * as React from "react";
 import { useBorrador } from "@/componentes/borrador";
 import { useRouter } from "next/navigation";
@@ -454,14 +455,14 @@ export function FormularioCliente({
       ) : null}
 
       {/* ═════════════════════════════════════════════════ Alta rápida ═══ */}
-      <section className="card flex flex-col gap-3 p-4">
-        <div>
-          <h2 className="text-sm font-semibold">¿Quién es?</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Pega el RUC y dale a «Traer datos»: razón social, dirección y
-            distrito se rellenan solos. Con eso ya se puede guardar.
-          </p>
-        </div>
+      <section className="card elev-1 flex flex-col gap-4 p-5">
+        {/* Pasos numerados (27/11), como en /accesibilidad: el número dice
+            cuántos son y en cuál estás. */}
+        <EncabezadoNumerado
+          numero={1}
+          titulo="¿Quién es?"
+          ayuda="Pega el RUC y dale a «Traer datos»: razón social, dirección y distrito se rellenan solos. Con eso ya se puede guardar."
+        />
 
         {/* Tres controles en una fila que en móvil se apila. La rejilla de 12
             columnas deja el número más ancho que el tipo, que es como se lee. */}
@@ -774,8 +775,12 @@ export function FormularioCliente({
           agrupar las visitas —*«un día se trabaja por el Callao, otro día me
           voy a Chorrillos»*—, que no es la dirección fiscal; y el RUBRO, para
           saber *«con cuántas empresas agroindustriales contamos»*. */}
-      <section className="card flex flex-col gap-3 p-4">
-        <h2 className="text-sm font-semibold">¿Por dónde lo visitas y a qué se dedica?</h2>
+      <section className="card elev-1 flex flex-col gap-4 p-5">
+        <EncabezadoNumerado
+          numero={2}
+          titulo="¿Por dónde lo visitas y a qué se dedica?"
+          ayuda="Para agrupar las visitas por zona y saber cuántos clientes tienes de cada rubro."
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           <SelectorCatalogo
             id="zona_id"

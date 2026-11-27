@@ -14,7 +14,9 @@ export function Volver({ href, children }: { href: string; children: React.React
   return (
     <Link
       href={href}
-      className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--fg)] transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
+      // El azul suave de los botones secundarios (27/11): en gris, junto a
+      // los «Editar» o «Imprimir» de la ficha, parecía apagado.
+      className="inline-flex h-10 w-fit items-center gap-2 rounded-md border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] px-3 text-sm font-semibold text-[var(--boton-fila-fg)] transition-colors hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
     >
       <ArrowLeft className="size-4 shrink-0" aria-hidden />
       {children}

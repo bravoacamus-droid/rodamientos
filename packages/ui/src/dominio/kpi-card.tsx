@@ -15,7 +15,7 @@
  * lo decide el negocio, no el signo.
  */
 import * as React from "react";
-import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, Minus, TrendingDown, TrendingUp } from "lucide-react";
 
 import { formatearPorcentaje, variacionPorcentual } from "../lib/formato";
 import { cn } from "../lib/utils";
@@ -32,8 +32,13 @@ export interface KpiCardProps {
   previo?: number;
   /** Cómo se llama el periodo de comparación: "vs. mes anterior". */
   etiquetaComparacion?: string;
-  /** `sube` para ventas y margen; `baja` para morosidad, días de cobro, roturas. */
-  mejorSi?: "sube" | "baja";
+  /**
+   * `sube` para ventas y margen; `baja` para morosidad, días de cobro,
+   * roturas; `ninguno` cuando no es ni bueno ni malo (lo comprado). Existe
+   * porque `mejorSi={undefined}` caía en el valor por defecto y pintaba de
+   * rojo una compra menor (27/11).
+   */
+  mejorSi?: "sube" | "baja" | "ninguno";
   /** Serie para el sparkline, del más antiguo al más reciente. */
   serie?: readonly number[];
   /** Color del trazo. Por defecto el azul de datos. */
@@ -41,6 +46,25 @@ export interface KpiCardProps {
   icono?: React.ReactNode;
   /** Envuelve la tarjeta en un enlace al listado filtrado. */
   href?: string;
+  /** Texto del botón visible cuando hay `href`: «Ver comprobantes». */
+  textoEnlace?: string;
+  /**
+   * Qué SIGNIFICA la cifra, no qué color queda bonito (27/11): `entra` para
+   * el dinero que llega (vendido, margen), `sale` para el que se va o está
+   * parado (comprado, capital en almacén), `revisar` para un dato que no
+   * cuadra. Sin tono, el azul de marca. Pinta el filo izquierdo y el icono.
+   */
+  tono?: "marca" | "entra" | "sale" | "revisar";
+  /**
+   * El indicador del periodo anterior, ya formateado («$ 15,400»). Con él la
+   * tarjeta dibuja dos barras con su cifra —ahora y antes— en lugar del
+   * trazo pequeño, y dice la diferencia en palabras (27/11, ver `Comparacion`).
+   */
+  valorPrevio?: React.ReactNode;
+  /** Rótulo de la barra de antes: «Periodo anterior», «Ayer». */
+  etiquetaPrevio?: string;
+  /** Cómo termina la frase: «41 % menos que {anterior}». */
+  anterior?: string;
   className?: string;
 }
 
@@ -99,7 +123,136 @@ function Sparkline({ serie, color }: { serie: readonly number[]; color: string }
   );
 }
 
+/* ----------------------------------------------------------- Comparación --- */
+
+/*
+ * Dos barras con su cifra, en vez del trazo (27/11, «esos gráficos también
+ * pueden estar mejor, todo pensado en Willy»).
+ *
+ * El trazo de 28 px no tenía escala, ni fechas, ni cifras: con datos por día
+ * salía una fila de picos de la que no se podía sacar nada. La pregunta que
+ * Willy le hace a una tarjeta es una sola —¿voy mejor o peor que antes?— y
+ * dos barras puestas una encima de otra la contestan sin leer: la larga es
+ * la mayor. Las cifras van al lado, para el que sí quiere leer.
+ *
+ * Y la diferencia en palabras: «−41.3 % vs. el periodo anterior» pide saber
+ * qué es «vs.» y leer un signo de 14 px; «41 % menos que el periodo
+ * anterior», no.
+ */
+
+const TONO_BARRA: Record<NonNullable<KpiCardProps["tono"]>, string> = {
+  marca: "bg-brand-500",
+  entra: "bg-[var(--ok)]",
+  sale: "bg-[var(--info)]",
+  revisar: "bg-[var(--warn)]",
+};
+
+function Comparacion({
+  actual,
+  previo,
+  valor,
+  valorPrevio,
+  etiquetaPrevio,
+  anterior,
+  variacion,
+  esBueno,
+  esMalo,
+  tono,
+}: {
+  actual: number;
+  previo: number;
+  valor: React.ReactNode;
+  valorPrevio: React.ReactNode;
+  etiquetaPrevio: string;
+  anterior: string;
+  variacion: number | null;
+  esBueno: boolean;
+  esMalo: boolean;
+  tono: NonNullable<KpiCardProps["tono"]>;
+}) {
+  const tope = Math.max(actual, previo, 0);
+  // Una barra en cero se queda en un punto: que se vea que existe y vale nada.
+  const ancho = (n: number) => (tope > 0 ? Math.max((Math.max(n, 0) / tope) * 100, 1.5) : 1.5);
+
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      <Barra rotulo="Ahora" cifra={valor} ancho={ancho(actual)} clase={TONO_BARRA[tono]} />
+      <Barra rotulo={etiquetaPrevio} cifra={valorPrevio} ancho={ancho(previo)} clase="bg-[var(--border-strong)]" tenue />
+
+      {variacion !== null ? (
+        <p
+          className={cn(
+            "mt-1 inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-0.5 text-sm font-semibold ring-1 ring-inset",
+            esBueno && "bg-ok-bg text-ok ring-[var(--ok)]/25",
+            esMalo && "bg-danger-bg text-danger ring-[var(--danger)]/25",
+            !esBueno && !esMalo && "bg-[var(--surface-2)] text-fg ring-[var(--border)]",
+          )}
+        >
+          {variacion > 0.05 ? (
+            <TrendingUp className="size-4 shrink-0" aria-hidden="true" />
+          ) : variacion < -0.05 ? (
+            <TrendingDown className="size-4 shrink-0" aria-hidden="true" />
+          ) : (
+            <Minus className="size-4 shrink-0" aria-hidden="true" />
+          )}
+          <span>
+            {Math.abs(variacion) < 0.5
+              ? `Igual que ${anterior}`
+              : `${formatearPorcentaje(Math.abs(variacion), 0)} ${variacion > 0 ? "más" : "menos"} que ${anterior}`}
+          </span>
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-muted">Sin datos para comparar con {anterior}</p>
+      )}
+    </div>
+  );
+}
+
+function Barra({
+  rotulo,
+  cifra,
+  ancho,
+  clase,
+  tenue = false,
+}: {
+  rotulo: string;
+  cifra: React.ReactNode;
+  ancho: number;
+  clase: string;
+  tenue?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className={cn("font-semibold", tenue ? "text-muted" : "text-fg")}>{rotulo}</span>
+        <span className={cn("tabular font-bold", tenue ? "text-muted" : "text-fg")}>{cifra}</span>
+      </div>
+      {/* El carril de fondo da la escala: sin él, una barra corta sola no
+          dice si es corta. */}
+      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--surface-3)]" aria-hidden="true">
+        <div className={cn("anim-crecer h-full origin-left rounded-full", clase)} style={{ width: `${ancho}%` }} />
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ Card --- */
+
+/* El color lleva significado y solo en dos sitios: el filo y el icono. La
+   cifra sigue en el azul de los títulos, que es el que mejor se lee. */
+const TONO_FILO: Record<NonNullable<KpiCardProps["tono"]>, string> = {
+  marca: "border-l-brand-500",
+  entra: "border-l-[var(--ok)]",
+  sale: "border-l-[var(--info)]",
+  revisar: "border-l-[var(--warn)]",
+};
+
+const TONO_ICONO: Record<NonNullable<KpiCardProps["tono"]>, string> = {
+  marca: "bg-brand-50 text-brand-600 ring-brand-100 dark:bg-surface-3 dark:text-brand-300 dark:ring-[var(--border)]",
+  entra: "bg-ok-bg text-ok ring-[var(--ok)]/20",
+  sale: "bg-info-bg text-info ring-[var(--info)]/20",
+  revisar: "bg-warn-bg text-warn ring-[var(--warn)]/25",
+};
 
 export function KpiCard({
   etiqueta,
@@ -113,6 +266,11 @@ export function KpiCard({
   colorSerie = "var(--viz-1)",
   icono,
   href,
+  textoEnlace = "Ver detalle",
+  tono = "marca",
+  valorPrevio,
+  etiquetaPrevio = "Periodo anterior",
+  anterior = "el periodo anterior",
   className,
 }: KpiCardProps) {
   const variacion =
@@ -120,29 +278,51 @@ export function KpiCard({
 
   const sube = variacion !== null && variacion > 0.05;
   const baja = variacion !== null && variacion < -0.05;
-  const esBueno = mejorSi === "sube" ? sube : baja;
-  const esMalo = mejorSi === "sube" ? baja : sube;
+  const esBueno = mejorSi === "sube" ? sube : mejorSi === "baja" && baja;
+  const esMalo = mejorSi === "sube" ? baja : mejorSi === "baja" && sube;
 
   const contenido = (
     <>
-      {/* El filo azul → dorado del logo: une las cifras del tablero con la marca. */}
-      <span className="filo-marca anim-crecer absolute inset-x-0 top-0 h-1" aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
-        <p className="text-base font-semibold text-muted">{etiqueta}</p>
+        <p className="min-w-0 text-base font-semibold text-fg">{etiqueta}</p>
         {icono && (
           // En su propia caja con fondo: un icono suelto en gris al lado de un
           // título se lee como decoración. Con superficie propia se lee como
           // la marca de qué mide esta tarjeta, que es lo que es.
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-surface-3 dark:ring-[var(--border)] [&_svg]:size-5">
+          <span
+            className={cn(
+              "flex size-12 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset [&_svg]:size-6",
+              TONO_ICONO[tono],
+            )}
+          >
             {icono}
           </span>
         )}
       </div>
 
-      <p className="tabular mt-1.5 text-2xl font-bold leading-none tracking-tight text-[var(--titulo)]">{valor}</p>
-      {detalle && <p className="mt-1.5 text-sm text-muted">{detalle}</p>}
+      {/* Sin `truncate`: con la letra al 150 % una cifra cortada es una
+          cifra que no existe. Si no cabe, baja de línea. */}
+      <p className="tabular mt-1 break-words text-3xl font-extrabold leading-tight tracking-tight text-[var(--titulo)]">
+        {valor}
+      </p>
+      {detalle && <p className="mt-1 text-sm text-muted">{detalle}</p>}
 
-      {variacion !== null && (
+      {valorPrevio !== undefined && actual !== undefined && previo !== undefined ? (
+        <Comparacion
+          actual={actual}
+          previo={previo}
+          valor={valor}
+          valorPrevio={valorPrevio}
+          etiquetaPrevio={etiquetaPrevio}
+          anterior={anterior}
+          variacion={variacion}
+          esBueno={esBueno}
+          esMalo={esMalo}
+          tono={tono}
+        />
+      ) : null}
+
+      {valorPrevio === undefined && variacion !== null && (
         <p
           className={cn(
             "mt-2 inline-flex items-center gap-1 text-sm font-medium",
@@ -152,11 +332,11 @@ export function KpiCard({
           )}
         >
           {sube ? (
-            <TrendingUp className="size-3.5" aria-hidden="true" />
+            <TrendingUp className="size-4" aria-hidden="true" />
           ) : baja ? (
-            <TrendingDown className="size-3.5" aria-hidden="true" />
+            <TrendingDown className="size-4" aria-hidden="true" />
           ) : (
-            <Minus className="size-3.5" aria-hidden="true" />
+            <Minus className="size-4" aria-hidden="true" />
           )}
           <span className="tabular">
             {variacion > 0 ? "+" : ""}
@@ -167,21 +347,35 @@ export function KpiCard({
       )}
 
       {/* Sin base de comparación no se inventa un porcentaje: se dice. */}
-      {variacion === null && actual !== undefined && previo !== undefined && (
+      {valorPrevio === undefined && variacion === null && actual !== undefined && previo !== undefined && (
         <p className="mt-2 text-sm text-subtle">Sin periodo anterior con el que comparar</p>
       )}
 
-      {serie && serie.length > 1 && (
+      {valorPrevio === undefined && serie && serie.length > 1 && (
         <div className="-mx-1 mt-3">
           <Sparkline serie={serie} color={colorSerie} />
         </div>
+      )}
+
+      {/* Que toda la tarjeta sea pulsable no se ve. Luis: «una persona que no
+          sabe que tiene que darle click ahí». El botón dice que se puede. */}
+      {/* `mt-auto` lo baja al fondo en una fila de alturas iguales; el
+          `pt-3` le deja aire en la tarjeta más alta, donde mt-auto vale 0. */}
+      {href && (
+        <span className="mt-auto pt-3">
+          <span className="boton-fila">
+            {textoEnlace}
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </span>
+        </span>
       )}
     </>
   );
 
   const clases = cn(
-    "card elev-1 anim-escalon relative block overflow-hidden p-4 pt-5",
-    href && "transition-[box-shadow,border-color] hover:elev-2 hover:border-brand-200",
+    "card elev-1 anim-escalon relative flex flex-col overflow-hidden border-l-4 p-4",
+    TONO_FILO[tono],
+    href && "transition-[box-shadow,border-color] hover:elev-2",
     className,
   );
 

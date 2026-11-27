@@ -58,7 +58,8 @@ export async function SeccionVentas({
   }
 
   const k = r.datos;
-  const comparacion = `vs. ${describirRango(rango, hoy) === "hoy" ? "ayer" : "el periodo anterior"}`;
+  const esHoy = describirRango(rango, hoy) === "hoy";
+  const comparacion = `vs. ${esHoy ? "ayer" : "el periodo anterior"}`;
   // La regla vive en `dominio/margen.ts`, donde está probada: qué se puede
   // decir del margen depende de cuánto costo se conozca, y decirlo mal es lo
   // que hacía que el tablero diera la venta entera como ganancia.
@@ -83,9 +84,13 @@ export async function SeccionVentas({
           valor={dolares(k.ventaNeta)}
           actual={k.ventaNeta}
           previo={k.ventaNetaPrevia}
+          valorPrevio={dolares(k.ventaNetaPrevia)}
+          etiquetaPrevio={esHoy ? "Ayer" : "Periodo anterior"}
+          anterior={esHoy ? "ayer" : "el periodo anterior"}
           etiquetaComparacion={comparacion}
           serie={k.serie.map((p) => p.venta)}
           detalle="neto, sin IGV"
+          tono="entra"
         />
         {/*
           El margen solo significa algo sobre la venta cuyo costo se conoce.
@@ -121,6 +126,8 @@ export async function SeccionVentas({
             valor="Revisar"
             detalle="El costo de estas ventas no cuadra"
             href="/productos"
+            textoEnlace="Revisar costos"
+            tono="revisar"
           />
         ) : (
           <KpiCard
@@ -129,7 +136,11 @@ export async function SeccionVentas({
             valor={dolares(margen.margen)}
             actual={margen.margen}
             previo={k.margenPrevio}
+            valorPrevio={dolares(k.margenPrevio)}
+            etiquetaPrevio={esHoy ? "Ayer" : "Periodo anterior"}
+            anterior={esHoy ? "ayer" : "el periodo anterior"}
             etiquetaComparacion={comparacion}
+            tono="entra"
             detalle={
               margen.tipo === "parcial"
                 ? // Sobre qué parte se calcula, o el número se lee como si
@@ -147,6 +158,7 @@ export async function SeccionVentas({
           valor={k.documentos.toLocaleString("es-PE")}
           detalle={`${k.unidades.toLocaleString("es-PE")} unidades`}
           href="/facturacion"
+          textoEnlace="Ver comprobantes"
         />
         {/* «Ticket promedio» y «venta / comprobantes» eran jerga y una
             fórmula: se dice lo que es (revisión por módulos del 02/10). */}

@@ -13,7 +13,7 @@ import {
 import { perfilActual } from "@rodatech/db/servidor";
 import { puedo, sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
-import { History } from "lucide-react";
+import { History, TriangleAlert } from "lucide-react";
 
 import {
   POR_PAGINA,
@@ -93,8 +93,9 @@ export default async function PaginaBitacora({ searchParams }: Props) {
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/actividad">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Qué ha pasado</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <h1 className="text-3xl font-bold tracking-tight">Qué ha pasado</h1>
+          <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">
             Quién cambió qué y cuándo. No se puede editar ni borrar.
           </p>
         </div>
@@ -103,12 +104,21 @@ export default async function PaginaBitacora({ searchParams }: Props) {
       {/* Lo roto va ARRIBA de lo que pasó. Si algo está fallando, eso es
           lo que hay que ver primero; el historial se consulta cuando se
           busca algo concreto. */}
-      <section className="card p-4">
-        <h2 className="mb-1 text-sm font-semibold">Lo que se rompió</h2>
-        <p className="mb-3 text-sm text-[var(--fg-subtle)]">
-          Errores de servidor sin revisar. Hasta ahora morían en la pantalla
-          de quien los provocaba y nadie más se enteraba.
-        </p>
+      {/* Con su icono en rojo y su título grande (27/11). Sin filo rojo: cuando
+          no hay nada roto, la tarjeta no tiene que parecer una alarma. */}
+      <section className="card elev-1 p-4 sm:p-5">
+        <div className="mb-3 flex items-start gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-danger-bg text-danger ring-1 ring-inset ring-[var(--border)]">
+            <TriangleAlert className="size-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-[var(--titulo)]">Lo que se rompió</h2>
+            <p className="mt-0.5 text-base text-[var(--fg-muted)]">
+              Errores de servidor sin revisar. Hasta ahora morían en la pantalla
+              de quien los provocaba y nadie más se enteraba.
+            </p>
+          </div>
+        </div>
         <Suspense fallback={<Skeleton className="h-24 w-full" />}>
           <BloqueFallos />
         </Suspense>
@@ -128,7 +138,7 @@ export default async function PaginaBitacora({ searchParams }: Props) {
         </Suspense>
       </section>
 
-      <p className="text-sm text-[var(--fg-subtle)]">
+      <p className="text-base text-[var(--fg-muted)]">
         Se apunta lo que cambia <strong>dinero, stock o permisos</strong>, y de
         eso solo los campos que importan: cambiar la dirección de un cliente no
         entra, cambiarle la línea de crédito sí. Un registro que lo apunta todo

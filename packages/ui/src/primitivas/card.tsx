@@ -33,11 +33,24 @@ export function CardHeader({ className, ...props }: React.ComponentPropsWithRef<
 }
 
 export function CardTitle({ className, ...props }: React.ComponentPropsWithRef<"h3">) {
-  return <h3 className={cn("text-base font-semibold tracking-tight text-[var(--titulo)]", className)} {...props} />;
+  // `text-lg` en negrita y con el filo de la marca delante (27/11), igual
+  // que el primer `h2` de las tarjetas escritas a mano (tokens.css): las dos
+  // formas de hacer una tarjeta tienen que dar el mismo título.
+  return (
+    <h3
+      className={cn(
+        "flex items-center gap-2.5 text-lg font-bold tracking-tight text-[var(--titulo)]",
+        "before:h-[1.2em] before:w-[5px] before:flex-none before:rounded-[3px] before:bg-gradient-to-b before:from-brand-500 before:to-accent-400",
+        "print:before:hidden",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardDescription({ className, ...props }: React.ComponentPropsWithRef<"p">) {
-  return <p className={cn("mt-0.5 text-sm text-muted", className)} {...props} />;
+  return <p className={cn("mt-1 text-base text-muted", className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: React.ComponentPropsWithRef<"div">) {

@@ -32,6 +32,8 @@ import { abreviaturaUnidad } from "@rodatech/config";
 
 import { useBorrador } from "@/componentes/borrador";
 import { Volver } from "@/componentes/volver";
+import { PanelModulo } from "@/componentes/panel-modulo";
+import { SeccionNumerada } from "../ficha";
 import { sinEnvioConEnter } from "@/lib/formularios";
 
 /*
@@ -563,23 +565,51 @@ export function FormularioKit({
     <form onSubmit={enviar} onKeyDown={sinEnvioConEnter} className={`flex flex-col gap-5 ${enModal ? "" : "sm:p-6"}`}>
       {/* En el modal el título lo pone el propio diálogo. */}
       {enModal ? null : (
-        <header>
-          {/* La ficha de un kit ES este formulario, y no tenía camino de
-              vuelta a la lista de kits (revisión por módulos del 02/10). */}
-          <Volver href="/productos/kits">Volver a kits</Volver>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-            {kit ? `Editar ${kit.codigo}` : "Nuevo kit"}
-          </h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Junta varios productos bajo un código y un precio. El cliente lo pide
-            por ese código y en la cotización sale como un solo ítem.
-          </p>
-        </header>
+        // La ficha de un kit ES este formulario: lleva la cabecera de marca
+        // de las demás fichas (27/11), con el código en grande y en letra de
+        // máquina y lo que más se pregunta —cuántos se arman hoy— a la vista.
+        <PanelModulo ruta="/productos/kits">
+          <div className="flex min-w-0 flex-col gap-3">
+            {/* No tenía camino de vuelta a la lista de kits (revisión por
+                módulos del 02/10). */}
+            <Volver href="/productos/kits">Volver a kits</Volver>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-[var(--fg-muted)]">
+                  {kit ? "Editar kit" : "Nuevo kit"}
+                </p>
+                <h1 className="font-mono text-3xl font-extrabold tracking-tight text-[var(--titulo)] [overflow-wrap:anywhere] sm:text-4xl">
+                  {kit ? kit.codigo : codigo.trim() || "Kit sin código"}
+                </h1>
+                <p className="mt-1 max-w-3xl text-base text-[var(--fg-muted)]">
+                  Junta varios productos bajo un código y un precio. El cliente lo pide
+                  por ese código y en la cotización sale como un solo ítem.
+                </p>
+              </div>
+              {lineas.length > 0 ? (
+                <div className="flex flex-col gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+                  <span className="text-sm font-semibold text-[var(--fg-muted)]">Se arman hoy</span>
+                  <span
+                    className={`tabular text-4xl font-extrabold leading-none ${
+                      armable <= 0 ? "text-[var(--danger)]" : "text-[var(--titulo)]"
+                    }`}
+                  >
+                    {armable}
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {armable <= 0 ? "Falta material" : armable === 1 ? "kit completo" : "kits completos"}
+                  </span>
+                </div>
+              ) : null}
+            </div>
+            <span className="h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          </div>
+        </PanelModulo>
       )}
 
       {avisoBorrador}
 
-      <section className="card p-4">
+      <SeccionNumerada numero={1} titulo="Cómo se llama" ayuda="El código y la descripción con los que el cliente lo pide.">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           <Campo
             id="kit-codigo"
@@ -612,17 +642,29 @@ export function FormularioKit({
             />
           </Campo>
         </div>
-      </section>
+      </SeccionNumerada>
 
       {/* --------------------------------------------------- Contenido */}
-      <section className="card @container p-4">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold">Qué lleva dentro</h2>
-            <p className="text-sm text-[var(--fg-muted)]">
-              Búscalos igual que en una cotización. El precio de cada uno no se
-              imprime: solo suma para el total.
-            </p>
+      <section aria-labelledby="seccion-2" className="card elev-1 @container p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          {/* Mismo encabezado numerado que `SeccionNumerada`, a mano porque
+              aquí comparte la fila con el interruptor del descuento. */}
+          <div className="flex min-w-0 items-start gap-3">
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white"
+              aria-hidden="true"
+            >
+              2
+            </span>
+            <div className="min-w-0">
+              <h2 id="seccion-2" className="text-xl font-bold text-[var(--titulo)]">
+                Qué lleva dentro
+              </h2>
+              <p className="mt-0.5 text-base text-muted">
+                Búscalos igual que en una cotización. El precio de cada uno no se
+                imprime: solo suma para el total.
+              </p>
+            </div>
           </div>
 
           {/*
@@ -1054,10 +1096,10 @@ export function FormularioKit({
       </section>
 
       {/* ------------------------------------------------------ Precio */}
-      <section className="card flex flex-col gap-4 p-4 lg:flex-row lg:items-start">
+      <SeccionNumerada numero={3} titulo="Precio del kit" ayuda="Lo que suma cada pieza, lo que te cuesta y a cuánto lo vendes.">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex-1">
-          <h2 className="mb-2 text-base font-semibold">Precio del kit</h2>
-          <div className="flex flex-col gap-1 text-sm">
+          <div className="flex flex-col gap-1.5 text-base">
             <span className="flex items-baseline justify-between">
               <span className="text-[var(--fg-muted)]">Suma de los productos</span>
               <span className="tabular">{dolar(suma)}</span>
@@ -1110,7 +1152,7 @@ export function FormularioKit({
             se puede corregir, lo segundo obliga a buscarlas a mano.
           */}
           {bajoMinimo.length > 0 ? (
-            <p className="mt-3 rounded-md border border-[var(--warn)] bg-[var(--surface-2)] p-3 text-sm">
+            <p className="mt-3 rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-base">
               <strong className="text-[var(--warn)]">
                 {bajoMinimo.length === 1
                   ? "Una pieza va por debajo de su precio mínimo de venta:"
@@ -1129,7 +1171,7 @@ export function FormularioKit({
           ) : null}
         </div>
 
-        <div className="lg:w-72">
+        <div className="rounded-lg border-2 border-brand-500 bg-[var(--surface)] p-3 lg:w-80">
           <Campo
             id="kit-precio"
             label="Se vende a"
@@ -1145,7 +1187,7 @@ export function FormularioKit({
                 setPrecioAMano(true);
                 setPrecio(e.target.value);
               }}
-              className="tabular text-right"
+              className="tabular text-right text-xl font-bold"
             />
           </Campo>
 
@@ -1176,9 +1218,11 @@ export function FormularioKit({
                   setPrecioAMano(true);
                   setPrecio(precioGuardado.toFixed(2));
                 }}
-                className="inline-flex items-center gap-1 whitespace-nowrap rounded px-1 align-baseline text-brand-600 underline transition-colors hover:bg-[var(--surface-2)]"
+                // Botón con borde y no subrayado (27/11): un botón tiene que
+                // parecer un botón (CLAUDE.md §1).
+                className="boton-fila mt-2"
               >
-                <RotateCcw className="size-3.5 shrink-0" aria-hidden="true" />
+                <RotateCcw aria-hidden="true" />
                 Dejarlo como estaba
               </button>
             </p>
@@ -1189,14 +1233,15 @@ export function FormularioKit({
                 setPrecioAMano(false);
                 setPrecio(suma.toFixed(2));
               }}
-              className="mt-2 inline-flex items-center gap-1 whitespace-nowrap rounded px-1 text-sm text-brand-600 underline transition-colors hover:bg-[var(--surface-2)]"
+              className="boton-fila mt-2"
             >
-              <RotateCcw className="size-3.5 shrink-0" aria-hidden="true" />
+              <RotateCcw aria-hidden="true" />
               Volver a la suma ({dolar(suma)})
             </button>
           ) : null}
         </div>
-      </section>
+      </div>
+      </SeccionNumerada>
 
       {/* La barra al pie, como en la cotización (Luis, 16/09). Los márgenes
           negativos anulan el relleno de quien la rodea: en el teléfono es el
@@ -1209,9 +1254,13 @@ export function FormularioKit({
         }
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm">
+          <span className="text-base">
             <span className="text-[var(--fg-muted)]">Con el stock de hoy se pueden armar </span>
-            <strong className="tabular">{armable}</strong>
+            <strong
+              className={`tabular text-xl ${armable <= 0 && lineas.length > 0 ? "text-[var(--danger)]" : ""}`}
+            >
+              {armable}
+            </strong>
           </span>
           <span className="flex items-center gap-2">
             <Button

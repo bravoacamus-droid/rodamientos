@@ -6,6 +6,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { ArrowDownToLine, ArrowUpFromLine, CircleCheck } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -102,42 +103,60 @@ export function DialogoStock({
               })}
             />
 
+            {/* Las dos cifras lado a lado y del mismo peso (27/11): lo que
+                dice el sistema y lo que tienes en la mano. Antes la del
+                sistema era un número suelto sobre un rótulo gris y el campo
+                no parecía su pareja. */}
             <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--fg-muted)]">
-                  Sistema dice
+              <div className="flex min-w-0 flex-col gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                <span className="etiqueta-dato">El sistema dice</span>
+                <span className="tabular break-words text-3xl font-extrabold text-[var(--titulo)]">
+                  {stock}
                 </span>
-                <span className="tabular text-2xl font-semibold">{stock}</span>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Contaste</span>
+              </div>
+              <label className="flex min-w-0 flex-col gap-1 rounded-lg border-2 border-brand-500 bg-[var(--surface)] p-3">
+                <span className="text-sm font-semibold text-fg">Contaste</span>
                 <Input
                   type="number"
                   step="any"
                   min={0}
                   value={contado}
                   onChange={(e) => setContado(e.target.value)}
-                  className="text-right tabular"
+                  className="text-right text-xl font-bold tabular"
                   autoFocus
                 />
               </label>
             </div>
 
             {diferencia !== 0 ? (
-              <p className="rounded-sm bg-[var(--surface-2)] p-2.5 text-sm">
-                Se registrará un ajuste de{" "}
-                <strong
-                  className={
-                    diferencia > 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"
-                  }
-                >
-                  {diferencia > 0 ? "+" : ""}
-                  {diferencia}
-                </strong>{" "}
-                unidades. Queda constancia en el kardex a tu nombre.
+              <p
+                className={`flex items-start gap-2 rounded-lg border p-3 text-base ${
+                  diferencia > 0
+                    ? "border-[var(--ok)] bg-ok-bg"
+                    : "border-[var(--danger)] bg-danger-bg"
+                }`}
+              >
+                {diferencia > 0 ? (
+                  <ArrowDownToLine className="mt-0.5 size-5 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                ) : (
+                  <ArrowUpFromLine className="mt-0.5 size-5 shrink-0 text-[var(--danger)]" aria-hidden="true" />
+                )}
+                <span>
+                  Se registrará un ajuste de{" "}
+                  <strong
+                    className={
+                      diferencia > 0 ? "text-[var(--ok)]" : "text-[var(--danger)]"
+                    }
+                  >
+                    {diferencia > 0 ? "+" : ""}
+                    {diferencia}
+                  </strong>{" "}
+                  unidades. Queda constancia en el kardex a tu nombre.
+                </span>
               </p>
             ) : (
-              <p className="text-sm text-[var(--fg-muted)]">
+              <p className="flex items-start gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 text-base text-[var(--fg-muted)]">
+                <CircleCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
                 El conteo coincide con el saldo: no hay nada que ajustar.
               </p>
             )}

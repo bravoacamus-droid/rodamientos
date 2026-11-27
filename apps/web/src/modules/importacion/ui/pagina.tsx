@@ -4,6 +4,9 @@ import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
 
 import { Volver } from "@/componentes/volver";
+import { PanelModulo } from "@/componentes/panel-modulo";
+import { buttonVariants } from "@rodatech/ui";
+import { TituloPaso } from "@/modules/compras/ui/ficha";
 
 import { FormularioImportacion } from "./formulario";
 
@@ -23,14 +26,19 @@ export default async function PaginaImportacion() {
     // pantalla de productos sin camino de vuelta (revisión por módulos del
     // 02/10).
     <div className="flex flex-col gap-6">
-      <header>
-        <Volver href="/productos">Volver a productos</Volver>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Cargar productos</h1>
-        <p className="mt-1 text-sm text-[var(--fg-muted)]">
-          Sube la plantilla llena. Primero se revisa y se muestra qué va a pasar
-          con cada fila; nada se guarda hasta que confirmes.
-        </p>
-      </header>
+      {/* Sobre el azul de la marca y con los pasos numerados (27/11): la
+          pantalla eran tres cajas iguales sin orden aparente. */}
+      <PanelModulo ruta="/productos">
+        <div className="flex flex-col gap-3">
+          <Volver href="/productos">Volver a productos</Volver>
+          <h1 className="text-3xl font-extrabold tracking-tight text-[var(--titulo)]">Cargar productos</h1>
+          <span className="block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="max-w-3xl text-lg text-[var(--fg)]">
+            Sube la plantilla llena. Primero se revisa y se muestra qué va a pasar
+            con cada fila; nada se guarda hasta que confirmes.
+          </p>
+        </div>
+      </PanelModulo>
 
       {prohibido ? (
         <AvisoSinPermiso mensaje={prohibido} />
@@ -44,27 +52,27 @@ export default async function PaginaImportacion() {
               archivo está en `public/`, así que lo sirve el propio servidor.
               Y es EL MISMO que abre `hoja.test.ts`, o sea que lo que se
               descarga es exactamente lo que está probado. */}
-          <section className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-brand-200 bg-brand-50 p-4 text-sm dark:border-brand-800 dark:bg-brand-950">
-            <div>
-              <p className="font-medium">¿No tienes la plantilla a mano?</p>
-              <p className="text-[var(--fg-muted)]">
-                Descárgala, llénala en Excel y súbela aquí. Trae los
-                desplegables de familia, sub-familia y descripción ya cargados.
-              </p>
+          <section className="card elev-1 flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
+            <div className="min-w-0 flex-1 basis-72">
+              <TituloPaso
+                numero={1}
+                titulo="¿No tienes la plantilla a mano?"
+                ayuda="Descárgala, llénala en Excel y súbela aquí. Trae los desplegables de familia, sub-familia y descripción ya cargados."
+              />
             </div>
             <a
               href="/plantillas/Rodatech - Maestro de productos.xlsx"
               download
-              className="inline-flex h-control-md shrink-0 items-center gap-1.5 rounded-md bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
+              className={buttonVariants({ size: "lg" })}
             >
               <Download className="size-4" />
               Descargar plantilla
             </a>
           </section>
 
-          <section className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-4 text-sm">
-            <p className="font-medium">Antes de subir</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--fg-muted)]">
+          <section className="card elev-1 flex flex-col gap-3 p-4 sm:p-5">
+            <TituloPaso numero={2} titulo="Antes de subir" ayuda="Cuatro cosas que evitan que una fila se rechace." />
+            <ul className="list-disc space-y-1.5 pl-14 text-base text-[var(--fg)]">
               <li>
                 Usa la plantilla de arriba, sin cambiarle los títulos de las
                 columnas ni el orden.
@@ -89,7 +97,10 @@ export default async function PaginaImportacion() {
             </ul>
           </section>
 
-          <FormularioImportacion />
+          <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+            <TituloPaso numero={3} titulo="Sube la plantilla llena" ayuda="Se revisa primero; nada se guarda hasta que confirmes." />
+            <FormularioImportacion />
+          </section>
         </>
       )}
     </div>

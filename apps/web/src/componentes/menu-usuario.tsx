@@ -14,8 +14,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@rodatech/ui";
-import { LogOut, UserRound } from "lucide-react";
+import { Accessibility, LogOut, UserRound } from "lucide-react";
 import { cerrarSesion } from "@/app/login/acciones";
+
+/** Las dos primeras iniciales del nombre: «Willy Fernández» → «WF». */
+function iniciales(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  const letras = partes.slice(0, 2).map((p) => p[0] ?? "").join("");
+  return letras.toLocaleUpperCase("es-PE") || "?";
+}
 
 export function MenuUsuario({
   nombre,
@@ -28,7 +35,17 @@ export function MenuUsuario({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="subtle" className="gap-2">
+        <Button variant="subtle" className="gap-2 sm:pl-1.5">
+          {/* Sus iniciales en un círculo del azul de la marca (27/11): es la
+              forma en que cualquier programa dice «esta es tu cuenta», y le da
+              a la esquina de la barra un ancla de color. El nombre sigue al
+              lado, que es lo que dice de quién es. En el teléfono no cabe. */}
+          <span
+            aria-hidden="true"
+            className="hidden size-7 shrink-0 place-items-center rounded-full bg-brand-600 text-sm font-bold text-white ring-2 ring-accent-400/70 sm:grid"
+          >
+            {iniciales(nombre)}
+          </span>
           <span className="max-w-28 truncate sm:max-w-40">{nombre}</span>
           {/* En el teléfono el rol no cabe al lado del botón «Menú» y del
               logo (02/11, a 390 px). Sigue dentro del desplegable. */}
@@ -65,6 +82,12 @@ export function MenuUsuario({
           <Link href="/perfil" className="w-full">
             <UserRound className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
             Mi perfil
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/accesibilidad" className="w-full">
+            <Accessibility className="size-4 text-[var(--fg-muted)]" aria-hidden="true" />
+            Letra y colores
           </Link>
         </DropdownMenuItem>
 

@@ -160,7 +160,7 @@ export function AccionesFila({
  * historial y se puede reactivar. Por eso el texto dice "dar de baja" y no
  * "eliminar", y por eso se pregunta antes.
  */
-function DialogoArchivar({
+export function DialogoArchivar({
   abierto,
   cerrar,
   id,

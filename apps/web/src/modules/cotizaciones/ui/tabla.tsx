@@ -24,16 +24,15 @@ import {
  *
  * Dos decisiones de forma que vale la pena explicar:
  *
- * 1. **El riel de estado.** Tres píxeles de color a la izquierda de cada fila.
- *    En una lista larga el ojo encuentra las azules —las enviadas, las que
- *    esperan respuesta— sin leer una palabra. La pastilla de Estado sigue ahí
- *    para quien necesite el nombre exacto, pero deja de ser lo que hay que
- *    escanear.
+ * 1. **El riel de estado, solo en la tarjeta del móvil.** En la tabla eran
+ *    tres píxeles de 36 de alto en filas de 80: rayas sueltas que parecían un
+ *    fallo, y el supervisor de Luis lo vio «feo» (20/11). El estado ya lo dice
+ *    la pastilla, que desde el 19/11 va en su color y con borde.
  *
- * 2. **Todo número va en cifras tabulares y todo código en monoespaciada.** No
- *    es estética: es lo que hace que dos totales se comparen mirando la
- *    columna, y que `COT1-000009` y `COT1-000010` ocupen lo mismo. En un
- *    catálogo de rodamientos, donde el código ES el producto, alinear importa.
+ * 2. **Todo número va en cifras tabulares.** Es lo que hace que dos totales
+ *    se comparen mirando la columna, y que `CT02-001340` y `CT02-001347`
+ *    ocupen lo mismo. Iban además en monoespaciada, una segunda letra en la
+ *    misma fila; las cifras tabulares alinean igual sin ella (20/11).
  *
  * 3. **La columna de acciones.** Hasta hoy la única forma de entrar en una
  *    cotización era pulsar su número —texto azul de 13 px—, y para editar un
@@ -112,89 +111,95 @@ export async function TablaCotizaciones({
         <table className="w-full text-sm">
           <thead>
             <tr className="cabecera-tabla">
-              <th className="w-1 p-0">
-                <span className="sr-only">Estado</span>
-              </th>
-              <th className="py-2.5 pl-3 pr-4 font-medium">Número</th>
-              <th className="px-4 py-2.5 font-medium">Fecha</th>
-              <th className="px-4 py-2.5 font-medium">Cliente</th>
-              <th className="hidden px-4 py-2.5 font-medium 2xl:table-cell">Orden de compra</th>
-              <th className="hidden px-4 py-2.5 text-right font-medium 2xl:table-cell">
+              <th className="px-4 py-3 font-medium">Cotización</th>
+              <th className="px-4 py-3 font-medium">Cliente</th>
+              <th className="hidden px-4 py-3 font-medium 2xl:table-cell">Orden de compra</th>
+              <th className="hidden px-4 py-3 text-right font-medium 2xl:table-cell">
                 Ítems
               </th>
-              <th className="px-4 py-2.5 text-right font-medium">Total</th>
-              <th className="px-4 py-2.5 text-right font-medium">Margen</th>
-              <th className="px-4 py-2.5 font-medium">Estado</th>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="px-4 py-3 text-right font-medium">Total</th>
+              <th className="px-4 py-3 text-right font-medium">Margen</th>
+              <th className="px-4 py-3 font-medium">Estado</th>
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-4 py-3 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((c) => (
               <tr
                 key={c.id}
-                className="group border-b border-[var(--border-soft)] transition-colors hover:bg-[var(--surface-2)]"
+                className="group fila-lista border-b border-[var(--border-soft)]"
               >
-                <td className="w-1 p-0">
-                  <span
-                    aria-hidden="true"
-                    className={`block h-9 w-[3px] rounded-r-sm ${RIEL_ESTADO[c.estado]}`}
-                  />
-                </td>
-
-                <td className="whitespace-nowrap py-2.5 pl-3 pr-4">
+                {/* Número y fecha en una sola celda (20/11). En dos columnas
+                    dejaban entre la fecha y el cliente un hueco de 150 px
+                    mientras el nombre del cliente se cortaba con «…», y el
+                    supervisor de Luis marcó justo ese hueco. */}
+                <td className="whitespace-nowrap px-4 py-3">
                   <Link
                     href={`/cotizaciones/${c.id}`}
-                    className="font-mono text-sm font-semibold text-brand-700 group-hover:underline"
+                    className="block tabular text-base font-semibold text-brand-700 group-hover:underline"
                   >
                     {c.numero}
                   </Link>
-                </td>
-
-                <td className="whitespace-nowrap px-4 py-2.5 tabular">
-                  {fechaCorta(c.fecha)}
-                  {vencida(c) ? (
-                    <span className="ml-1.5 rounded-sm bg-[var(--warn-bg)] px-1 py-0.5 text-sm font-medium text-[var(--warn)]">
-                      vencida
-                    </span>
-                  ) : null}
-                </td>
-
-                {/* 14rem y no 20: con 20 la tabla pasaba del ancho de la caja
-                    a 1440 px y la columna fija de acciones tapaba el estado
-                    («Envia…», 07/10). El nombre entero, en el `title`. */}
-                <td className="max-w-[14rem] px-4 py-2.5">
-                  <span className="block truncate" title={c.cliente}>
-                    {c.cliente}
+                  <span className="mt-0.5 flex items-center gap-1.5 tabular text-sm text-[var(--fg-muted)]">
+                    {fechaCorta(c.fecha)}
+                    {vencida(c) ? (
+                      <span className="rounded-sm bg-[var(--warn-bg)] px-1.5 text-sm font-medium text-[var(--warn)]">
+                        vencida
+                      </span>
+                    ) : null}
                   </span>
-                  {c.cliente_documento ? (
-                    <span className="block font-mono text-sm text-[var(--fg-subtle)]">
-                      {c.cliente_documento}
+                </td>
+
+                {/* El cliente toma el ancho que pide su nombre, y si no
+                    cabe se parte en dos líneas en vez de cortarse: con el
+                    tope de 14rem, «COMPAÑIA MINERA SIERRA C…» no decía cuál
+                    de las mineras era. La inicial en círculo es para
+                    encontrar a un cliente bajando la vista por la lista. */}
+                <td className="min-w-[16rem] px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-700 dark:bg-brand-950 dark:text-brand-200"
+                    >
+                      {iniciales(c.cliente)}
                     </span>
-                  ) : null}
+                    <div className="min-w-0">
+                      <span className="line-clamp-2 font-semibold text-[var(--fg)]" title={c.cliente}>
+                        {c.cliente}
+                      </span>
+                      {/* Con «RUC» o «DNI» delante: un número de once cifras
+                          suelto bajo el nombre no decía qué era (20/11). */}
+                      {c.cliente_documento ? (
+                        <span className="block tabular text-sm text-[var(--fg-subtle)]">
+                          {tipoDocumento(c.cliente_documento)} {c.cliente_documento}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </td>
 
                 {/* La orden de compra del cliente se busca por esta pantalla
                     —está en el marcador del buscador— y es lo que hay que
                     citar al facturar. Se lee: en 14, no en 12. */}
-                <td className="hidden px-4 py-2.5 font-mono text-[var(--fg-muted)] 2xl:table-cell">
+                <td className="hidden px-4 py-3 tabular text-[var(--fg-muted)] 2xl:table-cell">
                   {c.orden_compra_cliente ?? "—"}
                 </td>
-                <td className="hidden px-4 py-2.5 text-right tabular text-[var(--fg-muted)] 2xl:table-cell">
+                <td className="hidden px-4 py-3 text-right tabular text-[var(--fg-muted)] 2xl:table-cell">
                   {c.items}
                 </td>
 
-                <td className="px-4 py-2.5 text-right">
-                  <Moneda valor={c.total} tamano="sm" enfasis="fuerte" />
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  <Moneda valor={c.total} tamano="md" enfasis="fuerte" />
                   {c.enSoles ? <span className="block text-sm text-[var(--fg-muted)]">venta en soles</span> : null}
                 </td>
 
-                <td className="px-4 py-2.5 text-right">
+                <td className="px-4 py-3 text-right">
                   <Margen valor={c.margen_pct} costo={c.costo_total} />
                 </td>
 
                 {/* Sin partirse ni cortarse: la columna de acciones va fija a la
                     derecha y se montaba encima, dejando «Envia…» (07/10). */}
-                <td className="whitespace-nowrap px-4 py-2.5">
+                <td className="whitespace-nowrap px-4 py-3">
                   {/*
                     El mismo badge que el resto del ERP.
 
@@ -211,17 +216,20 @@ export async function TablaCotizaciones({
                     ficha: el catálogo y `ETIQUETA_ESTADO` dicen lo mismo hoy,
                     pero el nombre de un estado de cotización se discute aquí.
                   */}
+                  {/* Todas del mismo ancho (20/11): de 84 a 118 px según la
+                      palabra, la columna se veía desigual. */}
                   <EstadoBadge
                     estado={c.estado}
                     etiqueta={ETIQUETA_ESTADO[c.estado]}
-                    size="xs"
+                    size="sm"
+                    className="min-w-[7.5rem] justify-center py-1"
                   />
                 </td>
 
                 {/* Un solo botón, «Acciones», con todo dentro (Luis, 15/10:
                     «la idea es que esté adentro todo»). Mide lo mismo en
                     todas las filas, así que la columna queda a plomo. */}
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover:bg-[var(--surface-2)] px-4 py-2.5">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-4 py-3">
                   <div className="flex justify-end">
                     <AccionesFilaCotizacion c={c} eliminar={eliminar} />
                   </div>
@@ -248,7 +256,7 @@ export async function TablaCotizaciones({
                 se pulsan igual en un teléfono. */}
             <div className="min-w-0 flex-1 p-3">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-mono text-sm font-semibold text-brand-700">
+                <span className="tabular text-sm font-semibold text-brand-700">
                   {c.numero}
                 </span>
                 <span className="text-right">
@@ -290,7 +298,7 @@ export async function TablaCotizaciones({
                 {c.orden_compra_cliente ? (
                   <div className="col-span-2 min-w-0">
                     <dt className="text-sm text-[var(--fg-subtle)]">Orden de compra</dt>
-                    <dd className="break-words font-mono">{c.orden_compra_cliente}</dd>
+                    <dd className="break-words tabular">{c.orden_compra_cliente}</dd>
                   </div>
                 ) : null}
               </dl>
@@ -332,25 +340,53 @@ function Margen({ valor, costo }: { valor: number; costo: number }) {
     salía con la raya de «no se sabe». La COT1-000001, a −1.6 %, se veía
     igual que una sin datos.
   */
+  // «Sin costo» y no una raya (20/11): la raya sola, en gris, se leía como
+  // un hueco en la tabla y no decía por qué faltaba el margen.
   if (costo <= 0) {
-    return <span className="tabular text-[var(--fg-subtle)]">—</span>;
+    return <span className="text-sm text-[var(--fg-subtle)]">Sin costo</span>;
   }
   // Los cortes son sobre el COSTO (023): 12 y 20 son el equivalente de los
   // 10 y 15 que había cuando el denominador era la venta, y el 20 coincide
   // con el objetivo que trae la plantilla de productos.
+  // En pastilla de su color (20/11): en letra verde suelta se perdía entre
+  // el total y el estado, y es la cifra que más se mira.
   const tono =
     valor < 12
-      ? "text-[var(--danger)]"
+      ? "bg-[var(--danger-bg)] text-[var(--danger)]"
       : valor < 20
-        ? "text-[var(--warn)]"
-        : "text-[var(--ok)]";
+        ? "bg-[var(--warn-bg)] text-[var(--warn)]"
+        : "bg-[var(--ok-bg)] text-[var(--ok)]";
   return (
-    <span className={`tabular font-medium ${tono}`}>{valor.toFixed(2)}%</span>
+    <span className={`inline-block rounded-md px-2 py-0.5 tabular font-semibold ${tono}`}>
+      {valor.toFixed(2)}%
+    </span>
   );
 }
 
-/** Fecha corta en formato peruano, sin depender de la zona del servidor. */
+/** Fecha en formato peruano con el año entero, sin depender de la zona del servidor. */
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.split("-");
-  return d && m && a ? `${d}/${m}/${a.slice(2)}` : iso;
+  return d && m && a ? `${d}/${m}/${a}` : iso;
+}
+
+/**
+ * Dos iniciales del cliente, sin la forma societaria: de «GRUPO KLAUS S.A.C.»
+ * sale «GK», no «GS». Con una sola palabra, sus dos primeras letras.
+ */
+function iniciales(nombre: string): string {
+  const societaria = /^(S\.?A\.?C?\.?|S\.?R\.?L\.?|E\.?I\.?R\.?L\.?|SAC|SA|SRL|EIRL|S|A|C|DE|DEL|EL|LA|LOS|LAS|Y|E)$/i;
+  const palabras = nombre
+    .split(/\s+/)
+    .map((p) => p.replace(/[^\p{L}\p{N}.]/gu, ""))
+    .filter((p) => p.length > 0 && !societaria.test(p));
+  if (palabras.length === 0) return nombre.slice(0, 2).toUpperCase();
+  if (palabras.length === 1) return palabras[0]!.slice(0, 2).toUpperCase();
+  return (palabras[0]![0]! + palabras[1]![0]!).toUpperCase();
+}
+
+/** Once cifras es un RUC; ocho, un DNI. Lo demás (carné, pasaporte) sin rótulo. */
+function tipoDocumento(numero: string): string {
+  if (/^\d{11}$/.test(numero)) return "RUC";
+  if (/^\d{8}$/.test(numero)) return "DNI";
+  return "";
 }

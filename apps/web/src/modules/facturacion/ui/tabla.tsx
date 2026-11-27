@@ -102,7 +102,7 @@ export async function TablaComprobantes({
               <th className="px-3 py-2.5 font-medium">Cliente</th>
               <th className="hidden px-3 py-2.5 font-medium 2xl:table-cell">Cotización</th>
               <th className="px-3 py-2.5 text-right font-medium">Importe</th>
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-3 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -112,7 +112,7 @@ export async function TablaComprobantes({
                 // Entrada escalonada. El retraso se corta a la sexta fila: más
                 // allá el usuario ya está leyendo y una fila que aparece tarde
                 // distrae en vez de guiar.
-                className={`anim-entrada group/fila border-b border-[var(--border-soft)] align-top transition-colors hover:bg-[var(--surface-2)] ${
+                className={`anim-entrada group/fila border-b border-[var(--border-soft)] align-top fila-lista ${
                   c.estado === "anulado" ? "border-dashed" : ""
                 }`}
                 style={{ animationDelay: `${Math.min(i, 6) * 28}ms` }}
@@ -127,7 +127,7 @@ export async function TablaComprobantes({
                   */}
                   <Link
                     href={`/facturacion/${c.id}`}
-                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap tabular text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.numero}
                   </Link>
@@ -142,12 +142,12 @@ export async function TablaComprobantes({
                   {/* El nombre parte línea en vez de cortarse: «PRODUCTOS
                       QUIMIC…» no le dice a Willy de quién es la factura. */}
                   <span className="block">{c.cliente ?? "—"}</span>
-                  <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                  <span className="block tabular text-sm text-[var(--fg-subtle)]">
                     {c.cliente_documento ?? ""}
                   </span>
                 </td>
 
-                <td className="hidden px-3 py-2.5 font-mono text-[var(--fg-muted)] 2xl:table-cell">
+                <td className="hidden px-3 py-2.5 tabular text-[var(--fg-muted)] 2xl:table-cell">
                   {c.cotizacion_numero ?? "—"}
                 </td>
 
@@ -163,7 +163,7 @@ export async function TablaComprobantes({
                   quedaría en una equis distinta en cada fila. Fija a la
                   derecha por si la caja se queda corta.
                 */}
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-3 py-2.5">
                   <div className="ml-auto grid w-[196px] grid-cols-[80px_1fr] gap-1.5">
                     <Link
                       href={`/facturacion/${c.id}`}
@@ -216,7 +216,7 @@ export async function TablaComprobantes({
               <div className="flex flex-wrap items-center gap-1.5">
                 <Link
                   href={`/facturacion/${c.id}`}
-                  className="font-mono text-sm font-semibold text-brand-600"
+                  className="tabular text-sm font-semibold text-brand-600"
                 >
                   {c.numero}
                 </Link>
@@ -229,7 +229,7 @@ export async function TablaComprobantes({
               <div>
                 <p className="text-sm font-medium">{c.cliente ?? "—"}</p>
                 {c.cliente_documento ? (
-                  <p className="font-mono text-sm text-[var(--fg-subtle)]">
+                  <p className="tabular text-sm text-[var(--fg-subtle)]">
                     {c.cliente_documento}
                   </p>
                 ) : null}
@@ -244,7 +244,7 @@ export async function TablaComprobantes({
                     línea entera de nada. */}
                 {c.cotizacion_numero ? (
                   <Dato etiqueta="Cotización">
-                    <span className="font-mono">{c.cotizacion_numero}</span>
+                    <span className="tabular">{c.cotizacion_numero}</span>
                   </Dato>
                 ) : null}
                 <Dato etiqueta="Total">

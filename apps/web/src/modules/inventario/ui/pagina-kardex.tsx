@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileDown, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileDown, FileSpreadsheet } from "lucide-react";
 import { Skeleton, buttonVariants, cn } from "@rodatech/ui";
 
 import { PanelModulo } from "@/componentes/panel-modulo";
@@ -74,10 +74,35 @@ export default async function PaginaKardex({ searchParams }: Props) {
             <div>
               <h1 className="text-3xl font-semibold tracking-tight">Kardex</h1>
               {p ? (
-                <p className="text-sm text-[var(--fg-muted)]">
-                  <span className="font-mono font-medium">{p.codigo}</span> · {p.descripcion} · saldo actual{" "}
-                  <span className="tabular font-medium text-[var(--fg)]">{p.stock}</span>
-                </p>
+                // El kardex de UN producto (27/11): su código en grande y en
+                // letra de máquina, y el saldo como cifra, no perdidos en una
+                // línea gris de 14 px. Más un camino de vuelta a su ficha,
+                // que es de donde se suele venir.
+                <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-2xl font-extrabold text-[var(--titulo)] [overflow-wrap:anywhere]">
+                      {p.codigo}
+                    </p>
+                    <p className="text-base text-[var(--fg-muted)]">{p.descripcion}</p>
+                  </div>
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2">
+                    <span className="block text-sm font-semibold text-[var(--fg-muted)]">Saldo actual</span>
+                    <span
+                      className={`tabular text-3xl font-extrabold leading-tight ${
+                        p.stock <= 0 ? "text-[var(--danger)]" : "text-[var(--titulo)]"
+                      }`}
+                    >
+                      {p.stock}
+                    </span>
+                    {p.stock <= 0 ? (
+                      <span className="ml-2 text-base font-bold text-[var(--danger)]">Sin stock</span>
+                    ) : null}
+                  </div>
+                  <Link href={`/productos/${filtros.producto}`} className={BOTON_SECUNDARIO}>
+                    Ver ficha del producto
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </div>
               ) : (
                 <p className="text-sm text-[var(--fg-muted)]">
                   Cada entrada y salida del almacén, con el saldo que dejó.

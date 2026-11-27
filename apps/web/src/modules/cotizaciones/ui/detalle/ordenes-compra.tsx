@@ -20,6 +20,7 @@ import {
 } from "@rodatech/ui";
 
 import { BotonBloqueado } from "@/componentes/sin-permiso";
+import { ChipIcono } from "../ficha/piezas";
 
 import { generarOrdenesDeCompra } from "../../acciones/ordenes";
 import type { OrdenDelPedido } from "../../api/consultas";
@@ -63,11 +64,13 @@ export function OrdenesDeCompra({
   if (existentes.length === 0 && propuestas.length === 0) return null;
 
   return (
-    <section className="card flex flex-col gap-3 p-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="size-5 text-brand-600" aria-hidden="true" />
-          <h2 className="text-base font-semibold">Órdenes de compra</h2>
+    <section className="card elev-1 flex flex-col gap-3 p-4">
+      {/* Un div y no un header (27/11): el chip ya marca el título, sin la
+          raya de tokens.css delante. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <ChipIcono icono={ClipboardList} tono="sale" chico />
+          <h2 className="text-xl font-bold text-[var(--titulo)]">Órdenes de compra</h2>
         </div>
         {puedeGenerar && propuestas.length > 0 ? (
           <DialogoGenerar
@@ -81,7 +84,7 @@ export function OrdenesDeCompra({
             {vivas.length === 0 ? "Registrar la compra" : "Registrar lo que falta"}
           </BotonBloqueado>
         ) : null}
-      </header>
+      </div>
 
       {existentes.length > 0 ? (
         <ul className="flex flex-col divide-y divide-[var(--border-soft)] rounded-md border border-[var(--border)]">

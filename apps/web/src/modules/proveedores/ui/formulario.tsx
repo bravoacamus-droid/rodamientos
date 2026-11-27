@@ -8,7 +8,7 @@ import { Button, Combobox, Input, SelectNativo, Textarea } from "@rodatech/ui";
 import { ChevronDown } from "lucide-react";
 
 import { useBorrador } from "@/componentes/borrador";
-import { Volver } from "@/componentes/volver";
+import { CabeceraFicha, TituloPaso } from "@/modules/compras/ui/ficha";
 import {
   departamentosUbigeo,
   distritosUbigeo,
@@ -256,39 +256,44 @@ export function FormularioProveedor({
           al terminar de rellenar, como en el alta de cliente: arriba quedaban
           antes del primer campo y en el teléfono había que volver a subir
           para guardar (revisión por módulos del 02/10). */}
-      <header className="flex flex-col gap-1">
-        <Volver href={inicial ? `/proveedores/${inicial.id}` : "/proveedores"}>
-          {inicial ? "Volver a la ficha" : "Volver a proveedores"}
-        </Volver>
-        <h1 className="mt-1 text-xl font-semibold">
-          {editando ? "Editar proveedor" : "Nuevo proveedor"}
-        </h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          {editando
-            ? inicial?.codigo
-            : "Con el documento y la razón social basta para empezar."}
-        </p>
-      </header>
+      {/* Con la cabecera de ficha (27/11), y la ayuda en grande. */}
+      <CabeceraFicha
+        ruta="/proveedores"
+        volver={{
+          href: inicial ? `/proveedores/${inicial.id}` : "/proveedores",
+          texto: inicial ? "Volver a la ficha" : "Volver a proveedores",
+        }}
+        tipo={editando ? "Editar proveedor" : "Nuevo proveedor"}
+        numero={
+          <span className="font-sans">{editando ? (inicial?.razon_social ?? "Editar proveedor") : "Nuevo proveedor"}</span>
+        }
+        quien={
+          editando
+            ? { rotulo: "Código", nombre: <span className="font-mono">{inicial?.codigo}</span> }
+            : { rotulo: "Para empezar", nombre: "Con el documento y la razón social basta." }
+        }
+      />
 
       {avisoBorrador}
 
       {error ? (
-        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+        <p role="alert" className="rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-base font-medium text-[var(--danger)]">
           {error}
         </p>
       ) : null}
       {aviso ? (
-        <p className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm text-[var(--warn)]">
+        <p className="rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-base font-medium text-[var(--warn)]">
           {aviso}
         </p>
       ) : null}
 
       {/* ------------------------------------------------ Lo indispensable */}
-      <section className="card flex flex-col gap-4 p-4">
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso numero={1} titulo="Lo indispensable" ayuda="De dónde es, su documento y su nombre." />
         {/* La primera pregunta, la misma del alta rápida: dos botones a la
             vista, porque cambia qué se pide debajo. */}
         <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">¿De dónde es?</span>
+          <span className="text-base font-medium">¿De dónde es?</span>
           <div
             role="group"
             aria-label="De dónde es el proveedor"
@@ -345,7 +350,7 @@ export function FormularioProveedor({
           ) : (
             <>
               <label className="flex flex-col gap-1">
-                <span className="text-sm font-medium">Documento</span>
+                <span className="text-base font-medium">Documento</span>
                 <SelectNativo
                   value={datos.tipo_documento}
                   onChange={(e) => set("tipo_documento", e.target.value as TipoDocumento)}
@@ -361,7 +366,7 @@ export function FormularioProveedor({
               {/* El número y su botón, con sitio: a 1280 el número se quedaba
                   en una caja de 140 px al lado de un «Traer» a secas. */}
               <div className="flex flex-col gap-1 lg:col-span-3">
-                <span className="text-sm font-medium">Número</span>
+                <span className="text-base font-medium">Número</span>
                 <div className="flex gap-2">
                   <Input
                     value={datos.numero_documento ?? ""}
@@ -395,7 +400,7 @@ export function FormularioProveedor({
           )}
 
           <label className="flex flex-col gap-1 sm:col-span-2 lg:col-span-4">
-            <span className="text-sm font-medium">
+            <span className="text-base font-medium">
               {extranjero ? "Nombre de la empresa" : "Razón social"}{" "}
               <span className="text-[var(--danger)]">*</span>
             </span>
@@ -411,7 +416,7 @@ export function FormularioProveedor({
 
           {extranjero ? null : (
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Tipo de compra</span>
+              <span className="text-base font-medium">Tipo de compra</span>
               <SelectNativo
                 value={datos.tipo}
                 onChange={(e) => set("tipo", e.target.value as "local" | "importacion")}
@@ -427,7 +432,7 @@ export function FormularioProveedor({
               manda lo que ya tenía: el único con crédito no lo pierde. */}
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Plazo de entrega</span>
+            <span className="text-base font-medium">Plazo de entrega</span>
             <Input
               type="number"
               min={0}
@@ -444,12 +449,12 @@ export function FormularioProveedor({
       </section>
 
       {/* --------------------------------------------------------- Marcas */}
-      <section className="card p-4">
-        <h2 className="text-sm font-semibold">Marcas que representa</h2>
-        <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          Es lo que permite responder «¿quién me vende SKF?» sin abrir las
-          fichas una a una.
-        </p>
+      <section className="card elev-1 flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso
+          numero={2}
+          titulo="Marcas que representa"
+          ayuda="Es lo que permite responder «¿quién me vende SKF?» sin abrir las fichas una a una."
+        />
 
         <BuscadorMarcas
           marcas={marcas}
@@ -467,11 +472,11 @@ export function FormularioProveedor({
         onClick={() => setMasDatos((v) => !v)}
         aria-expanded={masDatos}
         aria-controls="mas-datos-proveedor"
-        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-left text-sm font-medium hover:bg-[var(--surface-2)]"
+        className="flex min-h-12 w-full items-center justify-between gap-2 rounded-md border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] px-4 py-2 text-left text-base font-semibold text-[var(--boton-fila-fg)] hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)]"
       >
         <span>
-          Más datos
-          <span className="ml-2 font-normal text-[var(--fg-muted)]">
+          3 · Más datos
+          <span className="ml-2 text-sm font-normal text-[var(--fg-muted)]">
             contacto, teléfonos, correo, dirección, notas · {llenosDeMas} de 7
           </span>
         </span>
@@ -482,10 +487,10 @@ export function FormularioProveedor({
       </button>
 
       {masDatos ? (
-        <section id="mas-datos-proveedor" className="card p-4">
+        <section id="mas-datos-proveedor" className="card elev-1 p-4 sm:p-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Contacto</span>
+              <span className="text-base font-medium">Contacto</span>
               <Input
                 value={datos.contacto ?? ""}
                 onChange={(e) => set("contacto", e.target.value)}
@@ -494,7 +499,7 @@ export function FormularioProveedor({
             </label>
 
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Teléfono</span>
+              <span className="text-base font-medium">Teléfono</span>
               <Input
                 type="tel"
                 inputMode="tel"
@@ -505,7 +510,7 @@ export function FormularioProveedor({
             </label>
 
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">WhatsApp</span>
+              <span className="text-base font-medium">WhatsApp</span>
               <Input
                 type="tel"
                 inputMode="tel"
@@ -515,7 +520,7 @@ export function FormularioProveedor({
             </label>
 
             <label className="flex flex-col gap-1">
-              <span className="text-sm font-medium">Correo</span>
+              <span className="text-base font-medium">Correo</span>
               <Input
                 type="email"
                 value={datos.email ?? ""}
@@ -526,7 +531,7 @@ export function FormularioProveedor({
             </label>
 
             <label className="flex flex-col gap-1 sm:col-span-2">
-              <span className="text-sm font-medium">Dirección</span>
+              <span className="text-base font-medium">Dirección</span>
               <Input
                 value={datos.direccion ?? ""}
                 onChange={(e) => set("direccion", e.target.value)}
@@ -564,7 +569,7 @@ export function FormularioProveedor({
             )}
 
             <label className="flex flex-col gap-1 sm:col-span-2">
-              <span className="text-sm font-medium">Notas</span>
+              <span className="text-base font-medium">Notas</span>
               <Textarea
                 value={datos.notas ?? ""}
                 onChange={(e) => set("notas", e.target.value)}

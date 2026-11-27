@@ -147,8 +147,9 @@ export default async function PaginaTransporte() {
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/transporte">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Transporte</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Transporte</h1>
+            <span className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-3 max-w-2xl text-lg text-white">
             Con quién y con qué se despacha. Nada se borra: lo que se deja de usar
             se da de baja, para que una guía vieja siga diciendo lo que decía.
           </p>

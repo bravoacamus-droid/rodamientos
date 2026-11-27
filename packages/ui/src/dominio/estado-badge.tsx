@@ -157,7 +157,9 @@ const DEFINICIONES: Record<EstadoDocumento, Definicion> = {
 };
 
 const CLASES_TONO: Record<Tono, string> = {
-  gris: "bg-surface-2 text-fg border-[var(--border-strong)]",
+  // `surface-3` y no `surface-2` (20/11): las listas alternan filas en
+  // `surface-2`, y ahí «Borrador» se quedaba sin fondo propio.
+  gris: "bg-surface-3 text-fg border-[var(--border-strong)]",
   azul: "bg-info-bg text-info border-info/30",
   verde: "bg-ok-bg text-ok border-ok/30",
   ambar: "bg-warn-bg text-warn border-warn/35",
@@ -166,17 +168,21 @@ const CLASES_TONO: Record<Tono, string> = {
 };
 
 /** Segundo canal, además del color: la forma del punto. */
+//
+// Un punto más grande (27/11): a 8 px, con la letra subida en /accesibilidad,
+// la forma —que es justo lo que distingue «en curso» de «terminado» sin color—
+// dejaba de verse. Va en `em`, así crece con la letra de la pastilla.
 function Punto({ forma }: { forma: Forma }) {
   const base = "inline-block shrink-0";
-  if (forma === "raya") return <span aria-hidden="true" className={cn(base, "h-0.5 w-2.5 rounded-full bg-current")} />;
+  if (forma === "raya") return <span aria-hidden="true" className={cn(base, "h-[0.15em] w-[0.75em] rounded-full bg-current")} />;
   if (forma === "hueco")
     return (
-      <span aria-hidden="true" className={cn(base, "size-2 rounded-full border-[1.5px] border-current bg-transparent")} />
+      <span aria-hidden="true" className={cn(base, "size-[0.6em] rounded-full border-2 border-current bg-transparent")} />
     );
   // Rombo: forma claramente distinta del círculo, para que "en curso" no se
   // confunda con "terminado" cuando el color no se percibe.
-  if (forma === "anillo") return <span aria-hidden="true" className={cn(base, "size-2 rotate-45 bg-current")} />;
-  return <span aria-hidden="true" className={cn(base, "size-2 rounded-full bg-current")} />;
+  if (forma === "anillo") return <span aria-hidden="true" className={cn(base, "size-[0.55em] rotate-45 bg-current")} />;
+  return <span aria-hidden="true" className={cn(base, "size-[0.6em] rounded-full bg-current")} />;
 }
 
 export interface EstadoBadgeProps {
@@ -195,7 +201,7 @@ export interface EstadoBadgeProps {
 const TAMANOS = {
   xs: "px-1.5 py-0.5 text-sm gap-1",
   sm: "px-2 py-0.5 text-sm gap-1.5",
-  md: "px-2.5 py-1 text-sm gap-1.5",
+  md: "px-3 py-1 text-sm gap-2",
 } as const;
 
 export function EstadoBadge({ estado, etiqueta, size = "sm", className }: EstadoBadgeProps) {

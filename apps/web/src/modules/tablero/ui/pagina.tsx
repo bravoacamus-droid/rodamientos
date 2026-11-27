@@ -7,6 +7,7 @@ import { RecordatorioAvisos } from "@/modules/avisos";
 import { PanelAlertas } from "./panel-alertas";
 import { PanelCartera } from "./panel-cartera";
 import { PanelPendientes } from "./panel-pendientes";
+import { Portada } from "./portada";
 import { CotizacionesEnQueQuedan, LosQueMas, TarjetasNegocio, VendidoComprado } from "./negocio";
 import { SeccionVentas } from "./ventas";
 
@@ -72,13 +73,7 @@ export default async function PaginaTablero({ searchParams }: Props) {
     <div className="@container flex flex-col gap-5">
       {/* La portada lleva el azul del logo: es la primera pantalla del día y
           la que dice «esto es Rodatech». El texto va en blanco (11:1). */}
-      <div className="fondo-marca overflow-hidden rounded-2xl px-5 py-6 shadow-[var(--elev-2)] sm:px-7">
-        <span className="filo-marca absolute inset-x-0 bottom-0 h-1" aria-hidden="true" />
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">Tablero</h1>
-        <p className="mt-1 text-base text-white/85">
-          Cómo va todo el negocio, de un vistazo. El detalle de cada parte está en Reportes.
-        </p>
-      </div>
+      <Portada hoy={hoy} />
 
       {/* 162: solo sale si este aparato puede recibir avisos y todavía no los recibe. */}
       <RecordatorioAvisos />
@@ -89,6 +84,12 @@ export default async function PaginaTablero({ searchParams }: Props) {
         <PanelPendientes />
       </Suspense>
 
+      {/* Desde aquí manda el filtro: la portada habla del mes, esto del
+          periodo que se elija. El rótulo lo separa para que no se mezclen. */}
+      <h2 className="mt-3 flex items-center gap-3 text-xl font-bold text-[var(--titulo)]">
+        <span className="h-6 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+        Cifras del periodo
+      </h2>
       <FiltroRango
         desde={rango.desde}
         hasta={rango.hasta}

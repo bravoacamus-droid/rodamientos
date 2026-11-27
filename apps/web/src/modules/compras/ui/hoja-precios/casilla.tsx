@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { campoBase, cn } from "@rodatech/ui";
-import { Check, Undo2, X } from "lucide-react";
+import { Check, Trophy, Undo2, X } from "lucide-react";
 
 import type { Casilla } from "../../dominio/hoja-precios";
 
@@ -77,12 +77,46 @@ export function CasillaPrecio({
   const tono =
     margen === null ? "" : margen < 0 ? "text-[var(--danger)]" : margen < 0.15 ? "text-[var(--warn)]" : "text-[var(--ok)]";
 
+  /*
+    EL MEJOR PRECIO, DE UN VISTAZO (27/11). Antes solo lo decía un fondo
+    verde claro y la palabra «Mejor» en 14 px al pie, que con poca vista o en
+    contraste alto (donde el fondo de estado pasa a blanco) no se distinguía.
+    Ahora son tres señales a la vez, y ninguna depende solo del color:
+      · una cinta arriba con trofeo y la palabra «Mejor precio»;
+      · el borde grueso de 3 px alrededor;
+      · el precio en negrita y más grande.
+    Si a quien se le compra no es el más barato (elegido a mano), la cinta
+    dice «Le compras aquí» y el más barato conserva su marca, con borde de
+    rayas: que se vea que se está pagando más a propósito.
+  */
+  const conPrecio = casilla.precio !== null;
+  const cinta = conPrecio && elegido ? (mejor ? "mejor" : "elegido") : conPrecio && mejor && hayVarios ? "barato" : null;
+
   return (
     <div
-      className={`flex min-h-[5.5rem] flex-col gap-1.5 rounded-md p-1.5 ${
-        elegido && casilla.precio !== null ? "bg-[var(--ok-bg)] ring-2 ring-[var(--ok)]" : ""
-      }`}
+      className={cn(
+        "flex min-h-[5.5rem] flex-col gap-1.5 rounded-lg p-1.5",
+        cinta === "mejor" && "border-[3px] border-[var(--ok)] bg-[var(--ok-bg)]",
+        cinta === "elegido" && "border-[3px] border-[var(--info)] bg-[var(--info-bg)]",
+        cinta === "barato" && "border-[3px] border-dashed border-[var(--ok)]",
+      )}
     >
+      {cinta === "mejor" ? (
+        <span className="-mx-1.5 -mt-1.5 flex items-center justify-center gap-1.5 rounded-t-[0.3rem] bg-[var(--ok)] px-2 py-1 text-sm font-bold text-[var(--fg-inverso)]">
+          <Trophy className="size-4" aria-hidden="true" />
+          Mejor precio
+        </span>
+      ) : cinta === "elegido" ? (
+        <span className="-mx-1.5 -mt-1.5 flex items-center justify-center gap-1.5 rounded-t-[0.3rem] bg-[var(--info)] px-2 py-1 text-sm font-bold text-[var(--fg-inverso)]">
+          <Check className="size-4" aria-hidden="true" />
+          Le compras aquí
+        </span>
+      ) : cinta === "barato" ? (
+        <span className="flex items-center justify-center gap-1.5 text-sm font-bold text-[var(--ok)]">
+          <Trophy className="size-4" aria-hidden="true" />
+          El más barato
+        </span>
+      ) : null}
       <div className="relative">
         <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-[var(--fg-subtle)]">
           {simbolo}
@@ -102,7 +136,12 @@ export function CasillaPrecio({
             const n = Number(limpio);
             onPrecio(limpio === "" || !Number.isFinite(n) ? null : n);
           }}
-          className={cn(campoBase, "h-10 pl-8 pr-2 text-right text-base tabular")}
+          className={cn(
+            campoBase,
+            "h-10 pl-8 pr-2 text-right text-base tabular",
+            cinta === "mejor" && "text-lg font-extrabold",
+            cinta === "elegido" && "font-bold",
+          )}
         />
       </div>
 
@@ -127,16 +166,11 @@ export function CasillaPrecio({
             ) : (
               <span className="text-sm text-[var(--fg-subtle)]">sin P.V.</span>
             )}
-            {elegido ? (
-              <span className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ok)]">
-                <Check className="size-4" aria-hidden="true" />
-                {mejor ? "Mejor" : "Elegido"}
-              </span>
-            ) : hayVarios && !soloLectura ? (
+            {elegido ? null : hayVarios && !soloLectura ? (
               <button
                 type="button"
                 onClick={onElegir}
-                className="inline-flex h-8 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] px-2 text-sm font-medium hover:bg-[var(--surface-2)]"
+                className="inline-flex h-8 items-center rounded-md border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] px-2 text-sm font-semibold text-[var(--boton-fila-fg)] hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)]"
               >
                 Comprar aquí
               </button>

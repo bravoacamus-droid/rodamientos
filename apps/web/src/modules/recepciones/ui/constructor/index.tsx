@@ -38,6 +38,9 @@ import type { ProveedorOpcion } from "@/modules/proveedores/dominio/opcion";
 import type { CompraPendiente } from "../../dominio/tipos";
 import { BuscadorRecepcion } from "./buscador";
 import { FilaRecepcion, TarjetaRecepcion } from "./linea";
+import { PackageCheck, PackageOpen, TriangleAlert, X } from "lucide-react";
+import { PanelModulo } from "@/componentes/panel-modulo";
+import { PasosFicha, TituloPaso } from "@/modules/compras/ui/ficha";
 
 /**
  * Registro de recepción de mercadería.
@@ -231,39 +234,81 @@ export function ConstructorRecepcion({
 
       {avisoBorrador}
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold">Recibir mercadería</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Al guardar, el stock se mueve y el kardex registra el ingreso.
-          </p>
+      {/*
+        Recibir en tres pasos, dichos arriba (27/11). Era un título de 20 px
+        y un formulario largo: quien recibe la caja en el almacén no sabía
+        por dónde empezar ni cuándo había terminado. Sobre el azul de la
+        marca, como las listas, y el botón de registrar en dorado y grande.
+      */}
+      <PanelModulo ruta="/recepciones">
+        <div className="@container flex flex-col gap-5">
+          <div className="flex flex-col gap-4 @3xl:flex-row @3xl:items-end @3xl:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--titulo)] sm:text-4xl">
+                Recibir mercadería
+              </h1>
+              <span className="mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+              <p className="mt-3 text-lg text-[var(--fg)]">
+                Al guardar, el stock se mueve y el kardex registra el ingreso.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  // Cancelar es decidir no seguir: no se ofrece otra vez.
+                  olvidarBorrador();
+                  router.push("/recepciones");
+                }}
+              >
+                <X aria-hidden="true" />
+                Cancelar
+              </Button>
+              <Button type="submit" variant="accent" size="lg" disabled={bloqueos.length > 0 || guardando}>
+                <PackageCheck aria-hidden="true" />
+                {guardando ? "Registrando…" : "Registrar recepción"}
+              </Button>
+            </div>
+          </div>
+          <PasosFicha
+            pasos={[
+              {
+                nombre: "De quién viene",
+                estado: estado.proveedorId || estado.compraId ? "hecho" : "ahora",
+              },
+              {
+                nombre: "Qué llegó",
+                estado:
+                  estado.lineas.length > 0 ? "hecho" : estado.proveedorId || estado.compraId ? "ahora" : "falta",
+              },
+              {
+                nombre: "Revisa y registra",
+                estado: bloqueos.length === 0 ? "ahora" : "falta",
+              },
+            ]}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              // Cancelar es decidir no seguir: no se ofrece otra vez.
-              olvidarBorrador();
-              router.push("/recepciones");
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={bloqueos.length > 0 || guardando}>
-            {guardando ? "Registrando…" : "Registrar recepción"}
-          </Button>
-        </div>
-      </header>
+      </PanelModulo>
 
       {resultado && !resultado.ok ? (
-        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+        <p
+          role="alert"
+          className="flex items-start gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-base font-medium text-[var(--danger)]"
+        >
+          <TriangleAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
           {resultado.error}
         </p>
       ) : null}
 
       {/* ----------------------------------------------------- Cabecera */}
-      <section className="card @container p-4">
+      <section className="card elev-1 @container flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso
+          numero={1}
+          titulo="De quién viene"
+          ayuda="Si viene de una orden de compra, elígela: se cargan solas las líneas que faltaban por llegar."
+        />
         {/* Cinco columnas y no cuatro: el selector de proveedor ocupa dos.
             Con cuatro iguales el placeholder se cortaba en «Busca por nombre,
             RUC o…» justo antes de la palabra que menos se espera —marca—, que
@@ -283,7 +328,7 @@ export function ConstructorRecepcion({
               haberlos leído de ningún sitio. */}
           {compraElegida ? (
             <div className="flex flex-col gap-1 @4xl:col-span-2">
-              <span className="text-sm font-medium">Proveedor</span>
+              <span className="text-base font-medium">Proveedor</span>
               <div className="flex h-control-md items-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3">
                 <span className="truncate text-sm">{compraElegida.proveedor}</span>
               </div>
@@ -319,7 +364,7 @@ export function ConstructorRecepcion({
             {/* El día que entra al almacén (Willy, 05/11, 21:30: «en la
                 recepción es cuando ya está ingresando»). Hoy por defecto; se
                 cambia si llegó otro día. La de la factura va en la compra. */}
-            <span className="text-sm font-medium">Fecha de ingreso al almacén</span>
+            <span className="text-base font-medium">Fecha de ingreso al almacén</span>
             <Input
               type="date"
               value={estado.fecha}
@@ -331,7 +376,7 @@ export function ConstructorRecepcion({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">
+            <span className="text-base font-medium">
               Guía del proveedor <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
             </span>
             <Input
@@ -348,7 +393,7 @@ export function ConstructorRecepcion({
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">
+            <span className="text-base font-medium">
               Factura del proveedor <span className="font-normal text-[var(--fg-muted)]">(opcional)</span>
             </span>
             <Input
@@ -388,7 +433,7 @@ export function ConstructorRecepcion({
           <div className="mt-3 border-t border-[var(--border-soft)] pt-3">
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex min-w-64 flex-1 flex-col gap-1">
-                <label htmlFor="rec-compra" className="text-sm font-medium">
+                <label htmlFor="rec-compra" className="text-base font-semibold">
                   ¿Viene de una compra registrada?
                 </label>
                 {/* Con buscador (07/10): por número o por proveedor. Sin
@@ -459,7 +504,16 @@ export function ConstructorRecepcion({
           compra (revisión por módulos del 02/10). El corte es `@5xl`: la tabla
           pide unos 1100 px y a 1280 con el menú abierto dejaba «Stock» cortado
           y «Quitar» fuera de la vista. */}
-      <section className="@container rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+      <section className="card elev-1 @container flex flex-col gap-4 p-4 sm:p-5">
+        <TituloPaso
+          numero={2}
+          titulo="Qué llegó"
+          ayuda={
+            estado.compraId !== null
+              ? "Lo que trae la orden de compra, tal cual."
+              : "Busca cada producto que llegó y pon la cantidad y el costo de la factura."
+          }
+        />
         {/*
           De una compra se recibe lo que se compró, tal cual (Luis, 04/11: «al
           recepcionar no debería dejar cambiar la cantidad ni el costo
@@ -467,12 +521,12 @@ export function ConstructorRecepcion({
           igual (187). Lo demás va en una recepción sin compra.
         */}
         {estado.compraId !== null ? (
-          <p className="mb-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-base">
+          <p className="rounded-md border border-l-4 border-[var(--border)] border-l-[var(--info)] bg-[var(--info-bg)] px-3 py-2 text-base">
             Se recibe lo que dice la compra{compraElegida ? ` ${compraElegida.numero}` : ""}: las cantidades y los
             costos no se cambian aquí. Si llegó algo distinto, corrige la compra antes de recibir.
           </p>
         ) : (
-          <div className="mb-3">
+          <div>
             <BuscadorRecepcion
               onElegir={(p) => despachar({ tipo: "agregar", producto: p })}
               yaEnDocumento={estado.lineas.map((l) => l.productoId)}
@@ -481,10 +535,21 @@ export function ConstructorRecepcion({
         )}
 
         {estado.lineas.length === 0 ? (
-          <p className="py-8 text-center text-sm text-[var(--fg-muted)]">
-            Busca un producto arriba para empezar
-            {compras.length > 0 ? ", o elige la compra de la que viene" : ""}.
-          </p>
+          // Vacío con su porqué y su siguiente paso (27/11), en grande: era
+          // una línea gris de 14 px en medio de una caja blanca.
+          <div
+            role="status"
+            className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] px-4 py-8 text-center"
+          >
+            <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-inset ring-brand-100 dark:bg-surface-3 dark:text-brand-300 dark:ring-[var(--border)]" aria-hidden="true">
+              <PackageOpen className="size-6" />
+            </span>
+            <p className="text-lg font-semibold">Todavía no hay productos</p>
+            <p className="max-w-md text-base text-[var(--fg-muted)]">
+              Busca un producto arriba para empezar
+              {compras.length > 0 ? ", o elige en el paso 1 la compra de la que viene" : ""}.
+            </p>
+          </div>
         ) : (
           <>
           <ul className="flex flex-col gap-2.5 @5xl:hidden">
@@ -542,9 +607,14 @@ export function ConstructorRecepcion({
       </section>
 
       <div className="flex flex-col gap-5 lg:flex-row">
-        <section className="min-w-0 flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4">
+        <section className="card elev-1 flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-5">
+          <TituloPaso
+            numero={3}
+            titulo="Revisa y registra"
+            ayuda="Apunta lo que convenga y mira el resumen. Después de registrar no se deshace."
+          />
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Observaciones</span>
+            <span className="text-base font-medium">Observaciones</span>
             <Textarea
               value={estado.observaciones}
               onChange={(e) =>
@@ -562,10 +632,10 @@ export function ConstructorRecepcion({
 
         {/* ------------------------------------------------------ Resumen */}
         <aside className="w-full shrink-0 lg:w-80">
-          <div className="card sticky top-4 flex flex-col gap-3 p-4">
-            <h2 className="text-sm font-semibold">Resumen</h2>
+          <div className="card elev-2 sticky top-4 flex flex-col gap-3 border-t-4 border-t-brand-500 p-4">
+            <h2 className="text-xl font-bold">Resumen</h2>
 
-            <dl className="flex flex-col gap-1.5 text-sm">
+            <dl className="flex flex-col gap-1.5 text-base">
               <div className="flex justify-between">
                 <dt className="text-[var(--fg-muted)]">Líneas</dt>
                 <dd className="tabular">{estado.lineas.length}</dd>
@@ -576,7 +646,7 @@ export function ConstructorRecepcion({
               </div>
               <div className="flex justify-between">
                 <dt className="text-[var(--fg-muted)]">Valor al proveedor</dt>
-                <dd className="tabular whitespace-nowrap">{"$\u00a0"}{costeo.total.toFixed(2)}</dd>
+                <dd className="tabular whitespace-nowrap text-lg font-bold">{"$\u00a0"}{costeo.total.toFixed(2)}</dd>
               </div>
 
               {conGastos ? (
@@ -654,6 +724,17 @@ export function ConstructorRecepcion({
                   <strong>precio de venta</strong>.
                 </p>
               </div>
+            ) : null}
+
+            {/* El botón también aquí, al final del recorrido (27/11): con
+                veinte líneas, el de arriba queda a tres pantallas. Es el
+                mismo envío del formulario. */}
+            <Button type="submit" size="lg" className="w-full" disabled={bloqueos.length > 0 || guardando}>
+              <PackageCheck aria-hidden="true" />
+              {guardando ? "Registrando…" : "Registrar recepción"}
+            </Button>
+            {bloqueos.length > 0 ? (
+              <p className="text-sm text-[var(--fg-muted)]">Se activa cuando no quede nada pendiente de la lista de arriba.</p>
             ) : null}
           </div>
         </aside>

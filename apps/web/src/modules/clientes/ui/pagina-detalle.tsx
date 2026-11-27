@@ -2,8 +2,27 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { HistorialCliente } from "@/modules/tablero";
 import { notFound } from "next/navigation";
-import { Badge, Button, EstadoBadge, EstadoError, Skeleton } from "@rodatech/ui";
-import { ChartColumn, FileText, HandCoins, Pencil, Receipt, ScrollText, Truck } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Badge, Button, EstadoBadge, EstadoError, Skeleton, buttonVariants, cn } from "@rodatech/ui";
+import {
+  ArrowRight,
+  Building2,
+  ChartColumn,
+  Contact,
+  Factory,
+  FileText,
+  FolderOpen,
+  HandCoins,
+  Lock,
+  MapPin,
+  NotebookPen,
+  Pencil,
+  Phone,
+  Receipt,
+  ScrollText,
+  Truck,
+  UserRound,
+} from "lucide-react";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
 import { avisoSinPermiso } from "@/lib/permisos-comun";
@@ -13,6 +32,7 @@ import { ETIQUETA_DOCUMENTO } from "../dominio/tipos";
 import { AccionesFila } from "./acciones-fila";
 import { Volver } from "@/componentes/volver";
 import { DireccionesDelCliente } from "@/modules/guias/ui/elegir-direccion";
+import { BarraAcciones, ChipIcono, CabeceraFicha, TituloBloque } from "@/modules/cotizaciones/ui/ficha/piezas";
 
 /**
  * Ficha de un cliente.
@@ -47,34 +67,50 @@ export default async function PaginaDetalleCliente({
   const puedeEditar = permisos.tiene("clientes", "editar");
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Volver href="/clientes">Volver a clientes</Volver>
-          {/* `break-words` y no `truncate`: la razón social es el dato que se
-              viene a leer, cortarla a 360 px sería esconder justo lo importante. */}
-          <h1 className="mt-1 break-words text-xl font-semibold tracking-tight sm:text-2xl">
-            {c.razon_social}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            {c.numero_documento && c.codigo.includes(c.numero_documento) ? null : (
-              <span className="font-mono text-sm text-[var(--fg-subtle)]">{c.codigo}</span>
-            )}
-            <Badge tone="neutral" size="xs">
-              {ETIQUETA_DOCUMENTO[c.tipo_documento]} {c.numero_documento ?? "—"}
-            </Badge>
-            {c.bloqueado ? (
-              <Badge tone="danger" size="xs">
-                Bloqueado
-              </Badge>
-            ) : null}
-            {!c.activo ? <EstadoBadge estado="de_baja" size="xs" /> : null}
-          </div>
-          {c.nombre_comercial ? (
-            <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{c.nombre_comercial}</p>
-          ) : null}
-        </div>
+    <div className="@container flex flex-col gap-5">
+      <Volver href="/clientes">Volver a clientes</Volver>
 
+      {/*
+        La cabecera de marca (27/11), la misma de la cotización y el pedido:
+        quién es, con su documento en grande y si está bloqueado o de baja a
+        la vista, sobre el azul. Antes era un `h1` de 20 px con el RUC en una
+        pastilla de 14 px.
+      */}
+      <CabeceraFicha
+        icono={Building2}
+        tipo="Cliente"
+        numero={c.numero_documento ? `${ETIQUETA_DOCUMENTO[c.tipo_documento]} ${c.numero_documento}` : undefined}
+        estado={
+          <>
+            {c.bloqueado ? (
+              <span className="inline-flex items-center gap-2 rounded-md border-2 border-[var(--danger)] bg-[var(--danger-bg)] px-3 py-1.5 text-base font-semibold text-[var(--danger)]">
+                <Lock className="size-5" aria-hidden="true" />
+                Bloqueado
+              </span>
+            ) : null}
+            {!c.activo ? <EstadoBadge estado="de_baja" size="md" className="px-3 py-1.5 text-base" /> : null}
+          </>
+        }
+        /* `break-words` y no `truncate` (lo hace CabeceraFicha): la razón
+           social es el dato que se viene a leer. */
+        titulo={c.razon_social}
+        detalle={
+          c.nombre_comercial || !(c.numero_documento && c.codigo.includes(c.numero_documento)) ? (
+            <p>
+              {c.nombre_comercial ?? ""}
+              {c.nombre_comercial && !(c.numero_documento && c.codigo.includes(c.numero_documento)) ? " · " : ""}
+              {c.numero_documento && c.codigo.includes(c.numero_documento) ? null : (
+                <span className="font-mono">Código {c.codigo}</span>
+              )}
+            </p>
+          ) : null
+        }
+      />
+
+      <BarraAcciones
+        titulo="Qué puedes hacer"
+        texto={c.bloqueado ? "Está bloqueado: no se le puede cotizar hasta desbloquearlo." : "Cotízale o corrige sus datos."}
+      >
         {/* Los tres botones del mismo alto y con el mismo dibujo: «Editar»
             era un enlace sin fondo, más alto que «Cotizar» y gris sobre el
             gris de la página (revisión por módulos del 02/10). */}
@@ -100,57 +136,28 @@ export default async function PaginaDetalleCliente({
             enFicha
           />
         </div>
-      </header>
+      </BarraAcciones>
 
       {c.bloqueado ? (
         <p
           role="alert"
-          className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm"
+          className="card elev-2 border-l-[6px] border-l-[var(--danger)] bg-danger-bg p-4 text-base"
         >
-          <strong>Cliente bloqueado.</strong>{" "}
+          <strong className="text-[var(--danger)]">Cliente bloqueado.</strong>{" "}
           {c.motivo_bloqueo ?? "No se registró el motivo."} No se le puede cotizar
           ni vender a crédito hasta desbloquearlo.
         </p>
       ) : null}
 
-      {/* ------------------------------------------------- Zona y rubro */}
-      {/* En lugar de condición, tope y días de gracia, que dejaron de ser del
-          cliente (Willy, 20/10: «se define en la cotización y en la
-          factura»). La zona y el rubro (141) llevan a la lista filtrada: es
-          como se arma la ruta de visitas. */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Tarjeta
-          etiqueta="Zona"
-          valor={c.zona_nombre ?? "Sin zona"}
-          pie={
-            c.zona_id ? (
-              <Link href={`/clientes?zona=${c.zona_id}`} className="font-medium text-brand-700 underline underline-offset-4">
-                Ver los clientes de esta zona
-              </Link>
-            ) : (
-              "ponla al editar"
-            )
-          }
-        />
-        <Tarjeta
-          etiqueta="Rubro"
-          valor={c.rubro_nombre ?? "Sin rubro"}
-          pie={
-            c.rubro_id ? (
-              <Link href={`/clientes?rubro=${c.rubro_id}`} className="font-medium text-brand-700 underline underline-offset-4">
-                Ver los clientes de este rubro
-              </Link>
-            ) : (
-              "ponlo al editar"
-            )
-          }
-        />
-        <Tarjeta
-          etiqueta="Vendedor"
-          valor={c.vendedor_nombre ?? "Sin asignar"}
-          pie={c.vendedor_nombre ? "lo atiende" : "nadie lo tiene asignado"}
-        />
-      </div>
+      {/* Lo que se le ha vendido, en cifras (134): vendido, facturado, lo que
+          debe, cuánto se le gana y sus pedidos, con su periodo.
+
+          Justo debajo de la cabecera desde el 27/11: estaba después de la
+          zona, el rubro y los enlaces, y es lo que Willy viene a mirar —
+          «Willy recuerda a un cliente por sus ventas» (revisión del 02/10). */}
+      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
+        <HistorialCliente id={c.id} sp={sp} />
+      </Suspense>
 
       {/* ---------------------------------------------------- Sus ventas */}
       {/*
@@ -159,9 +166,13 @@ export default async function PaginaDetalleCliente({
         listas YA filtraban por `?cliente=` desde hace meses; faltaba la
         puerta. La pieza sin camino, otra vez.
       */}
-      <section className="card p-4">
-        <h2 className="mb-3 text-sm font-semibold">Lo que se le ha vendido</h2>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="card elev-1 flex flex-col gap-4 p-4">
+        <TituloBloque
+          icono={FolderOpen}
+          titulo="Sus documentos"
+          ayuda="Cada botón abre la lista ya filtrada por este cliente."
+        />
+        <div className="grid grid-cols-1 gap-2 @xl:grid-cols-2 @4xl:grid-cols-3">
           {[
             { href: `/cotizaciones?cliente=${c.id}`, texto: "Sus cotizaciones", Icono: FileText },
             { href: `/guias?cliente=${c.id}`, texto: "Sus guías", Icono: Truck },
@@ -175,22 +186,61 @@ export default async function PaginaDetalleCliente({
             <Link
               key={href}
               href={href}
-              className="inline-flex h-11 items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
+              className={cn(buttonVariants({ variant: "outline" }), "h-auto min-h-12 justify-start px-4 py-2 text-base")}
             >
-              <Icono className="size-4 text-brand-600" aria-hidden />
-              {texto}
+              <Icono className="size-5" aria-hidden />
+              <span className="min-w-0 flex-1 text-left">{texto}</span>
+              <ArrowRight className="size-5" aria-hidden />
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Lo que se le ha vendido, en cifras (134): vendido, facturado, lo que
-          debe, cuánto se le gana y sus pedidos, con su periodo. */}
-      <Suspense key={JSON.stringify(sp)} fallback={<Skeleton className="h-96 w-full" />}>
-        <HistorialCliente id={c.id} sp={sp} />
-      </Suspense>
+      {/* ------------------------------------------------- Zona y rubro */}
+      {/* En lugar de condición, tope y días de gracia, que dejaron de ser del
+          cliente (Willy, 20/10: «se define en la cotización y en la
+          factura»). La zona y el rubro (141) llevan a la lista filtrada: es
+          como se arma la ruta de visitas. */}
+      <div className="grid gap-3 @3xl:grid-cols-3">
+        <Tarjeta
+          icono={MapPin}
+          etiqueta="Zona"
+          valor={c.zona_nombre ?? "Sin zona"}
+          pie={
+            c.zona_id ? (
+              <Link href={`/clientes?zona=${c.zona_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}>
+                Ver los clientes de esta zona
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            ) : (
+              "ponla al editar"
+            )
+          }
+        />
+        <Tarjeta
+          icono={Factory}
+          etiqueta="Rubro"
+          valor={c.rubro_nombre ?? "Sin rubro"}
+          pie={
+            c.rubro_id ? (
+              <Link href={`/clientes?rubro=${c.rubro_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3")}>
+                Ver los clientes de este rubro
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            ) : (
+              "ponlo al editar"
+            )
+          }
+        />
+        <Tarjeta
+          icono={UserRound}
+          etiqueta="Vendedor"
+          valor={c.vendedor_nombre ?? "Sin asignar"}
+          pie={c.vendedor_nombre ? "lo atiende" : "nadie lo tiene asignado"}
+        />
+      </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 @5xl:grid-cols-2">
         {/* ------------------------------------------------------ Contacto */}
         {/* La empresa y su gente, separadas. Antes iban en la misma caja
             llamada «Contacto» y con un solo nombre dentro; desde la 035 son
@@ -198,27 +248,31 @@ export default async function PaginaDetalleCliente({
         {/* Sus locales de entrega, con su distrito (195, 06/11). */}
         <DireccionesDelCliente clienteId={c.id} puedeEditar={puedeEditar} />
 
-        <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">La empresa</h2>
-          <dl className="flex flex-col gap-2 text-sm">
+        <section className="card elev-1 flex flex-col gap-3 p-4">
+          <TituloBloque icono={Phone} titulo="La empresa" ayuda="Cómo se le escribe o se le llama." />
+          <dl className="flex flex-col gap-2 text-base">
             <Dato etiqueta="Correo" valor={c.email} />
             <Dato etiqueta="Teléfono" valor={c.telefono} />
             <Dato etiqueta="WhatsApp" valor={c.whatsapp} />
           </dl>
         </section>
 
-        <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">
-            Contactos{" "}
-            {c.contactos_lista.length > 0 ? (
-              <span className="font-normal text-[var(--fg-muted)]">
-                · {c.contactos_lista.length}
-              </span>
-            ) : null}
-          </h2>
+        <section className="card elev-1 flex flex-col gap-3 p-4">
+          <TituloBloque
+            icono={Contact}
+            titulo={
+              <>
+                Contactos{" "}
+                {c.contactos_lista.length > 0 ? (
+                  <span className="font-normal text-[var(--fg-muted)]">· {c.contactos_lista.length}</span>
+                ) : null}
+              </>
+            }
+            ayuda="Las personas de la empresa a las que les llega la cotización."
+          />
 
           {c.contactos_lista.length === 0 ? (
-            <p className="text-sm text-[var(--fg-muted)]">
+            <p className="rounded-md bg-[var(--surface-2)] p-3 text-base text-[var(--fg-muted)]">
               Sin contactos. La cotización sale sin nombre de destinatario;
               añádelos desde «Editar».
             </p>
@@ -226,7 +280,7 @@ export default async function PaginaDetalleCliente({
             <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
               {c.contactos_lista.map((p) => (
                 <li key={p.id} className="py-2 first:pt-0 last:pb-0">
-                  <p className="flex items-center gap-2 text-sm font-medium">
+                  <p className="flex items-center gap-2 text-base font-semibold">
                     <span className="min-w-0 [overflow-wrap:anywhere]">{p.nombre}</span>
                     {p.principal ? (
                       <Badge tone="brand" size="xs">
@@ -268,16 +322,16 @@ export default async function PaginaDetalleCliente({
         </section>
 
         {/* ----------------------------------------------------- Dirección */}
-        <section className="card p-4">
-          <h2 className="mb-3 text-sm font-semibold">Dirección</h2>
-          <dl className="flex flex-col gap-2 text-sm">
+        <section className="card elev-1 flex flex-col gap-3 p-4">
+          <TituloBloque icono={MapPin} titulo="Dirección" ayuda="La fiscal, la que va en la factura." />
+          <dl className="flex flex-col gap-2 text-base">
             <Dato etiqueta="Dirección fiscal" valor={c.direccion} />
             <Dato etiqueta="Distrito" valor={c.ubigeo_nombre} />
             <Dato etiqueta="Código del distrito (SUNAT)" valor={c.ubigeo_codigo} />
             <Dato etiqueta="Referencia" valor={c.referencia_direccion} />
           </dl>
           {!c.direccion || !c.ubigeo_codigo ? (
-            <p className="mt-3 rounded-sm bg-[var(--surface-2)] p-2.5 text-sm text-[var(--fg-muted)]">
+            <p className="rounded-md border-l-4 border-l-[var(--warn)] bg-warn-bg p-3 text-base">
               Falta dirección o distrito. Se puede cotizar igual, pero la guía de
               remisión los exige: conviene completarlos antes del primer despacho.
             </p>
@@ -286,9 +340,9 @@ export default async function PaginaDetalleCliente({
       </div>
 
       {c.notas ? (
-        <section className="card p-4">
-          <h2 className="mb-2 text-sm font-semibold">Notas</h2>
-          <p className="whitespace-pre-wrap break-words text-sm">{c.notas}</p>
+        <section className="card elev-1 flex flex-col gap-3 p-4">
+          <TituloBloque icono={NotebookPen} titulo="Notas" />
+          <p className="whitespace-pre-wrap break-words text-base">{c.notas}</p>
         </section>
       ) : null}
 
@@ -299,20 +353,30 @@ export default async function PaginaDetalleCliente({
   );
 }
 
+/**
+ * Zona, rubro y vendedor (27/11): con su icono en chip y sin `truncate`
+ * —«Agroindustria» se cortaba a 24 px de letra—. El enlace del pie pasa a
+ * botón: era un subrayado azul de 14 px que Willy no leía como pulsable.
+ */
 function Tarjeta({
+  icono,
   etiqueta,
   valor,
   pie,
 }: {
+  icono: LucideIcon;
   etiqueta: string;
   valor: React.ReactNode;
   pie?: React.ReactNode;
 }) {
   return (
-    <div className="card p-3">
-      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className="mt-0.5 truncate text-lg font-semibold tabular">{valor}</p>
-      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
+    <div className="card elev-1 flex min-w-0 flex-col gap-1 border-l-4 border-l-brand-500 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-base font-semibold">{etiqueta}</p>
+        <ChipIcono icono={icono} chico />
+      </div>
+      <p className="break-words text-xl font-bold text-[var(--titulo)]">{valor}</p>
+      {pie ? <div className="mt-1 text-sm text-[var(--fg-muted)]">{pie}</div> : null}
     </div>
   );
 }
@@ -325,8 +389,8 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string | null }) {
           encima, y con `w-40` «Código del distrito (SUNAT)» se partía en
           dos líneas teniendo la fila entera libre (revisión por módulos del
           02/10). */}
-      <dt className="shrink-0 text-[var(--fg-muted)] sm:w-40">{etiqueta}</dt>
-      <dd className="min-w-0 flex-1 break-words">
+      <dt className="etiqueta-dato shrink-0 sm:w-44">{etiqueta}</dt>
+      <dd className="min-w-0 flex-1 break-words font-semibold">
         {valor ?? <span className="text-[var(--fg-subtle)]">Sin registrar</span>}
       </dd>
     </div>

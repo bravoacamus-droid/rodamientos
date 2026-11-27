@@ -17,7 +17,8 @@ import {
   formatearFecha,
   type ProductoBuscado,
 } from "@rodatech/ui";
-import { Plus, Search, X } from "lucide-react";
+import { Boxes, Plus, Search, X } from "lucide-react";
+import { ChipIcono } from "@/modules/compras/ui/ficha";
 
 import {
   anotarQueVende,
@@ -156,23 +157,28 @@ export function QueVende({
   const comprados = productos.filter((p) => p.veces > 0).length;
 
   return (
-    <section className="card p-4">
+    <section className="card elev-1 p-4 sm:p-5">
+      {/* El mismo título con icono en chip que el resto de la ficha (27/11). */}
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-semibold">Qué vende</h2>
-          <p className="text-sm text-[var(--fg-muted)]">
+        <div className="flex min-w-0 items-center gap-3">
+          <ChipIcono>
+            <Boxes />
+          </ChipIcono>
+          <div className="min-w-0">
+          <h2 className="text-xl font-bold text-[var(--titulo)]">Qué vende</h2>
+          <p className="text-base text-[var(--fg-muted)]">
             {productos.length === 0
               ? "Se va llenando solo: cada compra que le registres queda anotada aquí."
               : `${productos.length} ${productos.length === 1 ? "producto" : "productos"}` +
                 (comprados > 0 ? ` · ${comprados} con compras detrás` : "")}
           </p>
+          </div>
         </div>
 
         {puedeEditar ? (
           <Button
             type="button"
             variant="outline"
-            className="h-9"
             onClick={() => setAbierto((v) => !v)}
           >
             {/* Un «+» delante de «Cerrar» decía lo contrario de lo que hace

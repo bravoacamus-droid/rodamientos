@@ -1,6 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { CifraAnimada, EstadoError, EstadoVacio, Skeleton } from "@rodatech/ui";
+import {
+  BarChart3,
+  Boxes,
+  Filter,
+  Package,
+  Receipt,
+  ShoppingCart,
+  Trophy,
+  Wallet,
+} from "lucide-react";
 
 import {
   agingCartera,
@@ -13,7 +23,7 @@ import {
   valorizacionPorFamilia,
 } from "../api/consultas";
 import { margenDeLoFacturado } from "../dominio/margen";
-import { COLORES_FAMILIA, etiquetaAging } from "../dominio/periodo";
+import { COLORES_FAMILIA } from "../dominio/periodo";
 import { describirRango, leerRango, type Rango } from "../dominio/rango";
 import { FiltroRango } from "./filtro-rango";
 import { ComoVoyBloque } from "./como-voy";
@@ -94,9 +104,13 @@ export default async function PaginaReportes({ searchParams }: Props) {
   return (
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/reportes">
+        {/* Título de informe (27/11): más grande que el de una lista y con la
+            barra dorada del login, porque esta pantalla se abre para leer,
+            no para trabajar en una tabla. */}
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Informe general</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <h1 className="text-3xl font-bold tracking-tight">Informe general</h1>
+          <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">
             Cómo va el negocio {describirRango(rango, hoy)}: qué se vende, qué margen
             deja, qué falta por cobrar y cuánto capital hay parado en el almacén.
           </p>
@@ -128,6 +142,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
           concreta. Antes que lo facturado, porque va antes en el tiempo. */}
       <Bloque
         titulo="Lo vendido (pedidos)"
+        icono={<Receipt aria-hidden="true" />}
         nota="Cada vez que un cliente confirma: los pedidos del periodo —también los repetidos— y lo del sistema anterior. Sin IGV."
       >
         <Suspense key={`p-${clave}`} fallback={<FilaSkeleton alto="h-20" columnas={4} />}>
@@ -138,6 +153,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
           titulo="Lo facturado"
+          icono={<BarChart3 aria-hidden="true" />}
           nota="Lo facturado en cada periodo, sin IGV: lo declarado a SUNAT. En verde, lo que queda después del costo, cuando se conoce."
         >
           <Suspense key={`v-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
@@ -147,6 +163,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
 
         <Bloque
           titulo="Capital en el almacén"
+          icono={<Boxes aria-hidden="true" />}
           nota="A costo, por familia. Lo que está aquí no está en la cuenta."
         >
           <Suspense fallback={<Skeleton className="h-60 w-full" />}>
@@ -158,6 +175,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Bloque
           titulo="Costo de las compras"
+          icono={<ShoppingCart aria-hidden="true" />}
           nota="Lo que se PIDIÓ y cuándo, de las órdenes de compra. No es lo que entró al almacén ni lo que costó lo vendido: son tres preguntas distintas."
         >
           <Suspense key={`c-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
@@ -167,6 +185,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
 
         <Bloque
           titulo="Cobranzas"
+          icono={<Wallet aria-hidden="true" />}
           nota="Cuánto se debe y desde cuándo. De izquierda a derecha, de menos a más urgente."
         >
           <Suspense fallback={<Skeleton className="h-60 w-full" />}>
@@ -182,6 +201,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
           buscar arrastrando es una tabla que nadie mira. */}
       <Bloque
         titulo="Lo que más se vende, y a quién"
+        icono={<Package aria-hidden="true" />}
         nota="La última columna es el cliente que más se lleva de ese código. Si uno solo se lleva casi todo, reponer es una conversación con él."
       >
         <Suspense key={`p-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
@@ -191,6 +211,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
 
       <Bloque
         titulo="Quién más compra"
+        icono={<Trophy aria-hidden="true" />}
         nota="Cuánto se llevan y cada cuánto vuelven. La última columna es lo que llevan sin aparecer."
       >
         <Suspense key={`cl-${clave}`} fallback={<Skeleton className="h-64 w-full" />}>
@@ -200,6 +221,7 @@ export default async function PaginaReportes({ searchParams }: Props) {
 
       <Bloque
         titulo="Del presupuesto al cobro"
+        icono={<Filter aria-hidden="true" />}
         nota="Dónde se queda el dinero por el camino."
       >
         <Suspense fallback={<Skeleton className="h-32 w-full" />}>
@@ -212,24 +234,38 @@ export default async function PaginaReportes({ searchParams }: Props) {
 
 // ---------------------------------------------------------------------------
 
+/**
+ * Un bloque del informe (27/11): el título a `text-xl` con su icono en chip,
+ * como los del tablero. Era `text-base`, del mismo tamaño que la nota de
+ * debajo, y el informe se leía como un solo párrafo largo.
+ */
 function Bloque({
   titulo,
   nota,
+  icono,
   children,
 }: {
   titulo: string;
   nota?: string;
+  icono?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="anim-entrada card @container p-4">
-      <div className="mb-3">
-        <h2 className="text-base font-semibold">{titulo}</h2>
-        {/* La nota explica CÓMO leer el gráfico. Un gráfico sin instrucciones
-            se mira una vez y no se vuelve a abrir. */}
-        {nota ? (
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{nota}</p>
+    <section className="anim-entrada card elev-1 @container min-w-0 p-4 sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        {icono ? (
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--info-bg)] text-[var(--info)] ring-1 ring-inset ring-[var(--border)] [&_svg]:size-6">
+            {icono}
+          </span>
         ) : null}
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold leading-snug text-[var(--titulo)]">{titulo}</h2>
+          {/* La nota explica CÓMO leer el gráfico. Un gráfico sin instrucciones
+              se mira una vez y no se vuelve a abrir. */}
+          {nota ? (
+            <p className="mt-0.5 text-base text-[var(--fg-muted)]">{nota}</p>
+          ) : null}
+        </div>
       </div>
       {children}
     </section>
@@ -332,10 +368,23 @@ function Kpi({
         : tono === "ok"
           ? "text-[var(--ok)]"
           : "";
+  /*
+    El filo izquierdo dice lo mismo que el color del pie (27/11): verde si va
+    bien, ámbar si hay algo por hacer, rojo si es urgente, azul si solo
+    informa. Y la cifra a `text-3xl`: es lo que se viene a leer.
+  */
+  const filo =
+    tono === "malo"
+      ? "border-l-[var(--danger)]"
+      : tono === "aviso"
+        ? "border-l-[var(--warn)]"
+        : tono === "ok"
+          ? "border-l-[var(--ok)]"
+          : "border-l-[var(--info)]";
   return (
-    <div className="card anim-entrada p-3">
-      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className="mt-0.5 text-xl font-semibold">
+    <div className={`card elev-1 anim-entrada min-w-0 border-l-[6px] p-4 ${filo}`}>
+      <p className="text-base font-semibold text-[var(--fg-muted)]">{etiqueta}</p>
+      <p className="tabular mt-1 break-words text-3xl font-extrabold leading-tight text-[var(--titulo)]">
         {texto !== undefined ? (
           <span className="text-[var(--fg-subtle)]">{texto}</span>
         ) : (
@@ -347,7 +396,7 @@ function Kpi({
           />
         )}
       </p>
-      {pie ? <p className={`mt-0.5 text-sm ${color || "text-[var(--fg-subtle)]"}`}>{pie}</p> : null}
+      {pie ? <p className={`mt-1 text-base font-medium ${color || "text-[var(--fg-muted)]"}`}>{pie}</p> : null}
     </div>
   );
 }
@@ -360,7 +409,7 @@ async function BloquePedidos({ rango }: { rango: Rango }) {
   if (!r.ok) return <EstadoError titulo="No se pudo cargar lo vendido" detalle={r.error} />;
   const d = r.datos.resumen;
   return (
-    <div className="grid grid-cols-2 gap-3 @3xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @3xl:grid-cols-4">
       <Kpi
         etiqueta="Vendido"
         valor={d.vendido}
@@ -415,8 +464,8 @@ async function BloqueVentas({ rango }: { rango: Rango }) {
   return (
     <>
       <GraficoSerieVentas datos={r.datos} mostrarMargen={margen.tipo === "ok"} />
-      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
-        <span className="font-medium text-[var(--fg)]">{dinero(venta)}</span> en{" "}
+      <p className="mt-4 border-t border-[var(--border-soft)] pt-3 text-base text-[var(--fg-muted)]">
+        <span className="tabular text-lg font-bold text-[var(--fg)]">{dinero(venta)}</span> en{" "}
         {documentos} {documentos === 1 ? "documento" : "documentos"} ·{" "}
         {/* «margen 0.0 %» con el costo en cero no es un margen del cero por
             ciento: es que no se sabe. El histórico se cargó sin costo, así que
@@ -459,8 +508,8 @@ async function BloqueCompras({ rango }: { rango: Rango }) {
   return (
     <>
       <GraficoSerieCompras datos={r.datos} />
-      <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
-        <span className="font-medium text-[var(--fg)]">{dinero(total)}</span> en{" "}
+      <p className="mt-4 border-t border-[var(--border-soft)] pt-3 text-base text-[var(--fg-muted)]">
+        <span className="tabular text-lg font-bold text-[var(--fg)]">{dinero(total)}</span> en{" "}
         {ordenes} {ordenes === 1 ? "orden" : "órdenes"}
         {gastos > 0
           ? ` · de los cuales ${dinero(gastos)} son gastos de importación`
@@ -800,24 +849,14 @@ async function BloqueAging() {
 
   return (
     <>
+      {/* El total arriba y en grande (27/11): es la primera pregunta. Debajo,
+          cada tramo con su barra, su palabra y su cifra entera, que ya trae
+          los documentos: la lista repetida de antes sobra. */}
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-[var(--surface-2)] px-4 py-3">
+        <span className="text-base font-semibold text-[var(--fg-muted)]">Te deben en total</span>
+        <span className="tabular break-words text-3xl font-extrabold text-[var(--titulo)]">{dinero(total)}</span>
+      </div>
       <GraficoAging datos={r.datos} />
-      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-sm">
-        {r.datos.map((t) => (
-          <li key={t.tramo} className="flex items-baseline justify-between gap-2">
-            <span className="text-[var(--fg-muted)]">
-              {etiquetaAging(t.tramo)}
-              <span className="ml-1.5 text-[var(--fg-subtle)]">
-                ({t.documentos} {t.documentos === 1 ? "doc." : "docs."})
-              </span>
-            </span>
-            <span className="tabular font-medium">{dinero(t.saldo)}</span>
-          </li>
-        ))}
-        <li className="mt-1 flex items-baseline justify-between gap-2 border-t border-[var(--border-soft)] pt-1.5">
-          <span className="font-medium">Total</span>
-          <span className="tabular font-semibold">{dinero(total)}</span>
-        </li>
-      </ul>
     </>
   );
 }
@@ -848,19 +887,19 @@ async function BloqueValorizacion() {
   return (
     <>
       <GraficoValorizacion datos={conCapital} />
-      <ul className="mt-3 flex flex-col gap-1 border-t border-[var(--border-soft)] pt-3 text-sm">
+      <ul className="mt-3 flex flex-col gap-1.5 border-t border-[var(--border-soft)] pt-3 text-base">
         {conCapital.map((f, i) => (
           <li key={f.familia} className="flex items-baseline justify-between gap-2">
-            <span className="flex min-w-0 items-baseline gap-2 truncate text-[var(--fg-muted)]">
+            <span className="flex min-w-0 items-baseline gap-2 font-medium">
               <span
                 aria-hidden="true"
                 className="inline-block size-3 shrink-0 self-center rounded-[3px]"
                 style={{ background: COLORES_FAMILIA[i % COLORES_FAMILIA.length] }}
               />
               {f.familia}
-              <span className="ml-1.5 text-[var(--fg-subtle)]">({f.skus} productos)</span>
+              <span className="ml-1.5 text-sm font-normal text-[var(--fg-muted)]">({f.skus} productos)</span>
             </span>
-            <span className="tabular font-medium">{dinero(f.valorCosto)}</span>
+            <span className="tabular font-bold">{dinero(f.valorCosto)}</span>
           </li>
         ))}
       </ul>
@@ -918,7 +957,9 @@ async function BloqueEmbudo() {
         const pct = e.cotizado > 0 ? (p.valor / e.cotizado) * 100 : 0;
         // Por debajo del 18 % la cifra no cabe dentro de la barra y sale
         // recortada. A partir de ahí se escribe fuera, en color normal.
-        const dentro = pct >= 18;
+        // A 28 % y no a 18 % desde el 27/11: la cifra va ahora a `text-base`
+        // en negrita y crece con el ajuste de letra.
+        const dentro = pct >= 28;
 
         return (
           /* En el teléfono, el nombre y su nota arriba y la barra debajo a
@@ -926,11 +967,11 @@ async function BloqueEmbudo() {
              cifra no cabía (revisión por módulos del 02/10). */
           <div
             key={p.nombre}
-            className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_1fr_8rem]"
+            className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 sm:grid-cols-[8rem_1fr_10rem]"
           >
-            <span className="text-sm text-[var(--fg-muted)]">{p.nombre}</span>
+            <span className="text-base font-semibold text-[var(--fg)]">{p.nombre}</span>
 
-            <div className="order-last col-span-2 flex h-7 items-center gap-2 sm:order-none sm:col-span-1">
+            <div className="order-last col-span-2 flex h-9 items-center gap-2 sm:order-none sm:col-span-1">
               <div
                 className="h-full overflow-hidden rounded-sm bg-[var(--surface-2)]"
                 style={{ width: dentro ? `${pct}%` : undefined, flex: dentro ? "none" : 1 }}
@@ -949,7 +990,7 @@ async function BloqueEmbudo() {
                   }}
                 >
                   {dentro ? (
-                    <span className="tabular text-sm font-medium text-white">
+                    <span className="tabular text-base font-bold text-white">
                       {dinero(p.valor)}
                     </span>
                   ) : null}
@@ -957,13 +998,13 @@ async function BloqueEmbudo() {
               </div>
 
               {!dentro ? (
-                <span className="tabular shrink-0 text-sm font-medium text-[var(--fg-muted)]">
+                <span className="tabular shrink-0 text-base font-bold text-[var(--fg)]">
                   {dinero(p.valor)}
                 </span>
               ) : null}
             </div>
 
-            <span className="text-right text-sm text-[var(--fg-subtle)]">
+            <span className="text-right text-sm text-[var(--fg-muted)]">
               {p.pie}
             </span>
           </div>

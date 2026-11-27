@@ -12,6 +12,7 @@ import { series } from "../api/consultas";
 import { CabeceraConfig } from "./cabecera";
 import { ConsultasExternas } from "./consultas-externas";
 import { TablaSeries } from "./series";
+import { SeccionNumerada } from "./seccion";
 
 /**
  * SUNAT y numeración.
@@ -72,42 +73,50 @@ export default async function PaginaConfigSunat() {
         <BloqueEstado />
       </Suspense>
 
-      <section className="card p-4">
-        <h2 className="text-base font-semibold">Certificado y credenciales</h2>
-        <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          El <code>.pfx</code>, su clave y el usuario SOL. Se guardan cifrados.
-          Sin esto se puede emitir y cobrar, pero nada llega a SUNAT.
-        </p>
+      {/* Secciones numeradas (27/11), como /accesibilidad: el orden es el
+          de montarlo — primero con qué se firma, luego con qué número sale
+          cada documento, luego las consultas. */}
+      <SeccionNumerada
+        numero={1}
+        titulo="Certificado y credenciales"
+        ayuda={
+          <>
+            El <code>.pfx</code>, su clave y el usuario SOL. Se guardan cifrados.
+            Sin esto se puede emitir y cobrar, pero nada llega a SUNAT.
+          </>
+        }
+      >
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <BloqueCredenciales />
         </Suspense>
-      </section>
+      </SeccionNumerada>
 
-      <section className="card p-4">
-        <h2 className="text-base font-semibold">Series y correlativos</h2>
+      <SeccionNumerada
+        numero={2}
+        titulo="Series y correlativos"
+        ayuda="Con qué letra y número sale cada documento. Se continúa la numeración que ya usas, no se empieza de cero."
+      >
         <Suspense fallback={<Skeleton className="h-56 w-full" />}>
           <BloqueSeries puedeEditar={puedeEditar} />
         </Suspense>
-      </section>
+      </SeccionNumerada>
 
-      <section className="card p-4">
-        <h2 className="text-base font-semibold">Consultas de RUC, DNI y tipo de cambio</h2>
-        <p className="mb-3 text-sm text-[var(--fg-muted)]">
-          El botón «Traer datos» y el tipo de cambio las piden a Decolecta, que da
-          un número fijo al mes.
-        </p>
+      <SeccionNumerada
+        numero={3}
+        titulo="Consultas de RUC, DNI y tipo de cambio"
+        ayuda="El botón «Traer datos» y el tipo de cambio las piden a Decolecta, que da un número fijo al mes."
+      >
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
           <ConsultasExternas />
         </Suspense>
-      </section>
+      </SeccionNumerada>
 
       {/* Lo que hay que pedirle al cliente, escrito donde se necesita. Es la
-          lista que más veces se pide por chat y más veces llega incompleta. */}
-      <section className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-4">
-        {/* Lo lee el propio Willy: «qué hay que pedirle a Willy» le hablaba
-            de él en tercera persona (revisión por módulos del 02/10). */}
-        <h2 className="text-base font-semibold">Lo que falta para declarar a SUNAT</h2>
-        <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm text-[var(--fg-muted)]">
+          lista que más veces se pide por chat y más veces llega incompleta.
+          Lo lee el propio Willy: «qué hay que pedirle a Willy» le hablaba
+          de él en tercera persona (revisión por módulos del 02/10). */}
+      <SeccionNumerada tono="aviso" titulo="Lo que falta para declarar a SUNAT">
+        <ul className="flex list-disc flex-col gap-2 pl-5 text-base text-[var(--fg-muted)]">
           <li>
             El <strong>certificado digital .pfx</strong> y su contraseña.
             Comprueba la fecha de caducidad en cuanto llegue: con uno caducado
@@ -123,7 +132,7 @@ export default async function PaginaConfigSunat() {
             su sistema actual, más uno, para no repetir ni saltarse ninguno.
           </li>
         </ul>
-      </section>
+      </SeccionNumerada>
     </div>
   );
 }
@@ -139,20 +148,20 @@ async function BloqueEstado() {
 
   return (
     <section
-      className={`rounded-lg border p-4 ${
+      className={`card elev-2 border-l-[6px] p-4 sm:p-5 ${
         estado.listo
-          ? "border-[var(--ok)] bg-[var(--ok-bg)]"
-          : "border-[var(--warn)] bg-[var(--warn-bg)]"
+          ? "border-l-[var(--ok)] bg-[var(--ok-bg)]"
+          : "border-l-[var(--warn)] bg-[var(--warn-bg)]"
       }`}
     >
-      <h2 className="text-base font-semibold">
+      <h2 className="text-xl font-bold text-[var(--titulo)]">
         {estado.listo
           ? "Todo listo para emitir ante SUNAT"
           : "Se puede emitir y cobrar, pero nada llega a SUNAT todavía"}
       </h2>
 
       {estado.listo ? (
-        <p className="mt-1 text-sm">
+        <p className="mt-1 text-base">
           Ambiente:{" "}
           <strong>
             {estado.ambiente === "produccion"
@@ -162,7 +171,7 @@ async function BloqueEstado() {
           .
         </p>
       ) : (
-        <ul className="mt-1.5 flex flex-col gap-1 text-sm">
+        <ul className="mt-1.5 flex flex-col gap-1 text-base">
           {estado.faltan.map((f) => (
             <li key={f} className="flex gap-2">
               <span aria-hidden="true">·</span>
@@ -173,7 +182,7 @@ async function BloqueEstado() {
       )}
 
       {estado.avisoCaducidad ? (
-        <p className="mt-1.5 text-sm font-medium">{estado.avisoCaducidad}</p>
+        <p className="mt-1.5 text-base font-medium">{estado.avisoCaducidad}</p>
       ) : null}
     </section>
   );

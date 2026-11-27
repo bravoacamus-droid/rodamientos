@@ -154,8 +154,9 @@ function Formulario({
   }
 
   return (
-    <form onSubmit={enviar} className="rounded-lg border border-[var(--border)] p-4">
-      <h3 className="mb-3 text-base font-semibold">Dar de alta a alguien</h3>
+    // Sin borde ni título propios desde el 27/11: va dentro de la sección
+    // numerada «Dar de alta a alguien» de la pantalla de usuarios.
+    <form onSubmit={enviar}>
 
       {avisoBorrador ? <div className="mb-3">{avisoBorrador}</div> : null}
 

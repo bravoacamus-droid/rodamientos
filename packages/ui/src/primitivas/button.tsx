@@ -31,13 +31,28 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-brand-600 text-white hover:bg-brand-700 relieve hover:relieve-alto",
-        accent: "bg-accent-400 text-steel-950 hover:bg-accent-300 relieve hover:relieve-alto font-semibold",
-        outline: "border border-border-strong bg-surface text-fg elev-1 hover:bg-brand-50 hover:border-brand-400 dark:hover:bg-surface-2",
+        /*
+          «Dale más vida» (27/11, sobre el tablero). Los secundarios eran
+          blanco con borde gris: junto a una fila de texto parecían otra
+          casilla, no algo que se pulsa. Ahora todos llevan el azul suave de
+          la marca, letra azul en negrita y la flecha que avanza al pasar el
+          ratón — el mismo lenguaje que `boton-fila` de las listas, de modo
+          que «Abrir», «Ver todas» y «Ver» se reconocen igual en todo el
+          sistema. El principal gana un degradado y sube un pelo al pasar.
+        */
+        primary:
+          "bg-brand-600 bg-linear-to-b from-brand-500 to-brand-700 text-white font-semibold relieve hover:from-brand-600 hover:to-brand-800 hover:relieve-alto hover:-translate-y-px motion-reduce:hover:translate-y-0",
+        accent:
+          "bg-accent-400 bg-linear-to-b from-accent-300 to-accent-400 text-steel-950 font-semibold relieve hover:from-accent-200 hover:to-accent-300 hover:relieve-alto hover:-translate-y-px motion-reduce:hover:translate-y-0",
+        outline:
+          "border border-[var(--boton-fila-borde)] bg-[var(--boton-fila-bg)] text-[var(--boton-fila-fg)] font-semibold elev-1 hover:border-[var(--boton-fila-borde-hover)] hover:bg-[var(--boton-fila-bg-hover)] [&_.lucide-arrow-right]:transition-transform hover:[&_.lucide-arrow-right]:translate-x-0.5 motion-reduce:hover:[&_.lucide-arrow-right]:translate-x-0",
         ghost: "text-muted hover:bg-surface-2 hover:text-fg",
         subtle: "bg-surface-2 text-fg border hover:border-brand-300",
-        danger: "bg-danger text-white hover:brightness-95 relieve",
-        success: "bg-ok text-white hover:brightness-95 relieve",
+        // Letra en --fg-inverso (27/11): en oscuro el rojo y el verde son
+        // claros (#f2666e, #34c98a) y el blanco encima daba 3:1 o menos. En
+        // claro --fg-inverso sigue siendo blanco.
+        danger: "bg-danger text-[var(--fg-inverso)] hover:brightness-95 relieve",
+        success: "bg-ok text-[var(--fg-inverso)] hover:brightness-95 relieve",
         link: "text-brand-600 underline-offset-4 hover:underline p-0 h-auto",
       },
       size: {

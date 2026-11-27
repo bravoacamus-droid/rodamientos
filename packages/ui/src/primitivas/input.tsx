@@ -13,14 +13,19 @@ import { cn } from "../lib/utils";
 // Velo azul y borde firme (--campo-*): blanco sobre blanco no dejaba ver la
 // casilla (Luis, 02/11). Al escribir pasa a blanco con el anillo de marca, que
 // es lo que dice «estás aquí».
+//
+// El anillo, más fuerte (27/11): al 25 % el azul sobre el velo azul de la
+// casilla casi no se notaba, y para quien no ve bien «dónde estoy
+// escribiendo» es la pregunta de cada campo. Al 40 % y con el borde en
+// brand-600 se ve desde lejos; el error se marca con el mismo grosor.
 export const campoBase = [
   "w-full rounded-md border border-[var(--campo-borde)] bg-[var(--campo-bg)] text-fg placeholder:text-subtle",
   "shadow-[inset_0_1px_2px_rgb(11_52_80/0.06)]",
   "transition-[color,background-color,border-color,box-shadow] duration-150",
   "hover:border-brand-400",
-  "focus:border-brand-500 focus:bg-surface focus:outline-none focus:ring-[3px] focus:ring-brand-500/25",
+  "focus:border-brand-600 focus:bg-surface focus:outline-none focus:ring-[3px] focus:ring-brand-500/40",
   "disabled:opacity-60 disabled:bg-surface-2 disabled:cursor-not-allowed",
-  "aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger/15",
+  "aria-[invalid=true]:border-danger aria-[invalid=true]:focus:ring-danger/30",
   "read-only:bg-surface-2",
 ].join(" ");
 

@@ -17,8 +17,10 @@ export default function Pagina(props: { searchParams: Promise<Record<string, str
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/reportes/compras">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Lo comprado</h1>
-          <p className="text-base text-[var(--fg-muted)]">
+          <h1 className="text-3xl font-bold tracking-tight">Lo comprado</h1>
+          {/* La barra dorada del login, como el Informe general (27/11). */}
+          <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">
             Cuánto se compra, a quién, qué, quién lo deja más barato y qué falta que llegue.
           </p>
         </div>

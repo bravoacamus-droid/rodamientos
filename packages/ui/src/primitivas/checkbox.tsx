@@ -17,7 +17,11 @@ export function Checkbox({
   return (
     <CheckboxPrimitive.Root
       className={cn(
-        "peer size-4 shrink-0 rounded-[4px] border-2 border-[var(--border-strong)] bg-surface",
+        // 20 px y no 16 (27/11): una casilla de 16 px es un blanco pequeño
+        // para el ratón y casi un punto para quien no ve bien. El borde va en
+        // el del campo, que se ve sobre blanco y sobre las filas alternas.
+        "peer size-5 shrink-0 rounded-[5px] border-2 border-[var(--campo-borde)] bg-surface",
+        "hover:border-brand-500",
         "transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-brand-600 data-[state=checked]:bg-brand-600",
         "data-[state=indeterminate]:border-brand-600 data-[state=indeterminate]:bg-brand-600",
@@ -27,9 +31,9 @@ export function Checkbox({
     >
       <CheckboxPrimitive.Indicator className="flex items-center justify-center text-white">
         {props.checked === "indeterminate" ? (
-          <Minus className="size-3" strokeWidth={3} />
+          <Minus className="size-3.5" strokeWidth={3} />
         ) : (
-          <Check className="size-3" strokeWidth={3} />
+          <Check className="size-3.5" strokeWidth={3} />
         )}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
@@ -67,7 +71,7 @@ export function CheckboxCampo({
         <label
           htmlFor={id}
           className={cn(
-            "block cursor-pointer text-sm font-medium",
+            "block cursor-pointer text-sm font-semibold",
             props.checked ? "text-brand-800 dark:text-brand-200" : "text-fg",
             props.disabled && "cursor-not-allowed",
           )}

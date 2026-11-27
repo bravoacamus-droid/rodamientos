@@ -25,6 +25,8 @@ import {
 import { BotonDeclarar, BotonQuitar, DeclararOtro } from "./acciones";
 import { SelectorProducto } from "./selector";
 import { PanelModulo } from "@/componentes/panel-modulo";
+import { ArrowRight, GitCompareArrows, Link2, SearchX } from "lucide-react";
+import { BloqueFicha } from "@/modules/productos/ui/ficha";
 
 interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -73,7 +75,7 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
         </div>
       </PanelModulo>
 
-      <section className="card p-4">
+      <section className="card elev-2 p-4 sm:p-5">
         <div className="max-w-xl">
           <SelectorProducto excluir={productoId ?? undefined} autoFocus={!productoId} />
         </div>
@@ -86,24 +88,37 @@ export default async function PaginaEquivalencias({ searchParams }: Props) {
         // El estado vacío dice para qué sirve la pantalla y cómo se usa: con
         // cero equivalencias marcadas, «busca un producto» a secas no
         // explicaba qué iba a pasar después (revisión por módulos del 02/10).
-        <section className="card p-4 sm:p-6">
-          <h2 className="text-base font-semibold">Cómo se usa</h2>
-          <ol className="mt-3 flex list-decimal flex-col gap-2 pl-5 text-sm">
-            <li>
-              Busca arriba el producto que te piden, por código, marca o
-              descripción.
-            </li>
-            <li>
-              Salen los de otras marcas con la <strong>misma medida</strong>,
-              con su precio y su stock.
-            </li>
-            <li>
-              Si sabes que otro sirve y no sale, búscalo allí mismo y pulsa{" "}
-              <strong>Marcar como equivalente</strong>. Desde entonces saldrá
-              el primero, aquí y al cotizar.
-            </li>
+        // Desde el 27/11, los tres pasos con su número en círculo, como las
+        // secciones de los formularios: se ven como pasos, no como un párrafo.
+        <BloqueFicha icono={GitCompareArrows} titulo="Cómo se usa">
+          <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {[
+              <>Busca arriba el producto que te piden, por código, marca o descripción.</>,
+              <>
+                Salen los de otras marcas con la <strong>misma medida</strong>, con su precio y su
+                stock.
+              </>,
+              <>
+                Si sabes que otro sirve y no sale, búscalo allí mismo y pulsa{" "}
+                <strong>Marcar como equivalente</strong>. Desde entonces saldrá el primero, aquí y
+                al cotizar.
+              </>,
+            ].map((texto, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-base"
+              >
+                <span
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-base font-bold text-white"
+                  aria-hidden="true"
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0">{texto}</span>
+              </li>
+            ))}
           </ol>
-        </section>
+        </BloqueFicha>
       ) : (
         <Suspense key={productoId} fallback={<Skeleton className="h-96 w-full" />}>
           <Cross productoId={productoId} puedeDeclarar={puedeDeclarar} puedeQuitar={puedeQuitar} />
@@ -127,7 +142,7 @@ async function Contador() {
   if (!r.ok) return null;
 
   return (
-    <p className="mt-3 text-sm text-[var(--fg-subtle)]">
+    <p className="mt-3 text-base text-[var(--fg-muted)]">
       {r.datos.pares === 0
         ? "Todavía no se ha marcado ninguna a mano: lo que salga será por la medida del código."
         : `${r.datos.pares} ${r.datos.pares === 1 ? "equivalencia marcada" : "equivalencias marcadas"} a mano, entre ${r.datos.productos} productos.`}
@@ -160,7 +175,7 @@ async function Cross({
 
   if (!sustitutos.ok) {
     return (
-      <section className="card p-4">
+      <section className="flex flex-col gap-4">
         <Cabecera producto={base.datos} sustitutos={[]} />
         <EstadoError
           titulo="No se pudieron buscar equivalentes"
@@ -179,13 +194,12 @@ async function Cross({
 
   return (
     <div className="flex flex-col gap-4">
-      <section className="card p-4">
-        <Cabecera producto={base.datos} sustitutos={sustitutos.datos} />
-      </section>
+      <Cabecera producto={base.datos} sustitutos={sustitutos.datos} />
 
       {grupos.length === 0 ? (
-        <section className="card p-4">
+        <section className="card elev-1 p-4">
           <EstadoVacio
+            icono={<SearchX />}
             titulo="Sin equivalentes"
             descripcion={
               base.datos.designacion_base
@@ -196,17 +210,21 @@ async function Cross({
         </section>
       ) : (
         grupos.map((grupo) => (
-          <section key={grupo.origen} className="card overflow-hidden">
-            <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-[var(--border-soft)] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <Badge tone={tonoOrigen(grupo.origen)} size="sm">
+          // Cada peldaño de la cascada en su tarjeta, con la pastilla grande y
+          // el motivo en letra de leer (27/11): la diferencia entre «lo dice el
+          // código ISO» y «se parece en el precio» decide si se despacha o se
+          // llama al cliente, así que no puede ir en gris pequeño.
+          <section key={grupo.origen} className="card elev-1 overflow-hidden">
+            <header className="flex flex-col gap-1.5 border-b border-[var(--border-soft)] bg-[var(--surface-2)] px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={tonoOrigen(grupo.origen)} size="md" className="text-base font-bold">
                   {ETIQUETA_ORIGEN[grupo.origen]}
                 </Badge>
-                <span className="text-sm text-[var(--fg-subtle)]">
-                  {grupo.sustitutos.length}
+                <span className="text-base font-semibold text-[var(--fg-muted)]">
+                  {grupo.sustitutos.length} {grupo.sustitutos.length === 1 ? "producto" : "productos"}
                 </span>
               </div>
-              <p className="text-sm text-[var(--fg-muted)]">
+              <p className="text-base text-[var(--fg-muted)]">
                 {EXPLICACION_ORIGEN[grupo.origen]}
               </p>
             </header>
@@ -228,36 +246,36 @@ async function Cross({
       )}
 
       {puedeDeclarar ? (
-        <section className="card p-4">
+        <section className="card elev-1 p-4">
           <DeclararOtro productoId={productoId} />
         </section>
       ) : null}
 
       {declaradas.ok && declaradas.datos.length > 0 ? (
-        <section className="card p-4">
-          <h2 className="mb-2 text-base font-semibold">Marcadas a mano</h2>
-          <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+        <BloqueFicha icono={Link2} titulo="Marcadas a mano" ayuda="Las que alguien confirmó que sirven. Salen las primeras.">
+          <ul className="flex flex-col gap-2">
             {declaradas.datos.map((d) => (
               <li
                 key={d.id}
-                className="flex flex-wrap items-baseline justify-between gap-x-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-base"
               >
                 <div className="min-w-0">
-                  <Link
-                    href={`/equivalencias?producto=${d.otro_id}`}
-                    className="font-mono text-sm font-medium text-brand-600 hover:underline"
-                  >
+                  <span className="font-mono text-lg font-bold text-[var(--titulo)] [overflow-wrap:anywhere]">
                     {d.otro_codigo}
-                  </Link>
-                  <span className="ml-2 text-sm text-[var(--fg-muted)]">
+                  </span>
+                  <span className="ml-2 text-base text-[var(--fg-muted)]">
                     {d.otro_marca} · {ETIQUETA_CLASE[d.clase]}
                   </span>
                   {d.nota ? (
-                    <p className="text-sm text-[var(--fg-subtle)]">{d.nota}</p>
+                    <p className="text-base text-[var(--fg-muted)]">{d.nota}</p>
                   ) : null}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-[var(--fg-subtle)]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link href={`/equivalencias?producto=${d.otro_id}`} className="boton-fila">
+                    Ver sus equivalentes
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                  <span className="text-sm text-[var(--fg-muted)]">
                     {/* dd/mm/aaaa y en hora de Lima, como las demás fechas del
                         ERP, y no el «2026-10-02» crudo de la base (02/11). */}
                     {d.creado_por ?? "—"} · {formatearFecha(d.creado_en)}
@@ -269,7 +287,7 @@ async function Cross({
               </li>
             ))}
           </ul>
-        </section>
+        </BloqueFicha>
       ) : null}
     </div>
   );
@@ -282,31 +300,63 @@ function Cabecera({
   producto: ProductoBase;
   sustitutos: readonly Sustituto[];
 }) {
+  // El producto que te piden, como cabecera de ficha (27/11): el código en
+  // grande y en letra de máquina, el stock con su palabra y el precio como
+  // cifras, y la ficha del producto como botón —antes era el código en azul,
+  // y había que adivinar que se podía pulsar—.
+  const sinStock = producto.stock <= 0;
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <Link
-            href={`/productos/${producto.id}`}
-            className="font-mono text-base font-semibold text-brand-600 hover:underline"
-          >
-            {producto.codigo}
-          </Link>
-          <span className="text-sm text-[var(--fg-muted)]">{producto.marca}</span>
+    <section
+      className={`card elev-2 flex flex-wrap items-start justify-between gap-4 border-l-[6px] p-4 sm:p-5 ${
+        sinStock ? "border-l-[var(--danger)]" : "border-l-[var(--ok)]"
+      }`}
+    >
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <span className="etiqueta-dato">Lo que te piden</span>
+        <h2 className="font-mono text-3xl font-extrabold tracking-tight text-[var(--titulo)] [overflow-wrap:anywhere]">
+          {producto.codigo}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral" size="md">
+            {producto.marca}
+          </Badge>
           {producto.designacion_base ? (
-            <Badge tone="neutral" size="xs">
-              medida {producto.designacion_base}
+            <Badge tone="brand" size="md">
+              medida <span className="font-mono">{producto.designacion_base}</span>
             </Badge>
           ) : null}
         </div>
-        <p className="mt-0.5 text-sm text-[var(--fg-muted)]">{producto.descripcion}</p>
-        <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">
-          {producto.stock > 0 ? `${producto.stock} en stock` : "sin stock"} ·
-          {" "}
-          {`$ ${producto.precio_venta.toFixed(2)}`} · {contarPorOrigen(sustitutos)}
-        </p>
+        <p className="text-base text-[var(--fg-muted)]">{producto.descripcion}</p>
+        <p className="text-base font-semibold text-fg">{contarPorOrigen(sustitutos)}</p>
       </div>
-    </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+          <span className="text-sm font-semibold text-[var(--fg-muted)]">En almacén</span>
+          <span
+            className={`tabular text-3xl font-extrabold leading-tight ${
+              sinStock ? "text-[var(--danger)]" : "text-[var(--titulo)]"
+            }`}
+          >
+            {producto.stock}
+          </span>
+          <span className={`text-base font-bold ${sinStock ? "text-[var(--danger)]" : "text-[var(--ok)]"}`}>
+            {sinStock ? "Sin stock" : "Hay stock"}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+          <span className="text-sm font-semibold text-[var(--fg-muted)]">Precio de venta</span>
+          <span className="tabular text-3xl font-extrabold leading-tight text-[var(--titulo)]">
+            {producto.precio_venta > 0 ? `$ ${producto.precio_venta.toFixed(2)}` : "Sin precio"}
+          </span>
+          <span className="text-base text-[var(--fg-muted)]">sin IGV</span>
+        </div>
+        <Link href={`/productos/${producto.id}`} className="boton-fila">
+          Ver ficha del producto
+          <ArrowRight aria-hidden="true" />
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -328,31 +378,42 @@ function Fila({
       // En el teléfono, apilado: con el botón al lado, el texto se quedaba en
       // 60 px y la descripción salía como «62…» y el resumen una palabra por
       // renglón (revisión por módulos del 02/10).
-      className="anim-entrada flex flex-col gap-2 border-b border-[var(--border-soft)] px-4 py-2.5 text-sm transition-colors last:border-b-0 hover:bg-[var(--surface-2)] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+      className="anim-entrada flex flex-col gap-2 border-b border-[var(--border-soft)] px-4 py-3 text-base transition-colors last:border-b-0 hover:bg-[var(--surface-2)] sm:flex-row sm:items-center sm:justify-between sm:gap-3"
       style={{ animationDelay: `${Math.min(indice, 6) * 24}ms` }}
     >
       <div className="min-w-0 sm:flex-1">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <Link
-            href={`/equivalencias?producto=${sustituto.id}`}
-            className="font-mono text-sm font-medium text-brand-600 hover:underline"
-          >
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {/* El código ya no es el enlace (27/11): va en grande y en letra
+              de máquina, y lo que se pulsa es el botón con palabra de la
+              derecha (CLAUDE.md §1). */}
+          <span className="font-mono text-lg font-bold text-[var(--titulo)] [overflow-wrap:anywhere]">
             {sustituto.codigo}
-          </Link>
+          </span>
           {sustituto.mejor_oferta ? (
-            <Badge tone="success" size="xs">
+            <Badge tone="success" size="md">
               Mejor oferta
             </Badge>
           ) : null}
+          {sustituto.stock <= 0 ? (
+            <Badge tone="danger" size="md">
+              Sin stock
+            </Badge>
+          ) : null}
         </div>
-        <p className="truncate text-sm text-[var(--fg-muted)]">{sustituto.descripcion}</p>
-        <p className="text-sm text-[var(--fg-subtle)]">
+        {/* Sin `truncate`: con la letra grande, la descripción cortada no
+            decía qué producto era. */}
+        <p className="text-base text-[var(--fg-muted)]">{sustituto.descripcion}</p>
+        <p className="text-sm text-[var(--fg-muted)]">
           {resumenSustituto(sustituto)}
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center justify-between gap-2 sm:justify-end">
-        <span className="whitespace-nowrap tabular text-sm font-medium">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 sm:justify-end">
+        <Link href={`/equivalencias?producto=${sustituto.id}`} className="boton-fila">
+          Ver sus equivalentes
+          <ArrowRight aria-hidden="true" />
+        </Link>
+        <span className="order-first whitespace-nowrap tabular text-lg font-bold">
           {`$ ${sustituto.precio_venta.toFixed(2)}`}
         </span>
         {puedeDeclarar && sustituto.origen !== "equivalencia" && !yaDeclarado ? (

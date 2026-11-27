@@ -20,7 +20,10 @@ export function BotonReintentar({ etiqueta = "Reintentar" }: { etiqueta?: string
   return (
     <Button
       variant="outline"
-      size="sm"
+      // Del tamaño normal y no `sm` (27/11): cuando algo falla es la única
+      // salida que se ofrece, y no puede ser el botón más pequeño de la
+      // pantalla.
+      size="md"
       loading={pendiente}
       onClick={() => iniciarTransicion(() => router.refresh())}
     >

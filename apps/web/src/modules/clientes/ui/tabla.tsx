@@ -79,21 +79,21 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
               <th className="px-4 py-2.5 font-medium">Estado</th>
               {/* Con botones de verdad en la fila, la cabecera se dice en voz
                   alta: un `sr-only` valia cuando ahi solo habia tres puntos. */}
-              <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
+              <th className="sticky right-0 z-20 bg-[var(--surface)] px-4 py-2.5 text-right font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filas.map((c) => (
               <tr
                 key={c.id}
-                className={`border-b border-[var(--border-soft)] group/fila transition-colors hover:bg-[var(--surface-2)] ${
+                className={`border-b border-[var(--border-soft)] group/fila fila-lista ${
                   c.activo ? "" : "border-dashed"
                 }`}
               >
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/clientes/${c.id}`}
-                    className="whitespace-nowrap font-mono text-sm font-medium text-brand-600 hover:underline"
+                    className="whitespace-nowrap tabular text-sm font-medium text-brand-600 hover:underline"
                   >
                     {c.codigo}
                   </Link>
@@ -119,7 +119,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
                 <td className="px-4 py-2.5">
                   <Estado c={c} />
                 </td>
-                <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] group-hover/fila:bg-[var(--surface-2)] px-2 py-1.5">
+                <td className="sticky right-0 z-10 bg-[var(--surface)] px-2 py-1.5">
                   <AccionesFila
                     id={c.id}
                     codigo={c.codigo}
@@ -161,7 +161,7 @@ export async function TablaClientes({ filtros }: { filtros: FiltrosClientes }) {
             className={`flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 ${c.activo ? "" : "border-dashed"}`}
           >
             <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 truncate font-mono text-sm text-[var(--fg-subtle)]">
+              <span className="min-w-0 truncate tabular text-sm text-[var(--fg-subtle)]">
                 {c.codigo}
               </span>
               <span className="shrink-0">

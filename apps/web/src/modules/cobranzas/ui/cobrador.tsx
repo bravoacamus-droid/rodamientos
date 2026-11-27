@@ -18,6 +18,7 @@ import {
   SelectNativo,
   Textarea,
   buttonVariants,
+  cn,
   formatearFecha,
 } from "@rodatech/ui";
 import { FileCheck2, FileUp, HandCoins, X } from "lucide-react";
@@ -265,9 +266,12 @@ export function Cobrador({
       {/* De 32 px en escritorio pasaba a 38, como el resto de botones, y con
           su icono: es la acción principal de la fila (revisión por módulos
           del 02/10). */}
-      <DialogTrigger className={buttonVariants({ variant: "primary" })}>
+      {/* 27/11: «Registrar cobro», en negrita y a 16 px. «Cobrar» a secas
+          podía leerse como que el sistema cobra solo; y es la misma palabra
+          que lleva el botón de la ficha de la factura. */}
+      <DialogTrigger className={cn(buttonVariants({ variant: "primary" }), "whitespace-nowrap text-base font-bold")}>
         <HandCoins aria-hidden="true" />
-        Cobrar
+        Registrar cobro
       </DialogTrigger>
 
       <DialogContent className="max-w-lg">
@@ -295,6 +299,39 @@ export function Cobrador({
         <form action={cobrar}>
           <DialogBody className="flex flex-col gap-3">
             <input type="hidden" name="cobro" value={payload} />
+
+            {/*
+              Lo que debe, en grande, antes de teclear nada (27/11). Estaba en
+              la línea de debajo del título, en 14 px y entre puntos; es la
+              cifra contra la que se comprueba lo que se va a apuntar.
+            */}
+            <div
+              className={cn(
+                "flex flex-wrap items-end justify-between gap-2 rounded-xl border border-l-4 p-4",
+                documento.dias_vencido > 0
+                  ? "border-[var(--danger)] bg-[var(--danger-bg)]"
+                  : "border-[var(--border)] border-l-[var(--warn)] bg-[var(--surface-2)]",
+              )}
+            >
+              <div className="min-w-0">
+                <p className="etiqueta-dato">Debe</p>
+                <Moneda
+                  valor={esPen ? saldoPen : documento.saldo}
+                  moneda={esPen ? "PEN" : "USD"}
+                  className="whitespace-normal text-3xl font-extrabold text-[var(--titulo)]"
+                />
+              </div>
+              <p
+                className={cn(
+                  "text-base font-bold",
+                  documento.dias_vencido > 0 ? "text-[var(--danger)]" : "text-[var(--fg-muted)]",
+                )}
+              >
+                {documento.dias_vencido > 0
+                  ? `Vencida hace ${documento.dias_vencido} ${documento.dias_vencido === 1 ? "día" : "días"}`
+                  : "Todavía en plazo"}
+              </p>
+            </div>
 
             {/* La retención, lo primero: decide qué significa el importe. */}
             {pendienteRet > 0 ? (

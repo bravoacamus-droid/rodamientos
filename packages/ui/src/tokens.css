@@ -535,6 +535,23 @@
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
+  /* Una lista dentro de la tarjeta (20/11): la tira azul de la cabecera
+     llegaba al borde con esquinas cuadradas, encima de la tarjeta redonda, y
+     el supervisor de Luis lo veía «feo». `clip` y no `hidden`: no crea un
+     contenedor de scroll, así que lo `sticky` de dentro sigue pegándose. Los
+     menús de fila no se cortan porque Radix los saca a un portal.
+
+     Solo cuando la tabla va en el PRIMER hijo, que es cuando su cabecera toca
+     las esquinas. Con `:has(.cabecera-tabla)` a secas se recortaba también lo
+     que no va en portal y vive dentro de la misma tarjeta: el «Cliente» de los
+     filtros de pedidos, guías, facturación y cobranzas (`FiltroCliente`,
+     `absolute`), el buscador de productos de «Qué te vende» del proveedor y el
+     del paso 2 de la nueva cotización, que lleva `overflow-visible` a
+     propósito y perdía contra este selector, más específico. En esas
+     tarjetas la tabla va debajo de los filtros y no llega a las esquinas. */
+  &:has(> :first-child .cabecera-tabla) {
+    overflow: clip;
+  }
 }
 
 /* La cabecera de una tabla de pantalla (19/11), en el `<thead>` o su `<tr>`.
@@ -560,6 +577,31 @@
     text-transform: none;
     letter-spacing: normal;
     border-bottom: 2px solid var(--cabecera-borde);
+  }
+}
+
+/* La fila de una lista (20/11), en el `<tr>`.
+
+   El supervisor de Luis vio la lista de cotizaciones «fea»: diez filas
+   blancas iguales separadas por una raya casi invisible, donde el ojo salta
+   de una a otra al cruzar de «Número» a «Acciones». Una fila sí y otra no en
+   un gris azulado muy suave es lo que deja seguir la línea, y al pasar el
+   ratón la fila se pinta del azul de la cabecera.
+
+   El fondo va en las CELDAS y no en la fila: la columna fija de «Acciones»
+   lleva su propio `bg-[var(--surface)]` para tapar lo que pasa por debajo, y
+   con el fondo en el `<tr>` quedaba blanca en una fila gris. Este selector
+   (0,2,1) le gana a esa clase (0,1,0). */
+@utility fila-lista {
+  & > td {
+    background-color: var(--surface);
+    transition: background-color 120ms;
+  }
+  &:nth-child(even) > td {
+    background-color: var(--surface-2);
+  }
+  &:hover > td {
+    background-color: var(--cabecera-bg);
   }
 }
 
@@ -600,13 +642,23 @@
     height: 1rem;
     flex-shrink: 0;
   }
+  /* La flecha avanza al pasar el ratón (27/11), igual que en los botones
+     de contorno: dice «esto lleva a otro sitio» sin leer nada. */
+  & .lucide-arrow-right {
+    transition: translate 150ms;
+  }
+  &:hover .lucide-arrow-right {
+    translate: 2px 0;
+  }
 }
 
 /* El nombre de un dato en una ficha (`<dt>`): «Compra», «RUC», «Moneda».
    Sin mayúsculas por lo mismo que la cabecera de tabla. */
 @utility etiqueta-dato {
   font-size: 0.875rem;
-  font-weight: 500;
+  /* 600 y no 500 (27/11): el rótulo es lo que dice QUÉ es la cifra de
+     debajo; en gris y fino se perdía al lado de un valor en negrita. */
+  font-weight: 600;
   color: var(--fg-muted);
 }
 
@@ -712,6 +764,13 @@
   --info-bg: rgb(169 212 245 / 0.16);
   --elev-1: 0 1px 0 rgb(255 255 255 / 0.06) inset;
   --elev-2: 0 6px 18px rgb(0 0 0 / 0.18);
+  /* Los botones secundarios (variante `outline` y `boton-fila`) beben de
+     estos tokens desde el 27/11: sobre el azul, vidrio con letra blanca. */
+  --boton-fila-bg: rgb(255 255 255 / 0.12);
+  --boton-fila-bg-hover: rgb(255 255 255 / 0.22);
+  --boton-fila-borde: rgb(255 255 255 / 0.4);
+  --boton-fila-borde-hover: rgb(255 255 255 / 0.7);
+  --boton-fila-fg: #ffffff;
 
   /* El rodamiento de la marca, grande y tenue, en la esquina. */
   &::after {
@@ -1348,10 +1407,45 @@
   .card > header:first-child h2:first-of-type::before {
     content: "";
     flex: none;
-    width: 4px;
-    height: 1.15em;
-    border-radius: 2px;
+    /* 5 px y no 4 (27/11): a 4 px, con la letra subida a 24 px en
+       /accesibilidad, la raya se quedaba en un hilo junto a un título enorme. */
+    width: 5px;
+    height: 1.2em;
+    border-radius: 3px;
     background-image: linear-gradient(180deg, var(--color-brand-500), var(--color-accent-400));
+  }
+
+  /* La tarjeta, con su sombra de serie (27/11).
+
+     65 tarjetas se escriben `card p-4`, sin `elev-1`: eran un rectángulo
+     blanco con un borde de 1 px sobre un fondo casi blanco, y esa es la
+     pantalla «plana» de la que hablaban los supervisores. La sombra va aquí,
+     en `components`, y no dentro de `@utility card`: así cualquier `elev-2`,
+     `hover:elev-2` o `shadow-none` puesto en la tarjeta sigue mandando. */
+  .card {
+    box-shadow: var(--elev-1);
+  }
+}
+
+/* EL TÍTULO DE UNA TARJETA NO ES UNA ETIQUETA (27/11).
+
+   Medido en los módulos: de los primeros `h2` de tarjeta, la mayoría van en
+   `text-sm font-semibold` —«La empresa», «Dirección», «Lo que se le ha
+   vendido»—, del mismo tamaño que los datos que encabezan. Sin diferencia de
+   tamaño no hay jerarquía: la ficha se lee como un solo bloque de texto.
+
+   Se sube aquí, para todas a la vez, y SOLO las que estaban en `text-sm` o
+   `text-base`: un título puesto a propósito en `text-xl` no se toca. Va fuera
+   de capas porque tiene que ganarle a la utilidad `text-sm` del propio `h2`,
+   que vive en `@layer utilities`. Solo cambia tamaño y peso; `hidden`,
+   `sr-only` y los colores puestos a mano siguen valiendo. */
+@media screen {
+  .card > h2:first-child:is(.text-sm, .text-base),
+  .card > header:first-child h2:first-of-type:is(.text-sm, .text-base) {
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -1360,4 +1454,154 @@
   .card > header:first-child h2:first-of-type::before {
     display: none;
   }
+  .card {
+    box-shadow: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. Accesibilidad elegida por el usuario (27/11)
+   --------------------------------------------------------------------------
+   La pantalla /accesibilidad escribe una cookie y el layout raíz la pone en
+   el <html> como atributos (apps/web/src/lib/accesibilidad.ts). Aquí está lo
+   que hace cada uno.
+
+   Todo va SIN capa a propósito, para ganar a las utilidades: quien elige
+   contraste alto lo elige por encima de lo que diga cada pantalla. */
+
+/* Letra. Toda la interfaz está en rem —texto, alturas de control, espacios—
+   así que cambiar la base escala el conjunto sin descuadrar nada, igual que
+   el 106,25 % de siempre (ver `html` más arriba). Normal = 17 px. */
+@media screen {
+  html[data-letra="grande"] {
+    font-size: 118.75%; /* 19 px */
+  }
+  html[data-letra="muy-grande"] {
+    font-size: 131.25%; /* 21 px */
+  }
+  html[data-letra="enorme"] {
+    font-size: 150%; /* 24 px */
+  }
+}
+
+/* Contraste alto, tema claro. Lo gris pasa a negro, los bordes se ven, los
+   colores de estado se oscurecen hasta 7:1 y se quitan las sombras, que con
+   bordes firmes solo emborronan. El fondo pasa a blanco: el azulado de
+   siempre resta contraste a cada tarjeta. */
+:root[data-contraste="alto"]:not(.dark):not([data-theme="dark"]) {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f3f6f9;
+  --surface-3: #e9eef3;
+  --border: #4a5562;
+  --border-soft: #7b8794;
+  --border-strong: #14181d;
+  --campo-bg: #ffffff;
+  --campo-borde: #0b3450;
+  --seccion-bg: #ffffff;
+  --seccion-borde: #4a5562;
+  --titulo: #061c2c;
+  --cabecera-bg: #dde9f4;
+  --cabecera-fg: #061c2c;
+  --cabecera-borde: #0b3450;
+  --boton-fila-bg: #ffffff;
+  --boton-fila-borde: #0e4c73;
+  --boton-fila-fg: #0a2b41;
+  --fg: #000000;
+  --fg-muted: #1f262e;
+  --fg-subtle: #2b333c;
+  --ring: #000000;
+  --ok: #05543a;
+  --ok-bg: #ffffff;
+  --warn: #5e4000;
+  --warn-bg: #ffffff;
+  --danger: #8f1a22;
+  --danger-bg: #ffffff;
+  --info: #0f4470;
+  --info-bg: #ffffff;
+  --elev-1: none;
+  --elev-2: none;
+  --elev-3: 0 0 0 2px #000000;
+}
+
+/* Contraste alto, tema oscuro: negro de verdad y letra blanca. */
+:root.dark[data-contraste="alto"],
+:root[data-theme="dark"][data-contraste="alto"] {
+  --bg: #000000;
+  --surface: #000000;
+  --surface-2: #0d1117;
+  --surface-3: #161b22;
+  --border: #9aabbd;
+  --border-soft: #6b7c8e;
+  --border-strong: #ffffff;
+  --campo-bg: #000000;
+  --campo-borde: #cfe3f4;
+  --seccion-bg: #000000;
+  --seccion-borde: #9aabbd;
+  --titulo: #ffffff;
+  --cabecera-bg: #0d1117;
+  --cabecera-fg: #ffffff;
+  --cabecera-borde: #cfe3f4;
+  --boton-fila-bg: #000000;
+  --boton-fila-borde: #cfe3f4;
+  --boton-fila-fg: #ffffff;
+  --fg: #ffffff;
+  --fg-muted: #e6edf3;
+  --fg-subtle: #d0d9e2;
+  --ring: #ffd23f;
+  --ok: #6ff0b4;
+  --ok-bg: #000000;
+  --warn: #ffd166;
+  --warn-bg: #000000;
+  --danger: #ff9ca1;
+  --danger-bg: #000000;
+  --info: #9fd3ff;
+  --info-bg: #000000;
+  --elev-1: none;
+  --elev-2: none;
+  --elev-3: 0 0 0 2px #ffffff;
+}
+
+@media screen {
+  /* El azul de marca, liso: los brillos dorados y azules del degradado
+     pasan por detrás de la letra blanca y le quitan contraste. */
+  html[data-contraste="alto"] .fondo-marca {
+    background: var(--color-brand-900);
+  }
+  /* El foco, que no se pierda: más grueso y más separado. */
+  html[data-contraste="alto"] :focus-visible {
+    outline-width: 3px;
+    outline-offset: 3px;
+  }
+  /* Los enlaces de texto se subrayan: sin color que los distinga, el
+     subrayado es lo único que dice que se pueden pulsar. */
+  html[data-contraste="alto"] main a:not([class*="h-control"]):not(.card):not(.boton-fila):not([role]) {
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+  }
+  /* Las cards se separan del fondo con el borde, ahora que el fondo es
+     del mismo blanco que ellas. Tres lados y no el atajo `border-width`:
+     el izquierdo es el filo de color de las tarjetas de cifras y de las
+     pendientes (4 y 6 px), y es lo único que distingue URGENTE de POR
+     HACER cuando los fondos de estado pasan a blanco. */
+  html[data-contraste="alto"] .card {
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+  }
+  html[data-contraste="alto"] .card:not([class*="border-l-"]) {
+    border-left-width: 2px;
+  }
+}
+
+/* Sin movimiento, elegido a mano. Lo mismo que hace
+   `prefers-reduced-motion` más arriba, pero sin tener que encontrarlo en
+   la configuración de Windows. */
+html[data-movimiento="reducido"] *,
+html[data-movimiento="reducido"] *::before,
+html[data-movimiento="reducido"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

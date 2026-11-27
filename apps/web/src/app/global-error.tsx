@@ -40,6 +40,9 @@ function esVersionVieja(error: Error): boolean {
   );
 }
 
+// Colores de la marca (27/11), escritos a mano porque aquí no llegan los
+// tokens: el fondo azulado del ERP, los títulos en el azul del logo y el botón
+// en su azul de enlace. Antes era el azul cielo genérico de Tailwind.
 export default function GlobalError({
   error,
   reset,
@@ -67,8 +70,8 @@ export default function GlobalError({
             display: "grid",
             placeItems: "center",
             fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-            background: "#f8fafc",
-            color: "#0f172a",
+            background: "#eef2f7",
+            color: "#0b3450",
           }}
         >
           <main style={{ maxWidth: 480, padding: 24, textAlign: "center" }}>
@@ -86,9 +89,9 @@ export default function GlobalError({
               style={{
                 padding: "12px 22px",
                 fontSize: 16,
-                borderRadius: 6,
+                borderRadius: 8, fontWeight: 600,
                 border: "none",
-                background: "#0369a1",
+                background: "#0e4c73",
                 color: "white",
                 cursor: "pointer",
               }}
@@ -110,8 +113,8 @@ export default function GlobalError({
           display: "grid",
           placeItems: "center",
           fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-          background: "#f8fafc",
-          color: "#0f172a",
+          background: "#eef2f7",
+          color: "#0b3450",
         }}
       >
         <main style={{ maxWidth: 460, padding: 24, textAlign: "center" }}>
@@ -130,9 +133,9 @@ export default function GlobalError({
             style={{
               padding: "10px 18px",
               fontSize: 15,
-              borderRadius: 6,
+              borderRadius: 8, fontWeight: 600,
               border: "none",
-              background: "#0369a1",
+              background: "#0e4c73",
               color: "white",
               cursor: "pointer",
             }}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, TriangleAlert } from "lucide-react";
+import { Check, Pencil, TriangleAlert, Truck } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -14,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  buttonVariants,
+  cn,
 } from "@rodatech/ui";
 
 import { emitirGuia } from "../acciones/emitir";
@@ -86,7 +88,10 @@ export function EmitirGuia({ guia }: { guia: GuiaDetalle }) {
         if (!v) setError(null);
       }}
     >
-      <DialogTrigger className="inline-flex h-9 items-center rounded-md bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700">
+      {/* La acción principal de un borrador (27/11): sólida, con icono y en
+          negrita, del mismo alto que los demás botones de la ficha. */}
+      <DialogTrigger className={cn(buttonVariants(), "text-base font-bold")}>
+        <Truck aria-hidden="true" />
         Emitir y despachar
       </DialogTrigger>
       <DialogContent className="max-w-lg">

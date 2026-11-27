@@ -36,6 +36,7 @@ import { DialogoAgencia } from "./dialogo-agencia";
 import { TransportePropio } from "./transporte-propio";
 import { sinEnvioConEnter } from "@/lib/formularios";
 import { useBorrador } from "@/componentes/borrador";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * Preparación de una guía de remisión.
@@ -287,13 +288,15 @@ export function ConstructorGuia({
       {edicion ? (
         <input type="hidden" name="edicion" value={JSON.stringify(aPayloadEdicion(edicion.guiaId, estado))} />
       ) : null}
-
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
+      {/* La cabecera de marca, como la factura que se emite (27/11). */}
+      <PanelModulo ruta="/guias">
+      <header className="relative flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             {edicion ? `Editar guía ${edicion.numero}` : "Preparar guía de remisión"}
           </h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <span className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-3 max-w-2xl text-lg text-white">
             {edicion
               ? "Sigue siendo un borrador: la mercadería no ha salido del almacén."
               : "Se guarda como borrador. El stock sale al emitirla, no ahora."}
@@ -316,6 +319,7 @@ export function ConstructorGuia({
           </Button>
         </div>
       </header>
+      </PanelModulo>
 
       {avisoBorrador}
 

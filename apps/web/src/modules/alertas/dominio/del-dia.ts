@@ -16,6 +16,8 @@ export interface FilaDelDia {
   cuantas: number;
   /** «4 pedidos sin guía». */
   texto: string;
+  /** La misma frase sin la cifra, «pedidos sin guía»: el tablero pinta la cifra aparte y grande. */
+  frase: string;
   /** A dónde lleva «Ver». */
   enlace: string;
 }
@@ -56,6 +58,7 @@ export function resumirDelDia(alertas: readonly { tipo: string; valor: number | 
         tipo,
         cuantas: n,
         texto: `${n} ${n === 1 ? frase[0] : frase[1]}`,
+        frase: n === 1 ? frase[0] : frase[1],
         enlace: tipo === "cotizaciones_sin_cerrar" ? "/cotizaciones?estado=enviada" : `/alertas?tipo=${tipo}`,
       },
     ];

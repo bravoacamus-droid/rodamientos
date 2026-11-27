@@ -3,7 +3,23 @@ import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, Button, EstadoBadge, EstadoError, Moneda } from "@rodatech/ui";
-import { Pencil, RotateCcw, Scale } from "lucide-react";
+import {
+  ArrowRight,
+  Ban,
+  ClipboardPen,
+  Info,
+  ListChecks,
+  PackageCheck,
+  PackageOpen,
+  Pencil,
+  Percent,
+  Receipt,
+  RotateCcw,
+  Scale,
+  UserRound,
+  Wallet,
+  Warehouse,
+} from "lucide-react";
 import { BotonDescargarPdf } from "@/componentes/boton-pdf";
 import { nombreArchivo } from "@/lib/pdf-hoja";
 import { misPermisos } from "@/lib/permisos";
@@ -18,7 +34,17 @@ import { DocumentosCompra } from "./documentos";
 import { GastosFicha } from "./gastos-ficha";
 import { ParaQuienEs } from "./para-quien";
 import { ETIQUETA_MODALIDAD, costeoEstimado } from "../dominio/gastos";
-import { Volver } from "@/componentes/volver";
+import {
+  AvisoFicha,
+  BloqueFicha,
+  CabeceraFicha,
+  CifraFicha,
+  DatoFicha,
+  DatosFicha,
+  PasosFicha,
+  VacioFicha,
+  type EstadoPaso,
+} from "./ficha";
 import { emisorParaImprimir } from "@/lib/emisor";
 import { VistaPreviaDocumento } from "@/modules/cotizaciones/ui/detalle/vista-previa";
 import { DocumentoOrdenCompra } from "./documento-orden";
@@ -118,46 +144,97 @@ export default async function PaginaDetalleCompra({
   const tieneFactura = !c.falta_factura;
   const porRecibir = c.estado !== "anulada" && falta.length > 0;
 
+  const porcentajeRecibido = pedido > 0 ? Math.round((recibido / pedido) * 100) : 0;
+
+  /*
+    El paso del flujo (27/11). La compra tiene tres momentos y la ficha los
+    decía en tres sitios distintos —el estado, un aviso ámbar y la tarjeta de
+    «Recibido»—. Ahora se leen juntos y en orden, arriba.
+  */
+  const pasos: { nombre: string; estado: EstadoPaso }[] = [
+    { nombre: "Orden pedida", estado: "hecho" },
+    { nombre: "Compra registrada", estado: c.falta_factura ? "ahora" : "hecho" },
+    {
+      nombre: recibido > 0 && recibido < pedido ? "Mercadería recibida (en parte)" : "Mercadería recibida",
+      estado: c.falta_factura ? "falta" : falta.length === 0 ? "hecho" : "ahora",
+    },
+  ];
+
   return (
     <>
     <div className="flex flex-col gap-5 print:hidden">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Volver href="/compras">Volver a órdenes de compra</Volver>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
-              {c.numero}
-            </h1>
-            <EstadoBadge estado={c.estado} size="md" />
-            {/* Con su vía desde la 095. Las importaciones de antes no la
-                guardaban y siguen diciendo «Importación» a secas: es lo que se
-                sabe de ellas, y no se inventa. */}
-            {c.tipo === "importacion" ? (
-              <Badge tone="neutral">
-                {c.via_importacion
-                  ? ETIQUETA_MODALIDAD[c.via_importacion]
-                  : "Importación"}
-              </Badge>
-            ) : null}
-          </div>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            {c.proveedor ?? "—"}
-            {c.proveedor_documento ? ` · ${c.proveedor_documento}` : ""}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+      <CabeceraFicha
+        ruta="/compras"
+        volver={{ href: "/compras", texto: "Volver a órdenes de compra" }}
+        tipo={c.tipo === "importacion" ? "Orden de compra · importación" : "Orden de compra"}
+        numero={c.numero}
+        estado={<EstadoBadge estado={c.estado} size="md" />}
+        etiquetas={
+          /* Con su vía desde la 095. Las importaciones de antes no la
+             guardaban y siguen diciendo «Importación» a secas: es lo que se
+             sabe de ellas, y no se inventa. */
+          c.tipo === "importacion" ? (
+            <Badge tone="neutral" className="px-3 py-1 text-base">
+              {c.via_importacion
+                ? ETIQUETA_MODALIDAD[c.via_importacion]
+                : "Importación"}
+            </Badge>
+          ) : null
+        }
+        quien={{
+          rotulo: "Proveedor",
+          nombre: c.proveedor ?? "—",
+          detalle: c.proveedor_documento ? `RUC ${c.proveedor_documento}` : undefined,
+        }}
+        cifra={{
+          rotulo: "Total de la orden",
+          valor: <Moneda valor={c.total} moneda={c.moneda} />,
+          // En soles, también lo que es en dólares para el sistema (06/11).
+          pie:
+            c.moneda === "PEN" && c.tipo_cambio
+              ? `US$ ${enDolares(c.total, c.tipo_cambio).toFixed(2)} al T.C. ${c.tipo_cambio.toFixed(3)}`
+              : c.moneda === "PEN"
+                ? "sin tipo de cambio"
+                : c.igv > 0
+                  ? "con IGV"
+                  : "no afecto a IGV",
+        }}
+        acciones={
+          <>
+          {/* La acción que toca va primero y en dorado: sobre el azul, el
+              botón azul de siempre no se distinguía del fondo (27/11). */}
+          {c.falta_factura && c.estado === "registrada" ? (
+            <Button asChild variant="accent" size="lg">
+              <Link href={`/compras/${c.id}/factura`}>
+                Registrar compra
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          ) : null}
+          {porRecibir && tieneFactura ? (
+            <Button asChild variant="accent" size="lg">
+              <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                <PackageCheck aria-hidden="true" />
+                Recibir mercadería
+              </Link>
+            </Button>
+          ) : porRecibir ? (
+            <BotonBloqueado
+              mensaje="Antes de recibir la mercadería, regístrala con «Registrar compra». El número de factura es opcional."
+            >
+              Recibir mercadería
+            </BotonBloqueado>
+          ) : null}
           {/* Editar la orden mientras nadie la usó (180): sin factura del
               proveedor y sin recepción. Willy, 02/11: «cada orden de compra
               es como una cotización». */}
           {editableOrden ? (
-            <Link
-              href={`/compras/${c.id}/editar`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border-strong)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-            >
-              <Pencil className="size-4" aria-hidden />
-              Editar orden
-            </Link>
+            <Button asChild variant="outline">
+              <Link href={`/compras/${c.id}/editar`}>
+                <Pencil aria-hidden />
+                Editar orden
+              </Link>
+            </Button>
           ) : null}
           {/* La orden en papel, para mandársela al proveedor (12/10), y en
               PDF directo (02/11), como la cotización y la factura. */}
@@ -172,21 +249,6 @@ export default async function PaginaDetalleCompra({
               <BotonDescargarPdf hoja={hojaDeOrdenCompra(c, emisor)} nombre={archivo} variante="outline" />
             </>
           ) : null}
-          {porRecibir && tieneFactura ? (
-            <Link
-              href={`/recepciones/nueva?compra=${c.id}`}
-              className="inline-flex h-9 items-center rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
-            >
-              Recibir mercadería
-            </Link>
-          ) : porRecibir ? (
-            <BotonBloqueado
-              mensaje="Antes de recibir la mercadería, regístrala con «Registrar compra». El número de factura es opcional."
-              className="h-9 md:h-9"
-            >
-              Recibir mercadería
-            </BotonBloqueado>
-          ) : null}
           {/*
             «Volver a comprar» (§AO.5). Willy, 24/09: «se me acabó el stock y
             quiero comprar lo mismo una segunda vez… pero no sé a quién le he
@@ -199,130 +261,164 @@ export default async function PaginaDetalleCompra({
             que se quiera volver a pedir lo mismo.
           */}
           {puedeComprar ? (
-            <Link
-              href={`/compras/nueva?desde=${c.id}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-            >
-              <RotateCcw className="size-4" aria-hidden />
-              Volver a comprar
-            </Link>
+            <Button asChild variant="outline">
+              <Link href={`/compras/nueva?desde=${c.id}`}>
+                <RotateCcw aria-hidden />
+                Volver a comprar
+              </Link>
+            </Button>
           ) : null}
           {c.estado === "anulada" ? null : puedeAnular ? (
             <AnularCompra id={c.id} numero={c.numero} recibida={recibido > 0} />
           ) : (
-            <BotonBloqueado mensaje={avisoSinPermiso("compras", "eliminar", permisos.nombreRol)} className="h-9 md:h-9">
+            <BotonBloqueado mensaje={avisoSinPermiso("compras", "eliminar", permisos.nombreRol)}>
               Anular
             </BotonBloqueado>
           )}
-        </div>
-      </header>
+          </>
+        }
+      >
+        {c.estado !== "anulada" ? <PasosFicha pasos={pasos} /> : null}
+      </CabeceraFicha>
 
-      {/*
-        Para quién es (Luis, 09/10: *«enlazado al cliente y la cotización»*).
-        Antes solo lo decían las observaciones, en gris y al final.
-      */}
       {/* La orden del pedido todavía sin la factura del proveedor (128). */}
       {c.falta_factura && c.estado === "registrada" ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
-          <div>
-            <p className="text-base font-semibold">Orden pedida: falta registrar la compra</p>
-            <p className="text-sm">
-              Cuando la compres, regístrala: cómo llegó y lo que cobró. El número de factura, la guía y el PDF son
-              opcionales; registrada, ya se puede recibir.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href={`/compras/${c.id}/factura`}>Registrar compra</Link>
-          </Button>
-        </div>
+        <AvisoFicha
+          icono={<ClipboardPen />}
+          titulo="Orden pedida: falta registrar la compra"
+          accion={
+            <Button asChild size="lg">
+              <Link href={`/compras/${c.id}/factura`}>
+                Registrar compra
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          }
+        >
+          Cuando la compres, regístrala: cómo llegó y lo que cobró. El número de factura, la guía y el PDF son
+          opcionales; registrada, ya se puede recibir.
+        </AvisoFicha>
       ) : null}
 
       {/* Comprada y sin recibir (04/11): la compra 005 se registró y nadie
           la recibió, así que el stock no se enteró y otra cotización pidió
           comprarla otra vez. Que se vea, con el botón. */}
       {!c.falta_factura && porRecibir && tieneFactura && recibido === 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-[var(--warn)] bg-[var(--warn-bg)] px-4 py-3">
-          <div>
-            <p className="text-base font-semibold">Comprada, falta recibir la mercadería</p>
-            <p className="text-sm">
-              Hasta que la recibas no entra al almacén: el stock sigue sin contarla y las cotizaciones piden
-              comprarla otra vez.
-            </p>
-          </div>
-          <Button asChild>
-            <Link href={`/recepciones/nueva?compra=${c.id}`}>Recibir mercadería</Link>
-          </Button>
-        </div>
+        <AvisoFicha
+          icono={<PackageOpen />}
+          titulo="Comprada, falta recibir la mercadería"
+          accion={
+            <Button asChild size="lg">
+              <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                <PackageCheck aria-hidden="true" />
+                Recibir mercadería
+              </Link>
+            </Button>
+          }
+        >
+          Hasta que la recibas no entra al almacén: el stock sigue sin contarla y las cotizaciones piden
+          comprarla otra vez.
+        </AvisoFicha>
       ) : null}
 
+      {/*
+        Para quién es (Luis, 09/10: *«enlazado al cliente y la cotización»*).
+        Antes solo lo decían las observaciones, en gris y al final.
+      */}
       {c.para ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-800 dark:bg-brand-950">
-          <p className="text-base">
-            Para el pedido <strong>{c.pedido?.numero ?? c.para.numero}</strong> de <strong>{c.para.cliente}</strong>
-            {c.pedido ? <span className="text-sm text-[var(--fg-muted)]"> (cotización {c.para.numero})</span> : null}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {c.pedido ? (
+        <AvisoFicha
+          tono="sale"
+          icono={<UserRound />}
+          titulo={`Para el pedido ${c.pedido?.numero ?? c.para.numero} de ${c.para.cliente}`}
+          accion={
+            <>
+              {c.pedido ? (
+                <Button asChild variant="outline">
+                  <Link href={`/pedidos/${c.pedido.id}`}>
+                    Ver el pedido
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              ) : null}
               <Button asChild variant="outline">
-                <Link href={`/pedidos/${c.pedido.id}`}>Ver el pedido</Link>
+                <Link href={`/cotizaciones/${c.para.cotizacionId}`}>
+                  Ver la cotización
+                  <ArrowRight aria-hidden="true" />
+                </Link>
               </Button>
-            ) : null}
-            <Button asChild variant="outline">
-              <Link href={`/cotizaciones/${c.para.cotizacionId}`}>Ver la cotización</Link>
-            </Button>
-          </div>
-        </div>
+            </>
+          }
+        >
+          {c.pedido ? <span className="text-[var(--fg-muted)]">Cotización {c.para.numero}</span> : null}
+        </AvisoFicha>
       ) : null}
 
       {/* Solo el motivo: `compras` no guarda quién anuló ni cuándo (no tiene
           `anulada_por` ni `anulada_en`, a diferencia de guías y facturas).
           Lo apunta la bitácora, y se lee al pie en «Quién lo hizo y cuándo». */}
       {c.estado === "anulada" && c.motivo_anulacion ? (
-        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
-          <strong>Anulada.</strong> Motivo: {c.motivo_anulacion}
-        </p>
+        <AvisoFicha tono="urgente" icono={<Ban />} titulo="Esta orden está anulada">
+          Motivo: {c.motivo_anulacion}
+        </AvisoFicha>
       ) : null}
 
       {/* --------------------------------------------------------- Cifras */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Subtotal" valor={<Moneda valor={c.subtotal} moneda={c.moneda} />} />
-        <Tarjeta
-          etiqueta="IGV"
-          valor={<Moneda valor={c.igv} moneda={c.moneda} enfasis="suave" />}
-          pie={c.igv === 0 ? "no afecto" : undefined}
-        />
-        {/* En soles, también lo que es en dólares para el sistema (06/11). */}
-        <Tarjeta
-          etiqueta="Total"
-          valor={<Moneda valor={c.total} moneda={c.moneda} />}
-          pie={
-            c.moneda === "PEN" && c.tipo_cambio
-              ? `US$ ${enDolares(c.total, c.tipo_cambio).toFixed(2)} al T.C. ${c.tipo_cambio.toFixed(3)}`
-              : c.moneda === "PEN"
-                ? "sin tipo de cambio"
-                : undefined
-          }
-        />
-        <Tarjeta
-          etiqueta="Recibido"
-          valor={`${pedido > 0 ? Math.round((recibido / pedido) * 100) : 0}%`}
-          pie={`${recibido} de ${pedido}`}
-          tono={
-            c.estado === "anulada"
-              ? undefined
-              : recibido >= pedido
-                ? "ok"
-                : recibido > 0
-                  ? "aviso"
+      {/* El total ya es el héroe de la cabecera; aquí van su desglose y lo
+          recibido, con el filo que dice qué significa cada cifra (27/11). */}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
+          <CifraFicha
+            etiqueta="Subtotal"
+            valor={<Moneda valor={c.subtotal} moneda={c.moneda} />}
+            pie="sin IGV"
+            tono="sale"
+            icono={<Receipt />}
+          />
+          <CifraFicha
+            etiqueta="IGV"
+            valor={<Moneda valor={c.igv} moneda={c.moneda} />}
+            pie={c.igv === 0 ? "no afecto" : "18 %"}
+            tono="sale"
+            icono={<Percent />}
+          />
+          <CifraFicha
+            etiqueta="Total"
+            valor={<Moneda valor={c.total} moneda={c.moneda} />}
+            pie={
+              c.moneda === "PEN" && c.tipo_cambio
+                ? `US$ ${enDolares(c.total, c.tipo_cambio).toFixed(2)} al T.C. ${c.tipo_cambio.toFixed(3)}`
+                : c.moneda === "PEN"
+                  ? "sin tipo de cambio"
                   : undefined
-          }
-        />
+            }
+            tono="sale"
+            icono={<Wallet />}
+          />
+          <CifraFicha
+            etiqueta="Recibido"
+            valor={`${porcentajeRecibido} %`}
+            pie={`${recibido} de ${pedido} ${pedido === 1 ? "unidad" : "unidades"}`}
+            tono={
+              c.estado === "anulada"
+                ? "marca"
+                : recibido >= pedido
+                  ? "entra"
+                  : "porHacer"
+            }
+            icono={<PackageCheck />}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
-        <section className="card @container p-4">
-          <h2 className="mb-3 text-sm font-semibold">Qué se pidió</h2>
+        <BloqueFicha
+          icono={<ListChecks />}
+          titulo="Qué se pidió"
+          ayuda={`${c.lineas.length} ${c.lineas.length === 1 ? "producto" : "productos"} · ${pedido} ${
+            pedido === 1 ? "unidad" : "unidades"
+          }`}
+        >
           {/*
             EN MÓVIL, TARJETAS. Medido a 390 px: esta pantalla se salía —el
             `main` pedía 588— y la tabla, 539.
@@ -342,18 +438,23 @@ export default async function PaginaDetalleCompra({
             {c.lineas.map((l) => {
               const completa = l.cantidad_recibida >= l.cantidad;
               return (
-                <div key={l.id} className="rounded-lg border border-[var(--border)] p-3">
+                <div
+                  key={l.id}
+                  className={`rounded-lg border border-l-4 border-[var(--border)] bg-[var(--surface-2)] p-3 ${
+                    completa ? "border-l-[var(--ok)]" : "border-l-[var(--warn)]"
+                  }`}
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <Link
                       href={`/productos/${l.producto_id}`}
-                      className="font-mono text-sm font-medium text-brand-600 hover:underline"
+                      className="font-mono text-base font-bold text-brand-600 hover:underline dark:text-brand-300"
                     >
                       {l.codigo}
                     </Link>
-                    <Moneda valor={l.importe} moneda={c.moneda} />
+                    <Moneda valor={l.importe} moneda={c.moneda} tamano="lg" enfasis="fuerte" />
                   </div>
 
-                  <p className="mt-1 text-sm">{l.descripcion}</p>
+                  <p className="mt-1 text-base">{l.descripcion}</p>
                   {l.marca ? (
                     <p className="text-sm text-[var(--fg-subtle)]">{l.marca}</p>
                   ) : null}
@@ -365,11 +466,13 @@ export default async function PaginaDetalleCompra({
                     </span>
                     <span className="text-[var(--fg-muted)]"> · llegaron </span>
                     <span
-                      className={`tabular font-medium ${
+                      className={`tabular font-semibold ${
                         completa ? "text-[var(--ok)]" : "text-[var(--warn)]"
                       }`}
                     >
                       {l.cantidad_recibida}
+                      {/* Con palabra además del color (27/11). */}
+                      {completa ? " · completo" : " · falta"}
                     </span>
                   </p>
                   <p className="mt-1 flex flex-wrap justify-between gap-x-3 text-sm">
@@ -406,7 +509,7 @@ export default async function PaginaDetalleCompra({
           </div>
 
           <div className="hidden scroll-x @3xl:block">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="cabecera-tabla">
                   <th className="py-2 pr-3 font-medium">Código</th>
@@ -439,20 +542,21 @@ export default async function PaginaDetalleCompra({
                           {l.marca}
                         </span>
                       </td>
-                      <td className="max-w-xs py-2 pr-3">
-                        <span className="block truncate" title={l.descripcion}>
-                          {l.descripcion}
-                        </span>
+                      <td className="min-w-[12rem] max-w-sm py-2 pr-3">
+                        {/* Entera, no cortada con «…» (27/11): la descripción
+                            es lo que dice qué rodamiento es. */}
+                        <span className="block break-words">{l.descripcion}</span>
                       </td>
                       <td className="py-2 pr-3 text-right tabular">
                         {l.cantidad} <span className="text-sm text-[var(--fg-subtle)]">{unidadLegible(l.unidad)}</span>
                       </td>
                       <td
-                        className={`py-2 pr-3 text-right tabular ${
+                        className={`py-2 pr-3 text-right tabular font-semibold ${
                           completa ? "text-[var(--ok)]" : "text-[var(--warn)]"
                         }`}
                       >
                         {l.cantidad_recibida}
+                        {completa ? null : <span className="block text-sm font-medium">falta {l.cantidad - l.cantidad_recibida}</span>}
                       </td>
                       {mostrarPeso ? (
                         <td className="py-2 pr-3 text-right tabular">
@@ -480,7 +584,7 @@ export default async function PaginaDetalleCompra({
               </tbody>
             </table>
           </div>
-        </section>
+        </BloqueFicha>
 
         {/* ------------------------------------------------------- Datos */}
         <div className="flex flex-col gap-4">
@@ -497,29 +601,28 @@ export default async function PaginaDetalleCompra({
             />
           ) : null}
 
-          <section className="card p-4">
-            <h2 className="mb-3 text-sm font-semibold">Datos</h2>
-            <dl className="flex flex-col gap-2 text-sm">
-              <Dato etiqueta="Fecha de la factura" valor={c.fecha} />
-              <Dato etiqueta="Llega el" valor={c.fecha_estimada ?? "—"} />
-              <Dato etiqueta="Pago" valor={textoCondicionPago(c) ?? "—"} />
-              <Dato etiqueta="Entrega" valor={textoEntrega(c, emisor) ?? "—"} />
-              <Dato etiqueta="Factura" valor={c.documento_proveedor ?? "—"} />
-              <Dato etiqueta="Guía" valor={c.guia_proveedor ?? "—"} />
+          <BloqueFicha icono={<Info />} titulo="Datos de la orden">
+            <DatosFicha>
+              <DatoFicha etiqueta="Fecha de la factura" valor={c.fecha} />
+              <DatoFicha etiqueta="Llega el" valor={c.fecha_estimada ?? "—"} />
+              <DatoFicha etiqueta="Pago" valor={textoCondicionPago(c) ?? "—"} />
+              <DatoFicha etiqueta="Entrega" valor={textoEntrega(c, emisor) ?? "—"} />
+              <DatoFicha etiqueta="Factura" valor={c.documento_proveedor ?? "—"} />
+              <DatoFicha etiqueta="Guía" valor={c.guia_proveedor ?? "—"} />
               {c.tipo === "importacion" ? (
                 <>
-                  <Dato
+                  <DatoFicha
                     etiqueta={c.via_importacion === "maritima" ? "Naviera o agente" : "Courier"}
                     valor={c.courier ?? "—"}
                   />
-                  <Dato
+                  <DatoFicha
                     etiqueta={c.via_importacion === "maritima" ? "N.° de BL o contenedor" : "Tracking o guía aérea"}
                     valor={c.tracking ?? "—"}
                   />
                 </>
               ) : null}
-              <Dato etiqueta="Registró" valor={c.comprador ?? "—"} />
-            </dl>
+              <DatoFicha etiqueta="Registró" valor={c.comprador ?? "—"} />
+            </DatosFicha>
 
             {/*
               LOS GASTOS, DESGLOSADOS, en las tres modalidades (095).
@@ -582,11 +685,11 @@ export default async function PaginaDetalleCompra({
             ) : null}
 
             {c.observaciones && !c.consulta ? (
-              <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
+              <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-base text-[var(--fg-muted)]">
                 {c.observaciones}
               </p>
             ) : null}
-          </section>
+          </BloqueFicha>
 
           {/* La proforma confirmada, en PDF (099, §AQ), y la factura, que
               hace falta para recibir (182). */}
@@ -598,29 +701,51 @@ export default async function PaginaDetalleCompra({
           />
           </div>
 
-          <section className="card p-4">
-            <h2 className="mb-1 text-sm font-semibold">Recepciones</h2>
+          <BloqueFicha
+            icono={<Warehouse />}
+            tono={c.recepciones.length > 0 ? "entra" : "marca"}
+            titulo="Recepciones"
+          >
             {c.recepciones.length === 0 ? (
-              <p className="text-sm text-[var(--fg-muted)]">
-                Todavía no ha llegado nada de esta compra. El stock se mueve al
-                recibir, no al comprar.
-              </p>
+              <VacioFicha
+                icono={<PackageOpen />}
+                titulo="Todavía no ha llegado nada"
+                accion={
+                  porRecibir && tieneFactura ? (
+                    <Button asChild>
+                      <Link href={`/recepciones/nueva?compra=${c.id}`}>
+                        <PackageCheck aria-hidden="true" />
+                        Recibir mercadería
+                      </Link>
+                    </Button>
+                  ) : null
+                }
+              >
+                El stock se mueve al recibir, no al comprar.
+              </VacioFicha>
             ) : (
-              <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
+              <ul className="flex flex-col gap-2">
                 {c.recepciones.map((r) => (
-                  <li key={r.id} className="flex items-center justify-between gap-2 py-2">
-                    <Link
-                      href={`/recepciones/${r.id}`}
-                      className="font-mono text-sm font-medium text-brand-600 hover:underline"
-                    >
-                      {r.numero}
-                    </Link>
-                    <span className="tabular text-sm text-[var(--fg-muted)]">{r.fecha}</span>
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-mono text-base font-bold">{r.numero}</span>
+                      <span className="tabular text-sm text-[var(--fg-muted)]">{r.fecha}</span>
+                    </span>
+                    {/* Un botón con palabra y no el número en azul (27/11). */}
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/recepciones/${r.id}`}>
+                        Ver
+                        <ArrowRight aria-hidden="true" />
+                      </Link>
+                    </Button>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </BloqueFicha>
         </div>
       </div>
 
@@ -633,42 +758,5 @@ export default async function PaginaDetalleCompra({
       <DocumentoOrdenCompra c={c} emisor={emisor} />
     </div>
     </>
-  );
-}
-
-function Tarjeta({
-  etiqueta,
-  valor,
-  pie,
-  tono,
-}: {
-  etiqueta: string;
-  valor: React.ReactNode;
-  pie?: string;
-  tono?: "ok" | "aviso" | "malo";
-}) {
-  const color =
-    tono === "malo"
-      ? "text-[var(--danger)]"
-      : tono === "aviso"
-        ? "text-[var(--warn)]"
-        : tono === "ok"
-          ? "text-[var(--ok)]"
-          : "";
-  return (
-    <div className="card p-3">
-      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className={`mt-0.5 truncate text-lg font-semibold tabular ${color}`}>{valor}</p>
-      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
-    </div>
-  );
-}
-
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="w-28 shrink-0 text-[var(--fg-muted)]">{etiqueta}</dt>
-      <dd className="min-w-0 flex-1 break-words">{valor}</dd>
-    </div>
   );
 }

@@ -26,10 +26,14 @@ export function Toaster(props: ToasterProps) {
       closeButton
       toastOptions={{
         classNames: {
-          toast: "!rounded-lg !border !text-sm elev-2",
+          // `text-base` y el título en negrita (27/11): el aviso dice si se
+          // guardó o no, y desaparece solo. Lo que se lee con prisa no puede
+          // ir en la letra más pequeña de la pantalla.
+          toast: "!rounded-xl !border !text-base !px-4 !py-3.5 elev-3",
+          title: "!font-bold !text-base",
           description: "!text-sm !text-[var(--fg-muted)]",
-          actionButton: "!bg-brand-600 !text-white !text-sm",
-          cancelButton: "!bg-[var(--surface-2)] !text-[var(--fg-muted)] !text-sm",
+          actionButton: "!bg-brand-600 !text-white !text-sm !font-semibold !min-h-9 !px-3",
+          cancelButton: "!bg-[var(--surface-2)] !text-[var(--fg-muted)] !text-sm !font-semibold !min-h-9 !px-3",
         },
       }}
       style={

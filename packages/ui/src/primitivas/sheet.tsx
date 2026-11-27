@@ -49,11 +49,13 @@ export function SheetContent({
       <DialogOverlay />
       <DialogPrimitive.Content className={cn(sheetVariants({ lado }), className)} {...props}>
         {children}
+        {/* 36 px de lado, como el del diálogo (27/11): el aspa de 16 px con
+            4 de aire era un blanco diminuto y casi invisible. */}
         <DialogPrimitive.Close
-          className="absolute right-3.5 top-3.5 rounded-sm p-1 text-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+          className="absolute right-3 top-3 grid size-9 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           aria-label="Cerrar"
         >
-          <X className="size-4" />
+          <X className="size-[1.125rem]" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </SheetPortal>
@@ -61,14 +63,32 @@ export function SheetContent({
 }
 
 export function SheetHeader({ className, ...props }: React.ComponentPropsWithRef<"div">) {
-  return <div className={cn("shrink-0 border-b px-5 py-3.5 pr-12", className)} {...props} />;
+  // Con la raya de la marca y el velo azul, igual que la cabecera del
+  // diálogo (27/11): un panel lateral es un diálogo pegado al borde.
+  return (
+    <div
+      className={cn(
+        "relative shrink-0 border-b bg-[var(--seccion-bg)] px-5 pb-4 pt-5 pr-14",
+        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:filo-marca",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function SheetTitle({
   className,
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title className={cn("text-sm font-semibold text-fg", className)} {...props} />;
+  // `text-xl` en negrita (27/11), como el del diálogo: era `text-sm`, del
+  // tamaño de una celda de tabla.
+  return (
+    <DialogPrimitive.Title
+      className={cn("text-xl font-bold leading-tight tracking-tight text-[var(--titulo)]", className)}
+      {...props}
+    />
+  );
 }
 
 export function SheetDescription({
@@ -76,7 +96,7 @@ export function SheetDescription({
   ...props
 }: React.ComponentPropsWithRef<typeof DialogPrimitive.Description>) {
   return (
-    <DialogPrimitive.Description className={cn("mt-0.5 text-sm text-muted", className)} {...props} />
+    <DialogPrimitive.Description className={cn("mt-1.5 text-base leading-snug text-muted", className)} {...props} />
   );
 }
 
@@ -88,7 +108,12 @@ export function SheetBody({ className, ...props }: React.ComponentPropsWithRef<"
 export function SheetFooter({ className, ...props }: React.ComponentPropsWithRef<"div">) {
   return (
     <div
-      className={cn("shrink-0 flex items-center justify-end gap-2 border-t bg-surface-2 px-5 py-3", className)}
+      // Botones de 44 px como mínimo, como en el pie del diálogo (27/11).
+      className={cn(
+        "shrink-0 flex flex-wrap items-center justify-end gap-3 border-t bg-surface-2 px-5 py-4",
+        "[&>a]:min-h-11 [&>button]:min-h-11",
+        className,
+      )}
       {...props}
     />
   );

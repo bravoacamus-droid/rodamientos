@@ -1,5 +1,6 @@
 "use client";
 
+import { EncabezadoNumerado } from "../ficha/piezas";
 import * as React from "react";
 import { CircleCheck, Phone, Plus, Scale, TriangleAlert, Trash2, UserPlus, X } from "lucide-react";
 import {
@@ -315,7 +316,8 @@ export function AnalizarCompra({
           <div className={eleccion === null ? "hidden" : "contents"}>
           {/* ------------------------------------------------ 1. A quién */}
           <section className="@container flex flex-col gap-3">
-            <h3 className="text-base font-semibold">1. ¿A quién se lo compras y a cuánto?</h3>
+            {/* Numerado en su círculo (27/11), como los pasos de /accesibilidad. */}
+            <EncabezadoNumerado chico numero={1} titulo="¿A quién se lo compras y a cuánto?" />
 
             {filas.length === 0 ? (
               <p className="text-sm text-[var(--fg-muted)]">
@@ -627,7 +629,7 @@ export function AnalizarCompra({
 
           {/* ------------------------------------------------ 3. La venta */}
           <section className="flex flex-col gap-3">
-            <h3 className="text-base font-semibold">2. ¿A cuánto lo vendes?</h3>
+            <EncabezadoNumerado chico numero={2} titulo="¿A cuánto lo vendes?" />
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 Precio de venta (c/u, sin IGV)

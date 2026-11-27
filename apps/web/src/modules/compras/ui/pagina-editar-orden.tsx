@@ -3,7 +3,7 @@ import { EstadoError } from "@rodatech/ui";
 
 import { emisorParaImprimir } from "@/lib/emisor";
 import { misPermisos } from "@/lib/permisos";
-import { Volver } from "@/componentes/volver";
+import { CabeceraFicha } from "./ficha";
 
 import { detalleCompra } from "../api/consultas";
 import { FormularioEditarOrden } from "./formulario-editar-orden";
@@ -36,13 +36,15 @@ export default async function PaginaEditarOrden({ params }: { params: Promise<{ 
 
   return (
     <div className="flex flex-col gap-5">
-      <header>
-        <Volver href={`/compras/${c.id}`}>Volver a la orden</Volver>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-          Editar orden <span className="font-mono">{c.numero}</span>
-        </h1>
-        <p className="mt-0.5 text-base text-[var(--fg-muted)]">{c.proveedor ?? "—"}</p>
-      </header>
+      {/* La misma cabecera que la ficha de la orden (27/11): se ve que se
+          está DENTRO de esa orden, y no en una pantalla aparte. */}
+      <CabeceraFicha
+        ruta="/compras"
+        volver={{ href: `/compras/${c.id}`, texto: "Volver a la orden" }}
+        tipo="Editar orden de compra"
+        numero={c.numero}
+        quien={{ rotulo: "Proveedor", nombre: c.proveedor ?? "—" }}
+      />
       <FormularioEditarOrden c={c} direccionEmpresa={emisor.direccion ?? null} />
     </div>
   );

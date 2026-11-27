@@ -1,4 +1,4 @@
-import { Boxes, FileText, ShoppingCart, Users } from "lucide-react";
+import { BarChart3, Boxes, FileText, Package, PieChart, ShoppingCart, Trophy, Users } from "lucide-react";
 import { EstadoError, KpiCard, formatearMoneda } from "@rodatech/ui";
 import { misPermisos } from "@/lib/permisos";
 
@@ -78,11 +78,13 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         valor={dolares(c.monto)}
         actual={c.monto}
         previo={cotPrevio.ok ? cotPrevio.datos.resumen.monto : undefined}
+        valorPrevio={cotPrevio.ok ? dolares(cotPrevio.datos.resumen.monto) : undefined}
         etiquetaComparacion={comparacion}
         serie={cot.datos.serie.map((p) => p.monto)}
         colorSerie="var(--viz-2)"
         detalle={`${entero(c.cotizaciones)} cotizaciones · se gana el ${pct(tasa)}`}
         href="/reportes/cotizaciones"
+        textoEnlace="Ver lo cotizado"
       />
       {verCompras ? (
       <KpiCard
@@ -91,13 +93,16 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         valor={dolares(sumaCompras(compras))}
         actual={sumaCompras(compras)}
         previo={comprasPrevio.ok ? sumaCompras(comprasPrevio) : undefined}
+        valorPrevio={comprasPrevio.ok ? dolares(sumaCompras(comprasPrevio)) : undefined}
         etiquetaComparacion={comparacion}
         // Gastar más no es ni bueno ni malo: sin color en la flecha.
-        mejorSi={undefined}
+        mejorSi="ninguno"
         serie={compras.ok ? compras.datos.map((p) => p.costoTotal) : undefined}
         colorSerie="var(--viz-3)"
         detalle={`${entero(ordenes)} ${ordenes === 1 ? "compra" : "compras"} · costo puesto en almacén`}
         href="/compras"
+        textoEnlace="Ver compras"
+        tono="sale"
       />
       ) : null}
       {verCapital ? (
@@ -114,6 +119,8 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
             : "no se pudo calcular"
         }
         href="/inventario"
+        textoEnlace="Ver inventario"
+        tono="sale"
       />
       ) : null}
       <KpiCard
@@ -122,9 +129,11 @@ export async function TarjetasNegocio({ rango, hoy }: { rango: Rango; hoy: strin
         valor={clientes.ok ? entero(clientes.datos.length) : "—"}
         actual={clientes.ok ? clientes.datos.length : undefined}
         previo={clientesPrevio.ok ? clientesPrevio.datos.length : undefined}
+        valorPrevio={clientesPrevio.ok ? entero(clientesPrevio.datos.length) : undefined}
         etiquetaComparacion={comparacion}
         detalle={`${entero(c.clientes)} clientes cotizados en el periodo`}
         href="/reportes/clientes"
+        textoEnlace="Ver clientes"
       />
     </div>
   );
@@ -150,6 +159,7 @@ export async function VendidoComprado({ rango }: { rango: Rango }) {
   return (
     <Bloque
       titulo={verCompras ? "Lo vendido y lo comprado" : "Lo vendido"}
+      icono={<BarChart3 aria-hidden="true" />}
       descripcion={
         verCompras
           ? "En dólares sin IGV, por periodo. Si lo comprado pasa a lo vendido, se está llenando el almacén."
@@ -175,6 +185,7 @@ export async function LosQueMas({ rango }: { rango: Rango }) {
     <div className="grid gap-4 @4xl:grid-cols-2">
       <Bloque
         titulo="Quién más compra"
+        icono={<Trophy aria-hidden="true" />}
         descripcion="Los cinco clientes con más venta en el periodo."
         accion={{ href: "/reportes/clientes", texto: "Ver todos" }}
       >
@@ -196,6 +207,7 @@ export async function LosQueMas({ rango }: { rango: Rango }) {
       </Bloque>
       <Bloque
         titulo="Lo que más se vende"
+        icono={<Package aria-hidden="true" />}
         descripcion="Los cinco productos con más venta en el periodo."
         accion={{ href: "/reportes", texto: "Ver el informe" }}
       >
@@ -228,6 +240,7 @@ export async function CotizacionesEnQueQuedan({ rango }: { rango: Rango }) {
   return (
     <Bloque
       titulo="En qué quedó lo cotizado"
+      icono={<PieChart aria-hidden="true" />}
       descripcion="Lo cotizado en el periodo, repartido por cómo terminó."
       accion={{ href: "/reportes/cotizaciones", texto: "Ver el reporte" }}
     >

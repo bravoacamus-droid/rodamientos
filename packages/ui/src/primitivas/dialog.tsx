@@ -99,9 +99,20 @@ export function DialogHeader({
 }: React.ComponentPropsWithRef<"div">) {
   // `pr-14` deja sitio al botón de cerrar, que ahora es más grande. Sin eso,
   // un título largo se le mete debajo.
+  //
+  // Con el color de la casa (27/11): la raya azul → dorado arriba, la misma
+  // de la barra superior y del tablero, y un velo azul muy claro detrás del
+  // título. Un diálogo era una caja blanca dentro de otra pantalla blanca, y
+  // no se distinguía a primera vista dónde empezaba la pregunta. El velo es
+  // `--seccion-bg`, que ya está definido en claro, oscuro y contraste alto
+  // (en contraste alto pasa a blanco o negro y la raya es lo que queda).
   return (
     <div
-      className={cn("border-b px-5 py-4 pr-14 sm:px-6", className)}
+      className={cn(
+        "relative border-b bg-[var(--seccion-bg)] px-5 pb-4 pt-5 pr-14 sm:px-6",
+        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-1 before:filo-marca",
+        className,
+      )}
       {...props}
     />
   );
@@ -114,9 +125,13 @@ export function DialogTitle({
   // `text-base`, no `text-sm`: es la pregunta que la persona tiene que leer
   // antes de decidir, y en un ERP que se usa ocho horas el título de un modal
   // no puede tener el mismo tamaño que una celda de tabla.
+  //
+  // Y desde el 27/11, `text-xl` en negrita y en el azul de los títulos: con
+  // `text-base` medía casi lo mismo que la explicación de debajo, y lo que
+  // hay que leer primero no se distinguía de lo segundo.
   return (
     <DialogPrimitive.Title
-      className={cn("text-base font-semibold leading-tight text-fg", className)}
+      className={cn("text-xl font-bold leading-tight tracking-tight text-[var(--titulo)]", className)}
       {...props}
     />
   );
@@ -129,7 +144,9 @@ export function DialogDescription({
   return (
     <DialogPrimitive.Description
       className={cn(
-        "mt-1 max-w-prose text-sm leading-snug text-muted",
+        // `text-base` (27/11): explica lo que se va a decidir; no es una nota
+        // al pie.
+        "mt-1.5 max-w-prose text-base leading-snug text-muted",
         className,
       )}
       {...props}
@@ -151,7 +168,12 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-end gap-2 rounded-b-xl border-t bg-surface-2 px-5 py-3.5 sm:px-6",
+        // Los botones del pie, de 44 px como mínimo (27/11): son la decisión
+        // del diálogo —«Guardar», «Emitir», «Cancelar»— y con 38 px eran más
+        // bajos que el aire que los rodea. `min-h` y no `h`, para no pelear
+        // con la altura que traiga cada botón.
+        "flex flex-wrap items-center justify-end gap-3 rounded-b-xl border-t bg-surface-2 px-5 py-4 sm:px-6",
+        "[&>a]:min-h-11 [&>button]:min-h-11",
         className,
       )}
       {...props}

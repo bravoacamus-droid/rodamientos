@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PackageX, ShoppingCart } from "lucide-react";
+import { buttonVariants, cn } from "@rodatech/ui";
 
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import type { FaltaDelPedido } from "@/modules/compras";
@@ -81,11 +82,11 @@ export function LoQueFalta({
   const items = porPedir.map((f) => `${f.producto_id}:${f.falta}`).join(",");
 
   return (
-    <section className="rounded-md border border-[var(--warn)] bg-[var(--warn-bg)] p-4 print:hidden">
+    <section className="card elev-2 border-l-[6px] border-l-[var(--warn)] bg-warn-bg p-4 print:hidden">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <PackageX className="size-4 shrink-0" aria-hidden="true" />
+          <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--titulo)]">
+            <PackageX className="size-6 shrink-0 text-[var(--warn)]" aria-hidden="true" />
             {porPedir.length > 0
               ? yaAnalizado.size > 0
                 ? `Falta comprar ${porPedir.length === 1 ? "un producto" : `${porPedir.length} productos`} que no analizaste al cotizar`
@@ -93,11 +94,11 @@ export function LoQueFalta({
               : "Lo que faltaba ya viene en camino"}
           </h2>
 
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
+          <ul className="mt-2 flex flex-col gap-1 text-base">
             {visibles.map((f) => (
               <li key={f.producto_id} className="flex flex-wrap items-baseline gap-2">
                 <span className="font-medium tabular">{f.codigo}</span>
-                <span className="min-w-0 flex-1 truncate text-[var(--fg-muted)]">
+                <span className="min-w-0 flex-1 break-words text-[var(--fg-muted)]">
                   {f.descripcion}
                 </span>
                 <span className="tabular font-semibold">
@@ -130,14 +131,14 @@ export function LoQueFalta({
             <>
             <Link
               href={`/compras/pedir-precio?items=${items}`}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-sm bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+              className={cn(buttonVariants({ variant: "primary" }), "px-4")}
             >
               <ShoppingCart className="size-4" aria-hidden="true" />
               Pedir precio de lo que falta
             </Link>
             <Link
               href={`/compras/nueva?items=${items}`}
-              className="inline-flex h-10 items-center justify-center rounded-sm border border-[var(--border-strong)] px-3 text-sm font-medium hover:bg-[var(--surface)]"
+              className={cn(buttonVariants({ variant: "outline" }), "px-4")}
             >
               Registrar la compra a mano
             </Link>

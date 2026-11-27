@@ -206,8 +206,8 @@ export function RolesYPermisos({
       {/* ── El rol elegido ───────────────────────────────────────── */}
       <div className="flex flex-col gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold">{rol.nombre}</h2>
-          {rol.descripcion ? <p className="text-sm text-[var(--fg-muted)]">{rol.descripcion}</p> : null}
+          <h2 className="text-xl font-bold text-[var(--titulo)]">{rol.nombre}</h2>
+          {rol.descripcion ? <p className="text-base text-[var(--fg-muted)]">{rol.descripcion}</p> : null}
           <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-[var(--fg-muted)]">
             <Users className="size-4" aria-hidden="true" />
             {rol.usuarios === 0

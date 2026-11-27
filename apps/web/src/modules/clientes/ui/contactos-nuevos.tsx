@@ -3,6 +3,7 @@
 // Cliente: acumula contactos en memoria hasta que el formulario de la empresa
 // se envíe. No habla con el servidor: todavía no hay cliente al que colgarlos.
 
+import { EncabezadoNumerado } from "@/modules/cotizaciones/ui/ficha/piezas";
 import * as React from "react";
 import { Button } from "@rodatech/ui";
 import { Check, Plus, Star, Trash2, X } from "lucide-react";
@@ -156,16 +157,14 @@ export function ContactosNuevos({
   };
 
   return (
-    <section className="card flex flex-col gap-4 p-4">
+    <section className="card elev-1 flex flex-col gap-4 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold">¿Con quién hablas ahí?</h2>
-          <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
-            Las personas de esta empresa a las que se les cotiza. Pueden ser
-            varias: el de compras, el de logística, el de mantenimiento. Se
-            guardan junto con la empresa.
-          </p>
-        </div>
+        {/* El paso 3 del alta (27/11, numerado como en /accesibilidad). */}
+        <EncabezadoNumerado
+          numero={3}
+          titulo="¿Con quién hablas ahí?"
+          ayuda="Las personas de esta empresa a las que se les cotiza. Pueden ser varias: el de compras, el de logística, el de mantenimiento. Se guardan junto con la empresa."
+        />
         {!abierto ? (
           <Button type="button" variant="outline" className="h-11 md:h-control-md" onClick={abrirNuevo}>
             <Plus aria-hidden="true" />

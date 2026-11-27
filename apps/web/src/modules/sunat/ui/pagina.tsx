@@ -53,8 +53,9 @@ export default async function PaginaSunat() {
     <div className="flex flex-col gap-5">
       <PanelModulo ruta="/sunat">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">SUNAT</h1>
-          <p className="text-sm text-[var(--fg-muted)]">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">SUNAT</h1>
+          <span className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-3 max-w-2xl text-lg text-white">
             Lo que falta mandar, lo que SUNAT rechazó y las anulaciones que todavía no sabe.
           </p>
         </div>
@@ -123,21 +124,28 @@ export default async function PaginaSunat() {
       </PanelModulo>
 
       {todoAlDia ? (
-        <div className="flex items-center gap-3 rounded-md border border-[var(--ok)] bg-[var(--surface)] p-4">
-          <CircleCheck className="size-7 shrink-0 text-[var(--ok)]" aria-hidden="true" />
-          <div>
-            <p className="text-base font-semibold">Todo al día con SUNAT.</p>
-            <p className="text-sm text-[var(--fg-muted)]">No hay nada por enviar, rechazado ni por dar de baja.</p>
+        // 27/11: el «todo bien» también se dice en grande. Es la respuesta
+        // que Willy viene a buscar la mayoría de los días.
+        <div className="card elev-1 anim-entrada flex items-center gap-4 border-l-4 border-l-[var(--ok)] p-5">
+          <span
+            className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-ok-bg text-ok ring-1 ring-inset ring-[var(--ok)]/20"
+            aria-hidden="true"
+          >
+            <CircleCheck className="size-8" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-[var(--ok)]">Todo al día con SUNAT.</p>
+            <p className="text-base text-[var(--fg-muted)]">No hay nada por enviar, rechazado ni por dar de baja.</p>
           </div>
         </div>
       ) : null}
 
       {/* ----------------------------------------------------------- Guías */}
       {b.guias.length > 0 ? (
-        <section id="guias" className="card flex flex-col gap-3 border-[var(--danger)] p-4">
+        <section id="guias" className="card elev-1 flex scroll-mt-4 flex-col gap-3 border-l-4 border-l-[var(--danger)] p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Guías sin aceptar ({b.guias.length})</h2>
+              <TituloBandeja icono={<Truck />} tono="urgente">Guías sin aceptar ({b.guias.length})</TituloBandeja>
               <p className="text-sm text-[var(--fg-muted)]">
                 Una guía tiene que estar aceptada por SUNAT ANTES de que salga la mercadería. Si paran el camión,
                 una guía que SUNAT no tiene es como no llevar guía.
@@ -179,10 +187,10 @@ export default async function PaginaSunat() {
 
       {/* ------------------------------------------------------ Por enviar */}
       {b.porEnviar.length > 0 ? (
-        <section id="por-enviar" className="card flex flex-col gap-3 p-4">
+        <section id="por-enviar" className="card elev-1 flex scroll-mt-4 flex-col gap-3 border-l-4 border-l-[var(--warn)] p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Por enviar ({b.porEnviar.length})</h2>
+              <TituloBandeja icono={<SendHorizontal />} tono="aviso">Por enviar ({b.porEnviar.length})</TituloBandeja>
               <p className="text-sm text-[var(--fg-muted)]">
                 SUNAT pide recibirlos dentro de los 3 días siguientes a la emisión.
               </p>
@@ -215,9 +223,9 @@ export default async function PaginaSunat() {
 
       {/* ------------------------------------------------------ Rechazados */}
       {b.rechazados.length > 0 ? (
-        <section id="rechazados" className="card flex flex-col gap-3 border-[var(--danger)] p-4">
+        <section id="rechazados" className="card elev-1 flex scroll-mt-4 flex-col gap-3 border-l-4 border-l-[var(--danger)] p-5">
           <div>
-            <h2 className="text-lg font-semibold text-[var(--danger)]">Rechazados por SUNAT ({b.rechazados.length})</h2>
+            <TituloBandeja icono={<ShieldAlert />} tono="urgente">Rechazados por SUNAT ({b.rechazados.length})</TituloBandeja>
             <p className="text-sm text-[var(--fg-muted)]">
               Un rechazado no vale ante SUNAT. Cada uno dice qué pasó y qué hacer.
             </p>
@@ -245,9 +253,9 @@ export default async function PaginaSunat() {
 
       {/* ----------------------------------------------------------- Bajas */}
       {b.porDarDeBaja.length > 0 || bajasEnCurso.length > 0 ? (
-        <section id="bajas" className="card flex flex-col gap-3 p-4">
+        <section id="bajas" className="card elev-1 flex scroll-mt-4 flex-col gap-3 border-l-4 border-l-[var(--warn)] p-5">
           <div>
-            <h2 className="text-lg font-semibold">Bajas por comunicar</h2>
+            <TituloBandeja icono={<FileX2 />} tono="aviso">Bajas por comunicar</TituloBandeja>
             <p className="text-sm text-[var(--fg-muted)]">
               Comprobantes anulados aquí que SUNAT ya había aceptado. Hasta comunicar la baja, para SUNAT siguen vigentes.
               Se manda una comunicación por cada fecha de emisión.
@@ -297,8 +305,8 @@ export default async function PaginaSunat() {
 
       {/* ----------------------------------------------- Últimos aceptados */}
       {b.ultimosAceptados.length > 0 ? (
-        <section className="card flex flex-col gap-2 p-4">
-          <h2 className="text-lg font-semibold">Últimos aceptados</h2>
+        <section className="card elev-1 flex flex-col gap-2 border-l-4 border-l-[var(--ok)] p-5">
+          <TituloBandeja icono={<CircleCheck />} tono="ok">Últimos aceptados</TituloBandeja>
           <ul className="flex flex-col divide-y divide-[var(--border-soft)]">
             {b.ultimosAceptados.map((d) => (
               <li key={d.id} className="flex items-center gap-2 py-2">
@@ -309,6 +317,41 @@ export default async function PaginaSunat() {
           </ul>
         </section>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * El título de cada bandeja, con su icono en chip y la PALABRA de lo que
+ * toca (27/11): «Urgente», «Por hacer» o «Hecho». Antes solo los rechazados
+ * iban en rojo, y el color era lo único que separaba un rechazo de un
+ * pendiente normal.
+ */
+function TituloBandeja({
+  icono,
+  tono,
+  children,
+}: {
+  icono: React.ReactNode;
+  tono: "urgente" | "aviso" | "ok";
+  children: React.ReactNode;
+}) {
+  const chip = {
+    urgente: "bg-danger-bg text-danger ring-[var(--danger)]/25",
+    aviso: "bg-warn-bg text-warn ring-[var(--warn)]/25",
+    ok: "bg-ok-bg text-ok ring-[var(--ok)]/20",
+  }[tono];
+  const palabra = { urgente: "Urgente", aviso: "Por hacer", ok: "Hecho" }[tono];
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span
+        className={`flex size-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset [&_svg]:size-6 ${chip}`}
+        aria-hidden="true"
+      >
+        {icono}
+      </span>
+      <h2 className="min-w-0 text-xl font-bold text-[var(--titulo)]">{children}</h2>
+      <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ring-1 ring-inset ${chip}`}>{palabra}</span>
     </div>
   );
 }
@@ -326,7 +369,7 @@ function Documento({ d, children }: { d: DocumentoBandeja; children?: React.Reac
         </span>
       </p>
       <p className="flex flex-wrap items-baseline gap-x-2 text-sm">
-        <span className="min-w-0 truncate">{d.cliente}</span>
+        <span className="min-w-0 break-words">{d.cliente}</span>
         <Moneda valor={d.total} moneda={d.moneda} tamano="sm" />
       </p>
       {children}

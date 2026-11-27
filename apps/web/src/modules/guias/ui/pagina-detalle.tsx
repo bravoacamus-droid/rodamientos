@@ -1,8 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { Building2, FileArchive, FileCode, FileText, Printer, Pencil } from "lucide-react";
-import { EstadoBadge, EstadoError, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
+import {
+  Ban,
+  Boxes,
+  Building2,
+  CalendarDays,
+  FileArchive,
+  FileCode,
+  FileText,
+  Landmark,
+  MapPin,
+  Package,
+  PackageOpen,
+  Pencil,
+  Printer,
+  Truck,
+  Weight,
+} from "lucide-react";
+import { EstadoBadge, EstadoError, KpiCard, buttonVariants, cn, formatearFecha } from "@rodatech/ui";
+import {
+  AvisoFicha,
+  CabeceraFicha,
+  DatoFicha,
+  PasosDelFlujo,
+  TituloBloque,
+} from "@/modules/facturacion/ui/ficha";
 import { BotonBloqueado } from "@/componentes/sin-permiso";
 import { misPermisos } from "@/lib/permisos";
 import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
@@ -87,43 +110,58 @@ export default async function PaginaDetalleGuia({
       de la vista previa saca la PÁGINA, y sin esto sacaba la ficha.
     */}
     <div className="flex flex-col gap-5 print:hidden">
-      <header className="anim-entrada flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <span className="no-print">
-            <Volver href="/guias">Volver a guías</Volver>
-          </span>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
-              {g.numero}
-            </h1>
+      {/*
+        La cabecera de ficha del rediseño (27/11), la misma que la factura:
+        número grande, estado grande, a quién va, y como cifra héroe lo que
+        sale del almacén. Debajo, el paso del flujo: la guía va ANTES que la
+        factura, y aquí se ve qué toca después.
+      */}
+      <CabeceraFicha
+        ruta="/guias"
+        volver={<Volver href="/guias">Volver a guías</Volver>}
+        tipo="Guía de remisión"
+        numero={g.numero}
+        estados={
+          <>
             {/* El mismo badge que el listado, que pasó a `EstadoBadge` el
                 11/09. La ficha de al lado se quedó con `Badge` y `TONO_ESTADO`
                 —plano, sin punto—, así que la misma guía se veía de dos formas
                 según se mirara en la lista o dentro. */}
-            <EstadoBadge estado={g.estado} etiqueta={ETIQUETA_ESTADO[g.estado]} />
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <p className="text-sm text-[var(--fg-muted)]">
-              {g.cliente ?? "—"}
-              {g.cliente_documento ? ` · ${g.cliente_documento}` : ""}
-            </p>
-            {/* Para corregir su dirección antes de despachar (FS-08). */}
-            {g.cliente_id ? (
-              <Link
-                href={`/clientes/${g.cliente_id}`}
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3 no-print")}
-              >
-                <Building2 className="size-4" aria-hidden="true" />
-                Ficha del cliente
-              </Link>
+            <EstadoBadge size="md" className="text-base" estado={g.estado} etiqueta={ETIQUETA_ESTADO[g.estado]} />
+            {g.comprobante ? (
+              <EstadoBadge size="md" className="text-base" estado="aceptado" etiqueta={`Facturada · ${g.comprobante.numero}`} />
             ) : null}
-          </div>
-        </div>
-
-        {/* `flex-wrap`: sin él, en el teléfono los cinco botones iban en
+          </>
+        }
+        quien={g.cliente ?? "—"}
+        quienDetalle={g.cliente_documento}
+        junto={
+          /* Para corregir su dirección antes de despachar (FS-08). */
+          g.cliente_id ? (
+            <Link
+              href={`/clientes/${g.cliente_id}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }), "px-3 no-print")}
+            >
+              <Building2 className="size-4" aria-hidden="true" />
+              Ficha del cliente
+            </Link>
+          ) : null
+        }
+        cifra={{
+          rotulo: "Sale del almacén",
+          valor: (
+            <>
+              {unidades.toLocaleString("es-PE")} {unidades === 1 ? "unidad" : "unidades"}
+            </>
+          ),
+          pie: `${g.lineas.length} ${g.lineas.length === 1 ? "producto" : "productos"} · traslado el ${formatearFecha(g.fecha_traslado)}`,
+        }}
+        pasos={g.estado !== "anulada" ? <PasosDelFlujo actual={g.comprobante ? "factura" : "guia"} /> : null}
+        acciones={
+        /* `flex-wrap`: sin él, en el teléfono los cinco botones iban en
             una fila que se salía de la pantalla (revisión por módulos del
-            02/10). */}
-        <div className="flex flex-wrap items-center gap-2 no-print">
+            02/10). */
+        <>
           {/*
             Descargar e imprimir, los dos con icono y a 36 px.
 
@@ -178,10 +216,10 @@ export default async function PaginaDetalleGuia({
           ) : null}
           {g.estado === "borrador" ? (
             <>
-              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-9">
+              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-control-md">
                 Descargar PDF
               </BotonBloqueado>
-              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-9">
+              <BotonBloqueado mensaje={"Es un borrador: primero pulsa «Emitir y despachar». El PDF y la impresión salen ya con su validez; un borrador impreso dice «sin validez»."} className="md:h-control-md">
                 <IconoImprimir />
                 Imprimir
               </BotonBloqueado>
@@ -195,7 +233,7 @@ export default async function PaginaDetalleGuia({
               />
               <Link
                 href={`/guias/${g.id}/imprimir?auto=1`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                className={cn(buttonVariants({ variant: "outline" }), "px-3")}
               >
                 <IconoImprimir />
                 Imprimir
@@ -216,7 +254,7 @@ export default async function PaginaDetalleGuia({
           {puedeEmitir && g.estado === "borrador" ? (
             <Link
               href={`/guias/${g.id}/editar`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--border-strong)] px-3 text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+              className={cn(buttonVariants({ variant: "outline" }), "px-3")}
             >
               <Pencil className="size-4" aria-hidden="true" />
               Editar
@@ -224,7 +262,7 @@ export default async function PaginaDetalleGuia({
           ) : g.estado === "borrador" ? (
             <BotonBloqueado
               mensaje={avisoSinPermiso("guias", "editar", perfil.nombreRol)}
-              className="md:h-9"
+              className="md:h-control-md"
             >
               Editar
             </BotonBloqueado>
@@ -241,31 +279,51 @@ export default async function PaginaDetalleGuia({
           ) : g.estado !== "anulada" ? (
             <BotonBloqueado
               mensaje={avisoSinPermiso("guias", "eliminar", perfil.nombreRol)}
-              className="md:h-9"
+              className="md:h-control-md"
             >
               Anular
             </BotonBloqueado>
           ) : null}
-        </div>
-      </header>
+        </>
+        }
+      />
 
       {g.estado === "borrador" ? (
-        <p className="anim-entrada rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3 text-sm no-print">
-          <strong>Es un borrador.</strong> La mercadería todavía NO ha salido del
-          almacén. Sale cuando pulses «Emitir y despachar».
-        </p>
+        <div className="no-print">
+          <AvisoFicha tono="aviso" icono={<PackageOpen />} titulo="Es un borrador.">
+            La mercadería todavía NO ha salido del almacén. Sale cuando pulses «Emitir y despachar».
+          </AvisoFicha>
+        </div>
+      ) : null}
+
+      {/*
+        Emitida y sin factura: lo que toca ahora es facturar (27/11). El botón
+        «Facturar» ya estaba arriba; aquí se dice POR QUÉ es lo siguiente,
+        que es lo que la guía antes que la factura significa para Willy.
+      */}
+      {porFacturar ? (
+        <div className="no-print">
+          <AvisoFicha tono="info" icono={<FileText />} titulo="Lo siguiente: facturar esta guía.">
+            La mercadería ya salió. Con la guía emitida ya se puede hacer la factura, y su número irá impreso en ella.
+          </AvisoFicha>
+        </div>
       ) : null}
 
       {/* Quién, cuándo y por qué (TR-07). Decía el motivo y nada más, y si
           no había motivo, ni el aviso. */}
       {g.estado === "anulada" ? (
-        <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
-          <strong>
-            Anulada{g.anulada_en ? ` el ${formatearFecha(g.anulada_en)}` : ""}
-            {g.anulada_por ? ` por ${g.anulada_por}` : ""}.
-          </strong>
-          {g.motivo_anulacion ? <> Motivo: {g.motivo_anulacion}</> : null}
-        </p>
+        <AvisoFicha
+          tono="peligro"
+          icono={<Ban />}
+          titulo={
+            <>
+              Anulada{g.anulada_en ? ` el ${formatearFecha(g.anulada_en)}` : ""}
+              {g.anulada_por ? ` por ${g.anulada_por}` : ""}.
+            </>
+          }
+        >
+          {g.motivo_anulacion ? <>Motivo: {g.motivo_anulacion}</> : null}
+        </AvisoFicha>
       ) : null}
 
       {/* El segundo paso: la baja en SUNAT (190, Willy 04/11). */}
@@ -282,23 +340,38 @@ export default async function PaginaDetalleGuia({
       ) : null}
 
       {/* --------------------------------------------------------- Cifras */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Peso bruto" valor={`${formatoPeso(g.peso_bruto_kg)} kg`} />
-        <Tarjeta etiqueta="Bultos" valor={String(g.numero_bultos)} />
-        <Tarjeta
-          etiqueta="Unidades"
-          valor={unidades.toLocaleString("es-PE")}
-          pie={`${g.lineas.length} ${g.lineas.length === 1 ? "línea" : "líneas"}`}
-        />
-        <Tarjeta etiqueta="Traslado" valor={formatearFecha(g.fecha_traslado)} pie={g.motivo_descripcion ?? ""} />
+      {/* Las tarjetas de cifras del tablero (`KpiCard`, 27/11): en azul,
+          que es «informativo» en el código de colores del rediseño. */}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
+          <KpiCard etiqueta="Peso bruto" icono={<Weight />} tono="sale" valor={`${formatoPeso(g.peso_bruto_kg)} kg`} />
+          <KpiCard etiqueta="Bultos" icono={<Boxes />} tono="sale" valor={String(g.numero_bultos)} />
+          <KpiCard
+            etiqueta="Unidades"
+            icono={<Package />}
+            tono="sale"
+            valor={unidades.toLocaleString("es-PE")}
+            detalle={`${g.lineas.length} ${g.lineas.length === 1 ? "línea" : "líneas"}`}
+          />
+          {/* El pie partido y no cortado: es el motivo del traslado, y en el
+              celular «Traslado entre establecimientos de la misma empresa» se
+              quedaba en «Traslado entre…», que es justo lo que no dice nada. */}
+          <KpiCard
+            etiqueta="Traslado"
+            icono={<CalendarDays />}
+            tono="sale"
+            valor={formatearFecha(g.fecha_traslado)}
+            detalle={g.motivo_descripcion ?? undefined}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
         {/* `min-w-0`, como en la ficha de la factura: un hijo de rejilla no
             baja de lo que mide su tabla, y empujaba la página de lado. */}
-        <section className="card min-w-0 p-4">
-          <h2 className="mb-3 text-sm font-semibold">Qué se traslada</h2>
+        <section className="card elev-1 min-w-0 p-5">
+          <TituloBloque icono={<Package />} extra={<span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-sm font-semibold text-[var(--fg-muted)] ring-1 ring-inset ring-[var(--border)]">{g.lineas.length} {g.lineas.length === 1 ? "producto" : "productos"}</span>}>Qué se traslada</TituloBloque>
           {/*
             La tabla, solo de `md` para arriba.
 
@@ -378,50 +451,50 @@ export default async function PaginaDetalleGuia({
 
         {/* ------------------------------------------------- Datos */}
         <div className="flex flex-col gap-4">
-          <section className="card p-4">
-            <h2 className="mb-3 text-sm font-semibold">Traslado</h2>
-            <dl className="@container flex flex-col gap-2 text-sm">
+          <section className="card elev-1 p-5">
+            <TituloBloque icono={<MapPin />}>Traslado</TituloBloque>
+            <div className="@container"><dl className="grid grid-cols-1 gap-x-5 gap-y-4 @xs:grid-cols-2">
               <Dato etiqueta="Parte de" valor={g.direccion_partida ?? "—"} />
               <Dato etiqueta="Llega a" valor={g.direccion_llegada ?? "—"} />
               <Dato etiqueta="Código del distrito" valor={g.ubigeo_llegada ?? "—"} />
               <Dato etiqueta="Emisión" valor={formatearFecha(g.fecha_emision)} />
               {/* Enlazada, como el pedido (TR-05): era texto suelto. */}
               {g.cotizacion_id && g.cotizacion_numero ? (
-                <div className={FILA_DATO}>
-                  <dt className={ETIQUETA_DATO}>Cotización</dt>
-                  <dd className="min-w-0 flex-1">
+                <Dato
+                  etiqueta="Cotización"
+                  valor={
                     <Link
                       href={`/cotizaciones/${g.cotizacion_id}`}
                       className="font-mono font-semibold text-brand-600 underline underline-offset-4"
                     >
                       {g.cotizacion_numero}
                     </Link>
-                  </dd>
-                </div>
+                  }
+                />
               ) : (
                 <Dato etiqueta="Cotización" valor={g.cotizacion_numero ?? "—"} />
               )}
               {/* Al pedido del que sale (revisión del 15/10): desde la guía no
                   se llegaba, y el pedido es donde se hace lo que sigue. */}
               {g.pedido ? (
-                <div className={FILA_DATO}>
-                  <dt className={ETIQUETA_DATO}>Pedido</dt>
-                  <dd className="min-w-0 flex-1">
-                    {/* Subrayado, como la cotización de arriba: un enlace
-                        que solo se subraya al pasar el ratón no se ve. */}
+                <Dato
+                  etiqueta="Pedido"
+                  valor={
+                    /* Subrayado, como la cotización de arriba: un enlace
+                       que solo se subraya al pasar el ratón no se ve. */
                     <Link href={`/pedidos/${g.pedido.id}`} className="font-mono font-semibold text-brand-600 underline underline-offset-4">
                       {g.pedido.numero}
                     </Link>
-                  </dd>
-                </div>
+                  }
+                />
               ) : null}
               <Dato etiqueta="Orden de compra" valor={g.orden_compra_cliente ?? "—"} />
-            </dl>
+            </dl></div>
           </section>
 
-          <section className="card p-4">
-            <h2 className="mb-3 text-sm font-semibold">Transporte</h2>
-            <dl className="@container flex flex-col gap-2 text-sm">
+          <section className="card elev-1 p-5">
+            <TituloBloque icono={<Truck />}>Transporte</TituloBloque>
+            <div className="@container"><dl className="grid grid-cols-1 gap-x-5 gap-y-4 @xs:grid-cols-2">
               <Dato
                 etiqueta="Modalidad"
                 valor={ETIQUETA_MODALIDAD[g.modalidad_traslado] ?? g.modalidad_traslado}
@@ -458,7 +531,7 @@ export default async function PaginaDetalleGuia({
                   <Dato etiqueta="Licencia" valor={g.conductor_licencia ?? "—"} />
                 </>
               )}
-            </dl>
+            </dl></div>
 
             {g.observaciones ? (
               <p className="mt-3 border-t border-[var(--border-soft)] pt-3 text-sm text-[var(--fg-muted)]">
@@ -469,8 +542,8 @@ export default async function PaginaDetalleGuia({
 
           {/* La guía ante SUNAT (15/10): tiene que estar aceptada antes de
               que salga la mercadería. */}
-          <section className="card p-4 no-print">
-            <h2 className="mb-1 text-sm font-semibold">SUNAT</h2>
+          <section className="card elev-1 p-5 no-print">
+            <TituloBloque icono={<Landmark />}>SUNAT</TituloBloque>
             {g.comprobante ? (
               <p className="mb-2 text-sm">
                 Facturada con{" "}
@@ -534,16 +607,9 @@ export default async function PaginaDetalleGuia({
   );
 }
 
-function Tarjeta({
-  etiqueta,
-  valor,
-  pie,
-}: {
-  etiqueta: string;
-  valor: string;
-  pie?: string;
-}) {
-  /*
+/*
+  Las cifras de arriba eran una `Tarjeta` propia hasta el 27/11:
+
     Mismo formato que las tarjetas de la cotización.
 
     Luis, 09/09: *«mira cómo juega con las tipografías y las palabras en
@@ -552,20 +618,11 @@ function Tarjeta({
     seguida, el pie pequeño. Así el ojo cae en la cifra y no en el rótulo.
 
     Y nada por debajo de 14 px: la etiqueta y el pie iban a 12.
-  */
-  return (
-    <div className="card anim-entrada p-4">
-      <p className="text-sm font-medium text-[var(--fg-muted)]">
-        {etiqueta}
-      </p>
-      <p className="mt-1 truncate text-xl font-semibold tabular">{valor}</p>
-      {/* Partido y no cortado: el pie es el motivo del traslado, y en el
-          celular «Traslado entre establecimientos de la misma empresa» se
-          quedaba en «Traslado entre…», que es justo lo que no dice nada. */}
-      {pie ? <p className="mt-0.5 break-words text-sm text-[var(--fg-muted)]">{pie}</p> : null}
-    </div>
-  );
-}
+
+  Ahora son `KpiCard`, la tarjeta del tablero: la misma idea llevada más
+  lejos —cifra en 30 px, icono en su chip, filo de color—, y la misma en
+  todo el sistema.
+*/
 
 /*
   Etiqueta a la izquierda solo si cabe; si no, encima del valor.
@@ -576,19 +633,14 @@ function Tarjeta({
   vencimiento asomando fuera de la tarjeta (scrollWidth 1058 en una ventana
   de 1024). Se decide por el ancho de la LISTA (`@container` en el `dl`) y
   no por el de la pantalla, porque la columna es estrecha justo en tableta y
-  ancha en el celular. Desde 18 rem va en fila, como siempre: en escritorio
-  no cambia nada.
-*/
-const FILA_DATO = "flex flex-col gap-0.5 @min-[18rem]:flex-row @min-[18rem]:gap-3";
-const ETIQUETA_DATO = "shrink-0 text-[var(--fg-muted)] @min-[18rem]:w-32";
+  ancha en el celular.
 
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <div className={FILA_DATO}>
-      <dt className={ETIQUETA_DATO}>{etiqueta}</dt>
-      <dd className="min-w-0 flex-1 break-words">{valor}</dd>
-    </div>
-  );
+  27/11: el rótulo arriba (`etiqueta-dato`) y el valor debajo en semibold,
+  en rejilla de dos columnas desde 20 rem de CAJA: el patrón de ficha del
+  rediseño, igual que en la factura.
+*/
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
+  return <DatoFicha etiqueta={etiqueta} valor={valor} />;
 }
 
 function IconoImprimir() {

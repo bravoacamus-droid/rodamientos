@@ -45,8 +45,11 @@ export function CabeceraConfig({
           </span>
         )}
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
-          <p className="text-sm text-[var(--fg-muted)]">{descripcion}</p>
+          {/* Título de gestión (27/11): con la barra dorada del login, como
+              los informes. Se abre para leer y rellenar, no para una tabla. */}
+          <h1 className="text-3xl font-bold tracking-tight">{titulo}</h1>
+          <span className="mt-2 block h-2 w-24 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+          <p className="mt-2 max-w-3xl text-lg text-[var(--fg-muted)]">{descripcion}</p>
         </div>
       </div>
       {accion ?? null}

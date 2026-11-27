@@ -3,10 +3,11 @@ import { unidadLegible } from "@/modules/cotizaciones/dominio/unidades";
 import { enDolares } from "@/modules/compras/dominio/moneda";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EstadoError, Moneda } from "@rodatech/ui";
+import { Badge, Button, EstadoError, Moneda } from "@rodatech/ui";
+import { ArrowRight, Info, MessageSquareText, PackageCheck } from "lucide-react";
 
 import { AvisarAQuien } from "@/modules/compras/ui/avisar-a-quien";
-import { Volver } from "@/componentes/volver";
+import { BloqueFicha, CabeceraFicha, DatoFicha } from "@/modules/compras/ui/ficha";
 
 import { misPermisos } from "@/lib/permisos";
 import { HistorialDocumento } from "@/modules/bitacora/ui/historial-documento";
@@ -67,76 +68,117 @@ export default async function PaginaDetalleRecepcion({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {/* El mismo «Volver» que el resto de fichas, encima del número.
-              Era un botón «Volver al listado» al lado de «Editar papeles»: la
-              cuarta manera de volver que tenía el ERP (revisión por módulos
-              del 02/10). */}
-          <Volver href="/recepciones">Volver a recepciones</Volver>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-2xl font-semibold tracking-tight">
-              {r.numero}
-            </h1>
-            {r.anulada ? (
-              <span className="rounded-sm bg-[var(--danger-bg)] px-2 py-0.5 text-sm font-medium text-[var(--danger)]">
-                Anulada
-              </span>
-            ) : null}
-          </div>
-          <p className="text-sm text-[var(--fg-muted)]">
-            Recibido el {r.fecha}
-            {r.recibido_por ? ` por ${r.recibido_por}` : ""}
-          </p>
-        </div>
-
-        {/*
-          El botón de los papeles va aquí arriba y en color. Luis, 09/09:
-          *«ponlo pero que tenga color; por eso yo te decía poner un botón
-          editar al costado de Volver al listado»*. Metido dentro de la sección
-          de papeles y en gris no lo veía. Desde el 02/10 «Volver» está encima
-          del número, como en las demás fichas, y este sigue arriba y en azul.
-        */}
-        {puedeAdjuntar && !r.anulada ? (
-          <div className="flex flex-wrap items-center gap-2">
+      {/* El mismo «Volver» que el resto de fichas, encima del número.
+          Era un botón «Volver al listado» al lado de «Editar papeles»: la
+          cuarta manera de volver que tenía el ERP (revisión por módulos
+          del 02/10). Desde el 27/11, dentro de la cabecera de ficha: número
+          grande, el proveedor y lo que entró como cifra principal. */}
+      <CabeceraFicha
+        ruta="/recepciones"
+        volver={{ href: "/recepciones", texto: "Volver a recepciones" }}
+        tipo="Recepción de mercadería"
+        numero={r.numero}
+        estado={
+          r.anulada ? (
+            <Badge tone="danger">Anulada</Badge>
+          ) : (
+            <Badge tone="success">Ya entró al almacén</Badge>
+          )
+        }
+        quien={{
+          rotulo: "Proveedor",
+          nombre: r.proveedor ?? "—",
+          detalle: `Recibido el ${r.fecha}${r.recibido_por ? ` por ${r.recibido_por}` : ""}`,
+        }}
+        cifra={{
+          rotulo: "Entraron",
+          valor: `${unidades.toLocaleString("es-PE")} ${unidades === 1 ? "unidad" : "unidades"}`,
+          pie: (
+            <>
+              Valor al proveedor <Moneda valor={total} moneda={r.moneda} enfasis="fuerte" className="text-[var(--fg)]" />
+              {enDolaresTexto ? <span className="block">{enDolaresTexto}</span> : null}
+            </>
+          ),
+        }}
+        acciones={
+          /*
+            El botón de los papeles va aquí arriba y en color. Luis, 09/09:
+            *«ponlo pero que tenga color; por eso yo te decía poner un botón
+            editar al costado de Volver al listado»*. Metido dentro de la sección
+            de papeles y en gris no lo veía. Desde el 02/10 «Volver» está encima
+            del número, como en las demás fichas, y este sigue arriba y en azul.
+          */
+          puedeAdjuntar && !r.anulada ? (
             <EditarPapelesDelProveedor
               recepcionId={r.id}
               hayPapeles={papeles.ok && papeles.datos.length > 0}
               guiaProveedor={r.guia_proveedor}
               facturaProveedor={r.factura_proveedor}
             />
-          </div>
-        ) : null}
-      </div>
-
-      <section className="card grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Dato etiqueta="Proveedor" valor={r.proveedor ?? "—"} pie={r.proveedor_documento} />
-        <Dato etiqueta="Guía del proveedor" valor={r.guia_proveedor ?? "—"} />
-        <Dato etiqueta="Factura del proveedor" valor={r.factura_proveedor ?? "—"} />
-        {r.compra_id && r.compra_numero ? (
-          // La compra, con su botón: el número en texto plano no llevaba a
-          // ninguna parte (revisión por módulos del 02/10).
-          <div>
-            <dt className="etiqueta-dato">Compra</dt>
-            <dd className="mt-1">
-              <Link
-                href={`/compras/${r.compra_id}`}
-                className="inline-flex h-10 items-center rounded-md border border-[var(--border-strong)] bg-[var(--surface)] elev-1 px-3 font-mono text-sm font-medium text-brand-600 hover:bg-[var(--surface-2)]"
-              >
-                Ver {r.compra_numero}
+          ) : r.compra_id && r.compra_numero ? (
+            <Button asChild variant="outline">
+              <Link href={`/compras/${r.compra_id}`}>
+                Ver la compra {r.compra_numero}
+                <ArrowRight aria-hidden="true" />
               </Link>
-            </dd>
-          </div>
-        ) : (
-          <Dato
-            etiqueta="Compra"
-            valor="Recepción suelta"
-            pie="No viene de una compra registrada"
-          />
-        )}
-      </section>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <section className="card @container">
+      <BloqueFicha icono={<Info />} titulo="Datos de la recepción">
+        <dl className="grid grid-cols-1 gap-x-6 gap-y-3 @md:grid-cols-2 @4xl:grid-cols-4">
+          <DatoFicha
+            etiqueta="Proveedor"
+            valor={
+              <>
+                {r.proveedor ?? "—"}
+                {r.proveedor_documento ? (
+                  <span className="block text-sm font-normal text-[var(--fg-muted)]">{r.proveedor_documento}</span>
+                ) : null}
+              </>
+            }
+          />
+          <DatoFicha etiqueta="Guía del proveedor" valor={r.guia_proveedor ?? "—"} />
+          <DatoFicha etiqueta="Factura del proveedor" valor={r.factura_proveedor ?? "—"} />
+          {r.compra_id && r.compra_numero ? (
+            // La compra, con su botón: el número en texto plano no llevaba a
+            // ninguna parte (revisión por módulos del 02/10).
+            <div>
+              <dt className="etiqueta-dato">Compra</dt>
+              <dd className="mt-1">
+                <Button asChild variant="outline">
+                  <Link href={`/compras/${r.compra_id}`}>
+                    Ver {r.compra_numero}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </Button>
+              </dd>
+            </div>
+          ) : (
+            <DatoFicha
+              etiqueta="Compra"
+              valor={
+                <>
+                  Recepción suelta
+                  <span className="block text-sm font-normal text-[var(--fg-muted)]">
+                    No viene de una compra registrada
+                  </span>
+                </>
+              }
+            />
+          )}
+        </dl>
+      </BloqueFicha>
+
+      <BloqueFicha
+        icono={<PackageCheck />}
+        tono="entra"
+        titulo="Qué entró"
+        ayuda={`${r.lineas.length} ${r.lineas.length === 1 ? "línea" : "líneas"} · ${unidades.toLocaleString("es-PE")} ${
+          unidades === 1 ? "unidad" : "unidades"
+        }`}
+      >
         {/*
           Revisión de diseño del 02/10: en el teléfono esta tabla se
           desplazaba de lado (390 px: 353 → 765). Por debajo de `@3xl`
@@ -144,15 +186,15 @@ export default async function PaginaDetalleRecepcion({
           lo mismo apilado; se mide ESTA caja (`@container`), no la pantalla.
           Los totales del pie van al final, en su propio bloque.
         */}
-        <ul className="flex flex-col gap-2.5 p-3 @3xl:hidden">
+        <ul className="flex flex-col gap-2.5 @3xl:hidden">
           {r.lineas.map((l) => (
             <li
               key={l.id}
-              className="flex flex-col gap-2 rounded-lg border border-[var(--border)] p-3"
+              className="flex flex-col gap-2 rounded-lg border border-l-4 border-[var(--border)] border-l-[var(--ok)] bg-[var(--surface-2)] p-3"
             >
               <div>
-                <p className="font-mono text-sm font-semibold">{l.codigo}</p>
-                <p className="text-sm">{l.descripcion}</p>
+                <p className="font-mono text-base font-bold">{l.codigo}</p>
+                <p className="text-base">{l.descripcion}</p>
                 {l.marca ? (
                   <p className="text-sm text-[var(--fg-subtle)]">{l.marca}</p>
                 ) : null}
@@ -180,12 +222,12 @@ export default async function PaginaDetalleRecepcion({
               </dl>
               {/* En la tabla se entra por el código; aquí, con un botón que
                   se vea como tal. */}
-              <Link
-                href={`/productos/${l.producto_id}`}
-                className="inline-flex h-10 w-full items-center justify-center rounded-md border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--surface-2)]"
-              >
-                Ver el producto
-              </Link>
+              <Button asChild variant="outline" className="w-full">
+                <Link href={`/productos/${l.producto_id}`}>
+                  Ver el producto
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
             </li>
           ))}
           <li className="flex flex-wrap items-baseline justify-between gap-2 px-1 pt-1 text-sm font-medium">
@@ -202,7 +244,7 @@ export default async function PaginaDetalleRecepcion({
           </li>
         </ul>
         <div className="scroll-x hidden @3xl:block">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
               <tr className="cabecera-tabla">
                 <th className="px-4 py-2.5 font-medium">Código</th>
@@ -225,8 +267,9 @@ export default async function PaginaDetalleRecepcion({
                     </Link>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">{l.marca ?? "—"}</td>
-                  <td className="max-w-md px-4 py-2.5">
-                    <span className="block truncate">{l.descripcion}</span>
+                  <td className="min-w-[12rem] max-w-md px-4 py-2.5">
+                    {/* Entera, sin «…» (27/11). */}
+                    <span className="block break-words">{l.descripcion}</span>
                   </td>
                   <td className="px-4 py-2.5 text-right tabular">
                     {l.cantidad.toLocaleString("es-PE")}
@@ -264,15 +307,12 @@ export default async function PaginaDetalleRecepcion({
             </tfoot>
           </table>
         </div>
-      </section>
+      </BloqueFicha>
 
       {r.observaciones ? (
-        <section className="card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Observaciones</h2>
-          <p className="whitespace-pre-wrap text-sm text-[var(--fg-muted)]">
-            {r.observaciones}
-          </p>
-        </section>
+        <BloqueFicha icono={<MessageSquareText />} titulo="Observaciones">
+          <p className="whitespace-pre-wrap text-base text-[var(--fg)]">{r.observaciones}</p>
+        </BloqueFicha>
       ) : null}
 
       {/* El momento de acordarse: la caja acaba de entrar y el cliente que
@@ -293,26 +333,6 @@ export default async function PaginaDetalleRecepcion({
 
       {/* Quién la recibió o la anuló, y cuándo (TR-03). */}
       <HistorialDocumento entidad="recepciones" id={r.id} />
-    </div>
-  );
-}
-
-function Dato({
-  etiqueta,
-  valor,
-  pie,
-}: {
-  etiqueta: string;
-  valor: string;
-  pie?: string | null;
-}) {
-  return (
-    <div>
-      <dt className="etiqueta-dato">
-        {etiqueta}
-      </dt>
-      <dd className="mt-0.5 text-sm">{valor}</dd>
-      {pie ? <p className="text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
     </div>
   );
 }

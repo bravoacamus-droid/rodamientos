@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { AlarmClock, CalendarClock, Eye, FileSpreadsheet, FileText, HandCoins, Wallet } from "lucide-react";
+import { AlarmClock, CalendarClock, Eye, FileSpreadsheet, FileText, HandCoins, MessageSquareText, Wallet } from "lucide-react";
 import {
   Badge,
   EstadoError,
@@ -51,6 +51,7 @@ import { FiltrosCarteraBarra, OrdenCartera } from "./filtros";
 import { Gestor } from "./gestor";
 import { VoucherDelPago } from "./voucher-del-pago";
 import { PanelModulo } from "@/componentes/panel-modulo";
+import { TituloBloque } from "@/modules/facturacion/ui/ficha";
 
 const MOSTRAR_VALIDOS = Object.keys(MOSTRAR) as (keyof typeof MOSTRAR)[];
 
@@ -110,8 +111,9 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
       <PanelModulo ruta="/cobranzas">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Cobranzas</h1>
-            <p className="text-sm text-[var(--fg-muted)]">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Cobranzas</h1>
+            <span className="anim-crecer mt-3 block h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+            <p className="mt-3 max-w-2xl text-lg text-white">
               Lo que está por cobrar, por número de factura; lo vencido, en rojo.
               Registrar un pago actualiza el saldo y las cuotas solo.
             </p>
@@ -191,8 +193,8 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <section className="card flex flex-col gap-3 p-4">
-          <h2 className="text-base font-semibold">Lo cobrado</h2>
+        <section className="card elev-1 flex flex-col gap-3 p-5">
+          <TituloBloque icono={<HandCoins />}>Lo cobrado</TituloBloque>
           <Suspense fallback={<Skeleton className="h-16 w-full" />}>
             <BarraPeriodo
               titulo="Periodo"
@@ -207,8 +209,8 @@ export default async function PaginaCobranzas({ searchParams }: Props) {
           </Suspense>
         </section>
 
-        <section className="card p-4">
-          <h2 className="mb-3 text-base font-semibold">Últimas gestiones</h2>
+        <section className="card elev-1 p-5">
+          <TituloBloque icono={<MessageSquareText />}>Últimas gestiones</TituloBloque>
           <Suspense fallback={<Skeleton className="h-40 w-full" />}>
             <ListaGestiones />
           </Suspense>
@@ -239,7 +241,7 @@ async function Compromisos({ hoy }: { hoy: string }) {
             </span>
             <span>{g.nota}</span>
             {g.comprobante_numero ? (
-              <span className="font-mono text-sm">{g.comprobante_numero}</span>
+              <span className="tabular text-sm">{g.comprobante_numero}</span>
             ) : null}
           </li>
         ))}
@@ -464,11 +466,25 @@ export function CarteraVista({
       */}
       <div className="grid gap-3 p-3 pt-0 @3xl:hidden @xl:grid-cols-2">
         {datos.map((d) => (
-          <div key={d.id} className="rounded-lg border border-[var(--border)] p-3">
+          // 27/11: con el filo izquierdo que SIGNIFICA algo, como las tarjetas
+          // del tablero: rojo lo vencido, verde lo pagado, ámbar lo que se
+          // debe en plazo. Y la palabra «Vencida» arriba: el rojo no va solo.
+          <div
+            key={d.id}
+            className={`card elev-1 border-l-4 p-4 ${
+              vencida(d) ? "border-l-[var(--danger)]" : d.saldo <= 0 ? "border-l-[var(--ok)]" : "border-l-[var(--warn)]"
+            }`}
+          >
+            {vencida(d) ? (
+              <p className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-danger-bg px-2.5 py-0.5 text-sm font-bold text-danger">
+                <AlarmClock className="size-4" aria-hidden="true" />
+                Vencida
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link
                 href={`/facturacion/${d.id}`}
-                className={`font-mono text-sm hover:underline ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-medium text-brand-600"}`}
+                className={`tabular text-base underline underline-offset-4 ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-semibold text-brand-600"}`}
               >
                 {d.numero}
               </Link>
@@ -480,14 +496,18 @@ export function CarteraVista({
               <div className="text-right">
                 <span className="block text-sm text-[var(--fg-muted)]">Saldo</span>
                 {d.saldo <= 0 ? (
-                  <span className="text-lg font-semibold text-[var(--ok)]">Pagada</span>
+                  <span className="text-xl font-bold text-[var(--ok)]">Pagada</span>
                 ) : (
-                  <Moneda moneda={d.moneda} valor={saldoEnMoneda(d)} className="text-lg font-semibold" />
+                  <Moneda
+                    moneda={d.moneda}
+                    valor={saldoEnMoneda(d)}
+                    className={`text-2xl font-extrabold ${vencida(d) ? "text-[var(--danger)]" : "text-[var(--titulo)]"}`}
+                  />
                 )}
               </div>
             </div>
 
-            <p className="mt-1 text-sm">{d.cliente}</p>
+            <p className="mt-1 text-base font-semibold">{d.cliente}</p>
             {d.orden_compra_cliente ? (
               <p className="text-sm text-[var(--fg-subtle)]">
                 OC {d.orden_compra_cliente}
@@ -517,9 +537,11 @@ export function CarteraVista({
                 <VerFactura id={d.id} />
               </div>
             ) : puedeGestionar || puedeCobrar ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
+              // Cobrar primero y a lo ancho en el teléfono (27/11): es lo que
+              // se viene a hacer desde aquí. Anotar la llamada, al lado.
+              <div className="mt-4 flex flex-wrap gap-2 [&>*]:flex-1">
                 {puedeCobrar ? <Cobrador documento={d} hoy={hoy} /> : null}
+                {puedeGestionar ? <Gestor documento={d} hoy={hoy} /> : null}
               </div>
             ) : null}
           </div>
@@ -543,7 +565,7 @@ export function CarteraVista({
             <th className="px-3 py-2.5 font-medium">Vencimiento</th>
             <th className="px-3 py-2.5 font-medium">Retención</th>
             <th className="px-3 py-2.5 text-right font-medium">Saldo</th>
-            <th className="sticky right-0 z-20 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
+            <th className="sticky right-0 z-20 bg-[var(--surface)] px-3 py-2.5 text-right font-medium">
               Acciones
             </th>
           </tr>
@@ -558,7 +580,7 @@ export function CarteraVista({
               <td className="px-3 py-2.5">
                 <Link
                   href={`/facturacion/${d.id}`}
-                  className={`whitespace-nowrap font-mono text-sm hover:underline ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-medium text-brand-600"}`}
+                  className={`whitespace-nowrap tabular text-sm hover:underline ${vencida(d) ? "font-bold text-[var(--danger)]" : "font-medium text-brand-600"}`}
                 >
                   {d.numero}
                 </Link>
@@ -571,7 +593,7 @@ export function CarteraVista({
 
               <td className="px-3 py-2.5">
                 <span className="block">{d.cliente}</span>
-                <span className="block font-mono text-sm text-[var(--fg-subtle)]">
+                <span className="block tabular text-sm text-[var(--fg-subtle)]">
                   {d.documento ?? ""}
                 </span>
               </td>
@@ -601,7 +623,7 @@ export function CarteraVista({
                 ) : null}
               </td>
 
-              <td className="sticky right-0 z-10 border-l border-[var(--border-soft)] bg-[var(--surface)] px-3 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
+              <td className="sticky right-0 z-10 bg-[var(--surface)] px-3 py-2.5 group-hover/fila:bg-[var(--surface-2)]">
                 <div className="flex flex-col items-stretch gap-1.5 [&>*]:justify-center">
                   {d.saldo <= 0 ? (
                     <VerFactura id={d.id} />
@@ -636,11 +658,11 @@ async function ListaPagos({
 
   if (r.datos.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-[var(--fg-muted)]">
+      <VacioLista icono={<HandCoins />}>
         {periodo.desde || periodo.hasta
           ? "Ningún pago registrado en este periodo."
           : "Todavía no se ha registrado ningún pago."}
-      </p>
+      </VacioLista>
     );
   }
 
@@ -655,7 +677,7 @@ async function ListaPagos({
           <div className="min-w-0">
             <Link
               href={`/facturacion/${p.comprobante_id}`}
-              className="font-mono text-sm font-medium text-brand-600 hover:underline"
+              className="tabular text-sm font-medium text-brand-600 hover:underline"
             >
               {p.comprobante_numero}
             </Link>
@@ -705,10 +727,10 @@ async function ListaGestiones() {
 
   if (r.datos.length === 0) {
     return (
-      <p className="py-6 text-center text-sm text-[var(--fg-muted)]">
+      <VacioLista icono={<MessageSquareText />}>
         Sin gestiones apuntadas. Cuando llames a un cliente, anótalo: la promesa que
         no se apunta se olvida.
-      </p>
+      </VacioLista>
     );
   }
 
@@ -724,7 +746,7 @@ async function ListaGestiones() {
             <span className="text-sm font-medium">
               {ETIQUETA_CANAL[g.canal] ?? g.canal}
               {g.comprobante_numero ? (
-                <span className="ml-2 font-mono text-[var(--fg-muted)]">
+                <span className="ml-2 tabular text-[var(--fg-muted)]">
                   {g.comprobante_numero}
                 </span>
               ) : null}
@@ -834,6 +856,22 @@ function Atraso({ d }: { d: DocumentoPorCobrar }) {
     <Badge tone={tonoTramo(d.tramo_aging)} size="xs">
       {etiquetaAtraso(d.dias_vencido, d.fecha_vencimiento)}
     </Badge>
+  );
+}
+
+/**
+ * Una lista sin nada, con su icono y en 16 px (27/11): era una línea gris de
+ * 14 px centrada que se leía como un hueco de la pantalla, no como una
+ * respuesta.
+ */
+function VacioLista({ icono, children }: { icono: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4">
+      <span className="mt-0.5 shrink-0 text-[var(--fg-muted)] [&_svg]:size-6" aria-hidden="true">
+        {icono}
+      </span>
+      <p className="text-base text-[var(--fg)]">{children}</p>
+    </div>
   );
 }
 

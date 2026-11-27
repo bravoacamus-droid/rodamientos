@@ -10,6 +10,7 @@ import { catalogosParaProducto, productoPorId } from "../api/consultas";
 import { esKit } from "../api/kits";
 import { FormularioProducto } from "./formulario";
 import { Volver } from "@/componentes/volver";
+import { PanelModulo } from "@/componentes/panel-modulo";
 
 /**
  * Alta y edición de un producto.
@@ -73,27 +74,43 @@ export default async function PaginaFormularioProducto({
     // Al editar, «Volver» lleva a la ficha de la que se vino, no al listado
     // (revisión por módulos del 02/10).
     <div className="flex flex-col gap-5">
-      <header>
-        {p ? (
-          <Volver href={`/productos/${p.id}`}>Volver al producto</Volver>
-        ) : (
-          <Volver href="/productos">Volver a productos</Volver>
-        )}
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-          {p ? `Editar ${p.codigo}` : "Nuevo producto"}
-        </h1>
-        <p className="text-sm text-[var(--fg-muted)]">
-          {p
-            ? "Los cambios de precio afectan a las cotizaciones NUEVAS; las ya emitidas conservan lo que se pactó."
-            : "Los productos se crean aquí y no desde la cotización: así el catálogo no se llena de repetidos."}
-        </p>
-        {p?.designacion_base ? (
-          <p className="mt-1 text-sm text-[var(--fg-muted)]">
-            Medida detectada: <strong>{p.designacion_base}</strong> — con ella se
-            proponen los equivalentes de otras marcas.
-          </p>
-        ) : null}
-      </header>
+      {/* La cabecera de marca, como la ficha (27/11): al editar, el código
+          en grande y en letra de máquina, para saber qué se está tocando. */}
+      <PanelModulo ruta="/productos">
+        <div className="flex min-w-0 flex-col gap-3">
+          {p ? (
+            <Volver href={`/productos/${p.id}`}>Volver al producto</Volver>
+          ) : (
+            <Volver href="/productos">Volver a productos</Volver>
+          )}
+          <div className="min-w-0">
+            {p ? (
+              <>
+                <p className="text-base font-semibold text-[var(--fg-muted)]">Editar producto</p>
+                <h1 className="font-mono text-3xl font-extrabold tracking-tight text-[var(--titulo)] [overflow-wrap:anywhere] sm:text-4xl">
+                  {p.codigo}
+                </h1>
+              </>
+            ) : (
+              <h1 className="text-3xl font-extrabold tracking-tight text-[var(--titulo)]">
+                Nuevo producto
+              </h1>
+            )}
+            <p className="mt-1 max-w-3xl text-base text-[var(--fg-muted)]">
+              {p
+                ? "Los cambios de precio afectan a las cotizaciones NUEVAS; las ya emitidas conservan lo que se pactó."
+                : "Los productos se crean aquí y no desde la cotización: así el catálogo no se llena de repetidos."}
+            </p>
+            {p?.designacion_base ? (
+              <p className="mt-1 text-base text-[var(--fg-muted)]">
+                Medida detectada: <strong className="font-mono text-[var(--fg)]">{p.designacion_base}</strong> — con
+                ella se proponen los equivalentes de otras marcas.
+              </p>
+            ) : null}
+          </div>
+          <span className="h-2 w-32 -skew-x-[30deg] rounded-sm bg-accent-400" aria-hidden="true" />
+        </div>
+      </PanelModulo>
 
       {p ? (
         // El candado (106, Willy 06/10): «mientras yo cargo un grupo de

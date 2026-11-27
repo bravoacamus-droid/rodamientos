@@ -44,9 +44,11 @@ export function AvisoSinPermiso({ mensaje, className = "" }: { mensaje: string; 
   return (
     <div
       role="note"
-      className={`flex items-start gap-2.5 rounded-lg border border-[var(--warn)] bg-[var(--warn-bg)] p-3 text-sm ${className}`}
+      // `text-base` y el filo de 4 px a la izquierda (27/11): es lo que
+      // explica por qué no se puede, y en `text-sm` se leía como una nota.
+      className={`flex items-start gap-3 rounded-lg border border-l-4 border-[var(--warn)] bg-[var(--warn-bg)] p-4 text-base ${className}`}
     >
-      <Lock className="mt-0.5 size-4 shrink-0 text-[var(--warn)]" aria-hidden="true" />
+      <Lock className="mt-0.5 size-5 shrink-0 text-[var(--warn)]" aria-hidden="true" />
       <p>{mensaje}</p>
     </div>
   );

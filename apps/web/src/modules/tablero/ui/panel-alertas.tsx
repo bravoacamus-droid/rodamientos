@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BellRing } from "lucide-react";
 import { EstadoVacio, buttonVariants } from "@rodatech/ui";
 
 // Las etiquetas salen del módulo de alertas y no de una copia local: aquí
@@ -43,18 +43,24 @@ export async function PanelAlertas() {
   const sinNotificar = pendientes.ok ? pendientes.datos : 0;
 
   return (
-    <section className="card flex flex-col">
+    <section className="card elev-1 flex flex-col">
       <header className="border-b border-[var(--border-soft)] px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Alertas</h2>
+          {/* Icono en chip y `text-xl`, como Cartera y los bloques (27/11). */}
+          <div className="flex items-center gap-3">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-warn-bg text-warn ring-1 ring-inset ring-[var(--border)]">
+              <BellRing className="size-6" aria-hidden="true" />
+            </span>
+            <h2 className="text-xl font-bold text-[var(--titulo)]">Alertas</h2>
+          </div>
           {/* Botón y no enlace suelto, como el de la cartera (revisión del 02/10). */}
-          <Link href="/alertas" className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <Link href="/alertas" className={`${buttonVariants({ variant: "outline" })} text-base`}>
             Ver todas
             <ArrowRight aria-hidden="true" />
           </Link>
         </div>
         {sinNotificar > 0 ? (
-          <p className="mt-1 text-sm text-[var(--fg-muted)]">
+          <p className="mt-2 text-base text-[var(--fg-muted)]">
             {sinNotificar === 1
               ? "1 alerta todavía no se mandó por WhatsApp ni por correo."
               : `${sinNotificar} alertas todavía no se mandaron por WhatsApp ni por correo.`}
@@ -74,19 +80,19 @@ export async function PanelAlertas() {
           {alertas.map((a) => (
             // En el móvil el botón baja a su propia fila: a su lado, el mensaje
             // tenía 150 px y se cortaba justo en la cifra (visto a 390 px).
-            <li key={a.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-2.5">
+            <li key={a.id} className="flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3">
               <span
-                className={`mt-0.5 shrink-0 rounded-sm px-1.5 py-0.5 text-sm font-medium ${
+                className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold ${
                   COLOR_SEVERIDAD[a.severidad] ?? COLOR_SEVERIDAD.baja
                 }`}
               >
                 {ETIQUETA_SEVERIDAD[a.severidad] ?? a.severidad}
               </span>
               <div className="min-w-0 flex-1 basis-56">
-                <p className="text-sm font-medium">{a.titulo}</p>
+                <p className="text-base font-semibold">{a.titulo}</p>
                 {/* Dos líneas y no una: lo que se cortaba era la cifra y la
                     fecha. En el móvil, entero. */}
-                <p className="text-sm text-[var(--fg-muted)] sm:line-clamp-2" title={a.mensaje}>
+                <p className="text-base text-[var(--fg-muted)] sm:line-clamp-2" title={a.mensaje}>
                   {a.mensaje}
                 </p>
               </div>

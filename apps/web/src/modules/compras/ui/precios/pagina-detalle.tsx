@@ -1,6 +1,6 @@
-import { Volver } from "@/componentes/volver";
 import { redirect } from "next/navigation";
-import { EstadoError, formatearFecha } from "@rodatech/ui";
+import { Badge, EstadoError, formatearFecha } from "@rodatech/ui";
+import { CabeceraFicha } from "../ficha";
 import { perfilActual } from "@rodatech/db/servidor";
 import { sinPermiso } from "@/lib/permisos";
 import { AvisoSinPermiso } from "@/componentes/sin-permiso";
@@ -71,13 +71,20 @@ export default async function PaginaComparativa({
     }
     return (
       <div className="flex flex-col gap-5">
-        <div>
-          <Volver href="/compras/precios">Volver a pedir precios</Volver>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{ronda.numero}</h1>
-          <p className="text-base text-[var(--fg-muted)]">
-            {formatearFecha(ronda.fecha)} · apunta lo que te diga cada uno; cuando lo decidas, «Pasar a compras».
-          </p>
-        </div>
+        {/* La cabecera de ficha de compras (27/11): el número grande sobre
+            el azul y, en vez de una línea gris, qué se hace aquí. */}
+        <CabeceraFicha
+          ruta="/compras/precios"
+          volver={{ href: "/compras/precios", texto: "Volver a pedir precios" }}
+          tipo="Consulta de precios"
+          numero={ronda.numero}
+          estado={<Badge tone="warning">Abierta · preguntando</Badge>}
+          quien={{
+            rotulo: `Del ${formatearFecha(ronda.fecha)}`,
+            nombre: `${ronda.items.length} ${ronda.items.length === 1 ? "producto" : "productos"} por preguntar`,
+            detalle: "Apunta lo que te diga cada uno; cuando lo decidas, «Pasar a compras».",
+          }}
+        />
         <HojaPrecios
           inicial={cargada.datos.hoja}
           recientes={recientes}
@@ -100,21 +107,28 @@ export default async function PaginaComparativa({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          {/* El «Volver» de las demás fichas. Era un enlace gris en
-              mayúsculas encima del número, que no parece un botón
-              (revisión por módulos del 02/10). */}
-          <Volver href="/compras/precios">Volver a pedir precios</Volver>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
-            {ronda.numero}
-          </h1>
-          <p className="text-sm text-[var(--fg-muted)]">
-            {formatearFecha(ronda.fecha)}
-            {ronda.nota ? ` · ${ronda.nota}` : ""}
-          </p>
-        </div>
-      </div>
+      {/* El «Volver» de las demás fichas. Era un enlace gris en
+          mayúsculas encima del número, que no parece un botón
+          (revisión por módulos del 02/10). Y desde el 27/11, la cabecera
+          de ficha: número grande, estado y la nota como «para qué». */}
+      <CabeceraFicha
+        ruta="/compras/precios"
+        volver={{ href: "/compras/precios", texto: "Volver a pedir precios" }}
+        tipo="Consulta de precios"
+        numero={ronda.numero}
+        estado={
+          ronda.estado === "anulada" ? (
+            <Badge tone="danger">Anulada</Badge>
+          ) : (
+            <Badge tone="success">Cerrada · ya se decidió</Badge>
+          )
+        }
+        quien={{
+          rotulo: `Del ${formatearFecha(ronda.fecha)}`,
+          nombre: `${ronda.compras.length} ${ronda.compras.length === 1 ? "compra salió" : "compras salieron"} de aquí`,
+          detalle: ronda.nota || undefined,
+        }}
+      />
 
       <Comparativa ronda={ronda} referencias={ref.ok ? ref.datos : {}} />
     </div>

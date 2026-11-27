@@ -1,10 +1,11 @@
 import type * as React from "react";
 import type { LucideIcon } from "lucide-react";
-import { CircleCheck, CircleDot, FileText, Truck, Wallet } from "lucide-react";
+import { CircleCheck, CircleDot, FileText, ListChecks, Truck, Wallet } from "lucide-react";
 import { Moneda } from "@rodatech/ui";
 
 import { cuadreDelPedido, type EstadoCifra } from "../dominio/cuadre";
 import { cantidadLegible, type DespachoDelPedido } from "../dominio/etapa";
+import { TituloBloque } from "@/modules/cotizaciones/ui/ficha/piezas";
 
 /**
  * ¿Cuadra el pedido? (161) Tres cifras arriba de la ficha: despachado X de Y,
@@ -16,9 +17,9 @@ import { cantidadLegible, type DespachoDelPedido } from "../dominio/etapa";
  * su icono y la palabra «completo», «falta» o «nada todavía».
  */
 const ESTILO: Record<EstadoCifra, { clase: string; Icono: LucideIcon; palabra: string }> = {
-  todo: { clase: "border-[var(--ok)]", Icono: CircleCheck, palabra: "Completo" },
-  parte: { clase: "border-[var(--warn)] bg-[var(--warn-bg)]", Icono: CircleDot, palabra: "Falta una parte" },
-  nada: { clase: "border-[var(--border-strong)]", Icono: CircleDot, palabra: "Nada todavía" },
+  todo: { clase: "border-[var(--ok)] border-l-[var(--ok)] bg-ok-bg", Icono: CircleCheck, palabra: "Completo" },
+  parte: { clase: "border-[var(--warn)] border-l-[var(--warn)] bg-[var(--warn-bg)]", Icono: CircleDot, palabra: "Falta una parte" },
+  nada: { clase: "border-[var(--border-strong)] border-l-[var(--border-strong)] bg-[var(--surface)]", Icono: CircleDot, palabra: "Nada todavía" },
 };
 
 function Casilla({
@@ -34,14 +35,15 @@ function Casilla({
 }) {
   const e = ESTILO[estado];
   return (
-    <div className={`flex flex-col gap-1 rounded-lg border-2 p-3 ${e.clase}`}>
-      <p className="flex items-center gap-2 text-sm font-semibold text-[var(--fg-muted)]">
-        <Icono className="size-4" aria-hidden="true" />
+    <div className={`flex min-w-0 flex-col gap-1 rounded-lg border border-l-[6px] p-4 ${e.clase}`}>
+      <p className="flex items-center gap-2 text-base font-semibold text-[var(--fg)]">
+        <Icono className="size-5" aria-hidden="true" />
         {titulo}
       </p>
-      <div className="text-lg font-semibold tabular">{children}</div>
-      <p className={`flex items-center gap-1.5 text-sm font-medium ${estado === "todo" ? "text-[var(--ok)]" : ""}`}>
-        <e.Icono className="size-4" aria-hidden="true" />
+      {/* La cifra en grande (27/11): es lo que se viene a leer. */}
+      <div className="break-words text-2xl font-extrabold tabular text-[var(--titulo)]">{children}</div>
+      <p className={`flex items-center gap-1.5 text-base font-semibold ${estado === "todo" ? "text-[var(--ok)]" : ""}`}>
+        <e.Icono className="size-5" aria-hidden="true" />
         {e.palabra}
       </p>
     </div>
@@ -58,11 +60,9 @@ export function CuadreDelPedido({
   const c = cuadreDelPedido(despacho, facturas);
 
   return (
-    <section className="card p-4" aria-labelledby="cuadre-titulo">
-      <h2 id="cuadre-titulo" className="mb-3 text-lg font-semibold">
-        ¿Cómo va el pedido?
-      </h2>
-      <div className="grid gap-3 sm:grid-cols-3">
+    <section className="card elev-1 @container flex flex-col gap-3 p-4" aria-labelledby="cuadre-titulo">
+      <TituloBloque id="cuadre-titulo" icono={ListChecks} titulo="¿Cómo va el pedido?" />
+      <div className="grid gap-3 @2xl:grid-cols-3">
         {c.despachado ? (
           <Casilla icono={Truck} titulo="Despachado" estado={c.despachado.estado}>
             {cantidadLegible(c.despachado.hecho)} de {cantidadLegible(c.despachado.de)}
@@ -100,14 +100,14 @@ export function CuadreDelPedido({
             {c.cobrado.map((x, i) => (
               <span key={x.moneda} className="block">
                 {i > 0 ? "y " : ""}
-                <Moneda valor={x.cobrado} moneda={x.moneda} tamano="lg" className="text-lg text-inherit" /> de{" "}
-                <Moneda valor={x.total} moneda={x.moneda} tamano="lg" className="text-lg text-inherit" />
+                <Moneda valor={x.cobrado} moneda={x.moneda} tamano="lg" className="text-2xl text-inherit" /> de{" "}
+                <Moneda valor={x.total} moneda={x.moneda} tamano="lg" className="text-2xl text-inherit" />
               </span>
             ))}
           </Casilla>
         )}
       </div>
-      <p className="mt-2 text-sm text-[var(--fg-muted)]">
+      <p className="text-sm text-[var(--fg-muted)]">
         Despachado y facturado, en unidades: lo que salió en guías emitidas y lo que de eso ya tiene factura.
       </p>
     </section>

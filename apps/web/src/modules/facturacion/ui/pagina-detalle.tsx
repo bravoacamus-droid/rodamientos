@@ -1,12 +1,30 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mensajeParaPersona } from "@rodatech/sunat/red";
-import { Building2, FileArchive, FileCode, HandCoins, Printer } from "lucide-react";
 import {
-  Badge,
+  ArrowRight,
+  Ban,
+  BadgeCheck,
+  Building2,
+  CircleCheck,
+  Clock,
+  FileArchive,
+  FileCode,
+  FileText,
+  HandCoins,
+  Landmark,
+  Package,
+  Percent,
+  Printer,
+  Receipt,
+  Truck,
+  Wallet,
+} from "lucide-react";
+import {
   Button,
   EstadoBadge,
   EstadoError,
+  KpiCard,
   Moneda,
   buttonVariants,
   cn,
@@ -34,6 +52,7 @@ import { DocumentoComprobante } from "./documento";
 import { hojaDeComprobante } from "./papel";
 import { qrDeComprobante } from "../api/qr";
 import { enMonedaDelDocumento } from "../dominio/moneda-documento";
+import { AvisoFicha, CabeceraFicha, DatoFicha, PasosDelFlujo, TituloBloque } from "./ficha";
 
 /**
  * Ficha de un comprobante.
@@ -130,36 +149,73 @@ export default async function PaginaDetalleComprobante({
       de la vista previa saca la PÁGINA, y sin esto sacaba la ficha.
     */}
     <div className="flex flex-col gap-5 print:hidden">
-      <header className="anim-entrada flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Volver href="/facturacion">Volver a facturación</Volver>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="font-mono text-xl font-semibold tracking-tight sm:text-2xl">
-              {c.numero}
-            </h1>
-            <Badge tone="neutral">{ETIQUETA_TIPO[c.tipo]}</Badge>
+      {/*
+        La cabecera de ficha del rediseño (27/11): el número grande, el estado
+        grande, el cliente en grande y el TOTAL como héroe. Antes el total era
+        la tercera de cuatro tarjetas iguales y el número medía 20 px.
+      */}
+      <CabeceraFicha
+        ruta="/facturacion"
+        volver={<Volver href="/facturacion">Volver a facturación</Volver>}
+        tipo={ETIQUETA_TIPO[c.tipo]}
+        numero={c.numero}
+        estados={
+          <>
             {/* El mismo badge que el listado. Aquí se quedó `Badge` con
                 `TONO_SUNAT` —plano y sin punto— cuando la tabla pasó a
                 `EstadoBadge`: el estado ante SUNAT es lo que más caro sale
                 confundir, y se leía distinto en la lista y en la ficha. */}
             <EstadoBadge
+              size="md"
+              className="text-base"
               estado={c.estado_sunat}
               etiqueta={ETIQUETA_SUNAT[c.estado_sunat]}
             />
             {/* El mismo de la lista, con su raya y su tachado (UI1-05). */}
-            {c.estado === "anulado" ? <EstadoBadge estado="anulada" etiqueta="Anulado" /> : null}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <p className="text-sm text-[var(--fg-muted)]">
-              {c.cliente ?? "—"}
-              {c.cliente_documento ? ` · ${c.cliente_documento}` : ""}
-            </p>
-            <BotonFichaCliente id={c.cliente_id} />
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-2 no-print">
-          <div className="flex flex-wrap items-center gap-2">
+            {c.estado === "anulado" ? (
+              <EstadoBadge size="md" className="text-base" estado="anulada" etiqueta="Anulado" />
+            ) : null}
+            {/* Cobrada o no, con palabra: es lo que más se pregunta de una
+                factura después de «¿la aceptó SUNAT?» (27/11). */}
+            {!esNota && !anulado ? (
+              <EstadoBadge
+                size="md"
+                className="text-base"
+                estado={c.saldo <= 0 ? "pagada" : c.pagado > 0 ? "parcial" : "pendiente"}
+                etiqueta={c.saldo <= 0 ? "Cobrada" : c.pagado > 0 ? "Cobrada en parte" : "Por cobrar"}
+              />
+            ) : null}
+          </>
+        }
+        quien={c.cliente ?? "—"}
+        quienDetalle={c.cliente_documento}
+        junto={<BotonFichaCliente id={c.cliente_id} />}
+        cifra={{
+          rotulo: "Total",
+          valor: <Moneda moneda={c.moneda} valor={c.total} className={HEREDA} />,
+          pie: esNota ? (
+            c.referencia_numero ? `Corrige a ${c.referencia_numero}` : null
+          ) : anulado ? (
+            "Anulado: no se cobra"
+          ) : c.saldo <= 0 ? (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-[var(--ok)]">
+              <CircleCheck className="size-5" aria-hidden="true" />
+              Cobrado entero
+            </span>
+          ) : (
+            <span className="font-semibold text-[var(--warn)]">
+              Falta cobrar <Moneda moneda={c.moneda} valor={c.saldo} className="text-inherit text-[length:inherit]" />
+            </span>
+          ),
+        }}
+        pasos={
+          // Una nota no es un paso de la venta, y una anulada ya no avanza.
+          !esNota && !anulado ? (
+            <PasosDelFlujo actual={c.pagado > 0 || c.saldo <= 0 ? "cobro" : "factura"} terminado={c.saldo <= 0} />
+          ) : null
+        }
+        acciones={
+          <>
             {/*
               Descargar e imprimir, iguales que en la guía y la cotización.
 
@@ -210,9 +266,9 @@ export default async function PaginaDetalleComprobante({
                 series={series}
               />
             ) : null}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       {/*
         Quién la anuló, cuándo y por qué (TR-07). Decía «No se cobra · El
@@ -220,10 +276,9 @@ export default async function PaginaDetalleComprobante({
         cosas. Las bajas por SUNAT no apuntan a la persona: sale sin nombre.
       */}
       {anulacion ? (
-        <p className="anim-entrada rounded-md border border-[var(--danger)] bg-[var(--danger-bg)] p-3 text-sm">
-          <strong>{fraseAnulacion(anulacion.en, anulacion.por)}</strong>
-          {anulacion.motivo ? <> Motivo: {anulacion.motivo}</> : null}
-        </p>
+        <AvisoFicha tono="peligro" icono={<Ban />} titulo={fraseAnulacion(anulacion.en, anulacion.por)}>
+          {anulacion.motivo ? <>Motivo: {anulacion.motivo}</> : null}
+        </AvisoFicha>
       ) : null}
 
       {/* --------------------------------------------------------- Cifras */}
@@ -236,47 +291,86 @@ export default async function PaginaDetalleComprobante({
         (revisión por módulos del 02/10). Y una anulada no tiene saldo: decía
         «$ 1,018.17 · pagado 0.00», que se lee como una deuda viva.
       */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tarjeta etiqueta="Gravada" valor={<Moneda moneda={c.moneda} valor={c.op_gravada} tamano="lg" className="text-lg" />} />
-        <Tarjeta
-          etiqueta="IGV"
-          valor={<Moneda moneda={c.moneda} valor={c.igv} tamano="lg" enfasis="suave" className="text-lg" />}
-        />
-        <Tarjeta etiqueta="Total" valor={<Moneda moneda={c.moneda} valor={c.total} tamano="lg" className="text-lg" />} />
-        {esNota ? (
-          <Tarjeta
-            etiqueta="Motivo"
-            valor={<span className="text-base font-semibold">{motivoNota ?? "—"}</span>}
-            pie={c.referencia_numero ? `Corrige a ${c.referencia_numero}` : undefined}
+      {/*
+        27/11: las tarjetas de cifras del tablero (`KpiCard`), con el filo de
+        color que SIGNIFICA algo: verde lo cobrado, ámbar lo que falta. El
+        total ya está arriba como héroe, así que aquí van sus partes y lo
+        cobrado.
+      */}
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-3 @md:grid-cols-2 @4xl:grid-cols-4">
+          <KpiCard
+            etiqueta="Gravada"
+            icono={<Receipt />}
+            valor={<Moneda moneda={c.moneda} valor={c.op_gravada} className={HEREDA} />}
+            detalle="sin IGV"
           />
-        ) : c.estado === "anulado" ? (
-          <Tarjeta
-            etiqueta="Saldo"
-            valor={<span className="text-[var(--fg-muted)]">No se cobra</span>}
-            pie="El comprobante está anulado."
+          <KpiCard
+            etiqueta="IGV (18 %)"
+            icono={<Percent />}
+            tono="sale"
+            valor={<Moneda moneda={c.moneda} valor={c.igv} className={HEREDA} />}
           />
-        ) : (
-          <Tarjeta
-            etiqueta="Saldo"
-            valor={
-              <Moneda
-                moneda={c.moneda}
-                valor={c.saldo}
-                tamano="lg"
-                className={`text-lg ${c.saldo <= 0 ? "text-ok" : "text-warn"}`}
+          {esNota ? (
+            <KpiCard
+              etiqueta="Motivo"
+              icono={<FileText />}
+              className="@md:col-span-2"
+              valor={<span className="text-xl font-bold">{motivoNota ?? "—"}</span>}
+              detalle={c.referencia_numero ? `Corrige a ${c.referencia_numero}` : undefined}
+            />
+          ) : c.estado === "anulado" ? (
+            <KpiCard
+              etiqueta="Saldo"
+              icono={<Ban />}
+              className="@md:col-span-2"
+              valor={<span className="text-xl font-bold text-[var(--fg-muted)]">No se cobra</span>}
+              detalle="El comprobante está anulado."
+            />
+          ) : (
+            <>
+              <KpiCard
+                etiqueta="Cobrado"
+                icono={<Wallet />}
+                tono="entra"
+                valor={<Moneda moneda={c.moneda} valor={c.pagado} className={HEREDA} />}
+                detalle={
+                  pagos.ok
+                    ? `${pagos.datos.length} ${pagos.datos.length === 1 ? "cobro registrado" : "cobros registrados"}`
+                    : undefined
+                }
               />
-            }
-            pie={c.saldo <= 0 ? "Cobrado" : <>Pagado <Moneda moneda={c.moneda} valor={c.pagado} tamano="sm" enfasis="suave" /></>}
-          />
-        )}
+              <KpiCard
+                etiqueta="Falta cobrar"
+                icono={c.saldo <= 0 ? <CircleCheck /> : <Clock />}
+                tono={c.saldo <= 0 ? "entra" : "revisar"}
+                valor={<Moneda moneda={c.moneda} valor={c.saldo} className={HEREDA} />}
+                detalle={
+                  c.saldo <= 0
+                    ? "Cobrado"
+                    : c.fecha_vencimiento
+                      ? `Vence el ${formatearFecha(c.fecha_vencimiento)}`
+                      : "Al contado"
+                }
+              />
+            </>
+          )}
+        </div>
       </div>
 
       {c.total_letras ? (
-        <p className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-2)] px-3 py-2 text-sm">
-          <span className="text-[var(--fg-muted)]">Son: </span>
-          {c.total_letras}
+        <p className="card px-4 py-3 text-base">
+          <span className="etiqueta-dato mr-1">Son:</span>
+          <span className="font-semibold">{c.total_letras}</span>
         </p>
       ) : null}
+
+      {/*
+        La guía, a la vista y no en la sexta fila de «Datos» (27/11). Desde la
+        089 no se factura sin guía: es lo que justifica que esta factura
+        exista, y lo primero que se va a buscar al revisarla.
+      */}
+      {!esNota ? <BloqueGuias enl={enl} guiaNumero={c.guia_numero} /> : null}
 
       {/*
         `min-w-0` en las dos columnas: un hijo de rejilla no baja de lo que
@@ -285,13 +379,17 @@ export default async function PaginaDetalleComprobante({
       */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* ------------------------------------------------------ Líneas */}
-        <section className="card @container min-w-0 p-4">
-          <h2 className="mb-3 text-base font-semibold">
-            Detalle
-            <span className="ml-1.5 font-normal text-[var(--fg-muted)]">
-              · {c.lineas.length} {c.lineas.length === 1 ? "línea" : "líneas"}
-            </span>
-          </h2>
+        <section className="card elev-1 @container min-w-0 p-5">
+          <TituloBloque
+            icono={<Package />}
+            extra={
+              <span className="rounded-full bg-[var(--surface-2)] px-3 py-1 text-sm font-semibold text-[var(--fg-muted)] ring-1 ring-inset ring-[var(--border)]">
+                {c.lineas.length} {c.lineas.length === 1 ? "producto" : "productos"}
+              </span>
+            }
+          >
+            Qué se factura
+          </TituloBloque>
           {/*
             La tabla, solo cuando la CAJA pasa de 32 rem (`@lg`: 544 px con
             la letra de 17 px de esta casa).
@@ -391,8 +489,8 @@ export default async function PaginaDetalleComprobante({
         {/* ------------------------------------------------------- Datos */}
         <div className="flex flex-col gap-4">
           {/* Lo primero de la columna es lo accionable: el estado del envío. */}
-          <section className="card p-4 no-print">
-            <h2 className="mb-3 text-base font-semibold">SUNAT</h2>
+          <section className="card elev-1 p-5 no-print">
+            <TituloBloque icono={<Landmark />}>SUNAT</TituloBloque>
 
             {/*
               Una anulada o dada de baja no se envía. Aquí caía en el aviso
@@ -403,22 +501,24 @@ export default async function PaginaDetalleComprobante({
             {c.estado === "anulado" ||
             c.estado_sunat === "baja_aceptada" ||
             c.estado_sunat === "baja_solicitada" ? (
-              <div className="rounded-sm border border-[var(--border)] bg-[var(--surface-2)] p-2.5 text-sm">
-                <p className="font-medium">{ETIQUETA_SUNAT[c.estado_sunat]}.</p>
-                <p className="mt-0.5 text-[var(--fg-muted)]">
+              <AvisoFicha tono="peligro" icono={<Ban />} titulo={`${ETIQUETA_SUNAT[c.estado_sunat]}.`}>
+                <p className="text-[var(--fg-muted)]">
                   Este comprobante está anulado: no se envía a SUNAT ni se cobra.
                 </p>
-              </div>
+              </AvisoFicha>
             ) : c.estado_sunat === "aceptado" ? (
-              <div className="rounded-sm border border-[var(--ok)] bg-[var(--surface-2)] p-2.5 text-sm">
-                <p className="font-medium">Aceptado.</p>
+              <div className="rounded-xl border border-l-4 border-[var(--ok)] bg-[var(--ok-bg)] p-4 text-base">
+                <p className="flex items-center gap-2 font-bold">
+                  <BadgeCheck className="size-6 shrink-0 text-[var(--ok)]" aria-hidden="true" />
+                  Aceptado por SUNAT
+                </p>
                 {c.sunat_enviado_en ? (
-                  <p className="mt-0.5 text-sm text-[var(--fg-muted)]">
+                  <p className="mt-1 text-sm text-[var(--fg-muted)]">
                     {new Date(c.sunat_enviado_en).toLocaleString("es-PE", { timeZone: "America/Lima" })}
                   </p>
                 ) : null}
                 {c.sunat_hash_cdr ? (
-                  <p className="mt-1 break-all font-mono text-sm text-[var(--fg-subtle)]">
+                  <p className="mt-1 break-all font-mono text-sm text-[var(--fg-muted)]">
                     {c.sunat_hash_cdr}
                   </p>
                 ) : null}
@@ -461,9 +561,10 @@ export default async function PaginaDetalleComprobante({
             ) : null}
           </section>
 
-          <section className="card p-4">
-            <h2 className="mb-3 text-base font-semibold">Datos</h2>
-            <dl className="@container flex flex-col gap-2 text-sm">
+          <section className="card elev-1 p-5">
+            <TituloBloque icono={<FileText />}>Datos del documento</TituloBloque>
+            <div className="@container">
+            <dl className="grid grid-cols-1 gap-x-5 gap-y-4 @xs:grid-cols-2">
               {/* Fechas como en el papel (20/07/2026), y el vencimiento en su
                   propia línea: a 390 px «vence 2026-07-20» se partía en
                   «2026-07-» y «20» (revisión por módulos del 02/10). */}
@@ -526,40 +627,14 @@ export default async function PaginaDetalleComprobante({
                   }
                 />
               ) : null}
-              {/*
-                Desde la 089 no se factura sin guía, así que el número de la
-                guía es lo que justifica que esta factura exista. Salía en el
-                papel y no en la ficha: para comprobarlo había que imprimir.
-              */}
-              {/* Y cada guía es un enlace, una por línea (TR-05). */}
-              {enl && enl.guias.length > 0 ? (
-                <Dato
-                  etiqueta={enl.guias.length > 1 ? "Guías de remisión" : "Guía de remisión"}
-                  valor={
-                    <ul className="flex flex-col gap-0.5">
-                      {enl.guias.map((g) => (
-                        <li key={g.id}>
-                          <Link href={`/guias/${g.id}`} className={ENLACE_DOC}>
-                            {g.numero}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  }
-                />
-              ) : (
-                <Dato
-                  etiqueta={
-                    c.guia_numero?.includes(",") ? "Guías de remisión" : "Guía de remisión"
-                  }
-                  valor={c.guia_numero ?? "—"}
-                />
-              )}
+              {/* La guía (o las guías) ya no va aquí: tiene su bloque propio
+                  debajo de las cifras (27/11, `BloqueGuias`). */}
               <Dato etiqueta="Orden de compra" valor={c.orden_compra_cliente ?? "—"} />
                 </>
               )}
               <Dato etiqueta="Vendedor" valor={c.vendedor ?? "—"} />
             </dl>
+            </div>
 
             {/* La retención y las cuotas: estaban solo en el papel. */}
             {!esNota && c.retencion_aplica ? (
@@ -643,30 +718,42 @@ export default async function PaginaDetalleComprobante({
             solo se veía desde Cobranzas. Una nota no se cobra: no lleva esto.
           */}
           {!esNota ? (
-            <section className="card p-4">
-              <h2 className="mb-3 text-base font-semibold">Cobros</h2>
+            <section className="card elev-1 p-5">
+              <TituloBloque icono={<HandCoins />}>Cobros</TituloBloque>
               {!pagos.ok ? (
-                <p role="alert" className="text-sm text-[var(--danger)]">
+                <p role="alert" className="text-base text-[var(--danger)]">
                   No se pudieron leer los cobros: {pagos.error}
                 </p>
               ) : pagos.datos.length === 0 ? (
-                <p className="text-sm text-[var(--fg-muted)]">Todavía no se ha cobrado nada.</p>
+                /* El estado vacío dice qué hacer, y lleva el botón (27/11). */
+                <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-2)] p-4">
+                  <p className="text-base font-semibold">Todavía no se ha cobrado nada.</p>
+                  {puedeCobrar && !anulado && c.saldo > 0 ? (
+                    <Link
+                      href={`/cobranzas?q=${encodeURIComponent(c.numero)}`}
+                      className={cn(buttonVariants({ variant: "outline" }), "px-3")}
+                    >
+                      <HandCoins className="size-4" aria-hidden="true" />
+                      Registrar cobro
+                      <ArrowRight className="size-4" aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                </div>
               ) : (
-                <ul className="flex flex-col divide-y divide-[var(--border-soft)] text-sm">
+                <ul className="flex flex-col divide-y divide-[var(--border-soft)] text-base">
                   {pagos.datos.map((p) => (
-                    <li key={p.id} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
-                      <p>
-                        <span className="tabular">{formatearFecha(p.fecha)}</span>
-                        {" · "}
+                    <li key={p.id} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+                      <p className="flex flex-wrap items-baseline gap-x-2">
                         <Moneda
                           moneda={c.moneda}
                           valor={Math.round(p.monto * factorPagos * 100) / 100}
-                          tamano="sm"
-                          enfasis="fuerte"
+                          className="text-lg font-bold text-[var(--ok)]"
                         />
-                        {" · "}
-                        {ETIQUETA_MEDIO[p.medio] ?? p.medio}
-                        {p.referencia ? ` · Op. ${p.referencia}` : ""}
+                        <span className="tabular">{formatearFecha(p.fecha)}</span>
+                        <span>
+                          · {ETIQUETA_MEDIO[p.medio] ?? p.medio}
+                          {p.referencia ? ` · Op. ${p.referencia}` : ""}
+                        </span>
                       </p>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="text-[var(--fg-muted)]">
@@ -717,23 +804,14 @@ function BotonFichaCliente({ id }: { id: string | null }) {
   );
 }
 
-function Tarjeta({
-  etiqueta,
-  valor,
-  pie,
-}: {
-  etiqueta: string;
-  valor: React.ReactNode;
-  pie?: React.ReactNode;
-}) {
-  return (
-    <div className="card anim-entrada p-3">
-      <p className="text-sm text-[var(--fg-muted)]">{etiqueta}</p>
-      <p className="mt-0.5 truncate text-lg font-semibold tabular">{valor}</p>
-      {pie ? <p className="mt-0.5 text-sm text-[var(--fg-subtle)]">{pie}</p> : null}
-    </div>
-  );
-}
+/**
+ * Una cifra de `Moneda` que toma el tamaño, el peso y el color de la caja en
+ * la que va (la tarjeta, el héroe). `Moneda` pone los suyos, y sin esto el
+ * total del héroe salía a 16 px dentro de una caja de 36 (27/11). Y puede
+ * partirse en el espacio del símbolo: con la letra a 24 px, «$ 12,345.67» en
+ * 4xl no cabe en un teléfono.
+ */
+const HEREDA = "text-[length:inherit] font-[inherit] text-inherit whitespace-normal";
 
 /*
   Etiqueta a la izquierda solo si cabe; si no, encima del valor.
@@ -744,18 +822,72 @@ function Tarjeta({
   vencimiento asomando fuera de la tarjeta (scrollWidth 1058 en una ventana
   de 1024). Se decide por el ancho de la LISTA (`@container` en el `dl`) y
   no por el de la pantalla, porque la columna es estrecha justo en tableta y
-  ancha en el celular. Desde 18 rem va en fila, como siempre: en escritorio
-  no cambia nada.
-*/
-const FILA_DATO = "flex flex-col gap-0.5 @min-[18rem]:flex-row @min-[18rem]:gap-3";
-const ETIQUETA_DATO = "shrink-0 text-[var(--fg-muted)] @min-[18rem]:w-32";
+  ancha en el celular.
 
+  27/11: ya no va en fila. El rótulo arriba en `etiqueta-dato` y el valor
+  debajo en semibold, en una rejilla de dos columnas desde 20 rem de CAJA:
+  es el patrón de ficha del rediseño, y con el rótulo encima nunca se parte
+  el valor por falta de sitio.
+*/
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
+  return <DatoFicha etiqueta={etiqueta} valor={valor} />;
+}
+
+/**
+ * La guía (o las guías) que ampara la factura, en su propio bloque (27/11).
+ *
+ * Desde la 089 no se factura sin guía, así que el número de la guía es lo
+ * que justifica que esta factura exista. Salía en el papel y no en la ficha:
+ * para comprobarlo había que imprimir. Luego pasó a «Datos», en la sexta
+ * fila; ahora va con su icono y un botón por guía (TR-05: cada guía es un
+ * enlace). Si los enlaces no cargan, sale el número guardado, sin botón.
+ */
+function BloqueGuias({
+  enl,
+  guiaNumero,
+}: {
+  enl: { guias: { id: string; numero: string }[] } | null;
+  guiaNumero: string | null;
+}) {
+  const guias = enl?.guias ?? [];
+  const varias = guias.length > 1 || (guias.length === 0 && Boolean(guiaNumero?.includes(",")));
   return (
-    <div className={FILA_DATO}>
-      <dt className={ETIQUETA_DATO}>{etiqueta}</dt>
-      <dd className="min-w-0 flex-1 break-words">{valor}</dd>
-    </div>
+    <section className="card elev-1 flex flex-col gap-3 border-l-4 border-l-[var(--info)] p-5 @container">
+      <div className="flex flex-col gap-3 @2xl:flex-row @2xl:items-center @2xl:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-info-bg text-info ring-1 ring-inset ring-[var(--info)]/20 [&_svg]:size-6"
+          >
+            <Truck />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-[var(--titulo)]">
+              {varias ? "Guías de remisión que ampara" : "Guía de remisión que ampara"}
+            </h2>
+            <p className="text-base text-[var(--fg-muted)]">
+              {guias.length > 0 || guiaNumero
+                ? "La mercadería salió con ella. Su número va impreso en la factura."
+                : "Esta factura no tiene guía apuntada."}
+            </p>
+          </div>
+        </div>
+        {guias.length > 0 ? (
+          <ul className="flex flex-wrap gap-2">
+            {guias.map((g) => (
+              <li key={g.id}>
+                <Link href={`/guias/${g.id}`} className={cn(buttonVariants({ variant: "outline" }), "px-3 font-mono")}>
+                  {g.numero}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : guiaNumero ? (
+          <p className="break-words font-mono text-lg font-bold">{guiaNumero}</p>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
